@@ -1,66 +1,74 @@
 import { Button } from '@/app/components/ui/button';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { Section } from '@/app/components/layout/Section';
 import { ArrowRight, Flame } from 'lucide-react';
 
-// Flat, one-accent promo band. Replaced the hotlinked Unsplash background + gradient scrim +
-// blurred "orb" decorations + framer-motion entrance with an owned, on-system solid red block
-// (no external image dependency, no decorative motion → server component, zero JS).
+/**
+ * The one orange band — now a STRIP, not a screen.
+ *
+ * It measured 468px on desktop and ~380px on a 390px phone: on mobile that is a full screen of
+ * flat orange you scroll past between two content sections. Removing it is the single largest
+ * length saving on the page (−348px desktop). Nothing is lost, because the band only ever carried
+ * one message and one destination — the paragraph merely restated the headline, and the second
+ * "En savoir plus" button pointed at /shop, which the header already links to. A promo band with
+ * two CTAs has no CTA.
+ *
+ * THE NUMBER IS NOW IN THE HEADLINE. It used to be buried in a paragraph inside a `text-3xl` span
+ * that matched no type step. "JUSQU'À −30% SUR UNE SÉLECTION" reads as one statement.
+ *
+ * DARK MODE IS A STATIC RAMP SHADE, NOT THE THEME ACCENT. `.pt-promo` points the band at #D53B04
+ * in light and #8A2E0C in dark. Using `bg-brand` would resolve to #FF8A4C in dark and paint a
+ * full-bleed flashbang across a #0A0A0B page. The rule this establishes, now written into
+ * tokens.css: theme-aware accent for TYPE and small marks, static ramp shade for any large filled
+ * surface.
+ *
+ * WHITE IS THE ONLY INK HERE. Nothing lighter clears 4.5:1 on #D53B04 — white/70 composites to
+ * #F2C4B4 at 2.99:1 — so `.pt-promo` re-points the COMPLETE token set, including `--c-ink-3`,
+ * which would otherwise leak #6C6C73 onto orange at 1.11:1.
+ *
+ * The copy and the −30% figure are the owner's existing marketing pointing at the existing /offres
+ * page. Nothing here is fabricated urgency, an invented count, or a second countdown.
+ *
+ * Zero-JS server component, unchanged.
+ */
 export function PromoBanner() {
   return (
-    <section className="relative overflow-hidden bg-red-600 dark:bg-red-700">
-      {/* Single hairline texture — a thin diagonal sheen, not a blurred orb */}
+    <Section surface="promo" spacing="strip" width="wide" className="relative overflow-hidden">
+      {/* The one texture on the page. Zero cost, and it stops the band being a flat rectangle. */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.08]"
         aria-hidden="true"
         style={{
-          backgroundImage:
-            'repeating-linear-gradient(135deg, #fff 0 1px, transparent 1px 22px)',
+          backgroundImage: 'repeating-linear-gradient(135deg, #fff 0 1px, transparent 1px 22px)',
         }}
       />
 
-      <div className="relative max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20">
-        <div className="max-w-4xl space-y-5">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3.5 py-1.5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-white">
+      <div className="relative flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+        <div className="min-w-0">
+          <span className="pt-kicker mb-2 inline-flex items-center gap-2 text-ink-1">
             <Flame className="h-3.5 w-3.5" aria-hidden="true" />
             Offre limitée
           </span>
-
-          <h2 className="font-display uppercase tracking-tight leading-[0.95] text-4xl sm:text-5xl lg:text-6xl font-bold text-white">
-            Transformez votre corps maintenant
-          </h2>
-
-          <p className="text-lg sm:text-xl text-white/90">
+          <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 text-balance lg:text-[2.5rem]">
             Jusqu&apos;à{' '}
-            <span className="font-display font-bold tracking-tight tabular-nums text-3xl align-baseline">
-              −30%
-            </span>{' '}
-            sur une sélection de produits premium.
-          </p>
-
-          <div className="flex flex-wrap gap-3 pt-2">
-            <Button
-              size="lg"
-              className="group h-14 bg-white px-8 text-base font-display uppercase tracking-wide font-semibold text-red-600 hover:bg-gray-100"
-              asChild
-            >
-              <LinkWithLoading href="/offres" loadingMessage="Chargement des offres...">
-                Voir les offres
-                <ArrowRight className="h-5 w-5 ml-2 transition-transform group-hover:translate-x-1" />
-              </LinkWithLoading>
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="h-14 border-white/70 bg-transparent px-8 text-base font-display uppercase tracking-wide font-semibold text-white hover:bg-white hover:text-red-600"
-              asChild
-            >
-              <LinkWithLoading href="/shop" loadingMessage="Chargement de la boutique...">
-                En savoir plus
-              </LinkWithLoading>
-            </Button>
-          </div>
+            <span className="text-[2.5rem] leading-[0.9] lg:text-[3.5rem]">−30%</span> sur une
+            sélection
+          </h2>
         </div>
+
+        {/* ONE CTA. `bg-elevated` is white in both themes; `text-brand` inside `.pt-promo`
+            resolves to #B63304 (6.06:1 on white) in light and #8A2E0C (8.48:1) in dark. */}
+        <Button
+          size="lg"
+          className="group min-h-[52px] shrink-0 rounded-full bg-elevated px-8 font-display font-extended text-base font-semibold uppercase tracking-wide text-brand hover:bg-elevated/90"
+          asChild
+        >
+          <LinkWithLoading href="/offres" loadingMessage="Chargement des offres...">
+            Voir les offres
+            <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
+          </LinkWithLoading>
+        </Button>
       </div>
-    </section>
+    </Section>
   );
 }

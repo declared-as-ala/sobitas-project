@@ -23,14 +23,20 @@ import { buildHeroImageSet, type HeroSlide, type HeroImageSet } from '@/util/her
  * LCP path ships no JavaScript. Exactly one client island (HeroSliderControls) drives the
  * scroll-snap track for arrows/dots/autoplay, and it renders nothing at all for a single slide.
  *
- * SCRIM POLICY. The artwork is shown at full opacity when the slide has NO caption — the owner
- * bakes copy into some banners and a scrim over those would dim their own text. When a caption IS
- * present the copy must stay legible over an arbitrary upload, so the slide gets a gradient
- * weighted to the side the text sits on. Contrast is a floor, not a preference (WCAG 1.4.3).
+ * LEGIBILITY POLICY. The artwork is shown at full opacity when the slide has NO caption — the
+ * owner bakes copy into some banners and a scrim over those would dim their own text.
  *
- * Brand colour is `brand-500` (#F8480C, the logo orange) via the semantic token, not a hardcoded
- * hex — see tailwind.config.ts. Large display type and pill CTAs are the graphical-accent case the
- * token is meant for.
+ * When a caption IS present the copy sits on a SOLID PLATE, not on a gradient. The admin uploads
+ * arbitrary artwork, so a scrim's contrast is unknowable: measured over a blown-out white banner,
+ * the old gradient's mid-stop composited to #BFBFBF and white text on it was 1.84:1 — a severe AA
+ * failure that appeared only for certain uploads, which is the worst kind of bug to own. The plate
+ * composites to at worst #2F2F30, where white text is 13.4:1 no matter what the photograph is.
+ * Contrast is a floor, not a preference (WCAG 1.4.3). The gradient is kept purely as a blend.
+ *
+ * COLOUR. This band carries `.pt-slab`, so `bg-brand` / `text-brand` / `text-on-brand` resolve to
+ * the slab-scoped accent (#FF8A4C on #0A0A0B, 8.47:1). They used to be `bg-brand-500` with white
+ * on top — #F8480C under white is 3.55:1 and fails AA outright. brand-500 remains a GRAPHICAL
+ * accent only; it must never carry text.
  */
 
 /**
@@ -121,12 +127,33 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
       {/* On phones the copy sits at the bottom, so it must clear the controls rail — but ONLY when
           there is a rail. A single-slide banner renders no controls, and reserving the space anyway
           left a visible band of dead pixels under the CTA. */}
+      {/* THE LEFT PADDING CLEARS THE ARROW RAIL. Measured on the live site, the previous values
+          put the caption UNDERNEATH the previous-slide button at every width from 768px up:
+
+            768px   28px of overlap        1280px   4px
+            1024px  12px of overlap        1440px   4px
+
+          The arrow is `absolute left-2 sm:left-4` at 44x44 (HeroSliderIndicator), so from `sm` it
+          occupies 16–60px. The caption padded 32/48/56px — always short of 60. On phones the
+          caption is bottom-anchored while the arrows are vertically centred, so there is no
+          collision there and `px-5` is kept to let the copy use the full width of a small screen.
+          72px from `sm` clears the button with 12px to spare. */}
       <div
-        className={`w-full px-5 sm:px-8 md:pb-0 lg:px-12 xl:px-14 ${hasControls ? 'pb-24' : 'pb-8 sm:pb-10'}`}
+        className={`w-full px-5 sm:pl-[4.5rem] sm:pr-8 md:pb-0 lg:pl-20 lg:pr-12 xl:pl-24 xl:pr-14 ${hasControls ? 'pb-24' : 'pb-8 sm:pb-10'}`}
       >
-        <div className="max-w-[34rem] lg:max-w-[38rem]">
+        {/* A SOLID PLATE, not a gradient.
+            The admin uploads arbitrary artwork, so a scrim's contrast is unknowable: over a
+            blown-out white banner a `from-black/70` gradient composites to roughly #4D4D4D and
+            white body copy on it measures ~2.9:1 — a hard AA failure that only appears for
+            certain uploads, which is the worst kind. #0A0A0B at 85% composites to at worst
+            #2F2F30 over pure white; white on that is 13.4:1 and the brand accent 5.7:1,
+            regardless of the photograph. Legibility becomes a property of the component instead
+            of a property of the image someone happened to upload.
+            `inline-block` so the plate hugs the copy rather than always painting a full-width
+            slab — an image-only slide already renders nothing at all (see the guard above). */}
+        <div className="inline-block max-w-[34rem] rounded-xl bg-[#0A0A0B]/85 px-5 py-4 backdrop-blur-[2px] sm:px-6 sm:py-5 lg:max-w-[38rem]">
           {badge && (
-            <span className="mb-3 inline-flex items-center rounded-md bg-brand-500 px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-white sm:mb-4 sm:text-[11px]">
+            <span className="mb-3 inline-flex items-center rounded-md bg-brand px-2.5 py-1 font-display text-[10px] font-bold uppercase tracking-[0.16em] text-on-brand sm:mb-4 sm:text-[11px]">
               {badge}
             </span>
           )}
@@ -134,25 +161,25 @@ function HeroCaption({ slide, hasControls }: { slide: HeroSlide | null; hasContr
           {title && (
             /* <p>, not a heading: the page's single <h1> is the SEO block in HomePageClient, and a
                rotating banner must not compete with it for the document outline. */
-            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-white [text-shadow:0_2px_18px_rgba(0,0,0,0.5)] sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
+            <p className="font-display font-compressed text-[2.1rem] font-extrabold uppercase leading-[0.92] tracking-tight text-white sm:text-5xl lg:text-[3.5rem] xl:text-6xl">
               {lead}
               {accent && (
                 <>
                   <br />
-                  <span className="text-brand-500">{accent}</span>
+                  <span className="text-brand">{accent}</span>
                 </>
               )}
             </p>
           )}
 
           {subtitle && (
-            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-white/90 [text-shadow:0_1px_12px_rgba(0,0,0,0.6)] sm:mt-4 sm:text-base">
+            <p className="mt-3 max-w-md text-sm font-medium leading-snug text-white/95 sm:mt-4 sm:text-base">
               {subtitle}
             </p>
           )}
 
           {ctaLabel && (
-            <span className="mt-5 inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-brand-500 px-6 font-display text-sm font-bold uppercase tracking-[0.08em] text-white shadow-[0_10px_28px_-6px_rgba(248,72,12,0.6)] transition-colors duration-200 group-hover:bg-brand-600 sm:mt-6 sm:px-7 sm:text-[15px]">
+            <span className="mt-5 inline-flex min-h-[48px] items-center gap-2.5 rounded-full bg-brand px-6 font-display text-sm font-bold uppercase tracking-[0.08em] text-on-brand transition-colors duration-200 group-hover:bg-brand-hover sm:mt-6 sm:px-7 sm:text-[15px]">
               {ctaLabel}
               <ArrowRight
                 className="h-4 w-4 transition-transform duration-200 group-hover:translate-x-0.5"
@@ -217,10 +244,13 @@ function HeroSlideFrame({
       {/* Legibility scrim, captioned slides only. Vertical on phones (copy sits at the bottom),
           left-weighted from md up (copy sits left of centre) — so it darkens the text area and
           leaves the product shot on the right of the artwork untouched. */}
+      {/* The gradient stays as a BLEND between the artwork and the caption plate, but it is no
+          longer what makes the copy legible — the solid plate in HeroCaption does that. A gradient
+          over an arbitrary admin upload can never be proven to clear 4.5:1; a solid plate can. */}
       {hasCaption && (
         <span
           aria-hidden="true"
-          className="absolute inset-0 z-10 bg-gradient-to-t from-black/80 via-black/35 to-transparent md:bg-gradient-to-r md:from-black/80 md:via-black/40 md:to-transparent"
+          className="absolute inset-0 z-10 bg-gradient-to-t from-black/70 via-black/25 to-transparent md:bg-gradient-to-r md:from-black/70 md:via-black/25 md:to-transparent"
         />
       )}
 
@@ -232,7 +262,14 @@ function HeroSlideFrame({
 /* The slider viewport. `.pt-hero` (globals.css) sets a DEFINITE height, so the box is reserved
    before the image loads (zero CLS) and the absolutely-filled slide resolves against it. The
    neutral placeholder shows only for the instant before the preloaded LCP image paints. */
-const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-gray-100 dark:bg-gray-900 sm:rounded-2xl';
+/* `bg-sunken`, not `bg-gray-100 dark:bg-gray-900`: this is the colour that shows for the instant
+   before the preloaded LCP image paints. Inside the black stage a light-grey rectangle flashed
+   under a near-black header; the token resolves to the slab's own well (#202027 / #101012) because
+   the band scope re-points it, so the pre-paint frame is dark in both themes.
+
+   `sm:rounded-2xl` is GONE. The stage supplies the frame now, and dropping the rounding hands the
+   artwork back the 2x16px the corners were insetting. */
+const FRAME_BASE = 'pt-hero relative w-full overflow-hidden bg-sunken';
 
 export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
   const showAside = bestSellers.length > 0;
@@ -276,10 +313,33 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
     );
 
   return (
+    /*
+     * THE HERO IS A STAGE (DESIGN_SYSTEM v5 §4).
+     *
+     * `pt-slab` makes this band near-black (#0E0E12 light / #2A2A30 dark) and, because the header
+     * carries the same scope, the two read as ONE continuous black mass with no seam between them.
+     * The trust strip directly below is the same surface again, so the page opens with ~700px of
+     * black and the first white the eye meets is the category rail — which is what makes that rail
+     * land as a hard cut rather than as one more white section on a white sheet.
+     *
+     * `data-band` opts it into the automatic 1px seam rule. `py-0` is load-bearing at BOTH ends:
+     * no top padding so the hero is flush against the header, no bottom padding because the trust
+     * strip supplies it and there must be no gap between the artwork and the trust row.
+     *
+     * The vertical padding that used to sit here (`sm:pt-4 lg:pt-6`) is gone with it — that gap
+     * only existed to separate a white hero from a white header.
+     *
+     * LCP CONTRACT UNTOUCHED. buildHeroImageSet, the <picture> sources, fetchPriority="high",
+     * loading="eager" and the <link rel=preload> pair are all unchanged, and `.pt-hero` keeps its
+     * exact clamps, so the box stays a DEFINITE height at every breakpoint and CLS stays 0.
+     */
     <section
+      data-band=""
+      // First band on the page: the header supplies its own edge, so no top rule here.
+      data-band-first=""
       aria-label="Bannière principale"
       {...(slides.length > 1 ? { 'aria-roledescription': 'carrousel' } : {})}
-      className="w-full sm:pt-4 lg:pt-6"
+      className="pt-slab w-full py-0"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,

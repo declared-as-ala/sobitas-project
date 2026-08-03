@@ -92,6 +92,12 @@ export interface SectionProps {
    * Same element, always.
    */
   defer?: boolean;
+  /**
+   * Opt OUT of the automatic 1px top seam. Set on the first band of a page, which sits against
+   * the header and needs no rule of its own. Everything else keeps it — see globals.css for why
+   * the seam is not an adjacent-sibling rule.
+   */
+  first?: boolean;
   'aria-label'?: string;
   'aria-labelledby'?: string;
   children: ReactNode;
@@ -106,6 +112,7 @@ export function Section({
   className,
   containerClassName,
   defer = false,
+  first = false,
   children,
   ...rest
 }: SectionProps) {
@@ -115,6 +122,7 @@ export function Section({
       // so a boundary can never be forgotten, and the adjacent-sibling selector means the first
       // band on a page correctly has no rule above it.
       data-band=""
+      {...(first ? { 'data-band-first': '' } : {})}
       className={cn(SPACING[spacing], SURFACES[surface], defer && 'pt-defer', className)}
       {...rest}
     >

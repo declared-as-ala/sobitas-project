@@ -5,6 +5,7 @@ import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { buildCategoryAlt } from '@/util/productAlt';
 import { Section } from '@/app/components/layout/Section';
+import { SectionHeader } from '@/app/components/SectionHeader';
 
 /**
  * Category rail — the fastest path from landing to a product list.

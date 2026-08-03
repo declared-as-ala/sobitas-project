@@ -14,16 +14,21 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
  * JavaScript. Each row is ONE link to the product page, so there is no cart state, no client
  * handler, and no hydration here.
  *
- * DESIGN SYSTEM (owner request: "make them unified with the design system")
- * This panel used to be the only near-black surface on a light page — `bg-gray-950` with white
- * text and its own type scale, sitting directly beside a white category card that uses none of
- * that. It now speaks the same language as every other card on the homepage:
- *   surface   white, `rounded-2xl`, hairline `ring-black/[0.06]`   (identical to CategoryRail)
- *   heading   `font-display` uppercase over a `brand-500` accent rule (identical to CategoryRail)
- *   dividers  `gray-100` hairlines rather than `white/10`
- *   price     `brand-600`, NOT `brand-500` — per tailwind.config.ts, 600 is the action shade that
- *             clears AA on white (4.69:1), while 500 is the logo orange for graphical accents only
- *             (~3.5:1) and must never carry text on a light surface.
+ * DESIGN SYSTEM — A PLATE ON THE BLACK STAGE (DESIGN_SYSTEM v5 §4).
+ *
+ * The hero band now carries `.pt-slab`, so everything inside it inherits near-black surfaces and
+ * light ink. This panel carries `.pt-plate`, which restores PAGE token scope for its own subtree —
+ * so it renders as a white card punched out of the black stage (19.26:1 against the band) while
+ * every `text-ink-1` / `text-brand` / `border-hairline` inside it resolves against a light surface
+ * again. In dark theme the plate becomes a recessed #141416 well and `--slab-plate-hairline` gives
+ * it a real #767682 edge, because the plate-to-band fill difference there is only 1.29:1.
+ *
+ * That is why this file has no `dark:` classes at all any more: the band decides, not the
+ * component. It previously hand-wrote `bg-white ring-black/[0.06] dark:bg-gray-900
+ * dark:ring-white/10` and a `gray-*` divider on every row.
+ *
+ * The price uses `text-brand`, which on a plate is #D53B04 (4.71:1) — the action shade. brand-500
+ * (#F8480C) is 3.55:1 on white and is a GRAPHICAL accent only; it must never carry text.
  *
  * Product images went 56px → 112px (owner: "bigger and clear for the user") — 112 rather than 96
  * because the rows are ~154px tall, so 96 left ~58px of dead vertical space per row. They sit on a faint
@@ -63,7 +68,7 @@ function Stars({ value }: { value: number }) {
           className={
             i < rounded
               ? 'h-3 w-3 fill-brand-500 text-brand-500'
-              : 'h-3 w-3 fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'
+              : 'h-3 w-3 fill-hairline text-hairline'
           }
         />
       ))}
@@ -80,10 +85,10 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
        `hidden xl:flex` keeps it out of the DOM below 1280px. */
     <aside
       aria-label="Meilleures ventes"
-      className="pt-hero hidden flex-col overflow-hidden rounded-2xl bg-white ring-1 ring-black/[0.06] xl:flex dark:bg-gray-900 dark:ring-white/10"
+      className="pt-plate pt-hero hidden flex-col overflow-hidden rounded-2xl ring-1 ring-hairline xl:flex"
     >
-      <div className="border-b border-gray-100 px-4 py-3 dark:border-white/10">
-        <h2 className="font-display text-[13px] font-extrabold uppercase leading-none tracking-tight text-gray-900 dark:text-white">
+      <div className="border-b border-hairline px-4 py-3">
+        <h2 className="font-display text-[13px] font-extrabold uppercase leading-none tracking-tight text-ink-1">
           Meilleures ventes
         </h2>
         {/* Same accent rule as the category card, so the two headings read as one system. */}
@@ -92,7 +97,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
 
       {/* Rows share the remaining height evenly, and the footer link anchors the bottom so the
           panel reads as a finished block rather than a list that ran out. */}
-      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-gray-100 dark:divide-white/10">
+      <ul className="flex min-h-0 flex-1 flex-col divide-y divide-hairline">
         {products.slice(0, 3).map((p) => {
           const hasRating = (p.reviewCount ?? 0) > 0 && (p.ratingValue ?? 0) > 0;
 
@@ -101,11 +106,11 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
               <LinkWithLoading
                 href={p.href}
                 loadingMessage="Chargement..."
-                className="group flex h-full items-center gap-3 px-3 transition-colors duration-200 hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:hover:bg-white/[0.04]"
+                className="group flex h-full items-center gap-3 px-3 transition-colors duration-200 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
               >
                 {/* 112px, up from 56. The faint tile + hairline give cut-out pack shots an edge on
                     a white card; without it they float with no boundary. */}
-                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-gray-50 ring-1 ring-black/[0.04] dark:bg-gray-950 dark:ring-white/10">
+                <span className="relative flex h-28 w-28 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-sunken ring-1 ring-hairline">
                   {p.image ? (
                     <Image
                       src={p.image}
@@ -124,24 +129,24 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
                 {/* line-clamp-3, not 2: at 112px the image leaves ~150px for the name, and two
                     lines cut "…CHALLENGER…" mid-brand. The 154px row has room for a third. */}
                 <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <span className="line-clamp-3 text-[13px] font-semibold leading-snug text-gray-900 transition-colors group-hover:text-brand-600 dark:text-gray-100 dark:group-hover:text-brand-500">
+                  <span className="line-clamp-3 text-[13px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
                     {p.name}
                   </span>
 
                   {hasRating && (
                     <span className="flex items-center gap-1.5">
                       <Stars value={p.ratingValue as number} />
-                      <span className="text-[11px] tabular-nums text-gray-400">({p.reviewCount})</span>
+                      <span className="text-[11px] tabular-nums text-ink-3">({p.reviewCount})</span>
                     </span>
                   )}
 
                   {p.price != null && (
                     <span className="flex items-baseline gap-1.5">
-                      <span className="font-display text-[15px] font-bold text-brand-600 dark:text-brand-500">
+                      <span className="font-display text-[15px] font-bold text-brand">
                         {Math.round(p.price)} DT
                       </span>
                       {p.oldPrice != null && p.oldPrice > p.price && (
-                        <span className="text-[11px] text-gray-400 line-through">
+                        <span className="text-[11px] text-ink-3 line-through">
                           {Math.round(p.oldPrice)} DT
                         </span>
                       )}
@@ -151,7 +156,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
 
                 <span
                   aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white shadow-sm transition-colors duration-200 group-hover:bg-brand-700"
+                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm transition-colors duration-200 group-hover:bg-brand-hover"
                 >
                   <ShoppingCart className="h-4 w-4" />
                 </span>
@@ -164,7 +169,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
       <LinkWithLoading
         href="/shop"
         loadingMessage="Chargement..."
-        className="flex items-center justify-center gap-1.5 border-t border-gray-100 px-4 py-3 text-[12px] font-semibold text-gray-600 transition-colors hover:bg-gray-50 hover:text-brand-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-brand-500 dark:border-white/10 dark:text-gray-400 dark:hover:bg-white/[0.04] dark:hover:text-brand-500"
+        className="flex items-center justify-center gap-1.5 border-t border-hairline px-4 py-3 text-[12px] font-semibold text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
       >
         Voir toute la boutique
         <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />

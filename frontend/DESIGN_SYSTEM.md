@@ -1,4 +1,4 @@
-# Protein.tn Storefront Design System — v4
+# Protein.tn Storefront Design System — v5
 
 > Brand-level rules (logo, accent ramp, typefaces, French-only, lucide-only, ≥44px) are inherited
 > from [`../DESIGN_SYSTEM.md`](../DESIGN_SYSTEM.md). This document owns the **storefront**: tokens,
@@ -50,6 +50,113 @@ worse for documenting the rule it is explaining, and a developer log line is not
 
 ---
 
+---
+
+## 0.5 The band architecture (v5 — the organising idea)
+
+The page is a **sequence of bands**. A band is a full-bleed horizontal slab of colour that owns its
+own vertical padding. Everything below follows from one rule:
+
+> **Separation is a colour change plus a 1px rule. Never emptiness.**
+
+### Why this replaced the old model
+
+Measured on the live homepage before v5, at 1440px:
+
+| | |
+|---|---|
+| dead vertical space between bands | **1,004px — 11.0% of the document** |
+| the three worst gaps | **160px each** |
+| distinct section-heading sizes | **7** (13, 24, 26, 30, 40, 52, 60px) |
+| band backgrounds | essentially all white |
+
+Every 160px gap was two adjacent `py-20` paddings on two identical **white** backgrounds: 80 + 80,
+with no colour change to justify either. That is what "looks like WordPress" actually is —
+undifferentiated sections separated by air.
+
+After v5, same measurement: **556px (6.7%)**, and no two adjacent bands share a surface.
+
+### The four surfaces
+
+| surface | light | dark | used for |
+|---|---|---|---|
+| `base` (canvas) | `#FFFFFF` | `#0A0A0B` | product grids, the category rail |
+| `sunken` | `#F7F6F4` | `#191A1D` | alternating content bands |
+| `slab` | `#0E0E12` | `#2A2A30` | header, hero stage, trust strip, Ventes flash, Nos packs |
+| `promo` | `#D53B04` | `#8A2E0C` | the single orange strip |
+
+**The slab is defined as "the surface that steps AWAY from the canvas."** In light theme that is
+down (19.26:1 against white). In dark theme the page is already near-black, so the slab steps **up**
+to #2A2A30 and sits *proud* of the page. The alternation survives even though the polarity inverts.
+This is the single most common way a "more black" redesign breaks, and it is why the slab is a token
+scope rather than a `bg-black`.
+
+### Token scopes, not variant props
+
+`.pt-slab`, `.pt-plate` and `.pt-promo` (`styles/tokens.css`) re-point the whole `--c-*` set for
+their subtree. A component written in `bg-elevated text-ink-1 border-hairline` therefore renders
+correctly on **all four surfaces, in both themes, with no `dark:` variant and no `onSlab` prop**.
+The band decides; the component does not know.
+
+`.pt-plate` is the inverse: a white card punched out of a black slab restores page scope. It
+re-declares `color` as well as `background-color` — without that, the slab's inherited ink lands on
+a white card at **1.70:1**.
+
+Three rules that are not negotiable:
+
+1. **Never put a scope class on a focusable element.** The focus ring resolves in the element's own
+   scope but paints on the *parent* band's surface — a #FF8A4C ring on white is 2.34:1. Scope the
+   plate, not the link.
+2. **The scope class and `.pt-defer` must be the same element.** `content-visibility: auto` skips a
+   subtree's paint but **not** the element's own box decoration, so a slab background on a *child*
+   of a deferred wrapper renders as a white rectangle until it scrolls in. `<Section defer>` exists
+   so this cannot be got wrong.
+3. **A surface maps to a scope class ONLY, never to a `bg-*` utility.** `tokens.css` is imported
+   before `@tailwind utilities`, so a utility at equal specificity wins on source order and you get
+   a band whose tokens flipped but whose background did not.
+
+### The automatic seam
+
+```css
+[data-band]              { border-top: 1px solid rgb(var(--c-rule)); }
+[data-band][data-band-first] { border-top: 0; }
+```
+
+Emitted by `<Section>`, never by call sites, so a seam cannot be forgotten.
+
+**It is deliberately not `[data-band] + [data-band]`.** That was the first implementation and it
+silently drew **2 of 10 seams**: the adjacent-sibling combinator needs DOM siblings, and most bands
+sit inside `div.pt-reveal` motion wrappers as only-children. Nesting is a layout detail and must
+never decide whether a structural rule exists.
+
+The seam is what keeps dark mode honest. In light theme the fills do the work (slab vs canvas =
+19.26:1). In dark they cannot (1.39:1) — so the rule, at 3.18:1 against the band and 4.41:1 against
+the canvas, is what preserves the architecture. Without it "more black" would be an architecture
+that only exists for half the users.
+
+### Two boundary weights
+
+| token | job | floor |
+|---|---|---|
+| `hairline` | a border on something that also has its own fill (card, input, chip) | none — decorative |
+| `rule` | a band seam, alongside a fill change | none |
+| `rule-strong` | a divider that is the **sole** boundary between identical surfaces | **3:1** (WCAG 1.4.11) |
+
+The brand wall's `gap-px` matrix is the `rule-strong` case: 3.34:1 on white, 4.10:1 on the dark
+plate. Using `hairline` there looks fine and measures **1.26:1**.
+
+---
+
+## 0.6 The measured limit you will hit first
+
+**`text-brand` on `bg-sunken` is 4.36:1 and FAILS AA.** It is the one pair in the system that looks
+obviously fine and is not. Put the element on a `bg-elevated` plate first (4.71:1) — that is exactly
+what the SEO block's category chips do.
+
+`brand-500` (#F8480C) is **graphical accents only**: 3.55:1 on white, and white-on-it is also
+3.55:1. It must never carry text and never be a text background.
+
+
 ## 1. Typography
 
 Defined in `tailwind.config.ts:23-59`. **Three** faces, not two:
@@ -72,6 +179,36 @@ face by default, and the compression is applied globally rather than at the call
 
 Semantic sizes exist at `tailwind.config.ts:50-59`: `text-display`, `text-lead`, `text-ui`,
 `text-caption`.
+
+## 1.5 The section heading scale — three sizes, chosen by commercial role
+
+The homepage shipped **seven** section-heading sizes on desktop and six on mobile. Nobody chose
+seven; seven *happened*, because five components each hardcoded their own clamp. Intermediate sizes
+with no rule behind them are exactly what makes a page look like a purchased theme.
+
+Every section `h2` on the page is now emitted by **one** component, `SectionHeader`, which takes
+`scale` and defaults to the smallest:
+
+| scale | mobile / desktop | reserved for |
+|---|---|---|
+| `"1"` | 40 / 56px | **the four rails that sell** — Les plus vendus, Ventes flash, Nouveaux produits, Nos packs |
+| `"2"` | 30 / 40px | support bands — Acheter par objectif, Nos derniers articles, the SEO block |
+| `"3"` | 22 / 28px | bands that sell nothing directly — Nos marques partenaires — and the **default** |
+
+**Size follows commercial role, not background colour and not taste.** A logo wall getting a bigger
+heading than the best-seller rail is the failure mode of any "consistent" scale that keys off
+surface. Here the brand wall is deliberately the *smallest* heading on the page and the
+highest-intent rail is the largest.
+
+`scale` defaulting to `"3"` is what keeps `ProductDetailClient`'s "Produits similaires" from
+out-ranking the product's own H1 across 391 PDPs.
+
+Hierarchy is carried by Archivo's **variable width axis**, not by more sizes: a 12px kicker at
+wdth 112 with 0.22em tracking over a 56px headline at wdth 82 with −0.02em tracking is a 4.7x size
+ratio **and** a 30-point width delta **and** a 0.24em tracking delta — three axes of contrast from
+two type sizes.
+
+---
 
 ## 2. Colour — one accent, and only one
 
@@ -107,15 +244,24 @@ cost. **New code writes `brand-*`** (DS011).
 Vertical rhythm is owned by `<Section>` (`components/layout/Section.tsx:14-19`). These are the only
 legal section paddings:
 
-| Token | Value | Use |
+| Token | mobile / sm / lg | Use |
 | --- | --- | --- |
 | `spacing="none"` | — | the section manages its own padding |
-| `spacing="tight"` | `py-6 sm:py-8 lg:py-10` | rails attached to a neighbour — e.g. `CategoryRail` under the hero |
-| `spacing="default"` | `py-12 sm:py-16 lg:py-20` | every normal content band |
-| `spacing="flagship"` | `py-16 sm:py-20 lg:py-24` | promo / CTA bands |
+| `spacing="stage"` | `py-0` | the hero stage ONLY. Zero at both ends is load-bearing: flush to the header above, and the trust strip below supplies the bottom padding on the same surface |
+| `spacing="strip"` | `py-3 / 3.5 / 4` | anything exactly one row tall — the trust strip, the orange promo strip |
+| `spacing="tight"` | `py-6 / 8 / 9` | support bands carrying navigation or prose — category rail, brand wall, SEO block |
+| `spacing="default"` | `py-8 / 10 / 12` | every canvas/sunken product or content grid |
+| `spacing="feature"` | `py-10 / 12 / 14` | the two SLAB merchandising bands (Ventes flash, Nos packs) and nothing else. Black needs more internal air than white or it reads as cramped — and inside a coloured band that padding reads as the band's own body, not as a gap |
 
-**Never invent a local `py-` on a section** (DS008). `py-7`, `py-9`, `py-28` are all wrong by
-construction.
+**`flagship` (`py-16 sm:py-20 lg:py-24`) is DELETED.** It was the top of the ladder that produced
+the three 160px voids. Verified before removing: `grep -rn flagship src/` returned the definition
+and nothing else — zero call sites — so nothing could silently keep 96px.
+
+**Never invent a local `py-` on a section** (DS008). If a band needs a value that is not here, the
+scale is wrong — fix the scale, do not add a sixth number in a call site.
+
+**Padding, never margin.** A margin between two bands paints the *parent's* colour, which
+reintroduces exactly the gap this scale removes.
 
 ### The band-boundary rule
 
@@ -385,6 +531,30 @@ Two lessons that generalise:
 
 **Origin:** a Figma Make export (Tailwind v4 flavoured) hand-downgraded to v3. v4 reads raw colour
 values; v3's convention is `hsl(var())`. Do not reintroduce v4 syntax until v4 is actually installed.
+
+### ~~Alternating bands are invisible in dark mode~~ — *FIXED 2026-08-03*
+
+`--c-sunken` was `#101012` against a `#0A0A0B` canvas: **1.041:1**. Every alternating band on the
+entire site was invisible in dark theme — *less* separated than light mode's own 1.08:1. It had
+been shipping for as long as the token existed, and nobody saw it because nobody screenshots dark
+mode. Raised to `#191A1D` (1.14:1), with every ink re-checked on it (ink-1 15.83, ink-2 9.41,
+ink-3 5.92, brand 7.45).
+
+The generalisable lesson: **a surface pair needs a measured number, not an eyeball.** Two
+near-blacks always "look different" on the display you designed them on.
+
+### The hero caption sat on top of the previous-slide arrow — *FIXED 2026-08-03*
+
+Measured overlap at every width from 768px up: 28px @768, 12px @1024, 4px @1280 and @1440. The
+arrow is `left-2 sm:left-4` at 44x44, so from `sm` it occupies 16–60px, while the caption padded
+32/48/56px — always short of 60. Now `sm:pl-[4.5rem]`.
+
+### Brand-variant logo assets — *open, needs the owner*
+
+The brand wall keeps light plates in **both** themes rather than logos on black, because the
+supplied marks are dark-on-transparent third-party colour assets: `dark:invert` destroys them and
+dropping them on #0E0E12 makes half of them vanish. "Logos on black" needs light-variant assets for
+~40 brands — a content project, not a CSS change.
 
 ### Two page rails — *open*
 `max-w-7xl` on interior routes vs `max-w-site` on the homepage. Resolve in one dedicated PR (§4).

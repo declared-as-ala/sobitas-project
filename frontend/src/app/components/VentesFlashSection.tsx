@@ -9,6 +9,7 @@ import Link from 'next/link';
 // from ProductCard's own price logic.
 import { ProductCard } from './ProductCard';
 import { Button } from '@/app/components/ui/button';
+import { Section } from '@/app/components/layout/Section';
 import { ArrowRight, Clock, Flame } from 'lucide-react';
 
 interface FlashProduct {
@@ -84,24 +85,55 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
       ];
 
   return (
-    <div className="inline-flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl bg-red-600 px-3.5 py-2 text-white shadow-sm sm:px-4 sm:py-2.5">
-      <span className="inline-flex items-center gap-1.5 font-display uppercase tracking-wide text-[11px] font-semibold sm:text-xs">
+    <div className="flex flex-col gap-2">
+      {/*
+        THE VISIBLE CLOCK IS HIDDEN FROM ASSISTIVE TECH, AND THAT IS THE ACCESSIBLE CHOICE.
+
+        These digits change every second. Exposed, they are either a screen-reader firehose (with
+        aria-live) or an unlabelled cluster of numbers that a user lands on mid-count and cannot
+        interpret (without it). The pre-hydration placeholder makes it worse: "-- -- --" is a real
+        announced string that means nothing.
+
+        So the tiles are aria-hidden and a single static sentence carries the same information in a
+        form that is actually useful — an absolute date, in a <time> element, announced once. No
+        aria-live anywhere.
+      */}
+      <span className="pt-kicker inline-flex items-center gap-1.5 text-ink-3" aria-hidden="true">
         <Clock className="h-4 w-4" aria-hidden="true" />
         Se termine dans
       </span>
-      <div className="flex items-center gap-1 sm:gap-1.5">
+      <div className="grid grid-cols-4 gap-2" aria-hidden="true">
         {units.map(({ value, label }) => (
-          // bg-black/15 not white/15: a translucent-white chip over the orange pill lifted the
-          // effective background to a light orange, dropping white digits to ~3.9:1. Darkening the
-          // chip instead keeps white ≥4.5:1.
-          <div key={label} className="flex min-w-[2.5rem] flex-col items-center rounded-lg bg-black/15 px-1.5 py-1 sm:min-w-[2.75rem] sm:px-2">
-            <span className="font-display text-base font-bold leading-none tabular-nums sm:text-lg">
+          // A well on the slab (#202027 light / #101012 dark) with its own hairline, so the tile
+          // reads as inset rather than relying on the fill alone. Digits are `text-brand`: 6.93:1
+          // on the well in light, 8.14:1 in dark.
+          <div
+            key={label}
+            className="flex min-w-[3.75rem] flex-col items-center justify-center rounded-lg border border-hairline bg-sunken px-2 py-2 sm:min-w-[4.25rem] sm:py-2.5"
+          >
+            <span className="font-display font-compressed text-[1.75rem] font-extrabold leading-none tabular-nums text-brand sm:text-[2.25rem]">
               {value == null ? '--' : String(value).padStart(2, '0')}
             </span>
-            <span className="mt-0.5 text-[10px] uppercase tracking-wide text-white">{label}</span>
+            <span className="mt-1 text-[10px] uppercase tracking-wide text-ink-3">{label}</span>
           </div>
         ))}
       </div>
+      <p className="sr-only">
+        Offre valable jusqu&apos;au{' '}
+        {/* `timeZone` is PINNED, and that is not decoration. Without it the server formats in the
+            container's UTC and the browser formats in the visitor's local zone, so any promo
+            expiring near midnight renders a different date on each side — a hydration mismatch,
+            and exactly the class of bug the CountdownDisplay comment above already documents for
+            Date.now(). An explicit zone is deterministic everywhere. */}
+        <time dateTime={expirationDate.toISOString()}>
+          {expirationDate.toLocaleDateString('fr-FR', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric',
+            timeZone: 'Africa/Tunis',
+          })}
+        </time>
+      </p>
     </div>
   );
 });
@@ -153,23 +185,29 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     // White surface (not a red tint): the tint pushed the small kicker text below AA contrast, and
     // the section reads as distinctive from the plain rails via its own bold header + the orange
     // top rule + the live countdown — not via a background wash.
-    <section
+    /* THE FLAGSHIP SLAB BAND. `border-t-2 border-red-600` is deleted: the colour change from the
+       white rail above IS the edge (19.26:1), and a red hairline on black says nothing. The white
+       product cards are punched out of it, which is the treatment a discount moment deserves and
+       which no amount of white-on-white typography can buy. */
+    <Section
       id="ventes-flash"
-      className="border-t-2 border-red-600 bg-white py-12 dark:bg-gray-950 sm:py-16 lg:py-20"
+      surface="slab"
+      spacing="feature"
+      width="wide"
+      defer
     >
-      <div className="mx-auto max-w-site px-4 sm:px-6 lg:px-8">
         {/* Distinctive flash header: flame + compressed title on the left, live countdown on the
             right (drops below the title on phones). All copy on white ⇒ clean AA contrast. */}
-        <div className="mb-8 flex flex-col gap-5 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
+        <div className="mb-6 flex flex-col gap-5 sm:mb-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="min-w-0">
-            <span className="pt-kicker mb-3 inline-flex items-center gap-2 text-red-600 dark:text-red-400">
+            <span className="pt-kicker mb-2.5 inline-flex items-center gap-2 text-brand">
               <Flame className="h-4 w-4" aria-hidden="true" />
               Offres limitées
             </span>
-            <h2 className="font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.92] tracking-[-0.015em] text-gray-950 dark:text-white sm:text-[2.75rem] lg:text-[3.25rem]">
+            <h2 className="font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.92] tracking-[-0.015em] text-ink-1 sm:text-[2.75rem] lg:text-[3.5rem]">
               Ventes flash
             </h2>
-            <p className="mt-2 max-w-xl text-sm text-gray-600 dark:text-gray-400 sm:text-base">{subtitle}</p>
+            <p className="mt-2 max-w-xl text-sm text-ink-2 sm:text-base">{subtitle}</p>
           </div>
 
           {earliestExpiration && (
@@ -188,10 +226,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           ))}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-8 flex justify-center">
           <Button
-            variant="outline"
-            className="min-h-[48px] w-full justify-center rounded-full border-2 border-red-600 px-6 font-display font-extended uppercase tracking-wide font-semibold text-red-600 hover:bg-red-600 hover:text-white dark:border-red-400 dark:text-red-400 dark:hover:bg-red-500 sm:w-auto"
+            className="min-h-[52px] w-full justify-center rounded-full bg-brand px-10 font-display font-extended uppercase tracking-wide font-semibold text-on-brand hover:bg-brand-hover sm:w-auto"
             asChild
           >
             <Link href="/offres" aria-label="Voir toutes les offres et promos">
@@ -200,7 +237,6 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             </Link>
           </Button>
         </div>
-      </div>
-    </section>
+    </Section>
   );
 });

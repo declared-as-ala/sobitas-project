@@ -73,11 +73,21 @@
    * canvas — so bands are separated by something that clears the 3:1 UI floor rather than by a
    * 1.39:1 fill difference.
    *
-   * Emitted by the primitive, never by call sites, so a seam can't be forgotten. The adjacent
-   * sibling selector also means the FIRST band on a page correctly has no top rule.
+   * Emitted by the primitive, never by call sites, so a seam can't be forgotten.
+   *
+   * WHY THIS IS NOT `[data-band] + [data-band]`. That was the first version and it silently drew
+   * only 2 of 10 seams: the adjacent-sibling combinator needs the bands to be DOM siblings, and
+   * most of them sit inside `div.pt-reveal` motion wrappers, so they are each an only-child.
+   * Nesting is a layout detail and must not decide whether a structural rule exists. Every band
+   * gets the seam and the FIRST one opts out explicitly with `data-band-first`.
    */
-  [data-band] + [data-band] {
+  [data-band] {
     border-top: 1px solid rgb(var(--c-rule));
+  }
+
+  /* The first band on a page sits against the header, which supplies its own edge. */
+  [data-band][data-band-first] {
+    border-top: 0;
   }
 
   /**

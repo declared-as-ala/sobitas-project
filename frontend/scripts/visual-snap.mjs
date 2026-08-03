@@ -106,6 +106,24 @@ for (const theme of THEMES) {
       }
       document.addEventListener('DOMContentLoaded', () => {
         document.documentElement.classList.toggle('dark', t === 'dark');
+
+        /**
+         * DISABLE `content-visibility` FOR THE CAPTURE.
+         *
+         * `.pt-defer` sets `content-visibility: auto`, which tells the browser not to paint
+         * off-screen subtrees. In a `fullPage: true` screenshot that is exactly the wrong
+         * behaviour: the capture stitches the whole document, but every band that is not near the
+         * viewport comes out BLANK. The first dark-mobile shot taken with this script was ~60%
+         * empty grey and looked like a catastrophic layout bug; the page was fine.
+         *
+         * Real users never see this — a deferred band paints as soon as it approaches the
+         * viewport. But a review screenshot that cannot be trusted is worse than no screenshot,
+         * so the capture opts out and measures the page as it actually renders when read.
+         */
+        const s = document.createElement('style');
+        s.textContent =
+          '*{content-visibility:visible !important;contain-intrinsic-size:auto !important}';
+        document.head.appendChild(s);
       });
     }, theme);
 
