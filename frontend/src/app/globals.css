@@ -564,6 +564,22 @@ html[dir="rtl"] [data-i18n-ltr] {
   18%, 100% { opacity: 1; }
 }
 
+/* --------------------------------------------------------------------------
+   STICKY PACK BAR (pack builder, below lg)
+   --------------------------------------------------------------------------
+   Sits directly ON TOP of the mobile tab bar rather than under it. Both are fixed, so without
+   this the pack total and its CTA are covered by Accueil/Favoris/Boutique — on exactly the screen
+   where the summary matters most.
+
+   Uses the same `--tabbar-h` knob every other bottom-anchored element reads (tokens.css: 56px
+   below 768px, 0 above), plus the safe-area inset so it clears the iPhone home indicator instead
+   of sitting on it. Reading the shared variable rather than hardcoding 56px is what keeps this
+   correct the day the tab bar's height changes.
+   -------------------------------------------------------------------------- */
+.pt-packbar {
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+}
+
 .pt-hero {
   /* THE FLOOR IS THE NUMBER THAT MATTERS — it is what actually binds on a phone.
      Owner, iPhone 13: "the slider image is cropped from the top." Measured with
