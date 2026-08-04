@@ -68,12 +68,12 @@
     "DS008": 1
   },
   "src/app/(shop)/blog/BlogPageClient.tsx": {
-    "DS001": 8,
-    "DS002": 18,
-    "DS003": 13,
+    "DS001": 2,
+    "DS002": 10,
+    "DS003": 8,
     "DS004": 10,
     "DS007": 1,
-    "DS011": 26
+    "DS011": 22
   },
   "src/app/(shop)/blog/BlogPager.tsx": {
     "DS002": 3,
@@ -101,11 +101,11 @@
     "DS008": 1
   },
   "src/app/(shop)/blog/[slug]/ArticleDetailClient.tsx": {
-    "DS001": 18,
-    "DS002": 41,
-    "DS003": 34,
-    "DS004": 20,
-    "DS011": 44
+    "DS001": 10,
+    "DS002": 18,
+    "DS003": 24,
+    "DS004": 10,
+    "DS011": 30
   },
   "src/app/(shop)/blog/[slug]/loading.tsx": {
     "DS001": 4,
@@ -190,12 +190,10 @@
     "DS011": 90
   },
   "src/app/(shop)/contact/ContactPageClient.tsx": {
-    "DS001": 8,
-    "DS002": 28,
-    "DS003": 19,
-    "DS004": 6,
+    "DS002": 7,
+    "DS003": 6,
     "DS007": 1,
-    "DS011": 32
+    "DS011": 20
   },
   "src/app/(shop)/contact/loading.tsx": {
     "DS001": 6,
@@ -244,11 +242,7 @@
     "DS011": 28
   },
   "src/app/(shop)/pack-builder/PackBuilderClient.tsx": {
-    "DS001": 12,
-    "DS002": 44,
-    "DS003": 32,
-    "DS004": 14,
-    "DS011": 30
+    "DS002": 2
   },
   "src/app/(shop)/packs/PacksPageClient.tsx": {
     "DS001": 2,
@@ -261,12 +255,12 @@
     "DS007": 1
   },
   "src/app/(shop)/page/[slug]/PageContentClient.tsx": {
-    "DS001": 13,
-    "DS002": 23,
-    "DS003": 37,
-    "DS004": 20,
+    "DS001": 3,
+    "DS002": 5,
+    "DS003": 25,
+    "DS004": 16,
     "DS008": 2,
-    "DS011": 27
+    "DS011": 19
   },
   "src/app/(shop)/page/[slug]/loading.tsx": {
     "DS001": 6,
@@ -298,12 +292,12 @@
     "DS011": 15
   },
   "src/app/(shop)/qui-sommes-nous/AboutPageClient.tsx": {
-    "DS001": 34,
-    "DS002": 60,
-    "DS003": 44,
-    "DS004": 30,
+    "DS001": 4,
+    "DS002": 14,
+    "DS003": 24,
+    "DS004": 6,
     "DS008": 1,
-    "DS011": 40
+    "DS011": 26
   },
   "src/app/(shop)/qui-sommes-nous/loading.tsx": {
     "DS001": 12,
@@ -464,11 +458,6 @@
     "DS002": 3,
     "DS003": 2,
     "DS006": 2
-  },
-  "src/app/components/PageHeader.tsx": {
-    "DS002": 4,
-    "DS003": 3,
-    "DS011": 4
   },
   "src/app/components/ProductCard.tsx": {
     "DS006": 4

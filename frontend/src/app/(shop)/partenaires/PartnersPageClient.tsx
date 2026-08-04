@@ -316,7 +316,9 @@ export function PartnersPageClient() {
           <form
             onSubmit={handleSubmit}
             noValidate
-            className="pt-plate font-poppins mt-6 rounded-2xl border border-hairline p-5 sm:p-7"
+            /* `sm:p-6`, not `sm:p-7`. 28px is off the 8px lattice the whole spacing scale is built
+               on (§3), and card padding is specified as 20/24. Caught by DS008. */
+            className="pt-plate font-poppins mt-6 rounded-2xl border border-hairline p-5 sm:p-6"
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <Field
