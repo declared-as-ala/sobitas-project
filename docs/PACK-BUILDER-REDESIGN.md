@@ -1,5 +1,12 @@
 # /pack-builder — the study, the decisions, and what shipped
 
+> **2026-08-04, second pass.** The shelf layout below was superseded before it reached production by
+> a **guided wizard** — welcome → goal → one step per category → recap. Owner: *"there is a lot of
+> text and a lot of numbers and a lot of icons, and that's bad for the user. I want the whole
+> experience to be steps."* §1–§2 (the measurements and the research) still stand and still explain
+> why the page needed changing at all; §3.2's shelf is replaced by §7. Read §7 for what actually
+> shipped.
+
 *Written 2026-08-04. Owner brief: "the design looks so bad… the user experience itself and the flow
 of making the pack is so bad… why should I see all those intros from the up, I want to directly
 start making my pack… I keep scrolling, scrolling, scrolling to see just créatine… the screen on
@@ -211,3 +218,126 @@ had been hiding (`sm:p-7`, off the 8 px lattice) is fixed rather than baselined.
 into a Windows path, so `audit-contrast.mjs` received `C:/Program Files/Git/pack-builder` and died
 with "Cannot navigate to invalid URL". Prefix the command with `MSYS_NO_PATHCONV=1`. This affects
 every documented invocation of that script on this machine, including the one in DESIGN_SYSTEM §0.6.
+
+---
+
+# 7. The wizard (what shipped)
+
+## 7.1 Why steps replaced a page
+
+The shelf layout fixed the scroll problem and left the real one untouched. A single screen was
+showing, at once: a heading block, a goal question, a discount ladder with three thresholds, a
+running total, a saving, a next-tier nudge, a selection tray, a completion prompt, and five
+categories of twelve products. Every one of those earns its place individually. Together they
+compete, and the visitor's first job becomes *deciding what to look at* rather than *choosing a
+whey*.
+
+```
+welcome    what this is and what it earns you — three numbers, one button
+goal       one question, four answers, no typing
+category   one category per step, ordered by the goal
+recap      what you built, whether it holds together, an optional needs check
+```
+
+Categories are steps rather than a scroll because it makes the ordering *experienced* rather than
+read: the goal decides which category you are asked about **first**. Answering advances immediately —
+the choice only reorders (never filters, never hides), so it is fully reversible, and a confirm
+button on a reversible action is a step the visitor pays for and gets nothing back from.
+
+Steps are **derived, never stored** (`wizard/steps.ts`). Storing a list would let the index and the
+content drift apart the moment the goal reorders things — you would be on "step 4 of 7" showing a
+category that had moved to position 2.
+
+## 7.2 Framer Motion, and its real cost
+
+The owner asked for it twice. It is now installed and used, and a wizard is the case that justifies
+it: **a CSS transition cannot animate an element React has already removed from the DOM**, and the
+thing that makes stepping feel like stepping is the outgoing step *leaving*. `AnimatePresence` exists
+for exactly that.
+
+It is loaded through `LazyMotion` + the `m` component with `strict`. One measured correction worth
+recording: **`features={domAnimation}` is not lazy.** Passing the value is a static import; only the
+FUNCTION form defers. That mistake cost **42 kB of route JS while the file still said "lazy"** —
+14.8 kB → 56.6 kB. `wizard/motionFeatures.ts` exists solely to be the deferred chunk.
+
+`layout` props were removed rather than fixed: layout projection is a `domMax` feature, so under
+`domAnimation` they were silent no-ops — dead code that looks alive.
+
+Reduced motion is read once in the shell and threaded down as `calm`. Under it every variant
+collapses to a plain opacity crossfade — not "faster", because a fast slide is still a slide, and
+translation is the specific thing that triggers vestibular symptoms.
+
+## 7.3 The verdict, and the line it will not cross
+
+`wizard/assessPack.ts` judges the pack **as a purchase**: does it contain the categories the stated
+goal is usually built from, does it contain more than one kind of thing, where does it sit on the
+discount ladder, is delivery free. Every rule could be recomputed by hand from the cart and the
+category list — if one cannot be, it does not belong there.
+
+It does not judge the pack as a nutrition plan. "This covers your protein needs" would require
+protein-per-serving, servings per tub and intake from food, none of which this project holds. The
+needs check states a daily range from published equations (Mifflin-St Jeor 1990, ISSN 2017, both
+cited on screen) and stops. Joining the two is the visitor's judgement, with both halves visible.
+
+The coach is an **inline SVG, not the requested PNG**. A photorealistic person beside a calorie
+figure implies a real practitioner standing behind it; a drawn figure says "a guide" without saying
+"a clinician". `wizard/CoachFigure.tsx` is the single place to swap if the owner would rather use a
+photograph of an actual coach from the shop.
+
+## 7.4 What a 25-agent adversarial review found
+
+Five reviewers, one per dimension; every candidate finding then attacked by a separate skeptic
+instructed to refute it. **32 candidates → 20 verified → 16 confirmed, 4 refuted.** Fixed:
+
+| Severity | Defect |
+|---|---|
+| high | **Emptying the pack displayed a price.** The `items.length === 0` branch returned *before* the token bump, so that one transition left an in-flight quote unguarded and its response overwrote `setQuote(null)`. The recap read "Aucun produit sélectionné" and "Total 179.55 DT" at the same time. |
+| high | **A product in two categories counted as two.** `gainers-proteines` and `prise-de-masse` are not disjoint — the latter resolves to the *parent* category. Verified against the live API: five shared product ids. One tub reported "2 catégories différentes", and the same tub appeared on two different steps. Deduped at the source in `page.tsx`. |
+| high | **"Votre pack est complet" for an unpriced pack.** `nextTier === null` means either "top tier reached" *or* "no quote yet / request failed". It was read only as the first. Now gated on an explicit `hasQuote`. |
+| high | **"Calculer mes besoins" did nothing on a blank field.** `validateProfile` only reports out-of-range values, and was only called once every field was filled. No result, no message, no focus move — the only available conclusion was that the feature is broken. |
+| high | **The forward button was unreachable at 640–767px.** The reserve dropped to 64px at `sm`, but `MobileTabBar` is `md:hidden` and the pack bar stacks on it — ~151px of obstruction. Now steps at `md`, not `sm`. |
+| high | **Focus was dumped on `<body>` at every step change**, and nothing was announced. `AnimatePresence` unmounts the control just activated. Focus now moves to a `role="status"` element that reads "Étape 2 sur 8 : Objectif". |
+| medium | **No `<h1>` from step 1 onward** — it lived inside `StepWelcome`, which unmounts. Moved to the shell: full size on welcome, `sr-only` after. |
+| medium | **Twelve buttons all called "Ajouter"** in the screen-reader element list. Each now carries the product name as its accessible name. |
+| medium | **Progress-rail segments were 30px-wide tap targets**, eight of them, between identical neighbours. Made decorative — back, Continuer, Terminer and the recap chips already cover every navigation. |
+| medium | **Calculated targets rendered silently.** Now `role="status"`. |
+
+Refuted and deliberately unchanged: a claimed z-index conflict between the pack bar and the tab bar
+(paint order is unambiguous); a claimed memo failure (the boundary demonstrably skips); a claimed
+unreachable "Continuer" caused by the site footer (the footer sits below and supplies the scroll);
+and a claim that the hardcoded tier mirror is unfalsifiable (it is not — a server quote contradicts
+it visibly).
+
+**Known and accepted:** `PACK_TIERS` and the 300 DT free-delivery threshold are hardcoded mirrors of
+backend values. If the backend changes them, the welcome step advertises the old offer until this
+file is updated. Fixing it properly needs an endpoint that publishes the ladder; recorded here
+rather than silently carried.
+
+## 7.5 Verification
+
+`node scripts/check-packbuilder.mjs --base <url>` — **54 assertions, all passing.** It walks the
+flow the way a customer does, and three of its sections exist because the claim behind them was
+wrong at least once:
+
+- **SEO with JavaScript disabled** — a client wizard can silently move the `<h1>` and every internal
+  link behind a click, and nothing visible breaks when it does. Asserted: one `<h1>`, visible, naming
+  the page; 1,881 characters of prose; all five category links crawlable.
+- **The calculator's arithmetic, by hand** — a 30y / 178cm / 80kg male must produce **1,770 kcal**
+  BMR and **128–176 g** protein. A calculator that renders a plausible *wrong* number is worse than
+  one that renders nothing, because people act on it.
+- **Transferred JavaScript, cache disabled** — three consecutive runs reported 246.7, 189.4 and
+  362.5 kB for identical code before `setCacheEnabled(false)`, because a cached response carries no
+  body. A gate whose value depends on how recently you last ran it will eventually "prove" that a
+  regression is fine. Stable now: **1,176 kB uncompressed**, identical across runs.
+
+Plus: `audit-contrast` 0 failures in both themes at 1440 and 390 · `lint:design` clean · `tsc` clean ·
+build clean · route still statically prerendered · **56.9 kB / 212 kB**, against `/shop` at 216 kB
+and `/checkout` at 208 kB.
+
+## 7.6 Accès Pro left this page
+
+Owner: *"the Accès Pro button should be beside the composez votre pack in the header… the page of
+generating a pack is only for generating a pack."* It is now in the desktop nav (16px from the pack
+CTA, outlined so the row still has exactly one button that sells) and has a row in the mobile
+sidebar. A B2B signup link is navigation — it belongs wherever you are on the site, not stapled to
+one page's heading where it competed with that page's own first action.
