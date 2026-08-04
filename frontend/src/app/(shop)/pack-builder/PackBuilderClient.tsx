@@ -14,8 +14,9 @@ import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp, BadgeCheck, ChevronUp, Sparkles } from 'lucide-react';
+import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp, BadgeCheck, ChevronUp, Sparkles, Target } from 'lucide-react';
 import { PackAdvisor, type AdvisorResult } from './PackAdvisor';
+import { GOAL_LABELS, type Goal } from '@/util/nutritionTargets';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -141,14 +142,34 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     return [...groups].sort((a, b) => (rank.get(a.slug) ?? 99) - (rank.get(b.slug) ?? 99));
   }, [groups, categoryOrder]);
 
+  /**
+   * The chosen goal, kept after the advisor collapses.
+   *
+   * Once a goal is applied the advisor has done its job, and leaving the full four-card block
+   * open pushes the products it just recommended a whole screen further down — the questionnaire
+   * would be occupying the space its own answer needs. It collapses to one line that states the
+   * goal and offers to change it, so the personalisation stays visible (otherwise the reordering
+   * looks arbitrary) without costing the scroll.
+   */
+  const [appliedGoal, setAppliedGoal] = useState<Goal | null>(null);
+
   const handleAdvisorApply = useCallback((result: AdvisorResult) => {
     setCategoryOrder(result.categoryOrder);
-    // Let the reorder commit before scrolling, or we scroll to where the group used to be.
+    setAppliedGoal(result.goal);
+    // Let the reorder AND the collapse commit before scrolling, or we scroll to where the group
+    // used to be — two layout changes land in this same frame.
     requestAnimationFrame(() => {
-      const first = result.categoryOrder[0];
-      if (!first) return;
-      document.getElementById(`group-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      requestAnimationFrame(() => {
+        const first = result.categoryOrder[0];
+        if (!first) return;
+        document.getElementById(`group-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
     });
+  }, []);
+
+  const handleAdvisorReset = useCallback(() => {
+    setAppliedGoal(null);
+    setCategoryOrder(null);
   }, []);
 
   const handleAddPackToCart = useCallback(() => {
@@ -204,7 +225,28 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
             <TierProgress subtotal={subtotal} percent={discountPercent} nextTier={nextTier} />
 
             <div className="mt-5">
-              <PackAdvisor onApply={handleAdvisorApply} availableSlugs={availableSlugs} />
+              {appliedGoal ? (
+                <div className="pt-plate font-poppins flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hairline p-4">
+                  <p className="flex min-w-0 items-center gap-2.5 text-sm">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                      <Target className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0">
+                      <span className="block text-xs text-ink-3">Votre objectif</span>
+                      <span className="block font-semibold text-ink-1">{GOAL_LABELS[appliedGoal].label}</span>
+                    </span>
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleAdvisorReset}
+                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+                  >
+                    Changer
+                  </button>
+                </div>
+              ) : (
+                <PackAdvisor onApply={handleAdvisorApply} availableSlugs={availableSlugs} />
+              )}
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
@@ -413,12 +455,22 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                 <span className="min-w-0">
                   <span className="block text-xs text-ink-3">
                     {itemCount} article{itemCount !== 1 ? 's' : ''}
-                    {discountPercent > 0 && (
-                      <span className="ml-1.5 font-semibold text-brand">−{discountPercent}%</span>
-                    )}
                   </span>
-                  <span className="block font-display text-lg font-bold tabular-nums leading-tight text-ink-1">
-                    {total.toFixed(2)} DT
+                  {/* The saving sits BESIDE the total, not above it. Measured at 390px: with the
+                      CTA and the chevron taking their share, the label row has ~184px, and
+                      "2 articles vous économisez 120.96 DT" wrapped to two lines and shoved the
+                      total down. Inline it is one glance — what you pay, and what you saved.
+                      Green rather than brand orange because orange on this site means "action",
+                      and a saving coloured like a button stops registering as money back. */}
+                  <span className="flex items-baseline gap-2">
+                    <span className="font-display text-lg font-bold tabular-nums leading-tight text-ink-1">
+                      {total.toFixed(2)} DT
+                    </span>
+                    {discountAmount > 0 && (
+                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                        −{discountAmount.toFixed(2)} DT
+                      </span>
+                    )}
                   </span>
                 </span>
               </button>
