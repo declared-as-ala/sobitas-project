@@ -253,8 +253,19 @@ if (improvements.length) {
   const fixed = improvements.reduce((s, i) => s + (i.was - i.now), 0);
   console.log(`lint:design — ${fixed} violation(s) fixed since the baseline. Lowering it.`);
   const next = { ...baseline };
-  for (const [file, counts] of Object.entries(current)) next[file] = counts;
-  for (const file of Object.keys(next)) if (!current[file]) delete next[file];
+  /**
+   * ONLY files already in the baseline are rewritten. The previous version copied EVERY file's
+   * current counts in, which quietly defeated the rule directly below it: a brand-new file with
+   * violations was reported as a failure and, in the same run, written into the baseline — so the
+   * next run passed. A ratchet that unlatches when you pull it twice is not a ratchet.
+   *
+   * Caught in the wild: PartnersPageClient.tsx was flagged "NEW FILES MUST BE CLEAN", then silently
+   * accepted on the re-run.
+   */
+  for (const file of Object.keys(next)) {
+    if (!current[file]) delete next[file];
+    else next[file] = current[file];
+  }
   fs.writeFileSync(BASELINE, JSON.stringify(next, null, 2) + '\n');
 }
 

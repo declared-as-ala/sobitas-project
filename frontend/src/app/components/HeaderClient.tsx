@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
 import { usePathname, useRouter } from 'next/navigation';
-import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
+import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import {
   ShoppingCart,
   User,
@@ -1175,6 +1175,44 @@ export function HeaderClient() {
 
               {/* 8 — UTILITY ITEMS */}
               <div className="px-4 py-3 space-y-1">
+                {/*
+                  WhatsApp had no entry here at all, and on a phone the ONLY way to reach it was the
+                  floating bubble. That made the bubble undeletable on any route, however crowded —
+                  and `/pack-builder` measured 30.2% of an iPhone screen under fixed chrome.
+                  Giving the channel a home in the menu (owner: "put it maybe in the header or in
+                  the sidebar") is what makes suppressing the bubble on a route a layout decision
+                  rather than a loss of the dominant ordering channel for Tunisian COD shoppers.
+
+                  The green comes from `WHATSAPP_GREEN` as an inline style, not from an arbitrary
+                  Tailwind class. It is a third-party brand mark, so it must not flip with the theme
+                  and has no business being a token; and at 3.06:1 on the light sheet it is legal as
+                  an ICON beside ink-coloured label text, never as the text colour itself.
+
+                  Written in tokens (`text-ink-1`, `hover:bg-sunken`) rather than copying the
+                  `dark:text-gray-100 dark:hover:bg-gray-800` pairs off the rows around it. Those
+                  are legacy and predate the theme-aware tokens; propagating them into a new row is
+                  how a 2,000-instance migration never finishes.
+                */}
+                <a
+                  href={buildWhatsAppHref()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={closeMobileMenu}
+                  aria-label={WHATSAPP_ARIA_LABEL}
+                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken"
+                >
+                  <svg
+                    viewBox="0 0 24 24"
+                    className="h-5 w-5 shrink-0"
+                    style={{ color: WHATSAPP_GREEN }}
+                    fill="currentColor"
+                    aria-hidden="true"
+                  >
+                    <path d={WHATSAPP_ICON_PATH} />
+                  </svg>
+                  <span className="flex-1 text-left">Commander sur WhatsApp</span>
+                </a>
+
                 <button
                   type="button"
                   onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}

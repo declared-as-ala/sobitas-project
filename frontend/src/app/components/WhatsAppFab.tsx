@@ -24,7 +24,21 @@ import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/ut
  * footer already own the bottom of the screen (avoids the CTA-overlap problem).
  */
 
-const HIDDEN_ON = ['/checkout', '/cart', '/order-confirmation'];
+/**
+ * Routes where a sticky purchase CTA already owns the bottom of the screen.
+ *
+ * `/pack-builder` joined this list on 2026-08-04 for exactly the same reason as checkout, and with
+ * a measurement behind it: `scripts/measure-packbuilder.mjs` found **30.2% of an iPhone 13 screen —
+ * 39.9% of a 360x566 Android — covered by fixed chrome**, five layers of it, with this bubble and
+ * the back-to-top button sitting directly ON TOP of the product grid rather than beside it. Owner:
+ * "the screen on the mobile looks so filled… take it off."
+ *
+ * The channel is MOVED, not removed. WhatsApp now has a row in the mobile menu (HeaderClient), which
+ * it never had before — so every page still offers it, from the place people look for a way to
+ * contact a shop. Deleting the only mobile affordance for the dominant ordering channel in Tunisia
+ * would have been a conversion bug dressed up as a layout fix.
+ */
+const HIDDEN_ON = ['/checkout', '/cart', '/order-confirmation', '/pack-builder'];
 
 export function WhatsAppFab() {
   const pathname = usePathname() || '/';

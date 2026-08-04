@@ -55,6 +55,16 @@ interface PackAdvisorProps {
   onApply: (result: AdvisorResult) => void;
   /** Slugs the builder actually has products for, so we never point at an empty group. */
   availableSlugs: string[];
+  /**
+   * The goal already chosen in `PackGoalBar`, if any.
+   *
+   * When it is set, step 1 is not rendered: the four chips are sitting directly above this panel,
+   * so drawing the same question again inside it would make the visitor answer twice and leave two
+   * controls able to disagree about the same value. When it is null — someone who opened the
+   * calculator before answering anything — step 1 appears as before, because a goal is required to
+   * compute an energy target at all.
+   */
+  initialGoal?: Goal | null;
 }
 
 /** A labelled numeric field. `inputMode="numeric"` gets the phone keypad without a spinner. */
@@ -108,9 +118,12 @@ function NumberField({
   );
 }
 
-export function PackAdvisor({ onApply, availableSlugs }: PackAdvisorProps) {
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [showProfile, setShowProfile] = useState(false);
+export function PackAdvisor({ onApply, availableSlugs, initialGoal = null }: PackAdvisorProps) {
+  const [goal, setGoal] = useState<Goal | null>(initialGoal);
+  // Opened deliberately from a control labelled "Calculer mes besoins", so the form is already the
+  // thing that was asked for. Making the visitor click a second "Calculer mes besoins" inside it
+  // would be a door behind a door.
+  const [showProfile, setShowProfile] = useState(initialGoal !== null);
   const [sex, setSex] = useState<Sex>('homme');
   const [activity, setActivity] = useState<ActivityLevel>('modere');
   const [age, setAge] = useState('');
@@ -151,6 +164,7 @@ export function PackAdvisor({ onApply, availableSlugs }: PackAdvisorProps) {
   return (
     <div className="pt-plate font-poppins overflow-hidden rounded-2xl border border-hairline">
       {/* ── Step 1 · goal ─────────────────────────────────────────────────────────────── */}
+      {initialGoal === null && (
       <div className="border-b border-hairline p-5 sm:p-6">
         <div className="mb-4 flex items-center gap-2.5">
           <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
@@ -191,6 +205,7 @@ export function PackAdvisor({ onApply, availableSlugs }: PackAdvisorProps) {
           })}
         </div>
       </div>
+      )}
 
       {/* ── Step 2 · optional profile ─────────────────────────────────────────────────── */}
       {goal && (

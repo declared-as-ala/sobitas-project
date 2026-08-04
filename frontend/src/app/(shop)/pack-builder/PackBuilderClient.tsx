@@ -1,22 +1,56 @@
 'use client';
 
+/**
+ * "Composez votre pack" — the builder.
+ *
+ * ── WHAT THIS LAYOUT IS ANSWERING ─────────────────────────────────────────────────────────
+ * Measured on the live page before this rewrite (`scripts/measure-packbuilder.mjs`, iPhone 13 at
+ * the real 390x746 small viewport):
+ *
+ *     document                        13,035 px   17.5 screens
+ *     scroll before the first Ajouter  1,117 px    1.5 screens
+ *     whey -> pre-workout              8,104 px   10.9 screens
+ *     screen under fixed chrome           30.2%   (39.9% on a 360x566 Android)
+ *
+ * Three structural changes, each aimed at one of those numbers:
+ *
+ *   1. CATEGORIES ARE SHELVES, NOT GRIDS. Twelve products in two columns is six rows and ~2,026 px
+ *      per category; a horizontal shelf is ~330 px whatever the count. See PackRail for the
+ *      discoverability requirements that make a shelf safe (peek, stated size, escape hatch).
+ *   2. THE PREAMBLE IS ONE SCREEN, NOT ONE AND A HALF. The advisor's four hint-carrying cards
+ *      became four chips (PackGoalBar); the tier card became one row; the jump nav is gone,
+ *      because with shelves the whole page is under four screens and a map of four screens is
+ *      furniture.
+ *   3. ONE PIECE OF BOTTOM CHROME. The WhatsApp bubble and the back-to-top button are suppressed on
+ *      this route and the tier progress moved INTO the pack bar as a 3px fill along its top edge,
+ *      so the persistent UI is the pack bar and the tab bar rather than five overlapping layers.
+ *
+ * ── WHAT DID NOT CHANGE, DELIBERATELY ─────────────────────────────────────────────────────
+ * The authoritative discount still comes from `/pack/quote` on the server, debounced. `PACK_TIERS`
+ * below is a DISPLAY MIRROR of PackDiscountService and is used only to draw the bar — never to
+ * compute a price the customer is shown as final. If the two ever disagree the server wins, which
+ * is why `total` reads `quote.total` and falls back to the raw subtotal rather than to a
+ * locally-computed discount.
+ */
+
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { PageHeader } from '@/app/components/PageHeader';
 import { Button } from '@/app/components/ui/button';
 import { EmptyState } from '@/app/components/EmptyState';
 import { useCart } from '@/app/contexts/CartContext';
-import { packQuote, getStorageUrl, isStorageImageUrl } from '@/services/api';
+import { packQuote } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { toast } from 'sonner';
-import { Plus, Minus, Trash2, ShoppingCart, Percent, Loader2, Package, TrendingUp, BadgeCheck, ChevronUp, Sparkles, Target } from 'lucide-react';
-import { PackAdvisor, type AdvisorResult } from './PackAdvisor';
-import { GOAL_LABELS, type Goal } from '@/util/nutritionTargets';
+import { ShoppingCart, Percent, Loader2, TrendingUp, BadgeCheck, ChevronUp, Sparkles } from 'lucide-react';
+import { PackRail } from './PackRail';
+import { PackTray } from './PackTray';
+import { PackGoalBar } from './PackGoalBar';
+import type { AdvisorResult } from './PackAdvisor';
+import { GOAL_CATEGORY_EMPHASIS, type Goal } from '@/util/nutritionTargets';
+import { flyToPack, pulseTierUnlocked } from './packMotion';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -28,7 +62,7 @@ interface PackBuilderClientProps {
   groups: PackBuilderGroup[];
 }
 
-/** Display-only mirror of the backend PackDiscountService tiers (authoritative amount comes from /pack/quote). */
+/** Display-only mirror of the backend PackDiscountService tiers. See the header note. */
 const PACK_TIERS: { min: number; percent: number }[] = [
   { min: 200, percent: 5 },
   { min: 350, percent: 8 },
@@ -39,15 +73,32 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const router = useRouter();
   const { addToCart, setPackDiscount } = useCart();
 
-  // Selected quantities keyed by product id.
   const [pack, setPack] = useState<Record<number, number>>({});
   const [quote, setQuote] = useState<PackQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
 
-  // Flat product lookup so we can resolve ids → product without re-scanning groups each time.
+  /* Where a flying product thumbnail lands. Two targets because two summaries exist and only one is
+     ever on screen: the sticky bar below `lg`, the rail above it. `offsetParent` is null for a
+     `display: none` element, which is the cheapest reliable visibility test that does not force a
+     layout of both. */
+  const mobileTargetRef = useRef<HTMLDivElement>(null);
+  const desktopTargetRef = useRef<HTMLDivElement>(null);
+  const flyTarget = useCallback(() => {
+    const mobile = mobileTargetRef.current;
+    if (mobile && mobile.offsetParent !== null) return mobile;
+    return desktopTargetRef.current;
+  }, []);
+
   const productById = useMemo(() => {
     const map = new Map<number, Product>();
     groups.forEach((g) => g.products.forEach((p) => map.set(p.id, p)));
+    return map;
+  }, [groups]);
+
+  /** Which category each product came from — needed by the tray to say what the pack is missing. */
+  const slugByProductId = useMemo(() => {
+    const map = new Map<number, string>();
+    groups.forEach((g) => g.products.forEach((p) => map.set(p.id, g.slug)));
     return map;
   }, [groups]);
 
@@ -66,6 +117,11 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
 
   const itemCount = useMemo(() => entries.reduce((n, e) => n + e.qty, 0), [entries]);
 
+  const coveredSlugs = useMemo(
+    () => [...new Set(entries.map(({ product }) => slugByProductId.get(product.id)).filter(Boolean))] as string[],
+    [entries, slugByProductId]
+  );
+
   const setQty = useCallback((product: Product, qty: number) => {
     setPack((prev) => {
       const next = { ...prev };
@@ -79,17 +135,30 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     });
   }, []);
 
+  /**
+   * Add one, and throw the thumbnail into the pack.
+   *
+   * The animation is the point of this handler existing separately from `setQty`. On a phone the
+   * summary sits under the thumb, so adding an item changes two numbers the hand is covering — the
+   * tap reads as "nothing happened", and people tap again. The flight says *it worked* and *that is
+   * where it went*, which is the whole reason a second tap stops happening.
+   */
   const addOne = useCallback(
-    (product: Product) => {
+    (product: Product, img: HTMLElement | null) => {
       const stock = getStockDisponible(product as never);
       if (stock <= 0) {
         toast.error('Rupture de stock');
         return;
       }
-      setQty(product, (pack[product.id] ?? 0) + 1);
+      const current = pack[product.id] ?? 0;
+      if (current >= stock) return;
+      setQty(product, current + 1);
+      flyToPack(img, flyTarget());
     },
-    [pack, setQty]
+    [pack, setQty, flyTarget]
   );
+
+  const removeProduct = useCallback((product: Product) => setQty(product, 0), [setQty]);
 
   // Debounced authoritative quote: the server recomputes the subtotal + tier from real prices.
   const quoteTokenRef = useRef(0);
@@ -122,16 +191,24 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const total = quote ? quote.total : subtotal;
   const nextTier = quote?.next_tier ?? null;
 
+  /* Celebrate crossing a tier, once, on the way up only. Tracking the previous percent in a ref
+     rather than in state keeps this out of the render path — a tier change already re-renders the
+     whole builder, and adding a second render to play an animation is how a page gets janky at
+     exactly the moment it is meant to feel rewarding. */
+  const tierBarRef = useRef<HTMLDivElement>(null);
+  const prevPercentRef = useRef(0);
+  useEffect(() => {
+    if (discountPercent > prevPercentRef.current) pulseTierUnlocked(tierBarRef.current);
+    prevPercentRef.current = discountPercent;
+  }, [discountPercent]);
+
   /**
-   * The advisor's answer, applied to the picker below: the recommended categories are reordered
-   * to the top and the first one is scrolled to.
-   *
-   * REORDERING, NOT FILTERING. Hiding the other categories would make the advisor a gate rather
-   * than a suggestion — a visitor whose goal is "perte de poids" can still want a pre-workout,
-   * and a recommendation that removes options is a recommendation people learn to distrust.
+   * The advisor REORDERS, it never filters. Hiding the other categories would make a suggestion
+   * into a gate — someone losing weight can still want a pre-workout — and a recommendation that
+   * removes options is one people learn to distrust.
    */
   const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
-  /** Mobile summary panel. Closed by default — the bar already shows count, total, discount. */
+  const [appliedGoal, setAppliedGoal] = useState<Goal | null>(null);
   const [summaryOpen, setSummaryOpen] = useState(false);
 
   const availableSlugs = useMemo(() => groups.map((g) => g.slug), [groups]);
@@ -142,32 +219,37 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     return [...groups].sort((a, b) => (rank.get(a.slug) ?? 99) - (rank.get(b.slug) ?? 99));
   }, [groups, categoryOrder]);
 
-  /**
-   * The chosen goal, kept after the advisor collapses.
-   *
-   * Once a goal is applied the advisor has done its job, and leaving the full four-card block
-   * open pushes the products it just recommended a whole screen further down — the questionnaire
-   * would be occupying the space its own answer needs. It collapses to one line that states the
-   * goal and offers to change it, so the personalisation stays visible (otherwise the reordering
-   * looks arbitrary) without costing the scroll.
-   */
-  const [appliedGoal, setAppliedGoal] = useState<Goal | null>(null);
-
-  const handleAdvisorApply = useCallback((result: AdvisorResult) => {
-    setCategoryOrder(result.categoryOrder);
-    setAppliedGoal(result.goal);
-    // Let the reorder AND the collapse commit before scrolling, or we scroll to where the group
-    // used to be — two layout changes land in this same frame.
+  const scrollToGroup = useCallback((slug: string) => {
+    // Two frames, not one: the reorder and any collapse commit in the same frame as the state
+    // change, so a single rAF scrolls to where the section used to be.
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        const first = result.categoryOrder[0];
-        if (!first) return;
-        document.getElementById(`group-${first}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        document.getElementById(`group-${slug}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       });
     });
   }, []);
 
-  const handleAdvisorReset = useCallback(() => {
+  const applyGoal = useCallback(
+    (goal: Goal) => {
+      const emphasis = GOAL_CATEGORY_EMPHASIS[goal].filter((s) => availableSlugs.includes(s));
+      const order = [...emphasis, ...availableSlugs.filter((s) => !emphasis.includes(s))];
+      setCategoryOrder(order);
+      setAppliedGoal(goal);
+      if (order[0]) scrollToGroup(order[0]);
+    },
+    [availableSlugs, scrollToGroup]
+  );
+
+  const handleAdvisorApply = useCallback(
+    (result: AdvisorResult) => {
+      setCategoryOrder(result.categoryOrder);
+      setAppliedGoal(result.goal);
+      if (result.categoryOrder[0]) scrollToGroup(result.categoryOrder[0]);
+    },
+    [scrollToGroup]
+  );
+
+  const clearGoal = useCallback(() => {
     setAppliedGoal(null);
     setCategoryOrder(null);
   }, []);
@@ -183,23 +265,37 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     router.push('/cart');
   }, [entries, addToCart, setPackDiscount, router]);
 
+  const maxTier = PACK_TIERS[PACK_TIERS.length - 1].min;
+  const tierPct = Math.min(100, (subtotal / maxTier) * 100);
+
+  /** Categories with nothing in them yet — the "complete your pack" nudge, in both summaries. */
+  const missingGroups = useMemo(
+    () => orderedGroups.filter((g) => !coveredSlugs.includes(g.slug)).slice(0, 3).map(({ slug, label }) => ({ slug, label })),
+    [orderedGroups, coveredSlugs]
+  );
+
   return (
     <div className="min-h-screen bg-canvas">
-      {/* Room for the sticky mobile summary bar, which is fixed and therefore out of flow. Without
-          this the last row of products sits underneath it and cannot be tapped. */}
-      <main className="max-w-site mx-auto px-4 pb-40 pt-6 sm:px-6 sm:pb-16 sm:pt-10 lg:px-8 lg:pb-20">
-        <PageHeader
-          kicker="Pack sur mesure"
-          title="Composez votre pack"
-          subtitle="Choisissez vos produits : la remise groupée s'applique automatiquement, et grandit avec votre pack."
-          action={
-            /* Coaches and gyms buy packs repeatedly and at volume — this page is where they
-               already are. Outlined, not filled: the filled brand button here is the add-to-cart,
-               and two solid orange CTAs competing for the same eye is how the primary one gets
-               ignored. */
+      {/* `pb-36` reserves the sticky bar's height plus the tab bar's. Without it the last shelf sits
+          underneath them and its "Ajouter" buttons cannot be tapped at all. */}
+      <main className="max-w-site mx-auto px-4 pb-36 pt-5 sm:px-6 sm:pb-16 sm:pt-8 lg:px-8 lg:pb-20">
+        {/* The H1 block, tightened. It stays because it is the page's only H1 and the canonical/OG
+            title depend on this reading as a page — but `Accès Pro` is no longer a top-right sibling
+            of the heading on mobile, where it was squeezing the subtitle onto three lines. */}
+        <header>
+          {/* Accès Pro rides the KICKER's row, not the heading block's. As a sibling of the whole
+              block it wrapped onto a line of its own below the subtitle on a phone — 84px of screen
+              for a secondary link, on the page whose measured problem was preamble. Beside a
+              one-line eyebrow it costs nothing and still reads as deliberate. */}
+          <div className="flex items-center justify-between gap-3">
+            <p className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
+              Pack sur mesure
+            </p>
+            {/* Outlined, never filled: the filled brand button on this page is the add-to-cart, and
+                two solid orange CTAs competing for the same eye is how the primary one gets ignored. */}
             <Link
               href="/partenaires"
-              className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-canvas px-4 text-sm font-semibold text-ink-1 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+              className="inline-flex min-h-[40px] shrink-0 items-center gap-2 rounded-xl border border-hairline bg-canvas px-3.5 text-xs font-semibold text-ink-1 transition-colors sm:text-sm [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
             >
               <BadgeCheck className="h-4 w-4 text-brand" aria-hidden="true" />
               <span>
@@ -207,8 +303,17 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                 <span className="hidden text-ink-3 sm:inline"> — coachs &amp; salles</span>
               </span>
             </Link>
-          }
-        />
+          </div>
+
+          <h1 className="mt-1.5 font-display text-2xl font-extrabold uppercase leading-[1.05] tracking-tight text-ink-1 sm:text-3xl lg:text-4xl">
+            Composez votre pack
+          </h1>
+          {/* One line at 390px. The previous copy wrapped to two and the second line said nothing
+              the first had not already implied. */}
+          <p className="mt-1.5 max-w-xl text-sm text-ink-2">
+            Plus vous ajoutez, plus la remise grandit.
+          </p>
+        </header>
 
         {groups.length === 0 ? (
           <div className="mt-10">
@@ -220,174 +325,49 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           </div>
         ) : (
           <>
-            {/* One strip, not three cards. The three cards were static, took a full screen on a
-                phone, and never told you where you actually were. This shows the live position. */}
-            <TierProgress subtotal={subtotal} percent={discountPercent} nextTier={nextTier} />
+            <PackGoalBar
+              goal={appliedGoal}
+              onSelect={applyGoal}
+              onApplyAdvisor={handleAdvisorApply}
+              onClear={clearGoal}
+              availableSlugs={availableSlugs}
+            />
 
-            <div className="mt-5">
-              {appliedGoal ? (
-                <div className="pt-plate font-poppins flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-hairline p-4">
-                  <p className="flex min-w-0 items-center gap-2.5 text-sm">
-                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
-                      <Target className="h-4 w-4" aria-hidden="true" />
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block text-xs text-ink-3">Votre objectif</span>
-                      <span className="block font-semibold text-ink-1">{GOAL_LABELS[appliedGoal].label}</span>
-                    </span>
-                  </p>
-                  <button
-                    type="button"
-                    onClick={handleAdvisorReset}
-                    className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
-                  >
-                    Changer
-                  </button>
-                </div>
-              ) : (
-                <PackAdvisor onApply={handleAdvisorApply} availableSlugs={availableSlugs} />
-              )}
-            </div>
+            <TierStrip barRef={tierBarRef} subtotal={subtotal} percent={discountPercent} nextTier={nextTier} />
+
+            <PackTray
+              entries={entries}
+              groups={orderedGroups.map(({ slug, label }) => ({ slug, label }))}
+              coveredSlugs={coveredSlugs}
+              onRemove={removeProduct}
+              onJumpTo={scrollToGroup}
+            />
 
             <div className="mt-6 grid grid-cols-1 gap-8 lg:grid-cols-[1fr_340px]">
-              <div className="min-w-0">
-                {/* Jump nav. Five stacked category sections is a long scroll on a phone with no
-                    map; these chips are the map. Horizontal scroll rather than wrap, so the row
-                    height is constant however many categories the admin publishes. */}
-                <nav
-                  aria-label="Catégories du composeur"
-                  className="scrollbar-hide -mx-4 mb-5 flex gap-2 overflow-x-auto px-4 sm:mx-0 sm:px-0"
-                >
-                  {orderedGroups.map((group, i) => (
-                    <a
-                      key={group.slug}
-                      href={`#group-${group.slug}`}
-                      className={`inline-flex min-h-[40px] shrink-0 items-center gap-1.5 rounded-full border px-4 text-sm font-semibold transition-colors ${
-                        i === 0 && categoryOrder
-                          ? 'border-brand bg-brand/5 text-brand'
-                          : 'border-hairline bg-canvas text-ink-2 [@media(hover:hover)]:hover:border-brand/40'
-                      }`}
-                    >
-                      {i === 0 && categoryOrder && <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />}
-                      {group.label}
-                    </a>
-                  ))}
-                </nav>
-
-                <div className="space-y-9">
-                  {orderedGroups.map((group) => (
-                    <section
-                      key={group.slug}
-                      id={`group-${group.slug}`}
-                      aria-labelledby={`group-${group.slug}-h`}
-                      className="scroll-mt-24"
-                    >
-                      <h2
-                        id={`group-${group.slug}-h`}
-                        className="mb-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1 sm:text-2xl"
-                      >
-                        {group.label}
-                      </h2>
-                      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
-                        {group.products.map((product) => {
-                          const qty = pack[product.id] ?? 0;
-                          const price = getEffectivePrice(product as never);
-                          const stock = getStockDisponible(product as never);
-                          const outOfStock = stock <= 0;
-                          const image = product.cover ? getStorageUrl(product.cover) : '';
-                          return (
-                            <article
-                              key={product.id}
-                              className={`font-poppins flex flex-col overflow-hidden rounded-2xl border transition-colors ${
-                                qty > 0 ? 'border-brand bg-brand/5' : 'border-hairline bg-canvas'
-                              }`}
-                            >
-                              <div className="relative aspect-square w-full bg-sunken">
-                                {image ? (
-                                  <Image
-                                    src={image}
-                                    alt={product.designation_fr}
-                                    fill
-                                    className="object-contain p-3"
-                                    sizes="(min-width: 1024px) 200px, (min-width: 640px) 30vw, 45vw"
-                                    unoptimized={isStorageImageUrl(image)}
-                                  />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-ink-3">
-                                    <Package className="h-8 w-8" aria-hidden="true" />
-                                  </div>
-                                )}
-                                {qty > 0 && (
-                                  <span className="absolute left-2 top-2 flex h-6 min-w-[1.5rem] items-center justify-center rounded-full bg-brand px-1.5 font-display text-xs font-bold tabular-nums text-white">
-                                    {qty}
-                                  </span>
-                                )}
-                              </div>
-
-                              <div className="flex flex-1 flex-col p-3">
-                                <h3
-                                  title={product.designation_fr}
-                                  className="line-clamp-2 min-h-[2.25rem] text-xs font-semibold leading-snug text-ink-1 sm:text-sm"
-                                >
-                                  {product.designation_fr}
-                                </h3>
-                                <p className="mt-1 font-display text-base font-bold tabular-nums tracking-tight text-brand">
-                                  {price.toFixed(2)} DT
-                                </p>
-
-                                <div className="mt-2.5">
-                                  {outOfStock ? (
-                                    <span className="flex min-h-[44px] items-center justify-center rounded-xl bg-sunken text-xs font-semibold text-ink-3">
-                                      Rupture
-                                    </span>
-                                  ) : qty > 0 ? (
-                                    <div className="flex items-center justify-between rounded-xl border border-hairline bg-canvas">
-                                      <button
-                                        type="button"
-                                        onClick={() => setQty(product, qty - 1)}
-                                        className="flex h-11 w-11 items-center justify-center rounded-l-xl text-ink-2 [@media(hover:hover)]:hover:text-brand"
-                                        aria-label={qty === 1 ? 'Retirer du pack' : 'Diminuer la quantité'}
-                                      >
-                                        {qty === 1 ? <Trash2 className="h-4 w-4" /> : <Minus className="h-4 w-4" />}
-                                      </button>
-                                      <span className="font-display text-base font-bold tabular-nums text-ink-1">
-                                        {qty}
-                                      </span>
-                                      <button
-                                        type="button"
-                                        onClick={() => addOne(product)}
-                                        disabled={stock > 0 && qty >= stock}
-                                        className="flex h-11 w-11 items-center justify-center rounded-r-xl text-ink-2 disabled:opacity-40 [@media(hover:hover)]:hover:text-brand"
-                                        aria-label="Augmenter la quantité"
-                                      >
-                                        <Plus className="h-4 w-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      type="button"
-                                      onClick={() => addOne(product)}
-                                      className="flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-xl bg-brand text-sm font-semibold text-white transition-colors [@media(hover:hover)]:hover:bg-brand-hover"
-                                    >
-                                      <Plus className="h-4 w-4" aria-hidden="true" />
-                                      Ajouter
-                                    </button>
-                                  )}
-                                </div>
-                              </div>
-                            </article>
-                          );
-                        })}
-                      </div>
-                    </section>
-                  ))}
-                </div>
+              <div className="min-w-0 space-y-7">
+                {orderedGroups.map((group, i) => (
+                  <PackRail
+                    key={group.slug}
+                    slug={group.slug}
+                    label={group.label}
+                    products={group.products}
+                    href={`/${group.slug}`}
+                    pack={pack}
+                    onAdd={addOne}
+                    onSetQty={setQty}
+                    recommended={i === 0 && categoryOrder !== null}
+                  />
+                ))}
               </div>
 
               {/* Desktop rail. Hidden below lg, where the sticky bar takes over — rendering both
-                  would duplicate every line item into the DOM for no one. */}
-              <aside className="hidden h-fit lg:sticky lg:top-24 lg:block">
-                <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated">
+                  would duplicate every line item into the DOM for no one. `top-32` clears the
+                  desktop header, measured at 122px. */}
+              <aside className="hidden h-fit lg:sticky lg:top-32 lg:block">
+                <div
+                  ref={desktopTargetRef}
+                  className="overflow-hidden rounded-2xl border border-hairline bg-elevated"
+                >
                   <PackSummary
                     entries={entries}
                     itemCount={itemCount}
@@ -399,6 +379,8 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                     nextTier={nextTier}
                     quoteLoading={quoteLoading}
                     onSubmit={handleAddPackToCart}
+                    missing={missingGroups}
+                    onJumpTo={scrollToGroup}
                   />
                 </div>
               </aside>
@@ -407,21 +389,17 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
         )}
       </main>
 
-      {/* ── Mobile: the pack follows you ─────────────────────────────────────────────────────
-          It used to sit BELOW every product, so on a phone you had to scroll past the entire
-          catalogue to discover what your pack cost — and the tier nudge that drives the whole
-          mechanic was invisible exactly when it should be working on you.
-
-          It expands INLINE rather than opening a drawer: the drawer primitive (vaul) is only
-          loaded lazily elsewhere, so using it here would pull a dialog library into this route's
-          bundle. A transform and a boolean cost nothing, and keeping the products visible behind
-          it is better anyway on a page whose whole job is adjusting quantities. */}
+      {/* ── Mobile: one bar, carrying everything ─────────────────────────────────────────────
+          It expands INLINE rather than opening a drawer: the drawer primitive (vaul) is loaded
+          lazily elsewhere, so using it here would pull a dialog library into this route's bundle.
+          A transform and a boolean cost nothing, and keeping the shelves visible behind it is
+          better anyway on a page whose whole job is adjusting quantities. */}
       {groups.length > 0 && (
-        <div className="pt-packbar fixed inset-x-0 z-40 lg:hidden" aria-live="polite">
+        <div className="pt-packbar fixed inset-x-0 z-40 lg:hidden">
           <div
             id="pack-summary-mobile"
             className={`overflow-hidden border-t border-hairline bg-elevated transition-[max-height] duration-300 ease-out ${
-              summaryOpen ? 'max-h-[60svh] overflow-y-auto' : 'max-h-0'
+              summaryOpen ? 'max-h-[58svh] overflow-y-auto' : 'max-h-0'
             }`}
           >
             <PackSummary
@@ -439,8 +417,38 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
             />
           </div>
 
-          <div className="border-t border-hairline bg-elevated px-4 py-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.25)]">
-            <div className="flex items-center gap-3">
+          <div className="border-t border-hairline bg-elevated shadow-card">
+            {/* The tier progress, absorbed into the bar. It used to be a second sticky element; as
+                a 3px fill along the top edge it costs no height at all and is in the one place a
+                phone user is guaranteed to be looking — beside the total. */}
+            <div
+              className="h-[3px] w-full bg-hairline"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={maxTier}
+              aria-valuenow={Math.round(subtotal)}
+              aria-label="Progression vers la remise suivante"
+            >
+              <div
+                data-motion
+                className="h-full bg-brand transition-[width] duration-500 ease-out"
+                style={{ width: `${tierPct}%` }}
+              />
+            </div>
+
+            {/* The nudge sits ABOVE the total row, and that position is load-bearing rather than
+                aesthetic. MobileTabBar's raised centre button rises ~24px into whatever is directly
+                above it; as the bar's LAST line this text ran the full width and its middle — the
+                "−12%" — was covered by that button. The total row survives the same overlap because
+                its centre is the empty gap between the price and the CTA. */}
+            {nextTier && (
+              <p className="flex items-center gap-1.5 px-4 pt-2 text-[11px] font-medium text-ink-2">
+                <TrendingUp className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
+                Ajoutez {nextTier.remaining.toFixed(2)} DT pour obtenir −{nextTier.percent}%
+              </p>
+            )}
+
+            <div ref={mobileTargetRef} className="flex items-center gap-3 px-4 py-2.5">
               <button
                 type="button"
                 onClick={() => setSummaryOpen((v) => !v)}
@@ -452,16 +460,14 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                   className={`h-4 w-4 shrink-0 text-ink-3 transition-transform ${summaryOpen ? 'rotate-180' : ''}`}
                   aria-hidden="true"
                 />
-                <span className="min-w-0">
-                  <span className="block text-xs text-ink-3">
+                <span className="min-w-0" aria-live="polite">
+                  <span className="block text-[11px] text-ink-3">
                     {itemCount} article{itemCount !== 1 ? 's' : ''}
+                    {discountPercent > 0 && <span className="font-semibold text-brand"> · −{discountPercent}%</span>}
                   </span>
-                  {/* The saving sits BESIDE the total, not above it. Measured at 390px: with the
-                      CTA and the chevron taking their share, the label row has ~184px, and
-                      "2 articles vous économisez 120.96 DT" wrapped to two lines and shoved the
-                      total down. Inline it is one glance — what you pay, and what you saved.
-                      Green rather than brand orange because orange on this site means "action",
-                      and a saving coloured like a button stops registering as money back. */}
+                  {/* The saving sits BESIDE the total, not above it. Measured at 390px: with the CTA
+                      and the chevron taking their share, this label row has ~184px, and stacking
+                      them wrapped to two lines and shoved the total down. */}
                   <span className="flex items-baseline gap-2">
                     <span className="font-display text-lg font-bold tabular-nums leading-tight text-ink-1">
                       {total.toFixed(2)} DT
@@ -479,42 +485,42 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
                 type="button"
                 onClick={handleAddPackToCart}
                 disabled={entries.length === 0}
-                className="min-h-[48px] shrink-0 rounded-xl px-5 font-display uppercase tracking-wide disabled:opacity-40"
+                className="min-h-[46px] shrink-0 rounded-xl px-4 font-display uppercase tracking-wide transition-transform active:scale-95 disabled:opacity-40"
               >
                 <ShoppingCart className="mr-1.5 h-4 w-4" aria-hidden="true" />
                 Ajouter
               </Button>
             </div>
-
-            {nextTier && (
-              <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-medium text-ink-2">
-                <TrendingUp className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
-                Ajoutez {nextTier.remaining.toFixed(2)} DT pour obtenir −{nextTier.percent}%
-              </p>
-            )}
           </div>
         </div>
       )}
-
-      <ScrollToTop />
     </div>
   );
 }
 
 /**
- * The discount mechanic, as a position rather than a price list.
+ * The discount mechanic as a position, in ONE row.
  *
- * The three cards this replaces stated the tiers and nothing else: they were identical whether the
- * pack was empty or one dinar short of the next tier, and on a phone they cost a full screen
- * before a single product appeared. A progress bar answers the only question the shopper actually
- * has — how close am I — and it is the thing that makes the mechanic persuasive instead of
- * merely documented.
+ * It was a bordered card with a heading row, a bar, a label row and a nudge line: ~210px, on the
+ * screen where the measured cost of preamble was the complaint. The information that earns its
+ * place is *where am I* and *what is the next step*, and both fit on one line beside the bar.
+ *
+ * The bar is scaled to the LAST tier, so each tier's true position is min/max — 40%, 70%, 100% for
+ * 200/350/500. Laying the labels out with `justify-between` would put them at 0/50/100% and point
+ * "350 DT" at a place the bar never treats as 350 DT: an indicator that lies about where the goal
+ * is, which is worse than no indicator. Ticks and labels are therefore positioned from the same
+ * number the fill uses.
  */
-function TierProgress({
+function TierStrip({
+  barRef,
   subtotal,
   percent,
   nextTier,
 }: {
+  /* NOT named `ref`. React 18 strips a prop called `ref` before it reaches a function component and
+     warns "Function components cannot be given refs" — the pulse would silently never fire. React
+     19 changed this; this codebase is on 18.3.1. */
+  barRef: React.RefObject<HTMLElement | null>;
   subtotal: number;
   percent: number;
   nextTier: { percent: number; remaining: number } | null;
@@ -523,76 +529,50 @@ function TierProgress({
   const pct = Math.min(100, (subtotal / max) * 100);
 
   return (
-    <section aria-label="Progression de la remise" className="mt-5 rounded-2xl border border-hairline bg-sunken p-4 sm:p-5">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <h2 className="flex items-center gap-2 font-display text-sm font-extrabold uppercase tracking-tight text-ink-1">
-          <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
-          Remise groupée
+    <section
+      ref={barRef as React.RefObject<HTMLElement>}
+      aria-label="Progression de la remise"
+      className="mt-4 rounded-xl border border-hairline bg-sunken px-3.5 py-3 sm:px-4"
+    >
+      <div className="flex items-center gap-3">
+        <h2 className="flex shrink-0 items-center gap-1.5 font-display text-xs font-extrabold uppercase tracking-tight text-ink-1">
+          <Percent className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+          <span className="hidden sm:inline">Remise groupée</span>
+          <span className="sm:hidden">Remise</span>
         </h2>
-        <p className="text-xs text-ink-2">
+
+        <div className="relative h-1.5 min-w-0 flex-1 overflow-hidden rounded-full bg-hairline">
+          <div
+            data-motion
+            className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out"
+            style={{ width: `${pct}%` }}
+          />
+          {PACK_TIERS.slice(0, -1).map((tier) => (
+            <span
+              key={tier.min}
+              aria-hidden="true"
+              className="absolute top-0 h-full w-px bg-canvas"
+              style={{ left: `${(tier.min / max) * 100}%` }}
+            />
+          ))}
+        </div>
+
+        <p className="shrink-0 whitespace-nowrap text-xs tabular-nums text-ink-2">
           {percent > 0 ? (
-            <>
-              <span className="font-display text-base font-bold text-brand">−{percent}%</span> appliqué
-            </>
+            <span className="font-display text-sm font-bold text-brand">−{percent}%</span>
           ) : (
-            <>Dès {PACK_TIERS[0].min} DT d&apos;achat</>
+            <span className="text-ink-3">dès {PACK_TIERS[0].min} DT</span>
           )}
         </p>
       </div>
 
-      {/* The bar is scaled to the LAST tier, so each tier's true position is min/max — 40%, 70%,
-          100% for 200/350/500. Laying the labels out with `justify-between` would put them at
-          0/50/100% and point "350 DT" at a place the bar never treats as 350 DT: a progress
-          indicator that lies about where the goal is, which is worse than no indicator. Both the
-          ticks and the labels are therefore positioned from the same number the fill uses. */}
-      <div className="relative h-2 w-full overflow-hidden rounded-full bg-hairline">
-        <div
-          className="h-full rounded-full bg-brand transition-[width] duration-500 ease-out"
-          style={{ width: `${pct}%` }}
-        />
-        {PACK_TIERS.slice(0, -1).map((tier) => (
-          <span
-            key={tier.min}
-            aria-hidden="true"
-            className="absolute top-0 h-full w-px bg-canvas"
-            style={{ left: `${(tier.min / max) * 100}%` }}
-          />
-        ))}
-      </div>
-
-      <ol className="relative mt-2 h-4">
-        {PACK_TIERS.map((tier, i) => {
-          const reached = subtotal >= tier.min;
-          const isLast = i === PACK_TIERS.length - 1;
-          return (
-            <li
-              key={tier.min}
-              className={`absolute whitespace-nowrap text-[11px] font-semibold tabular-nums ${
-                reached ? 'text-brand' : 'text-ink-3'
-              }`}
-              style={
-                isLast
-                  ? { right: 0 }
-                  : { left: `${(tier.min / max) * 100}%`, transform: 'translateX(-50%)' }
-              }
-            >
-              {/* Below `sm` the track is ~324px and three "200 DT · −5%" labels physically cannot
-                  fit — measured, they overlapped by ~19px. Dropping the amount on a phone is the
-                  right thing to drop: the percentage is what the tick MARKS, and the exact dinars
-                  needed are spelled out in the "Ajoutez … DT" line directly below, where they are
-                  actionable rather than decorative. */}
-              <span className="sm:hidden">−{tier.percent}%</span>
-              <span className="hidden sm:inline">
-                {tier.min} DT · −{tier.percent}%
-              </span>
-            </li>
-          );
-        })}
-      </ol>
-
+      {/* `lg:flex`, not `flex`. Below lg the sticky pack bar carries this identical sentence, and it
+          was appearing twice about 400px apart — the same instruction, in two voices, which reads
+          as a bug rather than as emphasis. The bar wins on mobile because it is where the thumb
+          already is; this strip wins on desktop because there is no bar there. */}
       {nextTier && (
-        <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-ink-2">
-          <TrendingUp className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+        <p className="mt-1.5 hidden items-center gap-1.5 text-xs font-medium text-ink-2 lg:flex">
+          <TrendingUp className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />
           Ajoutez <span className="font-display font-bold text-ink-1">{nextTier.remaining.toFixed(2)} DT</span> pour
           passer à −{nextTier.percent}%
         </p>
@@ -605,8 +585,8 @@ function TierProgress({
  * One summary, rendered in two places — the desktop rail and the mobile expanding panel.
  *
  * Written once because these two used to be the same markup maintained separately, which is how a
- * total says one thing on a phone and another on a laptop. `compact` only drops the heading and
- * the CTA (the mobile bar already carries both), so the numbers cannot diverge.
+ * total says one thing on a phone and another on a laptop. `compact` only drops the heading and the
+ * CTA (the mobile bar already carries both), so the numbers cannot diverge.
  */
 function PackSummary({
   entries,
@@ -620,6 +600,8 @@ function PackSummary({
   quoteLoading,
   onSubmit,
   compact = false,
+  missing = [],
+  onJumpTo,
 }: {
   entries: { product: Product; qty: number }[];
   itemCount: number;
@@ -632,6 +614,10 @@ function PackSummary({
   quoteLoading: boolean;
   onSubmit: () => void;
   compact?: boolean;
+  /** Categories with nothing in them yet. Rendered on the desktop rail only — below lg the tray
+   *  above the shelves already offers them, and the mobile panel is a summary, not a shop. */
+  missing?: { slug: string; label: string }[];
+  onJumpTo?: (slug: string) => void;
 }) {
   return (
     <>
@@ -705,6 +691,27 @@ function PackSummary({
           </div>
         )}
 
+        {!compact && missing.length > 0 && entries.length > 0 && onJumpTo && (
+          <div className="border-t border-hairline pt-4">
+            <p className="flex items-center gap-1.5 text-xs font-semibold text-ink-2">
+              <Sparkles className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+              Complétez votre pack
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              {missing.map((g) => (
+                <button
+                  key={g.slug}
+                  type="button"
+                  onClick={() => onJumpTo(g.slug)}
+                  className="inline-flex min-h-[32px] items-center rounded-full border border-hairline bg-canvas px-3 text-xs font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+                >
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
         {!compact && (
           <>
             <Button
@@ -712,7 +719,7 @@ function PackSummary({
               size="lg"
               onClick={onSubmit}
               disabled={entries.length === 0}
-              className="min-h-[52px] w-full rounded-xl font-display uppercase tracking-wide disabled:opacity-50"
+              className="min-h-[52px] w-full rounded-xl font-display uppercase tracking-wide transition-transform active:scale-[0.98] disabled:opacity-50"
             >
               <ShoppingCart className="mr-2 h-5 w-5" aria-hidden="true" />
               Ajouter le pack au panier
