@@ -56,12 +56,44 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
     throw new Error('pack-builder: all category fetches failed');
   }
 
-  return results
+  const groups = results
     .filter(
       (r): r is PromiseFulfilledResult<PackBuilderGroup> =>
         r.status === 'fulfilled' && Array.isArray(r.value.products) && r.value.products.length > 0
     )
     .map((r) => r.value);
+
+  /**
+   * A product appears in exactly ONE group — the first that claims it.
+   *
+   * These slugs are not disjoint in the catalogue, and not by accident: `prise-de-masse` resolves
+   * to a PARENT category whose product list is a superset of the `gainers-proteines` subcategory
+   * beneath it. Verified against the live API — after the slice(0, 12) above, those two groups
+   * shared five product ids (542, 530, 463, 442, 440).
+   *
+   * Left alone that produced two visible defects, not one:
+   *   - the same tub was offered on two different wizard steps, so a visitor who added it on the
+   *     Gainers step met it again, unselected-looking in a fresh grid, on the Prise de masse step;
+   *   - the recap counted categories by asking which GROUPS held a selection, so a single item
+   *     reported as "2 catégories différentes" and was told it was a pack rather than an order.
+   *
+   * Deduping here, at the source, fixes both at once and keeps every downstream count honest by
+   * construction. Order matters and is the array order of BUILDER_CATEGORIES: a mass gainer lands
+   * in Gainers, which is the more specific of the two.
+   */
+  const claimed = new Set<number>();
+  return groups
+    .map((group) => ({
+      ...group,
+      products: group.products.filter((p) => {
+        if (claimed.has(p.id)) return false;
+        claimed.add(p.id);
+        return true;
+      }),
+    }))
+    // A group whose every product was claimed by an earlier one has nothing left to show, and an
+    // empty step is a step the visitor pays a click for and gets nothing from.
+    .filter((group) => group.products.length > 0);
 }
 
 export default async function PackBuilderPage() {

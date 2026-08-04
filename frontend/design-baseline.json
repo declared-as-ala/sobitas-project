@@ -241,9 +241,6 @@
     "DS004": 32,
     "DS011": 28
   },
-  "src/app/(shop)/pack-builder/PackBuilderClient.tsx": {
-    "DS002": 2
-  },
   "src/app/(shop)/packs/PacksPageClient.tsx": {
     "DS001": 2,
     "DS002": 1,

@@ -33,6 +33,7 @@ import {
   Shield,
   Lock,
   X,
+  BadgeCheck,
   type LucideIcon,
 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
@@ -769,6 +770,23 @@ export function HeaderClient() {
                   There is still exactly one WhatsApp affordance per breakpoint: the floating
                   bubble (WhatsAppFab) is `md:hidden` and covers phones. */}
 
+              {/* Accès Pro lives HERE now, beside the pack CTA — not on /pack-builder.
+                  Owner: "the Accès Pro button should be beside the composez votre pack in the
+                  header… the page of generating a pack is only for generating a pack."
+
+                  They are right, and the reason is structural rather than cosmetic: a B2B signup
+                  link is a NAVIGATION item — it belongs wherever you are on the site, not stapled
+                  to one page's heading where it competed with that page's own first action.
+                  Outlined against the filled pack CTA, so the nav row still has exactly one button
+                  that sells and this one reads as a door rather than a shout. */}
+              <Link
+                href="/partenaires"
+                className="shrink-0 inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-hairline px-3 py-2 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+              >
+                <BadgeCheck className="h-4 w-4 text-brand" aria-hidden />
+                <span>Accès Pro</span>
+              </Link>
+
               {packBuilderLink && (
                 <NavigationLink
                   item={packBuilderLink}
@@ -1212,6 +1230,21 @@ export function HeaderClient() {
                   </svg>
                   <span className="flex-1 text-left">Commander sur WhatsApp</span>
                 </a>
+
+                {/* The mobile half of the same move. Owner: "even in the sidebar of the mobile,
+                    don't forget that." Without this the B2B programme would be desktop-only the
+                    moment it left the pack-builder page — and coaches run their gym from a phone. */}
+                <Link
+                  href="/partenaires"
+                  onClick={closeMobileMenu}
+                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken"
+                >
+                  <BadgeCheck className="h-5 w-5 shrink-0 text-brand" aria-hidden />
+                  <span className="flex-1 text-left">
+                    Accès Pro
+                    <span className="block text-[12px] font-normal text-ink-3">Coachs &amp; salles de sport</span>
+                  </span>
+                </Link>
 
                 <button
                   type="button"

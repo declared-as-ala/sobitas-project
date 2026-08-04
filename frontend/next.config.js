@@ -258,10 +258,16 @@ const nextConfig = {
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-accordion',
       '@radix-ui/react-tabs',
-      // '@radix-ui/react-tooltip' and 'motion' removed: both packages are gone. Tooltip's only
-      // consumer was ui/sidebar.tsx (itself never imported), and `motion` had zero imports in src/
-      // at all. Listing an uninstalled package here is harmless but misleading — it reads as
+      // '@radix-ui/react-tooltip' removed: its only consumer was ui/sidebar.tsx, itself never
+      // imported. Listing an uninstalled package here is harmless but misleading — it reads as
       // "we ship this and tuned it".
+      //
+      // 'motion' is BACK, and this time it has a real consumer: the pack-builder wizard, which is
+      // built on AnimatePresence (exit animations on step change are the one thing CSS genuinely
+      // cannot express — an element that is being removed from the DOM has nothing left to
+      // transition). It is loaded through LazyMotion + the `m` component, so the whole page pays
+      // ~6 kB gzip for the feature set it actually uses rather than ~34 kB for all of it.
+      'motion',
       // '@radix-ui/react-dialog' STAYS: ui/dialog.tsx was dead, but ui/sheet.tsx — the mobile menu
       // and cart drawer — imports the package directly.
       '@radix-ui/react-dialog',
