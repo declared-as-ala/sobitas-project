@@ -16,8 +16,12 @@
 # come from the registry.
 #
 # ── RUN IT ON THE VPS ──────────────────────────────────────────────────────────────────────────
-#   cd /root/sobitas-project && git fetch origin && git reset --hard origin/main
-#   bash deploy-frontend-locally.sh
+#   cd /root/sobitas-project && bash deploy-frontend-locally.sh
+#
+# It updates the checkout itself. It will NOT do that over uncommitted edits to tracked files —
+# the normal deploy never touches the VPS's git checkout at all (it only pulls a Docker image), so
+# that checkout can quietly be dirty or years stale and nobody would find out until the first time
+# somebody ran a `git reset --hard` across it. It stops and shows you what it found instead.
 #
 # ── THE BUILD ARGS ARE NOT OPTIONAL ────────────────────────────────────────────────────────────
 # They are copied verbatim from deploy-frontend.yml and they are baked into the CLIENT bundle at
@@ -35,6 +39,23 @@ APP_DIR="${APP_DIR:-/root/sobitas-project}"
 IMAGE="ghcr.io/declared-as-ala/sobitas-frontend:latest"
 
 cd "$APP_DIR"
+
+# ── update the checkout, refusing to throw away work ──────────────────────────────────────────
+DIRTY="$(git status --porcelain --untracked-files=no)"
+if [ -n "$DIRTY" ]; then
+  echo "✗ There are uncommitted changes to tracked files here. Refusing to overwrite them."
+  echo "$DIRTY" | sed 's/^/    /'
+  echo
+  echo "  If they are wanted:      git stash"
+  echo "  If they are not wanted:  git checkout -- ."
+  echo "  Then re-run this script."
+  exit 1
+fi
+
+echo "▶ fetching origin/main…"
+git fetch origin main
+git checkout -q main 2>/dev/null || git checkout -q -B main origin/main
+git merge --ff-only origin/main
 
 echo "▶ commit: $(git rev-parse --short HEAD) — $(git log -1 --pretty=%s)"
 
