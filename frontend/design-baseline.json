@@ -383,13 +383,6 @@
     "DS003": 3,
     "DS011": 11
   },
-  "src/app/components/FlashProductCard.tsx": {
-    "DS001": 9,
-    "DS002": 11,
-    "DS003": 5,
-    "DS004": 2,
-    "DS011": 11
-  },
   "src/app/components/FooterClient.tsx": {
     "DS001": 19,
     "DS003": 20,
