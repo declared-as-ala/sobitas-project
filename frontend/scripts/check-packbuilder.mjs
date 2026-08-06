@@ -16,7 +16,10 @@
  */
 
 import puppeteer from 'puppeteer';
+import { readFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const CHROME = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -133,22 +136,37 @@ section('2 · walking the wizard as a customer');
   check('chose "Prise de masse"', await clickText(page, 'Prise de masse'));
   await settle(page, 900);
 
-  const firstCat = await page.evaluate(() => ({
-    heading: document.querySelector('h2')?.textContent?.trim() ?? '',
-    // Case-insensitive: the label carries `uppercase`, and `innerText` reflects text-transform —
-    // so the DOM says "Catégorie 1 sur 5" and this reads "CATÉGORIE 1 SUR 5".
-    position: document.body.innerText.match(/Cat[ée]gorie (\d+) sur (\d+)/i)?.slice(1, 3) ?? [],
-    tiles: document.querySelectorAll('article[data-pack-tile]').length,
-    rationale: /gainers apportent les calories|facteur limitant/i.test(document.body.innerText),
-    footer: !!document.querySelector('.pt-packbar'),
-  }));
+  const firstCat = await page.evaluate(() => {
+    const bar = document.querySelector('.pt-packbar');
+    return {
+      heading: document.querySelector('h2')?.textContent?.trim() ?? '',
+      tiles: document.querySelectorAll('article[data-pack-tile]').length,
+      rationale: /gainers apportent les calories|facteur limitant/i.test(document.body.innerText),
+      bar: !!bar,
+      barText: bar ? bar.textContent.replace(/\s+/g, ' ').trim() : '',
+      // The in-flow "Continuer" the owner had to scroll ~1,900px to reach. It must be GONE — the
+      // bar owns advancing now, and two forward controls on one screen is the confusion this
+      // redesign exists to remove.
+      inFlowAdvance: [...document.querySelectorAll('main button')].filter(
+        (b) => !b.closest('.pt-packbar') && /^(continuer|passer)/i.test((b.textContent || '').trim())
+      ).length,
+    };
+  });
   // GOAL_CATEGORY_EMPHASIS puts gainers first for prise_de_masse — the reorder is the whole point
   // of asking the question, so assert it landed rather than assuming.
   check('the goal reordered the steps (gainers first)', /gainers/i.test(firstCat.heading), firstCat.heading);
-  check('the step states its position', firstCat.position[0] === '1', firstCat.position.join('/'));
   check('only ONE category is on screen', firstCat.tiles > 0 && firstCat.tiles <= 12, `${firstCat.tiles} tiles`);
   check('the goal is explained once, on the first category', firstCat.rationale);
-  check('no footer bar while the pack is empty', !firstCat.footer);
+
+  /* THE OWNER'S COMPLAINT, AS THREE ASSERTIONS.
+     "You show a button of DONE in the sticky bar. When I have to scroll all the way down to
+     continue, that is bad. The user should CONTINUE, not directly finish the pack."
+     So: the bar exists before anything is added, its action moves forward one step, and the word
+     "Terminer" is nowhere near it. */
+  check('the step bar is present BEFORE anything is added', firstCat.bar);
+  check('…its action is Passer/Continuer, never Terminer', !/terminer/i.test(firstCat.barText), firstCat.barText.slice(0, 70));
+  check('…and it carries no money row while the pack is empty', !/\d+[.,]\d\d DT/.test(firstCat.barText));
+  check('the duplicate in-flow advance button is gone', firstCat.inFlowAdvance === 0, `${firstCat.inFlowAdvance} found`);
 
   check('added a product', await clickText(page, 'Ajouter'));
   await settle(page, 1100);
@@ -156,22 +174,37 @@ section('2 · walking the wizard as a customer');
   const afterAdd = await page.evaluate(() => {
     const bar = document.querySelector('.pt-packbar');
     return {
-      footer: !!bar,
-      barText: bar ? bar.textContent.replace(/\s+/g, ' ').trim().slice(0, 90) : '',
+      barText: bar ? bar.textContent.replace(/\s+/g, ' ').trim().slice(0, 110) : '',
       barH: bar ? Math.round(bar.getBoundingClientRect().height) : 0,
       selected: document.querySelectorAll('article[data-selected="true"]').length,
       orphanClones: [...document.body.children].filter(
         (el) => el.tagName === 'IMG' && getComputedStyle(el).position === 'fixed'
       ).length,
+      // The escape hatch to the recap, now that the primary action advances instead.
+      hasRecapJump: !!bar && /voir mon pack/i.test(bar.textContent || ''),
     };
   });
-  check('the footer appears once something is in the pack', afterAdd.footer);
   check('the tile shows its selected state', afterAdd.selected === 1, `${afterAdd.selected}`);
-  check('the footer stays compact', afterAdd.barH > 0 && afterAdd.barH < 140, `${afterAdd.barH}px`);
+  check('the bar stays compact', afterAdd.barH > 0 && afterAdd.barH < 150, `${afterAdd.barH}px`);
   check('no flight clone left behind', afterAdd.orphanClones === 0, `${afterAdd.orphanClones}`);
-  console.log(`        footer: ${afterAdd.barText}`);
+  check('the summary is a labelled jump to the recap', afterAdd.hasRecapJump, afterAdd.barText.slice(0, 60));
+  console.log(`        bar: ${afterAdd.barText}`);
 
-  check('finished early via the footer', await clickText(page, 'Terminer'));
+  /* CONTINUER ADVANCES ONE STEP — it does not finish. This is the regression that would silently
+     restore the old behaviour, so it asserts the DESTINATION, not the label. */
+  const headingBefore = firstCat.heading;
+  check('tapped Continuer in the bar', await clickText(page, 'Continuer'));
+  await settle(page, 1100);
+  const afterContinue = await page.evaluate(() => ({
+    heading: document.querySelector('h2')?.textContent?.trim() ?? '',
+    onRecap: [...document.querySelectorAll('button')].some((b) =>
+      /ajouter le pack au panier/i.test(b.textContent || '')
+    ),
+  }));
+  check('…it moved to the NEXT category', afterContinue.heading !== headingBefore, `${headingBefore} → ${afterContinue.heading}`);
+  check('…and did NOT jump to the recap', !afterContinue.onRecap);
+
+  check('reached the recap via "Voir mon pack"', await clickText(page, 'Voir mon pack'));
   await settle(page, 1100);
 
   const recap = await page.evaluate(() => ({
@@ -254,23 +287,61 @@ section('2b · regressions from the review — each of these shipped once');
   check('…and it still names the page', /composez votre pack/i.test(afterStep.h1Text), afterStep.h1Text);
   check('the new step is announced', /Étape 2 sur/i.test(afterStep.announced), afterStep.announced);
 
-  // (ii) Every tap target on the progress rail meets the site's own 44px rule.
+  // (ii) EVERY tap target, not just the progress rail. Widened after a review found three 36px
+  // controls the rail-only gate could never see — including the recap's destructive remove button.
+  // `offsetParent` skips anything display:none (a collapsed disclosure's contents).
   const small = await page.evaluate(() => {
-    const rail = document.querySelector('nav[aria-label="Progression"]');
-    if (!rail) return -1;
-    return [...rail.querySelectorAll('button')].filter((b) => {
-      const r = b.getBoundingClientRect();
-      return r.height < 44 || r.width < 44;
-    }).length;
+    return [...document.querySelectorAll('main button, main a')]
+      .filter((el) => el.offsetParent !== null && el.getBoundingClientRect().height > 0)
+      .filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.height < 44 || r.width < 44;
+      })
+      .map((el) => `${el.tagName}:${(el.textContent || '').trim().slice(0, 24)}`);
   });
-  check('no progress-rail control is under 44px', small === 0, `${small} too small`);
+  check('no control in the builder is under 44px', small.length === 0, small.slice(0, 4).join(' | '));
+
+  /* (iii) Every spinner opts out of the mobile animation clamp. Without `data-motion`, globals.css
+     forces its duration to 0.2s under 768px — five revolutions a second, which reads as a fault.
+
+     CHECKED AGAINST THE SOURCE, NOT THE DOM. A spinner only exists while something is pending, so
+     a DOM query almost always finds zero and reports "0/0 unmarked" — a check that passes because
+     it looked at nothing. Reading the files is the only version of this assertion that cannot be
+     vacuous. */
+  const spinnerSrc = await (async () => {
+    // NOT `new URL(...)`: this file shadows the global with `const URL = ${BASE}/pack-builder` at
+    // the top, so `new URL` throws "URL is not a constructor" here. Resolve from this module's own
+    // path instead, which is also correct regardless of the caller's working directory.
+    const dir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/app/(shop)/pack-builder');
+    const files = ['wizard/PackWizard.tsx', 'wizard/StepRecap.tsx', 'wizard/NeedsCheck.tsx', 'PackBuilderClient.tsx'];
+    let total = 0;
+    const bad = [];
+    for (const f of files) {
+      let src = '';
+      try {
+        src = await readFile(path.join(dir, f), 'utf8');
+      } catch {
+        continue;
+      }
+      for (const m of src.matchAll(/<Loader2[^>]*\/>|<Loader2[^>]*>/g)) {
+        total += 1;
+        if (!/data-motion/.test(m[0])) bad.push(`${f}: ${m[0].slice(0, 50)}`);
+      }
+    }
+    return { total, bad };
+  })();
+  check(
+    'every Loader2 in the source carries data-motion',
+    spinnerSrc.total > 0 && spinnerSrc.bad.length === 0,
+    `${spinnerSrc.total} found, ${spinnerSrc.bad.length} unmarked ${spinnerSrc.bad[0] ?? ''}`
+  );
 
   // (iii) The calculator used to do nothing at all when a field was blank.
   await clickText(page, 'Prise de masse');
   await settle(page, 900);
   await clickText(page, 'Ajouter');
   await settle(page, 900);
-  await clickText(page, 'Terminer');
+  await clickText(page, 'Voir mon pack');
   await settle(page, 1100);
   await clickText(page, 'Vos besoins');
   await settle(page, 800);
@@ -284,6 +355,143 @@ section('2b · regressions from the review — each of these shipped once');
   check('a blank field produces a visible error', blank.invalid > 0, `${blank.invalid} marked invalid`);
   check('…and focus moves to the field that needs it', /^nc-/.test(blank.focusedId), blank.focusedId);
 
+  await page.close();
+}
+
+// ── 2d · the stale-quote bug, reproduced deliberately ───────────────────────────────────────
+section('2d · a quote may only describe the pack it was asked about');
+{
+  /* THE BUG: `quote` was never cleared while the next one was in flight, so for the 400ms debounce
+     plus a round trip the page applied the PREVIOUS basket's discount to the CURRENT basket's
+     contents — a total LOWER than the sum of the lines above it, which is the one direction the
+     pricing rule in PackBuilderClient forbids.
+
+     A naive "add an item and look quickly" test cannot catch this: on localhost the quote returns
+     in ~30ms, so the window it lives in does not exist. SLOWING THE QUOTE IS THE TEST. With the
+     response held for 1.8s the window is real and deterministic, and the assertion below fails
+     loudly against the old code and passes against the new. */
+  const { page } = await phone();
+  await page.setRequestInterception(true);
+  page.on('request', (req) => {
+    if (/pack\/quote/i.test(req.url())) {
+      setTimeout(() => req.continue().catch(() => {}), 1800);
+    } else {
+      req.continue().catch(() => {});
+    }
+  });
+
+  await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
+  await settle(page, 1400);
+  await clickText(page, 'Commencer');
+  await settle(page, 900);
+  await clickText(page, 'Prise de masse');
+  await settle(page, 900);
+
+  // First product, and WAIT for its quote to land so a real discount is on screen to go stale.
+  await clickText(page, 'Ajouter');
+  await settle(page, 3000);
+  const settled = await page.evaluate(() => {
+    const bar = document.querySelector('.pt-packbar');
+    const t = bar ? bar.textContent.replace(/\s+/g, ' ') : '';
+    const m = t.match(/([\d.,]+)\s*DT/);
+    return { text: t, total: m ? parseFloat(m[1].replace(',', '.')) : null, hasDiscount: /−\s*\d+\s*%/.test(t) };
+  });
+  check('a discount is showing before the second add', settled.hasDiscount, settled.text.slice(0, 70));
+
+  // Second product, read DURING the held request.
+  await page.evaluate(() => {
+    const btns = [...document.querySelectorAll('article[data-pack-tile] button')].filter((b) =>
+      /^ajouter$/i.test((b.textContent || '').trim())
+    );
+    btns[0]?.click();
+  });
+  await settle(page, 900); // inside the 400ms debounce + 1800ms hold
+  const inFlight = await page.evaluate(() => {
+    const bar = document.querySelector('.pt-packbar');
+    const t = bar ? bar.textContent.replace(/\s+/g, ' ') : '';
+    const m = t.match(/([\d.,]+)\s*DT/);
+    const spin = bar?.querySelector('.animate-spin') ?? null;
+    return {
+      text: t,
+      total: m ? parseFloat(m[1].replace(',', '.')) : null,
+      showsDiscount: /−\s*\d+\s*%/.test(t),
+      spinner: !!spin,
+      spinnerMarked: !!spin && spin.hasAttribute('data-motion'),
+    };
+  });
+
+  check('the pending state is visible while the quote is in flight', inFlight.spinner);
+  check('…and its spinner is exempt from the mobile 0.2s clamp', inFlight.spinnerMarked);
+  check(
+    'no stale discount is applied to the new basket',
+    !inFlight.showsDiscount,
+    inFlight.text.slice(0, 70)
+  );
+  /* The decisive one. Old code: the previous basket's DISCOUNTED total, which is lower than the new
+     basket's raw subtotal. New code: the raw subtotal, which is strictly higher. */
+  check(
+    'the shown total goes UP when a product is added, never down',
+    settled.total !== null && inFlight.total !== null && inFlight.total > settled.total,
+    `${settled.total} → ${inFlight.total}`
+  );
+
+  await settle(page, 2600);
+  const resolved = await page.evaluate(() => {
+    const bar = document.querySelector('.pt-packbar');
+    const t = bar ? bar.textContent.replace(/\s+/g, ' ') : '';
+    return { text: t, hasDiscount: /−\s*\d+\s*%/.test(t), spinner: !!bar?.querySelector('.animate-spin') };
+  });
+  check('the real discount arrives once the quote lands', resolved.hasDiscount, resolved.text.slice(0, 70));
+  check('…and the pending state clears', !resolved.spinner);
+
+  await page.close();
+}
+
+// ── 2c · the goal can be skipped and the flow still works ───────────────────────────────────
+section('2c · "Je sais déjà ce que je veux" — the shopper who skips the question');
+{
+  const { page } = await phone();
+  await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
+  await settle(page, 1400);
+  await clickText(page, 'Commencer');
+  await settle(page, 900);
+
+  const skipped = await page.evaluate(() => {
+    const b = [...document.querySelectorAll('button')].find((x) => /je sais d[ée]j[àa]/i.test(x.textContent || ''));
+    if (!b) return false;
+    b.click();
+    return true;
+  });
+  check('the skip link exists and is tappable', skipped);
+  await settle(page, 1000);
+
+  // Walk to the end without answering the goal.
+  for (let i = 0; i < 8; i += 1) {
+    const done = await page.evaluate(() =>
+      [...document.querySelectorAll('button')].some((b) => /ajouter le pack au panier/i.test(b.textContent || ''))
+    );
+    if (done) break;
+    const moved = (await clickText(page, 'Passer')) || (await clickText(page, 'Voir mon pack'));
+    if (!moved) break;
+    await settle(page, 700);
+  }
+
+  /* The needs check used to be wrapped in `{goal && …}`, so skipping the question removed it
+     entirely — with nothing on screen to explain the absence. It is now always offered and asks
+     for the goal in place. */
+  const noGoalRecap = await page.evaluate(() => ({
+    onRecap: [...document.querySelectorAll('button')].some((b) => /ajouter le pack au panier/i.test(b.textContent || '')),
+    hasNeeds: [...document.querySelectorAll('button')].some((b) => /besoins quotidiens/i.test(b.textContent || '')),
+  }));
+  check('the recap is reachable without answering the goal', noGoalRecap.onRecap);
+  check('…and the needs check is still offered', noGoalRecap.hasNeeds);
+
+  if (noGoalRecap.hasNeeds) {
+    await clickText(page, 'Vos besoins');
+    await settle(page, 800);
+    const asks = await page.evaluate(() => (document.body.innerText || '').replace(/\s+/g, ' '));
+    check('…asking for the goal in place rather than sending you back', /d[ée]pend de votre objectif/i.test(asks));
+  }
   await page.close();
 }
 
@@ -376,6 +584,101 @@ section('5 · Accès Pro belongs to the header, not to this page');
   check('it sits in the desktop header', inHeader.present);
   check('…beside the pack CTA', inHeader.gap !== null && inHeader.gap >= 0 && inHeader.gap < 40, `${inHeader.gap}px apart`);
   await desk.close();
+}
+
+// ── 6 · geometry at the widths that are not a phone ─────────────────────────────────────────
+section('6 · the step bar must not sit on top of the page it belongs to');
+{
+  /* The bar has NO breakpoint gate — only MobileTabBar is `md:hidden`. The bottom reserve used to
+     drop to 64px at `md` against a ~93px bar, so from 768px up the last row of products sat behind
+     it. It was survivable while the bar was optional; now that the bar IS the way forward and the
+     grid runs right up to it, the bottom row would be clipped on every laptop. 800px is the width
+     that used to fail hardest — just past `md`, with the tab bar gone and the reserve at its
+     smallest. */
+  for (const width of [800, 1440, 1920]) {
+    const p = await browser.newPage();
+    await p.setViewport({ width, height: 900 });
+    await p.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
+    await settle(p, 1200);
+    await clickText(p, 'Commencer');
+    await settle(p, 800);
+    await clickText(p, 'Prise de masse');
+    await settle(p, 900);
+    await clickText(p, 'Ajouter');
+    await settle(p, 1100);
+
+    const geo = await p.evaluate(() => {
+      const bar = document.querySelector('.pt-packbar');
+      const main = document.querySelector('main');
+      if (!bar || !main) return null;
+      return {
+        barH: Math.round(bar.getBoundingClientRect().height),
+        /* THE REAL INVARIANT, and the reason this is not measured by scrolling to the bottom of
+           the document: the site Footer renders below `<main>`, so "scroll to the end and check
+           the last tile" always passes — the tiles end up hundreds of pixels above the viewport
+           and the assertion never bites. What actually has to hold is that MAIN reserves at least
+           the bar's height, so the last row of the grid can be scrolled clear of it. */
+        mainPadBottom: Math.round(parseFloat(getComputedStyle(main).paddingBottom)),
+        barContentWidth: Math.round(
+          bar.querySelector('.max-w-site')?.getBoundingClientRect().width ?? bar.getBoundingClientRect().width
+        ),
+        docWidth: Math.round(document.documentElement.scrollWidth),
+        viewport: window.innerWidth,
+      };
+    });
+
+    if (geo) {
+      check(
+        `@${width}px · main reserves at least the bar's height`,
+        geo.mainPadBottom >= geo.barH,
+        `reserve ${geo.mainPadBottom}px vs bar ${geo.barH}px`
+      );
+      // `max-w-site` is 1600, so this only bites above it — which is why 1920 is in the matrix.
+      check(
+        `@${width}px · the bar's contents stay on the page rail`,
+        geo.barContentWidth <= Math.min(geo.viewport, 1600) + 1,
+        `${geo.barContentWidth}px wide`
+      );
+      check(
+        `@${width}px · no horizontal overflow`,
+        geo.docWidth <= geo.viewport,
+        `doc ${geo.docWidth} / viewport ${geo.viewport}`
+      );
+    } else {
+      check(`@${width}px · geometry measurable`, false, 'bar or main missing');
+    }
+    await p.close();
+  }
+}
+
+// ── 7 · the landing page's photography actually renders ─────────────────────────────────────
+section('7 · the goal step carries the landing page\'s own category photographs');
+{
+  const { page } = await phone();
+  await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
+  await settle(page, 1400);
+  await clickText(page, 'Commencer');
+  await settle(page, 1200);
+
+  const covers = await page.evaluate(async () => {
+    // Force the lazy images to decode before measuring.
+    window.scrollTo(0, 400);
+    await new Promise((r) => setTimeout(r, 900));
+    const cards = [...document.querySelectorAll('button[aria-pressed]')];
+    const imgs = cards.map((c) => c.querySelector('img')).filter(Boolean);
+    return {
+      cards: cards.length,
+      withImage: imgs.length,
+      // Distinct sources: the whole reason the goal→category map is hand-written rather than a
+      // parent lookup is that a parent walk hands the same photograph to two different cards.
+      distinct: new Set(imgs.map((i) => (i.currentSrc || i.src).replace(/[?&]w=\d+/, ''))).size,
+      broken: imgs.filter((i) => i.complete && i.naturalWidth === 0).length,
+    };
+  });
+  check('all four goals are photographed', covers.withImage === covers.cards && covers.cards === 4, `${covers.withImage}/${covers.cards}`);
+  check('…with four DIFFERENT photographs', covers.distinct === covers.withImage, `${covers.distinct} distinct`);
+  check('…and none of them is broken', covers.broken === 0, `${covers.broken} broken`);
+  await page.close();
 }
 
 await browser.close();

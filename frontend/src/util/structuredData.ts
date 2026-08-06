@@ -644,6 +644,22 @@ export function buildOrganizationSchema(
     '@type': ['Organization', 'OnlineStore'],
     '@id': `${base}/#organization`,
     name: SITE_BRAND_NAME,
+    /**
+     * SOBITAS IS THE LEGAL NAME AND IT BELONGS HERE.
+     *
+     * The consumer rebrand to Protein.tn was deliberate and stays: `name` is the trading name and
+     * every visible surface says Protein.tn. But after that change the string "SOBITAS" appeared in
+     * ZERO machine-readable places on the whole site — not a title, not a schema field, nothing —
+     * while remaining the single biggest search query the site has (589 clicks on 927 impressions
+     * in the last 3 months, 63.5% CTR, average position 2.42).
+     *
+     * `alternateName` is precisely the field for this: it tells Google that one entity has two
+     * names, which is what is actually true. It is entity disambiguation, not a ranking factor, so
+     * the honest expectation is a more coherent knowledge panel — NOT a traffic lift on a query
+     * already sitting at position 2.4. It is here because a company's other name should be stated
+     * somewhere, and right now it is stated nowhere.
+     */
+    alternateName: ['SOBITAS', 'Sobitas'],
     url: base,
     logo: `${base}/logo.png`,
     description:
@@ -674,11 +690,31 @@ export function buildOrganizationSchema(
       areaServed: 'TN',
       availableLanguage: 'French',
     },
+    /**
+     * ── THE YOUTUBE URL WAS REMOVED BECAUSE IT IS A 404 ────────────────────────────────────
+     * Verified with a control: `youtube.com/@Google` returns 200 from here, so the request path
+     * works; `youtube.com/@proteinetunisie` returns 404. The footer links a DIFFERENT handle
+     * (`@proteine-tunisie`, FooterClient.tsx) and that one is also a 404 — so the site currently
+     * asserts two different YouTube channels and neither of them exists.
+     *
+     * `sameAs` is a corroboration signal: it only does anything when the profile links back. A
+     * URL that resolves to nothing corroborates nothing and is a claim about an entity that does
+     * not exist, so it comes out.
+     *
+     * ── THE OTHER THREE ARE LEFT ALONE, DELIBERATELY ───────────────────────────────────────
+     * Facebook and Instagram DISAGREE with the footer too (`protein.tn` here vs `proteinetunisie`
+     * and `sobitas.proteine.tunisie` there), and one side of each pair is wrong. But neither can
+     * be settled from a server: Facebook returns 400 to any non-browser request regardless of
+     * whether the page exists, and Instagram returns 200 for profiles that do not. Guessing which
+     * handle is real would just move the wrong URL from one file to another.
+     *
+     * This needs the owner to name the real accounts, and it is written up in the PR. Until then
+     * these stay as-is rather than being replaced with a different guess.
+     */
     sameAs: [
       'https://www.facebook.com/protein.tn',
       'https://www.instagram.com/protein.tn',
       'https://www.tiktok.com/@protein.tn',
-      'https://www.youtube.com/@proteinetunisie',
     ],
   };
 }
@@ -795,7 +831,9 @@ export function buildWebSiteSchema(baseUrl: string): object {
     '@type': 'WebSite',
     '@id': `${base}/#website`,
     name: 'Protéine Tunisie',
-    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn'],
+    // 'SOBITAS' appended for the reason given on the Organization node: it is the legal name, it
+    // is the site's single biggest query, and it was machine-readable nowhere after the rebrand.
+    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS'],
     url: base,
     inLanguage: 'fr-TN',
     publisher: { '@id': `${base}/#organization` },

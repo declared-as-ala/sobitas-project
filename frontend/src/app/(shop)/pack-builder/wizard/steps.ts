@@ -38,6 +38,8 @@ import type { Product } from '@/types';
 export interface PackGroup {
   slug: string;
   label: string;
+  /** Absolute URL of the category's own cover photograph, or null when the admin has none. */
+  cover: string | null;
   products: Product[];
 }
 

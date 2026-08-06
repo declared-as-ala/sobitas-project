@@ -18,7 +18,7 @@ import { useState } from 'react';
 import { m, AnimatePresence } from 'motion/react';
 import { Check, ChevronDown, Loader2, Percent, Plus, ShoppingCart, X } from 'lucide-react';
 import { getEffectivePrice } from '@/util/productPrice';
-import type { Goal } from '@/util/nutritionTargets';
+import { GOAL_LABELS, type Goal } from '@/util/nutritionTargets';
 import type { Product } from '@/types';
 import { CoachFigure } from './CoachFigure';
 import { NeedsCheck } from './NeedsCheck';
@@ -37,12 +37,16 @@ export interface StepRecapProps {
   quoteLoading: boolean;
   /** Whether a server quote has arrived. See assessPack — null nextTier is otherwise ambiguous. */
   hasQuote: boolean;
+  /** The cart write + navigation is in flight. Owned by PackBuilderClient. */
+  submitting: boolean;
   goal: Goal | null;
   coveredSlugs: string[];
   availableSlugs: string[];
   labelBySlug: Record<string, string>;
   onRemove: (product: Product) => void;
   onJumpToCategory: (slug: string) => void;
+  /** Sets the goal WITHOUT navigating — used by the needs check when step 1 was skipped. */
+  onSelectGoal: (goal: Goal) => void;
   onSubmit: () => void;
   calm: boolean;
 }
@@ -58,12 +62,14 @@ export function StepRecap({
   nextTier,
   quoteLoading,
   hasQuote,
+  submitting,
   goal,
   coveredSlugs,
   availableSlugs,
   labelBySlug,
   onRemove,
   onJumpToCategory,
+  onSelectGoal,
   onSubmit,
   calm,
 }: StepRecapProps) {
@@ -86,7 +92,11 @@ export function StepRecap({
   return (
     <div className="mx-auto max-w-2xl">
       <m.div variants={child} className="text-center">
-        <h2 className="font-display text-2xl font-extrabold uppercase leading-tight tracking-tight text-ink-1 sm:text-3xl">
+        {/* The SectionHeader scale-2 string, verbatim. This was a fourth heading size — `text-2xl
+            sm:text-3xl` with `leading-tight tracking-tight` and no width axis — stepping at `sm`
+            where every other heading on the site steps at `lg`. Intermediate sizes with no rule
+            behind them are exactly what makes a page look like a purchased theme. */}
+        <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
           {assessment.headline}
         </h2>
         {itemCount > 0 && (
@@ -127,7 +137,9 @@ export function StepRecap({
               type="button"
               whileTap={tap(calm)}
               onClick={() => onJumpToCategory(slug)}
-              className="inline-flex min-h-[36px] items-center rounded-full border border-hairline bg-canvas px-3.5 text-xs font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+              /* 44px, up from 36. The row is `flex-wrap` and has no vertical constraint, so the
+                 old height was not buying anything — it was simply under the site's own floor. */
+              className="inline-flex min-h-[44px] items-center rounded-full border border-hairline bg-elevated px-4 text-xs font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
             >
               {labelBySlug[slug] ?? slug}
             </m.button>
@@ -170,7 +182,10 @@ export function StepRecap({
                     type="button"
                     onClick={() => onRemove(product)}
                     aria-label={`Retirer ${product.designation_fr} du pack`}
-                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors [@media(hover:hover)]:hover:text-destructive"
+                    /* 44px, up from 36. This is the DESTRUCTIVE control on the screen: an
+                       under-sized target next to a product name is how someone removes the wrong
+                       line. The row is already ~62px tall, so nothing had to move to make room. */
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors [@media(hover:hover)]:hover:text-destructive"
                   >
                     <X className="h-4 w-4" />
                   </button>
@@ -207,7 +222,12 @@ export function StepRecap({
           <div className="flex items-baseline justify-between border-t border-hairline pt-2.5">
             <span className="flex items-center gap-1.5 font-display text-base font-extrabold uppercase tracking-tight text-ink-1">
               Total
-              {quoteLoading && <Loader2 className="h-3.5 w-3.5 animate-spin text-ink-3" aria-hidden="true" />}
+              {/* `data-motion` opts this out of the mobile clamp in globals.css, which forces
+                  every animation without it to 0.2s under 768px — five revolutions a second, which
+                  reads as a fault rather than as waiting. */}
+              {quoteLoading && (
+                <Loader2 data-motion className="h-3.5 w-3.5 animate-spin text-ink-3" aria-hidden="true" />
+              )}
             </span>
             <m.span
               key={total}
@@ -223,26 +243,48 @@ export function StepRecap({
         </div>
       </m.div>
 
-      {/* ── 3 · the exit ────────────────────────────────────────────────────────────────── */}
+      {/* ── 3 · the exit ──────────────────────────────────────────────────────────────────
+          THE PENDING STATE IS NOT DECORATION. `onSubmit` writes every line into the cart context,
+          sets the pack-discount flag and then `router.push('/cart')` — a client navigation that has
+          to fetch and render the cart route. On a Tunisian 3G connection that is comfortably long
+          enough for the button to look inert, and an inert button on the one screen where money
+          changes hands is how a pack gets added twice. The `disabled` attribute is what actually
+          prevents the second tap; the spinner and the label are what explain it. */}
       <m.div variants={child} className="mt-5">
         <m.button
           type="button"
           onClick={onSubmit}
-          disabled={entries.length === 0}
-          whileTap={tap(calm)}
-          className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-brand font-display text-base font-bold uppercase tracking-wide text-on-brand transition-colors disabled:opacity-40 [@media(hover:hover)]:hover:bg-brand-hover"
+          disabled={entries.length === 0 || submitting}
+          aria-busy={submitting}
+          whileTap={submitting ? undefined : tap(calm)}
+          className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl bg-brand font-display text-base font-bold uppercase tracking-wide text-on-brand transition-colors disabled:cursor-not-allowed disabled:opacity-60 [@media(hover:hover)]:hover:bg-brand-hover"
         >
-          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
-          Ajouter le pack au panier
+          {submitting ? (
+            <>
+              <Loader2 data-motion className="h-5 w-5 animate-spin" aria-hidden="true" />
+              Ajout en cours…
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-5 w-5" aria-hidden="true" />
+              Ajouter le pack au panier
+            </>
+          )}
         </m.button>
         <p className="mt-2 text-center text-[11px] leading-snug text-ink-3">
           La remise groupée est recalculée et appliquée automatiquement lors du paiement.
         </p>
       </m.div>
 
-      {/* ── 4 · the optional extra ──────────────────────────────────────────────────────── */}
-      {goal && (
-        <m.section variants={child} className="mt-7 overflow-hidden rounded-2xl border border-hairline bg-sunken">
+      {/* ── 4 · the optional extra ────────────────────────────────────────────────────────
+          IT NO LONGER REQUIRES A GOAL TO EXIST. It used to be wrapped in `{goal && …}`, so anyone
+          who took the "Je sais déjà ce que je veux" escape on step 1 — the shopper who knows what
+          they want, i.e. the best customer on the page — reached the end and the calculator was
+          simply not there. Nothing explained its absence, because nothing had been said about it.
+          The calculator genuinely needs a goal (the protein band is goal-dependent), so it asks for
+          one HERE, inside the panel, in context: one tap, instead of walking six steps backwards to
+          answer a question they had deliberately declined. */}
+      <m.section variants={child} className="mt-7 overflow-hidden rounded-2xl border border-hairline bg-elevated">
           <button
             type="button"
             onClick={() => setNeedsOpen((v) => !v)}
@@ -278,13 +320,33 @@ export function StepRecap({
                 className="overflow-hidden"
               >
                 <div className="border-t border-hairline p-4 sm:p-5">
-                  <NeedsCheck goal={goal} calm={calm} />
+                  {goal ? (
+                    <NeedsCheck goal={goal} calm={calm} />
+                  ) : (
+                    <div>
+                      <p className="text-sm text-ink-2">
+                        Le calcul dépend de votre objectif. Lequel vous correspond&nbsp;?
+                      </p>
+                      <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                        {(Object.keys(GOAL_LABELS) as Goal[]).map((g) => (
+                          <m.button
+                            key={g}
+                            type="button"
+                            whileTap={tap(calm)}
+                            onClick={() => onSelectGoal(g)}
+                            className="flex min-h-[52px] items-center rounded-xl border border-hairline bg-sunken px-4 text-left text-sm font-semibold text-ink-1 transition-colors [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+                          >
+                            {GOAL_LABELS[g].label}
+                          </m.button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </m.div>
             )}
           </AnimatePresence>
         </m.section>
-      )}
     </div>
   );
 }

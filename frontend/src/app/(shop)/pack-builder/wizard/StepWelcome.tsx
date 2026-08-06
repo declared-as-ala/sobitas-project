@@ -43,7 +43,12 @@ export function StepWelcome({ tiers, groups, onStart, calm }: StepWelcomeProps) 
 
   return (
     <div className="mx-auto max-w-2xl text-center">
-      <m.p variants={child} className="font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
+      {/* `.pt-kicker` is the site's shared kicker — the same class, the same 28px brand rule and
+          the same wdth 112 / 0.22em tracking that sits above every heading on the landing page.
+          It used to be a hand-rolled `text-[11px] tracking-[0.2em]`, which is how a page ends up
+          with seven kicker styles nobody chose. */}
+      <m.p variants={child} className="pt-kicker inline-flex items-center gap-2.5 text-brand">
+        <span className="h-px w-7 bg-brand" aria-hidden="true" />
         Pack sur mesure
       </m.p>
 

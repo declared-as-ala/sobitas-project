@@ -1,7 +1,7 @@
 'use client';
 
 /**
- * The wizard shell — progress, transitions, and the one persistent footer.
+ * The wizard shell — progress, transitions, and the one persistent step bar.
  *
  * ── WHY LazyMotion + `m` AND NOT `motion` ──────────────────────────────────────────────────
  * `import { motion } from 'motion/react'` pulls the whole feature set — layout projection, drag,
@@ -29,11 +29,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LazyMotion, MotionConfig, m, useReducedMotion } from 'motion/react';
-import { ArrowLeft, Check } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2 } from 'lucide-react';
 import type { Product } from '@/types';
 import type { Goal } from '@/util/nutritionTargets';
 import { buildSteps, stepLabel, type PackGroup, type Step } from './steps';
-import { stepVariants, EASE } from './variants';
+import { stepVariants, popVariants, EASE } from './variants';
+import type { GoalCovers } from './goalCovers';
 import { StepWelcome } from './StepWelcome';
 import { StepGoal } from './StepGoal';
 import { StepCategory } from './StepCategory';
@@ -44,6 +45,7 @@ const loadMotionFeatures = () => import('./motionFeatures').then((mod) => mod.de
 
 export interface PackWizardProps {
   groups: PackGroup[];
+  goalCovers: GoalCovers;
   categoryOrder: string[] | null;
   goal: Goal | null;
   pack: Record<number, number>;
@@ -58,6 +60,7 @@ export interface PackWizardProps {
   quoteLoading: boolean;
   /** Whether a server quote has arrived — see assessPack for why this is not derivable. */
   hasQuote: boolean;
+  submitting: boolean;
   tiers: { min: number; percent: number }[];
   coveredSlugs: string[];
   onSelectGoal: (goal: Goal) => void;
@@ -65,13 +68,16 @@ export interface PackWizardProps {
   onSetQty: (product: Product, qty: number) => void;
   onRemove: (product: Product) => void;
   onSubmit: () => void;
-  /** Set by the shell so the caller can aim the fly-to-pack animation at the footer total. */
+  /** Set by the shell so the caller can aim the fly-to-pack animation at the step bar's total. */
   footerRef: React.RefObject<HTMLDivElement | null>;
+  /** The tier track, so the caller can ring it when a discount tier is crossed. */
+  tierTrackRef: React.RefObject<HTMLDivElement | null>;
 }
 
 export function PackWizard(props: PackWizardProps) {
   const {
     groups,
+    goalCovers,
     categoryOrder,
     goal,
     pack,
@@ -85,6 +91,7 @@ export function PackWizard(props: PackWizardProps) {
     nextTier,
     quoteLoading,
     hasQuote,
+    submitting,
     tiers,
     coveredSlugs,
     onSelectGoal,
@@ -93,6 +100,7 @@ export function PackWizard(props: PackWizardProps) {
     onRemove,
     onSubmit,
     footerRef,
+    tierTrackRef,
   } = props;
 
   const prefersReduced = useReducedMotion();
@@ -114,12 +122,12 @@ export function PackWizard(props: PackWizardProps) {
    * The heading of the step now on screen. Focus is moved here after every step change.
    *
    * This is not polish. `AnimatePresence mode="wait"` UNMOUNTS the outgoing step, and the control
-   * the visitor just activated — "Commencer", a goal card, "Continuer" — lives inside it. When that
-   * element is destroyed the browser resets focus to `document.body`, so a keyboard user's next Tab
-   * starts again from the top of the document, and a screen-reader user is told nothing at all:
-   * the page silently became a different page. Moving focus to the new heading is the standard
-   * remedy, and it also makes the heading the thing that gets read aloud, which is the sentence
-   * that explains where you now are.
+   * the visitor just activated — "Commencer", a goal card — lives inside it. When that element is
+   * destroyed the browser resets focus to `document.body`, so a keyboard user's next Tab starts
+   * again from the top of the document, and a screen-reader user is told nothing at all: the page
+   * silently became a different page. Moving focus to the new heading is the standard remedy, and
+   * it also makes the heading the thing that gets read aloud, which is the sentence that explains
+   * where you now are.
    */
   const headingRef = useRef<HTMLDivElement>(null);
   /** True only after a real navigation, so the first paint does not steal focus on load. */
@@ -150,6 +158,7 @@ export function PackWizard(props: PackWizardProps) {
 
   const next = useCallback(() => goTo(safeIndex + 1), [goTo, safeIndex]);
   const back = useCallback(() => goTo(safeIndex - 1), [goTo, safeIndex]);
+  const goToRecap = useCallback(() => goTo(steps.length - 1), [goTo, steps.length]);
 
   const jumpToCategory = useCallback(
     (slug: string) => {
@@ -175,7 +184,13 @@ export function PackWizard(props: PackWizardProps) {
   );
   const availableSlugs = useMemo(() => groups.map((g) => g.slug), [groups]);
 
-  const showFooter = step.kind === 'category';
+  const onCategory = step.kind === 'category';
+  /** The recap is always last, so the final category is the one immediately before it. */
+  const isLastCategory = onCategory && safeIndex === steps.length - 2;
+  /** How many products of THIS category are in the pack — decides "Continuer" vs "Passer". */
+  const selectedHere = onCategory ? step.group.products.reduce((n, p) => n + (pack[p.id] ? 1 : 0), 0) : 0;
+
+  const advanceLabel = isLastCategory ? 'Voir mon pack' : selectedHere > 0 ? 'Continuer' : 'Passer';
 
   return (
     <LazyMotion features={loadMotionFeatures} strict>
@@ -192,7 +207,7 @@ export function PackWizard(props: PackWizardProps) {
         <h1
           className={
             step.kind === 'welcome'
-              ? 'text-center font-display text-3xl font-extrabold uppercase leading-[1.03] tracking-tight text-ink-1 sm:text-4xl lg:text-5xl'
+              ? 'text-center font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[3.5rem]'
               : 'sr-only'
           }
         >
@@ -216,7 +231,12 @@ export function PackWizard(props: PackWizardProps) {
         {/* ── progress rail ─────────────────────────────────────────────────────────────
             Hidden on the welcome step: a progress indicator shown before anyone has done
             anything is furniture, and it would be the first thing a crawler and a first-time
-            visitor both see. */}
+            visitor both see.
+
+            THE "3/8" COUNTER IS GONE. Owner: "a lot of text and a lot of numbers." The eight
+            segments already answer "how far am I" without asking anyone to read a fraction, and
+            the sr-only live region above states the position in words for anyone who cannot see
+            them. A number that duplicates a picture is the cheapest thing on the screen to cut. */}
         {step.kind !== 'welcome' && (
           <nav aria-label="Progression" className="mb-6">
             <div className="flex items-center gap-3">
@@ -234,13 +254,13 @@ export function PackWizard(props: PackWizardProps) {
 
                   THE SEGMENTS ARE NOT CLICKABLE, and that is a correction rather than an omission.
                   They were buttons. With eight steps at 390px the row has about 290px once the back
-                  button and the counter take their share, so each target measured ~30px wide —
-                  under the site's own 44px rule, and sitting between two identical neighbours, which
-                  is a mis-tap generator rather than a shortcut. Nothing was lost by removing them:
-                  back is the button to their left, forward is the step's own Continuer, the footer's
-                  Terminer jumps to the recap, and the recap's chips jump to any category.
+                  button takes its share, so each target measured ~33px wide — under the site's own
+                  44px rule, and sitting between two identical neighbours, which is a mis-tap
+                  generator rather than a shortcut. Nothing was lost: back is the button to their
+                  left, forward is the step bar's own button, the bar's summary jumps to the recap,
+                  and the recap's chips jump to any category.
 
-                  `aria-hidden` because the sentence above the rail already announces "Étape 2 sur 8 :
+                  `aria-hidden` because the live region above already announces "Étape 2 sur 8 :
                   Objectif" — eight unlabelled decorative bars would only add noise after it. */}
               <ol aria-hidden="true" className="flex min-w-0 flex-1 items-center gap-1.5">
                 {steps.map((s, i) => {
@@ -248,19 +268,21 @@ export function PackWizard(props: PackWizardProps) {
                   const current = i === safeIndex;
                   return (
                     <li key={s.key} className="min-w-0 flex-1">
+                      {/* `bg-rule-strong` for the steps still to come, NOT `bg-hairline`.
+                          #E8E5E1 on the sand page measures 1.05:1 — the remaining segments were
+                          effectively invisible, so the rail showed how far you had come and said
+                          nothing about how much was left, which is the half a visitor actually
+                          wants. `--c-rule-strong` is the token that exists precisely for a
+                          boundary carrying meaning on its own (3.34:1 on white, theme-aware). */}
                       <span
                         className={`block h-1.5 w-full rounded-full transition-colors ${
-                          current ? 'bg-brand' : done ? 'bg-brand/45' : 'bg-hairline'
+                          current ? 'bg-brand' : done ? 'bg-brand/45' : 'bg-rule-strong'
                         }`}
                       />
                     </li>
                   );
                 })}
               </ol>
-
-              <span className="shrink-0 whitespace-nowrap text-[11px] font-semibold tabular-nums text-ink-3">
-                {safeIndex + 1}/{steps.length}
-              </span>
             </div>
           </nav>
         )}
@@ -284,19 +306,16 @@ export function PackWizard(props: PackWizardProps) {
             )}
 
             {step.kind === 'goal' && (
-              <StepGoal goal={goal} onSelect={handleGoal} onSkip={next} calm={calm} />
+              <StepGoal goal={goal} covers={goalCovers} onSelect={handleGoal} onSkip={next} calm={calm} />
             )}
 
             {step.kind === 'category' && (
               <StepCategory
                 group={step.group}
-                position={step.position}
-                count={step.count}
                 pack={pack}
                 rationaleGoal={step.position === 1 && categoryOrder ? goal : null}
                 onAdd={onAdd}
                 onSetQty={onSetQty}
-                onNext={next}
                 calm={calm}
               />
             )}
@@ -313,12 +332,16 @@ export function PackWizard(props: PackWizardProps) {
                 nextTier={nextTier}
                 quoteLoading={quoteLoading}
                 hasQuote={hasQuote}
+                submitting={submitting}
                 goal={goal}
                 coveredSlugs={coveredSlugs}
                 availableSlugs={availableSlugs}
                 labelBySlug={labelBySlug}
                 onRemove={onRemove}
                 onJumpToCategory={jumpToCategory}
+                /* The RAW setter, not `handleGoal` — answering the question inside the needs check
+                   must not navigate the wizard back to the category steps. */
+                onSelectGoal={onSelectGoal}
                 onSubmit={onSubmit}
                 calm={calm}
               />
@@ -326,17 +349,33 @@ export function PackWizard(props: PackWizardProps) {
           </m.div>
         </AnimatePresence>
 
-        {/* ── the one persistent bar ────────────────────────────────────────────────────
-            Only on category steps, and only once something is in the pack. Everything the old
-            layout scattered across the page — total, saving, tier progress, next-tier nudge —
-            is stated here, once, out of the way of the grid.
+        {/* ── THE STEP BAR ──────────────────────────────────────────────────────────────
+            This is the fix the owner named, and the change is one of PURPOSE rather than of style.
+            It used to be a SUMMARY bar that happened to carry a "Terminer" button, and it only
+            appeared once something was in the pack. Two consequences, both bad:
 
-            It is absent on welcome, goal and recap because on each of those the same numbers are
-            already the subject of the screen. A summary bar under a summary is noise. */}
+              - the always-visible action was FINISH. Advancing to the next category meant scrolling
+                past twelve products to a button at the bottom of the grid. Owner: "the user should
+                continue, not directly finish the pack."
+              - on a category where you had selected nothing, there was no persistent control at
+                all — the bar was hidden, so the only way onward was, again, the bottom of the grid.
+
+            It is now the STEP BAR: present on every category step regardless of what is in the
+            pack, and its primary action always moves you forward. The verb follows the situation —
+            "Continuer" when this category has a selection, "Passer" when it does not, "Voir mon
+            pack" on the last one — so the button never lies about where it goes.
+
+            Finishing did not disappear; it moved to where finishing happens. The summary on the
+            left is a button to the recap, and the recap is the screen with "Ajouter le pack au
+            panier" on it.
+
+            It is absent on welcome, goal and recap because on each of those the primary action is
+            already the subject of the screen. A step bar under a step whose whole content is one
+            button is furniture. */}
         <AnimatePresence>
-          {showFooter && itemCount > 0 && (
+          {onCategory && (
             <m.div
-              key="wizard-footer"
+              key="wizard-stepbar"
               initial={calm ? { opacity: 0 } : { y: 80, opacity: 0 }}
               animate={calm ? { opacity: 1 } : { y: 0, opacity: 1 }}
               exit={calm ? { opacity: 0 } : { y: 80, opacity: 0 }}
@@ -344,67 +383,134 @@ export function PackWizard(props: PackWizardProps) {
               data-motion
               className="pt-packbar fixed inset-x-0 z-40 border-t border-hairline bg-elevated shadow-card"
             >
-              <div
-                className="h-[3px] w-full bg-hairline"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={tiers[tiers.length - 1].min}
-                aria-valuenow={Math.round(subtotal)}
-                aria-label="Progression vers la remise suivante"
-              >
-                <m.div
-                  className="h-full bg-brand"
-                  initial={false}
-                  animate={{ width: `${Math.min(100, (subtotal / tiers[tiers.length - 1].min) * 100)}%` }}
-                  transition={EASE}
+              {/* The tier track, only once there is progress to draw. At zero it is a bar reading
+                  empty, which states the mechanic without ever being persuasive — the welcome
+                  step's three figures do that job better. */}
+              {itemCount > 0 && (
+                <div
+                  ref={tierTrackRef as React.RefObject<HTMLDivElement>}
                   data-motion
-                />
-              </div>
-
-              {/* The nudge sits ABOVE the money row. MobileTabBar's raised centre button rises into
-                  whatever is directly above it, and as the last line this text had its middle
-                  covered; the money row survives that overlap because its centre is the empty gap
-                  between the total and the button. */}
-              {nextTier && (
-                <p className="px-4 pt-2 text-[11px] font-medium text-ink-2">
-                  Ajoutez{' '}
-                  <span className="font-display font-bold tabular-nums text-ink-1">
-                    {nextTier.remaining.toFixed(2)} DT
-                  </span>{' '}
-                  pour obtenir −{nextTier.percent}%
-                </p>
+                  className="h-[3px] w-full bg-rule-strong"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={tiers[tiers.length - 1].min}
+                  aria-valuenow={Math.round(subtotal)}
+                  aria-label="Progression vers la remise suivante"
+                >
+                  <m.div
+                    className="h-full bg-brand"
+                    initial={false}
+                    animate={{ width: `${Math.min(100, (subtotal / tiers[tiers.length - 1].min) * 100)}%` }}
+                    transition={EASE}
+                    data-motion
+                  />
+                </div>
               )}
 
-              {/* React 18's `LegacyRef` does not accept a `RefObject<T | null>`, which is what
-                  `useRef<HTMLDivElement>(null)` produces. React 19 relaxed this; the cast is the
-                  narrow, correct bridge until the upgrade — the ref genuinely can be null. */}
-              <div ref={footerRef as React.RefObject<HTMLDivElement>} className="flex items-center gap-3 px-4 py-2.5">
-                <span className="min-w-0 flex-1" aria-live="polite">
-                  <span className="block text-[11px] text-ink-3">
-                    {itemCount} article{itemCount !== 1 ? 's' : ''}
-                    {discountPercent > 0 && <span className="font-semibold text-brand"> · −{discountPercent}%</span>}
-                  </span>
-                  <span className="flex items-baseline gap-2">
-                    <span className="font-display text-lg font-bold tabular-nums leading-tight text-ink-1">
-                      {total.toFixed(2)} DT
+              {/* THE CONTENT SITS ON THE PAGE'S OWN RAIL. The bar is `inset-x-0` because a fixed
+                  element that stops short of the edges reads as a floating card, but its CONTENTS
+                  must not be: unconstrained, the total pinned to the far left and the action to the
+                  far right, roughly 1,450px apart on a 1600px screen — the eye cannot hold a number
+                  and its button at opposite ends of a monitor. `max-w-site` + the same gutters as
+                  `main` puts the total directly under the last column of products. The 3px track
+                  above stays full-bleed on purpose: it is a page-level progress indicator, and a
+                  progress bar that stops 200px from each edge looks broken. */}
+              <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+                {/* The nudge sits ABOVE the money row. MobileTabBar's raised centre button rises
+                    into whatever is directly above it, and as the last line this text had its
+                    middle covered; the money row survives that overlap because its centre is the
+                    empty gap between the total and the button. */}
+                {nextTier && itemCount > 0 && (
+                  <p className="pt-2 text-[11px] font-medium text-ink-2">
+                    Ajoutez{' '}
+                    <span className="font-display font-bold tabular-nums text-ink-1">
+                      {nextTier.remaining.toFixed(2)} DT
+                    </span>{' '}
+                    pour obtenir −{nextTier.percent}%
+                  </p>
+                )}
+
+                {/* React 18's `LegacyRef` does not accept a `RefObject<T | null>`, which is what
+                    `useRef<HTMLDivElement>(null)` produces. React 19 relaxed this; the cast is the
+                    narrow, correct bridge until the upgrade — the ref genuinely can be null. */}
+                <div
+                  ref={footerRef as React.RefObject<HTMLDivElement>}
+                  className="flex items-center gap-3 py-2.5"
+                >
+                {itemCount > 0 ? (
+                  /* THE SUMMARY IS A BUTTON, and its first line says so in words rather than with
+                     a chevron. A running total that silently happens to be tappable is a feature
+                     only the people who try it ever find. */
+                  <button
+                    type="button"
+                    onClick={goToRecap}
+                    className="group -my-1 min-w-0 flex-1 rounded-lg py-1 pr-2 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    aria-label={`Voir mon pack : ${itemCount} article${itemCount !== 1 ? 's' : ''}, total ${total.toFixed(2)} dinars`}
+                  >
+                    <span className="block truncate text-[11px] text-ink-3 underline-offset-2 [@media(hover:hover)]:group-hover:text-brand [@media(hover:hover)]:group-hover:underline">
+                      Voir mon pack · {itemCount} article{itemCount !== 1 ? 's' : ''}
+                      {discountPercent > 0 && <span className="font-semibold text-brand"> · −{discountPercent}%</span>}
                     </span>
-                    {discountAmount > 0 && (
-                      <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-ok">
-                        −{discountAmount.toFixed(2)} DT
-                      </span>
-                    )}
+                    <span className="flex items-baseline gap-2" aria-hidden="true">
+                      {/* Keyed on `total` so the number re-plays its pop each time it changes —
+                          the confirmation that a tap landed, on the one element a thumb is
+                          usually covering. `quoteLoading` dims it while the server is still
+                          deciding, because until the quote lands this figure is the raw subtotal
+                          and the discount is not in it yet. */}
+                      <m.span
+                        key={total}
+                        variants={popVariants(calm)}
+                        initial="enter"
+                        animate="center"
+                        data-motion
+                        className={`font-display text-lg font-bold tabular-nums leading-tight text-ink-1 transition-opacity ${
+                          quoteLoading ? 'opacity-50' : 'opacity-100'
+                        }`}
+                      >
+                        {total.toFixed(2)} DT
+                      </m.span>
+                      {quoteLoading ? (
+                        /* `data-motion` is not optional on a spinner. globals.css clamps every
+                           animation without it to 0.2s under 768px, which turns a 1s revolution
+                           into five per second — a strobe that reads as a fault rather than as
+                           waiting. The attribute is the documented per-component opt-out. */
+                        <Loader2
+                          data-motion
+                          className="h-3.5 w-3.5 shrink-0 animate-spin text-ink-3"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        discountAmount > 0 && (
+                          <span className="shrink-0 whitespace-nowrap text-xs font-semibold tabular-nums text-ok">
+                            −{discountAmount.toFixed(2)} DT
+                          </span>
+                        )
+                      )}
+                    </span>
+                  </button>
+                ) : (
+                  /* Nothing in the pack yet. The left column stays as a spacer rather than
+                     collapsing, so the advance button keeps the same position on every step
+                     instead of sliding across the bar the moment the first product is added. */
+                  <span className="min-w-0 flex-1 text-[11px] leading-snug text-ink-3">
+                    Ajoutez ce que vous voulez, ou passez à la catégorie suivante.
                   </span>
-                </span>
+                )}
 
                 <m.button
                   type="button"
-                  onClick={() => goTo(steps.length - 1)}
+                  onClick={next}
                   whileTap={calm ? undefined : { scale: 0.97 }}
-                  className="inline-flex min-h-[46px] shrink-0 items-center gap-1.5 rounded-xl bg-brand px-4 font-display text-sm font-bold uppercase tracking-wide text-on-brand transition-colors [@media(hover:hover)]:hover:bg-brand-hover"
+                  className={`inline-flex min-h-[46px] shrink-0 items-center gap-1.5 rounded-xl px-4 font-display text-sm font-bold uppercase tracking-wide transition-colors ${
+                    selectedHere > 0 || isLastCategory
+                      ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
+                      : 'border border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand'
+                  }`}
                 >
-                  <Check className="h-4 w-4" aria-hidden="true" />
-                  Terminer
-                </m.button>
+                    {advanceLabel}
+                    <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                  </m.button>
+                </div>
               </div>
             </m.div>
           )}

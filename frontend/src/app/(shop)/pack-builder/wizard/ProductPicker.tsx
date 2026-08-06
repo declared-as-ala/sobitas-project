@@ -3,7 +3,7 @@
 /**
  * The product grid inside a category step.
  *
- * ── WHY A GRID, WHEN THE PREVIOUS VERSION USED A HORIZONTAL SHELF ──────────────────────────
+ * ── WHY A GRID, WHEN AN EARLIER VERSION USED A HORIZONTAL SHELF ────────────────────────────
  * The shelf existed to solve a problem the wizard deletes. Five categories stacked vertically
  * measured 8,104 px — 10.9 iPhone screens — from the first to the last, so reaching créatine meant
  * scrolling past everything else. A shelf collapsed that, at the cost of hiding most of each
@@ -14,14 +14,13 @@
  * category at once and compare six products without moving anything.
  *
  * ── THE TILE IS QUIET ON PURPOSE ───────────────────────────────────────────────────────────
- * Owner: *"a lot of text and a lot of numbers and a lot of icons."* Each tile now carries four
- * things and no more: the picture, the name, the price, one control. No badges, no icons in the
- * button, no per-tile stock language unless it is actually out of stock. The information that was
- * removed did not disappear — it moved to the step footer, where it is stated once instead of
- * twelve times.
+ * Owner: *"a lot of text and a lot of numbers and a lot of icons."* Each tile carries four things
+ * and no more: the picture, the name, the price, one control. No badges, no icons in the button, no
+ * per-tile stock language unless it is actually out of stock. The information that was removed did
+ * not disappear — it moved to the step bar, where it is stated once instead of twelve times.
  */
 
-import { memo, useCallback, useMemo, useRef } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { m } from 'motion/react';
 import { Check, Minus, Package, Plus } from 'lucide-react';
@@ -54,6 +53,59 @@ export interface ProductPickerProps {
  * under-declaring makes the browser upscale a smaller file and the product photo goes soft.
  */
 const IMAGE_SIZES = '(min-width: 1024px) 244px, (min-width: 640px) 32vw, 44vw';
+
+/**
+ * The product photograph, faded in over its own frame.
+ *
+ * ── WHY THIS IS A FADE AND NOT A SHIMMER ───────────────────────────────────────────────────
+ * A shimmering skeleton is the fashionable answer and it is the wrong one here. It is a LOOPING
+ * animation, and this grid renders twelve of them at once on the page the project has already had
+ * to fix for mobile INP. Worse, `globals.css` clamps every animation without `data-motion` to 0.2s
+ * on phones — so a 1.4s sweep becomes a 0.2s strobe, twelve times over, which is not a loading
+ * state but a fault. Opting each one out of the clamp would mean twelve unclamped loops instead.
+ *
+ * The fade costs one compositor-only property on a transition that already ends, and it fixes the
+ * thing that actually looked cheap: tiles popping in hard against a flat grey square.
+ *
+ * ── THE `complete` CHECK IS NOT DEFENSIVE PADDING ──────────────────────────────────────────
+ * `onLoad` does not fire for an image the browser already has in cache and decodes before React
+ * attaches the handler. On a back-navigation, or on the second visit to a category step, that is
+ * the NORMAL path — so without this the tile would keep `opacity-0` forever and the grid would
+ * render twelve invisible products. Reading `.complete` once on mount is what makes the cached
+ * case the fast case instead of the broken one.
+ */
+function ProductImage({ src, alt, unoptimized }: { src: string; alt: string; unoptimized: boolean }) {
+  const ref = useRef<HTMLImageElement>(null);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    if (ref.current?.complete) setLoaded(true);
+  }, []);
+
+  return (
+    <>
+      <Image
+        ref={ref}
+        src={src}
+        alt={alt}
+        fill
+        onLoad={() => setLoaded(true)}
+        /* Deliberately NOT `data-motion`: the mobile clamp shortening this to 0.2s is an
+           improvement, not a regression, and twelve unclamped transitions is the thing the clamp
+           exists to prevent. */
+        className={`object-contain p-2.5 transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+        sizes={IMAGE_SIZES}
+        loading="lazy"
+        unoptimized={unoptimized}
+      />
+      {!loaded && (
+        <span className="absolute inset-0 flex items-center justify-center text-ink-3/40" aria-hidden="true">
+          <Package className="h-7 w-7" />
+        </span>
+      )}
+    </>
+  );
+}
 
 const Tile = memo(function Tile({
   product,
@@ -92,15 +144,7 @@ const Tile = memo(function Tile({
     >
       <div ref={frameRef} className="relative aspect-square w-full bg-sunken">
         {image ? (
-          <Image
-            src={image}
-            alt={product.designation_fr}
-            fill
-            className="object-contain p-2.5"
-            sizes={IMAGE_SIZES}
-            loading="lazy"
-            unoptimized={isStorageImageUrl(image)}
-          />
+          <ProductImage src={image} alt={product.designation_fr} unoptimized={isStorageImageUrl(image)} />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-ink-3">
             <Package className="h-7 w-7" aria-hidden="true" />
@@ -135,8 +179,30 @@ const Tile = memo(function Tile({
         >
           {product.designation_fr}
         </h3>
-        <p className="mt-1 font-display text-base font-bold tabular-nums tracking-tight text-ink-1">
-          {price.toFixed(2)} <span className="text-xs font-semibold text-ink-3">DT</span>
+        {/* THE PRICE IS BRAND ORANGE — BUT ONLY WHEN THE TILE IS NOT SELECTED.
+            Every price on the site is `text-brand` (ProductCard.tsx:355); this grid was the one
+            place a price rendered in plain ink, so the pack builder's products read as a different
+            product than the same tub on /shop.
+
+            The selected branch stays `text-ink-1`, and that is not an inconsistency — it is the
+            rule ProductCard.tsx:366 already documents. A selected tile is filled `bg-brand/5`, and
+            the accent on a 10% tint of ITSELF composites to #D03B04 on #FBEBE6 = 4.07:1 in light
+            theme: an AA failure that is invisible to review, because both values are "the brand
+            colour" and the tile obviously reads as orange. The TINT carries the colour, so the
+            number does not have to. */}
+        <p
+          className={`mt-1 font-display text-base font-bold tabular-nums tracking-tight ${
+            selected ? 'text-ink-1' : 'text-brand'
+          }`}
+        >
+          {price.toFixed(2)}{' '}
+          {/* The currency suffix steps UP to ink-2 on a selected tile. `bg-brand/5` composites to
+              #F5EDE8, and ink-3 (#6C6C73) measures 4.50:1 on it at 12px — landing exactly on the AA
+              minimum, i.e. failing on the next rounding. ink-2 (#57575E) is 6.4:1 there. Only the
+              selected branch moves: on the unselected tile's white, ink-3 is 5.21:1 and correct.
+              Found by walking the wizard in the contrast auditor — a selected tile does not exist
+              on first paint, so the step-0-only audit had never once measured this element. */}
+          <span className={`text-xs font-semibold ${selected ? 'text-ink-2' : 'text-ink-3'}`}>DT</span>
         </p>
 
         <div className="mt-2.5">
@@ -145,7 +211,7 @@ const Tile = memo(function Tile({
               Indisponible
             </span>
           ) : selected ? (
-            <div className="flex items-center justify-between rounded-lg border border-brand/40 bg-canvas">
+            <div className="flex items-center justify-between rounded-lg border border-brand/40 bg-elevated">
               <m.button
                 type="button"
                 whileTap={tap(calm)}
@@ -159,7 +225,19 @@ const Tile = memo(function Tile({
               >
                 <Minus className="h-4 w-4" />
               </m.button>
-              <span className="font-display text-base font-bold tabular-nums text-ink-1">{qty}</span>
+              {/* Keyed on `qty` so the figure re-plays its pop on every change. Remounting the node
+                  is the cheapest way to restart an animation: no state, no timer, nothing to
+                  clean up. */}
+              <m.span
+                key={qty}
+                initial={calm ? false : { scale: 0.6 }}
+                animate={{ scale: 1 }}
+                transition={{ type: 'spring', stiffness: 620, damping: 22 }}
+                data-motion
+                className="font-display text-base font-bold tabular-nums text-ink-1"
+              >
+                {qty}
+              </m.span>
               <m.button
                 type="button"
                 whileTap={tap(calm)}
