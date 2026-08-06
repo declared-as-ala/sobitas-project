@@ -43,10 +43,17 @@ export interface PackGroup {
   products: Product[];
 }
 
+/**
+ * `position` and `count` used to ride along on a category step. Both are gone, because both of
+ * their readers are: `count` fed a "Catégorie 3 sur 5" line deleted in the previous pass, and
+ * `position` gated the goal rationale paragraph deleted in this one. A struct field that nothing
+ * reads is worse than no field — the next person to open this file sees a step that knows where it
+ * sits in the flow and reasonably assumes something is using that.
+ */
 export type Step =
   | { kind: 'welcome'; key: 'welcome' }
   | { kind: 'goal'; key: 'goal' }
-  | { kind: 'category'; key: string; group: PackGroup; position: number; count: number }
+  | { kind: 'category'; key: string; group: PackGroup }
   | { kind: 'recap'; key: 'recap' };
 
 /**
@@ -66,12 +73,10 @@ export function buildSteps(groups: PackGroup[], order: string[] | null): Step[] 
       })
     : groups;
 
-  const categorySteps: Step[] = ordered.map((group, i) => ({
+  const categorySteps: Step[] = ordered.map((group) => ({
     kind: 'category',
     key: `cat-${group.slug}`,
     group,
-    position: i + 1,
-    count: ordered.length,
   }));
 
   return [{ kind: 'welcome', key: 'welcome' }, { kind: 'goal', key: 'goal' }, ...categorySteps, { kind: 'recap', key: 'recap' }];
@@ -96,14 +101,9 @@ export function stepLabel(step: Step): string {
   }
 }
 
-/**
- * How far through the flow a step sits, 0–1.
- *
- * The welcome step reports 0 rather than 1/n. Showing progress before the visitor has done
- * anything is a small lie, and it is the kind that makes every later reading of the bar feel
- * approximate.
+/*
+ * `stepProgress(index, total)` lived here and returned a 0–1 fraction for a continuous progress
+ * bar. It had zero call sites: the rail draws SEGMENTS, one per step, which answers "how many are
+ * left" where a percentage only says "some". Deleted rather than kept for a future that already
+ * decided against it.
  */
-export function stepProgress(index: number, total: number): number {
-  if (total <= 1) return 0;
-  return Math.min(1, Math.max(0, index / (total - 1)));
-}

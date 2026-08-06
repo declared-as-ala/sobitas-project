@@ -38,7 +38,9 @@ function flag(name, fallback) {
 const one = (n, d) => flag(n, [d])[0];
 
 const BASE = one('base', 'http://localhost:3000').replace(/\/$/, '');
-const ROUTES = flag('routes', ['/']);
+/* `--routes` still wins when given; the fallback is resolved below, after WALKS is defined, so a
+   `--walk` supplies the page it walks. */
+const ROUTES_EXPLICIT = flag('routes', []);
 const WIDTHS = flag('widths', ['1440', '390']).map(Number);
 const THEMES = flag('themes', ['light', 'dark']);
 
@@ -55,16 +57,40 @@ const THEMES = flag('themes', ['light', 'dark']);
  * auditing the previous step twice.
  */
 const WALK = one('walk', '');
+
+/**
+ * A WALK CARRIES ITS OWN ROUTE, and that is not tidiness.
+ *
+ * `--walk packbuilder` used to set only the click sequences, leaving `--routes` at its default of
+ * `['/']`. Run without also passing `--routes /pack-builder` — which is exactly what happened once
+ * — the auditor dutifully loaded the HOMEPAGE and looked for a "Commencer" button on it, twenty
+ * times. It reported the truth (twenty skipped states, twenty failures, exit 1), but the per-state
+ * lines all read "0 fail", so the run was one careless glance away from being called green.
+ *
+ * The invocation that produces a lie should not be spellable. `route` here is a default, so
+ * `--routes` still overrides it when someone genuinely wants to walk a different page.
+ */
 const WALKS = {
-  packbuilder: [
-    { name: 'welcome', clicks: [] },
-    { name: 'goal', clicks: ['Commencer'] },
-    { name: 'category', clicks: ['Commencer', 'Prise de masse'] },
-    { name: 'category+selection', clicks: ['Commencer', 'Prise de masse', 'Ajouter'] },
-    { name: 'recap', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack'] },
-    { name: 'recap+needs', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack', 'Vos besoins'] },
-  ],
+  packbuilder: {
+    route: '/pack-builder',
+    states: [
+      { name: 'welcome', clicks: [] },
+      { name: 'goal', clicks: ['Commencer'] },
+      { name: 'category', clicks: ['Commencer', 'Prise de masse'] },
+      { name: 'category+selection', clicks: ['Commencer', 'Prise de masse', 'Ajouter'] },
+      { name: 'recap', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack'] },
+      { name: 'recap+needs', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack', 'Vos besoins'] },
+    ],
+  },
 };
+
+if (WALK && !WALKS[WALK]) {
+  console.error(`audit-contrast: unknown --walk "${WALK}". Known: ${Object.keys(WALKS).join(', ')}`);
+  process.exit(2);
+}
+
+const ROUTES = ROUTES_EXPLICIT.length ? ROUTES_EXPLICIT : WALK ? [WALKS[WALK].route] : ['/'];
+const WALK_STATES = WALK ? WALKS[WALK].states : null;
 
 const CHROME = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
@@ -183,7 +209,7 @@ for (const route of ROUTES) {
 
       await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle2', timeout: 90_000 });
 
-      const states = WALKS[WALK] ?? [{ name: '', clicks: [] }];
+      const states = WALK_STATES ?? [{ name: '', clicks: [] }];
       for (const state of states) {
         // Every state is reached from a FRESH load. Replaying clicks on top of the previous state
         // would compound them — "Ajouter" twice, a goal chosen while already past it — and the

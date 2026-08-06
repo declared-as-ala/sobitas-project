@@ -75,6 +75,28 @@ const clickText = (page, text) =>
 
 const settle = (page, ms = 700) => page.evaluate((d) => new Promise((r) => setTimeout(r, d)), ms);
 
+/**
+ * Wait for a condition IN THE PAGE, and report false instead of throwing when it never arrives.
+ *
+ * ── WHY THIS EXISTS, AND WHY IT MATTERS MORE THAN IT LOOKS ─────────────────────────────────
+ * Section 2d used to wait for the quote with `settle(page, 3000)`, on the reasoning — written in
+ * its own comment — that "on localhost the quote returns in ~30ms". That is only true when the
+ * backend is also local. It is not: `/api-proxy` forwards to admin.protein.tn, and from a
+ * developer machine the round trip measured 3.1s cold, on top of the 400ms debounce and the 1.8s
+ * the test itself deliberately holds the response for. So three assertions failed against code
+ * that was working perfectly — the gate was reporting a pricing bug that did not exist.
+ *
+ * A fixed sleep against a remote API is a coin flip wearing a number, and the failure mode is the
+ * expensive one: it cries wolf, somebody learns to re-run it until it is green, and the day it
+ * catches something real nobody believes it. Waiting for the CONDITION is both correct and faster
+ * on a fast link.
+ *
+ * `.catch(() => false)` rather than letting the timeout throw, so a genuine failure still prints
+ * as one FAIL line among the others instead of aborting the whole run.
+ */
+const waitFor = (page, fn, timeout = 25000) =>
+  page.waitForFunction(fn, { timeout, polling: 200 }).then(() => true).catch(() => false);
+
 // ── 1 · what a crawler sees ─────────────────────────────────────────────────────────────────
 section('1 · the server-rendered step 0 — this is the page, for SEO');
 {
@@ -141,7 +163,23 @@ section('2 · walking the wizard as a customer');
     return {
       heading: document.querySelector('h2')?.textContent?.trim() ?? '',
       tiles: document.querySelectorAll('article[data-pack-tile]').length,
-      rationale: /gainers apportent les calories|facteur limitant/i.test(document.body.innerText),
+      /* THE STEP IS A HEADING AND A GRID, AND NOTHING ELSE.
+         This assertion replaces its own opposite. It used to require the goal-rationale paragraph
+         ("les gainers apportent les calories…") to be present; that paragraph has since been cut,
+         along with the "Choisissez" kicker, on the owner's "take off the texts that aren't
+         needed". Deleting the assertion with the prose would have left the simplification
+         unguarded — nothing would stop the next person reintroducing a paragraph here.
+         So it is inverted: count the prose nodes between the heading and the grid. The step
+         column's only children are the optional cover banner, the SectionHeader and the grid, so
+         a <p> that is not inside a product tile is by definition something new. */
+      strayProse: [...document.querySelectorAll('main p')].filter(
+        (p) =>
+          !p.closest('.pt-packbar') &&
+          !p.closest('article[data-pack-tile]') &&
+          !p.className.includes('sr-only') &&
+          (p.textContent || '').trim().length > 0 &&
+          p.getClientRects().length > 0
+      ).map((p) => (p.textContent || '').trim().slice(0, 40)),
       bar: !!bar,
       barText: bar ? bar.textContent.replace(/\s+/g, ' ').trim() : '',
       // The in-flow "Continuer" the owner had to scroll ~1,900px to reach. It must be GONE — the
@@ -156,7 +194,11 @@ section('2 · walking the wizard as a customer');
   // of asking the question, so assert it landed rather than assuming.
   check('the goal reordered the steps (gainers first)', /gainers/i.test(firstCat.heading), firstCat.heading);
   check('only ONE category is on screen', firstCat.tiles > 0 && firstCat.tiles <= 12, `${firstCat.tiles} tiles`);
-  check('the goal is explained once, on the first category', firstCat.rationale);
+  check(
+    'the category step is a heading and a grid — no prose',
+    firstCat.strayProse.length === 0,
+    firstCat.strayProse.join(' | ')
+  );
 
   /* THE OWNER'S COMPLAINT, AS THREE ASSERTIONS.
      "You show a button of DONE in the sticky bar. When I have to scroll all the way down to
@@ -388,8 +430,12 @@ section('2d · a quote may only describe the pack it was asked about');
   await settle(page, 900);
 
   // First product, and WAIT for its quote to land so a real discount is on screen to go stale.
+  // On the CONDITION, not on a stopwatch — see `waitFor`.
   await clickText(page, 'Ajouter');
-  await settle(page, 3000);
+  await waitFor(page, () => {
+    const bar = document.querySelector('.pt-packbar');
+    return !!bar && /−\s*\d+\s*%/.test(bar.textContent || '') && !bar.querySelector('.animate-spin');
+  });
   const settled = await page.evaluate(() => {
     const bar = document.querySelector('.pt-packbar');
     const t = bar ? bar.textContent.replace(/\s+/g, ' ') : '';
@@ -435,7 +481,10 @@ section('2d · a quote may only describe the pack it was asked about');
     `${settled.total} → ${inFlight.total}`
   );
 
-  await settle(page, 2600);
+  await waitFor(page, () => {
+    const bar = document.querySelector('.pt-packbar');
+    return !!bar && !bar.querySelector('.animate-spin');
+  });
   const resolved = await page.evaluate(() => {
     const bar = document.querySelector('.pt-packbar');
     const t = bar ? bar.textContent.replace(/\s+/g, ' ') : '';
@@ -448,7 +497,7 @@ section('2d · a quote may only describe the pack it was asked about');
 }
 
 // ── 2c · the goal can be skipped and the flow still works ───────────────────────────────────
-section('2c · "Je sais déjà ce que je veux" — the shopper who skips the question');
+section('2c · "Passer cette étape" — the shopper who skips the question');
 {
   const { page } = await phone();
   await page.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -456,8 +505,14 @@ section('2c · "Je sais déjà ce que je veux" — the shopper who skips the que
   await clickText(page, 'Commencer');
   await settle(page, 900);
 
+  /* Matched on the ESCAPE, not on one wording of it. The label has been "Je sais déjà ce que je
+     veux" and is now "Passer cette étape"; what the test actually cares about is that the goal
+     step offers a way past itself at all. Pinning the assertion to prose means a copy edit reads
+     as a broken feature. */
   const skipped = await page.evaluate(() => {
-    const b = [...document.querySelectorAll('button')].find((x) => /je sais d[ée]j[àa]/i.test(x.textContent || ''));
+    const b = [...document.querySelectorAll('button')].find((x) =>
+      /passer|je sais d[ée]j[àa]/i.test(x.textContent || '')
+    );
     if (!b) return false;
     b.click();
     return true;
@@ -594,8 +649,12 @@ section('6 · the step bar must not sit on top of the page it belongs to');
      it. It was survivable while the bar was optional; now that the bar IS the way forward and the
      grid runs right up to it, the bottom row would be clipped on every laptop. 800px is the width
      that used to fail hardest — just past `md`, with the tab bar gone and the reserve at its
-     smallest. */
-  for (const width of [800, 1440, 1920]) {
+     smallest.
+
+     320 is in the matrix because it is the narrowest viewport the site supports and the one where
+     every "it fits" claim is actually decided — the three-column needs-check fields were unusable
+     there and no audit had ever entered the state to find out. */
+  for (const width of [320, 800, 1440, 1920]) {
     const p = await browser.newPage();
     await p.setViewport({ width, height: 900 });
     await p.goto(URL, { waitUntil: 'networkidle2', timeout: 60000 });
@@ -619,9 +678,36 @@ section('6 · the step bar must not sit on top of the page it belongs to');
            and the assertion never bites. What actually has to hold is that MAIN reserves at least
            the bar's height, so the last row of the grid can be scrolled clear of it. */
         mainPadBottom: Math.round(parseFloat(getComputedStyle(main).paddingBottom)),
-        barContentWidth: Math.round(
-          bar.querySelector('.max-w-site')?.getBoundingClientRect().width ?? bar.getBoundingClientRect().width
-        ),
+        /* ALIGNMENT, not width. The old assertion measured the bar's outer box and checked it was
+           `<= 1600` — which passed the entire time the bar was 1,536px wide above a 672px column,
+           because 1536 is indeed <= 1600. A bound that the defect satisfies is not a test.
+           What has to hold is that the bar's content row and the product grid share both edges. */
+        rail: (() => {
+          const r = bar.querySelector('[data-packbar-rail]');
+          const g = document.querySelector('[data-pack-grid]');
+          if (!r || !g) return null;
+          const rb = r.getBoundingClientRect();
+          const gb = g.getBoundingClientRect();
+          return {
+            dLeft: Math.round(Math.abs(rb.left - gb.left)),
+            dRight: Math.round(Math.abs(rb.right - gb.right)),
+            width: Math.round(rb.width),
+          };
+        })(),
+        /* The other half of the same defect: the progress rail is rendered by the shell too, so it
+           inherited `main`'s 1600px rail and spanned the whole monitor above a narrow column. */
+        progress: (() => {
+          const n = document.querySelector('nav[aria-label="Progression"]');
+          const g = document.querySelector('[data-pack-grid]');
+          if (!n || !g) return null;
+          const nb = n.getBoundingClientRect();
+          const gb = g.getBoundingClientRect();
+          return {
+            dLeft: Math.round(Math.abs(nb.left - gb.left)),
+            dRight: Math.round(Math.abs(nb.right - gb.right)),
+            width: Math.round(nb.width),
+          };
+        })(),
         docWidth: Math.round(document.documentElement.scrollWidth),
         viewport: window.innerWidth,
       };
@@ -633,11 +719,17 @@ section('6 · the step bar must not sit on top of the page it belongs to');
         geo.mainPadBottom >= geo.barH,
         `reserve ${geo.mainPadBottom}px vs bar ${geo.barH}px`
       );
-      // `max-w-site` is 1600, so this only bites above it — which is why 1920 is in the matrix.
       check(
-        `@${width}px · the bar's contents stay on the page rail`,
-        geo.barContentWidth <= Math.min(geo.viewport, 1600) + 1,
-        `${geo.barContentWidth}px wide`
+        `@${width}px · the bar's row shares both edges with the product grid`,
+        !!geo.rail && geo.rail.dLeft <= 1 && geo.rail.dRight <= 1,
+        geo.rail ? `Δleft ${geo.rail.dLeft}px · Δright ${geo.rail.dRight}px · ${geo.rail.width}px wide` : 'rail or grid missing'
+      );
+      check(
+        `@${width}px · the progress rail shares both edges with the product grid`,
+        !!geo.progress && geo.progress.dLeft <= 1 && geo.progress.dRight <= 1,
+        geo.progress
+          ? `Δleft ${geo.progress.dLeft}px · Δright ${geo.progress.dRight}px · ${geo.progress.width}px wide`
+          : 'progress rail or grid missing'
       );
       check(
         `@${width}px · no horizontal overflow`,

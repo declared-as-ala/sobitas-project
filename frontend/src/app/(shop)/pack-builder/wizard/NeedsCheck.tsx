@@ -42,10 +42,24 @@ import { childVariants, popVariants, tap } from './variants';
 
 const ACTIVITIES = Object.keys(ACTIVITY_LABELS) as ActivityLevel[];
 
+/**
+ * ── THE UNIT MOVED INTO THE LABEL, AND THAT IS A LAYOUT FIX, NOT A STYLE ONE ───────────────
+ * These three fields sit in a `grid-cols-3` and the unit was an absolutely-positioned suffix
+ * inside the box, reserved with `pr-11` — 44px of the field's width, permanently.
+ *
+ * At 320px that arithmetic collapses: the row is 288px wide, so each field is 88px, and 44px of
+ * padding-right plus 12px of padding-left leaves THIRTY-TWO pixels for an 18px bold number. "180"
+ * does not fit in 32px. The field was unusable at the narrowest viewport the site supports, and
+ * the audit had never caught it because the panel is collapsed on first paint — nothing that only
+ * measures the page as it loads can ever see inside it.
+ *
+ * "Taille (cm)" in the label says the same thing, costs no width inside the box, and deletes an
+ * element per field. `pr-3` restores 32px to every field: 44px of room for the number at 320px,
+ * and the number is what the field is for.
+ */
 function Field({
   id,
   label,
-  unit,
   value,
   onChange,
   min,
@@ -53,8 +67,8 @@ function Field({
   error,
 }: {
   id: string;
+  /** Includes the unit, e.g. "Taille (cm)" — see the note above. */
   label: string;
-  unit: string;
   value: string;
   onChange: (v: string) => void;
   min: number;
@@ -66,23 +80,20 @@ function Field({
       <label htmlFor={id} className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-ink-3">
         {label}
       </label>
-      <div className="relative">
-        <input
-          id={id}
-          type="number"
-          inputMode="numeric"
-          value={value}
-          min={min}
-          max={max}
-          onChange={(e) => onChange(e.target.value)}
-          aria-invalid={error ? true : undefined}
-          aria-describedby={error ? `${id}-error` : undefined}
-          className={`h-12 w-full rounded-xl border bg-sunken px-3 pr-11 font-display text-lg font-bold tabular-nums text-ink-1 outline-none transition-colors [appearance:textfield] focus:border-brand focus:ring-2 focus:ring-brand/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
-            error ? 'border-destructive' : 'border-hairline'
-          }`}
-        />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-ink-3">{unit}</span>
-      </div>
+      <input
+        id={id}
+        type="number"
+        inputMode="numeric"
+        value={value}
+        min={min}
+        max={max}
+        onChange={(e) => onChange(e.target.value)}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${id}-error` : undefined}
+        className={`h-12 w-full rounded-xl border bg-sunken px-3 font-display text-lg font-bold tabular-nums text-ink-1 outline-none transition-colors [appearance:textfield] focus:border-brand focus:ring-2 focus:ring-brand/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+          error ? 'border-destructive' : 'border-hairline'
+        }`}
+      />
       {error && (
         <p id={`${id}-error`} className="mt-1.5 text-[11px] text-destructive">
           {error}
@@ -183,10 +194,12 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
         </div>
       </fieldset>
 
-      <div className="grid grid-cols-3 gap-3">
-        <Field id="nc-age" label="Âge" unit="ans" value={age} onChange={setAge} min={LIMITS.age.min} max={LIMITS.age.max} error={errorFor('age')} />
-        <Field id="nc-height" label="Taille" unit="cm" value={heightCm} onChange={setHeightCm} min={LIMITS.heightCm.min} max={LIMITS.heightCm.max} error={errorFor('heightCm')} />
-        <Field id="nc-weight" label="Poids" unit="kg" value={weightKg} onChange={setWeightKg} min={LIMITS.weightKg.min} max={LIMITS.weightKg.max} error={errorFor('weightKg')} />
+      {/* `gap-2` below `sm`, up to 3 above. At 320px three columns and 2×12px of gap left 88px per
+          field; 2×8px leaves 90.7. Small, and it is 3% of a field that had none to spare. */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <Field id="nc-age" label="Âge (ans)" value={age} onChange={setAge} min={LIMITS.age.min} max={LIMITS.age.max} error={errorFor('age')} />
+        <Field id="nc-height" label="Taille (cm)" value={heightCm} onChange={setHeightCm} min={LIMITS.heightCm.min} max={LIMITS.heightCm.max} error={errorFor('heightCm')} />
+        <Field id="nc-weight" label="Poids (kg)" value={weightKg} onChange={setWeightKg} min={LIMITS.weightKg.min} max={LIMITS.weightKg.max} error={errorFor('weightKg')} />
       </div>
 
       <fieldset className="mt-4">

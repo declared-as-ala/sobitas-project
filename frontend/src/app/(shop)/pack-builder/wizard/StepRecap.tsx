@@ -17,6 +17,7 @@
 import { useState } from 'react';
 import { m, AnimatePresence } from 'motion/react';
 import { Check, ChevronDown, Loader2, Percent, Plus, ShoppingCart, X } from 'lucide-react';
+import { SectionHeader } from '@/app/components/SectionHeader';
 import { getEffectivePrice } from '@/util/productPrice';
 import { GOAL_LABELS, type Goal } from '@/util/nutritionTargets';
 import type { Product } from '@/types';
@@ -90,21 +91,19 @@ export function StepRecap({
   });
 
   return (
-    <div className="mx-auto max-w-2xl">
-      <m.div variants={child} className="text-center">
-        {/* The SectionHeader scale-2 string, verbatim. This was a fourth heading size — `text-2xl
-            sm:text-3xl` with `leading-tight tracking-tight` and no width axis — stepping at `sm`
-            where every other heading on the site steps at `lg`. Intermediate sizes with no rule
-            behind them are exactly what makes a page look like a purchased theme. */}
-        <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
-          {assessment.headline}
-        </h2>
-        {itemCount > 0 && (
-          <p className="mt-1.5 text-sm text-ink-2">
-            {itemCount} article{itemCount !== 1 ? 's' : ''} · {coveredSlugs.length} catégorie
-            {coveredSlugs.length !== 1 ? 's' : ''}
-          </p>
-        )}
+    /* No `mx-auto max-w-2xl` — the shell owns the rail, and it is already this width on the recap.
+       See PackWizard. */
+    <div>
+      {/* THE LANDING PAGE'S OWN COMPONENT. This was the SectionHeader scale-2 class string copied
+          out by hand — itself a fix for a fourth bespoke heading size that had been stepping at
+          `sm` where every other heading on the site steps at `lg`. Rendering the component instead
+          of its output is what stops that happening a third time.
+
+          Left-aligned, and the "{n} articles · {m} catégories" subline underneath it is gone: the
+          itemised list two elements below states both numbers by simply BEING them. A count of
+          things the reader is about to read is the cheapest line on any screen to cut. */}
+      <m.div variants={child}>
+        <SectionHeader title={assessment.headline} scale="2" />
       </m.div>
 
       {/* ── 1 · the verdict ───────────────────────────────────────────────────────────────
@@ -112,7 +111,7 @@ export function StepRecap({
           four separate warnings competing for attention — the exact "lot of boxes" the whole
           redesign is answering. Inside a single plate they read as what they are: a short report. */}
       {assessment.points.length > 0 && (
-        <m.ul variants={child} className="mt-5 divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline bg-elevated">
+        <m.ul variants={child} className="divide-y divide-hairline overflow-hidden rounded-2xl border border-hairline bg-elevated">
           {assessment.points.map((point, i) => (
             <m.li key={i} variants={child} className="flex items-start gap-2.5 px-4 py-3">
               <span
@@ -271,8 +270,12 @@ export function StepRecap({
             </>
           )}
         </m.button>
+        {/* Down from "La remise groupée est recalculée et appliquée automatiquement lors du
+            paiement." The word the shopper needs is "automatiquement" — that they do not have to
+            hunt for a promo code. "Recalculée" was describing an implementation detail to someone
+            who is deciding whether to press the button above it. */}
         <p className="mt-2 text-center text-[11px] leading-snug text-ink-3">
-          La remise groupée est recalculée et appliquée automatiquement lors du paiement.
+          Remise appliquée automatiquement au paiement.
         </p>
       </m.div>
 
@@ -297,8 +300,12 @@ export function StepRecap({
               <span className="block font-display text-sm font-extrabold uppercase tracking-tight text-ink-1 sm:text-base">
                 Vos besoins quotidiens&nbsp;?
               </span>
+              {/* "Rien n'est enregistré" stays and the rest went. It is the sentence that earns
+                  the open — this panel asks for age, height and weight. Where the equations come
+                  from is stated in full, with citations, inside the panel once it is open, which
+                  is where somebody who cares will look for it. */}
               <span className="mt-0.5 block text-xs leading-snug text-ink-2">
-                Calcul en 4 champs, à partir d&apos;équations publiées. Rien n&apos;est enregistré.
+                En 4 champs. Rien n&apos;est enregistré.
               </span>
             </span>
             <ChevronDown

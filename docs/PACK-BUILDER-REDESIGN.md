@@ -541,3 +541,179 @@ Now **24 states clean** (6 steps x 2 themes x 2 widths).
 
 Plus: `lint:design` clean · `tsc` clean · build clean · route still **statically prerendered** at
 **57.9 kB / 213 kB**, against `/shop` at 216 kB.
+
+---
+
+# 9. v4 — one rail, and a hard pass on the copy (2026-08-06)
+
+Owner, after v3 shipped: *"keep working more on the design of the pack composer, make it simpler,
+take off the texts that aren't needed, make it super responsive, make it the same as the design of
+the landing page."*
+
+## 9.1 The defect nobody had measured: the wizard had four rails, and its chrome was on none of them
+
+Every step set its own column width, and the two pieces of persistent chrome set neither:
+
+| element | rendered by | width at a 1920px viewport |
+|---|---|---|
+| progress rail | the shell | **1536px** (`main`'s `max-w-site`) |
+| step bar contents | the shell | **1536px** |
+| welcome | StepWelcome | 672px (`max-w-2xl`) |
+| goal | StepGoal | 768px (`max-w-3xl`) |
+| category | StepCategory | 1024px (`max-w-5xl`) |
+| recap | StepRecap | 672px (`max-w-2xl`) |
+
+So the content box grew and shrank on every advance, and above it sat a progress bar **864px wider
+than the column it described**. On a 1600px screen the step bar's total and its own button were
+roughly 1,450px apart — the eye cannot hold a number and its button at opposite ends of a monitor.
+
+**The shell now owns the rail.** Two widths, chosen by the step's job: `max-w-5xl` for the two steps
+whose work is looking at pictures (goal, category), `max-w-2xl` for the two whose work is reading
+(welcome, recap). The progress rail, the step content and the step bar all sit on it, so they agree
+by construction rather than by coincidence.
+
+The step bar needed **two nested boxes** to do this — `max-w-site` plus the page gutters, then the
+wizard's rail inside — mirroring `main` exactly. One box with `max-w-5xl` and gutters would take the
+padding out of the 1024 instead of out of the 1600 and land 64px narrow at every width above 1088px.
+
+Measured after, at every width in the ladder, both themes: **left 0px, right 0px** difference
+between the progress rail, the step bar's row and the product grid.
+
+## 9.2 The heading is the landing page's component now, not a copy of its output
+
+`StepGoal`, `StepCategory` and `StepRecap` each wrote out
+`font-display font-compressed text-[1.875rem] ... lg:text-[2.5rem]` by hand. That string is what
+`SectionHeader scale="2"` emits — the same support-band step "Acheter par objectif" uses on the
+homepage. Copying the output is how the homepage acquired seven heading sizes nobody chose, one
+component at a time; v3 had already fixed a *fourth* bespoke size on the recap by pasting the
+string, which is the same mistake one revision later.
+
+All three now render `<SectionHeader>`. A change to the site's heading scale reaches this page for
+free and cannot drift.
+
+**No `viewAllHref`, deliberately**, even though the component offers one and every landing-page band
+has it. The pack lives in React state and nothing persists it, so a tap on "Tout voir" mid-flow
+would silently discard the basket. On the homepage that link costs nothing; here it costs the order.
+
+## 9.3 The goal cards became CategoryRail's actual layout, not just its construction
+
+They already had the rail's fused `gap-px` block, its 4:3 frame, its contained 1.04 scale and its
+caption-under-photo plate. What they did not have was its **shape**: 2-up at every width inside a
+768px column, so a laptop showed four 383px tiles in a 2x2 block while the homepage showed six 255px
+tiles in a row.
+
+Now `grid-cols-2 lg:grid-cols-4` on the wide rail — `(1024 - 3)/4 = 255px`, the number CategoryRail
+itself lands on at `lg`. `sizes` re-derived to `(min-width: 1024px) 256px, 48vw`; the smallest
+percentage is unchanged, so Next's `allSizes` filter is unchanged and nothing already cached is
+re-fetched.
+
+**The per-card hint came off** — "Gagner du muscle et du poids", "Perdre du gras en gardant le
+muscle" and two more. CategoryRail carries a label and an arrow; four photographs each explaining
+their own one-word name, under a question already asked in a 40px heading, is the thing that made
+these read as cards resembling the rail rather than as the rail.
+
+## 9.4 What came off, and where it already was
+
+| removed | it was already stated |
+|---|---|
+| welcome kicker, rendered *below* the h1 | moved to the shell, above it — see 9.5 |
+| "Repondez a une question, choisissez vos produits..." | the three -5/-8/-12% cards say the second half in figures |
+| "Moins d'une minute. Aucune inscription." | reassurance about a form nobody has seen yet |
+| "Livraison gratuite des 300 DT" chip | the utility strip at the top of this page (`HeaderClient.tsx:75`) |
+| "Produits 100% authentiques" chip | the footer |
+| "Au programme" label | a row of category names does not need to be told it is one |
+| goal-step kicker "Etape 1" | the progress rail directly beneath it, drawn |
+| goal-step per-card hints x4 | see 9.3 |
+| category kicker "Choisissez" | a verb for a screen whose whole content is a choice |
+| goal rationale (~200 chars of nutrition prose) | explains a reorder nobody saw the "before" of |
+| "Ajoutez ce que vous voulez, ou passez..." (step bar) | 58 characters restating the button beside it |
+| "{n} articles - {m} categories" (recap) | the itemised list two elements below **is** both numbers |
+| "La remise groupee est recalculee et appliquee..." | shortened; "recalculee" describes an implementation |
+
+The welcome step's category links **stay** — they are this page's internal links and they must exist
+in the server-rendered HTML, so cutting them to save a row would be a silent SEO regression. They
+went 36px to 44px on the way past, the last controls on the page under the site's own tap floor.
+
+## 9.5 Three things found while doing it
+
+**The kicker was rendering under the h1.** `StepWelcome` opened with `.pt-kicker`, followed by a
+`mt-2` spacer whose own comment read *"keeps the rhythm the h1 used to occupy"*. The h1 had been
+moved out to the shell two revisions earlier and nobody re-looked, so the landing page's
+kicker-over-title construction had been silently inverted on the one step a crawler reads. It is now
+rendered by the shell, above the h1.
+
+**The needs-check fields were unusable at 320px.** Three columns in a 288px row is an 88px field;
+the unit suffix reserved `pr-11` (44px) and `px-3` took 12 more, leaving **32px** for an 18px bold
+number. "180" does not fit in 32px. The unit moved into the label — "Taille (cm)" — which says the
+same thing, costs no width inside the box, and deletes an element per field. The panel is collapsed
+on first paint, which is why nothing that measures the page as it loads had ever seen it.
+
+**`position`, `count` and `stepProgress()` were dead.** `count` fed the "Categorie 3 sur 5" line
+deleted in v3; `position` gated the rationale deleted here; `stepProgress` returned a 0-1 fraction
+for a continuous bar the design had rejected in favour of segments. All three removed.
+
+## 9.6 Three assertions that were not testing anything
+
+**`the bar's contents stay on the page rail`** asserted `barContentWidth <= 1600`. The bar was
+1,536px wide above a 672px column for the whole of v3, and 1536 is indeed under 1600 — the assertion
+passed *throughout the defect it was written to catch*. It now measures **alignment**: the bar's row
+and the progress rail must share both edges with the product grid, at 320 / 800 / 1440 / 1920.
+
+**`the goal is explained once, on the first category`** required the rationale paragraph that 9.4
+removes. Deleting it with the prose would have left the simplification unguarded, so it was
+**inverted**: the category step must carry *no* visible `<p>` outside a product tile. The next
+person to reintroduce a paragraph here fails the gate.
+
+**Section 2d waited on a stopwatch.** `settle(page, 3000)`, justified in its own comment by *"on
+localhost the quote returns in ~30ms"* — true only when the backend is also local. `/api-proxy`
+forwards to admin.protein.tn, which measured **3.1s cold** from a developer machine, on top of the
+400ms debounce and the 1.8s the test itself holds the response for. Three assertions failed against
+code that was working perfectly: the gate reported a pricing bug that did not exist. They now wait
+on the **condition** (`waitFor`), which is correct at any latency and faster on a fast link.
+
+**And the contrast walk had never run on this page.** `--walk packbuilder` set the click sequences
+but left `--routes` at its default `['/']`, so it loaded the *homepage* and looked for "Commencer"
+twenty times. It reported honestly — twenty skipped states, twenty failures, exit 1 — but every
+per-state line read "0 fail", one careless glance from being called green. A walk now carries its
+own route, so the invocation that produces a lie is no longer spellable.
+
+## 9.7 Verification
+
+**88 behavioural assertions**, all passing — up from 81, with the three above rewritten rather than
+counted and a 320px column added to the geometry matrix.
+
+`measure-wizard-rail.mjs` (new): 10 widths x 2 themes, on a category step, asserting no horizontal
+overflow, chrome aligned to the grid, and no tap target under 44px — and reporting the rail width,
+column count and tile width behind it. It refuses to report a row it never reached.
+
+| width | rail | cols | tile | aligned | h2 | overflow |
+|---|---|---|---|---|---|---|
+| 320 | 288 | 2 | 138 | yes | 30 | no |
+| 360 | 328 | 2 | 158 | yes | 30 | no |
+| 390 | 358 | 2 | 173 | yes | 30 | no |
+| 430 | 398 | 2 | 193 | yes | 30 | no |
+| 640 | 592 | 3 | 187 | yes | 30 | no |
+| 768 | 720 | 3 | 229 | yes | 30 | no |
+| 1024 | 960 | 4 | 228 | yes | 40 | no |
+| 1280 | 1024 | 4 | 244 | yes | 40 | no |
+| 1440 | 1024 | 4 | 244 | yes | 40 | no |
+| 1920 | 1024 | 4 | 244 | yes | 40 | no |
+
+Identical in both themes. `h2` at 30/40px is `SectionHeader scale="2"` exactly, which is the point
+of 9.2 — the page can no longer disagree with the homepage about a heading size.
+
+**Its first run failed all twenty rows on the FOOTER**: a 16px phone-number link and a 21px
+copyright line, present on every page of the site and untouched by this change, because the scan
+was not scoped to `<main>` the way the behavioural gate's is. That is the mirror image of the
+stopwatch bug in 9.6 — an assertion that fails for a reason unrelated to what it claims to measure
+teaches people to ignore it just as fast as one that never fails at all. Now scoped, with the
+out-of-scope finding **reported rather than failed** so it is not lost.
+
+**Open, and not this page's to fix:** the footer's `tel:` link is a 16px tap target site-wide. On a
+store that takes orders by phone in Tunisia, that is worth a separate change.
+
+Contrast: 6 wizard states x 2 themes x 3 widths (320 / 390 / 1440), on the right route this time.
+
+Plus: `tsc` clean, `lint:design` clean (baseline holding at 4745), build clean, route still
+**statically prerendered** at **57.2 kB / 213 kB** — smaller than v3 despite the new component
+import, because the deleted copy and the dead step fields outweigh it.

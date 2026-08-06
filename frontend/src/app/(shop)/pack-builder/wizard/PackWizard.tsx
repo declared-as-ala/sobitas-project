@@ -192,11 +192,53 @@ export function PackWizard(props: PackWizardProps) {
 
   const advanceLabel = isLastCategory ? 'Voir mon pack' : selectedHere > 0 ? 'Continuer' : 'Passer';
 
+  /**
+   * ── THE WIZARD HAS ONE RAIL, AND THE SHELL OWNS IT ─────────────────────────────────────────
+   * Every step used to set its own column: `max-w-2xl` on welcome, `max-w-3xl` on goal,
+   * `max-w-5xl` on category, `max-w-2xl` again on the recap. Four widths in eight steps, so the
+   * content box visibly grew and shrank on every advance — the single loudest reason the flow did
+   * not read like the rest of the site, where every band shares `max-w-site`.
+   *
+   * Worse, the two pieces of persistent chrome were on NEITHER of those rails. The progress bar
+   * and the step bar are rendered here, so they inherited `main`'s `max-w-site` — 1600px. On a
+   * 1600px monitor the progress rail was 1536px wide above a 672px column, and the step bar's
+   * total sat ~1,450px from its own button. Chrome that does not line up with the content it
+   * describes is the thing that makes a page feel unfinished, and no amount of token work fixes it.
+   *
+   * Now there are TWO widths and the step decides which, so the rail always agrees with what is
+   * under it: WIDE for the two steps whose job is looking at pictures, NARROW for the two whose
+   * job is reading. Welcome→goal and last-category→recap are the only transitions where it moves,
+   * and both are exactly the point where the screen's job changes.
+   */
+  const wide = step.kind === 'goal' || step.kind === 'category';
+  const rail = wide ? 'max-w-5xl' : 'max-w-2xl';
+
   return (
     <LazyMotion features={loadMotionFeatures} strict>
       {/* One place to state the reduced-motion contract, so no child can forget it. */}
       <MotionConfig reducedMotion="user">
         <div ref={topRef} className="scroll-mt-20 lg:scroll-mt-32" />
+
+        <div className={`mx-auto w-full ${rail}`}>
+        {/* THE KICKER IS RENDERED HERE, NOT INSIDE StepWelcome — and that is a fix, not a
+            preference. It lived at the top of StepWelcome, which the shell renders BELOW the h1,
+            so the page opened with "COMPOSEZ VOTRE PACK" and then put "Pack sur mesure" underneath
+            it, followed by a `mt-2` spacer whose own comment said it was "keeping the rhythm the h1
+            used to occupy". The h1 had been moved out here two revisions earlier and nobody
+            re-looked: the landing page's kicker-over-title construction had been silently inverted.
+
+            One kicker in the whole flow, on the one step that is also the page's SEO surface. The
+            two that were deleted said "Étape 1" (the progress rail directly beneath it is that
+            sentence, drawn) and "Choisissez" (a verb for a screen whose entire content is a choice).
+            A kicker that names the band earns its line; a kicker that narrates the obvious does not. */}
+        {step.kind === 'welcome' && (
+          <p className="flex justify-center">
+            <span className="pt-kicker inline-flex items-center gap-2.5 text-brand">
+              <span className="h-px w-7 bg-brand" aria-hidden="true" />
+              Pack sur mesure
+            </span>
+          </p>
+        )}
 
         {/* THE PAGE'S ONLY h1, AND IT LIVES OUT HERE ON PURPOSE.
             It used to be inside StepWelcome, which AnimatePresence unmounts on the first advance —
@@ -207,7 +249,7 @@ export function PackWizard(props: PackWizardProps) {
         <h1
           className={
             step.kind === 'welcome'
-              ? 'text-center font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[3.5rem]'
+              ? 'mt-2.5 text-center font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[3.5rem]'
               : 'sr-only'
           }
         >
@@ -313,7 +355,6 @@ export function PackWizard(props: PackWizardProps) {
               <StepCategory
                 group={step.group}
                 pack={pack}
-                rationaleGoal={step.position === 1 && categoryOrder ? goal : null}
                 onAdd={onAdd}
                 onSetQty={onSetQty}
                 calm={calm}
@@ -348,6 +389,7 @@ export function PackWizard(props: PackWizardProps) {
             )}
           </m.div>
         </AnimatePresence>
+        </div>
 
         {/* ── THE STEP BAR ──────────────────────────────────────────────────────────────
             This is the fix the owner named, and the change is one of PURPOSE rather than of style.
@@ -407,15 +449,25 @@ export function PackWizard(props: PackWizardProps) {
                 </div>
               )}
 
-              {/* THE CONTENT SITS ON THE PAGE'S OWN RAIL. The bar is `inset-x-0` because a fixed
+              {/* THE CONTENT SITS ON THE STEP'S OWN RAIL. The bar is `inset-x-0` because a fixed
                   element that stops short of the edges reads as a floating card, but its CONTENTS
                   must not be: unconstrained, the total pinned to the far left and the action to the
                   far right, roughly 1,450px apart on a 1600px screen — the eye cannot hold a number
-                  and its button at opposite ends of a monitor. `max-w-site` + the same gutters as
-                  `main` puts the total directly under the last column of products. The 3px track
-                  above stays full-bleed on purpose: it is a page-level progress indicator, and a
-                  progress bar that stops 200px from each edge looks broken. */}
+                  and its button at opposite ends of a monitor.
+
+                  TWO nested boxes, mirroring `main` exactly: `max-w-site` + the page gutters, and
+                  then the wizard's own `rail` inside it. One box with `max-w-5xl` + gutters would
+                  be 64px NARROWER than the content, because the padding would come out of the 1024
+                  instead of out of the 1600 — the bar would miss the grid it sits under by half a
+                  gutter at every width above 1088px. The 3px track above stays full-bleed on
+                  purpose: it is a page-level progress indicator, and one that stops 200px from each
+                  edge looks broken. */}
               <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8">
+                {/* `data-packbar-rail` is a test hook, matching the existing `data-pack-tile`. The
+                    gate asserts this box has the same left and right edges as `data-pack-grid` —
+                    the invariant this whole change exists to establish, and one that a width
+                    number alone cannot express. */}
+                <div data-packbar-rail className={`mx-auto w-full ${rail}`}>
                 {/* The nudge sits ABOVE the money row. MobileTabBar's raised centre button rises
                     into whatever is directly above it, and as the last line this text had its
                     middle covered; the money row survives that overlap because its centre is the
@@ -489,12 +541,16 @@ export function PackWizard(props: PackWizardProps) {
                     </span>
                   </button>
                 ) : (
-                  /* Nothing in the pack yet. The left column stays as a spacer rather than
-                     collapsing, so the advance button keeps the same position on every step
-                     instead of sliding across the bar the moment the first product is added. */
-                  <span className="min-w-0 flex-1 text-[11px] leading-snug text-ink-3">
-                    Ajoutez ce que vous voulez, ou passez à la catégorie suivante.
-                  </span>
+                  /* Nothing in the pack yet, and the bar says nothing about it.
+                     It used to read "Ajoutez ce que vous voulez, ou passez à la catégorie
+                     suivante." — 58 characters restating what the button to its right already
+                     says in one word, permanently parked under the visitor's thumb on the screen
+                     whose whole job is showing products.
+                     The empty span stays because it is the SPACER: without `flex-1` here the
+                     advance button slides from the right edge to the left the instant the first
+                     product is added, so the control moves out from under the finger that just
+                     used it. */
+                  <span className="min-w-0 flex-1" aria-hidden="true" />
                 )}
 
                 <m.button
@@ -510,6 +566,7 @@ export function PackWizard(props: PackWizardProps) {
                     {advanceLabel}
                     <ArrowRight className="h-4 w-4" aria-hidden="true" />
                   </m.button>
+                </div>
                 </div>
               </div>
             </m.div>

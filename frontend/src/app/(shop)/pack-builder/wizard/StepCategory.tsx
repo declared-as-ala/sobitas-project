@@ -5,31 +5,44 @@
  *
  * ── WHAT CAME OFF THIS STEP, AND WHY ───────────────────────────────────────────────────────
  * Owner, looking at v1 live: *"there is a lot of text and a lot of numbers and a lot of icons…
- * try to make the screen less distributed so the user doesn't get confused."*
+ * try to make the screen less distributed so the user doesn't get confused."* Then, on v2:
+ * *"make it simpler, take off the texts that aren't needed."*
  *
- * Three things were removed rather than shrunk, because each was a SECOND place to read something
- * that is already stated once:
+ * Five things were removed rather than shrunk, because each was a SECOND place to read something
+ * already stated once:
  *
  *   "Catégorie 3 sur 5"    the progress rail directly above it is that sentence, drawn.
  *   "2 sélectionnés"       every selected tile carries a filled tick and a quantity stepper. The
  *                          badge was a count of things that are each individually marked.
- *   the bottom "Continuer" this is the one the owner named. It sat below twelve products, so
+ *   the bottom "Continuer" this is the one the owner named first. It sat below twelve products, so
  *                          advancing meant scrolling the whole grid, and the always-visible control
  *                          at the bottom of the screen said "Terminer" — the wrong verb entirely.
  *                          The step bar now owns advancing; see PackWizard.
+ *   the kicker             it said "Choisissez", on a screen whose entire content is a choice.
+ *   the goal rationale     ~200 characters of nutrition prose explaining why the categories had
+ *                          been reordered — an explanation of something invisible, since nobody
+ *                          ever saw the order it was reordered FROM. The goal question itself
+ *                          already promised "on classe les catégories dans l'ordre qui vous
+ *                          concerne", so the reorder is not unexplained; it is just not narrated a
+ *                          second time on the screen where the visitor is trying to look at
+ *                          products. `GOAL_RATIONALE` is untouched in nutritionTargets.ts.
  *
  * What is left is a heading and a grid of products. That is the whole job of this step.
  *
- * ── THE TYPE IS THE LANDING PAGE'S ─────────────────────────────────────────────────────────
- * `font-display font-compressed … leading-[0.94] tracking-[-0.02em]` at the SectionHeader scale-2
- * step is not a lookalike — it is the exact string `SectionHeader` emits for a support band. The
- * kicker uses the shared `.pt-kicker` class with the same 28px brand rule before it. A visitor
- * arriving from the homepage meets the same voice.
+ * ── THE HEADING IS THE LANDING PAGE'S COMPONENT, NOT A COPY OF ITS OUTPUT ──────────────────
+ * `SectionHeader scale="2"` is the exact support-band heading "Acheter par objectif" uses. It used
+ * to be that class string written out by hand here, which is how a codebase acquires a heading
+ * scale that drifts one component at a time.
+ *
+ * NO "Tout voir" LINK, deliberately, even though `SectionHeader` offers one and every landing-page
+ * band has it. The wizard's pack lives in React state and nothing persists it: a tap on a link out
+ * to /whey-proteine mid-flow silently discards everything the visitor has chosen. On the homepage
+ * that link costs nothing; here it would cost the basket.
  */
 
 import Image from 'next/image';
 import { m } from 'motion/react';
-import { GOAL_RATIONALE, type Goal } from '@/util/nutritionTargets';
+import { SectionHeader } from '@/app/components/SectionHeader';
 import type { Product } from '@/types';
 import { ProductPicker } from './ProductPicker';
 import { childVariants } from './variants';
@@ -38,21 +51,18 @@ import type { PackGroup } from './steps';
 export interface StepCategoryProps {
   group: PackGroup;
   pack: Record<number, number>;
-  /** Non-null only on the FIRST category step, where the goal actually explains the ordering. */
-  rationaleGoal: Goal | null;
   onAdd: (product: Product, img: HTMLElement | null) => void;
   onSetQty: (product: Product, qty: number) => void;
   calm: boolean;
 }
 
-export function StepCategory({ group, pack, rationaleGoal, onAdd, onSetQty, calm }: StepCategoryProps) {
+export function StepCategory({ group, pack, onAdd, onSetQty, calm }: StepCategoryProps) {
   const child = childVariants(calm);
 
   return (
-    /* `max-w-5xl`, wider than the reading steps. Those are a question and a verdict — prose past
-       ~70 characters gets hard to track, so they stay narrow. This one is a LOOKING step: at 1440
-       a `max-w-2xl` column showed three products in a strip half the width of the window. */
-    <div className="mx-auto max-w-5xl">
+    /* No `mx-auto max-w-5xl` — the shell owns the rail, and it is already this width on a category
+       step. See PackWizard. */
+    <div>
       {/* THE CATEGORY'S OWN PHOTOGRAPH, WHEN THERE IS ONE.
           Rendered exactly the way CategoryRail renders a category: `object-cover` in a fixed frame
           with the label UNDERNEATH, never over it — overlaid text needs a scrim, the scrim darkens
@@ -75,9 +85,10 @@ export function StepCategory({ group, pack, rationaleGoal, onAdd, onSetQty, calm
             alt=""
             aria-hidden="true"
             fill
-            /* Full container width at every breakpoint: `max-w-5xl` caps at 1024, and below that
-               it is the viewport minus 32/48px of gutter. Rounded up a bucket rather than down —
-               this is a wide crop of a 4:3 source, so it is scaled by WIDTH and softness shows. */
+            /* Full container width at every breakpoint: the shell's rail caps at 1024, and below
+               that it is the viewport minus 32/48px of gutter. Rounded up a bucket rather than
+               down — this is a wide crop of a 4:3 source, so it is scaled by WIDTH and softness
+               shows. */
             sizes="(min-width: 1024px) 1024px, 100vw"
             quality={80}
             loading="lazy"
@@ -86,30 +97,11 @@ export function StepCategory({ group, pack, rationaleGoal, onAdd, onSetQty, calm
         </m.div>
       )}
 
-      <m.header variants={child}>
-        <span className="pt-kicker inline-flex items-center gap-2.5 text-brand">
-          <span className="h-px w-7 bg-brand" aria-hidden="true" />
-          Choisissez
-        </span>
-        <h2 className="mt-2.5 font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
-          {group.label}
-        </h2>
-      </m.header>
+      <m.div variants={child}>
+        <SectionHeader title={group.label} scale="2" />
+      </m.div>
 
-      {/* Shown once, on the first category only. The goal reordered the steps, and an unexplained
-          reorder reads as arbitrary; repeating the explanation on every step reads as nagging. */}
-      {rationaleGoal && (
-        <m.p
-          variants={child}
-          className="mt-3 border-l-2 border-brand/40 pl-3 text-xs leading-relaxed text-ink-2 sm:text-sm"
-        >
-          {GOAL_RATIONALE[rationaleGoal]}
-        </m.p>
-      )}
-
-      <div className="mt-5 sm:mt-6">
-        <ProductPicker products={group.products} pack={pack} onAdd={onAdd} onSetQty={onSetQty} calm={calm} />
-      </div>
+      <ProductPicker products={group.products} pack={pack} onAdd={onAdd} onSetQty={onSetQty} calm={calm} />
     </div>
   );
 }
