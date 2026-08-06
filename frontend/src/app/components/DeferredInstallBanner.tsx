@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
 
 const InstallAppBanner = dynamic(
@@ -25,7 +26,23 @@ const InstallAppBanner = dynamic(
  * on `requestIdleCallback` means the chunk is fetched after the main thread has gone quiet rather
  * than while it is still competing with hydration.
  */
+/**
+ * Routes where the install prompt does not appear, because the screen is already full of fixed
+ * chrome that the visitor needs.
+ *
+ * Owner, about the pack builder specifically: *"the screen on mobile looks so filled… take them
+ * off from that page, make the screen free."* WhatsAppFab and ScrollToTop were suppressed there for
+ * exactly this reason and this banner was missed. Measured at 390×746 on a category step: the
+ * banner is 81px, the step bar ~70px and MobileTabBar 56px — 207px, 28% of the viewport, on the
+ * one screen whose entire job is showing products.
+ *
+ * The install prompt is a growth surface and this costs installs on one route. It is the right
+ * trade here and nowhere else: every other page keeps it, and reversing this is deleting one line.
+ */
+const HIDDEN_ON = ['/pack-builder', '/checkout', '/cart'];
+
 export function DeferredInstallBanner() {
+  const pathname = usePathname() || '/';
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -47,6 +64,9 @@ export function DeferredInstallBanner() {
     };
   }, []);
 
+  // Checked AFTER the hooks, never before — an early return above `useEffect` would change the hook
+  // count between routes and break the rules of hooks on every client navigation.
   if (!mounted) return null;
+  if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
   return <InstallAppBanner />;
 }

@@ -341,3 +341,203 @@ generating a pack is only for generating a pack."* It is now in the desktop nav 
 CTA, outlined so the row still has exactly one button that sells) and has a row in the mobile
 sidebar. A B2B signup link is navigation — it belongs wherever you are on the site, not stapled to
 one page's heading where it competed with that page's own first action.
+
+---
+
+# 8. v3 — the polish pass (2026-08-06)
+
+The owner saw §7 live and gave a mixed verdict: *"the layout and UX is not bad. You need to work
+more about the nano details, micro loadings."* Then one specific defect, and three asks.
+
+## 8.1 The defect: the always-visible button said the wrong thing
+
+> *"You have a bad UX since you show a button of DONE in the sticky bar at the bottom. When I have
+> to scroll all the way down to continue, that is bad. The user should CONTINUE, not directly finish
+> the pack."*
+
+He is describing a real, measurable trap, and it was worse than he said.
+
+The bar was a **summary** that happened to carry a `Terminer` button wired to
+`goTo(steps.length - 1)` — a jump past every remaining category, straight to the recap. Advancing
+one step meant reaching `StepCategory`'s own button, below up to twelve products: at 390px that is
+six rows of ~307px, roughly **1,900px — two and a half phone screens** below the heading.
+
+So on category 1 of 5, the prominent, brand-filled, thumb-level button meant **finish**, and the one
+that meant **continue** was 1,900px away.
+
+It cost money, not just patience. The page exists to bundle across categories toward 200 / 350 /
+500 DT. A shopper who adds one 120 DT whey, sees an orange `Terminer` and taps it lands on a recap
+that then tells them they need 80 DT more for the first tier and that *"un pack devient intéressant
+à partir de deux"* categories — the loudest button on the screen walking them into the verdict that
+scolds them for taking it.
+
+And the old gate **enshrined it as the happy path**: `check-packbuilder.mjs` asserted
+`'finished early via the footer'` after a single add on category 1.
+
+There was a second half. The bar was gated on `itemCount > 0`, so on the first category — the state
+every first-time visitor is in — **no bar rendered at all**. The persistent back arrow was pinned at
+the top of every step; forward cost 1,900px of scrolling. The interface gave away "go back" and
+charged for "go forward".
+
+**The fix is a change of purpose, not of styling.** The bar is now the **step bar**: present on
+every category step regardless of what is in the pack, and its primary action always moves forward.
+The verb follows the situation — `Continuer` when this category has a selection, `Passer` when it
+does not, `Voir mon pack` on the last one — so the button never lies about where it goes. Finishing
+moved to where finishing happens: the summary on the left is a labelled button to the recap, and the
+recap is the screen with *Ajouter le pack au panier* on it.
+
+`StepCategory`'s in-flow button was **deleted**, not demoted. Two forward controls on one screen is
+the confusion this redesign exists to remove.
+
+## 8.2 The stale quote — the one that printed a wrong price
+
+Found by the review, reproduced deliberately, now gated.
+
+`quote` was never cleared while the next one was in flight. It was only overwritten when a response
+landed. So for the 400 ms debounce **plus a round trip** after every single add, the page applied the
+*previous* basket's discount to the *current* basket's contents. Three numbers off two clocks:
+
+```
+Sous-total    428.00 DT   <- recomputed locally, instant
+Remise pack   -34.24 DT   <- the PREVIOUS basket's discount
+TOTAL         393.76 DT   <- the PREVIOUS basket's total
+```
+
+393.76 is 249's total, not 428's — **a total lower than the sum of the lines directly above it**, on
+the screen where the customer decides to buy, and wrong in the one direction this file's own header
+rule forbids: too *low*, which they accept and we would have to honour.
+
+The fix is one line — `const liveQuote = quoteLoading ? null : quote` — because everything
+downstream already knew how to render "no quote yet". The customer now watches an undiscounted price
+settle *into* a discount, which is both honest and the better story.
+
+**Testing it needed the bug slowed down.** On localhost the quote returns in ~30 ms, so the window
+does not exist and a naive "add and look quickly" test passes against the broken code. The gate now
+holds the `/pack/quote` response for 1,800 ms via request interception and asserts the arithmetic
+across the window:
+
+```
+a discount is showing before the second add    ->  1 article  -12%   641.52 DT
+no stale discount on the new basket            ->  2 articles        1008.00 DT
+the shown total goes UP, never down            ->  641.52 -> 1008
+the real discount arrives                      ->  2 articles  -12%   887.04 DT
+```
+
+Against the old code the third line reads `641.52 -> 641.52` and fails.
+
+## 8.3 The landing page's own language
+
+> *"Use the colors of the landing page, the same design as the landing page, literally the same
+> tokens. Maybe you can use the photos of the category that we used on the landing page."*
+
+**The page is sand, not white.** The landing page is not a white page — it alternates `canvas` and
+`sunken` bands carrying white `elevated` plates, and `CategoryRail` specifically is a sunken band of
+elevated tiles. The wizard was flat `bg-canvas` for all eight steps, so every card on it was
+white-on-white and had to be drawn with borders alone. On sand the same cards read as objects.
+
+**Type comes from `SectionHeader`, verbatim.** Not a lookalike — the same emitted string
+(`font-display font-compressed ... leading-[0.94] tracking-[-0.02em]` at the scale-2 step), and the
+shared `.pt-kicker` class with its 28px brand rule. The recap's heading had been a *fourth* size
+stepping at the wrong breakpoint; it is now on the three-size scale.
+
+**The photographs.** The honest constraint: four of the five builder slugs are **subcategories with
+`cover: null`** on the live API. Only the six top-level categories have photography — the six the
+landing page renders.
+
+The tempting shortcut is to borrow each one's parent picture. It does not survive the mapping:
+créatine and pre-workout both sit under `performance`, gainers and prise-de-masse both under
+`prise-de-masse`. Five steps would show three photographs, two of them twice, and the same picture on
+two steps reads as a rendering fault.
+
+So the photographs went where they map **one-to-one and change the most** — the **goal step**, four
+plain text cards until now, and the first screen after *Commencer*:
+
+| Goal | Photograph |
+|---|---|
+| Prise de masse | `prise-de-masse` |
+| Perte de poids | `perte-de-poids` |
+| Force & performance | `performance` |
+| Entretien | `sante-vitalite` |
+
+Four goals, four **distinct** landing-page photographs — asserted by the gate, which fails if two
+cards ever share a source. Built as `CategoryRail` is built: fused `gap-px` block over `bg-rule`, a
+4:3 frame matching the 4:3 source exactly, the 1.04 scale contained inside the cell so the block
+never deforms, the caption under the photo rather than over it.
+
+The category steps got the **plumbing** rather than a borrowed picture: each reads its own
+`cover` and renders a banner when there is one, nothing when there is not. `prise-de-masse` has one
+today. **Upload covers for `whey-proteine`, `creatine`, `gainers-proteines` and `pre-workout` in the
+admin and those four steps get their banner on the next revalidation, with no code change.**
+
+## 8.4 Less on the screen
+
+Three things came off the category step, each because it was a *second* place to read something
+already stated once:
+
+| Removed | Already said by |
+|---|---|
+| `Catégorie 3 sur 5` | the progress rail directly above it, drawn |
+| `2 sélectionnés` | every selected tile's filled tick and quantity stepper |
+| the in-flow `Continuer` | the step bar (§8.1) |
+
+The rail's `3/8` counter went too. Eight segments answer "how far am I" without asking anyone to
+read a fraction, and the `sr-only` live region still states *"Étape 3 sur 8"* in words. What is left
+on a category step is **a heading and a grid of products**.
+
+The rail's *remaining* segments were `bg-hairline` — 1.05:1 on the page, effectively invisible, so
+the rail showed how far you had come and said nothing about how much was left. They are
+`bg-rule-strong` now.
+
+## 8.5 The nano details
+
+| | |
+|---|---|
+| **Product images** | fade in over their frame instead of popping against flat grey. **Not** a shimmer: it is a *looping* animation, twelve at once, on the page already fixed for mobile INP — and `globals.css` clamps unmarked animations to 0.2s on phones, so a 1.4s sweep becomes a 0.2s strobe twelve times over. The fade also reads `img.complete` on mount, because `onLoad` never fires for a cached image and without it a revisited step renders twelve **invisible** products. |
+| **The total** | pops on every change, dims and shows a spinner while the server is deciding |
+| **Quantity** | pops on every increment, keyed on the value |
+| **Tier unlocked** | one expanding ring on the tier track. `pulseTierUnlocked` and its `.pt-tier-hit` keyframes were already written — and had **zero call sites**. It fires only when the percentage *increases*; on any change it would replay while the shopper removes items, turning a reward into a notification of loss. |
+| **Add to cart** | real pending state, guarded by a ref so two taps inside one React batch cannot both pass |
+| **The cart drawer** | no longer slides open *over* the `/cart` page the submit navigates to |
+| **Every spinner** | carries `data-motion`, checked **in the source** — a DOM query finds zero spinners almost always and reports "0/0 unmarked", a check that passes because it looked at nothing |
+| **Calculer mes besoins** | now scrolls to its result. `resultRef` was declared, attached, and never read — on a phone the answer rendered below a five-field form and the button appeared to do nothing |
+
+## 8.6 Two bugs the geometry hid
+
+**`.pt-packbar` double-counted the safe-area inset.** `--tabbar-h` already contains it
+(`calc(56px + env(safe-area-inset-bottom))`), and the bar added `env(...)` again. On every notched
+iPhone that floated the pack bar 34px above the tab bar with **page content scrolling through the
+gap between them**.
+
+**The desktop reserve was smaller than the bar.** Only `MobileTabBar` is `md:hidden`; the step bar
+has no breakpoint gate at all. `md:pb-16` reserved 64px against a ~93px bar, so from 768px up the
+page ran under it. Survivable while the bar was optional — not once the bar *is* the way forward and
+the grid runs right up to it. Now 128px from `md`, asserted at 800 / 1440 / 1920.
+
+## 8.7 The install banner left this page too
+
+Measured at 390x746 on a category step: install banner 81px + step bar ~70px + tab bar 56px = **207px,
+28% of the viewport**, on the screen whose entire job is showing products. `WhatsAppFab` and
+`ScrollToTop` were suppressed here in v2 for exactly this reason and this one was missed. It costs
+PWA installs on one route; reversing it is deleting one line.
+
+## 8.8 Verification
+
+**81 behavioural assertions**, all passing, including the four that reproduce §8.2 across a
+deliberately slowed quote, and a new section that walks the whole flow **without answering the goal
+question** — the needs check used to vanish entirely for anyone who took *"Je sais déjà ce que je
+veux"*, with nothing on screen explaining the absence.
+
+Three assertions in the first green run were **vacuous and were rewritten rather than counted**:
+one compared `729 - 0` against `729` because its regex had matched nothing; one reported "0/0
+spinners unmarked" having found no spinners; one checked that tiles cleared the bar after scrolling
+to the bottom of a document whose footer put them 469px above the viewport. All three passed. None
+of them tested anything.
+
+**The contrast auditor now walks the wizard** (`--walk packbuilder`) instead of measuring only what
+renders on load. It immediately earned it: `#6C6C73` on `#F5EDE8` at 12px — the currency suffix on a
+**selected** tile — measured exactly **4.50:1** against a 4.5 minimum. A selected tile does not exist
+on first paint, so the step-0-only audit had never once measured that element, on this page or in v2.
+Now **24 states clean** (6 steps x 2 themes x 2 widths).
+
+Plus: `lint:design` clean · `tsc` clean · build clean · route still **statically prerendered** at
+**57.9 kB / 213 kB**, against `/shop` at 216 kB.

@@ -160,7 +160,7 @@ export default function AboutPageClient({
               <div className="flex flex-wrap items-center justify-center gap-3">
                 <Link
                   href="/shop"
-                  className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-white px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold transition-colors"
+                  className="inline-flex items-center gap-2 rounded-xl bg-brand hover:bg-brand-hover text-on-brand px-5 py-2.5 text-sm font-display uppercase tracking-wide font-semibold transition-colors"
                 >
                   <Package className="h-4 w-4" /> Nos produits
                 </Link>
@@ -364,7 +364,7 @@ export default function AboutPageClient({
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <Link
                 href="/shop"
-                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-white text-sm sm:text-base font-display uppercase tracking-wide font-semibold transition-colors"
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-xl bg-brand hover:bg-brand-hover text-on-brand text-sm sm:text-base font-display uppercase tracking-wide font-semibold transition-colors"
               >
                 <Package className="h-4 w-4" /> Découvrir nos produits
               </Link>

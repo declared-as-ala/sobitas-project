@@ -42,6 +42,30 @@ const ROUTES = flag('routes', ['/']);
 const WIDTHS = flag('widths', ['1440', '390']).map(Number);
 const THEMES = flag('themes', ['light', 'dark']);
 
+/**
+ * `--walk packbuilder` — audit each STEP of a wizard, not just its first screen.
+ *
+ * Without this the auditor reports "0 failures" for /pack-builder having looked at exactly one of
+ * eight screens: the welcome step is what renders on load, and every other step exists only after
+ * a click. That is a green light bought by not looking, which is worse than a red one — the goal
+ * cards, the product grid, the step bar and the whole recap were never measured.
+ *
+ * Each entry names the state and the clicks that reach it. The clicks are text-matched the same way
+ * the behavioural gate matches them, so a renamed button fails loudly here rather than silently
+ * auditing the previous step twice.
+ */
+const WALK = one('walk', '');
+const WALKS = {
+  packbuilder: [
+    { name: 'welcome', clicks: [] },
+    { name: 'goal', clicks: ['Commencer'] },
+    { name: 'category', clicks: ['Commencer', 'Prise de masse'] },
+    { name: 'category+selection', clicks: ['Commencer', 'Prise de masse', 'Ajouter'] },
+    { name: 'recap', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack'] },
+    { name: 'recap+needs', clicks: ['Commencer', 'Prise de masse', 'Ajouter', 'Voir mon pack', 'Vos besoins'] },
+  ],
+};
+
 const CHROME = [
   process.env.PUPPETEER_EXECUTABLE_PATH,
   'C:/Program Files/Google/Chrome/Application/chrome.exe',
@@ -158,35 +182,64 @@ for (const route of ROUTES) {
       }, theme);
 
       await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle2', timeout: 90_000 });
-      await page.evaluate(async () => {
-        for (let y = 0; y < document.body.scrollHeight; y += 700) {
-          window.scrollTo(0, y);
-          await new Promise((r) => setTimeout(r, 60));
+
+      const states = WALKS[WALK] ?? [{ name: '', clicks: [] }];
+      for (const state of states) {
+        // Every state is reached from a FRESH load. Replaying clicks on top of the previous state
+        // would compound them — "Ajouter" twice, a goal chosen while already past it — and the
+        // sequence would silently drift from the one being named in the output.
+        if (state.clicks.length) {
+          await page.reload({ waitUntil: 'networkidle2', timeout: 90_000 });
+          await page.evaluate(() => new Promise((r) => setTimeout(r, 1200)));
+          for (const label of state.clicks) {
+            const hit = await page.evaluate((t) => {
+              const el = [...document.querySelectorAll('button')].find((b) =>
+                (b.textContent || '').trim().toLowerCase().startsWith(t.toLowerCase())
+              );
+              if (!el) return false;
+              el.click();
+              return true;
+            }, label);
+            if (!hit) {
+              console.log(`\n${route} ${state.name}  ${theme} @${width}px   SKIPPED — no button "${label}"`);
+              totalFail += 1;
+              break;
+            }
+            await page.evaluate(() => new Promise((r) => setTimeout(r, 1000)));
+          }
         }
-        window.scrollTo(0, 0);
-        await new Promise((r) => setTimeout(r, 500));
-      });
 
-      const res = await page.evaluate(AUDIT);
-      const fails = res.filter((x) => x.status === 'FAIL');
-      const unknown = res.filter((x) => x.status === 'UNKNOWN');
+        await page.evaluate(async () => {
+          for (let y = 0; y < document.body.scrollHeight; y += 700) {
+            window.scrollTo(0, y);
+            await new Promise((r) => setTimeout(r, 60));
+          }
+          window.scrollTo(0, 0);
+          await new Promise((r) => setTimeout(r, 500));
+        });
 
-      // Collapse identical (fg, bg, size) triples — one styling decision, not N defects.
-      const grouped = new Map();
-      for (const f of fails) {
-        const k = `${f.fg}|${f.bg}|${Math.round(f.size)}|${f.min}`;
-        if (!grouped.has(k)) grouped.set(k, { ...f, n: 0 });
-        grouped.get(k).n++;
+        const res = await page.evaluate(AUDIT);
+        const fails = res.filter((x) => x.status === 'FAIL');
+        const unknown = res.filter((x) => x.status === 'UNKNOWN');
+
+        // Collapse identical (fg, bg, size) triples — one styling decision, not N defects.
+        const grouped = new Map();
+        for (const f of fails) {
+          const k = `${f.fg}|${f.bg}|${Math.round(f.size)}|${f.min}`;
+          if (!grouped.has(k)) grouped.set(k, { ...f, n: 0 });
+          grouped.get(k).n++;
+        }
+
+        const tag = state.name ? `${route} · ${state.name}` : route;
+        console.log(`\n${tag}  ${theme}  @${width}px   ${fails.length} fail / ${unknown.length} over-image`);
+        for (const g of [...grouped.values()].sort((a, b) => a.r - b.r)) {
+          console.log(
+            `   ${String(g.r).padStart(5)}:1  (need ${g.min})  ${g.fg} on ${g.bg}  ${Math.round(g.size)}px  x${g.n}  "${g.text}"`
+          );
+        }
+        totalFail += fails.length;
+        totalUnknown += unknown.length;
       }
-
-      console.log(`\n${route}  ${theme}  @${width}px   ${fails.length} fail / ${unknown.length} over-image`);
-      for (const g of [...grouped.values()].sort((a, b) => a.r - b.r)) {
-        console.log(
-          `   ${String(g.r).padStart(5)}:1  (need ${g.min})  ${g.fg} on ${g.bg}  ${Math.round(g.size)}px  x${g.n}  "${g.text}"`
-        );
-      }
-      totalFail += fails.length;
-      totalUnknown += unknown.length;
       await page.close();
     }
   }

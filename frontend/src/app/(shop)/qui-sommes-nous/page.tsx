@@ -5,9 +5,23 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 import AboutPageClient from './AboutPageClient';
 
-const ABOUT_TITLE = 'À propos | Protéine Tunisie';
+/**
+ * THE ONE PAGE WHERE THE LEGAL NAME BELONGS IN THE TITLE.
+ *
+ * The consumer rebrand to Protein.tn is not being reversed — every commercial page keeps its
+ * Protein.tn title. But after it, "SOBITAS" appeared in zero indexed text on the entire site, and
+ * it is still the single biggest query the site receives (589 clicks / 927 impressions / 63.5% CTR
+ * over three months, average position 2.42). "Who are we" is exactly the page whose job is to say
+ * that the shop people know as SOBITAS is the shop now called Protein.tn — a sentence that
+ * currently exists nowhere Google can read.
+ *
+ * Deliberately NOT applied to /, /shop or any category page: on those the trading name is what the
+ * shopper is looking for, and stacking a second brand into an already 60-70 character title costs
+ * more in truncation than it wins in recognition.
+ */
+const ABOUT_TITLE = 'À propos de SOBITAS — Protein.tn | Protéine Tunisie';
 const ABOUT_DESCRIPTION =
-  'Proteine Tunisie, distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.';
+  'SOBITAS, aujourd’hui Protein.tn : distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.';
 
 export const metadata: Metadata = {
   title: { absolute: ABOUT_TITLE },

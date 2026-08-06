@@ -28,17 +28,22 @@ import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { toast } from 'sonner';
 import { GOAL_CATEGORY_EMPHASIS, type Goal } from '@/util/nutritionTargets';
-import { flyToPack } from './packMotion';
+import { flyToPack, pulseTierUnlocked } from './packMotion';
 import { PackWizard } from './wizard/PackWizard';
+import type { GoalCovers } from './wizard/goalCovers';
 
 export interface PackBuilderGroup {
   slug: string;
   label: string;
+  /** Absolute URL of the category's own cover photograph, or null when the admin has none. */
+  cover: string | null;
   products: Product[];
 }
 
 interface PackBuilderClientProps {
   groups: PackBuilderGroup[];
+  /** Landing-page category photographs, one per goal. Decorative — may be empty. */
+  goalCovers: GoalCovers;
 }
 
 /** Display-only mirror of the backend PackDiscountService tiers. See the header note. */
@@ -48,15 +53,16 @@ const PACK_TIERS: { min: number; percent: number }[] = [
   { min: 500, percent: 12 },
 ];
 
-export function PackBuilderClient({ groups }: PackBuilderClientProps) {
+export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps) {
   const router = useRouter();
-  const { addToCart, setPackDiscount } = useCart();
+  const { addToCart, setPackDiscount, setCartDrawerOpen } = useCart();
 
   const [pack, setPack] = useState<Record<number, number>>({});
   const [quote, setQuote] = useState<PackQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [goal, setGoal] = useState<Goal | null>(null);
   const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
+  const [submitting, setSubmitting] = useState(false);
 
   /** Where a flying product thumbnail lands — the wizard's footer total. */
   const footerRef = useRef<HTMLDivElement>(null);
@@ -170,10 +176,55 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     return () => clearTimeout(timer);
   }, [entries]);
 
-  const discountPercent = quote?.discount_percent ?? 0;
-  const discountAmount = quote?.discount_amount ?? 0;
-  const total = quote ? quote.total : subtotal;
-  const nextTier = quote?.next_tier ?? null;
+  /**
+   * A QUOTE MAY ONLY DESCRIBE THE PACK IT WAS ASKED ABOUT.
+   *
+   * ── THE BUG THIS ONE LINE FIXES ────────────────────────────────────────────────────────
+   * `quote` is never cleared on the way out — it is only overwritten when the next response
+   * lands. So for the 400 ms debounce plus a round trip after every single add, the previous
+   * basket's discount was being applied to the new basket's contents. Three numbers on the recap
+   * came off two different clocks:
+   *
+   *     Sous-total   428.00 DT   ← recomputed locally, instant
+   *     Remise pack  −34.24 DT   ← the PREVIOUS basket's discount
+   *     Total       393.76 DT   ← the PREVIOUS basket's total
+   *
+   * Add a second 179 DT item to a 249 DT pack and, for that second or two, "Total" printed 249's
+   * total under a subtotal of 428 — a figure lower than the sum of the lines directly above it,
+   * on the screen where the customer decides to buy. On a slow connection it is a visibly wrong
+   * price sitting under the shopper's thumb, and it is wrong in the one direction this file's own
+   * header rule forbids: too LOW, which they will accept and we would have to honour.
+   *
+   * Treating an in-flight quote as ABSENT rather than as current is the whole fix, and it is
+   * one line. Everything downstream already knows how to render "no quote yet": the total falls
+   * back to the raw subtotal, the discount row disappears, the tier nudge disappears, and
+   * `assessPack` withholds every money claim (it takes `hasQuote` for exactly this reason). The
+   * customer sees an undiscounted price settle INTO a discount, which is both honest and the
+   * better story.
+   */
+  const liveQuote = quoteLoading ? null : quote;
+  const discountPercent = liveQuote?.discount_percent ?? 0;
+  const discountAmount = liveQuote?.discount_amount ?? 0;
+  const total = liveQuote ? liveQuote.total : subtotal;
+  const nextTier = liveQuote?.next_tier ?? null;
+
+  /**
+   * One expanding ring on the tier track the moment a discount tier is actually reached.
+   *
+   * `pulseTierUnlocked` and its `.pt-tier-hit` keyframes were written for this and then had zero
+   * call sites — the single most requested kind of feedback on this page ("make it alive when the
+   * user interacts") existed in the codebase and was never connected to anything.
+   *
+   * It fires only when the percentage INCREASES. Firing on any change would replay the ring while
+   * the shopper removes items, turning a reward into a notification that they have lost something.
+   * The ref holds the previous value across renders without causing one of its own.
+   */
+  const tierTrackRef = useRef<HTMLDivElement>(null);
+  const prevDiscountRef = useRef(0);
+  useEffect(() => {
+    if (discountPercent > prevDiscountRef.current) pulseTierUnlocked(tierTrackRef.current);
+    prevDiscountRef.current = discountPercent;
+  }, [discountPercent]);
 
   /**
    * The goal REORDERS the category steps; it never filters. Someone losing weight can still want a
@@ -189,16 +240,38 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
     [availableSlugs]
   );
 
+  /**
+   * Commit the pack to the cart and leave.
+   *
+   * `submitting` is never reset on the success path, and that is deliberate rather than a leak: the
+   * only way out of this branch is `router.push('/cart')`, which unmounts this component. Clearing
+   * the flag first would un-disable the button for the length of the navigation, which is precisely
+   * the window in which a second tap adds every line to the cart twice.
+   *
+   * The guard on the ref rather than on the state variable is what makes that airtight — two taps
+   * inside one React batch both see the old `submitting === false`, so state alone does not
+   * serialise them.
+   */
+  const submittingRef = useRef(false);
   const handleSubmit = useCallback(() => {
+    if (submittingRef.current) return;
     if (entries.length === 0) {
       toast.error('Ajoutez au moins un produit à votre pack');
       return;
     }
+    submittingRef.current = true;
+    setSubmitting(true);
     entries.forEach(({ product, qty }) => addToCart(product, qty));
     setPackDiscount(true);
+    /* `addToCart` opens the cart drawer (CartContext's `openDrawerDeferred`), which is right
+       everywhere else on the site and wrong here: the very next line navigates to /cart, so the
+       drawer slid open over the top of the page it was taking the shopper to — the same cart,
+       twice, one of them a sheet they now have to dismiss. Closing it after the writes and before
+       the push means the drawer never paints. */
+    setCartDrawerOpen(false);
     toast.success('Pack ajouté au panier — la remise sera appliquée au paiement');
     router.push('/cart');
-  }, [entries, addToCart, setPackDiscount, router]);
+  }, [entries, addToCart, setPackDiscount, setCartDrawerOpen, router]);
 
   if (groups.length === 0) {
     return (
@@ -219,17 +292,28 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   }
 
   return (
-    <div className="min-h-screen bg-canvas">
-      {/* The bottom reserve, and why it steps where it does.
-          Two fixed things stack at the bottom: the pack bar (~95px: a 3px track, a nudge line, and
-          a 46px CTA row) and MobileTabBar (56px + safe area). The tab bar is `md:hidden`, so both
-          are present all the way to 767px — but the reserve used to drop to `sm:pb-16` (64px) at
-          640px, which is less than the tab bar alone. Between 640 and 767 the step's own "Continuer"
-          button sat under the bar and could not be tapped.
-          Now: 144px to 767px (both present), 64px from `md` (neither). */}
-      <main className="max-w-site mx-auto px-4 pb-36 pt-6 sm:px-6 sm:pt-10 md:pb-16 lg:px-8 lg:pb-20">
+    /* THE PAGE IS SAND, NOT WHITE (owner: "use the colors of the landing page… literally the same
+       tokens"). The landing page is not a white page — it is an alternation of `canvas` and
+       `sunken` bands with white `elevated` plates sitting on them, and CategoryRail specifically is
+       a sunken band carrying elevated tiles. This page was a flat `bg-canvas` for all eight steps,
+       so every card on it was white-on-white and the plates had to be drawn with borders alone.
+       On sand the same cards read as objects, exactly as they do on the homepage, and the borders
+       become an edge rather than the only thing defining a card. */
+    <div className="min-h-screen bg-sunken">
+      {/* THE BOTTOM RESERVE, AND WHY IT NO LONGER STEPS DOWN AT `md`.
+          Two fixed things stack at the bottom: the step bar and MobileTabBar (56px + safe area).
+          Only the TAB BAR is `md:hidden`. The step bar has no breakpoint gate at all — it renders
+          at every width — and it measures ~93px whenever a tier nudge is showing (3px track + a
+          24px nudge line + a 66px action row).
+          The old `md:pb-16 lg:pb-20` reserved 64/80px against that 93px bar, so from 768px up the
+          last ~30px of the page sat behind it. That was survivable while the bar was optional and
+          the step's own Continuer lived in the flow; now that the bar IS the way forward and the
+          grid runs right up to it, the bottom row of products would be clipped on every laptop.
+          128px from `md` clears the bar at every width with the same margin phones get. */}
+      <main className="max-w-site mx-auto px-4 pb-36 pt-6 sm:px-6 sm:pt-10 md:pb-32 lg:px-8">
         <PackWizard
           groups={groups}
+          goalCovers={goalCovers}
           categoryOrder={categoryOrder}
           goal={goal}
           pack={pack}
@@ -243,6 +327,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           nextTier={nextTier}
           quoteLoading={quoteLoading}
           hasQuote={quote !== null}
+          submitting={submitting}
           tiers={PACK_TIERS}
           coveredSlugs={coveredSlugs}
           onSelectGoal={handleSelectGoal}
@@ -251,6 +336,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           onRemove={removeProduct}
           onSubmit={handleSubmit}
           footerRef={footerRef}
+          tierTrackRef={tierTrackRef}
         />
       </main>
     </div>

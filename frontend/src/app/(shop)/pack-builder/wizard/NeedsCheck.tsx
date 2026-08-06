@@ -77,7 +77,7 @@ function Field({
           onChange={(e) => onChange(e.target.value)}
           aria-invalid={error ? true : undefined}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`h-12 w-full rounded-xl border bg-canvas px-3 pr-11 font-display text-lg font-bold tabular-nums text-ink-1 outline-none transition-colors [appearance:textfield] focus:border-brand focus:ring-2 focus:ring-brand/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
+          className={`h-12 w-full rounded-xl border bg-sunken px-3 pr-11 font-display text-lg font-bold tabular-nums text-ink-1 outline-none transition-colors [appearance:textfield] focus:border-brand focus:ring-2 focus:ring-brand/20 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none ${
             error ? 'border-destructive' : 'border-hairline'
           }`}
         />
@@ -148,7 +148,16 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
       return;
     }
     setTargets(computeTargets({ sex, activity, goal, ...numbers } as Profile));
-  }, [filled, errors, sex, activity, goal, numbers]);
+    /* `resultRef` was declared and attached and then never read — the one thing it was created for
+       was never wired up. It matters on a phone: the three result cards render BELOW a five-field
+       form, so at 390px pressing "Calculer mes besoins" scrolled nothing, changed nothing visible,
+       and the answer sat off-screen. The button appeared to do nothing, which is the same symptom
+       as the blank-field bug fixed above and just as easy to read as "this feature is broken".
+       `block: 'nearest'` rather than 'start' so a result already in view is not yanked upward. */
+    requestAnimationFrame(() =>
+      resultRef.current?.scrollIntoView({ behavior: calm ? 'auto' : 'smooth', block: 'nearest' })
+    );
+  }, [filled, errors, sex, activity, goal, numbers, calm]);
 
   const child = childVariants(calm);
 
@@ -156,7 +165,7 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
     <div>
       <fieldset className="mb-4">
         <legend className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">Sexe</legend>
-        <div className="inline-flex rounded-xl border border-hairline bg-canvas p-1">
+        <div className="inline-flex rounded-xl border border-hairline bg-sunken p-1">
           {(['homme', 'femme'] as Sex[]).map((s) => (
             <m.button
               key={s}
@@ -193,7 +202,7 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
               onClick={() => setActivity(a)}
               aria-pressed={activity === a}
               className={`min-h-[56px] rounded-xl border p-2.5 text-left transition-colors ${
-                activity === a ? 'border-brand bg-brand/5' : 'border-hairline bg-canvas'
+                activity === a ? 'border-brand bg-brand/5' : 'border-hairline bg-sunken'
               }`}
             >
               <span className={`block text-xs font-bold leading-tight ${activity === a ? 'text-brand' : 'text-ink-1'}`}>
@@ -229,7 +238,7 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
           className="mt-5"
         >
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <m.div variants={popVariants(calm)} className="rounded-xl border border-hairline bg-canvas p-3.5">
+            <m.div variants={popVariants(calm)} className="rounded-xl border border-hairline bg-sunken p-3.5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-ink-3">Métabolisme de base</p>
               <p className="mt-1 font-display text-xl font-extrabold tabular-nums text-ink-1">
                 {targets.bmr.toLocaleString('fr-FR')} <span className="text-sm font-bold text-ink-3">kcal</span>
@@ -237,7 +246,7 @@ export function NeedsCheck({ goal, calm }: NeedsCheckProps) {
               <p className="mt-0.5 text-[11px] text-ink-3">au repos, sur 24 h</p>
             </m.div>
 
-            <m.div variants={popVariants(calm)} className="rounded-xl border border-hairline bg-canvas p-3.5">
+            <m.div variants={popVariants(calm)} className="rounded-xl border border-hairline bg-sunken p-3.5">
               <p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
                 <Flame className="h-3 w-3" aria-hidden="true" />
                 Énergie conseillée
