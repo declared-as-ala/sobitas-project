@@ -75,6 +75,18 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
+          # Key first, password as fallback.
+          #
+          # appleboy/ssh-action uses the key when one is supplied and falls back to the password
+          # when VPS_SSH_KEY is unset, so this is safe to merge before the key exists.
+          #
+          # Why it matters: on 07/08/2026 every deploy failed with
+          #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
+          # The images built and pushed to GHCR fine; only the VPS step died, because the server
+          # stopped accepting the password held in VPS_PASSWORD. A pipeline whose only credential
+          # is a password breaks every time that password is rotated - and it has to be rotated,
+          # so a key is the fix rather than a fresher password.
+          key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           command_timeout: 900s
           script_stop: true
