@@ -22,9 +22,10 @@
 import { getStorageUrl } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
-import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
+import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink } from '@/util/productUrl';
 import { buildProductAlt } from '@/util/productAlt';
+import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import type { Product } from '@/types';
 
 function formatTnd(n: number): string {
@@ -53,10 +54,23 @@ export function CrawlerProductView({
   const inStock = isInStock(product);
   const brandName = product.brand?.designation_fr;
   const cover = product.cover ? getStorageUrl(product.cover) : '';
-  const descriptionHtml = sanitizeProductHtml(
-    product.description_fr || product.description_cover || ''
+  /*
+   * The fallback is the point of parity.
+   *
+   * ProductDetailClient falls back to generateProductFallbackDescription when both description
+   * columns are empty; this view did not. A product in that state therefore showed a human real
+   * copy and showed Googlebot — which is rewritten here by middleware — no Description section at
+   * all. Measured today that affects no live product, so this is closing a trapdoor rather than
+   * fixing a visible bug: the enrichment pipeline creates products, and the first one it creates
+   * without a description would have fallen straight through it.
+   */
+  const descriptionHtml = sanitizeRichHtml(
+    product.description_fr || product.description_cover || generateProductFallbackDescription(product)
   );
-  const nutritionHtml = sanitizeProductHtml(product.nutrition_values || '');
+  const nutritionHtml = sanitizeRichHtml(product.nutrition_values || '');
+  const nutritionImages = (
+    Array.isArray(product.nutrition_images) ? product.nutrition_images : []
+  ).filter(Boolean);
   const aromas = product.aromes ?? [];
   const reviews = (product.reviews ?? []).filter(
     (r) => (r.publier === undefined || r.publier === 1) && reviewRating(r) >= 1
@@ -158,13 +172,46 @@ export function CrawlerProductView({
         )}
 
         {/* Nutrition / specs */}
-        {nutritionHtml && (
+        {(nutritionHtml || nutritionImages.length > 0) && (
           <section aria-label="Valeurs nutritionnelles" className="my-6">
             <h2 className="text-lg font-semibold">Valeurs nutritionnelles</h2>
-            <div
-              className="prose prose-sm mt-2 max-w-none"
-              dangerouslySetInnerHTML={{ __html: nutritionHtml }}
-            />
+            {nutritionHtml && (
+              <div
+                className="prose prose-sm mt-2 max-w-none"
+                dangerouslySetInnerHTML={{ __html: nutritionHtml }}
+              />
+            )}
+            {/*
+              Photographs of the printed Supplement Facts panel.
+
+              These render on the human page but were absent here, so Googlebot — which gets this
+              view — saw no nutrition content at all for any product whose panel is a photo. For a
+              catalogue of EU brands that publish no machine-readable panel anywhere, a picture of
+              the label is often the ONLY evidence that exists, which makes this the difference
+              between a sourced page and an empty section.
+
+              The alt text names the product and says what the image is, because that text is the
+              only part a crawler can read.
+            */}
+            {nutritionImages.length > 0 && (
+              <ul className="mt-3 space-y-3">
+                {nutritionImages.map((path, i) => (
+                  <li key={path}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={getStorageUrl(path)}
+                      width={600}
+                      height={400}
+                      loading="lazy"
+                      alt={`${product.designation_fr ?? 'Produit'} — valeurs nutritionnelles${
+                        nutritionImages.length > 1 ? ` (${i + 1}/${nutritionImages.length})` : ''
+                      }`}
+                      className="h-auto w-full max-w-lg rounded border"
+                    />
+                  </li>
+                ))}
+              </ul>
+            )}
           </section>
         )}
 

@@ -251,6 +251,13 @@ function measure(url, html, status) {
     hasDescription: Boolean(descHtml),
     hasNutrition: Boolean(nutriHtml),
     nutritionWords: words(strip(nutriHtml ?? '')),
+    // A transcribed Supplement Facts panel, distinguishable from prose that merely mentions
+    // nutrition. The builder always emits this wrapper, so its presence means real label data.
+    hasSupplementPanel: /class="supplement-facts"/.test(nutriHtml ?? ''),
+    // Photographs of the printed panel. For EU brands that publish no machine-readable panel
+    // anywhere, this is often the only evidence that exists — and it was invisible to Googlebot
+    // until the crawler view started rendering it.
+    nutritionImages: nutriHtml ? [...nutriHtml.matchAll(/<img\s/gi)].length : 0,
     faqCount: faqHtml ? [...faqHtml.matchAll(/<dt[^>]*>/gi)].length : 0,
     hasReviews: Boolean(reviewsHtml),
     similarLinks: similarHtml ? [...similarHtml.matchAll(/<a\s[^>]*href=/gi)].length : 0,
@@ -300,12 +307,22 @@ function coverage(rows) {
     nutritionSchemaPct: pct((r) => r.ldNutrition),
     videoSchemaPct: pct((r) => r.ldVideo),
     hasDescriptionPct: pct((r) => r.hasDescription),
+    /**
+     * hasDescriptionPct reads 100% and always will: it asks whether a Description SECTION rendered,
+     * and one is rendered for a one-word description. Three products have exactly that. A metric
+     * that cannot fail is not measuring anything, so this is the one that actually tracks whether
+     * a customer learns something.
+     */
+    thinDescriptionPct: pct((r) => r.descriptionWords < 150),
+    // Real transcribed panels and label photographs — the two surfaces Stage 3 fills.
+    supplementPanelPct: pct((r) => r.hasSupplementPanel),
+    nutritionImagePct: pct((r) => r.nutritionImages > 0),
     under250WordsPct: pct((r) => r.bodyWords < 250),
   };
 }
 
-/** Coverage floors may only rise; under250WordsPct is a ceiling and may only fall. */
-const CEILINGS = new Set(['under250WordsPct']);
+/** Coverage floors may only rise; these are ceilings and may only fall. */
+const CEILINGS = new Set(['under250WordsPct', 'thinDescriptionPct']);
 
 function main(rows) {
   rows.sort((a, b) => a.bodyWords - b.bodyWords);
@@ -432,7 +449,8 @@ const rows = await mapWithConcurrency(urls, CONCURRENCY, async (url) => {
     return measure(url, html, status);
   } catch (err) {
     return { url, status: 0, isCrawlerView: true, bodyWords: 0, descriptionWords: 0,
-      hasDescription: false, hasNutrition: false, nutritionWords: 0, faqCount: 0, hasReviews: false,
+      hasDescription: false, hasNutrition: false, nutritionWords: 0,
+      hasSupplementPanel: false, nutritionImages: 0, faqCount: 0, hasReviews: false,
       similarLinks: 0, ldFaqPage: false, ldProduct: false, ldBreadcrumb: false, ldNutrition: false,
       ldVideo: false, ldAggregateRating: false, ldParseError: true, hasGtin: false,
       reference: '', refIsGtin: false, h1Count: 0, unitMismatch: false, error: String(err).slice(0, 120) };
