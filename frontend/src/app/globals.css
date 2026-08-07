@@ -547,11 +547,6 @@ html[dir="rtl"] [data-i18n-ltr] {
     transform-origin: center bottom;
   }
 
-  /* The SECONDS digit only. One 900ms fade per tick, so the motion tracks the thing that actually
-     changed. Applying it to all four tiles would animate three digits that are standing still. */
-  .pt-tick {
-    animation: pt-tick 1s steps(1, end) infinite;
-  }
 }
 
 @keyframes pt-flame {
@@ -559,10 +554,14 @@ html[dir="rtl"] [data-i18n-ltr] {
   50% { transform: scale(1.18); opacity: 0.78; }
 }
 
-@keyframes pt-tick {
-  0% { opacity: 0.45; }
-  18%, 100% { opacity: 1; }
-}
+/* `.pt-tick` and its keyframes lived here and are deleted. It pulsed the countdown's seconds digit,
+   and it had exactly one consumer — VentesFlashSection — which stopped using it.
+   Two reasons it is not worth keeping for a future caller. Its trough was `opacity: .45` held by
+   `steps(1, end)`, which parks TEXT at roughly 2.5:1 for about a fifth of every second: a contrast
+   failure that arrives and leaves sixty times a minute, and an SC 2.2.2 (Pause/Stop/Hide) exposure
+   with no way to pause it. Raising the trough until it passes AA leaves nothing visibly animating.
+   And the band now shows a live clock only inside a 48h window, so most of the time there is no
+   ticking digit to decorate. */
 
 /* --------------------------------------------------------------------------
    PACK BUILDER — INTERACTION FEEDBACK

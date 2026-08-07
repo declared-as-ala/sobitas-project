@@ -52,24 +52,31 @@ import { localizedName } from '@/i18n/content';
 export interface FlashDealCardProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   product: any;
-  /** The first card is above the fold on desktop; let it skip the lazy-load hop. */
-  priority?: boolean;
 }
 
 /**
- * Derived per DESIGN_SYSTEM §7.
+ * Derived per DESIGN_SYSTEM §7, and RE-derived after the cards were allowed to fill the rail.
  *
- * The CARD does not own its width — the rail does (see VentesFlashSection). Below `lg` the item is
- * a fixed 156/168px rail cell; from `lg` it grows to share the rail's width and is capped at 260px.
- * So the widest this ever renders is 260px, and the frame is square with `object-contain`, which
- * means the required width IS the rendered width — no `object-cover` scale factor to apply.
+ * The CARD does not own its width — the rail does (see VentesFlashSection). The `max-w-[260px]` cap
+ * came off the rail items when the 352px left column was deleted, so four deals now divide the full
+ * band rail. The frame is square with `object-contain`, so the required width IS the rendered width
+ * — no `object-cover` scale factor to apply.
  *
- * Declared one step above each cap rather than at it: a soft packshot on a discounted product
- * reads as a cheap product, and over-declaring costs at most one bucket.
+ *   >=1664  rail = 1536, four cards → (1536 − 36)/4 = 375px          → 380px
+ *   >=1024  rail = min(1536, vw − 64) → 25vw is the honest bracket   → 25vw
+ *   >=640   rail = vw − 48, cards at basis 168 before they grow      → 180px
+ *   below   full-bleed rail, basis 156                               → 170px
+ *
+ * Every bracket is declared one step ABOVE the requirement rather than at it: a soft packshot on a
+ * discounted product reads as a cheap product, and over-declaring costs at most one bucket.
+ *
+ * WITHOUT this re-derivation the old string's flat `260px` would have made every desktop packshot
+ * upscale ~1.29x at 1440 the moment the cap came off — the exact defect that is invisible in review
+ * because the layout looks right and only the pixels are wrong.
  */
-const IMAGE_SIZES = '(min-width: 1024px) 260px, (min-width: 640px) 168px, 156px';
+const IMAGE_SIZES = '(min-width: 1664px) 380px, (min-width: 1024px) 25vw, (min-width: 640px) 180px, 170px';
 
-export const FlashDealCard = memo(function FlashDealCard({ product, priority = false }: FlashDealCardProps) {
+export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealCardProps) {
   const { locale } = useI18n();
   const { addToCart } = useCartActions();
   const inCartQty = useCartQty(product.id);
@@ -92,7 +99,11 @@ export const FlashDealCard = memo(function FlashDealCard({ product, priority = f
 
   const handleAdd = useCallback(
     (e: React.MouseEvent) => {
-      // The whole card is a link; without this the tap navigates AND adds.
+      /* The button is no longer INSIDE the link (see the root note), so a tap can no longer
+         navigate as well as add. These two lines are kept anyway and they are not superstition:
+         `LinkWithLoading` also wraps the image and the title, and a fast double-tap that lands on
+         the button while the sibling link's navigation is already in flight would otherwise queue
+         both. Cheap, and it costs nothing now that the nesting is valid. */
       e.preventDefault();
       e.stopPropagation();
       if (outOfStock) {
@@ -127,14 +138,32 @@ export const FlashDealCard = memo(function FlashDealCard({ product, priority = f
   );
 
   return (
-    <LinkWithLoading
-      href={buildProductUrlPath(product)}
-      loadingMessage="Chargement"
-      /* `w-full h-full` — the card fills whatever cell the rail gives it. Width lives in one place
-         (the rail) so the two cannot disagree, and `h-full` is what keeps every card in the row the
-         same height when one product name wraps to two lines and another does not. */
-      className="group flex h-full w-full flex-col overflow-hidden rounded-xl border border-hairline bg-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 [@media(hover:hover)]:hover:border-brand/50"
-    >
+    /* ── THE ROOT IS A PLAIN DIV, AND THE LINK IS INSIDE IT ────────────────────────────────
+       It used to be `<LinkWithLoading>` wrapping everything, with the add-to-cart `<button>` as a
+       descendant. `LinkWithLoading` renders a real `<a>`, and `<button>` is interactive content,
+       which `<a>`'s transparent content model forbids — invalid HTML that browsers are free to
+       reparent. The measurable cost was in the accessible name: the card link computed to
+       "Whey Isolate, 89 DT, 129 DT, Ajouter Whey Isolate au panier, lien" — the product name spoken
+       twice and the link's purpose polluted by a control that is not part of it, on every card.
+
+       The house structure (ProductCard) is this one: a non-focusable root that owns the frame and
+       the hover group, the link scoped to the things that actually navigate, and the button as its
+       SIBLING.
+
+       ── AND THE FRAME IS NOW THE HOUSE RECIPE ──────────────────────────────────────────────
+       `font-poppins rounded-2xl … shadow-sm` matches ProductCard exactly. These were the only cards
+       on the homepage in a different typeface, at a different radius, with no shadow — part of the
+       owner's "it doesn't look like the design system". It matters more now than it did: inside the
+       deleted plate these sat white-on-white with a 1.16:1 hairline as their only edge, and on the
+       sand band they are white-on-sand with a shadow, so the card is finally an object. */
+    <div className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+      <LinkWithLoading
+        href={buildProductUrlPath(product)}
+        loadingMessage="Chargement"
+        /* `ring-inset`, not `ring-offset-2`: the link is no longer the root, so an outset ring is
+           clipped on three sides by the root's `overflow-hidden`. */
+        className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+      >
       <div className="relative aspect-square w-full overflow-hidden bg-sunken">
         {image ? (
           <Image
@@ -147,11 +176,23 @@ export const FlashDealCard = memo(function FlashDealCard({ product, priority = f
             fill
             sizes={IMAGE_SIZES}
             quality={80}
-            loading={priority ? 'eager' : 'lazy'}
+            /* ALWAYS LAZY. Two of these used to be `priority`, on the reasoning that "the first
+               card is above the fold on desktop". It is not: this band is fourth on the homepage,
+               roughly 1,500px down, and `content-visibility: auto` suppresses PAINT, not image
+               fetches — so two below-the-fold packshots were competing for bandwidth inside the
+               hero's LCP window at every width. CategoryRail carries this exact rule as a comment
+               and obeys it. Deleting the prop is the fix; there is no width where it was right. */
+            loading="lazy"
             className="object-contain p-2 transition-transform duration-500 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.04]"
           />
         ) : (
-          <span className="flex h-full w-full items-center justify-center font-display font-compressed text-2xl font-extrabold uppercase text-ink-3/40">
+          /* `aria-hidden`: this is a watermark of the first letter, and it was being announced as a
+             stray character immediately before the <h3> says the whole name — "W, Whey Isolate
+             2kg". Hidden, its 40% alpha is legal decoration rather than 1.70:1 text. */
+          <span
+            className="flex h-full w-full items-center justify-center font-display font-compressed text-2xl font-extrabold uppercase text-ink-3/40"
+            aria-hidden="true"
+          >
             {name.charAt(0)}
           </span>
         )}
@@ -172,7 +213,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product, priority = f
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-2.5">
+      <div className="flex flex-1 flex-col p-2.5 pb-0">
         <h3 className="line-clamp-2 min-h-[2.1rem] text-[11px] font-semibold leading-snug text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand">
           {name}
         </h3>
@@ -191,38 +232,54 @@ export const FlashDealCard = memo(function FlashDealCard({ product, priority = f
           )}
         </div>
 
-        <div className="mt-2">
-          {outOfStock ? (
-            <span className="flex min-h-[36px] items-center justify-center rounded-lg bg-sunken text-[11px] font-semibold text-ink-3">
-              Indisponible
-            </span>
-          ) : (
-            <button
-              type="button"
-              onClick={handleAdd}
-              disabled={atLimit}
-              /* 36px tall, and that is a considered exception rather than an oversight: the site's
-                 44px floor exists for a control that is the ONLY way to act on an element, and this
-                 one is not — the entire card is a 250px-tall link to the product page, where the
-                 full-size add-to-cart lives. The button is the shortcut, the card is the target. */
-              aria-label={`Ajouter ${name} au panier`}
-              className="flex min-h-[36px] w-full items-center justify-center gap-1.5 rounded-lg bg-brand text-[11px] font-semibold text-on-brand transition-colors disabled:opacity-40 [@media(hover:hover)]:hover:bg-brand-hover"
-            >
-              {justAdded ? (
-                <>
-                  <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                  Ajouté
-                </>
-              ) : (
-                <>
-                  <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
-                  Ajouter
-                </>
-              )}
-            </button>
-          )}
-        </div>
       </div>
-    </LinkWithLoading>
+
+      </LinkWithLoading>
+
+      {/* THE CONTROL IS A SIBLING OF THE LINK, NOT ITS CHILD. See the root note. */}
+      <div className="p-2.5 pt-2">
+        {outOfStock ? (
+          <span className="flex min-h-[44px] items-center justify-center rounded-lg bg-sunken text-[11px] font-semibold text-ink-3">
+            Indisponible
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={handleAdd}
+            /* ── `aria-disabled`, NOT `disabled` ──────────────────────────────────────────
+               `disabled` removed the button from the tab order and painted it at `opacity-40`,
+               which groups fill and label together to roughly 1.9:1 — a control that still read
+               "Ajouter" while being silently unavailable, and unreachable by keyboard so nobody
+               could find out why. It also made the stock guard in `handleAdd` DEAD CODE, so
+               CartContext's actual explanation ("Stock insuffisant. Il reste N unité(s).") could
+               never reach anyone. `aria-disabled` keeps it focusable and clickable, so the guard
+               finally fires and says the useful thing.
+
+               44px, up from 36. The old note argued the card is the real target and the button is
+               a shortcut — true, but the site's floor is not conditional, and this was the last
+               control on the homepage under it. */
+            aria-disabled={atLimit || undefined}
+            aria-label={atLimit ? `Stock maximum atteint pour ${name}` : `Ajouter ${name} au panier`}
+            className={`flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
+              atLimit
+                ? 'cursor-not-allowed bg-sunken text-ink-3'
+                : 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
+            }`}
+          >
+            {justAdded ? (
+              <>
+                <Check className="h-3.5 w-3.5" aria-hidden="true" />
+                Ajouté
+              </>
+            ) : (
+              <>
+                <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
+                Ajouter
+              </>
+            )}
+          </button>
+        )}
+      </div>
+    </div>
   );
 });
