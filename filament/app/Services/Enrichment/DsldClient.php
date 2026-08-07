@@ -275,9 +275,23 @@ class DsldClient
                 // Never invented and never converted: transcribed as printed, with its unit.
                 'quantity' => $this->quantity($quantity['quantity'] ?? null, (string) ($quantity['unit'] ?? '')),
                 'unit' => $this->unit((string) ($quantity['unit'] ?? '')),
-                // A disclosed-blend row with no amount is meaningful — say so rather than showing
-                // a blank cell that reads as missing data.
+                // A row with no amount is meaningful — say so rather than showing a blank cell that
+                // reads as missing data.
                 'undisclosed' => ($quantity['unit'] ?? '') === 'NP',
+                /**
+                 * ...but "no amount" has TWO causes, and calling them the same thing prints a
+                 * falsehood.
+                 *
+                 * Measured on Gold Standard Whey: Vitamin A, Calcium, Vitamin C and Iron all carry
+                 * unit NP with a declared %DV. They are not proprietary blends — a US label is
+                 * simply allowed to give the percentage without the milligrams. Animal Pak's
+                 * "Amino Acid Complex" also carries NP, and that one genuinely IS a blend
+                 * (category `blend`, group `Blend`).
+                 *
+                 * Labelling the first four "mélange breveté" would tell a customer their calcium
+                 * is a secret formula. The category is what separates them, so it decides.
+                 */
+                'blend' => $this->isBlend($row),
                 'operator' => (string) ($quantity['operator'] ?? '='),
                 'serving_quantity' => $quantity['servingSizeQuantity'] ?? null,
                 'serving_unit' => $this->unit((string) ($quantity['servingSizeUnit'] ?? '')),
@@ -290,6 +304,21 @@ class DsldClient
         }
 
         return $out;
+    }
+
+    /**
+     * A proprietary blend: the manufacturer declares the total but not the split between its
+     * components.
+     *
+     * Keyed on DSLD's own classification rather than on the missing amount, because the missing
+     * amount is ambiguous and the classification is not.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private function isBlend(array $row): bool
+    {
+        return str_contains(mb_strtolower((string) ($row['category'] ?? '')), 'blend')
+            || str_contains(mb_strtolower((string) ($row['ingredientGroup'] ?? '')), 'blend');
     }
 
     /**

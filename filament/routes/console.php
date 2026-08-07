@@ -65,6 +65,18 @@ Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // g
 // decide. Without this the drift is invisible — seo:enrich-nutrition above simply finds nothing.
 Schedule::command('products:recover-gtin')->weeklyOn(2, '02:30');
 
+// Supplement Facts from the NIH label database, transcribed rather than generated.
+//
+// Runs BEFORE seo:enrich-nutrition on the same night, because DSLD carries the actual printed
+// supplement panel — serving size, every ingredient row, %DV — while Open Food Facts carries
+// per-100 g food values. For a tub of whey the label panel is the better answer, so it goes first
+// and OFF fills in only what is still empty.
+//
+// --apply IS passed here, unlike products:recover-gtin, because this command publishes only on a
+// barcode match. A name-only match records a pending observation and touches no product, so the
+// worst a cron can do is queue something for a human to look at.
+Schedule::command('products:enrich-dsld --limit=25 --apply')->weeklyOn(2, '02:45');
+
 // Draft copy for thin product pages. 15 a week, queued one job per product.
 //
 // The rate is the point. 95 of 309 products are under 250 words, and clearing that in one sweep is

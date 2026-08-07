@@ -3,6 +3,7 @@
 namespace App\Services\Content;
 
 use App\Models\Product;
+use App\Support\Figures;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 
@@ -214,9 +215,13 @@ SYS;
             return null;
         }
 
+        // The figures the model was actually shown — the same block the prompt carries, so "you may
+        // quote what you were given" is checkable rather than aspirational.
+        $approved = Figures::in($this->knownFacts($product));
+
         // A description that breaks a rule sinks the whole draft: it is the body of the page, and
         // there is nothing to salvage around it.
-        if ($reason = $this->ruleViolation($plain, $product)) {
+        if ($reason = $this->ruleViolation($plain, $product, $approved)) {
             Log::warning('[ProductContentGenerator] draft rejected', [
                 'product' => $product->id,
                 'reason' => $reason,
@@ -237,7 +242,7 @@ SYS;
             // Same gate as the description. A single overstepping answer is dropped on its own —
             // discarding 400 good words because one answer gave a dosage helps nobody, and the
             // remaining questions are still worth publishing.
-            if ($reason = $this->ruleViolation($q.' '.$a, $product)) {
+            if ($reason = $this->ruleViolation($q.' '.$a, $product, $approved)) {
                 $droppedFaq[] = $reason.': '.mb_strimwidth($q, 0, 60, '…');
 
                 continue;
@@ -261,9 +266,10 @@ SYS;
     /**
      * The rules that hold for every customer-facing sentence, description or FAQ answer alike.
      *
+     * @param  list<string>  $approved  canonical figure tokens the evidence supports
      * @return string|null a short reason when the text breaks a rule, null when it is clean
      */
-    private function ruleViolation(string $plain, Product $product): ?string
+    private function ruleViolation(string $plain, Product $product, array $approved): ?string
     {
         foreach (self::CLAIM_PATTERNS as $pattern) {
             if (preg_match($pattern, $plain)) {
@@ -277,19 +283,23 @@ SYS;
             }
         }
 
-        // Rule 1, enforced rather than trusted: if we supplied no nutrition values, the text must
-        // not contain nutrition-shaped figures. Prices and pack sizes ARE known, so they are exempt.
-        if (blank($product->nutrition_values)) {
-            $stripped = $plain;
-            foreach ([(string) $product->designation_fr, number_format((float) $product->prix, 3, '.', ' ')] as $known) {
-                if ($known !== '') {
-                    $stripped = str_ireplace($known, ' ', $stripped);
-                }
-            }
-            if (preg_match('~\d+[.,]?\d*\s*(g|mg|kcal|calories?)\s+(de\s+)?(prot[ée]ines?|glucides?|lipides?|sucres?|BCAA|cr[ée]atine|leucine)~iu', $stripped)
-                || preg_match('~(prot[ée]ines?|glucides?|lipides?)\s*:?\s*\d+~iu', $stripped)) {
-                return 'invented nutrition figures';
-            }
+        /**
+         * Rule 1, enforced rather than trusted: every figure must come from the evidence we handed
+         * the model.
+         *
+         * The earlier version of this check only fired when `nutrition_values` was blank — which was
+         * defensible while the column was empty on all 309 products, and became a hole the moment
+         * Stage 3 started filling it. A populated panel would have licensed the model to print ANY
+         * number, including one the panel contradicts. "24 g de protéines" on a page whose label says
+         * 21 g is worse than no number at all, because it reads as sourced.
+         *
+         * `$approved` is built from exactly the facts block in the prompt, so the rule is simply:
+         * the model may quote what it was shown and nothing else. Prices, pack sizes and the product
+         * name are in that block, so ordinary copy passes untouched.
+         */
+        $ungrounded = Figures::ungrounded($plain, $approved);
+        if ($ungrounded !== []) {
+            return 'ungrounded figure ('.implode(', ', array_slice($ungrounded, 0, 4)).')';
         }
 
         return null;
