@@ -20,15 +20,24 @@ use Illuminate\Support\Facades\Log;
  *
  * 1. No invented numbers. Protein per serving, calories, dosage, creatine grams — people dose
  *    themselves on those. If a figure was not supplied in the attributes below, it must not appear.
- *    This is why nutrition values are NOT generated at all: no product here carries a barcode, so
- *    there is no external database to join against, and an LLM's guess at a Supplement Facts panel
- *    is a health risk, not a content gap.
+ *    Nutrition values are never generated: an LLM's guess at a Supplement Facts panel is a health
+ *    risk, not a content gap. Real values arrive from the label via a barcode lookup
+ *    (`seo:enrich-nutrition`), and this class may only quote what is already stored.
  * 2. No health or therapeutic claims — nothing that treats, prevents or cures. Supplement claims
  *    are regulated, and "boosts immunity" on a product page is a legal exposure, not just bad copy.
  * 3. No invented certifications, awards, lab tests, origins or ingredient lists.
+ * 4. No dosage instructions. "Prenez 2 capsules par jour" is advice about how much of a supplement
+ *    to put in your body, and it is the one sentence on the page a customer will act on literally.
+ *    The product's own label is the only authority; copy defers to it and never substitutes for it.
  *
- * A draft that breaks rule 1 or 2 is rejected in code rather than shown to the admin, because the
+ * A draft that breaks a rule is rejected in code rather than shown to the admin, because the
  * realistic failure mode is a busy owner approving a plausible-looking panel of fabricated numbers.
+ *
+ * ── WHY THE FAQ IS CHECKED SEPARATELY ─────────────────────────────────────────────────────
+ * The validators originally ran over the description only, so every rule above was unenforced
+ * inside an FAQ answer — and the FAQ is precisely where "combien par jour ?" gets asked. Each
+ * answer now passes the same gate. An answer that fails is dropped on its own rather than
+ * discarding the whole draft: losing 400 good words because one answer overstepped helps nobody.
  */
 class ProductContentGenerator
 {
@@ -40,6 +49,22 @@ class ProductContentGenerator
         '~\b(cures?|treats?|prevents? disease|heals?)\b~i',
         '~\bapprouv[ée] par (la )?(FDA|OMS|WHO)\b~iu',
         '~\b(clinically proven|cliniquement prouv[ée])\b~iu',
+    ];
+
+    /**
+     * A quantity of the product to consume, per unit of time. This is dosing advice whether or not
+     * it is phrased as advice, and we have no authority for it: the figure is on the label, and the
+     * label is not in our database. Deflection ("suivez les indications du fabricant") contains no
+     * number and passes.
+     */
+    private const DOSAGE_PATTERNS = [
+        // "2 capsules par jour", "1 à 2 doses quotidiennes", "30 g par jour"
+        '~\d+\s*(?:[àa-]\s*\d+\s*)?(?:g|mg|ml|capsules?|caps|comprim[ée]s?|g[ée]lules?|doses?|portions?|scoops?|mesurettes?|cuill[èe]res?)\b[^.;)]{0,24}\b(?:par|/)\s*jour~iu',
+        '~\d+\s*(?:[àa-]\s*\d+\s*)?(?:g|mg|ml|capsules?|caps|comprim[ée]s?|g[ée]lules?|doses?|portions?|scoops?|mesurettes?)\b[^.;)]{0,24}\bquotidien~iu',
+        // "prenez 2 comprimés", "consommer 30 g"
+        '~\b(?:prene?z|prendre|consomme[rz]|ingére[rz]|avale[rz]|m[ée]lange[rz])\b[^.;)]{0,30}\b\d+\s*(?:g|mg|ml|capsules?|caps|comprim[ée]s?|g[ée]lules?|doses?|portions?|scoops?|mesurettes?)\b~iu',
+        // "3 fois par jour", "2 prises quotidiennes"
+        '~\b\d+\s*(?:fois|prises?)\s+par\s+jour~iu',
     ];
 
     public function isConfigured(): bool
@@ -69,6 +94,7 @@ RÈGLES ABSOLUES — une seule violation rend ta réponse inutilisable :
 1. N'INVENTE JAMAIS de chiffre. Aucune valeur nutritionnelle, aucun dosage, aucun nombre de grammes, de calories ou de protéines par portion, sauf s'il figure explicitement dans les ATTRIBUTS fournis. Si tu ne connais pas une valeur, n'en parle pas.
 2. AUCUNE allégation de santé. Interdit d'écrire qu'un produit soigne, guérit, traite ou prévient une maladie. Interdit d'invoquer la FDA, l'OMS ou une "preuve clinique".
 3. N'INVENTE JAMAIS de certification, de récompense, d'analyse en laboratoire, de pays d'origine ni de liste d'ingrédients.
+4. AUCUNE POSOLOGIE. N'écris jamais combien en prendre ni à quelle fréquence ("2 capsules par jour", "une dose de 30 g", "3 fois par jour"). Renvoie à l'étiquette : « suivez les indications du fabricant figurant sur l'emballage ». Tu peux parler du MOMENT (après l'entraînement, entre les repas) sans jamais donner de quantité.
 
 STYLE :
 - Concret et utile. Écris pour quelqu'un qui hésite entre deux produits, pas pour remplir une page.
@@ -77,10 +103,17 @@ STYLE :
 - Pas de superlatifs creux ("le meilleur au monde"), pas d'emoji, pas de MAJUSCULES criardes.
 - Varie la structure selon le produit. Deux fiches ne doivent pas se ressembler.
 
+FAQ — règles supplémentaires :
+- Ne réponds QU'AUX questions que les ATTRIBUTS permettent réellement de trancher.
+- N'invente pas une question uniquement pour placer un mot-clé.
+- Ne réponds pas aux questions médicales, de sécurité, de contre-indication, de grossesse, d'interaction médicamenteuse, de garantie, de retour ni de livraison : renvoie à l'étiquette, à un professionnel de santé, ou au service client.
+- Ne rends jamais la réponse plus large que ce que tu sais. « Cela dépend de votre objectif » est une réponse acceptable ; une certitude inventée ne l'est pas.
+- Mieux vaut 2 bonnes questions que 5 remplissages. Si les attributs ne suffisent pas, renvoie moins de questions — voire aucune.
+
 FORMAT : réponds UNIQUEMENT avec un objet JSON, sans prose ni markdown :
 {
   "description_html": "<p>…</p><h2>…</h2><p>…</p> (250 à 400 mots, HTML simple : p, h2, ul, li, strong. JAMAIS de <h1>.)",
-  "faq": [ {"q": "…", "a": "…"}, … ]  (3 à 5 questions que se pose réellement un acheteur, réponses de 2 à 3 phrases)
+  "faq": [ {"q": "…", "a": "…"}, … ]  (0 à 5 questions que se pose réellement un acheteur, réponses de 2 à 3 phrases)
 }
 SYS;
 
@@ -181,17 +214,70 @@ SYS;
             return null;
         }
 
+        // A description that breaks a rule sinks the whole draft: it is the body of the page, and
+        // there is nothing to salvage around it.
+        if ($reason = $this->ruleViolation($plain, $product)) {
+            Log::warning('[ProductContentGenerator] draft rejected', [
+                'product' => $product->id,
+                'reason' => $reason,
+            ]);
+
+            return null;
+        }
+
+        $faq = [];
+        $droppedFaq = [];
+        foreach ((array) ($parsed['faq'] ?? []) as $item) {
+            $q = trim((string) ($item['q'] ?? ''));
+            $a = trim((string) ($item['a'] ?? ''));
+            if ($q === '' || $a === '') {
+                continue;
+            }
+
+            // Same gate as the description. A single overstepping answer is dropped on its own —
+            // discarding 400 good words because one answer gave a dosage helps nobody, and the
+            // remaining questions are still worth publishing.
+            if ($reason = $this->ruleViolation($q.' '.$a, $product)) {
+                $droppedFaq[] = $reason.': '.mb_strimwidth($q, 0, 60, '…');
+
+                continue;
+            }
+
+            $faq[] = ['q' => $q, 'a' => $a];
+        }
+
+        if ($droppedFaq !== []) {
+            Log::warning('[ProductContentGenerator] FAQ entries dropped', [
+                'product' => $product->id,
+                'dropped' => $droppedFaq,
+            ]);
+        }
+
+        // Fewer questions is a valid outcome. The prompt asks for none rather than filler when the
+        // attributes do not support an answer, so an empty FAQ is a working result, not a failure.
+        return ['description' => $html, 'faq' => array_slice($faq, 0, 5)];
+    }
+
+    /**
+     * The rules that hold for every customer-facing sentence, description or FAQ answer alike.
+     *
+     * @return string|null a short reason when the text breaks a rule, null when it is clean
+     */
+    private function ruleViolation(string $plain, Product $product): ?string
+    {
         foreach (self::CLAIM_PATTERNS as $pattern) {
             if (preg_match($pattern, $plain)) {
-                Log::warning('[ProductContentGenerator] draft contained a health claim, discarded', [
-                    'product' => $product->id,
-                ]);
-
-                return null;
+                return 'health claim';
             }
         }
 
-        // Rule 1, enforced rather than trusted: if we supplied no nutrition values, the draft must
+        foreach (self::DOSAGE_PATTERNS as $pattern) {
+            if (preg_match($pattern, $plain)) {
+                return 'dosage instruction';
+            }
+        }
+
+        // Rule 1, enforced rather than trusted: if we supplied no nutrition values, the text must
         // not contain nutrition-shaped figures. Prices and pack sizes ARE known, so they are exempt.
         if (blank($product->nutrition_values)) {
             $stripped = $plain;
@@ -202,23 +288,10 @@ SYS;
             }
             if (preg_match('~\d+[.,]?\d*\s*(g|mg|kcal|calories?)\s+(de\s+)?(prot[ée]ines?|glucides?|lipides?|sucres?|BCAA|cr[ée]atine|leucine)~iu', $stripped)
                 || preg_match('~(prot[ée]ines?|glucides?|lipides?)\s*:?\s*\d+~iu', $stripped)) {
-                Log::warning('[ProductContentGenerator] draft invented nutrition figures, discarded', [
-                    'product' => $product->id,
-                ]);
-
-                return null;
+                return 'invented nutrition figures';
             }
         }
 
-        $faq = [];
-        foreach ((array) ($parsed['faq'] ?? []) as $item) {
-            $q = trim((string) ($item['q'] ?? ''));
-            $a = trim((string) ($item['a'] ?? ''));
-            if ($q !== '' && $a !== '') {
-                $faq[] = ['q' => $q, 'a' => $a];
-            }
-        }
-
-        return ['description' => $html, 'faq' => array_slice($faq, 0, 5)];
+        return null;
     }
 }

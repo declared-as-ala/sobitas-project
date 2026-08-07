@@ -58,3 +58,20 @@ Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlap
 
 Schedule::command('seo:health-report')->weeklyOn(1, '06:00'); // Monday summary of missing SEO data (logged)
 Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // gradual factual nutrition enrichment (OFF, by GTIN)
+
+// Promote barcodes that are already in code_product/sku into the gtin column. Report-only on a
+// schedule: --apply is withheld deliberately, because the command also surfaces conflicting and
+// duplicate barcodes, and resolving those is a judgement call rather than something a cron should
+// decide. Without this the drift is invisible — seo:enrich-nutrition above simply finds nothing.
+Schedule::command('products:recover-gtin')->weeklyOn(2, '02:30');
+
+// Draft copy for thin product pages. 15 a week, queued one job per product.
+//
+// The rate is the point. 95 of 309 products are under 250 words, and clearing that in one sweep is
+// exactly the shape Google's scaled-content-abuse policy targets. Drafts are also invisible until
+// a human approves them in Filament, so this only ever builds a small review queue — it never
+// publishes. If nobody is reviewing, drafts accumulate harmlessly and the schedule is self-limiting
+// because --regenerate is not passed: a product with a pending draft is skipped.
+Schedule::command('products:generate-content --limit=15 --max-words=250')
+    ->weeklyOn(3, '03:30')
+    ->withoutOverlapping();
