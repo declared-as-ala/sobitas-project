@@ -124,6 +124,16 @@ for (const theme of THEMES) {
         overflowing,
         strays,
         smallest,
+        /* THE ROUTE TO /offres MUST EXIST AT EVERY WIDTH, in exactly one place.
+           SectionHeader hides its view-all below `sm` — that is what makes the clip impossible —
+           so the phone's link is a separate `sm:hidden` bar at the foot of the band. Two controls
+           that hide on opposite sides of one breakpoint is precisely the arrangement where a
+           mistuned breakpoint leaves a width with NEITHER, and nothing else here would notice:
+           every other assertion in this file is about things being too big, and a missing link is
+           the one defect that makes them all pass. */
+        offersLinks: [...band.querySelectorAll('a[href="/offres"]')].filter(
+          (a) => a.getClientRects().length > 0 && a.offsetParent !== null
+        ).length,
         // A "flash" clock that is really a date should not be ticking.
         clock: (band.querySelector('.pt-slab')?.textContent || '').replace(/\s+/g, ' ').trim(),
         docW: Math.round(document.documentElement.scrollWidth),
@@ -148,6 +158,7 @@ for (const theme of THEMES) {
     if (m.docW > m.vw) fail(`@${theme} ${width}px · page scrolls horizontally: ${m.docW} > ${m.vw}`);
     if (m.smallest && m.smallest.side < 44) fail(`@${theme} ${width}px · tap target ${Math.round(m.smallest.side)}px — "${m.smallest.text}"`);
     if (m.edgeW !== '4px') fail(`@${theme} ${width}px · band edge is ${m.edgeW}, expected 4px (the brand rule lost to the [data-band] seam)`);
+    if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected exactly 1`);
 
     if (width === WIDTHS[0]) console.log(`          clock: "${m.clock}"   edge: ${m.edgeW} ${m.edgeC}   band bg: ${m.bandBg}`);
 
