@@ -55,13 +55,14 @@ export interface FlashDealCardProps {
 }
 
 /**
- * Derived per DESIGN_SYSTEM §7. The frame is a fixed 64px square (72 from `sm`), `object-contain`,
- * so the required width IS the rendered width. Declared one step above the larger of the two.
+ * Derived per DESIGN_SYSTEM §7. The frame is a fixed square — 80px on phones, 96px from `sm` —
+ * with `object-contain`, so the required width IS the rendered width. Declared one step above the
+ * larger of the two.
  *
  * A flat `sizes` is correct here rather than lazy: the packshot's box does not vary with the
  * viewport at all any more, so there is nothing for a `vw` bracket to express.
  */
-const IMAGE_SIZES = '80px';
+const IMAGE_SIZES = '110px';
 
 export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealCardProps) {
   const { locale } = useI18n();
@@ -165,18 +166,22 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
        owner's "it doesn't look like the design system". It matters more now than it did: inside the
        deleted plate these sat white-on-white with a 1.16:1 hairline as their only edge, and on the
        sand band they are white-on-sand with a shadow, so the card is finally an object. */
-    <div className="group relative flex h-full w-full items-center gap-2.5 overflow-hidden rounded-2xl border border-hairline bg-elevated p-2.5 font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+    <div className="group relative flex h-full w-full items-center gap-3 overflow-hidden rounded-2xl border border-hairline bg-elevated p-3 font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
         /* `ring-inset`, not `ring-offset-2`: the link is not the root, so an outset ring would be
            clipped by the root's `overflow-hidden`. */
-        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
       >
-        {/* A FIXED 64px THUMBNAIL. This is the number that sets the band's height, so it is a
-            fixed size rather than a ratio of the card — the whole point of the row layout is that
-            widening the card can no longer make the band taller. */}
-        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-sunken">
+        {/* THE THUMBNAIL IS A FIXED SIZE, AND IT IS THE BAND'S HEIGHT DIAL.
+            80px on phones, 96px from `sm` — up from a flat 64, which measured correct but read as
+            a favicon beside the text. Because the row layout decoupled card height from card
+            WIDTH, this is now the only number that moves the band, which makes "bigger cards"
+            a one-line change with a predictable cost: +16px of thumbnail is +16px of band.
+            96 + 24px of padding = a 120px card, so the band lands ~273px — still inside the 320px
+            banner ceiling the guard asserts. */}
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sunken sm:h-24 sm:w-24">
           {image ? (
             <Image
               src={image}
@@ -211,7 +216,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-[11px] font-semibold leading-snug text-ink-1 transition-colors sm:text-xs [@media(hover:hover)]:group-hover:text-brand">
+          <h3 className="line-clamp-2 text-xs font-semibold leading-snug text-ink-1 transition-colors sm:text-sm [@media(hover:hover)]:group-hover:text-brand">
             {name}
           </h3>
 
@@ -224,19 +229,19 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
               thing next to a price the visitor cannot act on. */}
           <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
             {outOfStock ? (
-              <span className="text-[11px] font-semibold text-ink-3">Rupture de stock</span>
+              <span className="text-xs font-semibold text-ink-3">Rupture de stock</span>
             ) : (
               <>
-                <span className="font-display text-[15px] font-bold tabular-nums leading-none text-brand">
+                <span className="font-display text-base font-bold tabular-nums leading-none text-brand sm:text-lg">
                   {Math.round(priceDisplay.finalPrice)} DT
                 </span>
                 {priceDisplay.hasPromo && priceDisplay.oldPrice != null && (
-                  <span className="text-[11px] tabular-nums text-ink-3 line-through">
+                  <span className="text-xs tabular-nums text-ink-3 line-through">
                     {Math.round(priceDisplay.oldPrice)} DT
                   </span>
                 )}
                 {discount > 0 && (
-                  <span className="rounded bg-brand px-1 py-px font-display text-[10px] font-bold tabular-nums leading-normal text-on-brand">
+                  <span className="rounded bg-brand px-1.5 py-px font-display text-[11px] font-bold tabular-nums leading-normal text-on-brand">
                     −{discount}%
                   </span>
                 )}
@@ -268,16 +273,16 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
               ? `Stock maximum atteint pour ${name}`
               : `Ajouter ${name} au panier`
         }
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
           state === 'ok'
             ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
             : 'cursor-not-allowed bg-sunken text-ink-3'
         }`}
       >
         {justAdded ? (
-          <Check className="h-4 w-4" aria-hidden="true" />
+          <Check className="h-5 w-5" aria-hidden="true" />
         ) : (
-          <ShoppingCart className="h-4 w-4" aria-hidden="true" />
+          <ShoppingCart className="h-5 w-5" aria-hidden="true" />
         )}
       </button>
     </div>

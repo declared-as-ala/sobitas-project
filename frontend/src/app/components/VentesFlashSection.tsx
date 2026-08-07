@@ -350,18 +350,17 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
             constant and width costs nothing — it wants to be WIDE enough for a two-line product
             name beside that thumbnail.
 
-            `min-w-[236px]` is the floor: 64 thumbnail + 10 gap + 44 button + 20 padding leaves 98px
-            for the name, which fits roughly 18 characters per line at 11px — enough for two lines
-            of a real product name rather than an ellipsis. Below that the card starts lying about
-            what it contains.
+            `min-w-[264px]` is the floor, re-derived when the thumbnail grew to 80/96px: 96 + 12
+            gap + 48 button + 24 padding + 12 gap = 192px of fixed furniture, leaving ~72px for the
+            name at the floor and ~180px at the 400px cap. Below 264 the name clamps to a handful
+            of characters and the card starts lying about what it contains.
 
-            `grow` + `basis-[260px]` with `max-w-[340px]`: four deals share a wide rail without any
-            one of them becoming a poster, and the tenth deal overflows and scrolls with no
-            breakpoint deciding when. */}
+            `max-w-[400px]`, up from 340: at 1920 four cards now divide the rail EXACTLY
+            ((1536−36)/4 = 375), so the 140px of dead rail the 340 cap used to leave is gone. */}
         {products.map((product) => (
           <li
             key={product.id}
-            className="min-w-[236px] max-w-[340px] grow basis-[260px] snap-start"
+            className="min-w-[264px] max-w-[400px] grow basis-[300px] snap-start"
           >
             <FlashDealCard product={product} />
           </li>
