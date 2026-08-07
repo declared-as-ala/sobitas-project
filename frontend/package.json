@@ -12,6 +12,8 @@
     "lint:design": "node scripts/lint-design.mjs",
     "lint:design:update": "node scripts/lint-design.mjs --update",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
+    "audit:pdp": "node scripts/audit-pdp-content.mjs",
+    "audit:pdp:update": "node scripts/audit-pdp-content.mjs --update",
     "audit:contrast": "node scripts/audit-contrast.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",
     "audit:console": "node scripts/check-console.mjs",

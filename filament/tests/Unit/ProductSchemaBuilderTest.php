@@ -143,4 +143,92 @@ final class ProductSchemaBuilderTest extends TestCase
         $this->assertArrayNotHasKey('mpn', $facts);
         $this->assertSame('https://example.com/shop/x', $facts['canonical_url']);
     }
+
+    private function productWithGtin(?string $gtin, int $id): Product
+    {
+        $product = new Product([
+            'designation_fr' => 'X',
+            'slug' => 'x',
+            'prix' => 10,
+            'qte' => 1,
+            'rupture' => false,
+            'gtin' => $gtin,
+        ]);
+        $product->id = $id;
+        $product->syncOriginal();
+
+        return $product;
+    }
+
+    public function test_valid_gtin_is_emitted_with_its_length_specific_twin(): void
+    {
+        // Real EAN-13 recovered from products.code_product (Ostrovit vitamin C).
+        $graph = (new ProductSchemaBuilder)->buildGraph(
+            $this->productWithGtin('5903246226645', 10),
+            'https://example.com/shop/x'
+        );
+
+        $this->assertSame('5903246226645', $graph['gtin']);
+        $this->assertSame('5903246226645', $graph['gtin13']);
+        $this->assertArrayNotHasKey('gtin12', $graph);
+    }
+
+    public function test_upc_a_is_declared_as_gtin12_not_gtin13(): void
+    {
+        // Declaring a 12-digit value as gtin13 is rejected by Google, so the property must follow
+        // the value's length rather than being hard-coded.
+        $graph = (new ProductSchemaBuilder)->buildGraph(
+            $this->productWithGtin('638458699806', 11),
+            'https://example.com/shop/x'
+        );
+
+        $this->assertSame('638458699806', $graph['gtin12']);
+        $this->assertArrayNotHasKey('gtin13', $graph);
+    }
+
+    /**
+     * A malformed identifier is worse than none — Google reports it as a structured-data error and
+     * Merchant Center can disapprove the item. Before validation was added, whatever string sat in
+     * the column was published verbatim.
+     */
+    public function test_gtin_failing_its_check_digit_is_not_published(): void
+    {
+        $graph = (new ProductSchemaBuilder)->buildGraph(
+            $this->productWithGtin('5903246226646', 12), // last digit mutated
+            'https://example.com/shop/x'
+        );
+
+        $this->assertArrayNotHasKey('gtin', $graph);
+        $this->assertArrayNotHasKey('gtin13', $graph);
+    }
+
+    /**
+     * 297 of 309 products hold a short database id in code_product. If one is ever copied into the
+     * gtin column it must not reach the page.
+     */
+    public function test_database_id_in_the_gtin_column_is_not_published(): void
+    {
+        $graph = (new ProductSchemaBuilder)->buildGraph(
+            $this->productWithGtin('546', 13),
+            'https://example.com/shop/x'
+        );
+
+        $this->assertArrayNotHasKey('gtin', $graph);
+
+        $facts = (new ProductSchemaBuilder)->buildSchemaFacts(
+            $this->productWithGtin('546', 14),
+            'https://example.com/shop/x'
+        );
+        $this->assertArrayNotHasKey('gtin', $facts);
+    }
+
+    public function test_separators_from_scanners_are_normalised_before_publishing(): void
+    {
+        $graph = (new ProductSchemaBuilder)->buildGraph(
+            $this->productWithGtin('5-903246-226645', 15),
+            'https://example.com/shop/x'
+        );
+
+        $this->assertSame('5903246226645', $graph['gtin']);
+    }
 }

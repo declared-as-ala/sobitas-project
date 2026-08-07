@@ -6,6 +6,8 @@ use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Models\Review;
+use App\Support\Gtin;
+use Closure;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
@@ -93,6 +95,61 @@ class ProductResource extends Resource
                                         Forms\Components\TextInput::make('code_product')
                                             ->label('Code Produit')
                                             ->maxLength(255),
+                                    ]),
+                                    /**
+                                     * Identifiants commerciaux — sku / gtin / mpn existent depuis avril
+                                     * (migration 2026_04_21_120000) et sont déjà lus par ProductSchemaBuilder,
+                                     * mais n'avaient aucun champ dans l'admin : personne ne pouvait les saisir.
+                                     *
+                                     * Le code-barres est la clé de toutes les sources externes (NIH DSLD,
+                                     * Open Food Facts, USDA). Sans lui, `seo:enrich-nutrition` ne trouve
+                                     * jamais un seul produit.
+                                     */
+                                    Section::make('Identifiants commerciaux')
+                                        ->description('Le code-barres du pot. C’est lui qui permet de récupérer automatiquement les valeurs nutritionnelles et les ingrédients officiels.')
+                                        ->collapsed(fn ($record): bool => filled($record?->gtin))
+                                        ->visible(fn (): bool => self::hasProductColumn('gtin'))
+                                        ->schema([
+                                            Grid::make(3)->schema([
+                                                Forms\Components\TextInput::make('gtin')
+                                                    ->label('Code-barres (GTIN / EAN / UPC)')
+                                                    ->dehydrated(fn (): bool => self::hasProductColumn('gtin'))
+                                                    ->maxLength(64)
+                                                    ->placeholder('5903246226645')
+                                                    ->helperText('Scannez le code-barres imprimé sur le produit. 8, 12, 13 ou 14 chiffres.')
+                                                    // Les séparateurs viennent des scanners et des tableurs ;
+                                                    // les chiffres en dessous restent le code-barres.
+                                                    ->dehydrateStateUsing(fn (?string $state): ?string => Gtin::normalize($state) ?? (filled($state) ? trim($state) : null))
+                                                    ->rule(static function (): Closure {
+                                                        return static function (string $attribute, $value, Closure $fail): void {
+                                                            if (blank($value)) {
+                                                                return;
+                                                            }
+                                                            if (! Gtin::isValid((string) $value)) {
+                                                                // Un chiffre transposé passe inaperçu et enverrait une
+                                                                // requête pour le produit de quelqu'un d'autre : on
+                                                                // publierait alors ses valeurs nutritionnelles.
+                                                                $fail('Ce code-barres est invalide (chiffre de contrôle incorrect). Vérifiez la saisie — un seul chiffre erroné pointerait vers un autre produit.');
+                                                            }
+                                                        };
+                                                    })
+                                                    ->unique(ignoreRecord: true, modifyRuleUsing: fn ($rule) => $rule->whereNotNull('gtin'))
+                                                    ->validationMessages(['unique' => 'Ce code-barres est déjà attribué à un autre produit.']),
+                                                Forms\Components\TextInput::make('sku')
+                                                    ->label('SKU interne')
+                                                    ->visible(fn (): bool => self::hasProductColumn('sku'))
+                                                    ->dehydrated(fn (): bool => self::hasProductColumn('sku'))
+                                                    ->maxLength(120)
+                                                    ->helperText('Référence interne. À défaut, le Code Produit puis l’id sont utilisés.'),
+                                                Forms\Components\TextInput::make('mpn')
+                                                    ->label('Référence fabricant (MPN)')
+                                                    ->visible(fn (): bool => self::hasProductColumn('mpn'))
+                                                    ->dehydrated(fn (): bool => self::hasProductColumn('mpn'))
+                                                    ->maxLength(120)
+                                                    ->helperText('Telle quelle : ne jamais reformater (zéros initiaux et ponctuation compris).'),
+                                            ]),
+                                        ]),
+                                    Grid::make(3)->schema([
                                         Forms\Components\Select::make('brand_id')
                                             ->label('Marque')
                                             ->relationship('brand', 'designation_fr')
