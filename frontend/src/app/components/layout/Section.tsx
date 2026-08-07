@@ -101,10 +101,18 @@ const SPACING = {
   /** Every canvas/sunken product or content grid. */
   default: 'pb-0 pt-4 sm:py-8 lg:py-10',
   /**
-   * Reserved for the band that must out-weigh its neighbours — Ventes flash, and nothing else.
-   * Emphasis now comes from padding + a live countdown rather than from a black fill, so this
-   * step is what replaces the slab it used to be. If a second section asks for `feature`, the
-   * answer is no: two dominant bands is zero dominant bands.
+   * The step for a band that must out-weigh its neighbours. At most ONE per page: two dominant
+   * bands is zero dominant bands.
+   *
+   * VENTES FLASH GAVE THIS UP. It held this step, and this docblock used to name it as the sole
+   * owner. The owner asked three times for that band to stop reading as a section — "make it like
+   * a banner, not a wall", then "make the card smaller", then "make it a banner not a full section,
+   * just a small part of the landing page" — and it now runs at `tight` with a row card, 245px
+   * instead of 736px. A reservation nobody holds is worse than none, because the next band that
+   * wants emphasis reads this and assumes the slot is taken.
+   *
+   * Currently held by: nothing on the homepage. `/partenaires` uses it for its application band,
+   * which is a different page and therefore not a conflict.
    */
   feature: 'pb-0 pt-6 sm:py-10 lg:py-12',
 } as const;

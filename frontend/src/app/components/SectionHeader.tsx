@@ -14,9 +14,14 @@ import { ArrowRight } from 'lucide-react';
  * They collapse to THREE, and which one you get is decided by COMMERCIAL ROLE, not by taste and
  * not by what surface the band happens to sit on:
  *
- *   scale="1"  56 / 40px   THE RAILS THAT SELL — Les plus vendus, Ventes flash,
- *                          Nouveaux produits, Nos packs. Reserved to those four.
- *   scale="2"  40 / 30px   Support bands — Acheter par objectif, Nos derniers articles.
+ *   scale="1"  56 / 40px   THE RAILS THAT SELL — Les plus vendus, Nouveaux produits, Nos packs.
+ *                          Reserved to those three.
+ *   scale="2"  40 / 30px   Support bands — Acheter par objectif, Nos derniers articles, and
+ *                          VENTES FLASH, which used to be a scale-1 rail and is now a banner.
+ *                          The owner asked three times for that band to stop reading as a full
+ *                          section; a 56px headline was the loudest single thing making it one.
+ *                          Demoting it is the point, not an oversight — it keeps its urgency from
+ *                          the brand edge and the live clock, not from type size.
  *   scale="3"  28 / 22px   Bands that sell nothing directly — Nos marques partenaires — and
  *                          the DEFAULT, which is what keeps ProductDetailClient's "Produits
  *                          similaires" from out-ranking the product's own H1 across 391 PDPs.
@@ -70,6 +75,22 @@ interface SectionHeaderProps {
   scale?: SectionHeaderScale;
   /** Rendered before the kicker text (a lucide glyph, e.g. Flame on Ventes flash). */
   icon?: React.ReactNode;
+  /**
+   * An extra control on the heading row, left of "Tout voir" (e.g. Ventes flash's countdown pill).
+   *
+   * ── WHY THIS IS A PROP RATHER THAN THE CALLER RENDERING ITS OWN ROW ───────────────────────
+   * Ventes flash used to hand-roll its whole header so it could sit a countdown next to the title.
+   * That is how it drifted four copies of this component's internals — and how it shipped a bug:
+   * its clock and its CTA formed a 321px unbreakable run that overflowed a 254px box at 320px and
+   * was silently clipped, because a hand-rolled row does not inherit the `hidden … sm:block` guard
+   * below.
+   *
+   * Rendering here means `trailing` is inside that guard by construction: it CANNOT be the thing
+   * that overflows a phone, because on a phone it does not exist. Anything a caller puts here must
+   * therefore be genuinely optional at small widths — which is the right constraint for a heading
+   * row anyway.
+   */
+  trailing?: React.ReactNode;
   /** Set when the heading is referenced by an `aria-labelledby` on the band. */
   id?: string;
   /**
@@ -93,6 +114,7 @@ export function SectionHeader({
   scale = '3',
   icon,
   id,
+  trailing,
   centerOnMobile = false,
 }: SectionHeaderProps) {
   return (
@@ -122,10 +144,12 @@ export function SectionHeader({
         {subtitle && <p className="mt-2 max-w-xl text-sm text-ink-2 sm:text-base">{subtitle}</p>}
       </div>
 
-      {viewAllHref && (
+      {(viewAllHref || trailing) && (
         // min-h-[44px]: this was a ~34px pill, below the 44px tap floor. It is also the only
         // control in the band, so it is worth being reachable.
-        <div className="hidden shrink-0 pb-1 sm:block">
+        <div className="hidden shrink-0 items-center gap-3 pb-1 sm:flex">
+          {trailing}
+          {viewAllHref && (
           <Link
             href={viewAllHref}
             aria-label={viewAllLabel}
@@ -137,6 +161,7 @@ export function SectionHeader({
               aria-hidden="true"
             />
           </Link>
+          )}
         </div>
       )}
     </div>

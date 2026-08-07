@@ -55,8 +55,8 @@ console.log(`\n  ${BASE}  ·  #ventes-flash\n`);
 
 for (const theme of THEMES) {
   console.log(`  ═══ ${theme.toUpperCase()} ═══`);
-  console.log('   width  band   rail   cards  cardW  h2   edge      overflowing   ctaRight');
-  console.log('  ' + '─'.repeat(84));
+  console.log('   width  bandH  screens  cardW  cardH  h2   edge   over  strays');
+  console.log('  ' + '─'.repeat(74));
 
   for (const width of WIDTHS) {
     const page = await browser.newPage();
@@ -112,7 +112,14 @@ for (const theme of THEMES) {
         .sort((a, b) => a.side - b.side)[0];
 
       const cs = getComputedStyle(band);
+      /* HEIGHT IS THE OWNER'S ACTUAL COMPLAINT: "make it a banner, not a full section — just a
+         small part of the landing page." That is a number, so it gets measured rather than judged.
+         `screens` expresses it the way it is experienced: how much of the viewport this one
+         promotion occupies. Anything at or above 1.0 IS a full section by definition. */
       return {
+        bandH: Math.round(bandRect.height),
+        screens: +(bandRect.height / window.innerHeight).toFixed(2),
+        cardH: cards[0] ? Math.round(cards[0].getBoundingClientRect().height) : null,
         bandW: Math.round(bandRect.width),
         railW: rail ? Math.round(rail.getBoundingClientRect().width) : null,
         cards: cards.length,
@@ -148,9 +155,9 @@ for (const theme of THEMES) {
     }
 
     console.log(
-      `   ${String(width).padEnd(6)} ${String(m.bandW).padEnd(6)} ${String(m.railW).padEnd(6)} ` +
-        `${String(m.cards).padEnd(6)} ${String(m.cardW).padEnd(6)} ${String(m.h2).padEnd(4)} ` +
-        `${m.edgeW.padEnd(9)} ${String(m.overflowing.length).padEnd(13)} ${m.strays.length ? m.strays.join(',') : 'in'}`
+      `   ${String(width).padEnd(6)} ${String(m.bandH).padEnd(6)} ${String(m.screens).padEnd(8)} ` +
+        `${String(m.cardW).padEnd(6)} ${String(m.cardH).padEnd(6)} ${String(m.h2).padEnd(4)} ` +
+        `${m.edgeW.padEnd(6)} ${String(m.overflowing.length).padEnd(5)} ${m.strays.length ? m.strays.join(',') : 'in'}`
     );
 
     if (m.overflowing.length) fail(`@${theme} ${width}px · ${m.overflowing.length} element(s) overflow their own box: ${m.overflowing.slice(0, 3).join(' ')}`);
@@ -159,6 +166,14 @@ for (const theme of THEMES) {
     if (m.smallest && m.smallest.side < 44) fail(`@${theme} ${width}px · tap target ${Math.round(m.smallest.side)}px — "${m.smallest.text}"`);
     if (m.edgeW !== '4px') fail(`@${theme} ${width}px · band edge is ${m.edgeW}, expected 4px (the brand rule lost to the [data-band] seam)`);
     if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected exactly 1`);
+    /* THE BANNER CEILING. "Make it a banner, not a full section" is a height, so it is asserted as
+       one rather than left to whoever looks at it next.
+       320px against a measured 224-262px: enough headroom for a product name wrapping to a third
+       line or a fifth deal, nowhere near enough to let the vertical card back in (that measured
+       453-458px band) or to re-add a row of chrome. Absolute pixels, not a fraction of the
+       viewport, because the test viewport is 900px tall and a real phone is 700-850 — a ratio here
+       would quietly mean something different on every device. */
+    if (m.bandH > 320) fail(`@${theme} ${width}px · band is ${m.bandH}px — over the 320px banner ceiling, this is a section again`);
 
     if (width === WIDTHS[0]) console.log(`          clock: "${m.clock}"   edge: ${m.edgeW} ${m.edgeC}   band bg: ${m.bandBg}`);
 

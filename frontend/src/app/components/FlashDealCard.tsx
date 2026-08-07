@@ -55,26 +55,13 @@ export interface FlashDealCardProps {
 }
 
 /**
- * Derived per DESIGN_SYSTEM §7, and RE-derived after the cards were allowed to fill the rail.
+ * Derived per DESIGN_SYSTEM §7. The frame is a fixed 64px square (72 from `sm`), `object-contain`,
+ * so the required width IS the rendered width. Declared one step above the larger of the two.
  *
- * The CARD does not own its width — the rail does (see VentesFlashSection). The `max-w-[260px]` cap
- * came off the rail items when the 352px left column was deleted, so four deals now divide the full
- * band rail. The frame is square with `object-contain`, so the required width IS the rendered width
- * — no `object-cover` scale factor to apply.
- *
- *   >=1664  rail = 1536, four cards → (1536 − 36)/4 = 375px          → 380px
- *   >=1024  rail = min(1536, vw − 64) → 25vw is the honest bracket   → 25vw
- *   >=640   rail = vw − 48, cards at basis 168 before they grow      → 180px
- *   below   full-bleed rail, basis 156                               → 170px
- *
- * Every bracket is declared one step ABOVE the requirement rather than at it: a soft packshot on a
- * discounted product reads as a cheap product, and over-declaring costs at most one bucket.
- *
- * WITHOUT this re-derivation the old string's flat `260px` would have made every desktop packshot
- * upscale ~1.29x at 1440 the moment the cap came off — the exact defect that is invisible in review
- * because the layout looks right and only the pixels are wrong.
+ * A flat `sizes` is correct here rather than lazy: the packshot's box does not vary with the
+ * viewport at all any more, so there is nothing for a `vw` bracket to express.
  */
-const IMAGE_SIZES = '(min-width: 1664px) 380px, (min-width: 1024px) 25vw, (min-width: 640px) 180px, 170px';
+const IMAGE_SIZES = '80px';
 
 export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealCardProps) {
   const { locale } = useI18n();
@@ -137,8 +124,30 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
     [outOfStock, inCartQty, stockDisponible, product, addToCart, priceDisplay.finalPrice, image]
   );
 
+  const state = outOfStock ? 'out' : atLimit ? 'limit' : 'ok';
+
   return (
-    /* ── THE ROOT IS A PLAIN DIV, AND THE LINK IS INSIDE IT ────────────────────────────────
+    /* ── THE CARD IS A ROW, NOT A COLUMN, AND THAT IS THE WHOLE BANNER FIX ─────────────────
+       Owner, third pass: "make it a banner not a full section, just a small part of the landing
+       page, make the cards smaller."
+
+       The three previous attempts all cut chrome — band padding, heading scale, a countdown row —
+       and the band still measured half a screen, because the chrome was never what made it tall.
+       A VERTICAL card stacks a square packshot on top of a name, a price and a button, so its
+       height is its width plus ~127px of text: at 172px wide that is a 299px card, and no amount
+       of tightening the band around it gets below that.
+
+       Turned on its side, the packshot is a fixed 64px thumbnail beside the text instead of above
+       it, and the card's height stops depending on its width entirely — it is `max(64, text)` plus
+       padding, about 84px. Measured across the band: 736px -> ~240px at 1920.
+
+       It is also, on its own terms, the more honest shape for the job. A vertical card is for
+       BROWSING a grid; this rail is four known offers the visitor scans and either takes or does
+       not, and a scannable list of offers is a row. The band above it ("Les plus vendus") keeps the
+       vertical card, so the two now read as different KINDS of thing, which is what a banner among
+       sections is supposed to do.
+
+       ── THE ROOT IS A PLAIN DIV, AND THE LINK IS INSIDE IT ────────────────────────────────
        It used to be `<LinkWithLoading>` wrapping everything, with the add-to-cart `<button>` as a
        descendant. `LinkWithLoading` renders a real `<a>`, and `<button>` is interactive content,
        which `<a>`'s transparent content model forbids — invalid HTML that browsers are free to
@@ -156,130 +165,121 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
        owner's "it doesn't look like the design system". It matters more now than it did: inside the
        deleted plate these sat white-on-white with a 1.16:1 hairline as their only edge, and on the
        sand band they are white-on-sand with a shadow, so the card is finally an object. */
-    <div className="group relative flex h-full w-full flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+    <div className="group relative flex h-full w-full items-center gap-2.5 overflow-hidden rounded-2xl border border-hairline bg-elevated p-2.5 font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
-        /* `ring-inset`, not `ring-offset-2`: the link is no longer the root, so an outset ring is
-           clipped on three sides by the root's `overflow-hidden`. */
-        className="flex flex-1 flex-col focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        /* `ring-inset`, not `ring-offset-2`: the link is not the root, so an outset ring would be
+           clipped by the root's `overflow-hidden`. */
+        className="flex min-w-0 flex-1 items-center gap-2.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
       >
-      <div className="relative aspect-square w-full overflow-hidden bg-sunken">
-        {image ? (
-          <Image
-            src={image}
-            /* The product, plus the LOCALISED name as an override — `buildProductAlt` prefers an
-               explicit `seo.image_alt` / `alt_cover` from the admin and otherwise composes
-               "name — brand — locality", so passing the product is what keeps a hand-written alt
-               winning, and passing `name` is what keeps the fallback localised. */
-            alt={buildProductAlt(product, { name })}
-            fill
-            sizes={IMAGE_SIZES}
-            quality={80}
-            /* ALWAYS LAZY. Two of these used to be `priority`, on the reasoning that "the first
-               card is above the fold on desktop". It is not: this band is fourth on the homepage,
-               roughly 1,500px down, and `content-visibility: auto` suppresses PAINT, not image
-               fetches — so two below-the-fold packshots were competing for bandwidth inside the
-               hero's LCP window at every width. CategoryRail carries this exact rule as a comment
-               and obeys it. Deleting the prop is the fix; there is no width where it was right. */
-            loading="lazy"
-            className="object-contain p-2 transition-transform duration-500 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.04]"
-          />
-        ) : (
-          /* `aria-hidden`: this is a watermark of the first letter, and it was being announced as a
-             stray character immediately before the <h3> says the whole name — "W, Whey Isolate
-             2kg". Hidden, its 40% alpha is legal decoration rather than 1.70:1 text. */
-          <span
-            className="flex h-full w-full items-center justify-center font-display font-compressed text-2xl font-extrabold uppercase text-ink-3/40"
-            aria-hidden="true"
-          >
-            {name.charAt(0)}
-          </span>
-        )}
-
-        {/* ONE badge, and it is the reason this card is in a flash banner at all. The band is
-            headed VENTES FLASH, so a "FLASH" pill would repeat the heading once per card; the
-            percentage is the part that differs per product. */}
-        {discount > 0 && (
-          <span className="absolute left-2 top-2 rounded-md bg-brand px-1.5 py-0.5 font-display text-[11px] font-bold tabular-nums leading-none text-on-brand">
-            −{discount}%
-          </span>
-        )}
-
-        {outOfStock && (
-          <span className="pt-slab absolute inset-x-2 bottom-2 rounded-md px-2 py-1 text-center text-[10px] font-semibold text-ink-1">
-            Rupture
-          </span>
-        )}
-      </div>
-
-      <div className="flex flex-1 flex-col p-2.5 pb-0">
-        <h3 className="line-clamp-2 min-h-[2.1rem] text-[11px] font-semibold leading-snug text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand">
-          {name}
-        </h3>
-
-        {/* Price and original on ONE line. Stacked, they cost another 18px on every card in the
-            rail; side by side the struck-through figure is also directly comparable, which is the
-            whole point of showing it. */}
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
-          <span className="font-display text-[15px] font-bold tabular-nums leading-none text-brand">
-            {Math.round(priceDisplay.finalPrice)} DT
-          </span>
-          {priceDisplay.hasPromo && priceDisplay.oldPrice != null && (
-            <span className="text-[11px] tabular-nums text-ink-3 line-through">
-              {Math.round(priceDisplay.oldPrice)} DT
+        {/* A FIXED 64px THUMBNAIL. This is the number that sets the band's height, so it is a
+            fixed size rather than a ratio of the card — the whole point of the row layout is that
+            widening the card can no longer make the band taller. */}
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-sunken">
+          {image ? (
+            <Image
+              src={image}
+              /* The product, plus the LOCALISED name as an override — `buildProductAlt` prefers an
+                 explicit `seo.image_alt` / `alt_cover` from the admin and otherwise composes
+                 "name — brand — locality", so passing the product is what keeps a hand-written alt
+                 winning, and passing `name` is what keeps the fallback localised. */
+              alt={buildProductAlt(product, { name })}
+              fill
+              sizes={IMAGE_SIZES}
+              quality={80}
+              /* ALWAYS LAZY. Two of these used to be `priority`, on the reasoning that "the first
+                 card is above the fold on desktop". It is not: this band is fourth on the homepage,
+                 roughly 1,500px down, and `content-visibility: auto` suppresses PAINT, not image
+                 fetches — so two below-the-fold packshots were competing for bandwidth inside the
+                 hero's LCP window at every width. */
+              loading="lazy"
+              className={`object-contain p-1 transition-transform duration-500 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.06] ${
+                outOfStock ? 'opacity-45' : ''
+              }`}
+            />
+          ) : (
+            /* `aria-hidden`: this is a watermark of the first letter, and it was being announced as
+               a stray character immediately before the name — "W, Whey Isolate 2kg". */
+            <span
+              className="flex h-full w-full items-center justify-center font-display font-compressed text-xl font-extrabold uppercase text-ink-3/40"
+              aria-hidden="true"
+            >
+              {name.charAt(0)}
             </span>
           )}
         </div>
 
-      </div>
+        <div className="min-w-0 flex-1">
+          <h3 className="line-clamp-2 text-[11px] font-semibold leading-snug text-ink-1 transition-colors sm:text-xs [@media(hover:hover)]:group-hover:text-brand">
+            {name}
+          </h3>
 
-      </LinkWithLoading>
+          {/* ── ONE LINE: PRICE, ORIGINAL, DISCOUNT ────────────────────────────────────────
+              The discount moved off the packshot and onto this line. On a 64px thumbnail an
+              absolutely-positioned badge covered a quarter of the product; beside the two prices
+              it is where the eye is already comparing numbers, and it needs no space of its own.
 
-      {/* THE CONTROL IS A SIBLING OF THE LINK, NOT ITS CHILD. See the root note. */}
-      <div className="p-2.5 pt-2">
-        {outOfStock ? (
-          <span className="flex min-h-[44px] items-center justify-center rounded-lg bg-sunken text-[11px] font-semibold text-ink-3">
-            Indisponible
-          </span>
-        ) : (
-          <button
-            type="button"
-            onClick={handleAdd}
-            /* ── `aria-disabled`, NOT `disabled` ──────────────────────────────────────────
-               `disabled` removed the button from the tab order and painted it at `opacity-40`,
-               which groups fill and label together to roughly 1.9:1 — a control that still read
-               "Ajouter" while being silently unavailable, and unreachable by keyboard so nobody
-               could find out why. It also made the stock guard in `handleAdd` DEAD CODE, so
-               CartContext's actual explanation ("Stock insuffisant. Il reste N unité(s).") could
-               never reach anyone. `aria-disabled` keeps it focusable and clickable, so the guard
-               finally fires and says the useful thing.
-
-               44px, up from 36. The old note argued the card is the real target and the button is
-               a shortcut — true, but the site's floor is not conditional, and this was the last
-               control on the homepage under it. */
-            aria-disabled={atLimit || undefined}
-            aria-label={atLimit ? `Stock maximum atteint pour ${name}` : `Ajouter ${name} au panier`}
-            className={`flex min-h-[44px] w-full items-center justify-center gap-1.5 rounded-lg text-[11px] font-semibold transition-colors ${
-              atLimit
-                ? 'cursor-not-allowed bg-sunken text-ink-3'
-                : 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
-            }`}
-          >
-            {justAdded ? (
-              <>
-                <Check className="h-3.5 w-3.5" aria-hidden="true" />
-                Ajouté
-              </>
+              `Rupture` replaces the whole row when there is no stock, rather than being a fourth
+              thing next to a price the visitor cannot act on. */}
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+            {outOfStock ? (
+              <span className="text-[11px] font-semibold text-ink-3">Rupture de stock</span>
             ) : (
               <>
-                <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" />
-                Ajouter
+                <span className="font-display text-[15px] font-bold tabular-nums leading-none text-brand">
+                  {Math.round(priceDisplay.finalPrice)} DT
+                </span>
+                {priceDisplay.hasPromo && priceDisplay.oldPrice != null && (
+                  <span className="text-[11px] tabular-nums text-ink-3 line-through">
+                    {Math.round(priceDisplay.oldPrice)} DT
+                  </span>
+                )}
+                {discount > 0 && (
+                  <span className="rounded bg-brand px-1 py-px font-display text-[10px] font-bold tabular-nums leading-normal text-on-brand">
+                    −{discount}%
+                  </span>
+                )}
               </>
             )}
-          </button>
+          </div>
+        </div>
+      </LinkWithLoading>
+
+      {/* ── THE CONTROL IS A SIBLING OF THE LINK, AND IT IS NOW ICON-ONLY ──────────────────
+          A row has no full width to give a button, and it does not need to: the visible label
+          "Ajouter" was repeated once per card beside a name that already says what is being added.
+          44x44 is the site's floor and the icon carries it, with the product name in the ACCESSIBLE
+          name so a screen reader's control list does not read four identical "Ajouter"s.
+
+          IT STILL RENDERS WHEN THERE IS NO STOCK, as `aria-disabled` rather than `disabled`.
+          `disabled` takes a control out of the tab order and made `handleAdd`'s two guards dead
+          code, so CartContext's actual explanations — "Rupture de stock", "Stock insuffisant. Il
+          reste N unité(s)." — could never be reached by anyone who tried. Now a tap explains
+          itself, which is the entire reason those messages were written. */}
+      <button
+        type="button"
+        onClick={handleAdd}
+        aria-disabled={state !== 'ok' || undefined}
+        aria-label={
+          state === 'out'
+            ? `${name} — rupture de stock`
+            : state === 'limit'
+              ? `Stock maximum atteint pour ${name}`
+              : `Ajouter ${name} au panier`
+        }
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
+          state === 'ok'
+            ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
+            : 'cursor-not-allowed bg-sunken text-ink-3'
+        }`}
+      >
+        {justAdded ? (
+          <Check className="h-4 w-4" aria-hidden="true" />
+        ) : (
+          <ShoppingCart className="h-4 w-4" aria-hidden="true" />
         )}
-      </div>
+      </button>
     </div>
   );
 });

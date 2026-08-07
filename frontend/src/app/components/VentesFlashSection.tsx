@@ -120,38 +120,52 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
     timeZone: 'Africa/Tunis',
   });
 
+  /* The PILL ONLY. The spoken sentence is `<FlashDeadline>` below, rendered by the band outside
+     the header's `hidden … sm:flex` slot — see the note at the call site. */
   return (
-    <>
-      <span
-        className="pt-slab inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
-        aria-hidden="true"
-      >
-        <Clock className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-          {live ? 'Fin dans' : 'Jusqu’au'}
-        </span>
-        <span className="font-display text-sm font-bold tabular-nums leading-none text-brand">
-          {live && countdown
-            ? `${countdown.days > 0 ? `${countdown.days}J ` : ''}${pad(countdown.hours)}:${pad(
-                countdown.minutes
-              )}:${pad(countdown.seconds)}`
-            : dateLabel}
-        </span>
+    <span
+      className="pt-slab inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
+      aria-hidden="true"
+    >
+      <Clock className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
+        {live ? 'Fin dans' : 'Jusqu’au'}
       </span>
-      <span className="sr-only">
-        Offre valable jusqu&apos;au{' '}
-        <time dateTime={expirationDate.toISOString()}>
-          {expirationDate.toLocaleDateString('fr-FR', {
-            day: 'numeric',
-            month: 'long',
-            year: 'numeric',
-            timeZone: 'Africa/Tunis',
-          })}
-        </time>
+      <span className="font-display text-sm font-bold tabular-nums leading-none text-brand">
+        {live && countdown
+          ? `${countdown.days > 0 ? `${countdown.days}J ` : ''}${pad(countdown.hours)}:${pad(
+              countdown.minutes
+            )}:${pad(countdown.seconds)}`
+          : dateLabel}
       </span>
-    </>
+    </span>
   );
 });
+
+/**
+ * The deadline as one announced sentence, at every width.
+ *
+ * Separate from the pill because the pill lives in a `hidden … sm:flex` slot, and `display: none`
+ * takes a subtree out of the accessibility tree as well as off the screen. Kept as a `<time>` with
+ * a machine-readable `dateTime`, and the timezone is PINNED — without it the server formats in the
+ * container's UTC and the browser in the visitor's zone, so a promo expiring near midnight renders
+ * a different date on each side and React logs a hydration mismatch.
+ */
+function FlashDeadline({ expirationDate }: { expirationDate: Date }) {
+  return (
+    <span className="sr-only">
+      Offre valable jusqu&apos;au{' '}
+      <time dateTime={expirationDate.toISOString()}>
+        {expirationDate.toLocaleDateString('fr-FR', {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+          timeZone: 'Africa/Tunis',
+        })}
+      </time>
+    </span>
+  );
+}
 
 interface VentesFlashSectionProps {
   products: FlashProduct[];
@@ -257,7 +271,12 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     <Section
       id="ventes-flash"
       surface="sunken"
-      spacing="default"
+      /* ── `tight`, DOWN FROM `default` — AND `feature` IS NOW THE WRONG ANSWER ────────────
+         Section.tsx's `feature` step is documented as "reserved for the band that must out-weigh
+         its neighbours — Ventes flash, and nothing else". That reservation is now stale and its
+         docblock says so: the owner has asked twice for this band to stop behaving like a section.
+         `tight` is the support-band step, which is what a banner is. */
+      spacing="tight"
       width="wide"
       defer
       aria-labelledby="ventes-flash-heading"
@@ -268,22 +287,35 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       {/* THE KICKER CARRIES THE NUMBER. It used to be an 11px line of prose BELOW the products
           ("Jusqu'à −24% sur une sélection…") — the band's only quantity, set at its smallest size,
           under the fold of its own rail, restating the orange badge already painted on every card.
-          In the kicker it is the first thing read, and it costs no row. */}
+          In the kicker it is the first thing read, and it costs no row.
+
+          THE COUNTDOWN IS IN THE HEADING ROW, not on a line of its own. That line cost 44px on
+          every width, and `trailing` puts the pill inside SectionHeader's existing
+          `hidden … sm:flex` guard — so it is mobile-safe by construction rather than by care.
+
+          THE SPOKEN DEADLINE IS RENDERED SEPARATELY, BELOW, and that is not tidiness. `hidden` is
+          `display: none`, which removes a subtree from the ACCESSIBILITY TREE as well as from the
+          page — so leaving the `sr-only <time>` inside the pill would have silently deleted the
+          only machine-readable expiry on every phone. Sighted users would have lost nothing, which
+          is exactly why it would never have been noticed.
+
+          `scale="2"`, DOWN FROM 1. Scale 1 is the step for "the rails that sell", and by the
+          design system's own list this band was one of them — but the owner has now twice said
+          this should read as a banner rather than as a section, and a 56px headline is the single
+          loudest thing making it a section. Scale 2 is the documented support step; it is not a
+          new number. SectionHeader's own docblock is corrected to match. */}
       <SectionHeader
         id="ventes-flash-heading"
         kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
         icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
         title="Ventes flash"
-        scale="1"
+        scale="2"
         viewAllHref="/offres"
         viewAllLabel="Tout voir"
+        trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
       />
 
-      {earliestExpiration && (
-        <div className="mb-4 flex flex-wrap items-center gap-3">
-          <CountdownDisplay expirationDate={earliestExpiration} />
-        </div>
-      )}
+      {earliestExpiration && <FlashDeadline expirationDate={earliestExpiration} />}
 
       {/* ── the rail ───────────────────────────────────────────────────────────────────────
           ONE LAYOUT THAT IS BOTH A ROW AND A SCROLLER, sized on the items rather than by a
@@ -312,8 +344,25 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         role="list"
         className="scrollbar-hide -mx-4 flex snap-x snap-proximity items-stretch gap-3 overflow-x-auto overscroll-x-contain scroll-px-4 px-4 sm:mx-0 sm:scroll-px-0 sm:px-0"
       >
+        {/* ── SIZED FOR A ROW CARD, WHICH IS THE OPPOSITE PROBLEM TO A COLUMN CARD ──────────
+            A column card had to be kept NARROW, because its height followed its width and that is
+            what made the band a section. A row card has a fixed 64px thumbnail, so its height is
+            constant and width costs nothing — it wants to be WIDE enough for a two-line product
+            name beside that thumbnail.
+
+            `min-w-[236px]` is the floor: 64 thumbnail + 10 gap + 44 button + 20 padding leaves 98px
+            for the name, which fits roughly 18 characters per line at 11px — enough for two lines
+            of a real product name rather than an ellipsis. Below that the card starts lying about
+            what it contains.
+
+            `grow` + `basis-[260px]` with `max-w-[340px]`: four deals share a wide rail without any
+            one of them becoming a poster, and the tenth deal overflows and scrolls with no
+            breakpoint deciding when. */}
         {products.map((product) => (
-          <li key={product.id} className="min-w-[156px] grow basis-[156px] snap-start sm:basis-[168px]">
+          <li
+            key={product.id}
+            className="min-w-[236px] max-w-[340px] grow basis-[260px] snap-start"
+          >
             <FlashDealCard product={product} />
           </li>
         ))}
