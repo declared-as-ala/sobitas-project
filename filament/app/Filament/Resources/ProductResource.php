@@ -351,11 +351,163 @@ class ProductResource extends Resource
                                         ->reorderable()
                                         ->cloneable()
                                         ->columnSpanFull(),
+                                    /**
+                                     * ── PANNEAU NUTRITIONNEL ──────────────────────────────
+                                     *
+                                     * Typed once from the tub, rendered everywhere: the French
+                                     * panel below is GENERATED from these fields on save, in both
+                                     * the customer page and the Googlebot view, with the American
+                                     * %DV footnote, the two "no amount declared" markers and the
+                                     * curated French nutrient names all applied automatically.
+                                     *
+                                     * This is the main path, not a fallback. Measured 07/08/2026:
+                                     * the NIH label database matched 0 of our 12 barcoded products
+                                     * (it transcribes US labels; our brands are Polish, Spanish and
+                                     * Portuguese), Open Food Facts knew 2, and 3% of live product
+                                     * pages carry any nutrition content. No external database
+                                     * covers this catalogue. The tub does.
+                                     */
+                                    Section::make('Panneau nutritionnel')
+                                        ->description('Recopiez le tableau imprimé sur l\'emballage. Le panneau affiché sur le site est généré à partir de ces lignes — ne calculez rien, ne convertissez rien, recopiez.')
+                                        ->icon('heroicon-o-table-cells')
+                                        ->collapsible()
+                                        ->collapsed()
+                                        ->visible(fn (): bool => self::hasProductColumn('nutrition_facts'))
+                                        ->schema([
+                                            Grid::make(4)->schema([
+                                                Forms\Components\TextInput::make('nutrition_facts.serving_quantity')
+                                                    ->label('Portion')
+                                                    ->numeric()
+                                                    ->step(0.001)
+                                                    ->placeholder('30'),
+                                                Forms\Components\TextInput::make('nutrition_facts.serving_unit')
+                                                    ->label('Unité')
+                                                    ->placeholder('g')
+                                                    ->datalist(['g', 'ml', 'gélule(s)', 'comprimé(s)', 'dose(s)', 'sachet(s)']),
+                                                Forms\Components\TextInput::make('nutrition_facts.servings_per_container')
+                                                    ->label('Portions par contenant')
+                                                    ->placeholder('30'),
+                                                Forms\Components\TextInput::make('nutrition_facts.serving_note')
+                                                    ->label('Mesure du fabricant')
+                                                    ->placeholder('1 dosette rase')
+                                                    ->helperText('Tel qu\'écrit sur le pot.'),
+                                            ]),
+                                            Grid::make(4)->schema([
+                                                Forms\Components\TextInput::make('nutrition_facts.net_quantity')
+                                                    ->label('Contenu net')
+                                                    ->numeric()
+                                                    ->step(0.001)
+                                                    ->placeholder('2.27'),
+                                                Forms\Components\TextInput::make('nutrition_facts.net_unit')
+                                                    ->label('Unité')
+                                                    ->placeholder('kg')
+                                                    ->datalist(['g', 'kg', 'ml', 'l', 'gélule(s)', 'comprimé(s)']),
+                                                Forms\Components\TextInput::make('nutrition_facts.label_reference')
+                                                    ->label('Lot / référence étiquette')
+                                                    ->placeholder('facultatif')
+                                                    ->helperText('Permet de retrouver l\'emballage exact qui a été recopié.'),
+                                                // The percentages on an EU tub are apports de référence; on a US
+                                                // tub they are FDA Daily Values. Vitamin D is 20 µg in the US and
+                                                // 5 µg in the EU — the same capsule reads 100 % on one label and
+                                                // 400 % on the other, so the page must say which it is.
+                                                Forms\Components\Select::make('nutrition_facts.percent_basis')
+                                                    ->label('Référence des pourcentages')
+                                                    ->options([
+                                                        'eu' => 'AR européens (règlement UE 1169/2011)',
+                                                        'us' => 'VQ américaines (FDA)',
+                                                    ])
+                                                    ->default('eu')
+                                                    ->helperText('Emballage européen ou américain ?'),
+                                            ]),
+
+                                            Forms\Components\Repeater::make('nutrition_facts.rows')
+                                                ->label('Lignes du tableau')
+                                                ->helperText('Dans l\'ordre de l\'étiquette. Utilisez « Niveau » pour les sous-lignes (ex. « dont sucres » sous « Glucides ») : une sous-ligne est un composant de la ligne au-dessus, pas une ligne à côté.')
+                                                ->schema([
+                                                    Grid::make(12)->schema([
+                                                        Forms\Components\TextInput::make('name')
+                                                            ->label('Nutriment')
+                                                            ->required()
+                                                            ->columnSpan(4)
+                                                            ->placeholder('Protéines')
+                                                            ->helperText('Les noms réglementés (Protein, Vitamin C…) sont traduits automatiquement.'),
+                                                        Forms\Components\Select::make('kind')
+                                                            ->label('Type')
+                                                            ->options([
+                                                                'value' => 'Quantité chiffrée',
+                                                                'undeclared' => 'Quantité non indiquée (% seul)',
+                                                                'blend' => 'Mélange breveté',
+                                                            ])
+                                                            ->default('value')
+                                                            ->required()
+                                                            ->live()
+                                                            ->columnSpan(3),
+                                                        Forms\Components\TextInput::make('quantity')
+                                                            ->label('Quantité')
+                                                            ->numeric()
+                                                            ->step(0.0001)
+                                                            ->columnSpan(2)
+                                                            // Hidden rather than ignored: a number typed beside
+                                                            // "quantité non indiquée" would be a contradiction,
+                                                            // and TranscribedLabel drops it anyway.
+                                                            ->visible(fn (Forms\Get $get): bool => ($get('kind') ?? 'value') === 'value'),
+                                                        Forms\Components\TextInput::make('unit')
+                                                            ->label('Unité')
+                                                            ->columnSpan(1)
+                                                            ->datalist(['g', 'mg', 'µg', 'kcal', 'kJ', 'ml', 'UI'])
+                                                            ->visible(fn (Forms\Get $get): bool => ($get('kind') ?? 'value') === 'value'),
+                                                        Forms\Components\TextInput::make('percent_dv')
+                                                            ->label('% VQ')
+                                                            ->numeric()
+                                                            ->columnSpan(1)
+                                                            ->helperText('Si imprimé'),
+                                                        Forms\Components\Select::make('depth')
+                                                            ->label('Niveau')
+                                                            ->options([0 => 'Principal', 1 => '— dont', 2 => '—— dont'])
+                                                            ->default(0)
+                                                            ->columnSpan(1),
+                                                    ]),
+                                                ])
+                                                ->addActionLabel('Ajouter une ligne')
+                                                ->itemLabel(fn (array $state): ?string => filled($state['name'] ?? null)
+                                                    ? trim(($state['name'] ?? '').' '.($state['quantity'] ?? '').' '.($state['unit'] ?? ''))
+                                                    : 'Nouvelle ligne')
+                                                ->reorderable()
+                                                ->cloneable()
+                                                ->collapsible()
+                                                ->columnSpanFull(),
+
+                                            Forms\Components\Textarea::make('nutrition_facts.other_ingredients')
+                                                ->label('Autres ingrédients')
+                                                ->rows(2)
+                                                ->helperText('Séparés par des virgules, DANS L\'ORDRE de l\'étiquette — l\'ordre indique les quantités décroissantes.')
+                                                ->columnSpanFull(),
+                                            Forms\Components\Textarea::make('nutrition_facts.allergens')
+                                                ->label('Allergènes')
+                                                ->rows(2)
+                                                ->helperText('Une déclaration par ligne, recopiée MOT POUR MOT. Ne reformulez jamais une mention d\'allergène.')
+                                                ->columnSpanFull(),
+                                            Forms\Components\Textarea::make('nutrition_facts.warnings')
+                                                ->label('Précautions d\'emploi')
+                                                ->rows(2)
+                                                ->helperText('Une par ligne, mot pour mot.')
+                                                ->columnSpanFull(),
+                                            Forms\Components\Textarea::make('nutrition_facts.claims')
+                                                ->label('Allégations du fabricant')
+                                                ->rows(2)
+                                                ->helperText('« Sans gluten », « sans substance dopante »… Affichées comme des déclarations du fabricant que Protein.tn n\'a pas vérifiées.')
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columnSpanFull(),
+
                                     Forms\Components\Textarea::make('nutrition_values')
                                         ->label('Valeurs Nutritionnelles (texte/HTML)')
                                         ->visible(fn (): bool => self::hasProductColumn('nutrition_values'))
                                         ->dehydrated(fn (): bool => self::hasProductColumn('nutrition_values'))
                                         ->rows(6)
+                                        ->helperText(fn ($record): string => filled($record?->nutrition_facts)
+                                            ? 'Généré automatiquement depuis le panneau nutritionnel ci-dessus — toute modification ici sera écrasée au prochain enregistrement.'
+                                            : 'Champ libre. Dès que le panneau nutritionnel ci-dessus est rempli, ce contenu est généré automatiquement.')
                                         ->columnSpanFull(),
                                     FileUpload::make('nutrition_images')
                                         ->label('Images Nutritionnelles')
@@ -660,6 +812,63 @@ class ProductResource extends Resource
             ->filtersFormColumns(3)
             ->actions([
                 Actions\EditAction::make(),
+                /**
+                 * Duplicate a product.
+                 *
+                 * The fastest way to add the 908 g version of a 2,27 kg tub, or a second flavour:
+                 * same brand, same category, same description, same Supplement Facts panel, and the
+                 * new row opens straight in the editor for the handful of fields that differ.
+                 *
+                 * This was impossible until now for a reason worth recording. `products` is a legacy
+                 * table with NOT NULL columns that have no DEFAULT, so under MySQL strict mode any
+                 * programmatic create died with "SQLSTATE[HY000] 1364". The fix lived in one Filament
+                 * page's mutateFormDataBeforeCreate, which made that page the ONLY thing that could
+                 * create a product. It now lives in the Product model's creating hook, so this action
+                 * — and importers, seeders and the enrichment pipeline — work at all.
+                 */
+                Actions\Action::make('duplicate')
+                    ->label('Dupliquer')
+                    ->icon('heroicon-o-document-duplicate')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Dupliquer ce produit')
+                    ->modalDescription('Une copie non publiée est créée, avec « (copie) » dans le nom. Le stock est mis à zéro et les avis ne sont pas repris.')
+                    ->modalSubmitActionLabel('Dupliquer')
+                    ->action(function (Product $record) {
+                        $copy = $record->replicate([
+                            // Identifiers that must never be shared by two products. A duplicated
+                            // barcode would send every future lookup — DSLD, Open Food Facts, the
+                            // web enricher — to the wrong pack size and attach its panel to ours.
+                            'gtin', 'sku', 'mpn', 'code_product', 'slug',
+                            'created_at', 'updated_at',
+                        ]);
+
+                        $copy->designation_fr = Str::limit((string) $record->designation_fr, 180, '').' (copie)';
+                        $copy->slug = Str::slug($copy->designation_fr).'-'.Str::lower(Str::random(4));
+                        // Unpublished and out of stock: a copy is a draft until someone has set its
+                        // price, its pack size and its quantity. Publishing it live by accident would
+                        // put a duplicate page in front of both customers and Google.
+                        $copy->publier = false;
+                        $copy->qte = 0;
+                        $copy->save();
+
+                        // Many-to-many data does not travel with replicate().
+                        //
+                        // Plucked off the loaded relations rather than with a qualified column name:
+                        // the `aromes()` relation maps to a table called `aromas`, so the obvious
+                        // ->pluck('aromes.id') is an unknown-column error waiting for the first
+                        // person to click this button.
+                        $copy->tags()->sync($record->tags->pluck('id')->all());
+                        $copy->aromes()->sync($record->aromes->pluck('id')->all());
+
+                        \Filament\Notifications\Notification::make()
+                            ->success()
+                            ->title('Produit dupliqué')
+                            ->body('Complétez le code-barres, le prix et le stock avant de publier.')
+                            ->send();
+
+                        return redirect(ProductResource::getUrl('edit', ['record' => $copy]));
+                    }),
                 Actions\DeleteAction::make(),
             ])
             ->bulkActions([

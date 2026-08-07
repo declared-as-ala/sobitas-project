@@ -88,10 +88,12 @@ class NutritionPanelBuilder
                 $facts[] = $figure;
             }
 
+            // Classes, not inline styles. The frontend sanitiser strips `style` outright — DOMPurify
+            // does not parse CSS, so allowing the attribute would let `background:url(javascript:…)`
+            // through untouched. `nf-depth-N` is styled in globals.css and renders on both views.
             $body[] = sprintf(
-                '<tr><th scope="row" style="font-weight:%s;padding-left:%srem">%s</th><td>%s</td><td>%s</td></tr>',
-                $depth === 0 ? '600' : '400',
-                $depth === 0 ? '0' : (string) ($depth * 1.25),
+                '<tr class="nf-row nf-depth-%d"><th scope="row">%s</th><td>%s</td><td>%s</td></tr>',
+                $depth,
                 // Regulated nutrient terms get their settled French name; everything else — every
                 // botanical, blend and branded ingredient — keeps the manufacturer's wording.
                 e(NutrientNames::display((string) $row['name'])),
@@ -103,20 +105,34 @@ class NutritionPanelBuilder
         $html = '<div class="supplement-facts">';
         $html .= $this->servingBlock($label, $facts);
 
+        /**
+         * WHICH reference system the percentages belong to — and it is not always American.
+         *
+         * DSLD prints the US FDA Daily Value. A label transcribed off a tub bought here prints the
+         * European "apport de référence" from Règlement (UE) 1169/2011. The two genuinely differ
+         * (vitamin D: 20 µg in the US, 5 µg in the EU), so labelling an EU percentage as American —
+         * or the reverse — puts a correct number under the wrong name, which is the exact failure
+         * this class exists to prevent. Hence a property of the SOURCE, never a constant.
+         */
+        $basis = ($label['percent_basis'] ?? 'us') === 'eu'
+            ? ['abbr' => '% AR*', 'note' => '* Pourcentage des apports de référence (AR) pour un adulte-type '
+                .'(8&nbsp;400&nbsp;kJ / 2&nbsp;000&nbsp;kcal), selon le règlement (UE) n°&nbsp;1169/2011.']
+            : ['abbr' => '% VQ*', 'note' => '* Pourcentage des valeurs quotidiennes (VQ) de référence '
+                .'américaines, base 2&nbsp;000&nbsp;kcal. Ces valeurs ne sont pas identiques aux apports '
+                .'de référence (AR) européens.'];
+
         $html .= '<table class="nutrition-table">'
             .'<caption>Valeurs nutritionnelles, par portion</caption>'
             .'<thead><tr>'
             .'<th scope="col">Nutriment</th>'
             .'<th scope="col">Par portion</th>'
-            .'<th scope="col">'.($usesPercent ? '% VQ*' : '&nbsp;').'</th>'
+            .'<th scope="col">'.($usesPercent ? $basis['abbr'] : '&nbsp;').'</th>'
             .'</tr></thead>'
             .'<tbody>'.implode('', $body).'</tbody>'
             .'</table>';
 
         if ($usesPercent) {
-            $html .= '<p class="nutrition-note"><small>* Pourcentage des valeurs quotidiennes (VQ) de '
-                .'référence américaines, base 2&nbsp;000&nbsp;kcal. Ces valeurs ne sont pas identiques '
-                .'aux apports de référence (AR) européens.</small></p>';
+            $html .= '<p class="nutrition-note"><small>'.$basis['note'].'</small></p>';
         }
 
         if ($usesBlend) {
@@ -131,10 +147,20 @@ class NutritionPanelBuilder
                 .'</small></p>';
         }
 
+        /**
+         * The language of the quoted statements, which is a property of the SOURCE, not of the page.
+         *
+         * A DSLD record reproduces a US label, so its allergen text is English and must be marked
+         * `lang="en"` — that is what tells a screen reader to switch pronunciation and Google not to
+         * read it as broken French. A panel someone typed off a tub in Sousse is already French, and
+         * marking it English would do the reverse damage on every product we transcribe ourselves.
+         */
+        $lang = array_key_exists('statement_lang', $label) ? $label['statement_lang'] : 'en';
+
         $html .= $this->listBlock('Autres ingrédients', (array) ($label['other_ingredients'] ?? []));
-        $html .= $this->quoteBlock('Allergènes', (array) ($label['allergen_statements'] ?? []));
-        $html .= $this->quoteBlock('Précautions d\'emploi', (array) ($label['warning_statements'] ?? []));
-        $html .= $this->quoteBlock('Allégations du fabricant', (array) ($label['manufacturer_claims'] ?? []), true);
+        $html .= $this->quoteBlock('Allergènes', (array) ($label['allergen_statements'] ?? []), false, $lang);
+        $html .= $this->quoteBlock('Précautions d\'emploi', (array) ($label['warning_statements'] ?? []), false, $lang);
+        $html .= $this->quoteBlock('Allégations du fabricant', (array) ($label['manufacturer_claims'] ?? []), true, $lang);
 
         $html .= $this->sourceBlock($label);
         $html .= '</div>';
@@ -237,8 +263,9 @@ class NutritionPanelBuilder
      * @param  list<mixed>  $statements
      * @param  bool  $unverified  marks manufacturer claims we have not checked, so the page does not
      *                            present "gluten free" as something protein.tn has verified
+     * @param  string|null  $lang  language of the quoted text; null when it is already the page's
      */
-    private function quoteBlock(string $heading, array $statements, bool $unverified = false): string
+    private function quoteBlock(string $heading, array $statements, bool $unverified = false, ?string $lang = 'en'): string
     {
         $statements = array_values(array_filter(array_map(
             static fn ($s): string => trim((string) $s),
@@ -255,8 +282,10 @@ class NutritionPanelBuilder
                 .'Protein.tn ne les a pas vérifiées de façon indépendante.</small></p>';
         }
 
+        $attr = $lang === null || $lang === '' ? '' : ' lang="'.e($lang).'"';
+
         foreach ($statements as $statement) {
-            $out .= '<blockquote lang="en"><p>'.e($statement).'</p></blockquote>';
+            $out .= '<blockquote'.$attr.'><p>'.e($statement).'</p></blockquote>';
         }
 
         return $out;
@@ -273,23 +302,36 @@ class NutritionPanelBuilder
      */
     private function sourceBlock(array $label): string
     {
-        $parts = ['Source : '.e(DsldClient::ATTRIBUTION)];
+        // Two provenances are possible and they must not be dressed the same. A DSLD record is a US
+        // government transcription anyone can open; a hand-typed panel is our own staff reading the
+        // tub. Both are legitimate; claiming the second is the first would not be.
+        $source = is_array($label['source'] ?? null) ? $label['source'] : [
+            'name' => DsldClient::ATTRIBUTION,
+            'reference' => (string) ($label['dsld_id'] ?? ''),
+            'date' => (string) ($label['entry_date'] ?? ''),
+            'url' => (string) ($label['source_url'] ?? ''),
+            'reference_label' => 'étiquette n°',
+            'link_label' => "Voir l'étiquette d'origine",
+        ];
 
-        $id = trim((string) ($label['dsld_id'] ?? ''));
-        if ($id !== '') {
-            $parts[] = 'étiquette n° '.e($id);
+        $parts = ['Source : '.e((string) ($source['name'] ?? ''))];
+
+        $reference = trim((string) ($source['reference'] ?? ''));
+        if ($reference !== '') {
+            $parts[] = trim((string) ($source['reference_label'] ?? 'réf.')).' '.e($reference);
         }
 
-        $date = trim((string) ($label['entry_date'] ?? ''));
+        $date = trim((string) ($source['date'] ?? ''));
         if ($date !== '') {
             $parts[] = 'saisie le '.e($this->frenchDate($date));
         }
 
         $out = '<p class="nutrition-source"><small>'.implode(' — ', $parts).'.';
 
-        $url = trim((string) ($label['source_url'] ?? ''));
+        $url = trim((string) ($source['url'] ?? ''));
         if ($url !== '' && filter_var($url, FILTER_VALIDATE_URL)) {
-            $out .= ' <a href="'.e($url).'" rel="nofollow noopener" target="_blank">Voir l\'étiquette d\'origine</a>.';
+            $out .= ' <a href="'.e($url).'" rel="nofollow noopener" target="_blank">'
+                .e((string) ($source['link_label'] ?? 'Voir la source')).'</a>.';
         }
 
         return $out.'</small></p>';
