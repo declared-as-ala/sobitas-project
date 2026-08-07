@@ -228,6 +228,7 @@ function measure(url, html, status) {
   const faqHtml = section(html, 'Questions fréquentes');
   const reviewsHtml = section(html, 'Avis clients');
   const similarHtml = section(html, 'Produits similaires');
+  const comparisonHtml = section(html, 'Comparatif');
 
   const types = jsonLdTypes(html);
   const ldProduct = html.match(/"@type"\s*:\s*"Product"[\s\S]{0,4000}/)?.[0] ?? '';
@@ -258,6 +259,8 @@ function measure(url, html, status) {
     // anywhere, this is often the only evidence that exists — and it was invisible to Googlebot
     // until the crawler view started rendering it.
     nutritionImages: nutriHtml ? [...nutriHtml.matchAll(/<img\s/gi)].length : 0,
+    // Body rows only: a header row would make an empty table look populated.
+    comparisonRows: comparisonHtml ? [...comparisonHtml.matchAll(/<tr[^>]*>\s*<th scope="row"/gi)].length : 0,
     faqCount: faqHtml ? [...faqHtml.matchAll(/<dt[^>]*>/gi)].length : 0,
     hasReviews: Boolean(reviewsHtml),
     similarLinks: similarHtml ? [...similarHtml.matchAll(/<a\s[^>]*href=/gi)].length : 0,
@@ -317,6 +320,10 @@ function coverage(rows) {
     // Real transcribed panels and label photographs — the two surfaces Stage 3 fills.
     supplementPanelPct: pct((r) => r.hasSupplementPanel),
     nutritionImagePct: pct((r) => r.nutritionImages > 0),
+    // The comparison table. Unlike everything above it needs no external data, so once deployed it
+    // should approach 100% on any product with at least two priced siblings — which makes it the
+    // one metric here that measures the deploy rather than the data-entry backlog.
+    comparisonPct: pct((r) => r.comparisonRows >= 3),
     under250WordsPct: pct((r) => r.bodyWords < 250),
   };
 }
@@ -450,7 +457,7 @@ const rows = await mapWithConcurrency(urls, CONCURRENCY, async (url) => {
   } catch (err) {
     return { url, status: 0, isCrawlerView: true, bodyWords: 0, descriptionWords: 0,
       hasDescription: false, hasNutrition: false, nutritionWords: 0,
-      hasSupplementPanel: false, nutritionImages: 0, faqCount: 0, hasReviews: false,
+      hasSupplementPanel: false, nutritionImages: 0, comparisonRows: 0, faqCount: 0, hasReviews: false,
       similarLinks: 0, ldFaqPage: false, ldProduct: false, ldBreadcrumb: false, ldNutrition: false,
       ldVideo: false, ldAggregateRating: false, ldParseError: true, hasGtin: false,
       reference: '', refIsGtin: false, h1Count: 0, unitMismatch: false, error: String(err).slice(0, 120) };

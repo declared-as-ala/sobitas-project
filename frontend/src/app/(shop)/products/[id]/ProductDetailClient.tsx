@@ -17,7 +17,8 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
-import { hasValidPromo } from '@/util/productPrice';
+import { formatTnd, hasValidPromo } from '@/util/productPrice';
+import { buildComparison } from '@/util/productComparison';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { useAuth } from '@/contexts/AuthContext';
@@ -102,6 +103,9 @@ function ProductBadges({
 
 export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const REVIEW_PAGE_SIZE = 12;
+  // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
+  // middleware sends Googlebot to that view and a table only one of them can see is a discrepancy.
+  const comparisonRows = buildComparison(initialProduct, similarProducts);
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
@@ -1490,6 +1494,61 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
           </div>
         </section>
+
+        {/*
+          Comparison table — content parity with the crawler view.
+
+          The carousel below sells; this answers "which of these, and why". Same data, same helper,
+          same columns as CrawlerProductView, so Googlebot and a customer see the same facts. No
+          price-per-kilo column here either — see util/productComparison.ts.
+        */}
+        {comparisonRows.length > 0 && (
+          <div className="min-w-0">
+            <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
+            <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900">
+                    <th scope="col" className="p-3 text-left font-semibold">Produit</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Marque</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Format</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Prix</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Disponibilité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={row.isCurrent ? 'bg-orange-50/60 dark:bg-orange-950/20' : undefined}
+                    >
+                      <th scope="row" className="border-t border-gray-100 p-3 text-left font-normal dark:border-gray-800">
+                        {row.isCurrent ? (
+                          <span aria-current="true" className="font-semibold">
+                            {row.name} <span className="font-normal text-gray-500">(cette page)</span>
+                          </span>
+                        ) : (
+                          <Link href={row.url} className="text-red-700 hover:underline dark:text-red-400">
+                            {row.name}
+                          </Link>
+                        )}
+                      </th>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.brand || '—'}</td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.format || '—'}</td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                        {formatTnd(row.price)}
+                        {row.hasPromo && <span className="ml-1 text-green-700 dark:text-green-400">promo</span>}
+                      </td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                        {row.inStock ? 'En stock' : 'En rupture'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (

@@ -91,3 +91,25 @@ export function getPriceDisplay(product: ProductLike): PriceDisplay {
     hasPromo: false,
   };
 }
+
+/**
+ * A price as the shop writes it: "180 DT", "24,5 DT".
+ *
+ * Lifted out of CrawlerProductView so the comparison table renders identical prices on the human
+ * page and the crawler page. Two formatters would be two chances to disagree, on the one number a
+ * customer checks hardest.
+ *
+ * Trailing zeros are trimmed ONLY in the fractional part. The obvious `.replace(/\.?0+$/, '')` also
+ * eats the trailing zero of a whole number — turning 180 into "18" and 300 into "3" — which shipped
+ * once and showed wrong prices on every round-numbered product.
+ */
+export function formatTnd(n: number): string {
+  const value = Math.round((Number.isFinite(n) ? n : 0) * 1000) / 1000;
+  const s = value.toString();
+  // Decimal POINT, not a French comma. The rest of the product page renders the raw number
+  // ("24.5 DT"), and the crawler view must show a customer and Googlebot the same price string —
+  // a comma here would be a content discrepancy on the one number that matters most. Switching the
+  // whole site to French notation is a separate, deliberate change.
+  const clean = s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s;
+  return `${clean} DT`;
+}

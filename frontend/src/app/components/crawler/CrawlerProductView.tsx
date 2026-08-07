@@ -20,22 +20,14 @@
  */
 
 import { getStorageUrl } from '@/services/api';
-import { getPriceDisplay } from '@/util/productPrice';
+import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
-import { getProductBreadcrumbs, getProductLink } from '@/util/productUrl';
+import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildComparison } from '@/util/productComparison';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import type { Product } from '@/types';
-
-function formatTnd(n: number): string {
-  const s = (Math.round(n * 1000) / 1000).toString();
-  // Trim trailing zeros ONLY in the fractional part. The old /\.?0+$/ also ate the
-  // trailing zero of whole numbers (180 -> "18", 300 -> "3"), showing wrong prices
-  // to crawlers on every round-numbered product.
-  const clean = s.includes('.') ? s.replace(/0+$/, '').replace(/\.$/, '') : s;
-  return `${clean} DT`;
-}
 
 function reviewRating(r: { stars?: number; note?: number }): number {
   const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
@@ -83,6 +75,8 @@ export function CrawlerProductView({
     .map((f) => ({ q: (f.q || f.question || '').trim(), a: (f.a || f.answer || '').trim() }))
     .filter((f) => f.q && f.a);
   const sku = product.sku || product.code_product || String(product.id);
+  const comparison = buildComparison(product, similarProducts);
+  const subCategoryName = getProductPrimarySubCategory(product)?.designation_fr ?? '';
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -250,7 +244,60 @@ export function CrawlerProductView({
           </section>
         )}
 
-        {/* Internal links: related products (crawl depth + relevance) */}
+        {/*
+          Comparison table.
+
+          Replaces a bullet list of sibling names that helped crawl depth and helped a shopper not
+          at all. Every column comes from data we already own, so this works on all 309 products
+          today — no barcode, no external source. Deliberately no price-per-kilo column: see
+          util/productComparison.ts for why that number would be a thousandfold lie on at least one
+          product in this catalogue.
+        */}
+        {comparison.length > 0 && (
+          <section aria-label="Comparatif" className="my-6">
+            <h2 className="text-lg font-semibold">Comparer avec des produits similaires</h2>
+            <div className="mt-2 overflow-x-auto">
+              <table className="w-full border-collapse text-sm">
+                <caption className="pb-2 text-left text-gray-600">
+                  {subCategoryName
+                    ? `Autres ${subCategoryName.toLowerCase()} disponibles chez Protein.tn`
+                    : 'Autres produits disponibles chez Protein.tn'}
+                </caption>
+                <thead>
+                  <tr>
+                    <th scope="col" className="border-b-2 p-2 text-left">Produit</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Marque</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Format</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Prix</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Disponibilité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparison.map((row) => (
+                    <tr key={row.id}>
+                      <th scope="row" className="border-b p-2 text-left font-normal">
+                        {row.isCurrent ? (
+                          <span aria-current="true"><strong>{row.name}</strong> (cette page)</span>
+                        ) : (
+                          <a className="text-red-700 underline" href={row.url}>{row.name}</a>
+                        )}
+                      </th>
+                      <td className="border-b p-2">{row.brand || '—'}</td>
+                      <td className="border-b p-2">{row.format || '—'}</td>
+                      <td className="border-b p-2">
+                        {formatTnd(row.price)}
+                        {row.hasPromo ? ' (promo)' : ''}
+                      </td>
+                      <td className="border-b p-2">{row.inStock ? 'En stock' : 'En rupture'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* Internal links: the full sibling set, for crawl depth beyond the compared few. */}
         {similarProducts.length > 0 && (
           <section aria-label="Produits similaires" className="my-6">
             <h2 className="text-lg font-semibold">Produits similaires</h2>
