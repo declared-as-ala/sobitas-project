@@ -46,5 +46,9 @@ next-env.d.ts
 
 # Lighthouse reports from scripts/perf.mjs — machine-specific, regenerate locally
 .perf/
+
+# Full per-product dump from scripts/audit-pdp-content.mjs --json. The committed artefact is
+# pdp-content-baseline.json (the ratchet); this is the working detail behind one run.
+/pdp-audit.json
 .next-prod/
 .next-verify/

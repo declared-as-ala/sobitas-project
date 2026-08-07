@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Services\Enrichment\NutritionPanelBuilder;
+use App\Services\Enrichment\TranscribedLabel;
+use App\Support\LegacyColumnDefaults;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +18,7 @@ class Product extends Model
     protected $table = 'products';
 
     protected $fillable = [
-        'designation_fr', 'slug', 'description_fr', 'faq', 'nutrition_values', 'nutrition_images', 'cover', 'alt_cover', 'description_cover',
+        'designation_fr', 'slug', 'description_fr', 'faq', 'nutrition_values', 'nutrition_facts', 'nutrition_images', 'cover', 'alt_cover', 'description_cover',
         'images', 'prix', 'prix_ht', 'promo', 'promo_ht', 'promo_expiration_date',
         'qte', 'low_stock_threshold', 'publier', 'rupture', 'force_out_of_stock', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'seo_schema_description', 'seo_review', 'seo_aggregate_rating',
@@ -69,6 +72,7 @@ class Product extends Model
         'ai_faq_draft' => 'array',
         'ai_generated_at' => 'datetime',
         'nutrition_images' => 'array',
+        'nutrition_facts' => 'array',
         'seo_robots_index' => 'boolean',
         'seo_robots_follow' => 'boolean',
         'price_valid_until' => 'date',
@@ -79,6 +83,66 @@ class Product extends Model
      */
     protected static function booted(): void
     {
+        /**
+         * Supply the legacy table's mandatory-but-defaultless columns on INSERT.
+         *
+         * `products` is not under migration control and has NOT NULL columns with no DEFAULT, so
+         * under MySQL strict mode a bare Product::create() dies with
+         * "SQLSTATE[HY000] 1364: Field 'xxx' doesn't have a default value". Only INSERT is affected;
+         * an UPDATE writes just the dirty columns, which is why editing a product has always worked
+         * and adding one has not.
+         *
+         * This used to live in CreateProduct::mutateFormDataBeforeCreate — one Filament page, and
+         * therefore the ONLY path that could create a product. Every programmatic path (the
+         * enrichment pipeline, an importer, a duplicate action, a seeder, a test) hit 1364 instead.
+         * Moving it here makes creation work from anywhere, which is the precondition for Stage 5.
+         *
+         * Attributes already set are never touched, so nothing an admin typed can be overwritten
+         * by this.
+         */
+        static::creating(function (Product $product): void {
+            $filled = LegacyColumnDefaults::fill('products', $product->getAttributes());
+
+            foreach ($filled as $column => $value) {
+                // Null is the only condition, matching LegacyColumnDefaults' own semantics
+                // (absent-OR-null). An isDirty() guard would be wrong here: on a new model every
+                // set attribute is dirty, so a column explicitly set to null would be skipped —
+                // and null is exactly what a NOT NULL column rejects.
+                if ($product->getAttribute($column) === null) {
+                    $product->setAttribute($column, $value);
+                }
+            }
+        });
+
+        /**
+         * `nutrition_values` is DERIVED from `nutrition_facts` whenever the latter is present.
+         *
+         * Regenerating on save rather than on render means the panel is built once per edit instead
+         * of once per page view, and — more importantly — the exact HTML that will be published is
+         * inspectable in the database. A renderer that transformed the facts at request time would
+         * make "what does this page actually say?" a question you could only answer by fetching it.
+         *
+         * Typed-by-hand HTML in nutrition_values still works untouched: this only fires when
+         * structured facts exist and produce a panel.
+         */
+        static::saving(function (Product $product): void {
+            if (! $product->isDirty('nutrition_facts')) {
+                return;
+            }
+
+            $facts = $product->nutrition_facts;
+            $label = is_array($facts) ? TranscribedLabel::fromStored($facts) : null;
+            $panel = $label === null ? null : app(NutritionPanelBuilder::class)->build($label);
+
+            if ($panel !== null) {
+                $product->nutrition_values = $panel['html'];
+            } elseif (is_array($facts) && $facts !== [] && $label === null) {
+                // Facts were cleared down to nothing renderable. Leaving the old panel behind would
+                // keep publishing numbers the admin has just removed.
+                $product->nutrition_values = null;
+            }
+        });
+
         static::saving(function (Product $product): void {
             $qte = (int) $product->qte;
             if ($qte < 0) {

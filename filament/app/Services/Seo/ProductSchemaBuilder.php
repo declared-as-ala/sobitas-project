@@ -4,6 +4,7 @@ namespace App\Services\Seo;
 
 use App\Models\Product;
 use App\Models\Review;
+use App\Support\Gtin;
 use App\Support\Seo\ProductPublicUrl;
 use Illuminate\Support\Str;
 
@@ -69,9 +70,20 @@ final class ProductSchemaBuilder
             $graph['image'] = count($images) === 1 ? $images[0] : $images;
         }
 
-        $gtin = trim((string) ($product->gtin ?? ''));
-        if ($gtin !== '') {
+        /**
+         * Only a GTIN that passes its check digit is published.
+         *
+         * A malformed identifier is worse than none: Google reports it as a structured-data error,
+         * and Merchant Center can disapprove the item outright. `gtin` is Google's recommended
+         * property and accepts any valid length, but the length-specific twin is emitted alongside
+         * it because Merchant Center feed validation still keys on it — and it has to follow the
+         * value, since a 12-digit UPC-A declared as gtin13 is rejected.
+         */
+        if ($gtin = Gtin::normalize((string) ($product->gtin ?? ''))) {
             $graph['gtin'] = $gtin;
+            if ($property = Gtin::schemaProperty($gtin)) {
+                $graph[$property] = $gtin;
+            }
         }
 
         $mpn = trim((string) ($product->mpn ?? ''));
@@ -104,7 +116,8 @@ final class ProductSchemaBuilder
 
         $out = [
             'sku' => trim((string) $product->effective_sku) ?: ($product->id ? (string) $product->id : null),
-            'gtin' => filled(trim((string) ($product->gtin ?? ''))) ? trim((string) $product->gtin) : null,
+            // Same rule as buildGraph: an identifier that fails its check digit is not a fact.
+            'gtin' => Gtin::normalize((string) ($product->gtin ?? '')),
             'mpn' => filled(trim((string) ($product->mpn ?? ''))) ? trim((string) $product->mpn) : null,
             'brand' => $product->brand?->designation_fr,
             'price' => (float) $product->getEffectiveUnitPrice(),

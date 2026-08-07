@@ -889,3 +889,70 @@ input[type="search"]::-webkit-search-results-decoration {
     overflow: hidden;
   }
 }
+
+/*
+ * Supplement Facts panel — written into products.nutrition_values by the enrichment pipeline and
+ * rendered on BOTH the human page and the crawler view, so it is styled here rather than in a
+ * component. The crawler view ships no component CSS of its own.
+ *
+ * The indent is not decoration. A Supplement Facts panel indents sub-rows because they are
+ * components of the row above ("dont acides gras saturés"), not further line items beside it.
+ * Flattened, the panel reads as though the amounts sum. That is why depth is expressed as a class
+ * the stylesheet can honour instead of an inline style the sanitiser strips.
+ */
+.supplement-facts .nutrition-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.supplement-facts .nutrition-table caption {
+  text-align: left;
+  font-weight: 600;
+  padding-bottom: 0.5rem;
+}
+.supplement-facts .nutrition-table th,
+.supplement-facts .nutrition-table td {
+  border-bottom: 1px solid rgb(0 0 0 / 0.08);
+  padding: 0.375rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+.supplement-facts .nutrition-table thead th {
+  border-bottom-width: 2px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+/* Amount and %DV read as columns of numbers, so they align right. */
+.supplement-facts .nutrition-table td { text-align: right; white-space: nowrap; }
+
+.supplement-facts .nf-depth-0 > th { font-weight: 600; }
+.supplement-facts .nf-depth-1 > th { font-weight: 400; padding-left: 1.5rem; }
+.supplement-facts .nf-depth-2 > th { font-weight: 400; padding-left: 2.75rem; }
+.supplement-facts .nf-depth-3 > th { font-weight: 400; padding-left: 4rem; }
+.supplement-facts .nf-depth-4 > th { font-weight: 400; padding-left: 5.25rem; }
+
+.supplement-facts .nutrition-serving {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.125rem 0.75rem;
+  margin-bottom: 0.75rem;
+}
+.supplement-facts .nutrition-serving dt { font-weight: 600; }
+.supplement-facts .nutrition-serving dd { margin: 0; }
+
+.supplement-facts .nutrition-note,
+.supplement-facts .nutrition-source { margin-top: 0.5rem; opacity: 0.8; }
+.supplement-facts blockquote {
+  border-left: 3px solid rgb(0 0 0 / 0.12);
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+}
+
+/* A wide panel must scroll inside itself, never push the page sideways on a phone. */
+.supplement-facts { overflow-x: auto; }
+
+@media (prefers-color-scheme: dark) {
+  .supplement-facts .nutrition-table th,
+  .supplement-facts .nutrition-table td { border-bottom-color: rgb(255 255 255 / 0.12); }
+  .supplement-facts blockquote { border-left-color: rgb(255 255 255 / 0.18); }
+}

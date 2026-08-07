@@ -17,8 +17,9 @@ import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
-import { hasValidPromo } from '@/util/productPrice';
-import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
+import { formatTnd, hasValidPromo } from '@/util/productPrice';
+import { buildComparison } from '@/util/productComparison';
+import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
@@ -102,6 +103,9 @@ function ProductBadges({
 
 export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const REVIEW_PAGE_SIZE = 12;
+  // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
+  // middleware sends Googlebot to that view and a table only one of them can see is a discrepancy.
+  const comparisonRows = buildComparison(initialProduct, similarProducts);
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
@@ -1124,7 +1128,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       // top-level headings on the page whose only h1 should be the product name —
                       // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
                       // The crawler view already ran this; the page a customer sees did not.
-                      dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.description_fr || product.description_cover || generateProductFallbackDescription(product)) }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.description_fr || product.description_cover || generateProductFallbackDescription(product)) }}
                     />
                     <button
                       type="button"
@@ -1203,7 +1207,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                               <div
                                 className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
-                                dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.nutrition_values || '') }}
+                                dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
                               />
                             </div>
                           ) : !hasNutritionImages ? (
@@ -1303,7 +1307,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     ) : hasLegacyQuestionsHtml ? (
                       <div
                         className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                        dangerouslySetInnerHTML={{ __html: sanitizeProductHtml(product.questions || '') }}
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
                       />
                     ) : null}
                     </div>
@@ -1490,6 +1494,61 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
           </div>
         </section>
+
+        {/*
+          Comparison table — content parity with the crawler view.
+
+          The carousel below sells; this answers "which of these, and why". Same data, same helper,
+          same columns as CrawlerProductView, so Googlebot and a customer see the same facts. No
+          price-per-kilo column here either — see util/productComparison.ts.
+        */}
+        {comparisonRows.length > 0 && (
+          <div className="min-w-0">
+            <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
+            <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800">
+              <table className="w-full border-collapse text-sm">
+                <thead>
+                  <tr className="bg-gray-50 dark:bg-gray-900">
+                    <th scope="col" className="p-3 text-left font-semibold">Produit</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Marque</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Format</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Prix</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Disponibilité</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonRows.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={row.isCurrent ? 'bg-orange-50/60 dark:bg-orange-950/20' : undefined}
+                    >
+                      <th scope="row" className="border-t border-gray-100 p-3 text-left font-normal dark:border-gray-800">
+                        {row.isCurrent ? (
+                          <span aria-current="true" className="font-semibold">
+                            {row.name} <span className="font-normal text-gray-500">(cette page)</span>
+                          </span>
+                        ) : (
+                          <Link href={row.url} className="text-red-700 hover:underline dark:text-red-400">
+                            {row.name}
+                          </Link>
+                        )}
+                      </th>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.brand || '—'}</td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.format || '—'}</td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                        {formatTnd(row.price)}
+                        {row.hasPromo && <span className="ml-1 text-green-700 dark:text-green-400">promo</span>}
+                      </td>
+                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                        {row.inStock ? 'En stock' : 'En rupture'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (
