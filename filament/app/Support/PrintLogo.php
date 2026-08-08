@@ -31,6 +31,7 @@ final class PrintLogo
         };
 
         $candidates = [
+            public_path('logo-facture.png'),
             resource_path('views/print/logo_print.png'),
             public_path('logo.png'),
         ];

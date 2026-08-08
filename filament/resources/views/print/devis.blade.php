@@ -17,12 +17,7 @@
     $fmt         = function($n) { return number_format((float)$n, 3, '.', ' '); };
 
     /* ── Logo (base64 for PDF reliability) ───────────────────── */
-    $logoUrl = null;
-    $staticLogoPath = resource_path('views/print/logo_print.png');
-    if (is_file($staticLogoPath)) {
-        $mime    = @mime_content_type($staticLogoPath) ?: 'image/png';
-        $logoUrl = 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($staticLogoPath));
-    }
+    $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
 
     /* ── TVA config ───────────────────────────────────────────── */
     $defaultTva    = $coordonnee && isset($coordonnee->tva) ? (float)$coordonnee->tva : 19;
