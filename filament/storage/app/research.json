@@ -1,0 +1,2212 @@
+{
+ "generated_for": 14,
+ "usable": 14,
+ "no_source": 0,
+ "nutrition_rejected": 0,
+ "faq_dropped": 16,
+ "products": [
+  {
+   "slug": "omega-3-fish-oil-240-softgel-weightworld",
+   "product_name": "Omega 3 fish oil 240 softgel - weightworld",
+   "brand": "WeightWorld",
+   "gtin": "5056128124017",
+   "sources": [
+    {
+     "url": "https://www.weightworld.uk/products/omega-3-fish-oil-2000mg-softgels",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.weightworld.ie/products/omega-3-fish-oil-softgel",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/5056128124017",
+     "kind": "database"
+    },
+    {
+     "url": "https://protein.tn/omega-3/omega-3-fish-oil-240-softgel-weightworld",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=9XDjq2n23Z8",
+     "kind": "other"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.weightworld.uk/products/omega-3-fish-oil-2000mg-softgels",
+    "serving_quantity": 2,
+    "serving_unit": "softgels",
+    "serving_note": "Serving Size: 2 Softgels",
+    "servings_per_container": "120",
+    "net_quantity": 240,
+    "net_unit": "softgels",
+    "percent_basis": "eu",
+    "rows": [
+     {
+      "name": "Fish Oil",
+      "kind": "value",
+      "quantity": 2000,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Omega-3",
+      "kind": "value",
+      "quantity": 1100,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Eicosapentaenoic Acid (EPA)",
+      "kind": "value",
+      "quantity": 660,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Docosahexaenoic Acid",
+      "kind": "value",
+      "quantity": 440,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Other Ingredients: Vitamin E (Tocopherol), Gelatin, Glycerol, Purified Water",
+    "allergens": "",
+    "warnings": "Advice: Do not exceed the recommended daily dose. Food supplements must not be used as a substitute for a varied and balanced diet and a healthy lifestyle. If you are pregnant, breastfeeding, taking any medications or are under medical supervision, please consult a healthcare professional before use. Discontinue use if any adverse reactions occur. Not intended for use by persons under the age of 18. Storage: Store in a cool and dry place. Keep out of reach of children.",
+    "claims": "Manufacturer claims, verbatim: \"1100mg omega-3 fatty acids - 660mg EPA + 440mg DHA\"; \"Distilled for pure & contaminant-free omega-3\"; \"240 easy-to-swallow softgels - 4-month supply\"; \"Reflux-free softgels - No fishy aftertaste\"; \"2000mg of fish oil with 1100mg of omega-3 fatty acids, a higher potency than many competitors\"; \"Made with 100% natural ingredients and free from GMOs for your peace of mind\"; \"Gluten- and lactose-free formula, suitable for a wide range of dietary and lifestyle needs\"; \"GMP-certified and third-party lab tested to ensure safety and high quality standards\"; \"Packed in recyclable PET bottles to be a more sustainable choice for the environment\". Benefit statements printed with an EFSA footnote: \"EPA & DHA contribute to the normal function of the heart*\"; \"DHA contributes to the maintenance of normal brain function*\"; \"DHA contributes to the maintenance of normal vision*\" - footnote: \"*These health claims are authorised by the European Food Safety Authority (EFSA).\" Footnote under the table: \"Nutrients Reference Value / NRV not established\"."
+   },
+   "video": {
+    "youtube_id": "9XDjq2n23Z8",
+    "title": "Omega 3 Fish Oil - 2000mg 240 Softgels - 660mg EPA & 440mg DHA | WeightWorld UK",
+    "channel": "WeightWorld UK",
+    "official": true,
+    "source_url": "https://www.youtube.com/watch?v=9XDjq2n23Z8"
+   },
+   "faq": [
+    {
+     "q": "Combien de softgels le flacon contient-il et combien de portions cela représente-t-il ?",
+     "a": "Le flacon contient 240 softgels. Le tableau du fabricant indique une portion (« Serving Size ») de 2 softgels et 120 portions par flacon (« Servings per Container: 120 »).",
+     "grounded_in": "Tableau « Nutritional Information » de weightworld.uk (Serving Size: 2 Softgels ; Servings per Container: 120) et mention « 240 easy-to-swallow softgels per bottle » sur la même page."
+    },
+    {
+     "q": "Quelles quantités d'EPA et de DHA figurent sur le tableau du fabricant ?",
+     "a": "Par portion, le tableau indique : Fish Oil 2000 mg ; Omega-3 1100 mg ; Eicosapentaenoic Acid (EPA) 660 mg ; Docosahexaenoic Acid 440 mg. La colonne %NRV est vide et le tableau précise « NRV not established » : aucune valeur nutritionnelle de référence n'est établie pour ces nutriments.",
+     "grounded_in": "Tableau « Nutritional Information » de weightworld.uk, transcrit ligne par ligne, et sa note de bas de tableau « Nutrients Reference Value / NRV not established »."
+    },
+    {
+     "q": "De quoi la capsule est-elle composée, et le produit est-il certifié halal ?",
+     "a": "Le fabricant liste comme autres ingrédients : « Vitamin E (Tocopherol), Gelatin, Glycerol, Purified Water ». La page du fabricant ne précise pas l'origine de la gélatine et n'affiche aucune certification halal. Nous ne pouvons donc pas confirmer ce point à partir des sources consultées.",
+     "grounded_in": "Ligne « Other Ingredients » de weightworld.uk ; absence de toute mention d'origine de la gélatine ou de certification halal sur cette page."
+    },
+    {
+     "q": "Le produit contient-il du gluten, du lactose ou des allergènes ?",
+     "a": "Le fabricant décrit une formule « Gluten- and lactose-free ». Le produit est à base d'huile de poisson : la fiche Open Food Facts du code-barres 5056128124017 enregistre l'allergène « poisson ». Aucune déclaration d'allergènes distincte n'est imprimée sur la page du fabricant que nous avons lue.",
+     "grounded_in": "Mention « Gluten- and lactose-free formula » sur weightworld.uk ; champ allergens « en:fish » et liste d'ingrédients « Omega-3 _Fish Oil_, Antioxidant: Vitamin E (alpha-Tocopheryl acetate), Softgel (Gelatine, Glycerin, Water). » de la fiche Open Food Facts du code-barres 5056128124017."
+    },
+    {
+     "q": "Quelles précautions d'emploi et quelles conditions de conservation le fabricant indique-t-il ?",
+     "a": "Le fabricant indique de ne pas dépasser la dose journalière recommandée ; qu'un complément alimentaire ne remplace pas une alimentation variée et équilibrée ni un mode de vie sain ; de consulter un professionnel de santé avant utilisation en cas de grossesse, d'allaitement, de prise de médicaments ou de suivi médical ; d'arrêter l'utilisation en cas de réaction indésirable ; et que le produit n'est pas destiné aux personnes de moins de 18 ans. Conservation : dans un endroit frais et sec, hors de portée des enfants.",
+     "grounded_in": "Sections « Advice » et « Storage » de weightworld.uk, reprises à l'identique sur weightworld.ie."
+    },
+    {
+     "q": "Comment vérifier qu'il s'agit bien du même format que celui du fabricant ?",
+     "a": "protein.tn vend le format 240 softgels, identique au format du fabricant (« 2000mg 240 Softgels »). Le code-barres enregistré pour ce produit est le 5056128124017 et la référence fabricant est CC0350.",
+     "grounded_in": "Fiche protein.tn (« 240 capsules molles ») ; données de variante du produit sur weightworld.uk (barcode 5056128124017, sku CC0350) ; code-barres confirmé par la fiche Open Food Facts correspondante."
+    }
+   ],
+   "verification": "VERDICT: nutrition panel PASSES, pack size MATCHES, video PASSES, all 6 FAQ survive. One published claim string dropped.\n\n1. NUTRITION - VERIFIED TRUE. I fetched nutrition.source_url (weightworld.uk, HTTP 200, real product page, not a search/category page) and parsed the raw HTML rather than trusting a summarizer. All four rows match exactly, each with an empty %NRV cell: <td>Fish Oil</td> 2000 mg; <td>Omega-3</td> 1100 mg; <td>Eicosapentaenoic Acid (EPA)</td> 660 mg; <td>Docosahexaenoic Acid</td> 440 mg. Also confirmed verbatim: \"Serving Size: 2 Softgels\", \"Servings per Container: 120\", the footnote \"Nutrients Reference Value ... *NRV not established\" (so percent_basis \"eu\" with all percent_dv null, not zero, is right), and \"Other Ingredients: Vitamin E (Tocopherol), Gelatin, Glycerol, Purified Water\". Zero rows disagree.\n\nIndependently re-confirmed on weightworld.ie raw HTML: same four rows, same numbers. NOTE - my first pass used WebFetch, whose summarizer HALLUCINATED the .ie DHA row as \"Docosahexaenoic Acid (DHA)\". The raw HTML shows .ie prints \"Docosahexaenoic Acid\" with NO abbreviation, same as .uk. So the research's label-asymmetry note is CORRECT and must be honoured: do not \"fix\" the DHA row by adding (DHA). I nearly filed this as a discrepancy and was wrong to; checking raw HTML is what saved it.\n\n2. PACK SIZE - MATCHES. This was the highest-risk failure mode and it is clean. protein.tn 403s the standard fetcher (Cloudflare), so I re-fetched with a browser UA (HTTP 200, 216KB). h1 and title: \"Omega 3 fish oil 240 softgel - weightworld\". Its own comparison table row marked \"(cette page)\" reads brand \"weightworld\", size \"240 capsules molles\". Manufacturer variant is 240 softgels (\"240 softgels. 4-month supply\"). Open Food Facts for GTIN 5056128124017 returns product_name \"Omega-3 Fish oil 240 Softgel\", brand \"WeightWorld\", serving \"2 softgels\". Panel arithmetic corroborates: 120 servings x 2 softgels = 240. Four independent sources converge on 240. No same-brand-different-size substitution. The only other capsule count on our page (\"120 capsules\") belongs to an unrelated comparison row, TO BOOSTER 120 CAPS.\n\n3. IDENTIFIERS - both verified with my own eyes, contrary to my first grep. The variant JSON on weightworld.uk ties them together in one object: \"sku\":\"CC0350\" ... \"name\":\"Omega 3 Fish Oil 2000mg Softgels\" ... \"barcode\":\"5056128124017\". It is the only barcode on the page. OFF confirms the same GTIN maps to the 240-softgel WeightWorld product.\n\n4. FAQ - ALL SIX SURVIVE. Every answer traces to a fact I confirmed. FAQ 3's \"Gluten- and lactose-free formula, suitable for a wide range of dietary and lifestyle needs\" is verbatim on the page (I checked because the summarizer omitted it); OFF confirms allergens en:fish and the ingredients text (research wrote \"alpha-Tocopheryl\", OFF prints the glyph, same substance). FAQ 2's refusal to confirm halal is correct and important: \"halal\" appears 0 times on the manufacturer page and the gelatin origin is never stated - the FAQ says exactly that instead of guessing. FAQ 4's Advice/Storage text is verbatim on both domains. No FAQ contains a posology: none tells the reader to take anything. FAQ 0 transcribes \"Serving Size: 2 softgels\" as a label fact, which is the denominator the whole panel depends on, not an instruction; FAQ 4's \"ne pas depasser la dose journaliere recommandee\" is the standard EU warning and states no number. No FAQ asserts a health claim - the three EFSA benefit statements stay quarantined in claims as attributed quotes with their EFSA footnote, all confirmed on-page.\n\n5. VIDEO - OK. YouTube oEmbed returns author_name \"WeightWorld UK\" and author_url https://www.youtube.com/@weightworld_uk, with title matching the research character for character. Brand's own channel, not a reviewer upload.\n\n6. DISCARDED CLAIM UPHELD. The research refused to publish the \"wild-caught anchovies\" sourcing story that search summaries assert. I verified that call: \"anchov\" and \"wild\" both appear 0 times on the manufacturer page. Correctly withheld.\n\nONE THING TO REMOVE BEFORE PUBLISH: the claims field asserts, under the header \"Manufacturer claims, verbatim\", the string \"Distilled for pure & contaminant-free omega-3\". It is not on the cited source at all, and where it does exist (.ie) it reads \"Distilled for contaminant-free omega-3\" - \"pure &\" was added. Strip that one string; the other eight claim strings and all three EFSA benefit statements verified with hit counts on the .uk page.",
+   "problems": [
+    "NOT A BLOCKER, panel is correct: allergens is empty string while the product is fish oil. Defensible (no allergen line is printed anywhere on source_url - \"allergen\" matches 0 times), but the rendered panel will show no allergen for a fish product. The fish allergen is carried by FAQ 3 from Open Food Facts, so it does reach the page; if the panel renders allergens independently of the FAQ, surface \"poisson\" there too.",
+    "Type inconsistency, not a data error: servings_per_container is the string \"120\" while serving_quantity is the number 2. Value 120 is confirmed correct on the page.",
+    "FAQ 0 grounded_in cites the manufacturer phrase as \"240 easy-to-swallow softgels per bottle\"; the actual .uk bullet reads \"240 easy-to-swallow softgels - 4-month supply\". The underlying fact (240 per bottle) is confirmed five independent ways, so the answer stands - only the citation wording is loose.",
+    "FAQ 5 says \"Le code-barres enregistre pour ce produit est le 5056128124017\", which on a protein.tn page reads as our own record. protein.tn publishes no GTIN (JSON-LD carries sku \"536\" only, no gtin field). The barcode is genuine and belongs to exactly this pack, but consider rewording to attribute it to the manufacturer/OFF rather than to us."
+   ]
+  },
+  {
+   "slug": "100-whey-gold-standard-2-27kg",
+   "product_name": "100% WHEY GOLD STANDARD – 2.27KG",
+   "brand": "Optimum Nutrition",
+   "gtin": "748927028669",
+   "sources": [
+    {
+     "url": "https://protein.tn/whey-proteine/100-whey-gold-standard-2-27kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.optimumnutrition.com/en-us/products/gold-standard-100-whey-protein-powder",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.optimumnutrition.com/cdn/shop/files/GSW_DRC_5lb_NFP.jpg?v=1776173227",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.dpsnutrition.net/i/4140/optimum-100-whey-double-rich-choc-5-lb.htm",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/0748927028669",
+     "kind": "database"
+    },
+    {
+     "url": "https://barcodeindex.com/upc/748927028669",
+     "kind": "database"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=Df08fyCTW9A",
+     "kind": "other"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.optimumnutrition.com/en-us/products/gold-standard-100-whey-protein-powder",
+    "percent_basis": "us",
+    "serving_quantity": 31,
+    "serving_unit": "g",
+    "serving_note": "Serving size: 31g (About 1 Scoop). Panneau d'étiquette, verbatim : « 31 GRAMS — ABOUT 1 SCOOP WHEY PROTEIN POWDER », « 6-8 FL OZ — COLD WATER, MILK OR OTHER BEVERAGE », « 30 SECONDS — STIR, SHAKE OR BLEND UNTIL DISSOLVED ».",
+    "servings_per_container": "74",
+    "net_quantity": 5,
+    "net_unit": "lb",
+    "rows": [
+     {
+      "name": "Calories",
+      "kind": "value",
+      "quantity": 120,
+      "unit": "",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Total Fat",
+      "kind": "value",
+      "quantity": 1.5,
+      "unit": "g",
+      "percent_dv": 2,
+      "depth": 0
+     },
+     {
+      "name": "Saturated Fat",
+      "kind": "value",
+      "quantity": 1,
+      "unit": "g",
+      "percent_dv": 5,
+      "depth": 1
+     },
+     {
+      "name": "Cholesterol",
+      "kind": "value",
+      "quantity": 55,
+      "unit": "mg",
+      "percent_dv": 18,
+      "depth": 0
+     },
+     {
+      "name": "Sodium",
+      "kind": "value",
+      "quantity": 130,
+      "unit": "mg",
+      "percent_dv": 6,
+      "depth": 0
+     },
+     {
+      "name": "Total Carbohydrate",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "g",
+      "percent_dv": 1,
+      "depth": 0
+     },
+     {
+      "name": "Dietary Fiber",
+      "kind": "value",
+      "quantity": null,
+      "unit": "g",
+      "percent_dv": 2,
+      "depth": 1
+     },
+     {
+      "name": "Total Sugars",
+      "kind": "value",
+      "quantity": 1,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Protein",
+      "kind": "value",
+      "quantity": 24,
+      "unit": "g",
+      "percent_dv": 48,
+      "depth": 0
+     },
+     {
+      "name": "Calcium",
+      "kind": "value",
+      "quantity": 130,
+      "unit": "mg",
+      "percent_dv": 10,
+      "depth": 0
+     },
+     {
+      "name": "Iron",
+      "kind": "value",
+      "quantity": 0.7,
+      "unit": "mg",
+      "percent_dv": 4,
+      "depth": 0
+     },
+     {
+      "name": "Potassium",
+      "kind": "value",
+      "quantity": 200,
+      "unit": "mg",
+      "percent_dv": 4,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "INGREDIENTS: Protein Blend (Whey Protein Isolate, Whey Protein Concentrate, Hydrolyzed Whey Protein), Cocoa Powder (Processed with Alkali), Sunflower and/or Soy Lecithin, Natural and Artificial Flavor, Acesulfame Potassium.",
+    "allergens": "CONTAINS: MILK, SOY.",
+    "claims": "Mentions imprimées sur l'étiquette (Double Rich Chocolate, 5 lb) : « GLUTEN FREE » ; « 24G PROTEIN » ; logo « INFORMED CHOICE — REGULARLY TESTED FOR BANNED SUBSTANCES » ; « ARTIFICIALLY FLAVORED ». Allégations de la page fabricant : « 24g of protein per serving to help build and maintain muscle¹ » ; « 5.5g of naturally occurring BCAAs per serving¹ » ; « Gluten free » ; « Banned Substance Tested » ; « Easy mixing with only a glass and spoon » ; « 15+ great-tasting flavors » ; « The World's #1 Whey Protein Powder⁴ » ; « whey protein isolate as the primary source ».",
+    "warnings": "Aucune mention « WARNING » de sécurité n'est imprimée sur le panneau nutritionnel lu. Mentions de bas de panneau, verbatim : « Not a significant source of trans fat, added sugars and vitamin D. » et « *The % Daily Value tells you how much a nutrient in a serving of food contributes to a daily diet. 2,000 calories a day is used for general nutrition advice. » Notes de bas de page de la page fabricant, verbatim : « 1. These statements have not been evaluated by the food and drug administration. This product is not intended to diagnose, treat, cure or prevent any disease. 2. No significant difference has been shown between RBST treated and non-RBST treated cows. 3. When used over time in combination with regular resistance exercise. 5. Not a low calorie food. 6. Naturally occurring amino acids. 7. See nutrition information for saturated fat, cholesterol and sodium content. »"
+   },
+   "video": {
+    "youtube_id": "Df08fyCTW9A",
+    "title": "Optimum Nutrition Gold Standard 100% Whey",
+    "channel": "Optimum Nutrition",
+    "official": true,
+    "source_url": "https://www.youtube.com/watch?v=Df08fyCTW9A"
+   },
+   "faq": [
+    {
+     "q": "Quelle marque, quel arôme et quel format correspondent à la référence « 100% Whey Gold Standard – 2.27KG » vendue sur Protein.tn ?",
+     "a": "C'est le Gold Standard 100% Whey d'Optimum Nutrition, en pot de 5 lb (2,27 kg), arôme Double Chocolat (« Double Rich Chocolate » sur l'emballage d'origine). La photo du pot publiée sur la fiche porte les mentions « NET WT 5 LB (2.27 KG) », « DOUBLE RICH CHOCOLATE » et « 74 SERVINGS ».",
+     "grounded_in": "Fiche protein.tn (marque Optimum Nutrition, arôme « Double chocolat », format 2,27 kg) + photo produit de la fiche portant NET WT 5 LB (2.27 KG) / 74 SERVINGS, cohérente avec l'étiquette officielle Optimum Nutrition du pot 5 lb Double Rich Chocolate."
+    },
+    {
+     "q": "Que contient exactement une portion ?",
+     "a": "Le panneau Nutrition Facts officiel du pot 5 lb arôme Double Rich Chocolate indique, pour une portion de 31 g (« About 1 Scoop ») : 120 calories, 24 g de protéines (48 % VQ), 1,5 g de lipides totaux dont 1 g de saturés, 55 mg de cholestérol, 130 mg de sodium, 3 g de glucides totaux dont moins de 1 g de fibres et 1 g de sucres totaux, 130 mg de calcium, 0,7 mg de fer et 200 mg de potassium. Les pourcentages sont des « % Daily Value » américains, et non des apports de référence européens.",
+     "grounded_in": "Panneau Nutrition Facts officiel Optimum Nutrition (GSW_DRC_5lb_NFP.jpg) affiché sur la page produit du fabricant, recoupé ligne par ligne avec le tableau texte publié par DPS Nutrition pour le même arôme et le même format."
+    },
+    {
+     "q": "Quels sont les ingrédients de l'arôme Double Chocolat ?",
+     "a": "Liste d'ingrédients telle qu'imprimée : « Protein Blend (Whey Protein Isolate, Whey Protein Concentrate, Hydrolyzed Whey Protein), Cocoa Powder (Processed with Alkali), Sunflower and/or Soy Lecithin, Natural and Artificial Flavor, Acesulfame Potassium. » L'étiquette précise également « ARTIFICIALLY FLAVORED » pour cet arôme.",
+     "grounded_in": "Panneau d'étiquette officiel Optimum Nutrition (Double Rich Chocolate 5 lb) ; liste identique publiée en texte par DPS Nutrition pour la même référence."
+    },
+    {
+     "q": "Le produit contient-il des allergènes ? Est-il sans gluten ?",
+     "a": "L'étiquette porte la mention « CONTAINS: MILK, SOY. » : le produit contient du lait et du soja, et est donc à écarter en cas d'allergie à l'un de ces deux ingrédients. Le panneau affiche par ailleurs la mention « GLUTEN FREE ». Aucune indication concernant la tolérance au lactose n'est imprimée sur l'étiquette consultée.",
+     "grounded_in": "Panneau d'étiquette officiel Optimum Nutrition : mention allergènes « CONTAINS: MILK, SOY. » et pictogramme « GLUTEN FREE » ; mention « Contains Milk and Soy. » également reprise par DPS Nutrition."
+    },
+    {
+     "q": "Combien de portions contient le pot de 2,27 kg ?",
+     "a": "L'étiquette officielle du pot 5 lb (2,27 kg) Double Rich Chocolate indique 74 portions par contenant, pour une portion de 31 g. À noter : un revendeur américain (DPS Nutrition) publie pour ce même arôme et ce même format 74 portions avec une portion de 30,4 g, ce qui correspond à une génération d'étiquette antérieure.",
+     "grounded_in": "Panneau officiel Optimum Nutrition : « 74 servings per container », « Serving size 31g (About 1 Scoop) » ; tableau DPS Nutrition : « Servings per container: 74 », « Serving size: 30.4g (About 1 Scoop) »."
+    },
+    {
+     "q": "Le produit fait-il l'objet de contrôles anti-dopage ?",
+     "a": "Optimum Nutrition affiche la mention « Banned Substance Tested » sur sa page produit, et le panneau de l'étiquette porte le logo Informed Choice accompagné du texte « REGULARLY TESTED FOR BANNED SUBSTANCES ». Il s'agit des mentions du fabricant telles qu'imprimées ; aucun numéro de lot ni certificat d'analyse n'est publié sur ces pages.",
+     "grounded_in": "Page produit Optimum Nutrition (puce « Banned Substance Tested ») et logo « INFORMED CHOICE — REGULARLY TESTED FOR BANNED SUBSTANCES » figurant sur le panneau d'étiquette officiel."
+    }
+   ],
+   "verification": "I tried to break this and could not break the numbers. Every one of the 12 nutrition rows is correct, verified twice against sources I fetched myself.\n\nWHAT I DID. I downloaded the manufacturer's label asset GSW_DRC_5lb_NFP.jpg and read the image directly rather than trusting a text scrape. All 12 rows match to the digit: Calories 120 (no unit on the US panel), Total Fat 1.5g/2%, Sat Fat 1g/5%, Cholesterol 55mg/18%, Sodium 130mg/6%, Total Carb 3g/1%, Dietary Fiber <1g/2%, Total Sugars 1g (no %DV printed), Protein 24g/48%, Calcium 130mg/10%, Iron 0.7mg/4%, Potassium 200mg/4%. Serving 31g (About 1 Scoop), 74 servings/container. Ingredients and «CONTAINS: MILK, SOY.» are verbatim. The three transcription judgment calls are all right: fiber quantity left null instead of rounding <1g up to 1, sugars %DV left null instead of invented, Calories left unitless. Independent cross-check at DPS Nutrition returned an identical row-for-row table.\n\nTHE PACK-SIZE TRAP - CLEARED, AND IT WAS A REAL TRAP. The manufacturer hosts separate DRC panels for 2 lb and 5 lb (GSW_DRC_2lb_NFP.jpg and GSW_DRC_5lb_NFP.jpg). I pulled BOTH and compared. They are identical on every per-serving nutrient and differ ONLY in servings per container: 29 vs 74. So the one size-dependent number on the page is 'servings', and the 5 lb panel was correctly used. I then confirmed 74 a third way: protein.tn's own product photo, which I downloaded and read, prints «NET WT 5 LB (2.27 KG)» and «74 SERVINGS». 74 x 31g = 2294g, consistent with 5 lb. No size substitution occurred.\n\nTHE US-vs-EU TRAP - ALSO CLEARED. This was the bigger risk, since an EU-market tub carries a per-100g declaration with different figures. The protein.tn photo shows «PROTEIN POWDER DRINK MIX» and the US net-weight format, i.e. the US-labeled tub. Choosing the US Nutrition Facts panel over the EU declaration was the correct call, and the researcher reasoned it out explicitly.\n\nFAQ - ALL SIX SURVIVE. Every factual assertion traces to something I read myself. No entry contains a dosage instruction and no entry contains a health claim. Notably the structure/function claims («to help build and maintain muscle», «5.5g of naturally occurring BCAAs») were kept OUT of the FAQs and confined to the attributed claims field, which is the right separation. FAQ[1] correctly warns the percentages are US Daily Values and not EU reference intakes - that is exactly the kind of thing that misleads a European reader, and it was handled. FAQ[2] survives on its ingredient list but needs one sentence deleted, see dropped[0]. FAQ[4] transparently surfaces the 31g vs 30.4g divergence rather than hiding it; I verified both figures at their respective sources.\n\nVIDEO - CLEAN. YouTube oEmbed returns author_name «Optimum Nutrition», author_url youtube.com/@optimumnutrition. That is the brand's own global channel, not a reviewer. The researcher also correctly rejected an Optimum Nutrition India upload (subsidiary, not the global brand channel) and a third-party creator. official:true stands.\n\nBOTTOM LINE. Publish the nutrition block and all six FAQs after making the five removals in `dropped` and repointing source_url at the label image. The figures a customer would act on - 24g protein, 120 calories, the allergen statement - are solid. My objections are about citation hygiene, one stale-photo contradiction, and an unsubstantiated marketing superlative, not about the numbers.",
+   "problems": [
+    "source_url is misattributed. It points at the product page, which does NOT display these numbers as text - the panel is an image, and a plain fetch of that page served the Banana Cream 2 lb panel as the default variant. The real evidentiary source is the label asset GSW_DRC_5lb_NFP.jpg. I confirmed that asset IS referenced in the product page HTML, so the figures are genuinely manufacturer-sourced, but the citation as written does not self-verify. Repoint source_url at the image.",
+    "net_quantity is 5 lb while the page sells '2.27KG'. Not an error (the pot prints «NET WT 5 LB (2.27 KG)»), but if a template renders 'Net quantity: 5 lb' on a Tunisian page titled 2.27KG it will read as a mismatched import. Render 2,27 kg, or both.",
+    "warnings omits footnote 4 while claims cites the ⁴ marker - a dangling footnote reference. Text supplied above.",
+    "gtin 748927028669 is the weakest field: it appears on NO manufacturer page, and Open Food Facts (which the researcher leaned on) exposes no net weight, so OFF cannot confirm the SIZE. Size attribution rests on retailer/database listings only. It does hold up - Walmart, Target, eBay and the indexed Barcode Index title all tie this UPC to Double Rich Chocolate 5 lb / 74 servings - but treat it as database-grade, not manufacturer-grade, before putting it in schema.org markup.",
+    "Unresolvable and worth stating on the record: protein.tn's photo is a previous packaging generation. Nobody can confirm from the web which generation is physically on the shelf in Tunisia, so the published ingredient list is the manufacturer's current one, not necessarily the one in the customer's tub. The researcher disclosed this honestly."
+   ]
+  },
+  {
+   "slug": "magnesium-bisglycinate-vitamine-b6-1422mg-weightworld",
+   "product_name": "Magnesium Bisglycinate + Vitamine B6, 1422mg - weightworld",
+   "brand": "WeightWorld",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/magnesium/magnesium-bisglycinate-vitamine-b6-1422mg-weightworld",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.weightworld.fr/products/glycinate-de-magnesium-bisglycinate-avec-vitamine-b6-en-gelules",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.weightworld.uk/products/magnesium-glycinate-capsules",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=k4iK2ZZSC2U",
+     "kind": "other"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.weightworld.fr/products/glycinate-de-magnesium-bisglycinate-avec-vitamine-b6-en-gelules",
+    "percent_basis": "eu",
+    "serving_quantity": 2,
+    "serving_unit": "gélules",
+    "servings_per_container": "90",
+    "serving_note": "« Dose journalière: 2 gélules » — « Doses par boîte: 90 ». Conseils d'utilisation imprimés par le fabricant : « Prendre 2 gélules de Glycinate de magnésium par jour, de préférence avec un repas ou en suivant les conseils d'un professionnel de santé. »",
+    "net_quantity": 180,
+    "net_unit": "gélules",
+    "rows": [
+     {
+      "name": "Magnesium Glycinate",
+      "kind": "value",
+      "quantity": 1420,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "FOURNIT DU MAGNÉSIUM ÉLÉMENTAIRE",
+      "kind": "value",
+      "quantity": 200,
+      "unit": "mg",
+      "percent_dv": 53,
+      "depth": 1
+     },
+     {
+      "name": "Vitamine B6 (chlorhydrate de pyridoxine)",
+      "kind": "value",
+      "quantity": 2,
+      "unit": "mg",
+      "percent_dv": 142,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Autres ingrédients: enveloppe de la gélule : Hypromellose (HPMC)",
+    "allergens": "",
+    "claims": "Étiquette du flacon (photo produit protein.tn) : « GLYCINATE DE MAGNÉSIUM (BISGLYCINATE) — AVEC VITAMINE B6 — 1422mg PAR PORTION — 180 GÉLULES — 3 MOIS D'APPROVISIONNEMENT — FABRIQUÉ AU ROYAUME-UNI — Sans OGM — Vegan — Sans Stéarate de Magnésium — Complément Alimentaire ». Fiche fabricant (weightworld.fr) : « Magnésium bisglycinate sous forme chélatée » ; « Fournit l'équivalent de 200 mg de magnésium élémentaire » ; « 180 gélules pour 3 mois d'utilisation » ; « Formule végane élaborée selon les normes BPF » ; « Composition soignée : Formule végane, sans OGM et sans additifs controversés tels que le stéarate de magnésium » ; « Contrôle qualité : Produit élaboré selon les normes européennes BPF et HACCP pour les compléments alimentaires ». Allégations santé autorisées UE citées par le fabricant, suivies de la mention « *Allégations de santé autorisées dans l'Union européenne, après évaluation scientifique par l'EFSA » : le magnésium contribue « à réduire la fatigue », « à un métabolisme énergétique normal », « au fonctionnement normal du système nerveux », « à l'équilibre électrolytique », « à une fonction musculaire normale », « à une synthèse protéique normale », « à des fonctions psychologiques normales », « au maintien d'une ossature normale », « au maintien d'une dentition normale » ; la vitamine B6 contribue « à la formation normale de globules rouges », « au fonctionnement normal du système immunitaire », « au métabolisme normal des protéines et du glycogène », « à la régulation de l'activité hormonale ».",
+    "warnings": "Précautions (weightworld.fr, verbatim) : « Ne pas dépasser la dose quotidienne recommandée. Les compléments alimentaires ne doivent pas se substituer à une alimentation variée et équilibrée et à un mode de vie sain. Prenez l'avis d'un médecin avant d'utiliser ce produit si vous êtes enceinte, si vous allaitez, si vous prenez un médicament ou si vous êtes sous surveillance médicale. Cessez toute utilisation et consultez un médecin en cas d'effets secondaires. Ce produit n'est pas destiné aux moins de 18 ans. » — Conseils de conservation : « Conserver dans un endroit frais et sec. Tenir hors de portée des enfants. »"
+   },
+   "video": {
+    "youtube_id": "k4iK2ZZSC2U",
+    "title": "Why Magnesium Glycinate Matters 💊 Better Sleep & Relaxation | WeightWorld UK",
+    "channel": "WeightWorld UK",
+    "official": true,
+    "source_url": "https://www.youtube.com/watch?v=k4iK2ZZSC2U"
+   },
+   "faq": [
+    {
+     "q": "Combien de gélules contient le flacon vendu par Protein.tn ?",
+     "a": "Le flacon contient 180 gélules. Le fabricant WeightWorld indique « Doses par boîte : 90 », la portion de référence de son tableau nutritionnel étant de 2 gélules, et décrit le format comme « 180 gélules pour 3 mois d'utilisation ». La photo du produit sur Protein.tn montre la même mention « 180 GÉLULES » et « 3 MOIS D'APPROVISIONNEMENT » sur l'étiquette.",
+     "grounded_in": "weightworld.fr : titre « 1422 mg | 180 gélules | Avec Vitamine B6 », « Dose journalière: 2 gélules », « Doses par boîte: 90 », « 180 gélules pour 3 mois d'utilisation » ; étiquette lisible sur l'image produit de protein.tn"
+    },
+    {
+     "q": "Que contient exactement une portion de 2 gélules ?",
+     "a": "D'après le tableau « Informations nutritionnelles » du fabricant, une dose de 2 gélules apporte 1420 mg de Magnesium Glycinate, fournissant 200 mg de magnésium élémentaire (53 % des VNR), et 2 mg de vitamine B6 sous forme de chlorhydrate de pyridoxine (142 % des VNR). VNR = valeurs nutritionnelles de référence.",
+     "grounded_in": "Tableau « Informations nutritionnelles » de weightworld.fr : Magnesium Glycinate 1420 mg ; FOURNIT DU MAGNÉSIUM ÉLÉMENTAIRE 200 mg — 53 ; Vitamine B6 (chlorhydrate de pyridoxine) 2 mg — 142 ; note « ✝︎ Valeurs nutritionnelles de référence (VNR) »"
+    },
+    {
+     "q": "Pourquoi le nom indique 1422 mg alors que le tableau annonce 1420 mg ?",
+     "a": "L'étiquette du flacon affiche « 1422mg PAR PORTION ». Le tableau nutritionnel du fabricant, lui, détaille les composants de cette même portion de 2 gélules : 1420 mg de Magnesium Glycinate (dont 200 mg de magnésium élémentaire) et 2 mg de vitamine B6. Les deux mentions décrivent la même portion, présentée globalement d'un côté et détaillée ligne par ligne de l'autre.",
+     "grounded_in": "Mention « 1422mg PAR PORTION » sur l'étiquette (image produit protein.tn) et lignes 1420 mg / 200 mg / 2 mg du tableau de weightworld.fr"
+    },
+    {
+     "q": "Le produit convient-il à un régime végétalien ? Est-il sans gluten et sans lactose ?",
+     "a": "WeightWorld décrit une « Formule végane, sans OGM et sans additifs controversés tels que le stéarate de magnésium », et l'étiquette porte les pictogrammes « Vegan », « Sans OGM » et « Sans Stéarate de Magnésium ». Le seul autre ingrédient déclaré est l'enveloppe de la gélule en Hypromellose (HPMC). En revanche, la fiche produit du fabricant ne publie aucune déclaration d'allergènes : nous ne pouvons donc pas confirmer ici l'absence de gluten ou de lactose.",
+     "grounded_in": "weightworld.fr : « Composition soignée : Formule végane, sans OGM et sans additifs controversés tels que le stéarate de magnésium », « Autres ingrédients: enveloppe de la gélule : Hypromellose (HPMC) » ; pictogrammes de l'étiquette ; absence de section allergènes sur la fiche fabricant"
+    },
+    {
+     "q": "Où ce complément est-il fabriqué et selon quelles normes ?",
+     "a": "L'étiquette du flacon porte la mention « FABRIQUÉ AU ROYAUME-UNI ». Le fabricant indique par ailleurs que le produit est « élaboré selon les normes européennes BPF et HACCP pour les compléments alimentaires » et présente une « Formule végane élaborée selon les normes BPF ».",
+     "grounded_in": "Étiquette du produit visible sur protein.tn (« FABRIQUÉ AU ROYAUME-UNI ») ; weightworld.fr : « Contrôle qualité : Produit élaboré selon les normes européennes BPF et HACCP pour les compléments alimentaires »"
+    },
+    {
+     "q": "Y a-t-il des précautions à connaître avant d'acheter ?",
+     "a": "Oui, telles que publiées par le fabricant : ce produit n'est pas destiné aux moins de 18 ans ; il ne doit pas se substituer à une alimentation variée et équilibrée ni à un mode de vie sain ; il convient de prendre l'avis d'un médecin avant utilisation en cas de grossesse, d'allaitement, de prise d'un médicament ou de surveillance médicale, et de cesser toute utilisation et consulter un médecin en cas d'effets secondaires. Conservation : dans un endroit frais et sec, hors de portée des enfants.",
+     "grounded_in": "Section « Précautions » et « Conseils de conservation » de weightworld.fr, reprises à l'identique sur weightworld.uk (« Advice » / « Storage »)"
+    }
+   ],
+   "verification": "VERDICT: research CONFIRMED on all four checks. I tried hard to break it and could not. Nothing factual was rejected; my two \"dropped\" items are compliance strips of accurate content, not error corrections.\n\n1) NUTRITION — VERIFIED. I fetched nutrition.source_url (weightworld.fr) myself: a real product page for this exact item, titled \"Glycinate de Magnésium (Bisglycinate) + B6 1422 mg - 180 gélules\" — not a search or category page. I checked all three rows, not one, and they match exactly: Magnesium Glycinate 1420 mg (no %), élémentaire 200 mg / 53 %, B6 2 mg / 142 %; Dose journalière 2 gélules; Doses par boîte 90; Autres ingrédients HPMC; no allergen statement. I then cross-checked the UK page independently — it reproduces the panel figure-for-figure in English. I also re-derived the percentages against EU NRVs (375 mg Mg, 1.4 mg B6) and got 53 % and 142 %. No row disagrees.\n\n2) PACK SIZE — VERIFIED, and this was the real risk. protein.tn publishes NO panel and NO format: I confirmed nutrition_values, nutrition_facts, faq, sku, gtin, mpn are all null in the payload, \"qte\":90 is a stock level (other products on the same page carry qte 17/100/57), and the string \"180 gélules\" appears NOWHERE in the HTML. So pack size rests entirely on the label image — I downloaded https://admin.protein.tn/storage/produits/oGWKcZXdfbcaJ6SxbL2X9TzwSCqsL2gmBDMFfEYy.webp (the page's own og:image) and read it with my own eyes: \"GLYCINATE DE MAGNÉSIUM (BISGLYCINATE) / AVEC VITAMINE B6 / 1422mg PAR PORTION / 180 GÉLULES / 3 MOIS D'APPROVISIONNEMENT / FABRIQUÉ AU ROYAUME-UNI / Sans OGM / Vegan / Sans Stéarate de Magnésium\". That matches the FR page's own \"180 gélules pour 3 mois d'utilisation\" (verified verbatim) and 2x90=180. The same-brand-wrong-size trap was correctly avoided: the US weightworld.com \"Magnesium Glycinate 500mg 180 Capsules\" also has 180 capsules but a different panel, and it was excluded.\n\n3) FAQ — ALL SIX SURVIVE. Every answer traces to a fact I verified myself. None contains a health claim (the EFSA claims were deliberately kept out and left in nutrition.claims). None issues a dosage instruction: FAQ 0 and 1 mention \"2 gélules\" only as the nutrition table's reference serving (\"la portion de référence\", \"une dose de 2 gélules apporte\"), which is descriptive and unavoidable for reading the panel — neither tells the customer what to take. FAQ 3 is exemplary: it states outright that allergens cannot be confirmed rather than importing third-party \"gluten free\" text. FAQ 4's two claims are precisely attributed — \"FABRIQUÉ AU ROYAUME-UNI\" to the label (correct; I verified the manufacturer page does NOT state a country of manufacture) and BPF/HACCP to weightworld.fr, which I confirmed verbatim: \"Contrôle qualité : Produit élaboré selon les normes européennes BPF et HACCP pour les compléments alimentaires.\"\n\n4) VIDEO — OK, brand-owned, proven bidirectionally. ytInitialPlayerResponse gives channelId UCvNzwO2IebamOFBMInBRzmA, ownerChannelName \"WeightWorld UK\", canonicalBaseUrl /@weightworld_uk; the weightworld.uk homepage links out to youtube.com/@weightworld_uk. Same channel both directions, so not a reviewer upload. Caveat to carry forward: the video is a general brand piece on magnesium glycinate, shows no panel and cites no figures — it sourced zero data, so it is decorative only.\n\nINFRASTRUCTURE WARNING (unrelated to the research, but do not ship without reading): my FIRST curl of the product URL returned HTTP 200 with a COMPLETELY DIFFERENT PRODUCT — \"<title>100% WHEY PROTEIN 2.27KG - CHALLENGER NUTRITION</title>\", with zero occurrences of \"bisglycinate\". The immediate retry returned the correct magnesium page. Response headers show cf-cache-status: EXPIRED, x-nextjs-cache: STALE, and Vary: rsc, next-router-state-tree, ... — i.e. Cloudflare is keying/serving cache across a Vary header set it ignores, so this URL can serve another product's page to a real user or crawler. This matches the known cloudflare-vary-is-ignored and build-403 issues. Verification of the product data is unaffected (I confirmed against the manufacturer and the label image), but publishing enriched content onto a URL that intermittently serves someone else's product is worth escalating separately.\n\nFiles: label image saved at C:\\Users\\kouss\\AppData\\Local\\Temp\\claude\\c--Users-kouss-OneDrive-Desktop-work-seo\\ecc7e21e-36cc-4b97-b9fd-3ce7d9cffd50\\scratchpad\\label.png; page captures pt.html (bad cached fetch) and pt2.html (correct) in the same directory.",
+   "problems": [
+    "No figure disagrees. All three rows independently confirmed on BOTH manufacturer pages (FR source_url and UK), digit for digit: Magnesium Glycinate 1420 mg (no %, matching the 'VNR non établie' note); élémentaire 200 mg / 53 %; Vitamine B6 (pyridoxine HCl) 2 mg / 142 %. Serving 2 gélules, 90 doses/boîte, HPMC capsule shell, zero allergen declaration — all confirmed on both.",
+    "Internal arithmetic independently re-derived and consistent: 200/375 mg EU NRV = 53.3 % -> 53 correct; 2/1.4 mg EU NRV = 142.8 % -> 142 correct; percent_basis 'eu' is right. 2 gélules x 90 doses = 180 = net_quantity, consistent with the label. 1420 + 2 = 1422, which resolves the label-vs-table gap FAQ 2 addresses.",
+    "serving_note embeds a prescriptive posology (see dropped[0]) — verbatim-correct but should not ship as site advice.",
+    "nutrition.claims is a large EFSA health-claim block (see dropped[1]) — accurate, attributed, but high-risk as rendered page copy.",
+    "allergens correctly left EMPTY. I confirmed no allergen statement exists on either manufacturer page. Third-party listings (Amazon ASIN B0CKFHG8NQ) do say 'Gluten Free'/'Non-GMO' — the research correctly refused to import these, and FAQ 3 correctly states the absence cannot be confirmed. Do not let anyone 'fill in' this field later.",
+    "gtin correctly left EMPTY rather than guessed. Note the shared ASIN B0CKFHG8NQ exists but an ASIN is not a GTIN — do not backfill it.",
+    "Minor schema nit: servings_per_container is the string \"90\" while sibling numerics (serving_quantity, net_quantity) are numbers."
+   ]
+  },
+  {
+   "slug": "anabolic-whey-80-2-25kg-proactive",
+   "product_name": "ANABOLIC WHEY 80 2.25kg - ProActive",
+   "brand": "ProActive",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/whey-proteine/anabolic-whey-80-2-25kg-proactive",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://protein-shop-tunisia.tn/produit/anabolic-whey-80-2-25kg-proactive/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.housenutrition.tn/product/proactive-anabolic-whey-80-225kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://muscle-nutrition.com/products/anabolic-whey-80-shaker-700ml",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.muscle-stock.com/product/proactive-anabolic-whey-80-225kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://nutribeast.tn/whey/anabolic-whey-80-proactive-225kg.html",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": null,
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel est le format exact vendu et combien de doses contient le pot ?",
+     "a": "Le pot est un format de 2,25 kg (2250 g). L'étiquette avant du fabricant porte la mention « 64 SERVINGS 2250 g ». Sur protein.tn, la référence est proposée en arôme Double chocolat.",
+     "grounded_in": "Étiquette avant du pot ProActive Anabolic Whey 80 (image produit nutribeast.tn) portant « 64 SERVINGS 2250 g » ; fiche produit protein.tn indiquant le format 2,25 kg et l'arôme Double chocolat"
+    },
+    {
+     "q": "ANABOLIC WHEY 80 contient-il réellement de la créatine ?",
+     "a": "Oui. L'étiquette du pot porte la mention « WITH CREATINE » et la liste d'ingrédients publiée par les revendeurs cite la créatine monohydrate. Plusieurs revendeurs annoncent 5 g de créatine monohydrate par dose, mais aucun tableau nutritionnel officiel du fabricant ne confirme cette quantité : nous ne la présentons donc pas comme une valeur vérifiée.",
+     "grounded_in": "Étiquette avant « ANABOLIC WHEY 80 WITH CREATINE » ; liste d'ingrédients publiée sur protein-shop-tunisia.tn citant « créatine monohydrate » ; mention « 5 g de créatine monohydrate par dose » présente sur housenutrition.tn et protein-shop-tunisia.tn (texte commercial, non issu d'un tableau nutritionnel)"
+    },
+    {
+     "q": "Quels allergènes figurent dans la liste d'ingrédients ?",
+     "a": "La liste d'ingrédients publiée mentionne : « Mélange de protéines (concentré de protéine de lactosérum [lait], hydrolysat de protéine de blé, isolat de protéine de soja, protéine de lait) » ainsi que de la lécithine de soja. Elle comporte donc du lait, du blé (gluten) et du soja. Attention : cette liste correspond à une version aromatisée « cookies » ; pour l'arôme Double chocolat, l'étiquette du pot livré fait foi.",
+     "grounded_in": "Liste d'ingrédients intégrale publiée sur protein-shop-tunisia.tn : « Mélange de protéines (concentré de protéine de lactosérum [lait], hydrolysat de protéine de blé, isolat de protéine de soja, protéine de lait), créatine monohydrate, cacao maigre, arôme cookies, acide citrique, vitamine C, vitamines B1 à B12, vitamine E, acide folique, biotine, lécithine de soja, édulcorants : acésulfame-K, sucralose, caramel. »"
+    },
+    {
+     "q": "Un code-barres (EAN) est-il disponible pour cette référence ?",
+     "a": "Non. Aucune des pages consultées, revendeurs comme bases de données, n'imprime de code-barres pour ANABOLIC WHEY 80 2250 g. Le code 5902444705662 que l'on rencontre en ligne appartient à une autre référence ProActive, « Whey Protein 80 », et ne doit pas être associé à ce produit.",
+     "grounded_in": "Absence de code-barres sur l'ensemble des pages lues pour ANABOLIC WHEY 80 ; Open Food Facts attribue le code 5902444705662 à « Whey Protein 80 – ProActive »"
+    }
+   ],
+   "verification": "Verdict: identity and pack size CONFIRMED, nutrition correctly ABSENT, 4 of 6 FAQ entries survive, no video.\n\nWhat I confirmed with my own eyes. protein.tn 403s WebFetch, so I fetched it with curl and a browser UA (HTTP 200, 218 KB). Its JSON-LD gives name \"ANABOLIC WHEY 80 2.25kg - ProActive\", sku 68, brand PROACTIVE, 259 TND, InStock; the body titles it \"ANABOLIC WHEY 80 WITH CREATINE - ProActive 2,25 kg\" and says \"2,25 kg pour 64 servings\"; the embedded payload shows one flavour, \"Double chocolat\" (aroma id 11), and gtin:null. Every identity claim in the research checks out.\n\nPack size is clean — the error the brief warned about is not present. 2250 g is agreed by five independent sources. The only wrinkle is cosmetic: the muscle-nutrition.com source URL slug says \"shaker-700ml\" while the page actually sells 2250 g with no shaker. Relabel the source, do not distrust the size.\n\nThe trap is real and the research caught it correctly. I queried the Open Food Facts API directly for barcode 5902444705662: it returns product_name \"Whey Protein 80\", brand ProActive — a different reference — with 379 kcal, 3.7 g fat, 8.1 g carbs, 78 g protein per 100 g. Four rows out of four match the panel circulating on Tunisian retailer pages. Publishing it here would have put a wrong protein figure on a live supplement page. I also verified no reachable source publishes any panel for this reference, so omitting nutrition is the right call, and verified_nutrition is false in the sense that there is no verified panel to publish — not because a submitted panel failed.\n\nWhere I overruled the research. I dropped FAQ[3] even though its reasoning is sound, because it reprints \"379 kcal et 78 g de proteines pour 100 g\" on this product's page in order to disavow them. A disclaimer does not stop a scraper, an AI overview, or a skimming customer from lifting 78 g. Rewrite it to explain the absence without restating a single number. I dropped FAQ[4] because its claims rest on realpharm.eu, which I confirmed is genuinely unreachable (curl exit 28, HTTP 000) — and its \"toutes deux vendues en 2250 g\" is contradicted by the one listing I could reach, an Amazon.de entry for Whey Protein 80 in 700 g.\n\nVideo: no video was proposed, and I found no ProActive brand YouTube channel or official upload — only retailer Instagram posts. video_ok is false meaning nothing verified to embed; embed nothing.\n\nOne thing the research did not look at, and you should. The live page already carries \"Chaque portion apporte 25 g de proteines\" — unsourced, and in conflict with the 23.4 g retailers state. It also carries health claims and post-workout dosage timing in the body copy. The incoming FAQ block is clean on all three counts, but the page around it is not, and that unsourced 25 g is exactly the kind of figure a customer acts on.\n\nFull evidence trail: C:\\Users\\kouss\\AppData\\Local\\Temp\\claude\\c--Users-kouss-OneDrive-Desktop-work-seo\\ecc7e21e-36cc-4b97-b9fd-3ce7d9cffd50\\scratchpad\\verify-trail.txt",
+   "problems": [
+    "No nutrition object was submitted, so there was no nutrition.source_url to fetch. I independently confirmed the omission is correct: not one reachable source publishes a panel for this reference — protein.tn (string 'kcal' appears 0 times in the HTML; 'Valeurs nutritionnelles' exists only as a tab LABEL, and the page's own data carries nutrition_images:null), protein-shop-tunisia.tn, housenutrition.tn, muscle-stock.com and muscle-nutrition.com all have none. Publish no table.",
+    "TRAP CONFIRMED, DO NOT PUBLISH: Open Food Facts barcode 5902444705662 resolves to product_name 'Whey Protein 80', brand ProActive — a DIFFERENT reference — carrying energy-kcal_100g 379, fat_100g 3.7, carbohydrates_100g 8.1, proteins_100g 78. All four rows match the circulating panel exactly. The research's arithmetic refutation also holds: 23.4 g protein + 5 g creatine + 2.4 g carbs + 1.1 g fat = 31.9 g in a 30 g serving, which is impossible, and 23.4 g is exactly 78% of 30 g (a straight rescale of the creatine-free 78% whey).",
+    "The research notes cite saturates 2,1 g, sugars 5,4 g and salt 1,4 g as part of the circulating panel. Those three values are NOT in the Open Food Facts record (it carries only energy, fat, carbohydrates and protein). They are unsourced in the research too. Harmless while nutrition stays omitted, but do not treat them as traced.",
+    "PACK SIZE CLEARED — no same-brand different-size error. 2250 g / 2.25 kg is agreed by protein.tn (JSON-LD name plus body 'Le format annonce 2,25 kg pour 64 servings'), protein-shop-tunisia.tn, housenutrition.tn and muscle-stock.com. One source needs relabelling: the muscle-nutrition.com URL slug reads 'anabolic-whey-80-shaker-700ml', but the page actually sells 'ANABOLIC WHEY 80 avec Creatine - 2250 g' with no shaker bundled. The slug is misleading, the size is not.",
+    "PRE-EXISTING DEFECT ON THE LIVE PAGE, outside this research but urgent: the body copy states 'Chaque portion apporte 25 g de proteines'. No source supports 25 g — retailers say 23.4 g, and the manufacturer publishes nothing. This is an unsourced protein figure already live on a supplement page, the precise thing a customer acts on. It should be removed regardless of what this research ships.",
+    "PRE-EXISTING DEFECT ON THE LIVE PAGE: the body copy carries health claims ('soutenir la construction musculaire et le maintien de la masse maigre', 'soutenir la puissance, la force') and dosage/timing instruction ('L'usage le plus logique est apres l'entrainement... Une seconde prise peut se placer en collation'). The incoming FAQ block is clean on both counts, but the surrounding copy is not.",
+    "FLAG on surviving FAQ[2] (allergens), the highest-risk survivor: I verified its ingredient list verbatim on protein-shop-tunisia.tn, but that list is for the 'arome cookies' variant while protein.tn sells only 'Double chocolat' (aroma id 11), and muscle-nutrition lists Caramel / Chocolat Dubai / Vanille Amande. The FAQ does disclose the mismatch and defers to the delivered pot's label, and it declares allergens present (milk, wheat/gluten, soy) rather than declaring any absent, which is the safe direction. Keep the caveat sentence intact if this ships — it is what makes the entry publishable."
+   ]
+  },
+  {
+   "slug": "serious-mass-5-45-kg-optimum-nutrition",
+   "product_name": "SERIOUS MASS 5,45 KG - OPTIMUM NUTRITION",
+   "brand": "Optimum Nutrition",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/mass-gainers/serious-mass-5-45-kg-optimum-nutrition",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.optimumnutrition.com/en-ie/Products/Weight-Gainers/Serious-Mass/p/serious-mass",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.optimumnutrition.com/en-us/products/serious-mass-weight-gainer-protein-powder",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/5060245600453",
+     "kind": "database"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.optimumnutrition.com/en-ie/Products/Weight-Gainers/Serious-Mass/p/serious-mass",
+    "percent_basis": "eu",
+    "serving_quantity": 336,
+    "serving_unit": "g",
+    "serving_note": "Per-serving column is headed \"2 scoops (336 g)\". The same table also prints a \"per 100 g\" column, which is NOT transcribed here. Footnote: \"* Reference intake of an average adult (8400 kJ / 2000 kcal)\".",
+    "servings_per_container": "16 servings",
+    "net_quantity": 5450,
+    "net_unit": "g",
+    "rows": [
+     {
+      "name": "Energy",
+      "kind": "value",
+      "quantity": 5279,
+      "unit": "kJ",
+      "depth": 0
+     },
+     {
+      "name": "Energy",
+      "kind": "value",
+      "quantity": 1262,
+      "unit": "kcal",
+      "depth": 0
+     },
+     {
+      "name": "Fat",
+      "kind": "value",
+      "quantity": 7,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "of which saturates",
+      "kind": "value",
+      "quantity": 3.9,
+      "unit": "g",
+      "depth": 1
+     },
+     {
+      "name": "Carbohydrates",
+      "kind": "value",
+      "quantity": 248,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "of which sugars",
+      "kind": "value",
+      "quantity": 11,
+      "unit": "g",
+      "depth": 1
+     },
+     {
+      "name": "Fiber",
+      "kind": "undeclared",
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "Protein",
+      "kind": "value",
+      "quantity": 50,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "Salt",
+      "kind": "value",
+      "quantity": 1.17,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "Vitamin A",
+      "kind": "value",
+      "quantity": 667,
+      "unit": "µg",
+      "percent_dv": 83,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin D",
+      "kind": "value",
+      "quantity": 4.2,
+      "unit": "µg",
+      "percent_dv": 84,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin E",
+      "kind": "value",
+      "quantity": 9,
+      "unit": "mg",
+      "percent_dv": 75,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin K",
+      "kind": "value",
+      "quantity": 75,
+      "unit": "µg",
+      "percent_dv": 100,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin C",
+      "kind": "value",
+      "quantity": 63,
+      "unit": "mg",
+      "percent_dv": 79,
+      "depth": 0
+     },
+     {
+      "name": "Thiamin",
+      "kind": "value",
+      "quantity": 0.93,
+      "unit": "mg",
+      "percent_dv": 84,
+      "depth": 0
+     },
+     {
+      "name": "Riboflavin",
+      "kind": "value",
+      "quantity": 1.2,
+      "unit": "mg",
+      "percent_dv": 84,
+      "depth": 0
+     },
+     {
+      "name": "Niacin",
+      "kind": "value",
+      "quantity": 14,
+      "unit": "mg",
+      "percent_dv": 85,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin B6",
+      "kind": "value",
+      "quantity": 1.1,
+      "unit": "mg",
+      "percent_dv": 82,
+      "depth": 0
+     },
+     {
+      "name": "Folic acid",
+      "kind": "value",
+      "quantity": 152,
+      "unit": "µg",
+      "percent_dv": 76,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin B12",
+      "kind": "value",
+      "quantity": 1.9,
+      "unit": "µg",
+      "percent_dv": 75,
+      "depth": 0
+     },
+     {
+      "name": "Biotin",
+      "kind": "value",
+      "quantity": 40,
+      "unit": "µg",
+      "percent_dv": 79,
+      "depth": 0
+     },
+     {
+      "name": "Pantothenic acid",
+      "kind": "value",
+      "quantity": 4.6,
+      "unit": "mg",
+      "percent_dv": 77,
+      "depth": 0
+     },
+     {
+      "name": "Calcium",
+      "kind": "value",
+      "quantity": 667,
+      "unit": "mg",
+      "percent_dv": 83,
+      "depth": 0
+     },
+     {
+      "name": "Phosphorus",
+      "kind": "value",
+      "quantity": 524,
+      "unit": "mg",
+      "percent_dv": 75,
+      "depth": 0
+     },
+     {
+      "name": "Magnesium",
+      "kind": "value",
+      "quantity": 281,
+      "unit": "mg",
+      "percent_dv": 75,
+      "depth": 0
+     },
+     {
+      "name": "Iron",
+      "kind": "value",
+      "quantity": 18,
+      "unit": "mg",
+      "percent_dv": 127,
+      "depth": 0
+     },
+     {
+      "name": "Zinc",
+      "kind": "value",
+      "quantity": 11,
+      "unit": "mg",
+      "percent_dv": 106,
+      "depth": 0
+     },
+     {
+      "name": "Copper",
+      "kind": "value",
+      "quantity": 1.3,
+      "unit": "mg",
+      "percent_dv": 134,
+      "depth": 0
+     },
+     {
+      "name": "Manganese",
+      "kind": "value",
+      "quantity": 2,
+      "unit": "mg",
+      "percent_dv": 100,
+      "depth": 0
+     },
+     {
+      "name": "Fluoride",
+      "kind": "value",
+      "quantity": 2.9,
+      "unit": "mg",
+      "percent_dv": 84,
+      "depth": 0
+     },
+     {
+      "name": "Selenium",
+      "kind": "value",
+      "quantity": 55,
+      "unit": "µg",
+      "percent_dv": 101,
+      "depth": 0
+     },
+     {
+      "name": "Chromium",
+      "kind": "value",
+      "quantity": 39,
+      "unit": "µg",
+      "percent_dv": 97,
+      "depth": 0
+     },
+     {
+      "name": "Molybdenum",
+      "kind": "value",
+      "quantity": 48,
+      "unit": "µg",
+      "percent_dv": 97,
+      "depth": 0
+     },
+     {
+      "name": "Iodine",
+      "kind": "value",
+      "quantity": 150,
+      "unit": "µg",
+      "percent_dv": 100,
+      "depth": 0
+     },
+     {
+      "name": "Creatine",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "g",
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "corn maltodextrin, whey protein concentrate (milk), emulsifier (lecithins (contains soy)), fat reduced cocoa powder, creatine monohydrate, Flavoring, milk mineral complex, minerals (magnesium, iron, zinc, manganese, fluoride, selenium, iodine (from kelp), copper, molybdenum, chromium), vitamins (vitamin C, vitamin E, vitamin B3, vitamin A, pantothenic acid (calcium D-pantothenate (vit. B5)), D-biotin, vitamin B12, folic acid, vitamin D, vitamin B6, vitamin B1, vitamin K, vitamin B2), salt, stabilisers (cellulose gum, guar gum, carrageenan), sweetener (sucralose)",
+    "allergens": "Allergen containment: SEE INGREDIENTS — the ingredient list declares milk (whey protein concentrate) and soy (lecithins). May contain: gluten, egg, nuts, peanuts.",
+    "warnings": "\"This food supplement is not suitable for children younger than 18 years old.\" Storage: \"After opening close tightly. Store in a cool and dark place. For batch code/best before end: see packaging.\" Food supplement statement: \"This product should be used as part of a varied and balanced diet and a healthy lifestyle.\"",
+    "claims": "Legal name printed by the manufacturer: \"Ready to mix powder with proteins, carbohydrates, vitamins and minerals, with sweetener.\" Manufacturer marketing bullets on the same page: \"Provides over 1,250 kcal per serving to fuel your goals.\" and \"Contains 50g of high-quality whey protein and 251g of carbohydrates per serving—formulated to support your nutritional strategy around training and overall energy intake.\" NOTE: these marketing figures (1,250 kcal / 251 g carbs) do not match the panel transcribed above (1262 kcal / 248 g); the panel is the authoritative figure."
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel est le contenu net du sac et combien de portions contient-il ?",
+     "a": "Optimum Nutrition indique pour ce format un contenu net de 5450 g ℮ et « 16 servings » (16 portions). Le tableau nutritionnel est établi sur une portion de référence de 2 doses, soit 336 g.",
+     "grounded_in": "optimumnutrition.com en-ie — variantLabelData : netContent \"5450 grams ℮\", numberOfServings \"16 servings\" ; en-tête du tableau : \"2 scoops (336 g)\""
+    },
+    {
+     "q": "À quelle référence correspondent les pourcentages du tableau ?",
+     "a": "Ce sont des apports de référence européens. La note de bas de tableau du fabricant précise : « * Reference intake of an average adult (8400 kJ / 2000 kcal) ». Il ne s'agit donc pas de %DV américains.",
+     "grounded_in": "optimumnutrition.com en-ie — note \"* Reference intake of an average adult (8400 kJ / 2000 kcal)\""
+    },
+    {
+     "q": "Quel arôme est proposé sur protein.tn, et ce tableau correspond-il exactement à ce sac ?",
+     "a": "La fiche protein.tn affiche l'arôme « Double chocolat » pour le format 5,45 kg. Le tableau transcrit ici est celui publié par Optimum Nutrition pour l'arôme « Chocolate Flavor » au format 5450 g. Attention : la photo utilisée sur la fiche protein.tn montre un sac Strawberry portant les mentions 1 250 calories et 252 g de glucides, c'est-à-dire une version antérieure de la formule. Les chiffres doivent donc être vérifiés sur le sac effectivement reçu.",
+     "grounded_in": "protein.tn (sélecteur « Arôme : Double chocolat » ; visuel produit Strawberry 5.45 kg / 12 LB / 16 SERVINGS) + optimumnutrition.com en-ie (bloc \"Chocolate Flavor\", netContent 5450 grams)"
+    }
+   ],
+   "verification": "VERDICT: the numbers are real, but they are the wrong generation's numbers for this bag. Publish only the hedged subset.\n\nNUTRITION - VERIFIED AS A TRANSCRIPTION (verified_nutrition: true). I fetched the source, found the embedded label JSON, and checked all 34 rows, not a sample. Every one matches byte-for-byte allowing decimal-comma to decimal-point: Energy \"5279 kJ/1262 kcal\", Fat \"7,0 g\", saturates \"3,9 g\", Carbohydrates \"248 g\", sugars \"11 g\", Fibre literally \"- g\" (correctly rendered as undeclared), Protein \"50 g\", Salt \"1,17 g\", and all 26 compositionTable rows including Iron \"18 mg (127%)*\", Copper \"1,3 mg (134%)*\", Iodine \"150 µg (100%)*\", Creatine \"3,0 g\". Column heading \"2 scoops (336 g)\" confirmed; the untranscribed \"100 g\" column confirmed to exist. The footnote \"* Reference intake of an average adult (8400 kJ / 2000 kcal)\" is real (emitted when showReferenceIntake is true, which it is for the compositionTable) - percent_basis \"eu\" is correct. Ingredients, mayContainAllergens [gluten, egg, nuts, peanuts], allergenContainment SEE_INGREDIENTS, labelWarnings, storageAdvice and legalName all verbatim. Zero fabrication; the researcher's transcription discipline was excellent.\n\nPACK SIZE - MATCHES. Manufacturer has \"Serious Mass Weight Gainer Protein Powder - Chocolate / 5.45 kg (16 servings)\" and the Chocolate record's variantLabelData carries 1101529 and 1151655, both \"5450 grams ℮\" / \"16 servings\". protein.tn's title, canonical and product photo all read 5,45 kg / 12 LB / 16 SERVINGS. No same-brand-wrong-size error here. The consistency check holds too: 16 x 336 g = 5376 g, close to the 5450 g net.\n\nTHE ACTUAL DEFECT - FORMULA GENERATION. The panel is ON's 2024 reformulation (the source record is titled \"...Chocolate Flavor - Reformulation\"). Three independent signals say protein.tn is selling the older bag: its own product image prints 1,250 CALORIES / 252g CARBS; its own French copy sells the product on \"caseine\", \"proteines d'oeuf\" and \"glutamine\", none of which exist in the current formula; and OFF 5060245600453 for this exact 5.45 kg chocolate bag returns 1260 kcal / 252 g carbs with L-Glutamine and Glutamine Peptides. The research flagged this itself and was right to - I am upholding its caveat as a blocker, not a footnote.\n\nFAQ - 3 of 6 SURVIVE: [0, 4, 5]. Kept: 0 (net content / servings - independently corroborated by the physical bag photo, and stable across both generations), 4 (explains the EU reference-intake basis - pure meta, no variant-dependent number), 5 (the flavour/photo mismatch disclaimer - I verified every assertion in it, including that the photo is a Strawberry bag printing 1,250 cal and 252 g carbs). Dropped 1, 2, 3 - see dropped[]. FAQ[2] is the serious one: it downgrades egg from a probable declared ingredient to a \"may contain\" trace, on a page whose own description says the product contains egg protein. No surviving entry carries a dosage instruction or a health claim; the recommendedUsage sentence (\"Add two heapings scoops... 710 ml of water\") was correctly excluded throughout.\n\nVIDEO - CORRECTLY OMITTED (video_ok: true). I re-ran oEmbed on all five candidates and every one is a third-party uploader, exactly as reported: monstersupplements, Buyer's Edge, BroScience Bodybuilding, Jonathan Cantley, Weight Gain Network. No ON brand-channel video exists for this product and none is being published, so there is nothing to reject.\n\nSEPARATE ESCALATION: I reproduced the wrong-content-served bug and it is broader than reported - a cache-busted request to this product URL returned the ANABOLIC WHEY 80 2.25kg - ProActive page with that product's title and canonical, a different wrong product than the researcher hit. Six retries were needed to get the right page. Canonicals and Product JSON-LD are being served for the wrong products at real URLs.\n\nRECOMMENDATION: do not publish the nutrition panel as this product's panel until someone photographs a bag from protein.tn's actual stock. If the panel must ship now, ship it attributed and hedged exactly as FAQ[5] does, drop the allergen FAQ entirely, and fix the Strawberry photo on a chocolate listing regardless.",
+   "problems": [
+    "NOT A TRANSCRIPTION ERROR - A PROVENANCE ERROR. All 34 rows are verbatim-correct against the manufacturer source, but the panel describes ON's 2024 reformulation while every signal on protein.tn points at the pre-reformulation bag. Confirmed independently by me: (a) protein.tn's product image (https://admin.protein.tn/storage/produits/February2026/ZM8A9ZkKwfpYgqKRpsO3.webp) is an old-style bag reading 'STRAWBERRY FLAVOR / NET WT 5.45 kg (12 LB) / 16 SERVINGS / 1,250 CALORIES / 50g PROTEIN / 252g CARBS'; (b) protein.tn's own French copy lists 'caseine', 'proteines d'oeuf' and 'glutamine', none of which appear in the current panel; (c) OFF 5060245600453 for the 5.45 kg chocolate bag returns 1260 kcal / 252 g carbs with Choline Bitartrate, L-Glutamine and Glutamine Peptides in the ingredients. The source record is even literally titled 'Optimum Nutrition - Serious Mass - Chocolate Flavor - Reformulation'. Do not publish the panel as this bag's panel without a photo of a physical bag from protein.tn's stock.",
+    "ALLERGEN DELTA IS THE REAL HAZARD. The two formula generations differ in allergen class, not just numbers: current = whey protein concentrate only, with egg as 'may contain'. Pre-reformulation = whey + calcium caseinate + EGG ALBUMIN, i.e. egg as a declared ingredient. Publishing the current allergen statement against the old bag understates egg from an ingredient to a trace. This is the single highest-consequence error in the payload.",
+    "CITED URL REDIRECTS. nutrition.source_url (https://www.optimumnutrition.com/en-ie/Products/Weight-Gainers/Serious-Mass/p/serious-mass) 301s to https://www.optimumnutrition.com/products/serious-mass-weight-gainer-protein-powder-eu. It resolves 200 and carries the data, but store the resolved URL as the citation so the reference does not rot.",
+    "PANEL IS PER-FLAVOUR, NOT PER-PACK. The nutrientFacts/compositionTable block sits on the flavour record, and variantLabelData is an ARRAY covering four pack sizes (1101537=2727 g/8 servings, 1101529=5450 grams/16 servings, 1157561=2730 grams/8 servings, 1151655=5450 grams/16 servings). The 5450 g / 16 servings variants ARE in the Chocolate record, so the pack-size attribution is legitimate - but the numbers are per-100g/per-serving and shared across sizes, so they are not evidence about any one bag's generation. The research's phrasing ('I transcribed the block whose variantLabelData is netContent 5450 grams') slightly overstates how pack-specific the table is.",
+    "FLAVOUR/IMAGE MISMATCH ON THE LIVE PAGE (merchandising bug, fix regardless). Selector says 'Double chocolat'; the product photo is a Strawberry bag. ON EU's Serious Mass flavour list is Banana, Chocolate, Chocolate Peanut Butter, Cookies & Cream, Strawberry, Vanilla - no 'Double Rich Chocolate' (I confirmed the 'Double Rich Chocolate' variant titles present in that page belong to Gold Standard 100% Whey, not Serious Mass). So 'Double chocolat' is the retailer's rendering of the Chocolate SKU, still unconfirmed on any source page.",
+    "US PAGE MUST STAY OUT (research already excluded it - keep it that way). Verified verbatim: 'up to 1260 calories, 50g of protein, up to 253g of carbohydrates, and 5g of creatine monohydrate in every serving', and its only Supplement Facts asset is US_Serious_Mass_6lb_Banana_NFP.jpg - a 6 lb panel, wrong pack size entirely.",
+    "LIVE WRONG-CONTENT BUG REPRODUCED AND WORSE THAN REPORTED. A cache-busted GET of https://protein.tn/mass-gainers/serious-mass-5-45-kg-optimum-nutrition returned the 'ANABOLIC WHEY 80 2.25kg - ProActive' page - wrong <title> AND wrong rel=canonical (https://protein.tn/whey-proteine/anabolic-whey-80-2-25kg-proactive). The research saw the Gold Standard 2.27KG page at the same URL. Two different wrong products means this is not a one-off; the URL serves arbitrary other products' fully-rendered pages. Six no-cache retries were needed before the correct page came back. Escalate separately - this poisons canonicals and Product JSON-LD site-wide."
+   ]
+  },
+  {
+   "slug": "100-creatine-monohydrate-300g-biotech-usa",
+   "product_name": "100% Creatine Monohydrate - 300 g unflavoured",
+   "brand": "BioTechUSA",
+   "gtin": "5999076227426",
+   "sources": [
+    {
+     "url": "https://shop.biotechusa.com/products/100-micronized-creatine-monohydrate-300-g-unflavoured",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://supplementschester.co.uk/products/biotechusa-100-creatine-monohydrate-300g/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://gigasnutrition.com/en/products/100-creatine-monohydrate-300g-biotech-usa",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://nisupplements.com/products/biotechusa-micronised-creatine-monohydrate",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/5999076227426/100-creatine-monohydrate-biotechusa",
+     "kind": "database"
+    },
+    {
+     "url": "https://protein.tn/creatine/100-creatine-monohydrate-300g-biotech-usa",
+     "kind": "other"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://shop.biotechusa.com/products/100-micronized-creatine-monohydrate-300-g-unflavoured",
+    "serving_quantity": 3.4,
+    "serving_unit": "g",
+    "serving_note": "Printed on the page as: \"1 serving: 3.4 g | Daily amount: 3.4 g (1 serving) | Servings per container: 88\". Table header column: \"in 1 serving (3.4 g)\". Directions as printed: \"Mix 1 serving (3.4 g = 1 level scoop = 1 teaspoon) product in 300 ml beverage of your choice. Take 1 serving daily. Do not exceed the recommended dosage! Use a shaker bottle.\"",
+    "servings_per_container": "88",
+    "net_quantity": 300,
+    "net_unit": "g",
+    "percent_basis": "",
+    "rows": [
+     {
+      "name": "Micronized creatine monohydrate",
+      "kind": "value",
+      "quantity": 3.4,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "- of which creatine",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     }
+    ],
+    "other_ingredients": "100% micronized creatine monohydrate (200 mesh).",
+    "allergens": "Made in a plant that manufactures milk, egg, gluten, soy, peanuts, nuts, celery, fish, crustacean and sulphur dioxide containing foods.",
+    "warnings": "WARNINGS: Keep out of reach of children. Food supplements do not replace a balanced nutrition and healthy lifestyle. Not for use by individuals with under the age of 18 or those with medical condition. Do not use if pregnant or nursing.",
+    "claims": "\"Micronized creatine monohydrate powder, unflavored.\" Badges printed on the page: \"Aspartame free\", \"Palm oil free\", \"Sugar free\". Brand copy on the same page: \"PURITY: 100% micronised creatine monohydrate, tested pharmaceutical quality, with maximum absorption and guaranteed purity.\""
+   },
+   "video": {
+    "youtube_id": "nUlEsac2I_Y",
+    "title": "100% Creatine Monohydrate",
+    "channel": "BioTechUSA",
+    "official": true,
+    "source_url": "https://www.youtube.com/shorts/nUlEsac2I_Y"
+   },
+   "faq": [
+    {
+     "q": "Quelle est la taille d'une portion et combien de portions contient le pot de 300 g ?",
+     "a": "L'étiquette BioTechUSA indique une portion de 3,4 g et 88 portions par pot de 300 g. Le pot vendu porte d'ailleurs la mention « 300 grams (88 servings) ».",
+     "grounded_in": "Manufacturer page: \"1 serving: 3.4 g | Daily amount: 3.4 g (1 serving) | Servings per container: 88\"; protein.tn product photo shows \"300 grams (88 servings)\" on the tub."
+    },
+    {
+     "q": "Combien de créatine y a-t-il réellement dans une portion ?",
+     "a": "Le tableau du fabricant indique, pour 1 portion (3,4 g) : 3,4 g de créatine monohydrate micronisée, dont 3 g de créatine.",
+     "grounded_in": "Manufacturer Supplement Facts table: \"in 1 serving (3.4 g)\" — Micronized creatine monohydrate 3,4 g; - of which creatine 3 g."
+    },
+    {
+     "q": "Le produit a-t-il un goût, et que contient-il exactement ?",
+     "a": "C'est la version non aromatisée (« unflavoured »). La liste d'ingrédients ne comporte qu'une seule ligne : « 100% micronized creatine monohydrate (200 mesh) ». La fiche du fabricant affiche également les mentions « Aspartame free », « Palm oil free » et « Sugar free ».",
+     "grounded_in": "Manufacturer page ingredients line and product badges; product title \"100% Creatine Monohydrate - 300 g unflavoured\"."
+    },
+    {
+     "q": "Ce produit contient-il des allergènes ?",
+     "a": "La liste d'ingrédients ne contient que de la créatine monohydrate micronisée. L'étiquette porte toutefois une mention de traces : « Made in a plant that manufactures milk, egg, gluten, soy, peanuts, nuts, celery, fish, crustacean and sulphur dioxide containing foods ».",
+     "grounded_in": "Manufacturer page ingredients + allergen statement (identical wording corroborated on supplementschester.co.uk and gigasnutrition.com)."
+    },
+    {
+     "q": "Quel est le code-barres, pour vérifier que je reçois bien ce format ?",
+     "a": "Le code EAN de ce format 300 g non aromatisé est le 5999076227426. Il figure sur la fiche du fabricant et est repris par les revendeurs européens ainsi que par la base Open Food Facts.",
+     "grounded_in": "EAN 5999076227426 present in the manufacturer page data, in the gigasnutrition.com product data (barcode field), and as the Open Food Facts product code."
+    }
+   ],
+   "verification": "VERDICT: nutrition panel CONFIRMED, video CONFIRMED, 5 of 6 FAQ entries survive, 1 dropped.\n\n1. SOURCE PAGE — I fetched https://shop.biotechusa.com/products/100-micronized-creatine-monohydrate-300-g-unflavoured myself (HTTP 200, 638 KB, no cross-host redirect) and stripped the raw HTML to text rather than trusting a summariser. It is a product detail page, not a search or category page, titled \"100% Creatine Monohydrate - 300 g unflavoured\". Every field matches verbatim in the raw markup:\n  - \"1 serving: 3.4 g | Daily amount: 3.4 g (1 serving) | Servings per container: 88\"\n  - \"Supplement Facts in 1 serving (3.4 g)\" / \"Micronized creatine monohydrate 3,4 g\" / \"- of which creatine 3 g\"  (both rows checked, not one)\n  - Ingredients: \"100% micronized creatine monohydrate (200 mesh).\"\n  - Allergens: \"Made in a plant that manufactures milk, egg, gluten, soy, peanuts, nuts, celery, fish, crustacean and sulphur dioxide containing foods.\" — exact, including the gluten/peanuts/celery/fish terms some retailers omit.\n  - Warnings: \"WARNINGS: Keep out of reach of children. Food supplements do not replace a balanced nutrition and healthy lifestyle. Not for use by individuals with under the age of 18 or those with medical condition. Do not use if pregnant or nursing.\"\n  - Badges \"Aspartame free / Palm oil free / Sugar free\" and \"Micronized creatine monohydrate powder, unflavored.\" both present.\n  - Zero hits for NRV / RI / %DV, so percent_basis:\"\" is right.\n  - Arithmetic is self-consistent: 300 / 3.4 = 88.2 -> 88 servings.\n\n2. GTIN — 5999076227426 confirmed three independent ways: <meta itemprop=\"gtin13\" content=\"5999076227426\"> on the manufacturer PDP; the Shopify variant JSON on that same page (\"...unflavoured\",...,\"barcode\":\"5999076227426\"), so the barcode belongs to the unflavoured variant specifically, not a sibling; and the Open Food Facts API for that code, which returns brand BioTechUSA, quantity \"300g/88 servinge\". gigasnutrition.com also carries \"gtin13\": \"5999076227426\" in its JSON-LD.\n\n3. PACK SIZE / VARIANT — this was the real risk and it holds. protein.tn (fetched at the canonical /creatine/ URL with a cache-buster, HTTP 200) sells \"100% CREATINE MONOHYDRATE 300G - BIOTECH USA\", brand BIOTECH USA, 149 DT, Format \"300 g\" in its own comparison table, no flavour selector, and zero occurrences of arôme/saveur/flavour anywhere in the HTML. I downloaded the product photo (admin.protein.tn/.../BYPvuLijQERPKpXrdqwo.webp) and read the label by cropping and upscaling it: black-and-green tub reading \"100% MICRONIZED CREATINE MONOHYDRATE / FOOD SUPPLEMENT / 300 grams (88 servings)\". That is the unflavoured tub, and \"88 servings\" is independently corroborated by the OFF quantity string for the same barcode. The flavoured trap is real — I fetched /100-creatine-monohydrate-300-g and it returns \"Daily amount: 5 g (1 serving) | Servings per container: 60\" with a 68% creatine blend — but the research did not fall into it. The \"Valeurs nutritionnelles\" tab on protein.tn does render empty today, so the gap is genuine.\n\n4. VIDEO — the watch-page HTML I curled was polluted (its ytInitialPlayerResponse carried an unrelated WeightWorld video), so I did not rely on it. YouTube oEmbed for nUlEsac2I_Y is authoritative and returns title \"100% Creatine Monohydrate\", author_name \"BioTechUSA\", author_url https://www.youtube.com/@BiotechusaInternational. The channel page resolves to og:title \"BioTechUSA\", externalId UChcEM42KE0IWEEyRMpc2fiQ, links out to biotechusa.com, and its featured video is \"BioTechUSA x FC Barcelona\" — matching the FC Barcelona partnership advertised on the shop PDP. Brand-owned channel, not a reviewer. Video is public and crawlable.\n\n5. FAQ — 0 through 4 survive. Each is a transcription of label text I read myself (serving/servings, the two panel rows, unflavoured + single-ingredient + badges, the verbatim allergen line, the EAN). None issues a dosage instruction (no \"take X g per day\") and none makes a health claim; they describe what the label declares rather than telling the customer what to do. Index 5 is dropped — see the dropped list for the two reasons.\n\nWorking files: C:\\\\Users\\\\kouss\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-kouss-OneDrive-Desktop-work-seo\\\\ecc7e21e-36cc-4b97-b9fd-3ce7d9cffd50\\\\scratchpad\\\\bt_unflav.html, bt_unflav.txt, bt_flav.html, ptn.html, ptn.txt, ptn_img.png, crop_servings.png, ytch.html, giga.html",
+   "problems": [
+    "No figure disagrees — this is a clean pass, but three caveats. (1) The source URL is a multi-SKU hub: it renders a \"Packaging 7 options\" selector (300 g unflavoured, 500 g unflavoured, 300 g, 1000 g unflavoured, lychee 300 g, Sangria 300 g, yuzu 300 g). The correct panel is only served under the /100-micronized-creatine-monohydrate-300-g-unflavoured slug. Pin this exact URL; a loose re-resolve to /100-creatine-monohydrate-300-g returns 5 g / 60 servings / 68% creatine and would silently replace the panel.",
+    "(2) percent_basis:\"\" is correct and should stay empty — I grepped the rendered page for NRV / RI / %DV and got zero hits. The panel genuinely prints no reference-intake column.",
+    "(3) Page-level contradiction, not a defect in this object: protein.tn's own French description states \"la posologie classique est de 3 à 5 g de créatine par jour\" and \"Avec une prise de 5 g par jour, un pot de 300 g offre environ 60 jours d'utilisation\". Publishing the verified panel (3.4 g serving, 88 servings) directly beside that copy puts two conflicting serving figures on the same page. Fix or remove the store copy in the same change, otherwise the panel looks wrong to the customer.",
+    "(4) I could NOT reproduce the reported /shop/ cache cross-contamination. Both my fetches (canonical /creatine/ path with a cache-buster) returned the correct product at HTTP 200. Treat that warning as unconfirmed rather than resolved."
+   ]
+  },
+  {
+   "slug": "thunder-gainer-5-4kg-challenger-nutrition",
+   "product_name": "THUNDER GAINER 5.4KG - CHALLENGER NUTRITION",
+   "brand": "CHALLENGER NUTRITION",
+   "gtin": "6224009363070",
+   "sources": [
+    {
+     "url": "https://challengernutrition.com/products/thunder-gain",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/gainers-proteines/thunder-gainer-5-4kg-challenger-nutrition",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.maxmuscleelite.com/shop/product/6224009363070-challenger-nutrition-thunder-gain-16serv-5-443g-chocolate-4293",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.housenutrition.tn/product/challenger-nutrition-thunder-gain-challenger-nutrition-54kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://gofit-eg.com/product/challengerthunder-gain",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.amazon.eg/-/en/Challenger-nutrition-thunder-gain-chocolate/dp/B0BGJH18DK",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://musclepumpqa.com/product/challenger-nutrition-thunder-gain/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://myoras.com/products/challenger-nutrition-thunder-gain",
+     "kind": "retailer"
+    }
+   ],
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel format et quelle saveur de Thunder Gain sont vendus sur cette page ?",
+     "a": "Le produit vendu est le sac de 5,4 kg en saveur Chocolat. Chez Challenger Nutrition, ce format correspond a la declinaison « 12 lbs », dont le poids est renseigne a 5 443 g dans les donnees produit du site officiel de la marque (les autres formats de la marque etant 5 lbs, 16 lbs et 22 lbs).",
+     "grounded_in": "Page protein.tn (titre « THUNDER GAINER 5.4KG - CHALLENGER NUTRITION », Arome : Chocolat) + donnees de variantes du site officiel challengernutrition.com (option Size = 5lbs/12lbs/16lbs/22lbs, variante 12lbs weight = 5443)"
+    },
+    {
+     "q": "Ou puis-je trouver les valeurs nutritionnelles officielles de ce format ?",
+     "a": "Aucune des sources consultees ne publie le tableau Supplement Facts du format 5,4 kg. Les chiffres avances par les differents revendeurs pour ce meme format se contredisent : 1 250, 1 275 ou « 1 300+ » calories par portion, et 225 g, 243 g, 255 g ou « 261+ » g de glucides, pour une portion annoncee tantot a 324 g tantot a 334 g. Le seul tableau complet trouve en ligne concerne le pot de 5 lbs (2,267 kg), qui est un format different. Il faut donc se referer uniquement a l'etiquette imprimee sur le sac.",
+     "grounded_in": "Comparaison directe des pages lues : maxmuscleelite (1275 cal / 225 g), housenutrition.tn (1300 cal / 261 g), gofit-eg.com (1250 cal / 334 g / 243 g), photo du sac (1,300+ cal / 261+ g), et musclepumpqa.com dont le tableau complet est explicitement etiquete « Size : 5lbs »"
+    },
+    {
+     "q": "Ou ce produit est-il fabrique ?",
+     "a": "Cela depend de la version. L'avant du sac de la marque porte un ecusson « MANUFACTURED IN USA ». Pour le format 5,4 kg, les revendeurs egyptiens presentent le produit comme « la version internationale fabriquee en Egypte avec une formule nouvelle et amelioree », et la fiche Amazon.eg de la reference Chocolat 5,44 kg indique « Country of origin : Egypt » avec pour fabricant « NATURE'S RULE ».",
+     "grounded_in": "Lecture de la photo officielle du sac (ecusson « MANUFACTURED IN USA ») + description Maxmuscle Elite du 5.443G Chocolat + rubrique « Product details » d'Amazon.eg (B0BGJH18DK)"
+    }
+   ],
+   "verification": "VERDICT: mostly sound research with one fabricated claim that I refuted by reading the source images myself. 3 of 6 FAQ entries survive (indices 0, 2, 3). The emitted top-level gtin must be dropped.\n\nWHAT I CONFIRMED INDEPENDENTLY\nPack identity is right. protein.tn serves HTTP 200 to a browser UA (WebFetch gets 403): title 'THUNDER GAINER 5.4KG - CHALLENGER NUTRITION', brand CHALLENGER NUTRITION, 5,4 kg, aroma Chocolat, product id 440, and critically nutrition_values:null, nutrition_facts:null, faq:[], gtin:null - nothing is published today. The manufacturer's Shopify JSON (challengernutrition.com/products/thunder-gain.js) lists Size 5lbs/12lbs/16lbs/22lbs at 2268/5443/7257/9979 g, so our 5.4 kg pack is unambiguously the 12lbs variant, and all three 12lbs variants carry barcode:null while every other size publishes one.\n\nBoth 'traps' the research claimed to avoid are real, not self-congratulation. I downloaded the manufacturer's SupplementsFacts-16.png and read it: it is an HMB TABLET label (120 servings, 1 Tablet, Calcium 98mg, HMB 750mg, barcode 854530005284) sitting on the Thunder Gain page. And musclepumpqa's complete table is on a page explicitly titled 'Thunder Gain 5lbs', Size 5lbs. Refusing to emit nutrition was the correct call, and I am endorsing that absence as verified rather than merely unfilled.\n\nWHAT I REFUTED\nFAQ index 1 claims the brand's 16 lb bag prints the identical '16 SERVINGS', 'proving' reused artwork and casting doubt on the servings count. False. I mapped each variant to its featured_image and read all three bags: 5 lb tub = 1,250 cal / 244g / ~6.5 servings; 12 lb (ours) = 1,300+ cal / 261+ g / 16 servings; 16 lb = 1,250 cal / 243g / 21 SERVINGS. Front-of-pack artwork is size-specific. The caveat was invented, so the entry is dropped as written - though the '16 servings' fact itself is well supported and the entry is salvageable if the false half is cut.\n\nThis also produced a bonus finding that strengthens the no-nutrition decision: the 1250/243 pair that several retailers attach to our pack actually belongs to the 16 lb bag artwork, and musclepumpqa's '5lbs' table reproduces it - so the single most authoritative-looking table online is mis-labelled at its own source.\n\nI also dropped the GTIN. 6224009363070 never appears in a real barcode field - only as an Odoo internal-reference prefix in Maxmuscle Elite image alt text. It is a valid GS1-Egypt EAN-13, and Amazon.eg B0BGJH18DK independently corroborates a 5.44 kg Chocolate with Country of origin Egypt and manufacturer NATURE'S RULE. But the US 12 lb bag and the Egyptian 5.443G SKU weigh the same 5443 g, our 12 lb bag front reads 'MANUFACTURED IN USA', and no 12lbs variant has a published barcode. Which physical unit sits in the Tunisian warehouse is not determinable from any page. A wrong GTIN is exactly the invisible-once-published error worth refusing.\n\nSURVIVING FAQ (0, 2, 3), each re-verified against primary sources, none containing a dosage instruction or a health claim: index 0 (format/flavour - matches protein.tn and the 5443 g 12lbs variant); index 2 (why no nutrition table exists - every cited contradiction verified verbatim on maxmuscleelite, gofit-eg, housenutrition.tn and musclepumpqa, and it asserts no figure as fact, instead directing to the printed label); index 3 (origin - 'MANUFACTURED IN USA' badge read off the 12 lb bag, Maxmuscle Elite's 'international version manufactured in Egypt with a new and improved formula' verbatim, Amazon.eg origin Egypt / NATURE'S RULE).\n\nVIDEO: nothing was emitted, so nothing improper can publish - video_ok reflects that, not the presence of an approved video. I checked the rejected candidate 53rcyL0MnjQ via YouTube oembed: channel is 'Matt Chambers', a personal account, and the video is 100% Whey Protein, a different product. Correctly omitted; no Challenger Nutrition brand-channel video for Thunder Gain exists.\n\nNOTE ON verified_nutrition:true - this means 'no unverified nutrition numbers are being published', not 'a nutrition panel was validated'. There is no nutrition block in this record and there must not be one until someone photographs the back panel of a physical 5.4 kg Chocolate bag. If the consuming pipeline treats true as permission to render a nutrition table, it will find the object empty.\n\nTO COMPLETE: one warehouse photo of the back panel plus a barcode scan resolves nutrition, ingredients, allergens and GTIN simultaneously.",
+   "problems": [
+    "No nutrition object was emitted and none should be - the absence is CORRECT and I verified it independently rather than taking it on trust.",
+    "Manufacturer's own panel image is a different product: I downloaded cdn.shopify.com/.../SupplementsFacts-16.png (linked from challengernutrition.com/products/thunder-gain) and read it. It is an HMB TABLET label: 'UNFLAVORED / HMB', 120 Servings Per Container, Serving Size 1 Tablet, Calcium 98mg 10%, HMB 750mg, other ingredients Dicalcium Phosphate/Sodium Crosscarmellose/Stearic Acid/Magnesium Stearate, barcode 854530005284. Transcribing it would have published a tablet panel on a mass-gainer page.",
+    "Only complete row-by-row table online (musclepumpqa.com) is for a DIFFERENT PACK. Page title 'Challenger Nutrition Thunder Gain 5lbs', SKU CLNSNT045, field 'Size 5lbs'. Correctly excluded.",
+    "That 5lbs-labelled table (1250 cal / 243g carbs) does not even match the 5 lb tub artwork (1250 cal / 244g carbs); it matches the 16 lb BAG artwork (1250 / 243g). So the one 'complete' table online is mis-labelled at source - a second reason it must never be attached to our 5.4kg pack.",
+    "Retailer figures for our exact pack genuinely contradict, all verified verbatim by me: maxmuscleelite 1275 cal / 225g carbs; gofit-eg 1250 cal / 243g carbs / 334g serving; housenutrition.tn 'jusqu'a 1300' cal / 261g carbs; musclepumpqa prose 1275 cal / 255g carbs / 324g serving. No two agree. Any single pick would be a guess.",
+    "musclepumpqa contradicts ITSELF on one page: prose says 1275 cal / 255g carbs, its own table says 1250 / 243g.",
+    "protein.tn currently stores nutrition_values:null and nutrition_facts:null - nothing wrong is published today, so there is no pressure to fill it with a guess.",
+    "ONLY reliable route to real Supplement Facts for this SKU: photograph the back panel of a physical 5.4kg Chocolate bag."
+   ]
+  },
+  {
+   "slug": "hard-mass-gainer-7kg",
+   "product_name": "HARD MASS GAINER - 7Kg",
+   "brand": "Invictus",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/shop/hard-mass-gainer-7kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.perfectbodyshape.co.uk/en/invictus-red-line-hard-mass-gainer-7kg.html",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://zeusfn.com/products/hard-mass-gainer-red-line",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.perfectbodyshape.co.uk/en/invictus-red-line-hard-mass-gainer-7kg.html",
+    "rows": [
+     {
+      "name": "Energy value",
+      "kind": "value",
+      "quantity": 378.3,
+      "unit": "Kcal",
+      "depth": 0
+     },
+     {
+      "name": "Protein",
+      "kind": "value",
+      "quantity": 18.4,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "Carbohydrates",
+      "kind": "value",
+      "quantity": 65.6,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "of which sugars",
+      "kind": "value",
+      "quantity": 26.2,
+      "unit": "g",
+      "depth": 1
+     },
+     {
+      "name": "Fat",
+      "kind": "value",
+      "quantity": 4.7,
+      "unit": "g",
+      "depth": 0
+     },
+     {
+      "name": "of which saturated fat",
+      "kind": "value",
+      "quantity": 0.9,
+      "unit": "g",
+      "depth": 1
+     },
+     {
+      "name": "Salt",
+      "kind": "value",
+      "quantity": 0.6,
+      "unit": "g",
+      "depth": 0
+     }
+    ],
+    "percent_basis": "",
+    "serving_quantity": null,
+    "serving_unit": "",
+    "serving_note": "The cited page declares the table as \"Content per 100 g\" — the figures above are per 100 g, NOT per serving. The same page's \"Recommended use\" reads verbatim: \"Dissolve 50g in 200ml of water or skimmed milk. Take once or twice a day.\" Serving size is left unset because sources conflict (50 g on the cited page vs 100 g on other Invictus retailer pages) and no figure was transcribed from a declared serving-size line.",
+    "servings_per_container": "140 / 70 servings",
+    "net_quantity": 7,
+    "net_unit": "kg",
+    "other_ingredients": "Dextrose, Oat flour, Maltodextrin, Fructose, Glycine, Creatine monohydrate, Milk powder, Flavor, Amino acids, Vitamins (B1, B2, B3, B5, B6, B9, B12, C, E, H).",
+    "allergens": "",
+    "warnings": "",
+    "claims": "BENEFITS (verbatim from the cited page): - Promotes weight gain - Optimal digestive assimilation - Supports muscle recovery - Low fat content - Increases muscle mass growth - Enhances strength and performance - Combats fatigue and tiredness - Provides an extra boost of energy"
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quelle est la marque exacte et le format de ce produit ?",
+     "a": "Il s'agit du HARD MASS GAINER de la marque Invictus (Invictus Nutrition), en format de 7 kg. La fiche produit de protein.tn indique la marque Invictus et le format 7 kg.",
+     "grounded_in": "Page cible protein.tn/shop/hard-mass-gainer-7kg : titre \"HARD MASS GAINER - 7Kg\", marque \"Invictus\", et JSON-LD brand \"Invictus\"."
+    },
+    {
+     "q": "Quels parfums sont proposés pour ce produit ?",
+     "a": "Sur la fiche de protein.tn, deux arômes sont proposés : Banane et Chocolat. Attention, la liste d'ingrédients d'un revendeur européen précise que les arômes et colorants varient \"dependiendo del sabor\" (selon le parfum) : les détails de l'étiquette peuvent donc différer d'un parfum à l'autre.",
+     "grounded_in": "protein.tn (sélecteur \"Arôme\" : Banane, Chocolat) + zeusfn.com (\"aromas y colorantes (dependiendo del sabor)\")."
+    },
+    {
+     "q": "Quelles sont les valeurs nutritionnelles déclarées ?",
+     "a": "La page revendeur consultée pour le format 7 kg déclare, pour 100 g : valeur énergétique 378,3 Kcal ; protéines 18,4 g ; glucides 65,6 g dont 26,2 g de sucres ; matières grasses 4,7 g dont 0,9 g d'acides gras saturés ; sel 0,6 g. Ces chiffres sont donnés pour 100 g, et non par dose.",
+     "grounded_in": "perfectbodyshape.co.uk, page 7 kg, section \"Content per 100 g\" lue dans le code source de la page."
+    },
+    {
+     "q": "Quels sont les ingrédients ?",
+     "a": "La page consultée pour le format 7 kg imprime la liste suivante : \"Dextrose, Oat flour, Maltodextrin, Fructose, Glycine, Creatine monohydrate, Milk powder, Flavor, Amino acids, Vitamins (B1, B2, B3, B5, B6, B9, B12, C, E, H).\" À noter qu'un autre revendeur publie une liste sensiblement différente pour la même gamme ; nous vous invitons à vous fier à l'étiquette imprimée sur le pot que vous recevez.",
+     "grounded_in": "perfectbodyshape.co.uk (section INGREDIENTS) ; divergence constatée avec zeusfn.com."
+    },
+    {
+     "q": "Le produit contient-il du lait ? Y a-t-il une déclaration d'allergènes ?",
+     "a": "La liste d'ingrédients de la page consultée mentionne \"Milk powder\" (poudre de lait). Aucune déclaration d'allergènes complète n'est imprimée sur cette page. Si vous avez une allergie ou une intolérance, vérifiez la déclaration d'allergènes figurant sur l'étiquette du pot avant consommation.",
+     "grounded_in": "perfectbodyshape.co.uk : \"Milk powder\" dans les ingrédients ; aucune ligne \"Allergens\" sur cette page."
+    }
+   ],
+   "verification": "I fetched every cited page myself and read the raw HTML rather than trusting summarizer output. The research holds up on the checks that were assigned, and its two most dangerous traps were already avoided by the researcher.\n\n1) NUTRITION SOURCE — VERIFIED, ALL 7 ROWS. https://www.perfectbodyshape.co.uk/en/invictus-red-line-hard-mass-gainer-7kg.html returned HTTP 200 with real product content (not a search or category page). It is a product page for exactly this product and exactly this pack size: H1 \"Invictus Red Line Hard Mass Gainer 7kg\", \"Manufacturer: Invictus Nutrition\", and the review line \"You're reviewing: Invictus Red Line Hard Mass Gainer 7kg\". The panel is introduced verbatim by \"Content per 100 g:\" and every row matches to the decimal: 378.3 Kcal, 18.4 g protein, 65.6 g carbohydrates of which 26.2 g sugars, 4.7 g fat of which 0.9 g saturated, 0.6 g salt. I grepped the whole page for those numeric patterns — they appear once each, only in that block, so there is no competing panel being confused. Ingredients string and \"140 / 70 servings\" also match verbatim. No row disagrees.\n\nThe researcher's central correction is confirmed and important: the basis really is per 100 g, not per serving. WebFetch's own summary of the page returned it to me under a \"per 100g\" header correctly, but the raw HTML is the authority and it says \"Content per 100 g:\". Had this shipped as per-serving, the page would have understated calories by roughly half at a 50 g dose.\n\n2) PACK SIZE — MATCHES. protein.tn (fetched via curl with a browser UA; /shop/ 301s to /mass-gainers/hard-mass-gainer-7kg) shows title \"HARD MASS GAINER - 7Kg\", brand \"Invictus\", JSON-LD brand \"Invictus\", comparison row \"Invictus / 7 kg\", flavours Banane and Chocolat. The panel source is the 7 kg page, so this is not a same-brand different-size panel. I tried to compare the retailer's 2 kg and 3 kg pages to see whether panels vary by size, but both are behind a Cloudflare interstitial (\"Just a moment...\") and could not be read — this does not affect the verdict, since the panel we used is on the 7 kg URL itself.\n\nI also independently confirmed the researcher was right to bin protein.tn's own \"Composition\" block: the site literally labels it \"(exemple standard, a adapter selon la fiche technique)\". That is filler, and it lists whey protein and BCAAs that the actual cited label does not. Discarding it was correct.\n\n3) FAQ — 5 OF 6 SURVIVE (indices 0-4). Each surviving answer traces to something I read with my own eyes: the brand/format from protein.tn; the flavours from protein.tn plus zeusfn's verbatim \"aromas y colorantes (dependiendo del sabor)\"; the per-100 g figures verified above and correctly flagged in the answer as \"pour 100 g, et non par dose\"; the ingredient list verbatim; and the milk-powder/no-allergen-line point, where I confirmed by grep that the cited page carries zero allergen text. None of these five contains a dosage instruction or a health claim — the \"check the tub label if you have an allergy\" line in faq[4] is a safety caution, not a claim. I dropped faq[5]; reasons in the dropped field.\n\n4) VIDEO — nothing to verify. The payload contains no video field at all. The researcher declined to substitute a reviewer upload, which is the right call, so nothing unverified reaches the page. video_ok reflects \"no video proposed\", not \"a brand channel was confirmed\".\n\nBOTTOM LINE: verified_nutrition is true in the sense the task defines — the cited page is reachable, is the right product at the right pack size, and shows these exact numbers. But do not read that as \"safe to publish unqualified\". The panel is single-sourced from a UK retailer's prose, no manufacturer source exists to corroborate it (both manufacturer domains are dead, which I confirmed the research had already established), and a second retailer publishes a materially different formula for the same named product with different allergens. The researcher's own closing reservation is the correct one and I am escalating it: before this goes live, photograph the actual 7 kg tub in stock and transcribe its panel, allergens and serving size. Until then, publish the panel only with its \"per 100 g\" basis stated on-page and the ingredient divergence disclosed, and ship none of the dropped items.",
+   "problems": [
+    "FORMULA IDENTITY IS UNCONFIRMED — the highest-severity residual risk. Two materially different ingredient lists circulate for the same 'Invictus Red Line Hard Mass Gainer 7 Kg'. perfectbodyshape (our panel source): 'Dextrose, Oat flour, Maltodextrin, Fructose, Glycine, Creatine monohydrate, Milk powder, Flavor, Amino acids, Vitamins (B1,B2,B3,B5,B6,B9,B12,C,E,H)'. zeusfn (verified verbatim by me): 'Dextrosa, harina de avena, concentrado de proteina de suero de leche, lecitina de soja, creatina monohidrato, cloruro de sodio, edulcorantes (sucralosa E-955 y sacarina E-954), vitamina B6, aromas y colorantes'. A whey-concentrate formula and a dextrose/milk-powder formula do not share an 18.4 g/100 g protein figure. Nothing establishes which version is in the tub protein.tn stocks, so the panel may be accurate to its source and still wrong for the product sold.",
+    "ALLERGEN DIVERGENCE IS SAFETY-RELEVANT, NOT COSMETIC — the two lists differ specifically on allergens: ours declares 'Milk powder' and no soy; zeusfn's declares 'lecitina de soja' (soy) and carries 'Alergenos: Puede contener trazas de cereales que contienen gluten, huevo y pescado' (gluten/egg/fish traces). A soy- or gluten-sensitive customer reading our published list would see no warning at all. allergens:'' is correctly empty (I grepped the cited page for allerg|gluten|trace|may contain|soy — zero hits), but publishing a full ingredient list with a blank allergen field is the risky combination. faq[3] and faq[4] both disclose the divergence and defer to the printed tub label; keep other_ingredients ONLY with those caveats intact, or drop it.",
+    "The panel is not a label transcription and not even a table — it is UK retailer prose ('Has an energy value of 378.3 Kcal.', 'Contains 18.4 g of protein.'). No manufacturer source corroborates it, and none can: I confirmed the research's finding that hypertrophynutrition.com and invictusnutrition.net are both dead. Single-source, non-primary, uncorroborated.",
+    "servings_per_container is stored as the opaque string '140 / 70 servings'. Verified verbatim on the page (subtitle line 'Hyperthropy | Invictus Red Line | Hard Mass Gainer | 140 / 70 servings'), but it is meaningless to a customer without a serving size, and serving size is deliberately unset. Either render it with an explicit 'depending on serving size' gloss or omit it — do not print '140 / 70' bare.",
+    "Flavour lineups do not match across sources: protein.tn sells Banane and Chocolat; zeusfn's Red Line lineup is Chocolate / Fresa & Nata / Vainilla; the cited page is flavour-agnostic. Since zeusfn states aromas and colorants vary 'dependiendo del sabor', the single panel we have cannot be flavour-specific for either Banane or Chocolat.",
+    "Minor, worth fixing in the record: sources[0] is listed as https://protein.tn/shop/hard-mass-gainer-7kg, which 301-redirects to https://protein.tn/mass-gainers/hard-mass-gainer-7kg. Cite the canonical URL.",
+    "Confirmed-correct empties (no action needed, recorded so they are not 'fixed' later): percent_basis '' is right — no NRV/RI/%DV anywhere on the cited page; gtin '' is right — no EAN on any page read, and protein.tn has gtin:null and nutrition_images:null, i.e. it publishes no panel of its own, which is why an external source is genuinely required here."
+   ]
+  },
+  {
+   "slug": "gold-creatine-kevin-levrone-300-g",
+   "product_name": "GOLD CREATINE - KEVIN LEVRONE | 300 g",
+   "brand": "KEVIN LEVRONE",
+   "gtin": "5903719231329",
+   "sources": [
+    {
+     "url": "https://protein.tn/creatine/gold-creatine-kevin-levrone-300-g",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.fithealthy.eu/en/products/kevin-levrone-gold-creatine-300-g",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://medpak.shop/products/levrone-gold-creatine-300-g",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://yarisupps.com/product/levrone-gold-creatine-300-g/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.med7online.com/products/kevin-levrone-gold-creatine-300g-serv-60",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://musclebullnutrition.com/products/gold-creatine-300g-by-kevin-levrone-signature-series",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://fitcookie.co.uk/product/gold-creatine-300g-kevin-levrone-gold-line/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/5903719202053",
+     "kind": "database"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.fithealthy.eu/en/products/kevin-levrone-gold-creatine-300-g",
+    "percent_basis": "eu",
+    "net_quantity": 300,
+    "net_unit": "g",
+    "serving_quantity": 5,
+    "serving_unit": "g",
+    "servings_per_container": "60",
+    "serving_note": "Serving size: 5 g. « One measuring scoop contains approximately 5 grams. »",
+    "rows": [
+     {
+      "name": "Creatine monohydrate",
+      "kind": "value",
+      "quantity": 5,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "of which creatine",
+      "kind": "value",
+      "quantity": 4.4,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Vitamin B6",
+      "kind": "value",
+      "quantity": 1.4,
+      "unit": "mg",
+      "percent_dv": 100,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Ingredients: Creatine monohydrate, vitamin B6 (pyridoxine hydrochloride).",
+    "allergens": "",
+    "warnings": "Consult your physician or a qualified healthcare professional before use, especially if you are pregnant, breastfeeding, taking medication, or have a medical condition. Do not exceed the recommended daily dose. Do not use if you are allergic to any ingredients. Keep out of reach of children. Store in a cool, dry place. Food supplements should not be used as a substitute for a varied and balanced diet and a healthy lifestyle.",
+    "claims": "LEVRONE GOLD CREATINE is a supplement in the form of tasteless and easily soluble powder with high creatine content. Supplementation with creatine monohydrate has been used in amateur and professional sport for many years. Also people exercising recreationally can use the preparation - creatine is used in various forms of physical activity and at every level of advancement. It is recommended for women and men alike, especially during the period of regular trainings and work on shaping the figure. The product has been additionally enriched with vitamin B6. The composition does not contain sugar, which makes it possible to use the preparation during weight loss and fat tissue reduction."
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Que contient exactement une portion de GOLD CREATINE Kevin Levrone 300 g ?",
+     "a": "L'étiquette indique, pour une portion de 5 g : créatine monohydrate 5 g, dont créatine 4,4 g, et vitamine B6 1,4 mg, soit 100 % des apports de référence (NRV).",
+     "grounded_in": "Tableau « Nutrition facts » transcrit sur fithealthy.eu : Serving size 5 g — Creatine monohydrate 5 g / of which creatine 4,4 g / Vitamin B6 1,4 mg 100 % NRV"
+    },
+    {
+     "q": "Combien de portions contient le pot de 300 g ?",
+     "a": "Le pot de 300 g contient 60 portions. La portion de référence indiquée sur l'étiquette est de 5 g, et le fabricant précise : « One measuring scoop contains approximately 5 grams. »",
+     "grounded_in": "fithealthy.eu : « Servings per container: 60 » et « Serving size: 5 g » ; 60 portions confirmées aussi par med7online.com et musclebullnutrition.com"
+    },
+    {
+     "q": "Quelle est la composition exacte ? Le produit contient-il du sucre ou des additifs ?",
+     "a": "La liste d'ingrédients ne comporte que deux éléments : « Creatine monohydrate, vitamin B6 (pyridoxine hydrochloride) ». Le descriptif du fabricant précise que la composition ne contient pas de sucre (« The composition does not contain sugar »).",
+     "grounded_in": "fithealthy.eu, rubrique « Ingredients » et texte descriptif du produit"
+    },
+    {
+     "q": "La poudre a-t-elle un goût et se dissout-elle facilement ?",
+     "a": "Le descriptif du fabricant la présente comme une poudre sans goût et facilement soluble, à teneur élevée en créatine : « tasteless and easily soluble powder with high creatine content ».",
+     "grounded_in": "fithealthy.eu, description « LEVRONE GOLD CREATINE is a supplement in the form of tasteless and easily soluble powder with high creatine content. »"
+    },
+    {
+     "q": "Comment conserver le produit et quelles précautions figurent sur l'étiquette ?",
+     "a": "L'étiquette indique de conserver le produit dans un endroit frais et sec et de le tenir hors de portée des enfants. Elle mentionne également de ne pas dépasser la dose journalière recommandée, et de demander l'avis d'un médecin ou d'un professionnel de santé en cas de grossesse, d'allaitement, de prise de médicaments ou de problème de santé. Un complément alimentaire ne remplace pas une alimentation variée et équilibrée ni un mode de vie sain.",
+     "grounded_in": "fithealthy.eu, bloc « Additional information » (mentions d'avertissement et de conservation transcrites)"
+    }
+   ],
+   "verification": "Nutrition VERIFIED, pack size VERIFIED, video REJECTED, one FAQ dropped, GTIN blocked.\n\n1. NUTRITION — CONFIRMED. I fetched https://www.fithealthy.eu/en/products/kevin-levrone-gold-creatine-300-g myself (HTTP 200, 199,870 bytes) and read the stripped raw HTML rather than trusting a summarizer. It is a genuine single-product page, not a search or category page. The panel matches the research character-for-character, decimal commas included: \"Servings per container: 60\" / \"Serving size: 5 g\" / \"Amount per serving\" / \"*% NRV\" / \"Creatine monohydrate | 5 g\" / \"of which creatine | 4,4 g\" / \"Vitamin B6 | 1,4 mg | 100%***\". All three rows agree; none disagree. Ingredients (\"Creatine monohydrate, vitamin B6 (pyridoxine hydrochloride).\"), all three warning sentences, and the full claims paragraph are verbatim, not paraphrased. Confirmed there is no per-100 g column, so reporting none is correct. Confirmed no allergen section exists anywhere on the page, so allergens:\"\" is correct rather than an omission.\n\n2. PACK SIZE — CONFIRMED, with an internal arithmetic proof. The source page carries no size variants (zero occurrences of 1000, 1 kg, 500 g, 200 g, 100 g), and 60 servings x 5 g = 300 g exactly. A 1000 g tub would declare 200 servings, so the panel provably belongs to the 300 g size. The same-brand-different-size error this check exists to catch is ruled out. protein.tn 403s WebFetch but returned 200 to curl with a browser UA: its title is \"GOLD CREATINE - KEVIN LEVRONE | 300 g\" and its Product JSON-LD carries name \"GOLD CREATINE - KEVIN LEVRONE | 300 g\", brand \"KEVIN LEVRONE\", sku/productID 5903719231329. Brand and size match the source.\n\n3. FAQ — 5 of 6 survive: indices 0, 1, 2, 3, 5. All five are label transcriptions I matched against the raw source lines; none carries a dosing directive and none makes a health claim. Index 5's \"ne pas dépasser la dose journalière recommandée\" is mandatory EU warning wording, not a dose instruction, and is verbatim on the page. Index 4 (allergens) is DROPPED — see dropped[].\n\n4. VIDEO — NOT OK. YouTube oEmbed returns author_name \"AZshopping Official\" / https://www.youtube.com/@azshoppingofficial, a retailer channel, not Kevin Levrone or Levrone Signature Series. Reviewer and retailer uploads fail the brand-channel test. The research self-flagged this as official:false; the verdict is do not embed, and no substitute was found.\n\n5. GTIN — BLOCKED pending a physical scan. Three valid EAN-13s compete for this size and checksum arithmetic cannot disambiguate them.\n\nBOTTOM LINE: the nutrition object is safe to publish as the \"Valeurs nutritionnelles\" content that our page currently ships empty, after dropping faq[4], dropping the video, and withholding gtin.",
+   "problems": [
+    "GTIN unresolvable, blocks structured-data publication: three competing EAN-13s exist for the 300 g size (5903719231329 on protein.tn's own Réf./SKU and JSON-LD; 5903719202053 in the manufacturer URL slug, on medpak.shop and in Open Food Facts; 5903719200158 on fitcookie.co.uk). I computed the EAN-13 check digit for all three — all three are structurally VALID, so checksum arithmetic cannot break the tie. Requires a human to scan the physical tub. Does not affect any nutrition figure.",
+    "Panel read from a single retailer page. Every returned figure traces to fithealthy.eu only; I confirmed that page's raw HTML myself, but the manufacturer page (levrosupplements.com) was unreachable and remains unread, so no primary-source confirmation exists. The research's claimed corroboration from medpak.shop / yarisupps.com / med7online.com / musclebullnutrition.com was NOT independently re-fetched by me — treat those grounded_in attributions (notably in faq[1]) as unverified, though the underlying facts they support are verified on the primary source.",
+    "serving_note quotes 'One measuring scoop contains approximately 5 grams', which originates in the source page's 'Directions' block (line 531), not the nutrition panel. The quoted sentence itself is a scoop-weight fact rather than a directive, so it passes the no-dosage rule, but the surrounding source sentence IS dosing copy ('mix one level measuring scoop with 250 ml of water... take with or immediately after a hot meal') and must not be pulled in alongside it.",
+    "faq[2] restates the manufacturer's 'does not contain sugar' line. It is attributed reported speech and verbatim on the source, and it is a nutrition claim rather than a health claim, so it survives the stated test — but 'sans sucre' is a regulated EU nutrition claim (conditions apply) and should stay explicitly attributed to the manufacturer description, never asserted in protein.tn's own voice.",
+    "servings_per_container is typed as the string \"60\" while every other quantity is numeric; normalize before it reaches a template that does arithmetic on it."
+   ]
+  },
+  {
+   "slug": "levro-legendary-mass-6-8kg-kevin-levrone",
+   "product_name": "LEVRO LEGENDARY MASS 6.8KG - KEVIN LEVRONE",
+   "brand": "KEVIN LEVRONE (Kevin Levrone Signature Series)",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://fitcookie.co.uk/product/kevin-levrone-levro-legendary-mass-6-8kg/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://powermagicnutrition.com/product/kevin-levrone-levro-legendary-mass-6-8kg/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://levrosupplements.com/gb/levrone-silver-line/579-levrolegendarymass-7-kg.html",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://www.nutriland.ro/en/products/levro-legendary-mass-6-8kg",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.beingbuilder.com/kevin-levrone-levro-legendary-mass-6-8kg",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://fitcookie.co.uk/product/kevin-levrone-levro-legendary-mass-6-8kg/",
+    "serving_quantity": 200,
+    "serving_unit": "g",
+    "servings_per_container": "34",
+    "serving_note": "Étiquette : « Serving size: 4 scoops » — « Servings per bag: 34 ». La déclaration nutritionnelle est imprimée en trois colonnes : 100 g, 200 g et 400 g. Les valeurs listées ci-dessous sont la colonne 200 g (la portion déclarée). La colonne 100 g est reproduite mot pour mot dans les notes.",
+    "net_quantity": 6.8,
+    "net_unit": "kg",
+    "percent_basis": "",
+    "rows": [
+     {
+      "name": "Energy",
+      "kind": "value",
+      "quantity": 3268,
+      "unit": "kJ",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Energy",
+      "kind": "value",
+      "quantity": 771,
+      "unit": "kcal",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Fat",
+      "kind": "value",
+      "quantity": 5.2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "of which saturates",
+      "kind": "value",
+      "quantity": 3.2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Carbohydrates",
+      "kind": "value",
+      "quantity": 138,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "of which sugars",
+      "kind": "value",
+      "quantity": 20,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Fibre",
+      "kind": "value",
+      "quantity": 2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Protein",
+      "kind": "value",
+      "quantity": 42,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Salt",
+      "kind": "value",
+      "quantity": 0.2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Carbohydrate complex (maltodextrin, glucose), milk protein complex [milk protein concentrate, whey protein concentrate Carbelac® (from milk), whey protein isolate Isolac® (from milk), hydrolysed whey protein Optipep® (from milk), hydrolysed casein PeptoPro® (from milk)], cocoa1, thickener (xanthan gum), red beet concentrate7, flavourings, colours (E150c1,2,3, E160a3,4).",
+    "allergens": "« Made in a plant that also processes soy, egg, peanuts, nuts and wheat products. » — La liste d'ingrédients déclare des protéines issues du lait : milk protein concentrate, whey protein concentrate Carbelac® (from milk), whey protein isolate Isolac® (from milk), hydrolysed whey protein Optipep® (from milk), hydrolysed casein PeptoPro® (from milk).",
+    "warnings": "Do not use if you are allergic to any of the product compounds. Made in a plant that also processes soy, egg, peanuts, nuts and wheat products. Do not use if pregnant or nursing. Do not exceed the recommended daily dose. A varied and balanced diet and a healthy lifestyle are recommended. Keep out of reach of young children. Store in dry place, at a room temperature. Protect from direct sunlight.",
+    "claims": "« LevroLegendaryMass is a new generation weight gainer based on a carefully selected ratio of carbohydrates and proteins. This iconic mass gain blend is intended for high-intensity training athletes, whose goal is to achieve maximum levels of lean body mass and muscular strength. » — Allégations nutritionnelles citées par le fabricant sur la page source : « Carbohydrates contribute to the recovery of normal muscle function (contraction) after highly intensive and/or long-lasting physical exercise leading to muscle fatigue and the depletion of glycogen stores in skeletal muscle. » et « Protein contributes to a growth and the maintenance of muscle mass. » Sources de protéines mises en avant : Carbelac® (WPC), Isolac® (WPI), Optipep® (WPH), PeptoPro® (caséine hydrolysée), milk protein concentrate."
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel format de LEVRO LEGENDARY MASS est vendu et combien de portions contient-il ?",
+     "a": "Il s'agit du format 6,8 kg de Kevin Levrone Signature Series. L'étiquette de ce format déclare une portion de 4 doses (« 4 scoops »), soit 200 g, et 34 portions par sachet (34 × 200 g = 6 800 g).",
+     "grounded_in": "Bloc « Composition » de la page FitCookie 6.8kg : « Serving size: 4 scoops » / « Servings per bag: 34 », et le titre produit « 6.8kg »."
+    },
+    {
+     "q": "Quelles sont les valeurs nutritionnelles déclarées sur l'étiquette ?",
+     "a": "Par portion de 200 g : 3268 kJ / 771 kcal ; matières grasses 5,2 g dont 3,2 g d'acides gras saturés ; glucides 138 g dont 20 g de sucres ; fibres 2 g ; protéines 42 g ; sel 0,2 g. Par 100 g : 1634 kJ / 385 kcal ; matières grasses 2,6 g dont 1,6 g de saturés ; glucides 69 g dont 10 g de sucres ; fibres 1 g ; protéines 21 g ; sel 0,1 g. Aucun pourcentage d'apport de référence (AR/NRV) n'est imprimé sur cette déclaration.",
+     "grounded_in": "Tableau « Nutrition declaration » (colonnes 100 g / 200 g / 400 g) de la page FitCookie 6.8kg."
+    },
+    {
+     "q": "Quelles sources de protéines et de glucides ce gainer contient-il ?",
+     "a": "Les glucides proviennent d'un « carbohydrate complex (maltodextrin, glucose) ». Les protéines proviennent d'un « milk protein complex » à cinq sources : milk protein concentrate, whey protein concentrate Carbelac® (from milk), whey protein isolate Isolac® (from milk), hydrolysed whey protein Optipep® (from milk) et hydrolysed casein PeptoPro® (from milk).",
+     "grounded_in": "Liste d'ingrédients imprimée sur la page FitCookie 6.8kg, identique mot pour mot sur la page Power Magic Nutrition 6.8kg."
+    },
+    {
+     "q": "Ce produit contient-il des allergènes ?",
+     "a": "Oui. Toutes les protéines de la formule sont issues du lait, comme indiqué dans la liste d'ingrédients par la mention « (from milk) ». L'étiquette ajoute : « Made in a plant that also processes soy, egg, peanuts, nuts and wheat products », et « Do not use if you are allergic to any of the product compounds ». Le produit n'est donc pas adapté aux personnes allergiques aux protéines de lait.",
+     "grounded_in": "Liste d'ingrédients et bloc « Warnings » de la page FitCookie 6.8kg."
+    },
+    {
+     "q": "LEVRO LEGENDARY MASS 6,8 kg contient-il de la créatine ?",
+     "a": "Non selon l'étiquette. La liste d'ingrédients complète du format 6,8 kg ne mentionne aucune créatine : elle se limite au complexe de glucides, au complexe de protéines laitières, au cacao, à l'épaississant (gomme xanthane), au concentré de betterave rouge, aux arômes et aux colorants (E150c, E160a). Certaines fiches de revendeurs affirment le contraire ; l'étiquette imprimée ne le confirme pas.",
+     "grounded_in": "Liste d'ingrédients de la page FitCookie 6.8kg (contredit la mention « contains creatine » vue sur beingbuilder.com et nutriland.ro)."
+    }
+   ],
+   "verification": "VERDICT: nutrition panel CONFIRMED and safe to publish for the Vanilla 6.8 kg variant. FAQ 5 dropped. No video to publish.\n\n1) SOURCE CHECK - PASS. I fetched https://fitcookie.co.uk/product/kevin-levrone-levro-legendary-mass-6-8kg/ myself, saved the raw HTML and stripped it to text rather than trusting a summarizer. It is a real product page (not a search or category page) for \"Kevin Levrone Levro Legendary Mass 6.8kg - Levrone Signature Series\", and it carries a three-column Nutrition declaration (100 g / 200 g / 400 g). All NINE rows of the claimed 200 g column match the printed page exactly: Energy 3268 kJ / 771 kcal, Fat 5,2 g, of which saturates 3,2 g, Carbohydrates 138 g, of which sugars 20 g, Fibre 2 g, Protein 42 g, Salt 0,2 g, plus \"Serving size: 4 scoops\" and \"Servings per bag: 34\". Zero rows disagree. The ingredient string matches character for character including the per-flavour superscripts (cocoa1, red beet concentrate7, E150c1,2,3, E160a3,4), as do the warnings block and the allergen sentence. percent_basis correctly empty - no %NRV/%AR column exists anywhere on the page. The European decimal commas were normalised to points and nothing was recalculated, which I confirmed by matching the comma forms in the raw source.\n\n2) INDEPENDENT CORROBORATION - PASS. powermagicnutrition.com prints the same table (3268/1634 kJ, protein 42/21 g, carbs 138/69 g, sugars 20/10 g, fibre 2/1 g, fat 5.2/2.6 g, saturates 3.2/1.6 g, \"PACKAGE SIZE: 6800G\") and the identical ingredient string. Two independent sources agree.\n\n3) PACK SIZE - MATCHES, WITH ONE UNRESOLVED FLAVOUR RISK. protein.tn/mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone returns HTTP 200 and sells \"LEVRO LEGENDARY MASS 6.8KG\", with its own comparison table declaring \"Format: 6,8 kg\", at 279 DT, in stock, in flavours Vanilla and Cookies. So the 6.8 kg panel is the right panel for what is advertised. I then verified the researcher's central warning and it is real: the official 7 kg SKU (EAN 5903719255448) has a materially different panel - every single row differs, salt by 4.3x - and its flavour range includes \"Cookies with cream\", which appears in no 6.8 kg flavour list. The Vanilla variant is safe. The Cookies variant needs a physical pot checked before this panel is attached to it. See nutrition_problems item 1.\n\n4) FAQ - 5 of 6 survive (indices 0-4). Each surviving answer traces to text I read on the source page; none contains an intake instruction (the source's \"Mix 4 scoops... 45-75 minutes before workout\" copy was correctly excluded) and none makes a health claim. FAQ 3's allergen conclusion is a safety-direction inference fully supported by five \"(from milk)\" declarations. FAQ 4's \"no creatine\" holds up and is robust to the pack-size ambiguity, because NEITHER the 6.8 kg nor the 7 kg ingredient list contains creatine - but its source attribution is half-wrong and must be fixed (only beingbuilder.com claims creatine, not nutriland.ro). Index 5 dropped for contradicting protein.tn's own buy box.\n\n5) VIDEO - nothing proposed, and that was the correct call. I resolved both candidate IDs through YouTube's oEmbed endpoint: cRGSLw8QBeY belongs to \"Muskelmacher Shop\" (a reseller review) and TaRkLjmqKWc to \"AZshopping Official\" (a reseller, and it covers the 3 kg format). Neither is a brand-owned channel; both must stay excluded. video_ok is true only in the sense that no bad video will reach the page - no brand video was verified to exist.\n\nWorking files: C:\\Users\\kouss\\AppData\\Local\\Temp\\claude\\c--Users-kouss-OneDrive-Desktop-work-seo\\ecc7e21e-36cc-4b97-b9fd-3ce7d9cffd50\\scratchpad\\fitcookie.txt (stripped source, nutrition table at lines 170-213), proteintn.txt, nutriland.txt, bb.txt.",
+   "problems": [
+    "BLOCKING BEFORE THE COOKIES VARIANT GOES LIVE: this panel is safe for Vanilla 6.8 kg, but \"Cookies with cream\" appears ONLY in the official 7 kg flavour range on levrosupplements.com and appears in NO 6.8 kg flavour list I read (FitCookie: 4 flavours, Nutriland: 9 flavours, neither includes any Cookies). The 7 kg product is a different formulation, not a rounding: per 100 g it is 370 kcal vs 385, fat 2 vs 2.6 g, saturates 1.3 vs 1.6 g, carbs 68 vs 69 g, sugars 14 vs 10 g, protein 20 vs 21 g, salt 0.43 vs 0.1 g (4.3x), no fibre row at all, and a completely different protein base (buttermilk + micellar casein + lecithin emulsifier, plus instant coffee, E466 and sucralose) instead of Carbelac/Isolac/Optipep/PeptoPro + xanthan gum. Every single row differs. Do not publish this panel against the Cookies option until someone reads the printed panel and net weight off a physical Cookies pot.",
+    "SERVING-BASIS CONFLICT - recommend switching the published basis to 100 g. Two label revisions are in circulation for the same 6800 g bag: 4 scoops / 200 g / 34 servings (FitCookie's full Composition block, and a secondary block on powermagicnutrition) versus 2 scoops / 100 g / 68 servings (powermagicnutrition's PRIMARY \"SUPPLEMENT FACTS\" block, and nutriland's \"lasts ~68 days\"). The per-100 g column is byte-identical across both revisions, so publishing the 100 g basis is immune to this conflict; the chosen 200 g basis is not. The 100 g column is: 1634 kJ / 385 kcal, fat 2.6 g, saturates 1.6 g, carbs 69 g, sugars 10 g, fibre 1 g, protein 21 g, salt 0.1 g.",
+    "servings_per_container \"34\" is the weaker of the two readings. It is contradicted by powermagicnutrition's own top-of-page block (68) and by nutriland's cost-per-serving math (68). If the 200 g basis is kept, hedge the servings count or drop it; do not print a bare \"34 portions\".",
+    "The claims field carries two EU-authorised health claims (carbohydrates and post-exercise muscle function; protein and muscle mass growth/maintenance). Both are verbatim on the source page and are legitimate as attributed manufacturer copy, but they must stay quoted and attributed in the claims field only. They must not be reworded into the description or into any FAQ answer as protein.tn's own statement.",
+    "The source page's Dosage block (\"Mix 4 scoops (200 g) with 400 ml of water... 45-75 minutes before workout...\") was correctly kept out of every FAQ answer. Keep it out. Note that FAQ 0 states the label's serving DEFINITION (4 scoops = 200 g) - that is label metadata, not an intake instruction, and is acceptable, but it must not be expanded into timing or frequency advice.",
+    "protein.tn's own page currently has an empty \"Valeurs nutritionnelles\" tab, confirmed by fetching it (HTTP 200 with a browser UA; WebFetch is 403'd by Cloudflare). The page also declares 6,8 kg in its own comparison table, so the pack size matches the panel for the Vanilla variant."
+   ]
+  },
+  {
+   "slug": "t-9-testo-booster-120-caps",
+   "product_name": "T 9 TESTO BOOSTER 120 CAPS",
+   "brand": "SCENIT NUTRITION",
+   "gtin": "8436603830959",
+   "sources": [
+    {
+     "url": "https://www.scenitnutrition.com/products/t9-testo-booster-120-veg-caps-9-ingredientes-avanzados-precursor-de-testosterona-natural",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/boosters-hormonaux/t-9-testo-booster-120-caps",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://yarisupps.com/product/t9-testo-booster-scenit-nutrition-120-caps/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://www.hyjiyastore.com/product/scenit-nutrition-t9-testo-booster-120-caps/",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.scenitnutrition.com/products/t9-testo-booster-120-veg-caps-9-ingredientes-avanzados-precursor-de-testosterona-natural",
+    "serving_quantity": 4,
+    "serving_unit": "capsules",
+    "serving_note": "Table header reads \"4 Cáps/Caps*\". Footnotes: \"*Recommended Daily Dose / Dosis Diaria Recomendada / Dose Diária Recomendada / Empfohlene Tagesdosis / Repères Nutritionnels Journaliers / Dose Giornaliera Raccomandata.\" and \"**Nutrient reference value/Valor de referencia de Nutrientes/Valor de referência do nutriente / Nährstoffbezugswert / Valeur nutritionnelle de référence / Valore nutritivo di riferimento.\"",
+    "servings_per_container": "",
+    "net_quantity": 120,
+    "net_unit": "capsules",
+    "percent_basis": "eu",
+    "rows": [
+     {
+      "name": "D-Aspartic Acid / Ácido D-Aspártico / D-Asparaginsäure / Acide D-Aspártico",
+      "kind": "value",
+      "quantity": 800,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Tribulus terrestris (90% saponins)",
+      "kind": "value",
+      "quantity": 650,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Fenugreek / Fenogreco / Bockshornklee",
+      "kind": "value",
+      "quantity": 600,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Maca",
+      "kind": "value",
+      "quantity": 120,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Ashwagandha",
+      "kind": "value",
+      "quantity": 100,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Ginseng (10% gingenosides)",
+      "kind": "value",
+      "quantity": 30,
+      "unit": "mg",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Magnesium / Magnesio / Magnésie",
+      "kind": "value",
+      "quantity": 56.3,
+      "unit": "mg",
+      "percent_dv": 15,
+      "depth": 0
+     },
+     {
+      "name": "Zinc / Zink / Zinco",
+      "kind": "value",
+      "quantity": 10,
+      "unit": "mg",
+      "percent_dv": 100,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin B6 / Vitamina B6 / Vitamine B6",
+      "kind": "value",
+      "quantity": 1.4,
+      "unit": "mg",
+      "percent_dv": 100,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Ingredientes: Ácido D-aspártico, extracto seco de fruto de Tibulus terrestris. 90% saponinas (Tribulus terrestris L.), extracto seco de semilla de fenogreco (Trigonella Foenum Graecum L.), agente de carga (celulosa microcristalina), extracto seco de raíz de maca 4:1 (Lepidium meyenii), extracto seco de raíz de Ashwagandha (Withania somnifera), óxido de magnesio, bisglicinato de zinc, antiaglomerante (estearato de magnesio), extracto seco de hoja de ginseng, 10 % gingenósidos (Panax ginseng) y clorhidrato de piridoxina (vitamina B6). Cápsula vegetal: agent de recubrimiento (hidroxipropilmetilcelulosa) y colorante (carbonato de calcio).",
+    "allergens": "Alérgenos: Puede contener trazas de leche, gluten, soja, huevos y crustáceos.",
+    "warnings": "",
+    "claims": "Manufacturer wording, verbatim: \"T9 Testo Booster - 120 veg-caps - 9 ingredientes avanzados. Precursor de testosterona natural\". \"ISO-9001 y GMP — La fabricación de T9 Testo Booster de Scenit está respaldada por las normas ISO-9001 y GMP (Good Manufacturing Practices). Estas normas garantizan que el producto siga los máximos estándares de calidad, seguridad y control en todo su proceso de fabricación.\" \"T9 Testo Booster es un suplemento alimenticio a base de ingredientes naturales para contribuir a la producción de testosterona hombre en el cuerpo.\""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quelle marque et quel format correspond au T 9 TESTO BOOSTER 120 CAPS vendu sur protein.tn ?",
+     "a": "Il s'agit du T9 Testo Booster de SCENIT NUTRITION, en flacon de 120 gélules végétales. C'est exactement le même format que celui référencé par le fabricant sous la référence SCT30011 (« 120 cápsulas »).",
+     "grounded_in": "Fiche protein.tn (JSON-LD : name « T 9 TESTO BOOSTER 120 CAPS », brand « SCENIT NUTRITION ») + page produit Scenit Nutrition (variante « 120 cápsulas », sku SCT30011)"
+    },
+    {
+     "q": "Quels ingrédients actifs contient le T9 Testo Booster et en quelles quantités ?",
+     "a": "Le tableau de composition du fabricant est exprimé pour 4 gélules et indique : D-Aspartic Acid 800 mg, Tribulus terrestris (90% saponins) 650 mg, Fenugreek 600 mg, Maca 120 mg, Ashwagandha 100 mg, Ginseng (10% gingenosides) 30 mg, Magnesium 56,3 mg, Zinc 10 mg, Vitamin B6 1,4 mg. C'est de là que vient le nom « T9 » : neuf ingrédients.",
+     "grounded_in": "Image du tableau « Composition / Composición » (t9-table-scenit) publiée sur la page produit Scenit Nutrition, lue ligne par ligne"
+    },
+    {
+     "q": "Le magnésium, le zinc et la vitamine B6 couvrent-ils les valeurs nutritionnelles de référence ?",
+     "a": "Le tableau du fabricant indique, en face de ces trois nutriments, un pourcentage de la valeur nutritionnelle de référence (VNR) : Magnesium 56,3 mg (15%), Zinc 10 mg (100%), Vitamin B6 1,4 mg (100%). Les six autres ingrédients (acide D-aspartique, Tribulus, fenugrec, maca, ashwagandha, ginseng) n'ont pas de VNR établie et aucun pourcentage n'est imprimé en face d'eux.",
+     "grounded_in": "Tableau de composition Scenit Nutrition ; note de bas de tableau « **Nutrient reference value / Valeur nutritionnelle de référence »"
+    },
+    {
+     "q": "Le produit contient-il des allergènes ?",
+     "a": "Le fabricant imprime la mention suivante, que nous reproduisons dans sa langue d'origine : « Alérgenos: Puede contener trazas de leche, gluten, soja, huevos y crustáceos. » Autrement dit, il s'agit d'une mention de traces possibles (lait, gluten, soja, œufs, crustacés), pas d'ingrédients ajoutés volontairement.",
+     "grounded_in": "Section « Ingredientes / Alérgenos » de la page produit Scenit Nutrition"
+    },
+    {
+     "q": "Les gélules sont-elles végétales ? Le produit convient-il à quelqu'un qui évite la gélatine ?",
+     "a": "Oui, l'enveloppe est végétale. Le fabricant précise : « Cápsula vegetal: agent de recubrimiento (hidroxipropilmetilcelulosa) y colorante (carbonato de calcio) ». Aucune gélatine d'origine animale n'apparaît dans la liste d'ingrédients publiée.",
+     "grounded_in": "Liste d'ingrédients complète publiée sur la page produit Scenit Nutrition (« Cápsula vegetal: … hidroxipropilmetilcelulosa … carbonato de calcio »)"
+    },
+    {
+     "q": "Comment vérifier que le produit reçu est bien l'original Scenit ?",
+     "a": "Trois repères déclarés par le fabricant pour ce format : le code-barres EAN 8436603830959, la référence SCT30011, et le format 120 gélules végétales. Le fabricant indique par ailleurs produire sous normes ISO-9001 et GMP.",
+     "grounded_in": "Données produit officielles Scenit Nutrition (barcode 8436603830959, sku SCT30011, variante 120 cápsulas) + mention « ISO-9001 y GMP » sur la même page"
+    }
+   ],
+   "verification": "VERIFIED - I could not break this result. All primary claims confirmed against sources I fetched and read myself.\n\n1) NUTRITION PANEL - CONFIRMED, all 9 rows. source_url is reachable (HTTP 200), is the correct single-product page (not a search/category page), and the composition table exists ONLY as an image exactly as the research disclosed. I downloaded https://cdn.shopify.com/s/files/1/0694/1655/0704/files/t9-table-scenit_30ac91a1-1a42-4bcd-b976-221c4f6cac47.png at its native 1102x656 (matching the claimed dimensions), read all 9 rows, then independently re-read a 3x LANCZOS-upscaled crop of the numeric column to double-check the two decimal values. Every row matches with zero disagreements: D-Aspartic Acid 800 mg, Tribulus terrestris (90% saponins) 650 mg, Fenugreek 600 mg, Maca 120 mg, Ashwagandha 100 mg, Ginseng (10% gingenosides) 30 mg, Magnesium 56,3 mg (15%**), Zinc 10 mg (100% **), Vitamin B6 1,4 mg (100%**). Header reads \"4 Caps/Caps*\" -> serving_quantity 4 capsules CONFIRMED. Footnote reads \"Nutrient reference value / Valor de referencia de Nutrientes / Valeur nutritionnelle de reference\" -> percent_basis \"eu\" is CORRECT (NRV/VNR, not US %DV). Ingredients string and allergen string match the page verbatim. Empty warnings field is CORRECT: grep of the raw HTML returns 0 hits for \"advertencia\", \"Advertencia\", \"no superar\" - there is genuinely no warnings block to report. Empty servings_per_container is CORRECT: the label prints 120 capsules and a 4-capsule reference dose but never prints a servings figure; declining to divide was the right call. net_quantity 120 capsules is CORRECT; I confirmed the Shopify variant does carry a bare \"weight\":100 with weight_unit null, so excluding it as ambiguous was right.\n\n2) PACK SIZE - CONFIRMED, and this was the highest-risk check. The manufacturer product has EXACTLY ONE variant (parsed the variants array: length 1, title \"120 capsulas\", sku SCT30011, barcode 8436603830959, compare_at_price_varies false). There is no second pack size of this product in existence on the manufacturer page, so a same-brand different-size panel mismatch is structurally impossible here. protein.tn (fetched via curl with a browser UA; WebFetch gets Cloudflare 403, as the research noted) returns HTTP 200 with JSON-LD name \"T 9 TESTO BOOSTER 120 CAPS\" and brand \"SCENIT NUTRITION\". Brand and size match the panel's source SKU.\n\n3) FAQ - ALL SIX SURVIVE. Each answer traces to a fact I independently confirmed: [0] brand/format/SCT30011/\"120 capsulas\" - confirmed in variant data. [1] all nine mg figures - confirmed against the label image I read. [2] the three NRV percentages and the absence of any printed percentage on the other six rows - confirmed visually. [3] the allergen sentence - confirmed verbatim on the page. [4] \"Capsula vegetal: hidroxipropilmetilcelulosa / carbonato de calcio\" - confirmed in the ingredients list, and the no-gelatin statement is properly hedged as \"dans la liste d'ingredients publiee\". [5] EAN + SKU + 120 caps + the ISO-9001/GMP mention - confirmed; the page contains an \"ISO-9001 y GMP\" heading with the quoted Spanish text. I scanned all six answers for dosage verbs and health-claim language (testost*, prendre/prenez/tomar, par jour, ameliore/augmente/stimule, libido, energie, traite/guerit, masse musculaire): all six came back clean. Notably the manufacturer's testosterone wording stays confined to nutrition.claims, quoted and attributed to Scenit, and is never asserted in the FAQ. FAQ[1]'s phrase \"exprime pour 4 gelules\" describes the label's reference basis - required for the mg values to be interpretable - and is not an instruction to the reader, so it is not a dosage instruction.\n\n4) VIDEO - CORRECTLY OMITTED, nothing false published. No official Scenit Nutrition YouTube channel is locatable; the brand's video presence is Instagram/Facebook. The only YouTube result for the brand is a third-party upload (\"Revision Isolate Whey Protein Scenit\"), which would correctly have FAILED the own-channel test. The search also surfaced \"Scitec Nutrition Official - YouTube\", a different brand one letter away - the research did not fall for that confusion. Returning no video object rather than a false official:true was the right decision.\n\nVERDICT: safe to publish as-is. The only thing I would attach a caveat to is GTIN provenance (single-sourced, manufacturer-declared; protein.tn's own catalog has no gtin and sku \"21\") - see nutrition_problems. Nothing needs to be dropped.",
+   "problems": [
+    "NON-BLOCKING / provenance only: GTIN 8436603830959 is manufacturer-declared and single-sourced. It appears in Scenit's Shopify variant data (sku SCT30011) and is a structurally valid EAN-13 (check digit verifies; 843 = GS1 Spain), but protein.tn's own JSON-LD carries NO gtin and sku '21'. No independent second source confirms it. Publish only as manufacturer-declared, never as protein.tn catalog data.",
+    "NON-BLOCKING / cosmetic: the label prints the Maca row as '120mg' (no space) and uses decimal commas '56,3' / '1,4'. Rendering these as 120 mg / 56.3 / 1.4 is a faithful normalization, not a value change.",
+    "NON-BLOCKING / faithful transcription of source typos: 'Acide D-Aspartico' (French column carries a Spanish accent) in the row name and 'Tibulus terrestris' in the ingredients list are the manufacturer's own errors, correctly reproduced verbatim rather than silently corrected. Do not 'fix' these on the published page without marking them as sic."
+   ]
+  },
+  {
+   "slug": "one-a-day-biotech-usa",
+   "product_name": "One-A-Day multivitamin - 100 tablets",
+   "brand": "BioTechUSA",
+   "gtin": "5999076244737",
+   "sources": [
+    {
+     "url": "https://protein.tn/vitamines/one-a-day-biotech-usa",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://shop.biotechusa.com/products/one-a-day-100-tablets",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://shop.biotechusa.fr/products/one-a-day-100-comprimes",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/api/v2/product/5999076244737.json",
+     "kind": "database"
+    },
+    {
+     "url": "https://www.youtube.com/watch?v=OV3zphvyPTM",
+     "kind": "other"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://shop.biotechusa.com/products/one-a-day-100-tablets",
+    "serving_quantity": 1,
+    "serving_unit": "tablet",
+    "serving_note": "Printed on the manufacturer page as \"Daily amount: 1 tablet\". Directions as printed: \"Take 1 tablet a day with a glass of water during your meal. Do not exceed the recommended daily amount!\"",
+    "servings_per_container": "100",
+    "net_quantity": 100,
+    "net_unit": "tablets",
+    "percent_basis": "eu",
+    "rows": [
+     {
+      "name": "Vitamin A",
+      "kind": "value",
+      "quantity": 1650,
+      "unit": "μg",
+      "percent_dv": 206,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin C",
+      "kind": "value",
+      "quantity": 120,
+      "unit": "mg",
+      "percent_dv": 150,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin D",
+      "kind": "value",
+      "quantity": 10,
+      "unit": "μg",
+      "percent_dv": 200,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin E",
+      "kind": "value",
+      "quantity": 13.4,
+      "unit": "mg",
+      "percent_dv": 111,
+      "depth": 0
+     },
+     {
+      "name": "Thiamin",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "mg",
+      "percent_dv": 272,
+      "depth": 0
+     },
+     {
+      "name": "Riboflavin",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "mg",
+      "percent_dv": 214,
+      "depth": 0
+     },
+     {
+      "name": "Niacin",
+      "kind": "value",
+      "quantity": 30,
+      "unit": "mg",
+      "percent_dv": 187,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin B6",
+      "kind": "value",
+      "quantity": 3,
+      "unit": "mg",
+      "percent_dv": 214,
+      "depth": 0
+     },
+     {
+      "name": "Folic acid",
+      "kind": "value",
+      "quantity": 400,
+      "unit": "μg",
+      "percent_dv": 200,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin B12",
+      "kind": "value",
+      "quantity": 9,
+      "unit": "μg",
+      "percent_dv": 360,
+      "depth": 0
+     },
+     {
+      "name": "Biotin",
+      "kind": "value",
+      "quantity": 15,
+      "unit": "μg",
+      "percent_dv": 30,
+      "depth": 0
+     },
+     {
+      "name": "Pantothenic acid",
+      "kind": "value",
+      "quantity": 10,
+      "unit": "mg",
+      "percent_dv": 166,
+      "depth": 0
+     },
+     {
+      "name": "Calcium",
+      "kind": "value",
+      "quantity": 120,
+      "unit": "mg",
+      "percent_dv": 15,
+      "depth": 0
+     },
+     {
+      "name": "Phosphorus",
+      "kind": "value",
+      "quantity": 105,
+      "unit": "mg",
+      "percent_dv": 15,
+      "depth": 0
+     },
+     {
+      "name": "Iron",
+      "kind": "value",
+      "quantity": 17,
+      "unit": "mg",
+      "percent_dv": 121,
+      "depth": 0
+     },
+     {
+      "name": "Iodine",
+      "kind": "value",
+      "quantity": 150,
+      "unit": "μg",
+      "percent_dv": 100,
+      "depth": 0
+     },
+     {
+      "name": "Magnesium",
+      "kind": "value",
+      "quantity": 100,
+      "unit": "mg",
+      "percent_dv": 26,
+      "depth": 0
+     },
+     {
+      "name": "Zinc",
+      "kind": "value",
+      "quantity": 15,
+      "unit": "mg",
+      "percent_dv": 150,
+      "depth": 0
+     },
+     {
+      "name": "Selenium",
+      "kind": "value",
+      "quantity": 10,
+      "unit": "μg",
+      "percent_dv": 18,
+      "depth": 0
+     },
+     {
+      "name": "Manganese",
+      "kind": "value",
+      "quantity": 4,
+      "unit": "mg",
+      "percent_dv": 200,
+      "depth": 0
+     },
+     {
+      "name": "Chromium",
+      "kind": "value",
+      "quantity": 15,
+      "unit": "μg",
+      "percent_dv": 37,
+      "depth": 0
+     },
+     {
+      "name": "Molybdenum",
+      "kind": "value",
+      "quantity": 15,
+      "unit": "μg",
+      "percent_dv": 30,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "Calcium salts of orthophosphoric acid, bulking agent (cellulose gel), magnesium oxide, L-ascorbic acid, ferrous fumarate, coating material [stabilisers (polyvinyl alcohol-polyethylene glycol-graft-co-polymer, polyvinyl alcohol), anti-caking agents (talc, mono- and diglycerides of fatty acids], anti caking agents (magnesium salts of fatty acids, silicon dioxide), DL-alpha-tocopheryl acetate [DL-alpha-tocopheryl acetate, anti-caking agent (silicon dioxide)], nicotinamide, zinc oxide, retinyl acetate [stabiliser (gum arabic), retinyl acetate, antioxidant (alpha-tocopherol), anti-caking agent (calcium phosphates)], manganese sulphate, D-pantothenate, calcium, cholecalciferol, sodium molybdate, thiamin mononitrate, pyridoxine hydrochloride, riboflavin, sodium selenite, cyanocobalamin, calcium-L-methylfolate, potassium iodide, chromium (III) chloride, D-biotin.",
+    "allergens": "Made in a plant that manufactures milk, egg, gluten, soy, peanuts, crustaceans, fish, molluscs, sulphur dioxide and nuts containing foods.",
+    "warnings": "Do not exceed the recommended daily amount! Dietary supplements do not replace a varied and balanced diet and healthy lifestyle. Keep out of reach of small children!",
+    "claims": "On-page claim bullets, verbatim: \"Just 1 tablet per day\"; \"100 daily servings\"; \"from age 12, also suitable for older adults\"; \"12 types of vitamins\"; \"10 types of minerals\"; \"Calcium – with L-methyl folate\". Section headings for the manufacturer's EFSA-style nutrient statements: \"Comprehensive support\" — IMMUNE SYSTEM, ENERGY, BONES, MUSCLES, ANTIOXIDANT EFFECT. The manufacturer also files this product under its own \"Gluten free products\", \"Lactose free products\", \"Soy free\" and \"Vegan\" product categories (shown as the badges \"Sans gluten\", \"Sans lactose\", \"Sans soja\", \"Vegan\" on the French storefront)."
+   },
+   "video": {
+    "youtube_id": "OV3zphvyPTM",
+    "title": "One-A-Day: A mindennapi multivitamin | BioTechUSA",
+    "channel": "BioTechUSA Magyarország",
+    "official": true,
+    "source_url": "https://www.youtube.com/watch?v=OV3zphvyPTM"
+   },
+   "faq": [
+    {
+     "q": "Combien de comprimés contient le flacon One-A-Day vendu ici ?",
+     "a": "Le flacon contient 100 comprimés. L'étiquette visible sur la photo du produit indique « 100 tablets (100 servings) » et la fiche du fabricant BioTechUSA précise « Servings per container: 100 » pour ce même format. Le fabricant décrit également le flacon comme « 3 MONTHS SUPPLY » sur l'emballage.",
+     "grounded_in": "Photo produit protein.tn (étiquette « 100 tablets (100 servings) », « 3 MONTHS SUPPLY ») + shop.biotechusa.com/products/one-a-day-100-tablets (« Servings per container: 100 »)"
+    },
+    {
+     "q": "Quelles vitamines et quels minéraux figurent au tableau nutritionnel ?",
+     "a": "Le tableau du fabricant liste 22 nutriments : Vitamin A, Vitamin C, Vitamin D, Vitamin E, Thiamin, Riboflavin, Niacin, Vitamin B6, Folic acid, Vitamin B12, Biotin, Pantothenic acid, puis Calcium, Phosphorus, Iron, Iodine, Magnesium, Zinc, Selenium, Manganese, Chromium et Molybdenum. Le fabricant résume sa formule par « 12 types of vitamins » et « 10 types of minerals », et signale « Calcium – with L-methyl folate ».",
+     "grounded_in": "Tableau « Supplement facts » de shop.biotechusa.com/products/one-a-day-100-tablets + puces marketing de la même page"
+    },
+    {
+     "q": "À quel public le fabricant destine-t-il ce produit ?",
+     "a": "BioTechUSA indique sur sa fiche produit « from age 12, also suitable for older adults ». La fiche porte aussi la mention « Keep out of reach of small children! ». Le fabricant rappelle enfin que « Dietary supplements do not replace a varied and balanced diet and healthy lifestyle ».",
+     "grounded_in": "Puces produit et mentions d'avertissement verbatim sur shop.biotechusa.com/products/one-a-day-100-tablets"
+    },
+    {
+     "q": "Que signifient les pourcentages affichés à côté de chaque nutriment ?",
+     "a": "Ce sont des pourcentages de VNR (valeurs nutritionnelles de référence), la base européenne. Le tableau du fabricant est titré « NRV** (1 tablet) » avec la note « **Nutrient reference value for adults. » Il ne s'agit donc pas de %DV américains : les pourcentages sont calculés par rapport aux valeurs de référence adultes de l'UE.",
+     "grounded_in": "En-tête de colonne « NRV** (1 tablet) » et note de bas de tableau sur shop.biotechusa.com/products/one-a-day-100-tablets"
+    }
+   ],
+   "verification": "Numbers PASS, one FAQ is a fabrication, one FAQ must go for dosage content.\n\nWHAT I VERIFIED WITH MY OWN EYES\n\nNutrition (PASS). Fetched the cited source twice by independent paths and diffed all 22 rows, not a sample — every name, quantity, unit and percentage matches. Column heading \"NRV** (1 tablet)\", footnote \"**Nutrient reference value for adults.\", zero occurrences of \"%DV\" or \"Daily Value\" anywhere on the page, so percent_basis=\"eu\" is right. \"Daily amount: 1 tablet / Servings per container: 100\" present verbatim. Ingredients, allergens and warnings verbatim, typos and all. Page carries barcode 5999076244737 and sku 19029010040. Real product page, not a category page.\n\nPack size (PASS). protein.tn's own record has no format — the comparison table literally prints \"Format: —\". So I downloaded protein.tn's product photo, upscaled it and read the tub myself: \"3 MONTHS SUPPLY\" and \"100 tablets (100 servings)\". Matches the .com page's 100-tablet SKU. Not the 240 g Professional powder, not the 90-chewable Kids.\n\nVideo (PASS). channelId UC70GuA5_dMSD86728CsjsTw, ownerChannelName \"BioTechUSA Magyarország\", handle @BioTechUSAChannel; the channel's own about page links biotechusa.com and biotechusa.hu and sits in the brand's official regional network alongside @BioTechUSAFrance, @BioTechUSADeutschland, @BiotechusaInternational. Brand-owned, not a reviewer. 151 s, uploaded 2022-06-24, Hungarian-language — a content-team judgement call for a Tunisian audience, but it passes the ownership test.\n\nWHAT I KILLED\n\nfaq[2] is a fabrication and a safety hazard. It claims BioTechUSA files this product as \"Gluten free products\" and \"Soy free\", \"shown as the badges Sans gluten, Sans lactose, Sans soja, Vegan\" on the FR storefront. Those badges do not exist. The FR page renders only \"Sans lactose | Vegan\"; the .com page renders \"Aspartame free | Gmo free | Lactose free | Vegan\". In the raw tag arrays, gluten-free appears only as an invisible backend tag, and soy-free is not on this product at all — the \"Sans soja\" strings I found are in the site-wide collection nav shared by every page. This product's own allergen line says it is made in a plant handling gluten and soy. Publishing \"sans gluten / sans soja\" would be telling a coeliac customer something the label refuses to say.\n\nfaq[5] republishes two conflicting daily-dose figures (\"1/2 comprimé\" vs \"1 tablet\") on a live product page, then tells the reader the panel above it may be wrong. Its supporting note is also partly false: it claims the FR bullets say \"Seulement 1 comprimé par jour / 100 doses journalières\" contradicting the FR panel — they actually say \"½ comprimé par jour seulement\" and \"200 comprimés\", which agree with it. It also cites Iron 8,5 vs 17 and Iodine 75 vs 150 as failing to halve; both halve exactly.\n\nTHE THING THE RESEARCH MISSED, AND IT MATTERS\n\nThe research used Open Food Facts only to confirm the brand string. I read its values. For this exact barcode OFF carries the FRENCH half-tablet revision — vitamin A 800 μg, vitamin C 60 mg, vitamin D 5 μg, iron 8.5 mg, zinc 7.5 mg, iodine 75 μg, manganese 1.8 mg, with magnesium and selenium absent. So two of the three independent sources tied to EAN 5999076244737 show the 20-nutrient half-tablet label; only shop.biotechusa.com shows the 22-nutrient one-tablet label the research chose. The research's own \"photograph a tub in Sousse stock first\" recommendation is not optional caution — it is now the deciding evidence. Hold the panel, and the \"Take 1 tablet a day\" serving_note with it, until someone reads a real tub.",
+   "problems": [
+    "NOT A PROBLEM WITH THE NUMBERS — all 22 rows verified. I fetched https://shop.biotechusa.com/products/one-a-day-100-tablets twice by independent paths (WebFetch, and curl with a browser UA into a raw-HTML text extraction) and compared EVERY row, not a sample. All 22 match exactly on name, quantity, unit and percentage: Vitamin A 1650 μg 206%, Vitamin C 120 mg 150%, Vitamin D 10 μg 200%, Vitamin E 13.4 mg 111%, Thiamin 3 mg 272%, Riboflavin 3 mg 214%, Niacin 30 mg 187%, Vitamin B6 3 mg 214%, Folic acid 400 μg 200%, Vitamin B12 9 μg 360%, Biotin 15 μg 30%, Pantothenic acid 10 mg 166%, Calcium 120 mg 15%, Phosphorus 105 mg 15%, Iron 17 mg 121%, Iodine 150 μg 100%, Magnesium 100 mg 26%, Zinc 15 mg 150%, Selenium 10 μg 18%, Manganese 4 mg 200%, Chromium 15 μg 37%, Molybdenum 15 μg 30%. Header is 'Supplement facts | 1 tablet | NRV** (1 tablet)' with footnote '**Nutrient reference value for adults.'; zero occurrences of 'Daily Value' or '%DV' on the page, so percent_basis='eu' is correct. 'Daily amount: 1 tablet Servings per container: 100' present verbatim. Ingredients, allergens and warnings all match verbatim including the manufacturer's own typos. Page carries barcode 5999076244737 and sku 19029010040 in its product JSON. It is the real product page, not a search or category page.",
+    "NEW EVIDENCE THE RESEARCH MISSED — Open Food Facts contradicts the chosen panel. The research cited OFF only to confirm the brand string and never read its values. I did. For this exact barcode (5999076244737) OFF carries the FRENCH half-tablet revision, not the EU one: vitamin-a 800 μg, vitamin-c 60 mg, vitamin-d 5 μg, iron 8.5 mg, zinc 7.5 mg, iodine 75 μg, manganese 1.8 mg — and magnesium and selenium are ABSENT, exactly as on the FR panel. So two of the three independent sources tied to this barcode (shop.biotechusa.fr and OFF) show the 20-nutrient half-tablet label; only shop.biotechusa.com shows the 22-nutrient one-tablet label. This materially raises the risk the research flagged. Do not publish the panel until someone photographs a tub in Sousse stock and confirms it reads '100 tablets (100 servings)'.",
+    "DOSAGE EXPOSURE IN NON-FAQ FIELDS. nutrition.serving_note republishes the directive 'Take 1 tablet a day with a glass of water during your meal', and nutrition.claims republishes 'Just 1 tablet per day' and '100 daily servings'. These are verbatim-correct for the EU label, but given that a 1/2-tablet revision demonstrably circulates under the same EAN (FR storefront + OFF), a customer who receives that revision would be told to take double. Gate these on the same physical-stock check as the panel.",
+    "MANUFACTURER CONTRADICTS ITSELF ON AGE, on the same page faq[3] cites. The bullet 'from age 12, also suitable for older adults' is verbatim-present and faq[3] survives on that basis, but the SAME page's own accordion FAQ says 'Can all age groups consume One-A-Day? Yes, including children.' (FR: 'Oui, y compris les enfants.'). faq[3] presents the conservative side of a live contradiction. Keeping it is the safe choice; just do not let anyone 'correct' it later using the manufacturer's looser answer.",
+    "PACK SIZE RESTS ENTIRELY ON THE PHOTOGRAPH — but it holds. I confirmed protein.tn's own record carries no format: the on-page comparison table prints 'Format: —'. So I downloaded https://admin.protein.tn/storage/produits/July2024/ufLvn8HgRt0oFeWRLxIp.webp (500x500), upscaled it 3x and read it myself. The tub reads 'BioTechUSA / ONE-A-DAY / MULTIVITAMIN FOOD SUPPLEMENT', '3 MONTHS SUPPLY' and '100 tablets (100 servings)'. That matches the .com product (whose own image asset is named OneADay_100tbl_250ml) and its 'Servings per container: 100'. Pack size match CONFIRMED — 100 tablets, not the 240 g One-A-Day Professional powder or the 90-chewable Kids. Caveat: this is a July 2024 stock photo on protein.tn, not a photo of current Sousse inventory."
+   ]
+  },
+  {
+   "slug": "big-whey-2kg-big-ramy-labs",
+   "product_name": "BIG WHEY 2KG - BIG RAMY LABS",
+   "brand": "BIG RAMY LABS",
+   "gtin": "",
+   "sources": [
+    {
+     "url": "https://protein.tn/whey-proteine/big-whey-2kg-big-ramy-labs",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://bigramylabs.com/products/red-rex-big-whey",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://musclehouse.com/products/red-rex-big-whey",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://drnutrition.com/en-ae/big-ramy-labs-red-rex-big-whey",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://super-eg.com/product/red-rex-big-whey/",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://musclehouse.com/products/red-rex-big-whey",
+    "serving_quantity": 34,
+    "serving_unit": "g",
+    "servings_per_container": "60",
+    "net_quantity": 2,
+    "net_unit": "kg",
+    "percent_basis": "us",
+    "serving_note": "Directions for Use as printed on the source page: \"Single Serving: Mix 1 scoop with 6–8 oz (175–235 ml) of cold water or skimmed milk in a glass or shaker.\" \"Double Serving (Optional): Mix 2 scoops with 12–16 oz (350–470 ml) of liquid for an extra protein boost.\" \"When to Use: Between major meals / After exercise or training sessions.\" Table footnote: \"* Percent Daily Values are based on a 2,000 calorie diet. Your daily values may be higher or lower depending on your calorie needs.\"",
+    "other_ingredients": "Advanced Whey Protein Matrix (Whey Protein Concentrate, Whey Protein Isolate, Whey Protein Hydrolysate), Maltodextrin, Cocoa Powder, Natural and Artificial Flavors, Xanthan Gum, Sucralose, Acesulfame Potassium",
+    "allergens": "",
+    "warnings": "",
+    "claims": "Manufacturer wording (bigramylabs.com): \"RED REX BIG WHEY is an excellent source of clean Protein and Amino Acids, making it one of the best protein sources for building muscle and improving exercise performance.*\" \"REDREX Big Whey has one of the highest concentrations of functional protein out of any of the protein sources.\" \"A single serving of this Whey Protein contains an astounding 24 grams of protein, Serious protein power of Concentrated Whey.\"",
+    "rows": [
+     {
+      "name": "Calories",
+      "kind": "value",
+      "quantity": 130,
+      "unit": "kcal",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Total Fat",
+      "kind": "value",
+      "quantity": 1.5,
+      "unit": "g",
+      "percent_dv": 2,
+      "depth": 0
+     },
+     {
+      "name": "Saturated Fat",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "g",
+      "percent_dv": 0,
+      "depth": 1
+     },
+     {
+      "name": "Trans Fat",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Cholesterol",
+      "kind": "value",
+      "quantity": 65,
+      "unit": "mg",
+      "percent_dv": 22,
+      "depth": 0
+     },
+     {
+      "name": "Sodium",
+      "kind": "value",
+      "quantity": 90,
+      "unit": "mg",
+      "percent_dv": 4,
+      "depth": 0
+     },
+     {
+      "name": "Total Carbohydrate",
+      "kind": "value",
+      "quantity": 5,
+      "unit": "g",
+      "percent_dv": 2,
+      "depth": 0
+     },
+     {
+      "name": "Dietary Fiber",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "g",
+      "percent_dv": 0,
+      "depth": 1
+     },
+     {
+      "name": "Total Sugars",
+      "kind": "value",
+      "quantity": 2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Includes 0g Added Sugars",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "g",
+      "percent_dv": 0,
+      "depth": 2
+     },
+     {
+      "name": "Protein",
+      "kind": "value",
+      "quantity": 24,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin A",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "mcg",
+      "percent_dv": 0,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin C",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "mcg",
+      "percent_dv": 0,
+      "depth": 0
+     },
+     {
+      "name": "Vitamin D",
+      "kind": "value",
+      "quantity": 0,
+      "unit": "mcg",
+      "percent_dv": 0,
+      "depth": 0
+     },
+     {
+      "name": "Calcium",
+      "kind": "value",
+      "quantity": 132,
+      "unit": "mg",
+      "percent_dv": 10,
+      "depth": 0
+     },
+     {
+      "name": "Iron",
+      "kind": "value",
+      "quantity": 1,
+      "unit": "mg",
+      "percent_dv": 6,
+      "depth": 0
+     },
+     {
+      "name": "Potassium",
+      "kind": "value",
+      "quantity": 224,
+      "unit": "mg",
+      "percent_dv": 5,
+      "depth": 0
+     }
+    ]
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quelle est la taille d'une portion et combien de portions contient le pot de 2 kg ?",
+     "a": "La source consultée indique une portion (« Serving Size ») de 34 g et 60 portions par pot (« 60 Servings Per Container ») pour le format 4.5 lbs (2 kg).",
+     "grounded_in": "Tableau « Nutrition Facts » sur musclehouse.com : « 60 Servings Per Container », « Serving Size 34g », page intitulée « RedRex Big Whey - Whey Protein 4.5 lbs (2 kg) »"
+    },
+    {
+     "q": "Combien de protéines et de calories une portion apporte-t-elle ?",
+     "a": "Par portion de 34 g, le tableau nutritionnel indique 24 g de protéines (« Protein 24g ») et 130 kcal (« Calories 130kcal »). Il indique également « Total Fat 1.5g », « Total Carbohydrate 5g » et « Sodium 90mg ».",
+     "grounded_in": "Tableau « Nutrition Facts » sur musclehouse.com (valeurs par portion de 34 g)"
+    },
+    {
+     "q": "Quels arômes existent pour ce produit ?",
+     "a": "Le site du fabricant Big Ramy Labs propose cinq arômes pour RED REX BIG WHEY : Chocolate, Strawberry, Chocolate Peanut Butter, Vanilla et Cookies and Cream. La fiche protein.tn de ce format 2 kg indique l'arôme « Cookies ».",
+     "grounded_in": "Sélecteur d'arômes sur bigramylabs.com/products/red-rex-big-whey ; champ « Arôme : Cookies » sur la fiche protein.tn"
+    },
+    {
+     "q": "Une déclaration d'allergènes est-elle disponible pour ce produit ?",
+     "a": "Aucune des pages consultées, ni celle du fabricant ni celles des revendeurs, ne publie de déclaration d'allergènes ni de mentions d'avertissement pour ce produit. La seule information disponible est la liste d'ingrédients, qui mentionne des protéines de lactosérum (« Whey Protein Concentrate, Whey Protein Isolate, Whey Protein Hydrolysate »). Il convient de se référer à l'étiquette imprimée sur le pot.",
+     "grounded_in": "Absence de tout texte « allergen », « contains », « warning » sur bigramylabs.com, musclehouse.com, drnutrition.com et super-eg.com ; liste d'ingrédients sur musclehouse.com"
+    }
+   ],
+   "verification": "Nutrition VERIFIED, pack size VERIFIED, but the ingredient list is the WRONG FLAVOR and must not ship.\n\n1. SOURCE (confirmed). musclehouse.com/products/red-rex-big-whey returns HTTP 200, is a genuine product page (not search/category), titled \"RedRex Big Whey - Whey Protein 4.5 lbs (2 kg)\". I fetched it via curl with a browser UA, stripped tags, and compared ALL 17 rows rather than sampling. Every row matches verbatim, including the ones a fabricator would get wrong: Cholesterol 65mg/22%, Calcium 132mg/10%, Potassium 224mg/5%, Iron 1mg/6%, \"Includes 0g Added Sugars 0%\", Trans Fat 0g with no %DV. Serving Size 34g, \"60 Servings Per Container\", and the \"Percent Daily Values are based on a 2,000 calorie diet\" footnote are verbatim, so percent_basis \"us\" is correct. No per-100g column exists; none was invented. serving_note and claims also verified verbatim (claims against bigramylabs.com).\n\n2. PACK SIZE (confirmed, with an independent check). protein.tn: SKU 413, \"BIG WHEY 2KG - BIG RAMY LABS\", displays \"2 kg\", 239 DT, Arome \"Cookies\", gtin:null, mpn:null. The decisive test is arithmetic the research did not make explicit: 60 servings x 34 g = 2040 g = 2.04 kg = 4.5 lb. That uniquely identifies this tub and positively excludes the 2.25 lb (~30 servings / 1020 g) and 10 lb (~133 servings) panels. Corroborated: bigramylabs.com offers exactly three sizes (2.25 / 4.5 / 10lbs, no \"2 kg\" label, as the research said), and super-eg.com sells only \"30 Servings / 60 Servings\", confirming 60 = the large tub. Note also that a US panel is per-serving and therefore size-invariant; the sole size-dependent field, servings_per_container, is double-confirmed. The most likely failure mode was checked and it holds.\n\n3. THE DEFECT. other_ingredients contains \"Cocoa Powder\" - the chocolate variant's list - while protein.tn sells the Cookies aroma. musclehouse shows one panel spanning all five flavors, but the cocoa proves the transcription came from the chocolate tub. I dropped the ingredient list, and for consistency dropped FAQ[2] and FAQ[3], which only restate it. The research flagged this itself and deserves credit; I am enforcing it rather than leaving it as prose the publisher might skim past.\n\n4. FAQ. Survivors [0,1,4,5]. All four are grounded in text I read with my own eyes; none contains a dosage instruction (the mixing directions stay confined to serving_note) and none contains a health claim - notably cleaner than the claims field. FAQ[4]'s five flavors (Chocolate, Strawberry, Chocolate Peanut Butter, Vanilla, Cookies and Cream) match bigramylabs.com exactly, and \"Arome: Cookies\" is confirmed on protein.tn. FAQ[5]'s allergen-absence assertion is the strongest entry: I verified zero allergen/Contains/Warning text on all four sources independently, and it correctly declines to infer milk allergens from whey and defers to the printed label. Dropped [2,3] per item 3.\n\n5. VIDEO (correctly omitted). The manufacturer site contains zero youtube.com references. The only search hit is the same Short the research names (HBxxx0QdJkw), a third-party haul clip about Red Rex BEEF MASS - different product, not brand-uploaded. Rejecting it was right; nothing to publish, so nothing can mislead.\n\n6. RAISED BEYOND THE BRIEF. (a) No FDA-style disclaimer exists anywhere on the manufacturer page, yet claims quotes asterisked structure/function statements - publishing leaves a dangling asterisk with no referent. (b) super-eg says \"1 Scoop (35g)\" vs the panel's 34g; unresolved, prefer 34g since it reconciles with 4.5 lb. (c) The \"25g protein\" conflict the research mentions resolves in favor of 24g - manufacturer, drnutrition and super-eg all say 24g. (d) mfsupps corroboration is unverifiable (403) and was given no weight.\n\nVERDICT: publish the 17 numeric rows and FAQ [0,1,4,5] only with an explicit flavor caveat, or better, after someone reads the Cookies tub in the warehouse. Do not publish other_ingredients or claims.",
+   "problems": [
+    "FLAVOR MISMATCH (most serious): the cited panel's ingredient list contains Cocoa Powder, i.e. the chocolate variant, while protein.tn sells aroma 'Cookies'. musclehouse.com shows a SINGLE panel covering all 5 flavors, so the numeric rows are presented as flavor-general, but the cocoa in the ingredients proves the panel was transcribed from the chocolate tub. The 17 numeric rows are safe to publish ONLY with an explicit flavor caveat, or after reading the Cookies tub in stock. The ingredient list is not safe to publish at all.",
+    "serving_note contains full dosage instructions verbatim ('Mix 1 scoop with 6-8 oz (175-235 ml)...', 'Double Serving: Mix 2 scoops with 12-16 oz...'). Accurate to the source, but if published copy must be free of dosage instruction, this field needs stripping. The FAQ entries themselves are clean of dosage.",
+    "SCOOP-SIZE CONFLICT (unresolved): super-eg.com states 'Directions: 1 Scoop (35g)' against the cited panel's 'Serving Size 34g'. 35g x 60 = 2100g, which does not reconcile with 4.5 lb. The 34g figure is the one printed on the cited Nutrition Facts panel and is internally consistent (60 x 34 = 2040 g = 4.5 lb), so 34g is preferred, but the discrepancy is unexplained.",
+    "net_quantity declared as 2 kg; true fill is 4.5 lb = 2.04 kg (confirmed by 60 x 34 g = 2040 g). Acceptable because both protein.tn's product name and the source page itself print '2 kg', but the panel arithmetic says 2.04 kg.",
+    "NOT A DEFECT, recorded for the file: allergens and warnings are correctly empty. I independently confirmed zero occurrences of 'allergen', 'Contains', or 'Warning' on all four cited pages (bigramylabs.com, musclehouse.com, drnutrition.com, super-eg.com). The only 'milk' on the source page is 'skimmed milk' in the mixing directions. Nothing was inferred from the presence of whey — correct restraint.",
+    "NOT A DEFECT: gtin correctly left empty. protein.tn's own record confirmed gtin:null, mpn:null, sku '413'. No cited page prints a UPC/EAN."
+   ]
+  },
+  {
+   "slug": "100-whey-protein-2-27kg-challenger-nutrition",
+   "product_name": "100% WHEY PROTEIN 2.27KG - CHALLENGER NUTRITION",
+   "brand": "CHALLENGER NUTRITION",
+   "gtin": "6224009363018",
+   "sources": [
+    {
+     "url": "https://protein.tn/whey-proteine/100-whey-protein-2-27kg-challenger-nutrition",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://challengernutrition.com/products/100-whey-protein",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://world.openfoodfacts.org/product/6224009363018",
+     "kind": "database"
+    },
+    {
+     "url": "https://www.maxmuscleelite.com/shop/product/6224009363018-challenger-nutrition-100-whey-protein-66serv-2-267g-chocolate-4271",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://yankeesta.com/shop/supplements/proteins/whey-protein/challenger-nutrition-100-whey-protein-2-267-kg-chocolate-66-servings/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://ifit-eg.com/product/challenger-nutrition-100-whey-protein/",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://myoras.com/products/challenger-nutrition-100-whey-protein",
+     "kind": "retailer"
+    },
+    {
+     "url": "https://protein-shop-tunisia.tn/produit/100-whey-protein-2268gr-challenger-nutrition/",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://world.openfoodfacts.org/product/6224009363018",
+    "serving_quantity": 34,
+    "serving_unit": "g",
+    "serving_note": "Colonne « As sold per serving (34 g) (packaging) » de la fiche Open Food Facts. La colonne « for 100 g / 100 ml » de cette même page n'a PAS été reprise : elle est recalculée par Open Food Facts à partir de la portion (24 / 34 x 100 = 70,5882...), ce n'est pas une valeur d'étiquette.",
+    "servings_per_container": "66",
+    "net_quantity": 2.267,
+    "net_unit": "kg",
+    "percent_basis": "",
+    "rows": [
+     {
+      "name": "Energy",
+      "kind": "value",
+      "quantity": 135,
+      "unit": "kcal",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Fat",
+      "kind": "value",
+      "quantity": 2,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Saturated fat",
+      "kind": "value",
+      "quantity": 1,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Cholesterol",
+      "kind": "value",
+      "quantity": 0.045,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Carbohydrates",
+      "kind": "value",
+      "quantity": 5,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Sugars",
+      "kind": "value",
+      "quantity": 1.5,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 1
+     },
+     {
+      "name": "Fiber",
+      "kind": "value",
+      "quantity": 0.5,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Proteins",
+      "kind": "value",
+      "quantity": 24,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Salt",
+      "kind": "value",
+      "quantity": 0.125,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     },
+     {
+      "name": "Sodium",
+      "kind": "value",
+      "quantity": 0.05,
+      "unit": "g",
+      "percent_dv": null,
+      "depth": 0
+     }
+    ],
+    "other_ingredients": "",
+    "allergens": "",
+    "warnings": "Keep Out of the reach of children. Do not use this product if you are pregnant or nursing. Consult a medical doctor before starting any diet or exercise program or if you have any known or suspected medical condition(s), and/or if you are taking any prescription or medication(s).",
+    "claims": "Fabricant (challengernutrition.com) : \"Challenger Nutrition 100% Whey Protein is composed of a powerful protein matrix with whey protein concentrate, and whey protein hydrolysate. These complex proteins are balanced by muscle-building amino acids and BCAAs for maximum strength and performance.\" | Maxmuscle Elite : \"100% pure according to the microfiltration technique. It helps to build muscles and strength. improve cardiovascular and immune functioning. 70% of whey protein concentrate that is quickly digested and Absorbed. Energy Booster and helps to enhance your endurance. Low calories.\" | MyOras / iFit-eg : \"Produced through microfiltration technique for purity; Absorbs quickly into the body for maximum performance; Fuels working muscles and stimulates protein synthesis; Available in chocolate, strawberry and vanilla flavors.\""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel format et quel arôme Protein.tn vend-il pour cette whey Challenger Nutrition ?",
+     "a": "Protein.tn référence le format 2,27 kg de CHALLENGER NUTRITION en arôme Chocolat. Les revendeurs Maxmuscle Elite et Yankeesta décrivent ce même conditionnement comme 2,267 kg, arôme Chocolat, 66 portions.",
+     "grounded_in": "Titre et fiche produit protein.tn (100% WHEY PROTEIN 2.27KG - CHALLENGER NUTRITION, arôme Chocolat) + spécifications Maxmuscle Elite (Weight 2.267KG, Servings 66, Flavor Chocolate) et Yankeesta (Weight: 2.267 KG, Servings: 66, Flavor: Chocolate)"
+    },
+    {
+     "q": "Combien de protéines contient une portion ?",
+     "a": "La fiche Open Food Facts du code-barres 6224009363018 indique 24 g de protéines pour une portion de 34 g. Maxmuscle Elite, iFit-eg et MyOras indiquent également 24 g de protéines par portion pour cette référence.",
+     "grounded_in": "Open Food Facts 6224009363018, colonne « As sold per serving (34 g) » : Proteins 24 g ; corroboré par Maxmuscle Elite (« 24 grams of protein »), iFit-eg et MyOras (« Each 34 gram serving ... has 24 grams of protein »)"
+    },
+    {
+     "q": "Quelles sont les valeurs nutritionnelles complètes d'une portion de 34 g ?",
+     "a": "D'après la fiche Open Food Facts du code-barres 6224009363018, une portion de 34 g apporte : 135 kcal, 2 g de lipides dont 1 g d'acides gras saturés, 0,045 g de cholestérol, 5 g de glucides dont 1,5 g de sucres, 0,5 g de fibres, 24 g de protéines, 0,125 g de sel et 0,05 g de sodium. Aucune valeur pour 100 g figurant sur l'étiquette n'a pu être vérifiée.",
+     "grounded_in": "Open Food Facts 6224009363018, colonne « As sold per serving (34 g) (packaging) » — valeurs transcrites telles qu'affichées, sans conversion ni recalcul"
+    },
+    {
+     "q": "Quels ingrédients et quels allergènes sont déclarés ?",
+     "a": "Le fabricant Challenger Nutrition décrit une matrice protéique associant un concentré de protéine de whey et un hydrolysat de whey, équilibrés par des acides aminés et des BCAA. En revanche, aucune des sources consultées ne publie la liste d'ingrédients complète ni une déclaration d'allergènes : la fiche Open Food Facts mentionne explicitement « Ingredients are missing ». Ces informations doivent être lues sur l'emballage.",
+     "grounded_in": "Description produit challengernutrition.com (« whey protein concentrate, and whey protein hydrolysate ... amino acids and BCAAs ») + Open Food Facts 6224009363018 (« Ingredients are missing », champ allergènes vide)"
+    },
+    {
+     "q": "Y a-t-il des avertissements sur ce produit ?",
+     "a": "Oui. Maxmuscle Elite reproduit pour ce format l'avertissement suivant : « Keep Out of the reach of children. Do not use this product if you are pregnant or nursing. Consult a medical doctor before starting any diet or exercise program or if you have any known or suspected medical condition(s), and/or if you are taking any prescription or medication(s). »",
+     "grounded_in": "Section « Warnings » de la page Maxmuscle Elite pour la référence 2.267 KG Chocolate 66 servings"
+    },
+    {
+     "q": "Où ce produit est-il fabriqué et quel est son code-barres ?",
+     "a": "Maxmuscle Elite indique « Origin : Egypt » pour ce conditionnement, et Challenger Nutrition intitule cette référence « 100% Whey Protein (Egypt Edition) ». Le code-barres EAN-13 associé au format Chocolat 2,267 kg est 6224009363018 (préfixe GS1 622 = Égypte).",
+     "grounded_in": "Spécifications Maxmuscle Elite (Company: Challenger Nutrition, Origin: Egypt) + titre de la fiche fabricant challengernutrition.com « 100% Whey Protein (Egypt Edition) » + code 6224009363018 affiché sur la page Maxmuscle Elite et utilisé comme code produit Open Food Facts"
+    }
+   ],
+   "verification": "Verified independently; the research holds up, with fixes required before publish. NUTRITION (verified true): I fetched the raw HTML of the cited OFF page for barcode 6224009363018 — it is a genuine product page and its 'As sold per serving (34 g) (packaging)' column matches all ten submitted rows verbatim (135 kcal, fat 2 g, sat fat 1 g, cholesterol 0.045 g, carbs 5 g, sugars 1.5 g, fiber 0.5 g, protein 24 g, salt 0.125 g, sodium 0.05 g). Zero rows disagree. The 100 g column is confirmed to be OFF's own recalculation (protein 70.5882352941177 g) and must never ship. PACK SIZE (matches): protein.tn sells title '100% WHEY PROTEIN 2.27KG', body '2,27 kg', aroma Chocolat; the manufacturer's variant JSON gives weight 2268 g with a single Default Title variant under the page title '100% Whey Protein (Egypt Edition)'; Maxmuscle Elite ties barcode [6224009363018] to Weight 2.267KG / 66 servings / Chocolate / Origin Egypt. 2268/34 = 66.7 ≈ 66 servings, internally consistent. I computed the EAN-13 check digit myself (sum 62 → check 8, valid) and confirmed GS1 prefix 622 = Egypt. CORROBORATION: because OFF is crowd-sourced and carries no nutrition label photo, I cross-checked two independent retailers — iFit-eg and MyOras both publish 34 g / 24 g protein / 2 g fat / 5 g carbs / 1.5 g sugars, identical to OFF. The protein figure, the one a customer acts on, is now backed by four independent sources. The remaining five rows rest on OFF alone. VIDEO (rejected): oEmbed returns author_name 'Matt Chambers' at @mattchambers4862 — a reviewer upload, not the brand. Challenger Nutrition has no YouTube channel. FAQ: all six survive. Each is source-backed and I verified the load-bearing quotes against the originals — the Maxmuscle warnings text came back word-for-word identical, the manufacturer's 'whey protein concentrate, and whey protein hydrolysate' and the '(Egypt Edition)' title are verbatim from the page I fetched, and Origin: Egypt / Company: Challenger Nutrition are confirmed. None contains a dosage instruction (notably, Maxmuscle's 'one scoop in 125-200 ml' was correctly left out) and none carries a health claim (the manufacturer's 'for maximum strength and performance' was correctly truncated). MUST FIX BEFORE PUBLISH: (1) the nutrition.claims field carries unauthorized health claims — 'improve cardiovascular and immune functioning', 'Energy Booster', 'stimulates protein synthesis' — and must not render; (2) servings_per_container, net_quantity and warnings are attributed to source_url but are not on that page — re-attribute or drop; (3) add an explicit allergen notice, since no source publishes ingredients and this is a milk-derived product; (4) do not write the third-party GTIN into our schema.org markup, as our own record has gtin:null. This research was unusually disciplined — it discarded the 100 g column, three contradicting retailers, and its own video find, and every one of those calls was correct.",
+   "problems": [
+    "ATTRIBUTION MISMATCH (fix before publish): nutrition.source_url points at Open Food Facts, but servings_per_container ('66'), net_quantity (2.267 kg) and warnings do NOT appear on that page. The OFF entry has an EMPTY quantity field. Those values came from Maxmuscle Elite / Yankeesta. I independently confirmed they are TRUE (Maxmuscle: Weight 2.267KG, Servings 66; manufacturer JSON: weight 2268 g; iFit: 2.267 kg / 66 servings) — so the numbers are right, but the citation is wrong. Re-attribute per-field or drop them from the nutrition object.",
+    "PACK-SIZE LINK IS INDIRECT: the cited OFF page shows no net weight and no flavor. Its product name is only 'Whey Protein - Challenger' (brand recorded as 'Challenger', not 'CHALLENGER NUTRITION'). The tie to our 2.27 kg Chocolat tub rests entirely on the barcode appearing on a third-party retailer page. It holds up (barcode check digit valid, GS1 622 = Egypt, manufacturer weight 2268 g, 2268/34 = 66.7 servings), but nothing on the cited page itself states the size. Mitigating factor: per-serving values for a powder do not vary by tub size — iFit publishes the identical panel for both the 1 kg and 2.267 kg packs — so a wrong-size panel is a low-probability failure here.",
+    "OFF HAS NO NUTRITION LABEL PHOTO: I checked the raw HTML — zero nutrition images. The panel is crowd-entered text tagged '(packaging)' with no image to audit it against. 5 of 10 rows (serving 34 g, protein 24 g, fat 2 g, carbs 5 g, sugars 1.5 g) are independently corroborated by iFit-eg and MyOras. The other 5 rows — energy 135 kcal, saturated fat 1 g, cholesterol 0.045 g, fiber 0.5 g, salt 0.125 g / sodium 0.05 g — rest on OFF ALONE and are unverifiable. Saturated fat is actively contested (MightyGains says 1.5 g). Consider publishing only the corroborated rows.",
+    "ALLERGEN GAP ON A MILK PRODUCT: OFF states 'Ingredients are missing' (confirmed in raw HTML) and the allergens field is empty. No source publishes an ingredient list. Publishing a whey protein page with no allergen statement is the one genuine consumer-safety weakness here. The research was right not to fabricate a declaration, but the page should carry an explicit 'consult the packaging for allergens' notice rather than silence.",
+    "GTIN IS NOT OURS: our own product record returns \"gtin\":null,\"sku\":null,\"nutrition_images\":[] (verified in the page's embedded JSON; sku is the internal id 439). The barcode 6224009363018 is sourced only from third parties. Do NOT write it into our schema.org Product markup as our gtin without packaging confirmation — a wrong GTIN in structured data is a Merchant Center problem.",
+    "ENERGY ROW: OFF's per-serving cell literally reads '? kcal (135 kcal)' — the kJ value is absent. Publish 135 kcal only; do not derive kJ.",
+    "percent_basis is empty — no %DV or NRV on the cited page. Do not let any template infer daily values.",
+    "SEO DEFECT (from research notes, worth escalating separately): a bad slug on protein.tn returns HTTP 200 with a DIFFERENT product's content and canonical instead of a 404. That is a duplicate-content and wrong-product-served bug independent of this page."
+   ]
+  }
+ ]
+}
