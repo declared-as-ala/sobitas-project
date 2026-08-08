@@ -70,18 +70,6 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy to VPS
-        # Best-effort only: the VPS deploys ITSELF from cron (scripts/vps-autodeploy.sh).
-        #
-        # This step just asks it to pull immediately rather than waiting for the next poll. It is
-        # allowed to fail because its failure does not mean the DEPLOY failed: from 07/08/2026 every
-        # run went red here with
-        #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
-        # while the image built and pushed to GHCR perfectly. A red X on a successful build teaches
-        # people to ignore red X-es, which is worse than the original problem.
-        #
-        # The honest contract of this workflow is now BUILD AND PUBLISH THE IMAGE. Whether the server
-        # has picked it up is reported in the job summary, not by this exit code.
-        continue-on-error: true
         id: push_to_vps
         uses: appleboy/ssh-action@v1.0.3
         with:

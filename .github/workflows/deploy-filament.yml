@@ -86,9 +86,6 @@ jobs:
       # and the deploy printed `no such service: backend-v2-scheduler` while still reporting
       # success. Any future service, port or env change to compose would have failed the same way.
       - name: Sync docker-compose.yml to VPS
-        # Also best-effort. The autodeploy poller does `git pull` on the server, so the compose file
-        # arrives that way regardless; this only makes it arrive a little sooner.
-        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -114,17 +111,6 @@ jobs:
       - name: Deploy to VPS (attempt 1)
         id: deploy_attempt_1
         continue-on-error: true
-        # Best-effort only: the VPS deploys ITSELF from cron (scripts/vps-autodeploy.sh).
-        #
-        # This step just asks it to pull immediately rather than waiting for the next poll. It is
-        # allowed to fail because its failure does not mean the DEPLOY failed: from 07/08/2026 every
-        # run went red here with
-        #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
-        # while the image built and pushed to GHCR perfectly. A red X on a successful build teaches
-        # people to ignore red X-es, which is worse than the original problem.
-        #
-        # The honest contract of this workflow is now BUILD AND PUBLISH THE IMAGE. Whether the server
-        # has picked it up is reported in the job summary, not by this exit code.
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -247,18 +233,6 @@ jobs:
 
       - name: Deploy to VPS (attempt 2 on transient SSH failure)
         if: steps.deploy_attempt_1.outcome == 'failure'
-        # Best-effort only: the VPS deploys ITSELF from cron (scripts/vps-autodeploy.sh).
-        #
-        # This step just asks it to pull immediately rather than waiting for the next poll. It is
-        # allowed to fail because its failure does not mean the DEPLOY failed: from 07/08/2026 every
-        # run went red here with
-        #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
-        # while the image built and pushed to GHCR perfectly. A red X on a successful build teaches
-        # people to ignore red X-es, which is worse than the original problem.
-        #
-        # The honest contract of this workflow is now BUILD AND PUBLISH THE IMAGE. Whether the server
-        # has picked it up is reported in the job summary, not by this exit code.
-        continue-on-error: true
         id: push_to_vps
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -380,20 +354,25 @@ jobs:
 
             echo "🚀 Deploy complete!"
 
-      - name: Warn when the VPS could not be reached
-        # Was `exit 1`. It is now a warning, because the workflow no longer OWNS the deploy: the
-        # server pulls from GHCR on its own schedule (scripts/vps-autodeploy.sh), so an unreachable
-        # SSH port means "the update arrives a minute later" rather than "the deploy failed".
+      - name: Fail workflow when both attempts failed
+        # Stays a hard failure, on purpose.
         #
-        # Keeping the hard failure would have been the safer-looking choice and the wrong one. Every
-        # run from 07/08/2026 onward went red here while the image published perfectly, and a build
-        # status that is red when the build succeeded stops carrying information — people learn to
-        # scroll past it, including on the day it means something.
+        # This workflow OWNS the deploy: SSH is how the new image reaches the server, so an
+        # unreachable VPS means the site did not update, and the run must say so. It was briefly
+        # softened to a warning during the outage of 07-08/08/2026 — that was correct only while the
+        # server was expected to pull for itself, and the moment SSH worked again a green check on a
+        # failed deploy would have been a lie of exactly the kind this project has been bitten by
+        # before (PRs #183/#184 reported green with the old image still running).
+        #
+        # The whole outage was one cause: the VPS password was rotated in Hostinger and
+        # VPS_PASSWORD in GitHub was not updated. Set VPS_SSH_KEY and that class of failure stops
+        # recurring, because a key does not change when a password does.
         if: steps.deploy_attempt_1.outcome == 'failure'
         run: |
-          echo "::warning::Could not reach the VPS over SSH. The image is published; the server's"
-          echo "::warning::autodeploy poller will pick it up. If the site does not change within a"
-          echo "::warning::few minutes, check: crontab -l | grep vps-autodeploy"
+          echo "❌ SSH deploy failed — the new image did NOT reach the server."
+          echo "   Most likely: VPS_PASSWORD is stale after a password change in Hostinger."
+          echo "   Permanent fix: set the VPS_SSH_KEY secret (a key survives password rotation)."
+          exit 1
 
       - name: Report what actually happened
         if: always()
