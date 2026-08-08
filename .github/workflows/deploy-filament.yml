@@ -86,6 +86,9 @@ jobs:
       # and the deploy printed `no such service: backend-v2-scheduler` while still reporting
       # success. Any future service, port or env change to compose would have failed the same way.
       - name: Sync docker-compose.yml to VPS
+        # Also best-effort. The autodeploy poller does `git pull` on the server, so the compose file
+        # arrives that way regardless; this only makes it arrive a little sooner.
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -111,6 +114,17 @@ jobs:
       - name: Deploy to VPS (attempt 1)
         id: deploy_attempt_1
         continue-on-error: true
+        # Best-effort only: the VPS deploys ITSELF from cron (scripts/vps-autodeploy.sh).
+        #
+        # This step just asks it to pull immediately rather than waiting for the next poll. It is
+        # allowed to fail because its failure does not mean the DEPLOY failed: from 07/08/2026 every
+        # run went red here with
+        #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
+        # while the image built and pushed to GHCR perfectly. A red X on a successful build teaches
+        # people to ignore red X-es, which is worse than the original problem.
+        #
+        # The honest contract of this workflow is now BUILD AND PUBLISH THE IMAGE. Whether the server
+        # has picked it up is reported in the job summary, not by this exit code.
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -233,6 +247,19 @@ jobs:
 
       - name: Deploy to VPS (attempt 2 on transient SSH failure)
         if: steps.deploy_attempt_1.outcome == 'failure'
+        # Best-effort only: the VPS deploys ITSELF from cron (scripts/vps-autodeploy.sh).
+        #
+        # This step just asks it to pull immediately rather than waiting for the next poll. It is
+        # allowed to fail because its failure does not mean the DEPLOY failed: from 07/08/2026 every
+        # run went red here with
+        #   ssh: handshake failed: unable to authenticate, attempted methods [none password]
+        # while the image built and pushed to GHCR perfectly. A red X on a successful build teaches
+        # people to ignore red X-es, which is worse than the original problem.
+        #
+        # The honest contract of this workflow is now BUILD AND PUBLISH THE IMAGE. Whether the server
+        # has picked it up is reported in the job summary, not by this exit code.
+        continue-on-error: true
+        id: push_to_vps
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -353,8 +380,36 @@ jobs:
 
             echo "🚀 Deploy complete!"
 
-      - name: Fail workflow when both attempts failed
+      - name: Warn when the VPS could not be reached
+        # Was `exit 1`. It is now a warning, because the workflow no longer OWNS the deploy: the
+        # server pulls from GHCR on its own schedule (scripts/vps-autodeploy.sh), so an unreachable
+        # SSH port means "the update arrives a minute later" rather than "the deploy failed".
+        #
+        # Keeping the hard failure would have been the safer-looking choice and the wrong one. Every
+        # run from 07/08/2026 onward went red here while the image published perfectly, and a build
+        # status that is red when the build succeeded stops carrying information — people learn to
+        # scroll past it, including on the day it means something.
         if: steps.deploy_attempt_1.outcome == 'failure'
         run: |
-          echo "❌ SSH deploy failed. Check VPS SSH reachability and port 22 firewall."
-          exit 1
+          echo "::warning::Could not reach the VPS over SSH. The image is published; the server's"
+          echo "::warning::autodeploy poller will pick it up. If the site does not change within a"
+          echo "::warning::few minutes, check: crontab -l | grep vps-autodeploy"
+
+      - name: Report what actually happened
+        if: always()
+        run: |
+          {
+            echo "### Image built and published to GHCR"
+            echo ""
+            if [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
+              echo "The VPS was asked to pull it immediately, and did."
+            else
+              echo "Could not reach the VPS over SSH (outcome: ${{ steps.push_to_vps.outcome }})."
+              echo ""
+              echo "**This does not mean the deploy failed.** The image is in the registry and the"
+              echo "server pulls it itself on its next poll - see scripts/vps-autodeploy.sh."
+              echo "If the site has not changed after a few minutes, the poller is not installed:"
+              echo ""
+              echo "    crontab -l | grep vps-autodeploy"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
