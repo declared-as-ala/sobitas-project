@@ -18,7 +18,7 @@ class Product extends Model
     protected $table = 'products';
 
     protected $fillable = [
-        'designation_fr', 'slug', 'description_fr', 'faq', 'nutrition_values', 'nutrition_facts', 'nutrition_images', 'cover', 'alt_cover', 'description_cover',
+        'designation_fr', 'slug', 'description_fr', 'faq', 'nutrition_values', 'nutrition_facts', 'official_video', 'nutrition_images', 'cover', 'alt_cover', 'description_cover',
         'images', 'prix', 'prix_ht', 'promo', 'promo_ht', 'promo_expiration_date',
         'qte', 'low_stock_threshold', 'publier', 'rupture', 'force_out_of_stock', 'new_product', 'best_seller', 'pack', 'note',
         'meta_title', 'meta_description', 'seo_schema_description', 'seo_review', 'seo_aggregate_rating',
@@ -73,6 +73,7 @@ class Product extends Model
         'ai_generated_at' => 'datetime',
         'nutrition_images' => 'array',
         'nutrition_facts' => 'array',
+        'official_video' => 'array',
         'seo_robots_index' => 'boolean',
         'seo_robots_follow' => 'boolean',
         'price_valid_until' => 'date',

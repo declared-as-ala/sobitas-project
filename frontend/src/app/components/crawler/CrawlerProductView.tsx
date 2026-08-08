@@ -25,6 +25,7 @@ import { isInStock } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildComparison } from '@/util/productComparison';
+import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import type { Product } from '@/types';
@@ -77,6 +78,7 @@ export function CrawlerProductView({
   const sku = product.sku || product.code_product || String(product.id);
   const comparison = buildComparison(product, similarProducts);
   const subCategoryName = getProductPrimarySubCategory(product)?.designation_fr ?? '';
+  const officialVideoId = videoId(product.official_video);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -241,6 +243,40 @@ export function CrawlerProductView({
                 </div>
               ))}
             </dl>
+          </section>
+        )}
+
+        {/*
+          Official brand video.
+
+          Rendered as a real embed on the human page and as a thumbnail + link here. That is not a
+          parity gap: a bot gains nothing from an iframe, and the VideoObject schema on the page
+          carries the same embedUrl, thumbnail and title either way. What matters is that both
+          audiences are told the same video exists and can reach it.
+        */}
+        {officialVideoId && (
+          <section aria-label="Vidéo officielle" className="my-6">
+            <h2 className="text-lg font-semibold">Vidéo officielle</h2>
+            <p className="mt-1 text-sm">
+              <a
+                className="text-red-700 underline"
+                href={watchUrl(officialVideoId)}
+                rel="noopener nofollow"
+                target="_blank"
+              >
+                {videoTitle(product.official_video, product.designation_fr ?? '')}
+              </a>
+              {product.official_video?.channel ? ` — chaîne ${product.official_video.channel}` : ''}
+            </p>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={thumbnailUrl(officialVideoId)}
+              width={480}
+              height={360}
+              loading="lazy"
+              alt={videoTitle(product.official_video, product.designation_fr ?? '')}
+              className="mt-2 h-auto w-full max-w-sm rounded border"
+            />
           </section>
         )}
 

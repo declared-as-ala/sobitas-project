@@ -7,6 +7,7 @@ use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Models\Review;
 use App\Support\Gtin;
+use App\Support\YouTubeId;
 use Closure;
 use Filament\Actions;
 use Filament\Forms;
@@ -367,6 +368,52 @@ class ProductResource extends Resource
                                      * pages carry any nutrition content. No external database
                                      * covers this catalogue. The tub does.
                                      */
+                                    /**
+                                     * ── VIDÉO OFFICIELLE ──────────────────────────────────
+                                     *
+                                     * The id, not an embed code. Whatever lands here is
+                                     * concatenated into an `<iframe src>` on a page that takes
+                                     * card payments, so it is validated against YouTube's exact
+                                     * 11-character alphabet and REJECTED otherwise — never
+                                     * sanitised into something plausible.
+                                     *
+                                     * "Officielle" is the point: a reviewer's video embedded on
+                                     * our own product page hands our page to claims we have not
+                                     * checked and cannot stand behind.
+                                     */
+                                    Section::make('Vidéo officielle de la marque')
+                                        ->description('Uniquement une vidéo publiée par la marque elle-même — pas un test ni un avis de youtubeur.')
+                                        ->icon('heroicon-o-play-circle')
+                                        ->collapsible()
+                                        ->collapsed()
+                                        ->visible(fn (): bool => self::hasProductColumn('official_video'))
+                                        ->schema([
+                                            Grid::make(2)->schema([
+                                                Forms\Components\TextInput::make('official_video.youtube_id')
+                                                    ->label('Vidéo YouTube')
+                                                    ->placeholder('dQw4w9WgXcQ ou l\'URL complète')
+                                                    ->helperText('Collez l\'identifiant ou le lien : les deux fonctionnent.')
+                                                    // Normalised on save so a pasted watch/share/embed URL is
+                                                    // stored as the bare id — one shape in the database.
+                                                    ->dehydrateStateUsing(fn (?string $state): ?string => YouTubeId::parse($state))
+                                                    ->rule(static function (): Closure {
+                                                        return static function (string $attribute, $value, Closure $fail): void {
+                                                            if (filled($value) && ! YouTubeId::isValid((string) $value)) {
+                                                                $fail('Identifiant YouTube invalide. Attendu : 11 caractères, ou une URL YouTube.');
+                                                            }
+                                                        };
+                                                    }),
+                                                Forms\Components\TextInput::make('official_video.channel')
+                                                    ->label('Chaîne')
+                                                    ->placeholder('Optimum Nutrition')
+                                                    ->helperText('Le nom de la chaîne qui a publié la vidéo — c\'est ce qui rend « officielle » vérifiable plus tard.'),
+                                            ]),
+                                            Forms\Components\TextInput::make('official_video.title')
+                                                ->label('Titre de la vidéo')
+                                                ->columnSpanFull(),
+                                        ])
+                                        ->columnSpanFull(),
+
                                     Section::make('Panneau nutritionnel')
                                         ->description('Recopiez le tableau imprimé sur l\'emballage. Le panneau affiché sur le site est généré à partir de ces lignes — ne calculez rien, ne convertissez rien, recopiez.')
                                         ->icon('heroicon-o-table-cells')

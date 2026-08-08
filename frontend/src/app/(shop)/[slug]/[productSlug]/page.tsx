@@ -13,6 +13,7 @@ import {
   sanitizeBackendProductJsonLd,
   validateStructuredData,
 } from '@/util/structuredData';
+import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
@@ -299,6 +300,8 @@ export default async function NewProductPage({ params }: PageProps) {
   // `|| buildFAQPageSchema(getFAQs())` fallback emitted the sitewide /faqs FAQ — invisible on the
   // product page and duplicated across every product — a Google FAQ-policy violation.
   const faqSchema = buildFAQPageSchemaFromProductFaq(product.faq);
+  // Only emitted when a validated official video id is present; see util/officialVideo.ts.
+  const videoSchema = buildVideoObjectSchema(product?.official_video, product?.designation_fr ?? '', canonicalUrl);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
@@ -310,6 +313,9 @@ export default async function NewProductPage({ params }: PageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+      {videoSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
       )}
       <ProductDetailClient 
         product={product} 

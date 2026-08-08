@@ -269,6 +269,26 @@ SYS;
      * @param  list<string>  $approved  canonical figure tokens the evidence supports
      * @return string|null a short reason when the text breaks a rule, null when it is clean
      */
+    /**
+     * The dosage and health-claim patterns, for other writers into the same columns.
+     *
+     * Exposed rather than copied. The research importer has to apply exactly these rules, and two
+     * separate definitions of "this is a dosage instruction" would drift — at which point one entry
+     * point publishes advice the other rejects, on the same product page.
+     *
+     * @return list<string>
+     */
+    public static function dosagePatterns(): array
+    {
+        return self::DOSAGE_PATTERNS;
+    }
+
+    /** @return list<string> */
+    public static function claimPatterns(): array
+    {
+        return self::CLAIM_PATTERNS;
+    }
+
     private function ruleViolation(string $plain, Product $product, array $approved): ?string
     {
         foreach (self::CLAIM_PATTERNS as $pattern) {

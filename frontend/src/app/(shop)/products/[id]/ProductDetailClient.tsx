@@ -19,6 +19,7 @@ import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
 import { formatTnd, hasValidPromo } from '@/util/productPrice';
 import { buildComparison } from '@/util/productComparison';
+import { embedUrl, videoId, videoTitle } from '@/util/officialVideo';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { useAuth } from '@/contexts/AuthContext';
@@ -106,6 +107,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
   // middleware sends Googlebot to that view and a table only one of them can see is a discrepancy.
   const comparisonRows = buildComparison(initialProduct, similarProducts);
+  const officialVideoId = videoId(initialProduct.official_video);
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
@@ -1494,6 +1496,39 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
           </div>
         </section>
+
+        {/*
+          Official brand video.
+
+          `loading="lazy"` and youtube-nocookie are both deliberate: the iframe is below the fold on
+          every layout, and nocookie sets no tracking cookie until the visitor actually presses play.
+          The id is re-validated by videoId() before it reaches this src — the value arrives from a
+          JSON column, and the set of things that can write to a JSON column only grows over a
+          project's life.
+        */}
+        {officialVideoId && (
+          <div className="min-w-0">
+            <SectionHeader kicker="En vidéo" title="Vidéo officielle" />
+            <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
+              <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
+                <iframe
+                  src={embedUrl(officialVideoId)}
+                  title={videoTitle(initialProduct.official_video, initialProduct.designation_fr ?? '')}
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+              </div>
+            </div>
+            {initialProduct.official_video?.channel && (
+              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+                Vidéo publiée par {initialProduct.official_video.channel}.
+              </p>
+            )}
+          </div>
+        )}
 
         {/*
           Comparison table — content parity with the crawler view.

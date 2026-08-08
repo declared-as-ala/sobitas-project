@@ -45,6 +45,16 @@ export interface Product {
   nutrition_values?: string | null;
   /** Array of image paths for the nutrition facts section (stored in storage/public/produits/nutrition) */
   nutrition_images?: string[] | null;
+  /** Structured Supplement Facts; nutrition_values above is the HTML DERIVED from it. */
+  nutrition_facts?: Record<string, unknown> | null;
+  /** One official brand video. The id is re-validated at render — see util/officialVideo.ts. */
+  official_video?: {
+    youtube_id: string;
+    title?: string | null;
+    channel?: string | null;
+    source_url?: string | null;
+    verified_at?: string | null;
+  } | null;
   /** Filament repeater: [{ q, a }, …] — product-specific FAQ shown on detail page */
   faq?: Array<{ q?: string; a?: string; question?: string; answer?: string }> | null;
   /** Legacy HTML block (older backends); optional fallback if `faq` is empty */

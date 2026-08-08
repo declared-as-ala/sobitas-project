@@ -15,6 +15,7 @@ import {
   sanitizeBackendProductJsonLd,
   validateStructuredData,
 } from '@/util/structuredData';
+import { buildVideoObjectSchema } from '@/util/officialVideo';
 import type { Product } from '@/types';
 import { buildMetaDescription } from '@/util/sanitizeProductHtml';
 
@@ -254,6 +255,8 @@ export default async function ShopProductPage({ params }: PageProps) {
   });
 
   const faqSchema = buildFAQPageSchemaFromProductFaq(safeProduct.faq);
+  // Only emitted when a validated official video id is present; see util/officialVideo.ts.
+  const videoSchema = buildVideoObjectSchema(safeProduct?.official_video, safeProduct?.designation_fr ?? '', canonicalUrl);
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
@@ -266,6 +269,9 @@ export default async function ShopProductPage({ params }: PageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+      {videoSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
       )}
       <ProductDetailClient product={safeProduct} similarProducts={similarProducts} slugOverride={cleanSlug} breadcrumbItems={breadcrumbItems} />
     </>

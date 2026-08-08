@@ -32,6 +32,7 @@ import {
   buildFAQPageSchemaFromProductFaq,
   sanitizeBackendProductJsonLd,
 } from '@/util/structuredData';
+import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
 import { htmlToText } from '@/util/sanitizeProductHtml';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
@@ -137,6 +138,8 @@ export default async function CrawlerProductPage({ params }: PageProps) {
       : buildProductJsonLd(product, canonicalUrl);
   const breadcrumbSchema = buildBreadcrumbListSchema(getProductBreadcrumbs(product), BASE_URL);
   const faqSchema = buildFAQPageSchemaFromProductFaq(product.faq);
+  // Only emitted when a validated official video id is present; see util/officialVideo.ts.
+  const videoSchema = buildVideoObjectSchema(product?.official_video, product?.designation_fr ?? '', canonicalUrl);
 
   return (
     <>
@@ -146,6 +149,9 @@ export default async function CrawlerProductPage({ params }: PageProps) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
+      {videoSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
       )}
       <CrawlerProductView product={product} similarProducts={similarProducts} />
     </>
