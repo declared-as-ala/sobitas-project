@@ -4,10 +4,8 @@ namespace App\Console\Commands;
 
 use App\Models\Product;
 use App\Models\ProductSourceObservation;
-use App\Services\Content\ProductContentGenerator;
-use App\Support\Figures;
+use App\Services\Enrichment\ResearchValidator;
 use App\Support\Gtin;
-use App\Support\YouTubeId;
 use Illuminate\Console\Command;
 use Illuminate\Support\Carbon;
 
@@ -47,7 +45,7 @@ class ImportProductResearch extends Command
 
     protected $description = 'Import researched Supplement Facts, FAQ and official videos, re-validating everything';
 
-    public function handle(): int
+    public function handle(ResearchValidator $validator): int
     {
         $path = (string) $this->argument('file');
         if (! is_file($path)) {
@@ -89,10 +87,15 @@ class ImportProductResearch extends Command
 
             $this->line(sprintf('<fg=cyan>▸</> %s', mb_strimwidth((string) $product->designation_fr, 0, 58, '…')));
 
-            $facts = $this->nutritionFacts($entry['nutrition'] ?? null);
-            $approved = $facts === null ? [] : $this->figuresIn($facts);
-            $faq = $this->faq($entry['faq'] ?? [], $approved, $product);
-            $video = $this->video($entry['video'] ?? null);
+            $facts = $validator->nutritionFacts($entry['nutrition'] ?? null);
+            $approved = $facts === null ? [] : $validator->figuresIn($facts);
+            $faqResult = $validator->faq($entry['faq'] ?? [], $approved, (string) $product->designation_fr);
+            $faq = $faqResult['kept'];
+            foreach ($faqResult['rejected'] as $reason) {
+                $totals['rejected']++;
+                $this->line('    <fg=red>FAQ rejetée</> '.$reason);
+            }
+            $video = $validator->video($entry['video'] ?? null, Carbon::now()->toDateString());
             $gtin = Gtin::normalize((string) ($entry['gtin'] ?? ''));
 
             $changes = [];
@@ -152,215 +155,6 @@ class ImportProductResearch extends Command
         }
 
         return self::SUCCESS;
-    }
-
-    /**
-     * Map researched nutrition into the same shape the admin form stores, dropping anything
-     * malformed rather than letting it reach the renderer.
-     *
-     * @return array<string, mixed>|null
-     */
-    private function nutritionFacts(mixed $nutrition): ?array
-    {
-        if (! is_array($nutrition)) {
-            return null;
-        }
-
-        $sourceUrl = trim((string) ($nutrition['source_url'] ?? ''));
-        // No citation, no panel. A figure whose origin cannot be checked is not evidence, and this
-        // is the field that makes a wrong number traceable six months from now.
-        if ($sourceUrl === '' || filter_var($sourceUrl, FILTER_VALIDATE_URL) === false) {
-            return null;
-        }
-
-        $rows = [];
-        foreach ((array) ($nutrition['rows'] ?? []) as $row) {
-            $name = trim((string) ($row['name'] ?? ''));
-            if ($name === '') {
-                continue;
-            }
-
-            $kind = in_array($row['kind'] ?? '', ['value', 'undeclared', 'blend'], true) ? $row['kind'] : 'value';
-
-            // A "value" row with no number is not a value row. Rather than print a blank cell that
-            // reads as missing data, call it what it is: an undeclared amount.
-            if ($kind === 'value' && ! is_numeric($row['quantity'] ?? null)) {
-                $kind = 'undeclared';
-            }
-
-            $rows[] = [
-                'name' => $name,
-                'kind' => $kind,
-                'quantity' => $kind === 'value' ? $row['quantity'] + 0 : null,
-                'unit' => $kind === 'value' ? trim((string) ($row['unit'] ?? '')) : '',
-                'percent_dv' => is_numeric($row['percent_dv'] ?? null) ? $row['percent_dv'] + 0 : null,
-                'depth' => max(0, min(2, (int) ($row['depth'] ?? 0))),
-            ];
-        }
-
-        if ($rows === []) {
-            return null;
-        }
-
-        return [
-            'rows' => $rows,
-            'serving_quantity' => is_numeric($nutrition['serving_quantity'] ?? null) ? $nutrition['serving_quantity'] + 0 : null,
-            'serving_unit' => trim((string) ($nutrition['serving_unit'] ?? '')),
-            'serving_note' => trim((string) ($nutrition['serving_note'] ?? '')),
-            'servings_per_container' => trim((string) ($nutrition['servings_per_container'] ?? '')),
-            'net_quantity' => is_numeric($nutrition['net_quantity'] ?? null) ? $nutrition['net_quantity'] + 0 : null,
-            'net_unit' => trim((string) ($nutrition['net_unit'] ?? '')),
-            // European reference intakes unless the source explicitly said Daily Value. Vitamin D is
-            // 20 µg in the US against 5 µg in the EU — the same capsule reads 100 % on one label and
-            // 400 % on the other, so guessing this wrong prints a correct number under a wrong name.
-            'percent_basis' => ($nutrition['percent_basis'] ?? '') === 'us' ? 'us' : 'eu',
-            'other_ingredients' => trim((string) ($nutrition['other_ingredients'] ?? '')),
-            'allergens' => trim((string) ($nutrition['allergens'] ?? '')),
-            'warnings' => trim((string) ($nutrition['warnings'] ?? '')),
-            'claims' => trim((string) ($nutrition['claims'] ?? '')),
-            'transcribed_at' => Carbon::now()->toDateString(),
-            'source_url' => $sourceUrl,
-        ];
-    }
-
-    /**
-     * Every figure the imported panel vouches for.
-     *
-     * @param  array<string, mixed>  $facts
-     * @return list<string>
-     */
-    private function figuresIn(array $facts): array
-    {
-        $text = [];
-        foreach ($facts['rows'] as $row) {
-            if ($row['quantity'] !== null) {
-                $text[] = $row['quantity'].' '.$row['unit'];
-            }
-            if ($row['percent_dv'] !== null) {
-                $text[] = $row['percent_dv'].' %';
-            }
-        }
-        $text[] = $facts['serving_quantity'].' '.$facts['serving_unit'];
-        $text[] = $facts['net_quantity'].' '.$facts['net_unit'];
-        $text[] = $facts['serving_note'];
-
-        return Figures::in(implode(' ', $text));
-    }
-
-    /**
-     * FAQ entries that survive the same gates a generated draft has to pass.
-     *
-     * @param  list<string>  $approved
-     * @return list<array{q: string, a: string}>
-     */
-    private function faq(mixed $entries, array $approved, Product $product): array
-    {
-        if (! is_array($entries)) {
-            return [];
-        }
-
-        $out = [];
-
-        foreach ($entries as $entry) {
-            $q = trim((string) ($entry['q'] ?? ''));
-            $a = trim((string) ($entry['a'] ?? ''));
-            if ($q === '' || $a === '') {
-                continue;
-            }
-
-            $text = $q.' '.$a;
-
-            if ($this->hasHealthClaim($text)) {
-                $this->line('    <fg=red>FAQ rejetée</> (allégation santé) : '.mb_strimwidth($q, 0, 46, '…'));
-
-                continue;
-            }
-
-            if ($this->hasDosage($text)) {
-                $this->line('    <fg=red>FAQ rejetée</> (posologie) : '.mb_strimwidth($q, 0, 46, '…'));
-
-                continue;
-            }
-
-            /**
-             * The grounding rule. Figures in the product NAME are legitimate (pack size), and so are
-             * figures the imported panel prints. Anything else the researcher wrote is a number that
-             * appears on no label we hold — which is the single most likely way a confident,
-             * well-sourced-looking answer turns out to be about a different pack size.
-             */
-            $allowed = array_merge($approved, Figures::in((string) $product->designation_fr));
-            $ungrounded = Figures::ungrounded($a, $allowed);
-
-            if ($ungrounded !== []) {
-                $this->line('    <fg=red>FAQ rejetée</> (chiffre non sourcé : '.implode(', ', array_slice($ungrounded, 0, 3)).') : '
-                    .mb_strimwidth($q, 0, 40, '…'));
-
-                continue;
-            }
-
-            $out[] = ['q' => $q, 'a' => $a];
-        }
-
-        return array_slice($out, 0, 6);
-    }
-
-    /**
-     * Reuses the generator's own patterns rather than a second list. Two definitions of "this is a
-     * health claim" drift, and then one entry point publishes what the other rejects on the same
-     * product page.
-     */
-    private function hasHealthClaim(string $text): bool
-    {
-        foreach (ProductContentGenerator::claimPatterns() as $pattern) {
-            if (preg_match($pattern, $text) === 1) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private function hasDosage(string $text): bool
-    {
-        foreach (ProductContentGenerator::dosagePatterns() as $pattern) {
-            if (preg_match($pattern, $text) === 1) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    /**
-     * @return array<string, mixed>|null
-     */
-    private function video(mixed $video): ?array
-    {
-        if (! is_array($video) || ($video['official'] ?? false) !== true) {
-            return null;
-        }
-
-        // Rejected, not sanitised. This id is concatenated into an iframe src; anything that is not
-        // exactly YouTube's 11-character alphabet is not an id, whatever it looks like.
-        $id = YouTubeId::parse((string) ($video['youtube_id'] ?? ''));
-        if ($id === null) {
-            return null;
-        }
-
-        $channel = trim((string) ($video['channel'] ?? ''));
-        if ($channel === '') {
-            // Without a channel we cannot answer "is this the brand's own video?" later, and an
-            // unattributed embed on our product page is somebody else's claims wearing our layout.
-            return null;
-        }
-
-        return [
-            'youtube_id' => $id,
-            'title' => trim((string) ($video['title'] ?? '')),
-            'channel' => $channel,
-            'source_url' => YouTubeId::watchUrl($id),
-            'verified_at' => Carbon::now()->toDateString(),
-        ];
     }
 
     /**

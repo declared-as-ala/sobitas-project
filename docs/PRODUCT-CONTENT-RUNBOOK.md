@@ -161,6 +161,29 @@ see the finding above.
 
 ---
 
+### 5b. Import researched content
+
+Agent research produces a JSON file of transcribed Supplement Facts, official brand videos and
+grounded FAQs, each carrying the URL it was read from and each re-checked by a second pass that
+re-fetched that URL and tried to refute it.
+
+```bash
+php artisan products:import-research storage/app/research.json            # report only
+php artisan products:import-research storage/app/research.json --apply
+```
+
+**The importer does not trust the file.** It re-applies every rule the rest of the system enforces:
+barcodes must pass their check digit and are only ever *proposed*; a video id must be 11 characters
+of YouTube's alphabet or it is rejected outright; FAQ answers carry no dosage instruction and no
+health claim; and **every figure in an answer must appear in the panel imported beside it**.
+
+That last rule matters most. "24 g de protéines" on a product whose panel says 21 g is exactly what
+a confident, well-sourced-looking researcher produces when it read the wrong pack size — and it is
+invisible once published. Rejected entries are printed with their reason.
+
+Existing panels and FAQs are skipped unless you pass `--overwrite`, so a human edit always wins over
+a re-import.
+
 ### 6. Measure
 
 ```bash
