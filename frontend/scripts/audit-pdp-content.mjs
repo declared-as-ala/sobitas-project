@@ -122,13 +122,49 @@ async function mapWithConcurrency(items, limit, fn) {
 
 /* ------------------------------------------------------------------ parsing */
 
+/**
+ * Entities are DECODED, not deleted.
+ *
+ * This counter used to `.replace(/&[a-z]+;/gi, ' ')`, and that silently inflated every word count in
+ * the catalogue. The CMS stores French copy with entities — one ISO 100 description carries 73 of
+ * them — so `Prot&eacute;ine` was scored as TWO words, "Prot" and "ine". Roughly one in six words in
+ * an accented French description counted double.
+ *
+ * It surfaced as a false regression: after DOMPurify started decoding entities on render, 63
+ * products appeared to "lose" 10-40 words each. Nothing was lost. The pages got more readable and
+ * the old baseline had been wrong since the day it was captured.
+ *
+ * `&amp;` is decoded LAST. Doing it first turns "&amp;lt;" into "<", re-animating text that was
+ * deliberately escaped — the same ordering rule as util/sanitizeProductHtml.ts, which learned it the
+ * same way.
+ */
+const NAMED = {
+  nbsp: ' ', lt: '<', gt: '>', quot: '"', apos: "'", eacute: 'é', egrave: 'è', ecirc: 'ê',
+  euml: 'ë', agrave: 'à', acirc: 'â', ccedil: 'ç', ugrave: 'ù', ucirc: 'û', ocirc: 'ô',
+  icirc: 'î', iuml: 'ï', laquo: '«', raquo: '»', hellip: '…', ndash: '–', mdash: '—',
+  rsquo: '’', lsquo: '‘', deg: '°', times: '×', middot: '·', bull: '•', euro: '€',
+};
+
+const decodeEntities = (text) =>
+  text
+    .replace(/&#(\d+);/g, (_m, d) => String.fromCodePoint(Number(d)))
+    .replace(/&#x([0-9a-f]+);/gi, (_m, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&([a-zA-Z]+);/g, (m, name) => {
+      const v = NAMED[name.toLowerCase()];
+      if (v === undefined) return m;
+      const upper = name[0] === name[0].toUpperCase() && name[0] !== name[0].toLowerCase();
+      return upper ? v.toUpperCase() : v;
+    })
+    .replace(/&amp;/gi, '&');
+
 const strip = (html) =>
-  html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;|&#160;/g, ' ')
-    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+  decodeEntities(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+  )
+    .replace(/ /g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
