@@ -564,9 +564,21 @@ final class IHerbPageExtractor
     /**
      * Did iHerb declare this page machine translated?
      *
-     * true / false are measurements. null means "the locale is not one whose notice we have seen",
-     * and it is returned rather than guessed, because "false" would read as "these are the
-     * manufacturer's own words" on a page nobody verified.
+     * `false` is a POSITIVE CLAIM — "these are the manufacturer's own words" — and only a SOURCE
+     * language may make it. Everything else is `true` (notice found) or `null` (not confirmed).
+     *
+     * ── WHY `null` AND NOT `false` WHEN THE NOTICE IS MISSING ─────────────────────────────
+     * This used to end `return mb_stripos($disclaimer, $needle) !== false;`, so a French page whose
+     * disclaimer existed but did not contain our exact substring stored `false`. iHerb owns that
+     * string and we do not version it: rewording "traduit automatiquement" to "traduit par un
+     * moteur automatique", or renaming the element the disclaimer is read from, silently flipped a
+     * confirmed translation into an assertion that the text was original. Downstream that dropped
+     * the machine-translation caveat from pages carrying transcribed dosage ("prenez 1 capsule par
+     * jour") and contraindications ("Ne pas utiliser en cas de prise d'inhibiteurs de monoamine
+     * oxydase") — the one direction this disclosure must never fail in.
+     *
+     * The absence of a notice is not evidence that a page is original. It is the absence of
+     * evidence, and the difference matters precisely because nobody re-reads 20,000 pages.
      */
     private static function machineTranslated(?string $locale, ?string $disclaimer): ?bool
     {
@@ -576,16 +588,19 @@ final class IHerbPageExtractor
             return null;
         }
 
+        // The only case that may answer "not translated": the page IS in the source language.
         if (in_array($language, self::SOURCE_LANGUAGES, true)) {
             return false;
         }
 
         $needle = self::TRANSLATION_NOTICE[$language] ?? null;
-        if ($needle === null || $disclaimer === null) {
-            return null;
+
+        if ($needle !== null && $disclaimer !== null && mb_stripos($disclaimer, $needle) !== false) {
+            return true;
         }
 
-        return mb_stripos($disclaimer, $needle) !== false;
+        // A non-source language with no confirmed notice. Unknown — never "original".
+        return null;
     }
 
     /** `<html ... lang="fr">` → `fr`. The locale is a fact about the text we transcribed. */

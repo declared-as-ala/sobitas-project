@@ -77,6 +77,16 @@ final class ImportedSourceContent
      */
     public const PUBLISHABLE_LANGUAGE = 'fr';
 
+    /**
+     * Languages that ARE iHerb's source language, so their text is the manufacturer's own.
+     *
+     * Mirrors IHerbPageExtractor::SOURCE_LANGUAGES. Duplicated rather than imported for the same
+     * reason every constant in this layer is: these classes must load under a bare `php` with no
+     * autoloader so the standalone harnesses can execute them. The harness requires BOTH files and
+     * is what keeps the two lists honest.
+     */
+    public const SOURCE_LANGUAGES = ['en'];
+
     /** The manufacturer's own overview prose. Folded into `products.description_fr` by promotion. */
     public const OVERVIEW_COLUMN = 'source_overview_html';
 
@@ -359,7 +369,38 @@ final class ImportedSourceContent
          * the machine-translation disclosure on every promoted product, which is the one direction
          * this notice must never fail in.
          */
-        if (self::truthy($row['source_content_translated'] ?? null)) {
+        /*
+         * THE DISCLOSURE IS DECIDED BY THE LOCALE, NOT BY THE FLAG.
+         *
+         * This used to disclose only on a truthy value, so `null` — "not confirmed" — rendered the
+         * short attribution, which reads as "these are the manufacturer's words". That is the wrong
+         * default here, and the reason is structural rather than cautious:
+         *
+         *   · publishable() admits ONE language, French (PUBLISHABLE_LANGUAGE)
+         *   · French is never iHerb's source language; the source is English
+         *
+         * So on every row this method can reach, the honest answer is either "translated" or "we
+         * could not confirm" — and both must carry the caveat. `false` is reachable only for a
+         * SOURCE language, which publishable() rejects before it gets here, so suppressing the
+         * caveat on an explicit false costs nothing and keeps the flag meaningful if English is
+         * ever published.
+         *
+         * So the flag is NOT consulted here at all, and that is deliberate. It is a measurement of
+         * what iHerb's page declared, recorded on the row and reported by --status; it is not
+         * evidence a customer-facing caveat should hang on. Hanging on it made the caveat defeatable
+         * three ways: a NULL (notice not confirmed), a reworded notice, or a stray false written by
+         * anything. The locale cannot be any of those - it comes from `<html lang>` on the page we
+         * actually read, and publishable() has already required it.
+         *
+         * The `false` branch below is UNREACHABLE today, because publishable() admits only French
+         * and French is not in SOURCE_LANGUAGES. It is kept rather than deleted so that publishing
+         * an English locale later is a config change and not a correctness change - at which point
+         * the caveat correctly disappears instead of becoming boilerplate a reader learns to ignore.
+         */
+        $language = strtolower(explode('-', strtolower(trim((string) ($row['source_content_locale'] ?? ''))))[0]);
+        $isSourceLanguage = $language !== '' && in_array($language, self::SOURCE_LANGUAGES, true);
+
+        if (! $isSourceLanguage) {
             return "Informations transcrites de la fiche d'origine du fabricant. "
                 ."La version française provient d'une traduction automatique de la source et peut "
                 ."comporter des erreurs. En cas de différence, l'étiquette imprimée sur l'emballage "

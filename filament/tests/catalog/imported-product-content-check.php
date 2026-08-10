@@ -1012,8 +1012,31 @@ check(
         .'that the printed label governs',
 );
 
+/*
+ * THIS EXPECTATION WAS INVERTED ON 10/08/2026, AND IT IS A STRICTER ASSERTION THAN THE ONE IT
+ * REPLACES — it now DEMANDS the disclosure where the old one merely permitted silence.
+ *
+ * It used to require that a NULL translation state say nothing about translation, on the reasoning
+ * that NULL means "unverified" and silence asserts nothing. That reasoning is sound in the abstract
+ * and wrong here, because of a fact about which rows can reach this method at all:
+ *
+ *   · ImportedSourceContent::publishable() admits exactly ONE language — French
+ *   · iHerb's source language is English, so published French is ALWAYS a translation
+ *
+ * There is therefore no reachable state in which a published page's French is the manufacturer's
+ * own writing, and "saying nothing" on a page carrying "prenez 1 capsule par jour" and a
+ * monoamine-oxidase contraindication is misleading by omission rather than neutral.
+ *
+ * NULL is also not rare. The extractor detects the notice by one hard-coded substring per locale;
+ * iHerb owns that string, we do not version it, and a rewording or a renamed element produces NULL
+ * across the entire catalogue at once, silently. An expectation that treats NULL as "no disclosure
+ * needed" is one that would have let that happen and reported ALL PASS.
+ *
+ * `false` is left meaningful: it is reachable only for a SOURCE language, which publishable()
+ * rejects today, so it costs nothing now and stays correct if English is ever published.
+ */
 check(
-    'an unverified translation state asserts nothing about translation',
+    'an UNVERIFIED translation state still discloses — the only publishable locale is always translated',
     (function (): bool {
         $note = (string) ImportedSourceContent::attribution([
             'source_content_locale' => 'fr',
@@ -1021,10 +1044,37 @@ check(
             'source_overview_html' => '<p>Texte du fabricant.</p>',
         ]);
 
-        return $note !== '' && ! str_contains($note, 'traduction');
+        return $note !== '' && str_contains($note, 'traduction automatique');
     })(),
-    'NULL means "this locale\'s notice is not one the extractor has verified" — saying nothing is '
-        .'right; asserting there was no translation is not',
+    'NULL means the notice was not CONFIRMED, not that the text is original. Absence of evidence '
+        .'must not spend as evidence of absence on a page transcribing dosage and contraindications',
+);
+
+/*
+ * THE FLAG MUST NOT BE ABLE TO DEFEAT THE CAVEAT.
+ *
+ * My first version of this case asserted the opposite — that an explicit `false` omits the caveat —
+ * and it FAILED, which is how the design error surfaced. attribution() returns null for an English
+ * row, because publishable() rejects it before any section exists to attribute; so the `false`
+ * branch is UNREACHABLE and the flag could never have been the thing the disclosure hangs on.
+ *
+ * The decision is therefore made from `source_content_locale`, which comes from `<html lang>` on the
+ * page actually read and which publishable() has already constrained. This case pins that: a French
+ * row discloses even when something has written `false` onto it.
+ */
+check(
+    'an explicit FALSE cannot suppress the caveat on a French page',
+    (function (): bool {
+        $note = (string) ImportedSourceContent::attribution([
+            'source_content_locale' => 'fr',
+            'source_content_translated' => false,
+            'source_overview_html' => '<p>Texte du fabricant.</p>',
+        ]);
+
+        return $note !== '' && str_contains($note, 'traduction automatique');
+    })(),
+    'the caveat is decided by the locale, not by a flag that a reworded notice, an unconfirmed '
+        .'match or a stray write can flip',
 );
 
 check(

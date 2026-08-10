@@ -807,6 +807,39 @@ check(
 
 echo "\n".str_repeat('─', 100)."\n";
 
+/*
+| == THE FAIL-OPEN THIS DISCLOSURE USED TO HAVE ============================================
+|
+| machineTranslated() detects iHerb's notice by ONE hard-coded substring per locale. iHerb owns
+| that string and we do not version it, so a rewording -- or the disclaimer moving out of the
+| element it is read from -- changes the answer for the ENTIRE catalogue at once, silently.
+|
+| It used to end `return mb_stripos($disclaimer, $needle) !== false;`, so both cases below stored
+| FALSE: a positive claim that the French is the manufacturer's own writing, on pages transcribing
+| "prenez 1 capsule par jour" and a monoamine-oxidase contraindication. These drive the REAL
+| fixture through the REAL extractor with the notice broken in each of the two ways it can break,
+| and require `null` -- unverified -- rather than a claim nobody measured.
+*/
+check(
+    'a REWORDED translation notice yields null (unverified), never false',
+    $extractor->extract(str_replace(
+        'traduit automatiquement',
+        'traduit par un moteur automatique',
+        $pages['fr-1'],
+    ))['content_machine_translated'] === null,
+    'iHerb can reword their disclaimer at any time; the failure must be "we could not confirm", '
+        .'never "this text is original"',
+);
+
+check(
+    'a MISSING translation notice yields null (unverified), never false',
+    $extractor->extract(
+        str_replace('traduit automatiquement', '', $pages['fr-1'])
+    )['content_machine_translated'] === null,
+    'the absence of a notice is the absence of evidence, and must not spend as evidence of absence',
+);
+
+
 if ($failed > 0) {
     printf("\n%d check(s) FAILED.\n\n", $failed);
     exit(1);
