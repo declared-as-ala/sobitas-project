@@ -128,6 +128,21 @@
     width: 100%;
     max-width: 100%;
     font-size: var(--font-size);
+
+    /* PAINT THE CANVAS EXPLICITLY (owner, 11/08/2026: "at the bottom the background is not white,
+       and when I scroll it starts scrolling with me down").
+
+       Body's background normally propagates to the canvas — but only while the root's own
+       background is transparent, and only the PROPAGATED copy covers the full viewport. Anything
+       that gives <html> a background, and any moment the document is shorter than the viewport or
+       is being over-scrolled (rubber-band on macOS/iOS, overscroll on Chrome), exposes canvas that
+       body never painted. That strip is whatever the browser last had — which is exactly the
+       "different colour at the bottom that moves when I scroll" being described.
+
+       Setting the SAME token here makes the canvas deterministic. It costs nothing: html and body
+       resolve `--background` from the same scope, so light and dark both stay correct, and no band
+       changes colour. */
+    @apply bg-background;
   }
 
   /* Reserve the mobile tab bar's height so the last row of content and the footer are never

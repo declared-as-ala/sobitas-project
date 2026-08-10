@@ -61,10 +61,11 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
   const items = categories.slice(0, 6);
 
   return (
-    /* `width="wide"` is `max-w-site` — the same rail as the hero and every other homepage band.
-       No `surface`: HomePageClient already paints the page background, so a second one here was
-       a redundant `dark:` pair. */
-    <Section surface="sunken" spacing="tight" width="wide" aria-labelledby="category-rail-heading">
+    /* `width="full"` (owner, 11/08/2026: "make them full width of the screen"). This band no
+       longer shares the `max-w-site` rail the hero and the product grids use — it is the one band
+       whose content is photography rather than a list, and it is the only one wide enough to carry
+       six tiles without shrinking them. Everything below it keeps the rail. */
+    <Section surface="sunken" spacing="tight" width="full" aria-labelledby="category-rail-heading">
       {/* SCALE 3, and no kicker (owner: "that's a big title — no need. I just want to show the
           user that they can browse by category and directly do that").
 
@@ -72,11 +73,9 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           plus a kicker it was announcing itself louder than "Les plus vendus" directly below it,
           which is the rail that actually converts. Scale "3" is 22/28px — enough to label the
           grid, not enough to compete with it. The photographs are the content here. */}
-      {/* CENTRED BELOW `sm` (owner set `margin: 0 auto` on it in DevTools). The grid under it is
-          full-bleed on phones — it has no left rail for the heading to align to, because the
-          container gutters are cancelled by `-mx-4`. A left-aligned label 16px in from the edge,
-          over tiles that start at 0, was the only thing in the band not on the same axis. This is
-          the one band where centring is right; see the prop's note in SectionHeader. */}
+      {/* CENTRED BELOW `sm`, still — but the ORIGINAL reason is gone with the `-mx-4`. It now
+          earns its place on the plainer ground that a two-up grid of square photographs reads as a
+          centred composition on a phone, and a label pinned hard left over it does not. */}
       <SectionHeader
         id="category-rail-heading"
         title="Acheter par objectif"
@@ -86,27 +85,19 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
         centerOnMobile
       />
 
-      {/* FULL-BLEED ON PHONES, CONTAINER-ALIGNED FROM `sm`.
-          Owner: "for mobile, browse by category — I want it full width, no padding for the images
-          so they can see it, and the text a bit bigger."
+      {/* SEPARATED CARDS, replacing the fused `gap-px over bg-rule` block (owner, 11/08/2026:
+          "there's a lot of wide space in there… make the cards away from each other, make margins
+          between them… make them full width of the screen").
 
-          `-mx-4` cancels the Container's own 16px gutters, so at 390px each tile goes 179 → 194px
-          wide: +17% image area for zero extra band height. The radius and the side borders come
-          off with it, because a rounded card that touches both screen edges reads as a rendering
-          fault rather than as a decision. From `sm` the grid returns to the rail and becomes one
-          rounded, bordered block again — there, alignment with the heading is what matters, and
-          that was the v6 fix the owner asked for on desktop.
+          The fused block was a deliberate choice and the note above still explains why. What
+          changed is the band around it: at `width="full"` the six tiles span the viewport, and a
+          single hairline-bordered slab 1900px wide reads as a table, not as navigation. Real gaps
+          give each objective its own object, which is what "browse by objective" is.
 
-          The misalignment complaint and this one are not in conflict: on desktop the heading and
-          the grid share a rail; on a phone there is no rail to share, because the band is only
-          32px wider than the grid in the first place.
-
-          Still ONE OBJECT, not six cards: `gap-px` over `bg-rule`. Six separately-bordered rounded
-          cards is the WordPress category widget.
-
-          `sm:grid-cols-3` is KEPT deliberately: dropping it would regress 640–1023px from three
-          tiles to two half-width ones. */}
-      <ul className="-mx-4 grid grid-cols-2 gap-px overflow-hidden border-y border-hairline bg-rule sm:mx-0 sm:grid-cols-3 sm:rounded-2xl sm:border-x lg:grid-cols-6">
+          `gap-3 sm:gap-4` and not more: the tiles are the content, the gutter is not. Anything
+          past 16px starts competing with the band padding above and reintroduces the whitespace
+          this change exists to remove. */}
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -132,7 +123,16 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                    `focus-visible:ring-focus` resolves in the CANVAS band's scope (#D53B04,
                    4.71:1). Never put a band scope on a focusable element — the ring resolves in
                    the element's own scope but paints on the parent's surface. */
-                className="group flex h-full flex-col overflow-hidden bg-elevated transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+                /* THE LIFT IS BACK, and only because the cells are no longer fused.
+                   It was removed when this was one block ("when I hover on them, they grow in a
+                   bad way") — correctly, because lifting one cell tore a 4px hole in the block and
+                   dropped a shadow onto its neighbours. With real gaps there is nothing to tear:
+                   each tile is its own object and a 2px rise is the ordinary affordance for one.
+                   Kept small — `-translate-y-0.5`, not the `-translate-y-1 shadow-xl` that read as
+                   a card jumping at you.
+
+                   `rounded-2xl border` per tile, since the shared rounded slab is gone. */
+                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-rule hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
