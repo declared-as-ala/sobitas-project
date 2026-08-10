@@ -86,6 +86,20 @@ jobs:
       # and the deploy printed `no such service: backend-v2-scheduler` while still reporting
       # success. Any future service, port or env change to compose would have failed the same way.
       - name: Sync docker-compose.yml to VPS
+        id: sync_compose
+        # Non-blocking, but NOT forgiven — see "Fail workflow" at the foot of this job.
+        #
+        # This step used to be a hard gate, and that hid the cause of every failure since
+        # 08/08/2026. When SSH auth broke, scp died first, the two deploy attempts were SKIPPED,
+        # and the diagnostic step that exists precisely to explain the failure never ran. What the
+        # owner saw was a drone-scp stack trace; what they needed was one line saying the password
+        # was wrong.
+        #
+        # This does not soften the run: if the sync fails, the job still fails at the end, with a
+        # message that says whether the compose file or the deploy was the problem. A stale
+        # docker-compose.yml on the server is exactly the silent failure the sync was added to
+        # prevent, so it is reported — just not in a way that suppresses the real diagnosis.
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -234,6 +248,10 @@ jobs:
       - name: Deploy to VPS (attempt 2 on transient SSH failure)
         if: steps.deploy_attempt_1.outcome == 'failure'
         id: push_to_vps
+        # Soft, so the verdict step below is always reached and can explain the failure in one
+        # line. The run still fails there — this changes which message the owner reads, not
+        # whether a broken deploy is reported as broken.
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -367,12 +385,54 @@ jobs:
         # The whole outage was one cause: the VPS password was rotated in Hostinger and
         # VPS_PASSWORD in GitHub was not updated. Set VPS_SSH_KEY and that class of failure stops
         # recurring, because a key does not change when a password does.
-        if: steps.deploy_attempt_1.outcome == 'failure'
+        # `always()` because the two steps above are now soft: without it this step inherits the
+        # default `success()` and is skipped exactly when it is needed most.
+        #
+        # And the retry is now actually honoured. The old condition tested attempt 1 alone, so a
+        # deploy that failed once and SUCCEEDED on the retry still exited 1 here — the retry could
+        # never produce a green run, which made it decorative. It now fails only when attempt 2
+        # did not succeed.
+        if: >-
+          always() && (
+            steps.sync_compose.outcome == 'failure' ||
+            (steps.deploy_attempt_1.outcome == 'failure' && steps.push_to_vps.outcome != 'success')
+          )
         run: |
-          echo "❌ SSH deploy failed — the new image did NOT reach the server."
-          echo "   Most likely: VPS_PASSWORD is stale after a password change in Hostinger."
-          echo "   Permanent fix: set the VPS_SSH_KEY secret (a key survives password rotation)."
-          exit 1
+          FAILED=0
+
+          if [ "${{ steps.sync_compose.outcome }}" = "failure" ]; then
+            echo "❌ Could not copy docker-compose.yml to the server."
+            FAILED=1
+          fi
+
+          if [ "${{ steps.deploy_attempt_1.outcome }}" = "failure" ]; then
+            echo "❌ SSH deploy failed — the new image did NOT reach the server."
+            FAILED=1
+          fi
+
+          if [ "$FAILED" = "1" ]; then
+            echo ""
+            echo "   The image itself built and is in GHCR. Only the VPS steps failed, and both"
+            echo "   fail on the same thing: authentication."
+            echo ""
+            echo "   Diagnosed 10/08/2026 by asking the server directly, with no credential:"
+            echo "     ssh -o PreferredAuthentications=none root@<host>"
+            echo "     → Permission denied (publickey,password)"
+            echo ""
+            echo "   The server DOES accept passwords. So VPS_PASSWORD does not hold the server's"
+            echo "   current root password — updating it is the entire fix."
+            echo ""
+            echo "     1. Hostinger → VPS → Settings → Root password → set a new one."
+            echo "        Use letters and digits ONLY. The previous password contained ) ' and #,"
+            echo "        and quote characters are the classic way a password arrives mangled."
+            echo "     2. GitHub → Settings → Secrets and variables → Actions → VPS_PASSWORD →"
+            echo "        Update. No leading or trailing space, no newline."
+            echo "     3. Re-run this workflow."
+            echo ""
+            echo "   Run the 'VPS Doctor' workflow any time this recurs — it names the cause"
+            echo "   without using any credential at all."
+            exit 1
+          fi
 
       - name: Report what actually happened
         if: always()
