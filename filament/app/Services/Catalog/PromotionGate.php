@@ -50,6 +50,21 @@ final class PromotionGate
      */
     public const MAX_TITLE = 500;
 
+    /**
+     * The shape App\Services\Catalog\IHerb\IHerbClient::imageUrl() requires of a part number before
+     * it will build a Cloudinary URL: two-to-four letters (the brand folder), an optional hyphen,
+     * then the asset id. "OPN-02385" → .../images/opn/opn02385/l/0.jpg.
+     *
+     * Copied rather than imported, for the same reason as STATUS_HYDRATED above: `use`-ing
+     * IHerbClient would pull PoliteFetcher and the Log facade into a class that has to load under a
+     * bare `php` with no autoloader. The copy is NOT trusted to stay in step by inspection —
+     * filament/tests/catalog/promotion-gate-check.php requires BOTH files and asserts that
+     * hasCoverImage() agrees with `IHerbClient::imageUrl(…) !== null` on every fixture, so editing
+     * either regex fails the harness with a part number attached rather than silently promoting rows
+     * whose cover will come out null.
+     */
+    public const PART_NUMBER = '~^([a-z]{2,4})-?(\w+)$~';
+
     // ── Rejection reasons ─────────────────────────────────────────────────────────────────
     public const NOT_HYDRATED = 'not_hydrated';
     public const ALREADY_PROMOTED = 'already_promoted';
@@ -59,6 +74,7 @@ final class PromotionGate
     public const NO_BRAND = 'no_brand';
     public const NO_PRICE = 'no_price';
     public const PRICE_TOO_LOW = 'price_too_low';
+    public const NO_IMAGE = 'no_image';
     public const INCOMPLETE = 'incomplete';
     public const UNCLASSIFIED = 'unclassified';
     public const SUBCATEGORY_MISSING = 'subcategory_missing';
@@ -68,7 +84,10 @@ final class PromotionGate
      *
      * Chosen so the counts are actionable rather than merely accurate. State comes first because a
      * row in the wrong state was never a candidate. Then the facts the source either gave us or did
-     * not (title, brand, price) — nothing we can do about those. Classification is LAST on purpose:
+     * not (title, brand, price, cover image) — nothing we can do about those. NO_IMAGE sits ahead of
+     * INCOMPLETE because it is the specific statement and INCOMPLETE is the aggregate one: a row
+     * blocked on both should be reported as "no photo", not as "scored 75".
+     * Classification is LAST on purpose:
      * it is the only gate whose failures the owner can fix in bulk, by adding a rule to
      * config/catalog.classification, so it is the number worth reading at the bottom of the report.
      *
@@ -83,6 +102,7 @@ final class PromotionGate
         self::NO_BRAND => 'no brand could be identified',
         self::NO_PRICE => 'no source list price, so no Tunisian price',
         self::PRICE_TOO_LOW => 'price at or below catalog.pricing.min_price',
+        self::NO_IMAGE => 'no cover image can be built — the page would ship with no photo',
         self::INCOMPLETE => 'below catalog.promotion.min_completeness',
         self::UNCLASSIFIED => 'no classification rule matched the product name',
         self::SUBCATEGORY_MISSING => 'classified subcategory does not exist in sous_categories',
@@ -114,6 +134,15 @@ final class PromotionGate
             'min_completeness' => (int) ($promotion['min_completeness'] ?? 0),
             'require_brand' => (bool) ($promotion['require_brand'] ?? true),
             'require_price' => (bool) ($promotion['require_price'] ?? true),
+            /*
+             * Defaults to REQUIRED, and the default is what is doing the work: `require_image` is
+             * not a key in config/catalog.php today, so every deployment gets the strict behaviour
+             * without a config change and without a migration of the file. Setting
+             * `'require_image' => false` under `promotion` is the deliberate opt-out — it means "I
+             * accept product pages with no photo", and CatalogIHerbPromote --report then prints how
+             * many of the promotable rows that actually is.
+             */
+            'require_image' => (bool) ($promotion['require_image'] ?? true),
         ];
     }
 
@@ -123,7 +152,9 @@ final class PromotionGate
      * @param  array<string, mixed>  $row  the staging row's attributes. Reads: status, product_id,
      *                                     source_discontinued, normalized_title, external_url_name,
      *                                     normalized_brand_key, source_brand_name,
-     *                                     source_list_price, completeness, sous_category_id.
+     *                                     source_list_price, external_part_number,
+     *                                     source_primary_image_index, completeness,
+     *                                     sous_category_id.
      *                                     Raw DB values are fine — every read is cast defensively.
      * @param  array<string, mixed>  $context  from contextFrom()
      * @return array{
@@ -208,6 +239,35 @@ final class PromotionGate
             $add(self::NO_PRICE, 'source_list_price is missing or not positive');
         } elseif ((bool) ($context['require_price'] ?? true) && $price <= $minPrice) {
             $add(self::PRICE_TOO_LOW, sprintf('computed price %.3f is not above the %.3f floor', $price, $minPrice));
+        }
+
+        /*
+         * ── Cover image ───────────────────────────────────────────────────────────────────
+         *
+         * A product page with no photo is not a slightly worse page; it is a page that looks
+         * broken, and at --publish it is an INDEXABLE page that looks broken. Worse, it does not
+         * look empty to the machinery: ProductSeoObserver::saving runs ProductSeoDefaults::apply(),
+         * which writes an `alt_cover` describing a product photo — so the page ships alt text for an
+         * image that is not there, which is the one failure mode nothing downstream can detect.
+         *
+         * ── WHY completeness CANNOT STAND IN FOR THIS ─────────────────────────────────────
+         * HydrateExternalProductJob::completeness() scores title 30 + brand 20 + price 25 +
+         * pack_size 10 + primary_image_index 10 + part_number 5. A row carrying only a title, a
+         * brand and a price therefore scores 75 — already over the default min_completeness of 60
+         * with BOTH image components missing. The score cannot be tuned into this gate either: the
+         * two image components are worth 15 of 100, so forcing them would mean a threshold above 85,
+         * which would also reject every row that merely has no pack size. Presence of an image is a
+         * structural fact and belongs in a gate of its own, exactly like the price.
+         *
+         * Checked BEFORE the completeness gate so a row failing both is reported as "no photo" —
+         * the specific, fixable statement — rather than as a score.
+         */
+        if ((bool) ($context['require_image'] ?? true)) {
+            $imageProblem = self::imageProblem($row);
+
+            if ($imageProblem !== null) {
+                $add(self::NO_IMAGE, $imageProblem);
+            }
         }
 
         if ($completeness < $minCompleteness) {
@@ -366,6 +426,59 @@ final class PromotionGate
         }
 
         return ['slug' => null, 'id' => null, 'term' => null, 'source' => null];
+    }
+
+    /**
+     * Would CatalogIHerbPromote::coverUrl() produce a URL for this row?
+     *
+     * Public because it is the surface promotion-gate-check.php pins against the real
+     * IHerbClient::imageUrl(), and because the command's own post-gate check reads better calling a
+     * named question than re-deriving one.
+     *
+     * @param  array<string, mixed>  $row  the staging row's attributes
+     */
+    public static function hasCoverImage(array $row): bool
+    {
+        return self::imageProblem($row) === null;
+    }
+
+    /**
+     * WHY no cover URL can be built — or null when one can.
+     *
+     * Mirrors IHerbClient::imageUrl() condition for condition, including the caller's own
+     * `$index === null ? null : (int) $index` cast, so the gate's verdict and the value actually
+     * written to `products.cover` cannot disagree about the same row. (`size` is not modelled:
+     * CatalogIHerbPromote passes the literal 'l', which is in imageUrl()'s allowed set, so that
+     * branch is unreachable from this import.)
+     *
+     * Three separate sentences rather than one "no image", because they are three different
+     * repairs: a missing part number is a hydration that did not get `partNumber` from the payload;
+     * a null primary index means the source listed no photo at all and never will until it does; an
+     * unparseable part number is a spelling this connector's URL scheme does not cover, which is a
+     * code change here and not a data problem at the source.
+     *
+     * @param  array<string, mixed>  $row
+     */
+    private static function imageProblem(array $row): ?string
+    {
+        $part = strtolower(trim((string) ($row['external_part_number'] ?? '')));
+
+        if ($part === '') {
+            return 'external_part_number is empty, so no image URL can be built';
+        }
+
+        if (($row['source_primary_image_index'] ?? null) === null) {
+            return 'source_primary_image_index is null — the source listed no primary photo';
+        }
+
+        if (preg_match(self::PART_NUMBER, $part) !== 1) {
+            return sprintf(
+                'external_part_number "%s" is not a shape IHerbClient::imageUrl can build a URL from',
+                self::excerpt($part, 40),
+            );
+        }
+
+        return null;
     }
 
     /** A name to create or match a brand from. BrandMatcher folds it; this only asks that it exists. */

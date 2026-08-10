@@ -230,7 +230,9 @@ Schedule::command('catalog:iherb:hydrate --include-neutral')
 | (product_id, field_path, source_id, content_hash), so a repeat run cannot
 | duplicate observation rows either. rescue(..., false) means "if the cache
 | cannot be reached, assume not yet imported" — the safe direction, because
-| the failure mode of running again is nothing.
+| the failure mode of running again is nothing. BOTH the read in when() and the
+| write in onSuccess() go through it: an unreachable cache is a degraded latch,
+| never an exception thrown out of a scheduled task.
 |
 | Deliberately NOT here: promotion and publishing. Creating and publishing
 | products stays a command someone runs on purpose, exactly as the catalogue
@@ -313,7 +315,41 @@ Schedule::command('products:import-research storage/app/research.json --apply')
             return;
         }
 
-        \Illuminate\Support\Facades\Cache::forever($researchImportedKey, now()->toIso8601String());
+        /*
+         * SYMMETRIC WITH THE READ IN when(), AND FOR THE SAME REASON.
+         *
+         * The guard above already reads this key through rescue(): an unreachable cache there means
+         * "assume not yet imported" instead of an exception. This write did not have the same
+         * protection, so the one moment the cache being down became FATAL was the end of a run that
+         * had just succeeded — an uncaught exception out of a scheduled task's onSuccess callback,
+         * from a schedule:work process, over content that had already landed correctly. A read that
+         * degrades and a write that throws are not two policies; they are one policy applied once.
+         *
+         * rescue(..., false) makes an unreachable cache mean "not latched", the same safe direction
+         * the read takes: the entry stays armed and next hour's run is a no-op that writes nothing
+         * (without --overwrite the importer skips every field that is already filled, and
+         * recordProvenance() is keyed so a repeat cannot duplicate observations — see the header).
+         * `!== false` because a driver that refuses the write reports it in the return value rather
+         * than by throwing, and a refused write must not be logged as a latch that happened.
+         */
+        $latched = rescue(
+            fn () => \Illuminate\Support\Facades\Cache::forever($researchImportedKey, now()->toIso8601String()) !== false,
+            false,
+            false,
+        );
+
+        if (! $latched) {
+            \Illuminate\Support\Facades\Log::warning(
+                'products:import-research succeeded and every slug in research.json resolved to a product, '
+                ."but the completion marker [{$researchImportedKey}] could not be written (cache unreachable "
+                .'or the write was refused). The entry stays armed: it will run again next hour, which is '
+                .'harmless — without --overwrite a repeat run writes nothing. '
+                .'Output: storage/logs/research-import.log.',
+            );
+
+            return;
+        }
+
         \Illuminate\Support\Facades\Log::info(
             'products:import-research ran, every slug in research.json resolved to a product, and the '
             .'entry is now disabled. Output: storage/logs/research-import.log. '

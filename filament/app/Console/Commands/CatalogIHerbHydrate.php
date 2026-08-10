@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\HydrateExternalProductJob;
 use App\Models\ExternalCatalogProduct;
 use Illuminate\Console\Command;
+use Illuminate\Support\Str;
 
 /**
  * Dispatch hydration work for staged products.
@@ -34,6 +35,7 @@ class CatalogIHerbHydrate extends Command
                             {--include-neutral : Also hydrate rows the slug filter could not decide}
                             {--retry-failed : Return exhausted rows to the queue and stop}
                             {--reset-stuck= : Return rows stuck in `hydrating` for N+ minutes to the queue}
+                            {--renormalize : Re-derive normalised fields from the stored payloads (no HTTP)}
                             {--status : Print the state of the import and exit}';
 
     protected $description = 'Dispatch hydration jobs for discovered iHerb products';
@@ -56,6 +58,10 @@ class CatalogIHerbHydrate extends Command
 
         if ($this->option('reset-stuck') !== null) {
             return $this->resetStuck((int) $this->option('reset-stuck'));
+        }
+
+        if ($this->option('renormalize')) {
+            return $this->renormalize();
         }
 
         $limit = (int) ($this->option('limit') ?: config('catalog.hydration.batch', 250));
@@ -173,6 +179,115 @@ class CatalogIHerbHydrate extends Command
 
         $stillInFlight = ExternalCatalogProduct::where('status', ExternalCatalogProduct::STATUS_HYDRATING)->count();
         $this->line(sprintf('  %s row(s) remain in flight and were left alone.', number_format($stillInFlight)));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Re-derive every normalised field from the payload already on the row. Zero HTTP requests.
+     *
+     * ── WHY THIS IS NOT "JUST RE-HYDRATE THEM" ────────────────────────────────────────────
+     * A normaliser fix invalidates the DERIVED columns — normalized_title, pack_size, pack_unit,
+     * flavour, completeness, computed_price — and none of the SOURCE columns. The source is already
+     * on the row: store() writes the whole `/ugc/api/product/v2` response to `source_payload`
+     * precisely so a re-decision costs no request. Re-fetching 875 rows is ten minutes at 1.5 req/s;
+     * re-fetching them once the backlog is hydrated would be seven hours, to ask iHerb questions we
+     * already have the answers to.
+     *
+     * ── THE FIX THIS WAS WRITTEN FOR ──────────────────────────────────────────────────────
+     * IHerbNormalizer::packSize() read the US thousands separator in "1,361 g" as a decimal point
+     * and stored 1.361 g. The wrong figure reaches the product H1, the description's
+     * "Conditionnement" line and the completeness score — and, through Str::slug(the title), the
+     * permanent URL. It was caught in a dry run with 0 rows promoted, so nothing published carried
+     * it; this command is what makes that recovery cheap rather than a re-crawl.
+     *
+     * ── WHAT IT REFUSES TO TOUCH ──────────────────────────────────────────────────────────
+     * `status`, `product_id`, `promoted_at` and `external_product_id`. A row that is already a real
+     * product keeps the title its URL was built from — rewriting that here would silently desync a
+     * live page's H1 from its address, which is worse than the parse error being fixed. Promoted
+     * rows are therefore skipped outright and reported, not quietly updated.
+     */
+    private function renormalize(): int
+    {
+        $normalizer = app(\App\Services\Catalog\IHerb\IHerbNormalizer::class);
+
+        $promoted = ExternalCatalogProduct::whereNotNull('product_id')->count();
+        $changed = 0;
+        $scanned = 0;
+        $samples = [];
+
+        ExternalCatalogProduct::query()
+            ->whereNull('product_id')
+            ->whereNotNull('source_payload')
+            ->orderBy('id')
+            // chunkById, not chunk(): this loop writes to the rows it is paging over, and an
+            // offset-paginated chunk would skip one row per row updated. The filters here do not
+            // change under the write, but the ordering guarantee is what makes that irrelevant.
+            ->chunkById(200, function ($rows) use ($normalizer, &$changed, &$scanned, &$samples): void {
+                foreach ($rows as $row) {
+                    // Decoded defensively: the column is json and the model casts it, but a row
+                    // written before the cast existed — or by anything other than Eloquent — comes
+                    // back as a string, and silently skipping every such row would report "0
+                    // changed" for a command that had simply not looked at the data.
+                    $payload = $row->source_payload;
+
+                    if (is_string($payload)) {
+                        $payload = json_decode($payload, true);
+                    }
+
+                    if (! is_array($payload) || $payload === []) {
+                        continue;
+                    }
+
+                    $scanned++;
+
+                    $normalized = $normalizer->normalize($payload);
+
+                    // Identity is never rewritten from a payload — the same rule store() applies.
+                    unset($normalized['external_product_id']);
+
+                    $before = [$row->normalized_title, $row->pack_size, $row->pack_unit];
+
+                    $row->forceFill($normalized + [
+                        'computed_price' => HydrateExternalProductJob::tunisianPrice($normalized),
+                        'completeness' => HydrateExternalProductJob::completeness($normalized),
+                    ]);
+
+                    if (! $row->isDirty()) {
+                        continue;
+                    }
+
+                    $titleChanged = $row->normalized_title !== $before[0];
+
+                    $row->save();
+                    $changed++;
+
+                    if ($titleChanged && count($samples) < 15) {
+                        $samples[] = [Str::limit((string) $before[0], 52), Str::limit((string) $row->normalized_title, 52)];
+                    }
+                }
+            });
+
+        $this->info(sprintf(
+            '%s of %s row(s) re-derived from their stored payloads. No HTTP requests were made.',
+            number_format($changed),
+            number_format($scanned),
+        ));
+
+        if ($samples !== []) {
+            $this->line('');
+            $this->line('Titles that changed:');
+            $this->table(['was', 'now'], $samples);
+        }
+
+        if ($promoted > 0) {
+            $this->warn(sprintf(
+                '%s row(s) are already promoted and were SKIPPED. Their product titles and URLs were '
+                .'built from the old values and are left alone — rewriting a title here would desync a '
+                .'live page from the address Google already holds. Fix those in the admin if needed.',
+                number_format($promoted),
+            ));
+        }
 
         return self::SUCCESS;
     }

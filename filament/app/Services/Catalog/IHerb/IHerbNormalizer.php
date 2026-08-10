@@ -181,6 +181,25 @@ class IHerbNormalizer
      * The per-unit strength trap is real: "(500 mg per Capsule)" is the dose in ONE capsule, not the
      * pack. Reading it as the pack size would turn a 180-capsule bottle into a 500 mg product.
      *
+     * ── THE COMMA IS A THOUSANDS SEPARATOR, NOT A DECIMAL POINT ───────────────────────────
+     * iHerb writes US-formatted numbers, so "1,361 g" is 1361 grams and "1,000 Tablets" is a bottle
+     * of a thousand. This method used to do `str_replace(',', '.')` — reading that comma as a French
+     * decimal point — while price() twelve lines above does `str_replace(',', '')` and documents
+     * exactly why. Two methods in one class, parsing numbers from the same payload, disagreeing about
+     * what a comma means.
+     *
+     * The result was a factual error 1000x in size, printed in the H1 and baked into the permanent
+     * URL: "NOW Foods Vitamin C Crystals – 1,361 g" is 1.361 grams in French, which is not a product
+     * anybody sells. Caught in a promotion dry run on 10/08/2026, before any row was promoted.
+     * `pack_size` is also what the completeness score and the description's "Conditionnement" line
+     * read, so the same wrong figure reached three places from one parse.
+     *
+     * ── AND AN AMBIGUOUS NUMBER NOW YIELDS NOTHING ────────────────────────────────────────
+     * The leading `(?<![\d,])` is what makes a European-formatted "1,36 g" match NOTHING rather than
+     * quietly matching the "36". Without it the engine simply restarts after the comma and returns a
+     * confident wrong answer — the failure mode this class's own docblock says it exists to avoid.
+     * A blank pack size costs 10 completeness points; a wrong one is on the page.
+     *
      * @return array{quantity: float, unit: string}|null
      */
     public function packSize(string $title): ?array
@@ -197,13 +216,18 @@ class IHerbNormalizer
             array_keys(self::UNITS)
         ));
 
-        if (! preg_match_all('~(\d+(?:[.,]\d+)?)\s*('.$units.')\b~i', $clean, $matches, PREG_SET_ORDER)) {
+        // Grouped form FIRST: alternation is leftmost-first, so `\d+` would otherwise match the "1"
+        // of "1,361" and stop, and the match would fail on the comma that follows.
+        $number = '\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:\.\d+)?';
+
+        if (! preg_match_all('~(?<![\d,])('.$number.')\s*('.$units.')\b~i', $clean, $matches, PREG_SET_ORDER)) {
             return null;
         }
 
         $candidates = [];
         foreach ($matches as $match) {
-            $quantity = (float) str_replace(',', '.', $match[1]);
+            // Commas are separators between groups of three and carry no value. Same rule as price().
+            $quantity = (float) str_replace(',', '', $match[1]);
             $unitRaw = mb_strtolower(trim($match[2]));
             if ($quantity <= 0) {
                 continue;

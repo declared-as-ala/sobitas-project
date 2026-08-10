@@ -30,10 +30,23 @@ use App\Services\Content\ProductContentGenerator;
  *   · a dosage or serving instruction
  *   · a benefit, an origin, a certification, a lab test or an ingredient list
  *   · a rating, a review, or anything derived from `source_rating` / `source_rating_count`
+ *   · an act of importation, distribution or supply. We hold no supplier record, no import
+ *     document and no arrival date; the row we compose from is a discovered listing, nothing
+ *     more. Sentences asserting one were in this class and have been deleted.
+ *   · an availability or stock statement. Promotion writes qte = 0 and Product::booted() derives
+ *     `rupture` from it, so every promoted page renders an OUT OF STOCK badge — a stored sentence
+ *     saying the product is "disponible" contradicts the page it is printed on.
+ *   · the existence of anything the input does not name: other references of the brand, a brand
+ *     page, an equivalent product, a neighbouring size. The class is handed a brand STRING; it
+ *     knows nothing about what else carries that brand, and "les autres références {brand}" is
+ *     flatly false the first time a brand arrives with one product.
  *
- * Those are the same four rules App\Services\Content\ProductContentGenerator enforces on LLM output,
+ * Those are the same rules App\Services\Content\ProductContentGenerator enforces on LLM output,
  * and selfCheck() below runs this class's own template bank through THAT class's exported patterns —
- * so a template added later that says "2 gélules par jour" fails a check instead of shipping.
+ * so a template added later that says "2 gélules par jour" fails a check instead of shipping. It
+ * additionally rejects the vocabulary of the three bullets above (see UNSUPPORTED_VOCABULARY) and
+ * any frame with no product-specific placeholder in it, because both failures are invisible when
+ * you read one rendered page and obvious only across thirteen thousand of them.
  *
  * Where a fact is missing, the sentence that would have carried it is dropped. Where too few facts
  * survive to make a paragraph worth reading, compose() returns nulls. Padding an empty product with
@@ -75,29 +88,44 @@ use App\Services\Content\ProductContentGenerator;
  * Variation may rearrange true statements; it may never make two pages claim different things. If a
  * frame can only be filled by inventing something, it does not belong in the bank.
  *
- * ── MEASURED, NOT ASSERTED ────────────────────────────────────────────────────────────────
- * Numbers below come from running this class's own template bank and control flow over generated
- * inputs. There is no php binary on the development machine (see the note on the harness at the
- * bottom of this block), so the run was done outside PHP against the constants in THIS file; the
- * harness reproduces it wherever PHP exists, and it is the authority if the two ever disagree.
+ * ── NO NUMBERS IN THIS COMMENT; THE HARNESS COMPUTES THEM ─────────────────────────────────
+ * This block used to carry measured distinctness figures and say that the harness reproduced them.
+ * It did not: nothing in filament/tests/catalog/imported-product-content-check.php computed a
+ * distinctness number at all, so those figures were one bank edit away from being false and nothing
+ * would have said so. They are gone, and what replaced them is a computation that runs every time
+ * the harness runs:
  *
- *   · 15 products shaped the way IHerbNormalizer produces them: 99-129 words, median 114
- *   · 768 distinct fact shapes at a FIXED identity — i.e. axis 3 pinned, axes 1 and 2 alone —
- *     produced 263 distinct bodies
- *   · the worst realistic cohort (ONE subcategory, ONE brand, ONE pack size, ONE flavour state:
- *     every fact identical, only the identity differing) produced 4,937 distinct bodies from 5,000
- *     identities. Independent selection over the ~196,000 arrangements available to that cohort
- *     predicts about 4,940, so the hash is realising essentially all of the variation the banks
- *     contain. The sparsest possible product — name, brand and rayon only, no pack, no flavour, no
- *     reference, no parent category — has a smaller space and produced 3,832 from 5,000, which is
- *     what the birthday bound predicts for it.
- *   · 95 frames in the bank, 0 of them containing a digit
+ *   · compose() returns `arrangements` — the EXACT size of the phrasing space for the fact set it
+ *     was handed: the product of the bank sizes of the slots the plan actually filled. Exact,
+ *     because no two frames within one bank are byte-identical, so two different picks can never
+ *     collapse to one body.
+ *   · the harness composes a worst-case cohort — one subcategory, one brand, one pack size, one
+ *     flavour state, N identities: every fact identical, only the hash input differing — counts the
+ *     distinct bodies, and compares that count against S·(1−(1−1/S)^N), which is what independent
+ *     selection over S arrangements predicts for N draws. A hash that correlates loses that ratio,
+ *     which is the failure crc32 produced here (see pick()).
+ *   · it repeats the measurement for the sparsest product this pipeline can emit — name, brand and
+ *     rayon only — whose space is far smaller, and PRINTS both results rather than asserting a
+ *     remembered one.
+ *
+ * Every figure is therefore derived from the constants in THIS file at the moment of the run: edit a
+ * bank and the numbers move with it, and no comment goes stale behind your back.
  *
  * ── WHAT THIS DOES NOT SOLVE, STATED PLAINLY ──────────────────────────────────────────────
- * Around 100-130 words. That is materially more than the 83-93 the storefront's current fallback
- * produces, and every word of it is grounded — but it is NOT 250, and no honest arrangement of the
- * columns we hold reaches 250. `word_count` is returned for exactly this reason: it is computed the
- * way frontend/scripts/audit-pdp-content.mjs computes `bodyWords` (strip tags, collapse whitespace,
+ * These bodies are short, and this comment deliberately does not say how short — the harness prints
+ * the min/median/max it measures over its own sample, which is the only word count anybody should
+ * quote. What is certain is that it is not 250, and that no honest arrangement of the columns we
+ * hold reaches 250: the sentences that would have got there are exactly the ones that asserted an
+ * import, a distribution, an availability or a brand range we hold no record of, and those were
+ * deleted rather than kept for their word count.
+ *
+ * On the sparsest fact sets that now lands BELOW the storefront fallback's own word count, and that
+ * is still the right trade. The fallback's defect was never its length — it was that it says the
+ * same thing on every page. Length is what you add once the facts arrive (a transcribed label, a
+ * translated description); it is not something to manufacture out of a brand name.
+ *
+ * `word_count` is returned for this reason. It is computed the way
+ * frontend/scripts/audit-pdp-content.mjs computes `bodyWords` (strip tags, collapse whitespace,
  * split on space, count tokens longer than one character), so the caller can compare it to that
  * gate directly instead of guessing. A promotion path that wants pages indexed should treat a short
  * result as "promote with seo_robots_index = 0", not as a reason to lengthen the text.
@@ -128,6 +156,16 @@ final class ImportedProductContent
      * silently reused when a subcategory is deleted and recreated. A slug that is not listed here
      * simply falls to `default`, which is a working plan — an unknown subcategory must not be a
      * fatal error in a class that runs 20,000 times.
+     *
+     * ── EVERY KEY IS LOWER-CASE, AND THE LOOKUP LOWER-CASES TOO ───────────────────────────
+     * `intra-workout` was written here as `Intra-Workout`, the only mixed-case key in the map, and
+     * that spelling is not arbitrary: the live rayon really is served at /Intra-Workout and
+     * config/catalog.php's rule for it is `['sub' => 'Intra-Workout', ...]`, so the value in
+     * `sous_categories.slug` carries capitals. A map that mixes both conventions only works while
+     * the caller's spelling happens to match the key character for character — one lower-cased slug
+     * from one call site and the rayon silently falls to `default`, taking its whole content family
+     * with it and giving 20,000 pages no way to report the loss. family() now lower-cases the
+     * incoming slug and this map is lower-case throughout, so both spellings resolve.
      */
     private const FAMILY_BY_SUBCATEGORY = [
         // Protein powders and mass gainers.
@@ -153,7 +191,7 @@ final class ImportedProductContent
         'zma' => 'performance',
         'pre-workout' => 'performance',
         'post-workout' => 'performance',
-        'Intra-Workout' => 'performance',
+        'intra-workout' => 'performance',
 
         // Weight management.
         'l-carnitine' => 'silhouette',
@@ -199,47 +237,57 @@ final class ImportedProductContent
      * `ident_form` is `ident` with the galenic form folded in — used by the families whose products
      * are overwhelmingly capsules and tablets, where the form is the single most useful thing to say
      * first and a separate sentence for it reads like padding.
+     *
+     * ── TWO SLOTS USED TO BE HERE AND ARE NOT COMING BACK ─────────────────────────────────
+     * `import` said the product had been imported and was distributed in Tunisia by us. `brandpage`
+     * said the brand's OTHER references were gathered on its brand page. Neither fact is in the
+     * input: this class is handed a title, a brand string, a rayon, a pack and sometimes a flavour,
+     * and from those you cannot know that anything was imported, that anything is distributed, or
+     * that a second product of that brand exists. Both slots appeared in every plan, so both were
+     * about to be asserted on every one of ~20,000 pages. Removing them costs roughly two sentences
+     * per page; keeping them cost the whole page's credibility, and a page that says less is not the
+     * page Google's scaled-content policy is aimed at — a page that says more than it knows is.
      */
     private const PLANS = [
         'proteines' => [
             ['ident', 'pack', 'flavour'],
-            ['placement', 'import', 'label', 'label_scope'],
-            ['brandpage', 'reference', 'contact'],
+            ['placement', 'label', 'label_scope'],
+            ['reference', 'contact'],
         ],
         'performance' => [
             ['ident', 'form', 'pack', 'flavour'],
-            ['placement', 'label', 'label_scope', 'import'],
-            ['brandpage', 'reference', 'contact'],
+            ['placement', 'label_scope', 'label'],
+            ['reference', 'contact'],
         ],
         'silhouette' => [
-            ['ident', 'form', 'pack'],
-            ['placement', 'label', 'label_scope'],
-            ['import', 'brandpage', 'reference', 'contact'],
+            ['ident', 'form', 'pack', 'placement'],
+            ['label', 'label_scope'],
+            ['reference', 'contact'],
         ],
         'micronutrition' => [
             ['ident_form', 'pack', 'placement'],
-            ['label', 'label_scope', 'import'],
-            ['brandpage', 'reference', 'contact'],
+            ['label', 'label_scope'],
+            ['reference', 'contact'],
         ],
         'plantes' => [
             ['ident_form', 'pack', 'placement'],
-            ['label_scope', 'label', 'import'],
-            ['reference', 'brandpage', 'contact'],
+            ['label_scope', 'label'],
+            ['reference', 'contact'],
         ],
         'bienetre' => [
             ['ident_form', 'flavour', 'pack'],
-            ['placement', 'import', 'label', 'label_scope'],
-            ['brandpage', 'reference', 'contact'],
+            ['placement', 'label', 'label_scope'],
+            ['reference', 'contact'],
         ],
         'snacking' => [
-            ['ident', 'flavour', 'pack'],
-            ['placement', 'label', 'label_scope'],
-            ['import', 'brandpage', 'reference', 'contact'],
+            ['ident', 'flavour', 'pack', 'placement'],
+            ['label', 'label_scope'],
+            ['reference', 'contact'],
         ],
         'default' => [
             ['ident', 'form', 'pack', 'flavour'],
-            ['placement', 'label', 'label_scope', 'import'],
-            ['brandpage', 'reference', 'contact'],
+            ['placement', 'label', 'label_scope'],
+            ['reference', 'contact'],
         ],
     ];
 
@@ -308,6 +356,28 @@ final class ImportedProductContent
      *
      * Placeholders: {full} {core} {brand} {sub} {cat} {form} {pack} {flavour} {ref} {site}
      *
+     * ── EVERY FRAME CARRIES A PLACEHOLDER THAT VARIES WITHIN A BRAND-AND-RAYON COHORT ─────
+     * {core}, {full}, {pack}, {flavour}, {form} or {ref}. Not {brand}, not {sub}, not {cat}, not
+     * {site} — those four are CONSTANTS for every product of one brand in one rayon, which is the
+     * cohort where near-duplicate bodies actually cost something.
+     *
+     * The rule started as "at least one placeholder that is not {site}", after `import`, `label` and
+     * `label_scope` were found carrying none at all. That version was still wrong by exactly one
+     * step: it accepted {brand}-only and {sub}-only frames, and `placement`, `placement_sub_only`
+     * and two thirds of every `label` bank were made of them. Measured over 300 products of one
+     * brand in one rayon, 50 pages carried a middle paragraph that named no product at all and
+     * shared two strings between them. Counting distinct BODIES cannot see that — the surrounding
+     * paragraphs still differ — which is why the check is on the frame and not on the output.
+     *
+     * ── NOTHING THAT ELIDES MAY SIT IN FRONT OF A PLACEHOLDER ────────────────────────────
+     * French elides de / le / la / ce / que before a vowel, and the values are third-party strings
+     * we cannot inspect: "de {core}" renders "de Ashwagandha" where the language wants
+     * "d'Ashwagandha", and "celles que {brand} imprime" renders "que Optimum Nutrition" where it
+     * wants "qu'Optimum" — and vowel-initial brands are not rare (Optimum, Applied, Olimp, AllMax).
+     * The frames therefore use only prepositions that never elide — pour, sur, par, en, dans, à —
+     * and otherwise put {core}/{brand} in subject position. {form} is safe after "de" because every
+     * FORM_PHRASES value begins with a consonant, and {pack} is safe because it begins with a digit.
+     *
      * ── WHY THE IDENTITY FRAMES USE {core} AND NOT {full} ─────────────────────────────────
      * {full} is "Brand Core" — `normalized_title` already leads with the brand. A frame written as
      * "<strong>{full}</strong>, signé {brand}" therefore renders "Optimum Nutrition Gold Standard
@@ -323,31 +393,31 @@ final class ImportedProductContent
         'ident' => [
             'proteines' => [
                 '<strong>{core}</strong>, de la marque {brand}, est inscrit au rayon {sub} de {site}.',
-                '{site} référence <strong>{core}</strong>, produit {brand}, à son rayon {sub}.',
+                '{site} référence <strong>{core}</strong>, produit {brand}, dans son rayon {sub}.',
                 'Au rayon {sub} de {site} figure <strong>{core}</strong>, signé {brand}.',
-                '<strong>{core}</strong> porte la marque {brand} et occupe le rayon {sub} du catalogue {site}.',
+                '<strong>{core}</strong> porte la marque {brand} et figure au rayon {sub} du catalogue {site}.',
             ],
             'performance' => [
                 '<strong>{core}</strong>, signé {brand}, est classé au rayon {sub} du catalogue {site}.',
-                'Au catalogue {site}, <strong>{core}</strong> relève du rayon {sub} et porte la marque {brand}.',
+                'Dans le catalogue {site}, <strong>{core}</strong> relève du rayon {sub} et porte la marque {brand}.',
                 '{site} référence <strong>{core}</strong>, produit {brand}, au rayon {sub}.',
-                '<strong>{core}</strong> rejoint le rayon {sub} de {site}, dans la gamme {brand}.',
+                '<strong>{core}</strong> figure au rayon {sub} de {site}, dans la gamme {brand}.',
             ],
             'silhouette' => [
                 '<strong>{core}</strong> est un produit {brand} référencé par {site} au rayon {sub}.',
                 '{site} inscrit <strong>{core}</strong>, de la marque {brand}, à son rayon {sub}.',
                 'Le rayon {sub} de {site} comprend <strong>{core}</strong>, marque {brand}.',
-                '<strong>{core}</strong>, marque {brand}, est classé en {sub} au catalogue {site}.',
+                '<strong>{core}</strong>, marque {brand}, est classé au rayon {sub} du catalogue {site}.',
             ],
             'snacking' => [
                 '<strong>{core}</strong> est un produit {brand} référencé au rayon {sub} de {site}.',
-                '{site} propose <strong>{core}</strong>, de la marque {brand}, au rayon {sub}.',
+                '{site} référence <strong>{core}</strong>, de la marque {brand}, au rayon {sub}.',
                 'Au rayon {sub}, {site} référence <strong>{core}</strong>, signé {brand}.',
                 '<strong>{core}</strong> vient de la marque {brand} et figure au rayon {sub} du catalogue {site}.',
             ],
             'default' => [
-                '<strong>{core}</strong>, de la marque {brand}, est inscrit au rayon {sub} de {site}.',
-                '{site} référence <strong>{core}</strong>, produit {brand}, au rayon {sub}.',
+                '<strong>{core}</strong> est référencé par {site} au rayon {sub}, sous la marque {brand}.',
+                '{site} classe <strong>{core}</strong> au rayon {sub} : un produit de la marque {brand}.',
                 'Au rayon {sub} du catalogue {site} figure <strong>{core}</strong>, marque {brand}.',
                 '<strong>{core}</strong>, marque {brand}, est classé au rayon {sub} par {site}.',
             ],
@@ -359,8 +429,8 @@ final class ImportedProductContent
          */
         'ident_form' => [
             'micronutrition' => [
-                '<strong>{core}</strong> est un complément {brand} présenté sous forme de {form} et référencé par {site} au rayon {sub}.',
-                'Proposé en {form}, <strong>{core}</strong> porte la marque {brand} et figure au rayon {sub} du catalogue {site}.',
+                '<strong>{core}</strong> est un complément {brand} présenté sous forme de {form}, référencé par {site} au rayon {sub}.',
+                'Présenté en {form}, <strong>{core}</strong> porte la marque {brand} et figure au rayon {sub} du catalogue {site}.',
                 '{site} référence <strong>{core}</strong> au rayon {sub} : un produit {brand} conditionné en {form}.',
                 '<strong>{core}</strong>, marque {brand}, se présente en {form} et appartient au rayon {sub} de {site}.',
             ],
@@ -368,28 +438,34 @@ final class ImportedProductContent
                 '<strong>{core}</strong> est un produit {brand} présenté en {form}, référencé par {site} au rayon {sub}.',
                 'Au rayon {sub} de {site}, <strong>{core}</strong> se présente en {form} et porte la marque {brand}.',
                 '{site} inscrit <strong>{core}</strong> à son rayon {sub} : marque {brand}, conditionnement en {form}.',
-                'Signé {brand} et proposé en {form}, <strong>{core}</strong> relève du rayon {sub} du catalogue {site}.',
+                'Signé {brand} et présenté en {form}, <strong>{core}</strong> relève du rayon {sub} du catalogue {site}.',
             ],
             'bienetre' => [
-                '<strong>{core}</strong>, de la marque {brand}, est proposé en {form} et classé au rayon {sub} de {site}.',
+                '<strong>{core}</strong>, de la marque {brand}, est présenté en {form} et classé au rayon {sub} de {site}.',
                 '{site} référence <strong>{core}</strong> en {form} au rayon {sub}, sous la marque {brand}.',
-                'Présenté en {form}, <strong>{core}</strong> figure au rayon {sub} du catalogue {site} et porte la marque {brand}.',
-                'Au rayon {sub}, {site} propose <strong>{core}</strong> — marque {brand}, format {form}.',
+                'Conditionné en {form}, <strong>{core}</strong> figure au rayon {sub} du catalogue {site} et porte la marque {brand}.',
+                'Au rayon {sub}, {site} référence <strong>{core}</strong> — marque {brand}, conditionnement en {form}.',
             ],
             'default' => [
                 '<strong>{core}</strong>, marque {brand}, se présente en {form} et figure au rayon {sub} de {site}.',
                 '{site} référence <strong>{core}</strong> au rayon {sub} : produit {brand} conditionné en {form}.',
-                'Proposé en {form}, <strong>{core}</strong> porte la marque {brand} et relève du rayon {sub} de {site}.',
+                'Présenté en {form}, <strong>{core}</strong> porte la marque {brand} et relève du rayon {sub} de {site}.',
                 'Au rayon {sub} du catalogue {site}, <strong>{core}</strong> est un produit {brand} présenté en {form}.',
             ],
         ],
 
-        /** Galenic form as its own sentence, for the families that do not fold it into the opener. */
+        /**
+         * Galenic form as its own sentence, for the families that do not fold it into the opener.
+         *
+         * The third frame used to read "Il s'agit d'un format {form}", which fills as "un format
+         * gélules végétales" — a noun apposed to a noun with nothing joining them. French needs the
+         * preposition.
+         */
         'form' => [
             'default' => [
                 'Cette référence se présente sous forme de {form}.',
                 'Le produit est conditionné en {form}.',
-                'Il s\'agit d\'un format {form}.',
+                'Il s\'agit d\'un conditionnement en {form}.',
             ],
         ],
 
@@ -400,24 +476,30 @@ final class ImportedProductContent
         'pack_count' => [
             'default' => [
                 'Le conditionnement annoncé est de {pack}.',
-                'Chaque unité vendue contient {pack}.',
+                'Chaque emballage contient {pack}.',
                 'La quantité indiquée sur l\'emballage est de {pack}.',
                 'L\'emballage annonce {pack}.',
             ],
         ],
+        /**
+         * `contenance` was in this bank and does not belong: it names a VOLUME, and every unit that
+         * reaches `pack_mass` is a mass (kg, g, lb, oz). "La contenance annoncée est de 2,27 kg"
+         * measures the wrong quantity in the wrong noun. It survives in `pack_volume`, where it is
+         * the correct word.
+         */
         'pack_mass' => [
             'default' => [
                 'Le format référencé est de {pack}.',
                 'Le poids net indiqué sur l\'emballage est de {pack}.',
                 'Cette référence correspond au conditionnement de {pack}.',
-                'La contenance annoncée est de {pack}.',
+                'La masse nette annoncée est de {pack}.',
             ],
         ],
         'pack_volume' => [
             'default' => [
                 'Le volume indiqué sur l\'emballage est de {pack}.',
                 'Cette référence correspond à la contenance de {pack}.',
-                'Le conditionnement annoncé est de {pack}.',
+                'L\'emballage annonce une contenance de {pack}.',
             ],
         ],
 
@@ -429,63 +511,82 @@ final class ImportedProductContent
                 'Il s\'agit de la version {flavour}.',
             ],
         ],
-        /** "Unflavored" is the absence of a flavour, so it gets its own bank and its own wording. */
+        /**
+         * "Unflavored" is the absence of a flavour, so it gets its own bank and its own wording.
+         *
+         * "sans arôme AJOUTÉ" was one of these frames and says more than the source does: the row
+         * carries a flavour field that IHerbNormalizer mapped to "Sans arôme", which tells us how
+         * the variant is named — not that nothing aromatic is in the formula. The frames now name
+         * the variant and stop there.
+         */
         'flavour_none' => [
             'default' => [
-                'Cette version est référencée sans arôme ajouté.',
-                'La déclinaison référencée ici est la version sans arôme.',
-                'Il s\'agit de la version neutre, sans arôme.',
+                'La déclinaison retenue pour {core} est la version sans arôme.',
+                '{core} est référencé ici dans sa version sans arôme.',
+                'Cette fiche porte sur {core} en version sans arôme.',
             ],
         ],
 
-        /** Where the product sits in our own taxonomy. True by construction — we placed it there. */
+        /**
+         * Where the product sits in our own taxonomy. True by construction — we placed it there.
+         *
+         * Every frame names {core}. None of them used to: they carried {sub}, {cat} and {site} and
+         * nothing else, all three of which are CONSTANT inside one brand-and-rayon cohort — so the
+         * sentence was byte-identical on every product of that rayon. `placement` is in every plan,
+         * and in three families it shares a paragraph with `label` and `label_scope`, which had the
+         * same hole; the measured result was a middle paragraph that named no product at all, shared
+         * verbatim across a sixth of a 300-product cohort. selfCheck() now rejects a frame whose only
+         * placeholders are cohort-constant, which is what stops the next one.
+         */
         'placement' => [
             'default' => [
-                'Le rayon {sub} appartient à la catégorie {cat} du catalogue.',
-                'Sur {site}, {sub} est un rayon de la catégorie {cat}.',
-                '{sub} fait partie de la catégorie {cat}.',
-                'Ce rayon, {sub}, est rattaché à la catégorie {cat}.',
+                'Le rayon {sub}, où figure {core}, appartient à la catégorie {cat} du catalogue.',
+                'Sur {site}, {core} est classé au rayon {sub}, rattaché à la catégorie {cat}.',
+                'Ce rayon, {sub}, relève de la catégorie {cat} ; {core} y est listé.',
+                'La catégorie {cat} regroupe le rayon {sub}, où {site} référence {core}.',
             ],
         ],
         /** Same slot when the parent category is unknown: says less, still says something true. */
         'placement_sub_only' => [
             'default' => [
-                'Cette référence est classée au rayon {sub} du catalogue.',
-                'Sur {site}, le produit est listé au rayon {sub}.',
-                'Le classement retenu pour cette fiche est le rayon {sub}.',
+                'Cette référence, {core}, est classée au rayon {sub} du catalogue.',
+                'Sur {site}, {core} est listé au rayon {sub}.',
+                'Le classement retenu pour {core} est le rayon {sub}.',
             ],
         ],
 
-        'import' => [
-            'default' => [
-                'Ce produit est importé et proposé à la vente en Tunisie par {site}.',
-                '{site} importe cette référence et la propose à sa clientèle en Tunisie.',
-                'Il s\'agit d\'une référence importée, distribuée en Tunisie par {site}.',
-                'Cette référence fait partie du catalogue importé de {site} pour la Tunisie.',
-            ],
-        ],
-
-        /** Defer to the manufacturer's label. This is the house rule, not a stylistic choice. */
+        /**
+         * Defer to the manufacturer's label. This is the house rule, not a stylistic choice.
+         *
+         * Every frame names {core}. Naming the manufacturer as well is the more accurate sentence —
+         * it is {brand} that prints the panel, not an anonymous "fabricant" — but {brand} is NOT a
+         * product-specific placeholder and two of the three frames in each of these banks had only
+         * that. Inside one brand's rayon the brand name is a constant, so those frames rendered the
+         * same bytes on every product of that brand; paired with a `label_scope` frame that had the
+         * same hole, a whole middle paragraph came out identical across the cohort — measured at 26
+         * byte-identical paragraphs in a 300-product, one-brand, one-rayon sample. The frames now
+         * carry {core} as well, and selfCheck() rejects any future frame that does not.
+         */
         'label' => [
             'proteines' => [
-                'La composition complète et les valeurs nutritionnelles figurent sur l\'emballage d\'origine du fabricant.',
-                'Reportez-vous à l\'étiquette du fabricant pour la composition et les valeurs nutritionnelles.',
-                'Les valeurs nutritionnelles et la liste des ingrédients sont celles imprimées sur l\'emballage d\'origine.',
+                'Pour {core}, la composition complète et les valeurs nutritionnelles sont celles imprimées sur l\'emballage d\'origine.',
+                '{brand} imprime la composition et les valeurs nutritionnelles sur l\'emballage d\'origine qui accompagne {core}.',
+                'La composition et les valeurs nutritionnelles retenues pour {core} sont celles imprimées par {brand} sur l\'emballage.',
             ],
             'micronutrition' => [
-                'La composition et les apports par unité figurent sur l\'étiquette d\'origine du fabricant.',
-                'Reportez-vous à l\'emballage du fabricant pour la composition détaillée et les apports.',
-                'Les apports et la liste des ingrédients sont ceux imprimés sur l\'étiquette d\'origine.',
+                'Pour {core}, la composition et les apports par unité figurent sur l\'étiquette d\'origine.',
+                '{brand} indique la composition et les apports par unité sur l\'étiquette d\'origine qui accompagne {core}.',
+                'La liste des ingrédients et les apports par unité retenus pour {core} sont imprimés par {brand} sur l\'étiquette d\'origine.',
             ],
             'plantes' => [
-                'La composition et les indications d\'usage figurent sur l\'étiquette d\'origine du fabricant.',
-                'Reportez-vous à l\'emballage d\'origine pour la composition et les indications du fabricant.',
-                'Les informations de composition sont celles imprimées par le fabricant sur l\'emballage.',
+                'Pour {core}, la composition et les indications d\'usage figurent sur l\'emballage d\'origine.',
+                'La composition et les indications d\'usage sont imprimées par {brand} sur l\'emballage d\'origine qui accompagne {core}.',
+                'Pour {core}, cette fiche renvoie à l\'emballage d\'origine, où {brand} imprime la composition et les indications d\'usage.',
             ],
             'default' => [
-                'La composition et les conseils d\'utilisation figurent sur l\'emballage d\'origine du fabricant.',
-                'Reportez-vous à l\'étiquette du fabricant pour la composition et les conseils d\'utilisation.',
-                'Les informations de composition et d\'usage sont celles imprimées sur l\'emballage d\'origine.',
+                'Pour {core}, la composition et les conseils d\'utilisation figurent sur l\'emballage d\'origine.',
+                '{brand} imprime la composition et les conseils d\'utilisation sur l\'emballage d\'origine qui accompagne {core}.',
+                'Pour {core}, cette fiche renvoie à l\'emballage d\'origine, où {brand} imprime la composition et les conseils d\'utilisation.',
             ],
         ],
 
@@ -496,23 +597,29 @@ final class ImportedProductContent
          * read as "this page is unfinished"; it states a policy, which is what it actually is —
          * we publish a Supplement Facts panel only when it has been read off the label of the lot
          * we hold, and inventing or copying one from elsewhere is not on the table.
+         *
+         * The first frame used to open "Aucune valeur nutritionnelle n'est reproduite … tant
+         * qu'ELLE n'a pas été relevée": a singular pronoun reaching back for its antecedent through
+         * a negated plural noun phrase, which is not French. The frames now name what has not been
+         * read — the label — rather than pronominalising what is not there.
+         *
+         * ── AND IT SAID "L'ÉTIQUETTE DU PRODUIT REÇU", WHICH IS A SUPPLY CLAIM ────────────
+         * "le produit reçu" is a definite noun phrase asserting that the product has been RECEIVED
+         * by us — the same class of assertion the `import` slot was deleted for, and forbidden for
+         * the same reason: we hold no supplier record, no import document, no arrival date and no
+         * stock (promotion writes qte = 0, so the badge on the very page says RUPTURE). It is not
+         * load-bearing — the other three frames in this bank state the identical policy without it —
+         * and it was reachable on roughly a quarter of the pages that pick this slot, which is in
+         * every plan. The frame now names the label on the packaging, which is where the panel is
+         * printed whether or not anything ever arrived anywhere. UNSUPPORTED_VOCABULARY grew a
+         * `reçu` pattern so the next one fails the check instead of shipping.
          */
         'label_scope' => [
             'default' => [
-                'Aucune valeur nutritionnelle n\'est reproduite sur cette page tant qu\'elle n\'a pas été relevée sur l\'étiquette du produit reçu.',
-                'Nous ne publions un tableau nutritionnel qu\'une fois relevé sur l\'étiquette du produit lui-même, ce qui n\'est pas encore le cas ici.',
-                'Cette fiche ne reprend aucun chiffre nutritionnel : nous ne publions que les valeurs lues sur l\'étiquette du produit reçu.',
-                'Les chiffres nutritionnels ne sont ajoutés qu\'après lecture de l\'étiquette du produit reçu ; ils ne figurent donc pas encore ici.',
-            ],
-        ],
-
-        /** The brand page exists — BrandMatcher creates it, and the PDP already links to it. */
-        'brandpage' => [
-            'default' => [
-                'Les autres références {brand} disponibles sur {site} sont regroupées sur la page de la marque.',
-                'La page de marque {brand} rassemble les autres références disponibles sur {site}.',
-                'Vous retrouvez le reste de la sélection {brand} sur sa page de marque.',
-                'La marque {brand} dispose de sa propre page sur {site}.',
+                'Aucune valeur nutritionnelle n\'est publiée pour {core} tant que l\'étiquette imprimée sur l\'emballage n\'a pas été relevée.',
+                '{site} ne publie un tableau nutritionnel qu\'après relevé de l\'étiquette : pour {core}, ce relevé n\'a pas encore été fait.',
+                'Cette fiche ne reprend aucun chiffre nutritionnel pour {core} : seules les valeurs lues sur l\'étiquette du produit sont publiées.',
+                'Les valeurs nutritionnelles ne sont ajoutées pour {core} qu\'après lecture de l\'étiquette imprimée par {brand} ; elles ne figurent donc pas encore sur cette fiche.',
             ],
         ],
 
@@ -529,14 +636,66 @@ final class ImportedProductContent
             ],
         ],
 
+        /**
+         * The only slot about us rather than about the product, and it stays inside what we know.
+         *
+         * "renseigne sur {core} ET SUR LES RÉFÉRENCES ÉQUIVALENTES" was here and asserted that
+         * equivalents exist in the catalogue — the same unsupported claim that removed `brandpage`,
+         * one slot further down the page. The question mark in the third frame is gone too: French
+         * typography wants a non-breaking space before it, and a stored column travelling through
+         * strip_tags, JSON and a template is not where you want to be maintaining one.
+         *
+         * The fourth frame says "renseigne" and not "traite les demandes", which is the more natural
+         * verb — and which selfCheck() rejects, because `\btraite\b` is one of
+         * ProductContentGenerator::claimPatterns()' health-claim words. The pattern is right to be
+         * blunt (a supplement page that "traite" anything is a regulated claim) and this bank simply
+         * has no business using the word.
+         */
         'contact' => [
             'default' => [
-                'Pour toute question sur {core}, l\'équipe de {site} répond depuis sa boutique de Sousse.',
-                'L\'équipe de {site}, à Sousse, renseigne sur {core} et sur les références équivalentes.',
-                'Une question sur {core} ? L\'équipe de {site} est joignable depuis sa boutique de Sousse.',
-                'Notre équipe, installée à Sousse, répond aux questions portant sur {core}.',
+                'Pour toute question sur {core}, l\'équipe de {site} vous répond depuis sa boutique de Sousse.',
+                'L\'équipe de {site}, installée à Sousse, répond aux questions portant sur {core}.',
+                'Une question sur {core} : l\'équipe de {site} est joignable depuis sa boutique de Sousse.',
+                'Depuis sa boutique de Sousse, l\'équipe de {site} renseigne sur {core}.',
             ],
         ],
+    ];
+
+    /**
+     * Vocabulary this class may not use, because no column we hold supports it.
+     *
+     * A frame bank is read by a human once and then rendered ~20,000 times, so the guard has to be
+     * mechanical. Each pattern here corresponds to a sentence that WAS in the banks above and was
+     * removed: an import, a distribution, an availability, a stock or price statement, other
+     * references of the brand, a review. The value is the reason, printed by selfCheck() so whoever
+     * trips it reads the argument rather than just the rule.
+     *
+     * The `import` pattern is anchored on both sides so that it matches "importé"/"importateur" and
+     * NOT "important" — a word ordinary copy is allowed to use.
+     *
+     * ── WHY `reçu` IS IN HERE ─────────────────────────────────────────────────────────────
+     * Because it got past this list once. A `label_scope` frame read "l'étiquette du produit REÇU",
+     * which asserts that we have taken delivery of the product — the same supply claim the whole
+     * `import` slot was deleted for, in a different word, on roughly a quarter of the pages that
+     * reach that slot. Nothing here matched it: an assertion is a MEANING, and this list can only
+     * catch the spellings somebody thought of. Every entry below is a spelling that shipped.
+     *
+     * @var array<string, string>
+     */
+    private const UNSUPPORTED_VOCABULARY = [
+        '~\bimport(?:e|é|ée|és|ées|er|ation|ations|ateur|ateurs)?\b~iu' => 'asserts an act of importation; we hold no supplier record, no import document and no arrival date',
+        '~\bre[çc]u(?:e|s|es)?\b~iu' => 'asserts that the product has been received by us; we hold no supplier record, no arrival date and no stock — promotion writes qte = 0',
+        '~\bdistribu~iu' => 'asserts distribution; we are not recorded anywhere as this product\'s distributor',
+        '~\bdisponib~iu' => 'asserts availability; promotion writes qte = 0, so the page badge says the opposite',
+        '~\bstocks?\b~iu' => 'asserts a stock state, which is live data and must never be baked into a stored column',
+        '~\bprix\b~iu' => 'asserts a price, which is live data and must never be baked into a stored column',
+        '~\blivraison\b~iu' => 'asserts a delivery term this class has no knowledge of',
+        '~\bvend(?:u|ue|us|ues|re|ons|ez)\b~iu' => 'asserts a sale; the product is created unpublished with qte = 0',
+        '~\bautres?\s+r[ée]f[ée]rences?\b~iu' => 'asserts that other references exist; the class is handed one brand string and knows nothing else that carries it',
+        '~\b[ée]quivalent~iu' => 'asserts that an equivalent product exists in the catalogue',
+        '~\bavis\b~iu' => 'advertises reviews; imported products carry none and emit no aggregateRating',
+        '~\bauthentique~iu' => 'asserts an authenticity guarantee we have no chain of custody for',
+        '~\bmeilleur~iu' => 'a superlative is a comparison, and we hold nothing to compare against',
     ];
 
     /**
@@ -560,8 +719,16 @@ final class ImportedProductContent
      *     seo_description: ?string,
      *     word_count: int,
      *     facts_used: list<string>,
-     *     family: string
+     *     family: string,
+     *     arrangements: int
      * }
+     *
+     * `arrangements` is the number of DIFFERENT bodies this fact set could have produced across all
+     * identities: the product of the bank sizes of the slots the plan actually filled. It is exact
+     * — no two frames inside one bank are byte-identical, so two different picks cannot collapse
+     * onto one body — and it is returned rather than computed in a comment because it is what makes
+     * the distinctness of this whole scheme a thing a test can assert instead of a thing a docblock
+     * claims. 1 means the body is fixed for this fact set; 0 slots filled means no body at all.
      */
     public static function compose(array $facts): array
     {
@@ -581,6 +748,7 @@ final class ImportedProductContent
             'word_count' => 0,
             'facts_used' => [],
             'family' => $family,
+            'arrangements' => 0,
         ];
 
         // The opening sentence needs a product, a brand and a rayon. Without all three there is no
@@ -629,18 +797,43 @@ final class ImportedProductContent
 
         $values = [
             '{site}' => self::SITE,
-            '{full}' => self::escape($full),
+            '{full}' => self::markupFree($full),
             // $core is guaranteed non-empty by the guard above; the old `$core !== '' ? $core : $full`
             // fallback was what silently put the brand into {core} on a brand-only title.
-            '{core}' => self::escape($core),
-            '{brand}' => self::escape($brand),
-            '{sub}' => self::escape($subLabel),
-            '{cat}' => $catLabel !== null ? self::escape($catLabel) : '',
-            '{form}' => $form !== null ? self::escape($form) : '',
-            '{pack}' => $pack !== null ? self::escape($pack['label']) : '',
-            '{flavour}' => $flavour !== null ? self::escape($flavour) : '',
-            '{ref}' => $reference !== null ? self::escape($reference) : '',
+            '{core}' => self::markupFree($core),
+            '{brand}' => self::markupFree($brand),
+            '{sub}' => self::markupFree($subLabel),
+            '{cat}' => $catLabel !== null ? self::markupFree($catLabel) : '',
+            '{form}' => $form !== null ? self::markupFree($form) : '',
+            '{pack}' => $pack !== null ? self::markupFree($pack['label']) : '',
+            '{flavour}' => $flavour !== null ? self::markupFree($flavour) : '',
+            '{ref}' => $reference !== null ? self::markupFree($reference) : '',
         ];
+
+        /*
+         * THE METADATA IS BUILT FROM THE SAME NEUTRALISED VALUES AS THE BODY.
+         *
+         * It was not. Every {placeholder} above went through markupFree(), and then seoTitle() and
+         * seoDescription() were handed $full, $core, $brand, $subLabel, $pack and $flavour STRAIGHT
+         * FROM self::text(), which only collapses whitespace. Same row, two different strings: for a
+         * brand arriving as "Nature&#039;s Way" in a rayon labelled "Vitamines &amp; Minéraux" the
+         * body read "…un produit Nature's Way…au rayon Vitamines & Minéraux" while seo_title kept
+         * "Nature&#039;s Way …" and seo_description kept "Rayon Vitamines &amp; Minéraux, marque
+         * Nature&#039;s Way". Markup leaked the same way: the body neutralised "Turbo <b>Ultra</b>
+         * Complex", the title did not.
+         *
+         * Those two columns are the ones a crawler reads VERBATIM — x-crawler/product/[slug]
+         * emits product.seo.title as `title: { absolute: … }` and product.seo.description as the
+         * meta description and the og/twitter description, with no decode and no sanitise, and
+         * ProductSchemaBuilder::plainDescription() prefers the same string for JSON-LD. So the one
+         * half of the output that gets no second chance was the half that was not neutralised.
+         *
+         * It also corrupted the sizing: mb_strlen() counts "&#039;" as six characters, so the 30/60
+         * and 110/160 windows were being enforced against a length no SERP ever shows.
+         */
+        $packText = $pack === null ? null : ['label' => self::markupFree($pack['label']), 'group' => $pack['group']];
+        $flavourText = $flavour === null ? null : self::markupFree($flavour);
+        $formText = $form === null ? null : self::markupFree($form);
 
         $factsUsed = ['name', 'brand', 'sub_category'];
         if ($catLabel !== null) {
@@ -659,20 +852,30 @@ final class ImportedProductContent
             $factsUsed[] = 'reference';
         }
 
+        $available = [
+            'form' => $form,
+            'pack' => $pack,
+            'flavour' => $flavour,
+            'category' => $catLabel,
+            'reference' => $reference,
+        ];
+
         $paragraphs = [];
+        // The size of the phrasing space, accumulated as the plan is executed rather than rebuilt by
+        // a second walk over PLANS — a duplicate walk is a duplicate set of skip rules, and the two
+        // would drift the first time a slot learns a new condition.
+        $arrangements = 1;
+
         foreach (self::PLANS[$family] as $slotGroup) {
             $sentences = [];
             foreach ($slotGroup as $slot) {
-                $sentence = self::sentence($slot, $family, $identity, $values, [
-                    'form' => $form,
-                    'pack' => $pack,
-                    'flavour' => $flavour,
-                    'category' => $catLabel,
-                    'reference' => $reference,
-                ]);
-                if ($sentence !== null) {
-                    $sentences[] = $sentence;
+                $bank = self::bank($slot, $family, $available);
+                if ($bank === null) {
+                    continue;
                 }
+                $frames = $bank['frames'];
+                $sentences[] = strtr($frames[self::pick($identity, $bank['slot'], count($frames))], $values);
+                $arrangements *= count($frames);
             }
             if ($sentences !== []) {
                 $paragraphs[] = '<p>'.implode(' ', $sentences).'</p>';
@@ -684,11 +887,15 @@ final class ImportedProductContent
 
         return [
             'description_fr' => $description,
-            'seo_title' => self::seoTitle($full, $core, $subLabel, $pack, $flavour),
-            'seo_description' => self::seoDescription($full, $brand, $subLabel, $pack, $flavour, $form),
+            // $values holds the already-neutralised {full}/{core}/{brand}/{sub}; reusing them is what
+            // makes "the body and the metadata are built from the same strings" a property of the
+            // code rather than of whoever edits these two lines next.
+            'seo_title' => self::seoTitle($values['{full}'], $values['{core}'], $values['{sub}'], $packText, $flavourText),
+            'seo_description' => self::seoDescription($values['{full}'], $values['{brand}'], $values['{sub}'], $packText, $flavourText, $formText),
             'word_count' => $wordCount,
             'facts_used' => $factsUsed,
             'family' => $family,
+            'arrangements' => $description === null ? 0 : $arrangements,
         ];
     }
 
@@ -702,7 +909,7 @@ final class ImportedProductContent
      * @param  array<string, mixed>  $row       an ExternalCatalogProduct row (or its toArray())
      * @param  array<string, mixed>  $resolved  brand / sub_category_slug / sub_category_label /
      *                                          category_label / reference, resolved by the caller
-     * @return array{description_fr: ?string, seo_title: ?string, seo_description: ?string, word_count: int, facts_used: list<string>, family: string}
+     * @return array{description_fr: ?string, seo_title: ?string, seo_description: ?string, word_count: int, facts_used: list<string>, family: string, arrangements: int}
      */
     public static function fromStagingRow(array $row, array $resolved = []): array
     {
@@ -754,6 +961,18 @@ final class ImportedProductContent
      * than a copy, and additionally refuses any frame containing a bare digit: a number in a constant
      * template cannot have come from this product's data.
      *
+     * Two rules of its own run alongside them, both learned from frames that shipped in this file:
+     *
+     *   · UNSUPPORTED_VOCABULARY — a frame may not assert an import, a distribution, an
+     *     availability, a stock, a price, a review, or the existence of something the input never
+     *     named. Each of those was a real sentence here, and each read perfectly well; that is the
+     *     problem. Untrue copy does not look untrue, so it needs a mechanical check.
+     *   · a frame must carry at least one placeholder that varies BETWEEN TWO PRODUCTS OF THE SAME
+     *     BRAND IN THE SAME RAYON — {core}, {full}, {pack}, {flavour}, {form} or {ref}. The rule
+     *     used to be "any placeholder that is not {site}", which accepted {brand}, {sub} and {cat};
+     *     those are constants inside that cohort, so frames carrying only them rendered identical
+     *     bytes across it, and whole paragraphs did.
+     *
      * @return list<string> one message per offending frame; empty when the bank is clean
      */
     public static function selfCheck(): array
@@ -775,13 +994,69 @@ final class ImportedProductContent
                 }
             }
 
+            $unsupported = self::unsupportedAssertions($plain);
+            if ($unsupported !== []) {
+                $problems[] = 'unsupported assertion in frame ('.$unsupported[0].'): '.$frame;
+
+                continue;
+            }
+
             // A digit inside a constant is a figure nobody measured for this product.
             if (preg_match('~\d~', $plain) === 1) {
                 $problems[] = 'hardcoded figure in frame: '.$frame;
+
+                continue;
+            }
+
+            /*
+             * THE PLACEHOLDER MUST VARY BETWEEN TWO PRODUCTS THAT SIT SIDE BY SIDE.
+             *
+             * This was `\{(?!site\})[a-z_]+\}` — "any placeholder that is not {site}" — and it was
+             * measuring the wrong thing. {brand}, {sub} and {cat} interpolate CONSTANTS inside a
+             * brand-and-rayon cohort, which is the cohort the harness itself calls the worst
+             * realistic one and the only cohort where near-duplicate bodies actually do damage. The
+             * old rule therefore passed a bank of {brand}-only sentences as "product-specific", and
+             * measured over 300 products of one brand in one rayon that let 50 pages carry a middle
+             * paragraph naming no product at all, sharing two distinct strings between them — about
+             * 40 % of a body, byte-identical, on a sixth of the cohort. Counting whole distinct
+             * bodies cannot see it, because the paragraphs around it still differ.
+             *
+             * So the rule is now the one that was always meant: the frame must interpolate something
+             * that DIFFERS from one product to the next — the name, the pack, the flavour, the
+             * galenic form or the reference. {site}, {brand}, {sub} and {cat} do not count, whatever
+             * else the frame carries.
+             */
+            if (preg_match('~\{(?:core|full|pack|flavour|form|ref)\}~', $frame) !== 1) {
+                $problems[] = 'no per-product placeholder in frame (only cohort-constant ones): '.$frame;
             }
         }
 
         return $problems;
+    }
+
+    /**
+     * Why this text asserts something our data does not support, or [] when it does not.
+     *
+     * Public, and used by selfCheck() rather than duplicated inside it, because the frame banks are
+     * NOT the only thing this class writes: seoTitle() and seoDescription() assemble their strings
+     * in PHP, from clauses that never appear in FRAMES, and the two worst offenders this file has
+     * ever shipped — "importateur en Tunisie" and "Référence importée, disponible sur …" — were
+     * both in seoDescription(), i.e. in exactly the half a frame-bank check cannot see. A caller
+     * that wants to hold generated metadata to the same rule can now do so against the same
+     * definitions, which is the reason ProductContentGenerator exports its patterns too.
+     *
+     * @return list<string> one reason per rule broken
+     */
+    public static function unsupportedAssertions(string $text): array
+    {
+        $reasons = [];
+        foreach (self::UNSUPPORTED_VOCABULARY as $pattern => $why) {
+            if (preg_match($pattern, $text)) {
+                $reasons[] = $why;
+            }
+        }
+
+        return $reasons;
     }
 
     // ─────────────────────────────────────────────────────────────────────────────────────
@@ -789,12 +1064,22 @@ final class ImportedProductContent
     // ─────────────────────────────────────────────────────────────────────────────────────
 
     /**
-     * Render one slot, or null when the fact it needs is missing.
+     * The frames one plan slot resolves to, or null when the fact it needs is missing.
      *
-     * @param  array<string, string>  $values
-     * @param  array<string, mixed>   $available
+     * Split out of sentence() so that compose() can both PICK a frame and COUNT the frames it could
+     * have picked from a single walk of the plan. The alternative — a second method re-deriving
+     * which slots render — is two copies of every skip rule below, and the copy that gets forgotten
+     * is the one that makes the harness's distinctness figure quietly wrong.
+     *
+     * The returned `slot` is the RESOLVED name (`pack_mass`, `flavour_none`, …) and that is what
+     * pick() is seeded with, not the plan's name: `flavour` and `flavour_none` are different banks
+     * of different sizes, and one seed for both would make a product's unflavoured wording a
+     * function of an index chosen for a bank it never reaches.
+     *
+     * @param  array<string, mixed>  $available
+     * @return array{slot: string, frames: list<string>}|null
      */
-    private static function sentence(string $slot, string $family, string $identity, array $values, array $available): ?string
+    private static function bank(string $slot, string $family, array $available): ?array
     {
         // Slots that resolve to a different bank depending on the facts present.
         if ($slot === 'ident_form') {
@@ -847,7 +1132,7 @@ final class ImportedProductContent
             return null;
         }
 
-        return strtr($frames[self::pick($identity, $slot, count($frames))], $values);
+        return ['slot' => $slot, 'frames' => array_values($frames)];
     }
 
     /**
@@ -856,13 +1141,16 @@ final class ImportedProductContent
      * Seeded with the slot name as well as the product identity — see the class docblock.
      *
      * ── WHY md5 AND NOT crc32 ─────────────────────────────────────────────────────────────
-     * This was crc32 first, and it was measurably wrong. Product identities are not random: they are
-     * sequential-ish part numbers, and crc32 is linear over GF(2), so its LOW bits — which is
-     * exactly what `% 4` reads — stay correlated across inputs that differ only in a suffix. Measured
-     * over 5,000 sequential identities in one worst-case cohort (every fact identical, only the
-     * identity differing), crc32 produced 2,512 distinct bodies where independent selection predicts
-     * about 4,940. Half the intended variation was being lost to the hash, in precisely the cohort
-     * — one subcategory, one pack shape — where near-duplicate bodies do the damage.
+     * This was crc32 first, and it was wrong for a structural reason. Product identities are not
+     * random: they are sequential-ish part numbers, and crc32 is linear over GF(2), so its LOW bits
+     * — which is exactly what `% 4` reads — stay correlated across inputs that differ only in a
+     * suffix. The visible effect is fewer distinct bodies than independent selection would give, in
+     * precisely the cohort — one subcategory, one pack shape, sequential part numbers — where
+     * near-duplicate bodies do the damage.
+     *
+     * How much fewer is not asserted here, because a number in a comment is a number nothing checks.
+     * The harness measures the realised fraction every run (see the class docblock): a hash that
+     * correlates fails the ratio, whichever hash it is.
      *
      * md5's bit distribution has no such structure. It is a core function with no extension
      * dependency and returns the same digest on every platform and PHP version, which is what "same
@@ -892,7 +1180,20 @@ final class ImportedProductContent
      * fit: a title cut mid-brand ("Optimum Nutrition Gold Standard 100% Whe…") reads as broken in a
      * result list, and the brand is the part a Tunisian buyer is scanning for.
      *
-     * Candidates are tried longest-first and the first one inside the window wins.
+     * ── THE LADDER IS ORDERED BY PREFERENCE, NOT BY LENGTH ────────────────────────────────
+     * This said "candidates are tried longest-first", and they are not: with a short rayon label
+     * ("CLA") the third candidate is shorter than the second, and with a short brand the fourth is
+     * longer than the third. Sorting them by length would make the sentence true and the OUTPUT
+     * worse — on a 19-character name the longest fitting candidate is the one that dropped the
+     * brand and kept " | Protéine Tunisie", which trades the word a Tunisian buyer scans for
+     * against a site name repeated on every result. Each candidate gives up more of the OPTIONAL
+     * material than the one before it, the first that lands inside the window wins, and that is
+     * what the order means.
+     *
+     * ── EVERY ARGUMENT ARRIVES markupFree()'d; SEE THE CALL SITE ──────────────────────────
+     * They did not use to, and the entity that survived here surfaced in the SERP title. Length is
+     * measured on the neutralised string for the same reason: "&#039;" is six characters of window
+     * spent on an apostrophe nobody sees.
      *
      * ── THE VARIANT SUFFIX IS NOT DECORATION; IT IS THE ONLY THING THAT DIFFERS ───────────────
      * iHerb lists every size and every flavour as its own part number, so each becomes its own
@@ -971,8 +1272,8 @@ final class ImportedProductContent
             return self::truncateOnWord($full, self::TITLE_MAX);
         }
 
-        // Everything undershoots: a very short name with a short rayon. The longest candidate is
-        // still the most informative one.
+        // Everything undershoots: a very short name with a short rayon. The first candidate is the
+        // one that gave up nothing, so it is the most informative thing we can return.
         return $candidates[0];
     }
 
@@ -987,6 +1288,21 @@ final class ImportedProductContent
      * It also does not contain the word "avis". The route's current fallback does — on a page that
      * renders no reviews and emits no aggregateRating — which is a snippet that advertises something
      * the page does not have.
+     *
+     * ── THE TWO CLAUSES THAT WERE HERE AND SHOULD NOT HAVE BEEN ──────────────────────────
+     * The longest tail ended "…, importateur en Tunisie", and the padding clause read "Référence
+     * importée, disponible sur Protéine Tunisie en Tunisie". Both were about to be printed in the
+     * SERP snippet of a page whose own badge says RUPTURE — promotion writes qte = 0 — and neither
+     * import nor distribution is a fact we hold for a single one of these rows. A meta description
+     * is the one sentence a searcher reads before deciding whether we are worth a click; "available"
+     * on an out-of-stock page is the cheapest possible way to teach them we are not.
+     *
+     * What replaced the padding is a clause about US — the shop, in Sousse — which is true whatever
+     * the stock column says and cannot go stale in a stored string.
+     *
+     * Every argument arrives markupFree()'d; see the call site. "Rayon Vitamines &amp; Minéraux,
+     * marque Nature&#039;s Way" was reaching the meta description, the og:description and the JSON-LD
+     * description while the body of the same page read them decoded.
      *
      * @param  array{label: string, group: string}|null  $pack
      */
@@ -1018,21 +1334,26 @@ final class ImportedProductContent
         }
         $lead .= '.';
 
-        // Tail clauses, most informative first. Each is added only if the result still fits.
+        /*
+         * Tail clauses. Every one of them states only where the product sits in our catalogue and
+         * who makes it — the two things we are certain of — and they are SORTED by length here
+         * rather than written in a hopeful order, because whether "Rayon X, marque Y" is longer
+         * than "Fiche produit du rayon X" depends entirely on how long X and Y turn out to be. With
+         * the sort, "the first tail that fits is the longest that fits" is a property of the code
+         * instead of an assumption about the data.
+         */
         $tails = [
-            'Fiche produit et rayon '.$subLabel.' sur '.self::SITE.', importateur en Tunisie.',
-            'Rayon '.$subLabel.' sur '.self::SITE.', boutique en Tunisie.',
+            'Rayon '.$subLabel.', marque '.$brand.', sur '.self::SITE.'.',
+            'Fiche produit du rayon '.$subLabel.' sur '.self::SITE.'.',
             'Rayon '.$subLabel.' sur '.self::SITE.'.',
             'Marque '.$brand.' sur '.self::SITE.'.',
         ];
+        usort($tails, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
 
         $best = null;
         foreach ($tails as $tail) {
             $candidate = $lead.' '.$tail;
-            $length = mb_strlen($candidate);
-            if ($length <= self::DESCRIPTION_MAX) {
-                // The first tail that fits is also the longest that fits, because the list is
-                // ordered longest-first.
+            if (mb_strlen($candidate) <= self::DESCRIPTION_MAX) {
                 $best = $candidate;
                 break;
             }
@@ -1046,11 +1367,21 @@ final class ImportedProductContent
                 : $lead;
         }
 
-        // Still short? Add the shortest true clause we have left rather than padding with adjectives.
+        /*
+         * Still under the window? Say who we are, longest phrasing first, and add nothing if even
+         * the shortest overshoots. None of these mentions the rayon, the brand or the site name, so
+         * whichever tail was chosen above, the sentence does not repeat it back.
+         */
         if (mb_strlen($best) < self::DESCRIPTION_MIN) {
-            $extra = ' Référence importée, disponible sur '.self::SITE.' en Tunisie.';
-            if (mb_strlen($best.$extra) <= self::DESCRIPTION_MAX) {
-                $best .= $extra;
+            foreach ([
+                ' Boutique de compléments alimentaires à Sousse, en Tunisie.',
+                ' Boutique de compléments à Sousse, en Tunisie.',
+                ' Boutique à Sousse, en Tunisie.',
+            ] as $extra) {
+                if (mb_strlen($best.$extra) <= self::DESCRIPTION_MAX) {
+                    $best .= $extra;
+                    break;
+                }
             }
         }
 
@@ -1061,15 +1392,22 @@ final class ImportedProductContent
     // Fact extraction
     // ─────────────────────────────────────────────────────────────────────────────────────
 
+    /**
+     * Content family for a subcategory slug, `default` for anything unmapped.
+     *
+     * Both sides are lower-cased. The map used to be tried verbatim first and lower-cased second,
+     * which worked only for as long as every caller spelled the slug exactly the way the key was
+     * typed — and the map contained one mixed-case key (`Intra-Workout`, matching the live rayon at
+     * /Intra-Workout), so the two conventions were already coexisting. `mb_strtolower`, not
+     * `strtolower`: slugs are UTF-8 and a byte-wise lower-case mangles accented ones.
+     */
     private static function family(?string $subSlug): string
     {
         if ($subSlug === null) {
             return 'default';
         }
 
-        return self::FAMILY_BY_SUBCATEGORY[$subSlug]
-            ?? self::FAMILY_BY_SUBCATEGORY[strtolower($subSlug)]
-            ?? 'default';
+        return self::FAMILY_BY_SUBCATEGORY[mb_strtolower($subSlug)] ?? 'default';
     }
 
     /**
@@ -1174,26 +1512,41 @@ final class ImportedProductContent
     }
 
     /**
-     * HTML-escape a value interpolated into the description.
+     * A third-party value, reduced to something that cannot open a tag.
      *
-     * The frames are ours; the VALUES are a third party's — brand names and titles arrive from
-     * iHerb. `sanitizeRichHtml` on the storefront is the last line of defence, not the only one, and
+     * The frames are ours; the VALUES are a third party's — brand names, titles and rayon labels.
+     * `sanitizeRichHtml` on the storefront is the last line of defence, not the only one, and
      * `description_fr` is read by more than one consumer (the human PDP, the crawler view, the
-     * schema description). Escaping at the point of composition means the column never holds markup
-     * we did not write.
+     * schema description, the Merchant feed). Neutralising at the point of composition means the
+     * column never holds markup we did not write.
      *
-     * ENT_NOQUOTES, not ENT_QUOTES, and that is deliberate. Every interpolation site here is TEXT
-     * CONTENT, never an attribute value, so quotes need no escaping — and escaping them is actively
-     * harmful downstream: `Doctor's Best` would be stored as `Doctor&#039;s Best`, and the
-     * consumers that derive plain text from this column do it with strip_tags / a tag regex, which
-     * removes markup but does NOT decode entities. The literal `&#039;` would then surface in a
-     * meta description. French copy is dense with apostrophes, so this is the common case, not an
-     * edge one. `&`, `<` and `>` are still escaped, because those are the ones that can change the
-     * meaning of the markup.
+     * ── WHY THIS REMOVES CHARACTERS INSTEAD OF ENCODING THEM ──────────────────────────────
+     * This was htmlspecialchars(ENT_NOQUOTES), whose docblock argued at length that quotes must NOT
+     * be encoded because the consumers deriving plain text from this column use strip_tags or a tag
+     * regex, which removes markup but does not decode entities — so `Doctor&#039;s Best` would
+     * surface literally in a meta description. The argument was right and it was applied to one
+     * character too few: ENT_NOQUOTES still encodes `&`, and `&` is not an exotic input here. Three
+     * of this shop's own rayon labels contain one — "Sommeil & Stress", "Santé & Vitalité",
+     * "Barres & Snacks Protéinés" — so the very consumers that comment describes were receiving
+     * "Sommeil &amp; Stress" as literal text, in a meta description, on every page of those rayons.
+     *
+     * Encoding cannot fix that: any entity survives strip_tags by construction. So nothing is
+     * encoded. Entities already present in the input are DECODED first (a source string carrying
+     * `&amp;` must not become `&amp;amp;`), and then the only two characters that can open markup
+     * in text content are dropped. What is left is a string that reads identically as HTML and as
+     * plain text, which is the only property that actually holds across every consumer.
+     *
+     * A bare `&` in the stored HTML is well-formed: HTML5 only calls an ampersand ambiguous when it
+     * is followed by alphanumerics AND a semicolon, which "& Stress" is not. `<` and `>` are
+     * replaced by a space rather than deleted so that a title like "A<B" does not silently become
+     * one word; the whitespace collapse then tidies up.
      */
-    private static function escape(string $value): string
+    private static function markupFree(string $value): string
     {
-        return htmlspecialchars($value, ENT_NOQUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $decoded = html_entity_decode($value, ENT_QUOTES | ENT_HTML5, 'UTF-8');
+        $stripped = str_replace(['<', '>'], ' ', $decoded);
+
+        return trim(preg_replace('~\s+~u', ' ', $stripped) ?? $stripped);
     }
 
     /** "2.29" → "2,29"; "600" → "600". Matches IHerbNormalizer; no rounding, no conversion. */

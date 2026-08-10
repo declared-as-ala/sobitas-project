@@ -33,6 +33,19 @@ use Illuminate\Support\Str;
  * Publishing is `--publish`, in waves bounded by `--limit`, and that is the step where somebody is
  * accepting responsibility for what goes live.
  *
+ * ── AND THE SECOND STEP HAS TO BE ABLE TO REACH THE FIRST STEP'S OUTPUT ───────────────────
+ * It could not. `--publish` used to be nothing but a post-commit save inside the CREATION loop, and
+ * that loop selects `status = hydrated AND product_id IS NULL` — which createProduct() then moves to
+ * `promoted` with a product_id. So the workflow this file prints and describes ("promote everything
+ * unpublished, review it, then `--publish --limit=100` in waves") did nothing at all: the second
+ * command found zero hydrated rows, warned "No hydrated rows matched", and returned SUCCESS having
+ * published none of the ~20,000 products the first command created. A green exit code for a no-op,
+ * and every one of those products invisible forever unless published by hand.
+ *
+ * `--publish` therefore drains the BACKLOG first — products an earlier run promoted and left
+ * unpublished — and only then spends whatever is left of the wave on creating new ones. See
+ * publishBacklog().
+ *
  * `publier = 0` is the first thing that keeps a promoted product out of the sitemap: /api/all_products
  * filters on `publier`. `seo_robots_index = 0` is the second, and it is now load-bearing too — the
  * listing projection carried no robots column at all until ApisController::PRODUCT_LISTING was given
@@ -49,6 +62,13 @@ use Illuminate\Support\Str;
  * concurrent runs cannot both create a product for the same source id, and `product_id` (never
  * `status`) is what decides whether a row has already been promoted.
  *
+ * Two things are deliberately kept OUTSIDE that transaction because they are irreversible in a way
+ * a rollback cannot undo: the slug claim (recorded once the commit has happened, so a failed row
+ * releases the slug it was going to take) and publication itself (a second save after the commit,
+ * because ProductSeoObserver fires SeoNotifier from wherever `publier` first becomes true — and
+ * inside a transaction that means IndexNow can be told about a URL that then rolls back). Both are
+ * documented at their call sites.
+ *
  * ── WHAT IT NEVER WRITES ──────────────────────────────────────────────────────────────────
  * `note`, `seo_review`, `seo_aggregate_rating`, `promo`, `promo_ht`, `promo_expiration_date`. The
  * first three would put a rating on the page that no customer of ours gave — the staging table's
@@ -62,18 +82,33 @@ class CatalogIHerbPromote extends Command
                             {--limit= : Maximum products to CREATE in this run (default: all; with --publish, catalog.promotion.chunk)}
                             {--brand= : Only rows of this brand (any spelling — it is folded through BrandKey)}
                             {--subcategory= : Only rows that resolve to this sous_categories slug}
-                            {--publish : Create the products published (publier=1, seo_robots_index=1)}
+                            {--publish : Publish a wave (publier=1, seo_robots_index=1) — the backlog an earlier run left unpublished first, then anything this run creates}
                             {--dry-run : Print the gate breakdown and write nothing}
                             {--report : Print counts per rejection reason and exit}';
 
     protected $description = 'Promote hydrated iHerb staging rows into products';
 
     /**
-     * Slug bases already handed out in THIS run.
+     * Slugs already handed out in THIS run — and only ones that were actually TAKEN.
      *
-     * The database is the real authority, but a dry run writes nothing — so without this, two rows
-     * with the same base slug would both be reported as taking it, and the dry run would describe an
+     * The database is the real authority, but a dry run writes nothing, so without this two rows
+     * with the same base slug would both be reported as taking it and the dry run would describe an
      * outcome the real run cannot produce.
+     *
+     * ── WHY A CLAIM IS NEVER RECORDED BY uniqueSlug() ─────────────────────────────────────
+     * It used to be: the method marked its candidate here and returned, before anything existed to
+     * own it. Everything between that line and the COMMIT can still fail — the transaction's own
+     * re-read can find the row claimed by a concurrent run, Brand::create() can hit 1364 on the
+     * legacy `brands` table, the INSERT can hit 1406 — and the claim was never released. The next
+     * row normalising to the same base then skipped a base that nothing holds and took
+     * `{base}-{externalId}` instead. Product URLs are permanent, so that is not a cosmetic
+     * difference: it is a URL decided by whether an unrelated row happened to fail earlier in the
+     * same wave, which means the same catalogue promoted twice produces two different sets of
+     * addresses.
+     *
+     * So the claim is recorded by claimSlug(), at the two points where the slug is genuinely gone:
+     * after a successful commit, and immediately in a dry run (where no commit will ever come and
+     * this array is the only authority there is).
      *
      * @var array<string, true>
      */
@@ -159,6 +194,17 @@ class CatalogIHerbPromote extends Command
                     continue;
                 }
 
+                // Likewise for the cover. PromotionGate has already run its own NO_IMAGE gate on the
+                // row's columns; this re-asks the question of the exact function whose return value
+                // is written to `products.cover`, so the report can never promise a product the
+                // promote path will refuse for a reason the report did not model.
+                if ($verdict['promotable'] && $this->coverUnusable($row)) {
+                    $reasons[PromotionGate::NO_IMAGE] = ($reasons[PromotionGate::NO_IMAGE] ?? 0) + 1;
+                    $gateHits[PromotionGate::NO_IMAGE] = ($gateHits[PromotionGate::NO_IMAGE] ?? 0) + 1;
+
+                    continue;
+                }
+
                 if ($verdict['promotable']) {
                     $promotable++;
                     $slug = (string) $verdict['sub_slug'];
@@ -214,11 +260,16 @@ class CatalogIHerbPromote extends Command
             }
         }
 
+        // Only reachable when catalog.promotion.require_image has been turned OFF — with the default
+        // (required) every such row was counted against NO_IMAGE above and is not promotable at all.
+        // Kept because that opt-out is exactly the situation somebody needs telling the size of.
         if ($noImage > 0) {
             $this->line('');
             $this->warn(sprintf(
-                '%s promotable product(s) have no cover image — no part number or no primary image index. '
-                .'They would be created with an empty cover.',
+                '%s promotable product(s) have no cover image — no part number, no primary image index, '
+                .'or a part number the image URL scheme does not cover. catalog.promotion.require_image '
+                .'is false, so they WOULD be created with an empty cover while ProductSeoObserver still '
+                .'writes an alt_cover describing a photo that is not there.',
                 number_format($noImage),
             ));
         }
@@ -251,8 +302,9 @@ class CatalogIHerbPromote extends Command
 
         if ($publish && ! $dryRun) {
             $this->warn(sprintf(
-                'Publishing %s product(s). ProductSeoObserver::saved fires SeoNotifier for each one — '
-                .'three HTTP calls apiece (revalidate path, revalidate sitemap tag, IndexNow). '
+                'Publishing %s product(s). ProductSeoObserver::saved fires SeoNotifier for each one, '
+                .'from the post-commit publish and not from inside the transaction — three HTTP calls '
+                .'apiece (revalidate path, revalidate sitemap tag, IndexNow). '
                 .'That is ~%s requests at the storefront.',
                 $limit === null ? 'every promotable' : number_format($limit),
                 $limit === null ? 'unbounded' : number_format($limit * 3),
@@ -263,9 +315,52 @@ class CatalogIHerbPromote extends Command
         $scanned = 0;
         $rejected = [];
         $failedWrites = 0;
+        $failedPublishes = 0;
         $samples = [];
 
-        foreach ($this->chunks($brandKey, true) as $rows) {
+        /*
+         * THE BACKLOG FIRST — the products the documented workflow was silently skipping.
+         *
+         * `--publish` used to publish only what the same run created, because the only publish that
+         * existed was the post-commit save at the bottom of the creation loop below, and that loop
+         * selects `status = hydrated AND product_id IS NULL`. The default run turns every such row
+         * into `promoted` + product_id, so the follow-up `--publish --limit=100` matched nothing,
+         * fell into summarise()'s "$scanned === 0" branch and reported success having published
+         * zero of the products it was run to publish.
+         *
+         * Running it first, rather than after the creation loop, is deliberate: with `--limit=100`
+         * and a 20,000-product backlog, publishing last would mean every wave created 100 MORE
+         * unpublished products and the backlog would grow faster than it drained.
+         */
+        $backlogPublished = 0;
+        $backlogFailed = 0;
+        if ($publish) {
+            $backlog = $this->publishBacklog($brandKey, $subcategorySlug, $limit, $dryRun);
+            $backlogPublished = $backlog['published'];
+            // Kept apart from $failedPublishes, which counts the creation loop's own failures: the
+            // summary subtracts THAT one from $created, and a backlog failure has no created
+            // product behind it to subtract.
+            $backlogFailed = $backlog['failed'];
+        }
+
+        /*
+         * `--limit` bounds what this run PUBLISHES, so the backlog spends the same wave.
+         *
+         * A product published out of the backlog costs the storefront exactly what one published at
+         * creation costs — three HTTP calls and one URL handed to IndexNow — and the whole point of
+         * the wave is that somebody chose that number. Attempts count, not successes: a failed
+         * publish already fired its save.
+         */
+        $createLimit = $limit;
+        if ($publish && $limit !== null) {
+            $createLimit = max(0, $limit - ($backlogPublished + $backlogFailed));
+        }
+
+        // A wave fully spent on the backlog creates nothing, so the scan is skipped outright rather
+        // than opened and then abandoned on its first row.
+        $chunks = $createLimit === 0 ? [] : $this->chunks($brandKey, true);
+
+        foreach ($chunks as $rows) {
             // ── Per-chunk caches ──────────────────────────────────────────────────────────
             // Reloaded per chunk rather than once per run so a subcategory created while a long run
             // is going is picked up, and so a very long run cannot hold a stale brand memo forever.
@@ -275,7 +370,10 @@ class CatalogIHerbPromote extends Command
             $matcher = new BrandMatcher();
 
             foreach ($rows as $row) {
-                if ($limit !== null && $created >= $limit) {
+                // $createLimit, not $limit: under --publish the backlog has already spent part of
+                // the wave, and a run that published 100 backlog products and then created 100 more
+                // would double the number of URLs the operator asked for.
+                if ($createLimit !== null && $created >= $createLimit) {
                     break 2;
                 }
 
@@ -307,6 +405,24 @@ class CatalogIHerbPromote extends Command
                 }
 
                 /*
+                 * The cover, asked of the function that actually writes it.
+                 *
+                 * PromotionGate::NO_IMAGE has already rejected this row's columns if they could not
+                 * yield a URL, so under normal circumstances this never fires. It is here for the
+                 * one circumstance that matters: the gate reproduces IHerbClient's part-number
+                 * pattern rather than importing it (it must load with no autoloader), and if those
+                 * two ever drift, the gate's "promotable" and the value handed to
+                 * `Product::create(['cover' => …])` stop describing the same row. Re-asking
+                 * coverUrl() itself means the drift costs a row that stays staged, instead of an
+                 * indexable product page with no photo and an alt_cover describing one.
+                 */
+                if ($this->coverUnusable($row)) {
+                    $rejected[PromotionGate::NO_IMAGE] = ($rejected[PromotionGate::NO_IMAGE] ?? 0) + 1;
+
+                    continue;
+                }
+
+                /*
                  * EVERY per-row database interaction lives inside this guard, not just the INSERT.
                  *
                  * It used to start at createProduct(), which left the two calls that precede it
@@ -330,6 +446,13 @@ class CatalogIHerbPromote extends Command
                     $slug = $this->uniqueSlug((string) $verdict['title'], (string) $row->external_product_id);
 
                     if ($dryRun) {
+                        // A dry run is the ONE case where the claim is taken before anything exists,
+                        // because nothing ever will: no row is inserted, so this run's own memory is
+                        // the only authority on what the previous rows took. Without it two rows
+                        // sharing a base would both be printed as taking it, and the dry run would
+                        // describe URLs the real run cannot produce.
+                        $this->claimSlug($slug);
+
                         $created++;
                         if (count($samples) < 25) {
                             $samples[] = [
@@ -359,7 +482,7 @@ class CatalogIHerbPromote extends Command
                         continue;
                     }
 
-                    $product = $this->createProduct($row, $verdict, $brand, $subcategories, $slug, $publish);
+                    $product = $this->createProduct($row, $verdict, $brand, $subcategories, $slug);
                 } catch (QueryException|\RuntimeException $e) {
                     // The row stays `hydrated` with the database's own words on it, so a fix plus a
                     // re-run picks it up — and the message is kept because 1364/1406/23000 and "no
@@ -376,19 +499,192 @@ class CatalogIHerbPromote extends Command
                 }
 
                 if ($product === null) {
-                    // Another run claimed it between the read and the transaction. Not an error.
+                    // Another run claimed it between the read and the transaction. Not an error —
+                    // and note that $slug was NOT claimed, so the base is released back to the next
+                    // row that normalises to it rather than being burned by a product that does not
+                    // exist. Same for the catch above: a rolled-back row leaves no claim behind.
                     continue;
                 }
 
+                // Claimed only now, because only now is there a row to claim it. From this point the
+                // database is the authority again — the next uniqueSlug() will see this product with
+                // its own `where('slug', …)->exists()` — so this is belt-and-braces rather than the
+                // mechanism. The mechanism is that a FAILED promotion records nothing.
+                $this->claimSlug($slug);
+
                 $created++;
+
+                /*
+                 * PUBLICATION IS A POST-COMMIT ACT, and that is the whole point of it living here.
+                 *
+                 * Product::create() fires ProductSeoObserver::saved, which — when `publier` is true
+                 * — hands the product to SeoNotifier, which registers an afterResponse callback that
+                 * revalidates the product path, busts the sitemap tag and submits the URL to
+                 * IndexNow. Under `php artisan`, "after response" is application termination: the
+                 * callback runs at the END of the command, long after this row's transaction has
+                 * been decided, and it runs whether that transaction COMMITTED OR ROLLED BACK.
+                 *
+                 * So creating the product already published meant a rollback here produced no
+                 * product and still advertised its URL to Bing/Yandex and told the storefront to
+                 * cache it — a 404 submitted for indexing, by a command whose own summary reported
+                 * the row as failed. Nothing in the observer, the notifier or the transaction can
+                 * see that; the only place with the knowledge is this line, after DB::transaction()
+                 * has returned a product, which means the row is committed.
+                 *
+                 * The product is therefore ALWAYS created unpublished and published by a second
+                 * save. The trade-off, stated rather than hidden: a crash between the commit and
+                 * this save leaves the product existing and unpublished. That is the safe direction
+                 * — invisible to customers and to Google, fixable in the admin — and it is the
+                 * opposite of the direction the old code failed in.
+                 */
+                if ($publish && ! $this->publish($product, $row)) {
+                    $failedPublishes++;
+                }
             }
         }
 
-        return $this->summarise($dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $samples, $limit);
+        return $this->summarise($dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $failedPublishes, $backlogPublished, $backlogFailed, $samples, $limit);
+    }
+
+    /**
+     * Publish products a PREVIOUS run promoted and left unpublished. The missing half of --publish.
+     *
+     * ── WHAT WAS BROKEN ───────────────────────────────────────────────────────────────────
+     * Nothing in this command could publish a product it had not just created. chunks() selects
+     * `status = hydrated` and `product_id IS NULL`; createProduct() writes STATUS_PROMOTED and a
+     * product_id in the same transaction, so a promoted row is never selected again. The workflow
+     * the command prints — promote the backlog unpublished, review it, then
+     * `catalog:iherb:promote --publish --limit=100` — therefore published nothing at all: the second
+     * command matched zero rows and exited SUCCESS. ~20,000 complete products, invisible to
+     * customers and to Google, with the summary saying the run was fine.
+     *
+     * ── WHAT IT SELECTS, AND WHAT IT DELIBERATELY LEAVES ALONE ────────────────────────────
+     * `status = promoted AND product_id IS NOT NULL` (the row half), joined to a product that is
+     * still `publier = 0` AND still `seo_robots_index = 0` (the product half). Both flags, not just
+     * `publier`, and that is the whole safety property: createProduct() writes the pair (0, 0) and
+     * publish() writes the pair (1, 1), so a product the OWNER unpublished in the admin after
+     * reviewing it comes back as (0, 1) — Filament's publier toggle does not touch the robots
+     * column — and is not selected here. A deliberate rejection stays rejected instead of being
+     * re-published by the next wave.
+     *
+     * Stated rather than hidden: an owner who unpublishes AND noindexes a product puts it back into
+     * (0, 0) and this will publish it again. The columns cannot tell that apart from "never
+     * published", and inventing a staging column to encode it is a schema change for a case the
+     * admin can express by deleting the product.
+     *
+     * The cursor is on `external_catalog_products.id` and only moves forward, so rows dropping out
+     * of the result set as they are published cannot make this loop repeat or stall.
+     *
+     * @return array{published: int, failed: int}
+     */
+    private function publishBacklog(?string $brandKey, ?string $subcategorySlug, ?int $limit, bool $dryRun): array
+    {
+        $published = 0;
+        $failed = 0;
+
+        // Resolved once: unlike the creation loop this writes no subcategories and creates no
+        // brands, so there is nothing a per-chunk reload would pick up.
+        $subId = $subcategorySlug === null ? null : ($this->subcategories()['ids'][$subcategorySlug] ?? -1);
+
+        $chunk = max(1, (int) config('catalog.promotion.chunk', 100));
+        $cursor = 0;
+
+        while ($limit === null || $published + $failed < $limit) {
+            $take = $limit === null ? $chunk : min($chunk, $limit - ($published + $failed));
+
+            $rows = ExternalCatalogProduct::query()
+                ->with('product')
+                ->where('provider', IHerbClient::PROVIDER)
+                ->where('status', ExternalCatalogProduct::STATUS_PROMOTED)
+                ->whereNotNull('product_id')
+                ->where('id', '>', $cursor)
+                ->when($brandKey !== null, fn ($q) => $q->where('normalized_brand_key', $brandKey))
+                ->when($subId !== null, fn ($q) => $q->where('sous_category_id', $subId))
+                ->whereHas('product', function ($q): void {
+                    // Null-tolerant on both columns: `products` is legacy, LegacyColumnDefaults
+                    // fills what it knows about, and a NULL here means "never set", which is
+                    // exactly the state we are looking for — not a reason to skip the row.
+                    $q->where(fn ($p) => $p->whereNull('publier')->orWhere('publier', 0))
+                        ->where(fn ($p) => $p->whereNull('seo_robots_index')->orWhere('seo_robots_index', 0));
+                })
+                ->orderBy('id')
+                ->limit($take)
+                ->get();
+
+            if ($rows->isEmpty()) {
+                return ['published' => $published, 'failed' => $failed];
+            }
+
+            $cursor = (int) $rows->last()->id;
+
+            foreach ($rows as $row) {
+                if ($dryRun) {
+                    // Same promise --dry-run makes everywhere else in this command: it reports and
+                    // writes nothing. No save means no ProductSeoObserver, no IndexNow.
+                    $published++;
+
+                    continue;
+                }
+
+                $product = $row->product;
+                if ($product === null) {
+                    // whereHas matched but the eager load did not: the product was deleted between
+                    // the two. Nothing to publish and nothing to repair.
+                    continue;
+                }
+
+                if ($this->publish($product, $row)) {
+                    $published++;
+                } else {
+                    $failed++;
+                }
+            }
+        }
+
+        return ['published' => $published, 'failed' => $failed];
+    }
+
+    /**
+     * Flip an ALREADY-COMMITTED product to published. This save, and nothing before it, is what
+     * fires ProductSeoObserver::saved → SeoNotifier → revalidate + IndexNow.
+     *
+     * Two callers, on purpose: the creation loop (a product committed seconds ago) and
+     * publishBacklog() (a product committed by an earlier run). They are the same act — the whole
+     * defect publishBacklog() exists to fix was that only the first of them existed.
+     *
+     * Guarded like every other per-row write in this command: one product whose UPDATE fails must
+     * not abort the wave and lose the counters for everything already created. The product survives
+     * as an unpublished, complete row, so the repair is a publish in the admin and not a re-import.
+     */
+    private function publish(Product $product, ExternalCatalogProduct $row): bool
+    {
+        try {
+            // Assigned rather than forceFill()ed so `wasChanged(['publier'])` — the condition
+            // ProductSeoObserver::saved actually tests — is unambiguously true here.
+            $product->publier = true;
+            $product->seo_robots_index = true;
+            $product->save();
+
+            return true;
+        } catch (QueryException $e) {
+            $this->warn(sprintf(
+                '  row %d: product %d was created but could not be published: %s',
+                $row->id,
+                $product->id,
+                Str::limit($e->getMessage(), 140),
+            ));
+
+            return false;
+        }
     }
 
     /**
      * Create the product, its pivot row and the staging bookkeeping — all or nothing.
+     *
+     * The product is created UNPUBLISHED whatever `--publish` says. Publication is a separate save
+     * that promote() performs after this transaction has committed, because ProductSeoObserver fires
+     * SeoNotifier from inside whatever transaction is open and a rollback would then have advertised
+     * a URL that does not exist. See the comment at that call site.
      *
      * @param  array<string, mixed>  $verdict  a PromotionGate::inspect() result
      * @param  array{ids: array<string, int>, labels: array<int, string>, slugs: array<int, string>, categories: array<int, string>}  $subcategories
@@ -399,9 +695,8 @@ class CatalogIHerbPromote extends Command
         ?Brand $brand,
         array $subcategories,
         string $slug,
-        bool $publish,
     ): ?Product {
-        return DB::transaction(function () use ($row, $verdict, $brand, $subcategories, $slug, $publish): ?Product {
+        return DB::transaction(function () use ($row, $verdict, $brand, $subcategories, $slug): ?Product {
             // Re-read under a row lock and re-assert the precondition. This is the guarantee that
             // re-running — or running two copies at once — cannot produce two products for one
             // source id. `product_id IS NULL` is the claim; `status` is only a label.
@@ -468,7 +763,11 @@ class CatalogIHerbPromote extends Command
                 'cover' => $this->coverUrl($row),
                 'prix' => $verdict['price'],
                 'qte' => (int) config('catalog.promotion.initial_qte', 0),
-                'publier' => $publish,
+                // FALSE even under --publish. Not a default — a sequencing decision: while this
+                // transaction is open the product may still be rolled back, and a `publier` of true
+                // right here is what makes ProductSeoObserver::saved schedule an IndexNow submission
+                // for a URL that may never exist. promote() sets both flags after the commit.
+                'publier' => false,
                 'sous_categorie_id' => $subId,
                 'brand_id' => $brand?->id,
                 // Two independent brakes on indexing, and both are now real. `publier` keeps the
@@ -477,7 +776,7 @@ class CatalogIHerbPromote extends Command
                 // what sitemapData.ts's noindex filter reads, so publishing a wave noindexed no
                 // longer submits URLs marked noindex. follow stays true so a noindex page still
                 // passes its links on.
-                'seo_robots_index' => $publish,
+                'seo_robots_index' => false,
                 'seo_robots_follow' => true,
                 // Left blank so ProductSeoObserver fills them from the templates every other product
                 // on the site uses. Writing them here would produce a second, divergent house style.
@@ -563,6 +862,11 @@ class CatalogIHerbPromote extends Command
      * id is stable, unique per source product, and already the row's identity — the same input
      * always yields the same slug, which is what "deterministic" has to mean for something that
      * becomes a permanent address.
+     *
+     * ── PURE BY DESIGN ────────────────────────────────────────────────────────────────────
+     * This method RESERVES NOTHING. It answers "which slug is free right now?" and the caller
+     * records the answer with claimSlug() once the product owning it has committed. See the
+     * $claimedSlugs docblock for the URLs that were at stake when it did both.
      */
     private function uniqueSlug(string $title, string $externalId): string
     {
@@ -586,8 +890,6 @@ class CatalogIHerbPromote extends Command
             }
 
             if (! Product::where('slug', $candidate)->exists()) {
-                $this->claimedSlugs[$candidate] = true;
-
                 return $candidate;
             }
         }
@@ -595,6 +897,18 @@ class CatalogIHerbPromote extends Command
         // Unreachable in practice — it would need the base, the base plus the external id, and 20
         // numbered variants all taken. Failing loudly beats returning a slug that shadows a product.
         throw new \RuntimeException('Could not find a free slug for "'.$base.'" (external id '.$externalId.')');
+    }
+
+    /**
+     * Record that a slug is now genuinely taken.
+     *
+     * Called after the commit that created the product holding it, or immediately in a dry run.
+     * Never from uniqueSlug(), which is what makes a failed promotion release the slug it was going
+     * to use instead of burning it for the rest of the run.
+     */
+    private function claimSlug(string $slug): void
+    {
+        $this->claimedSlugs[$slug] = true;
     }
 
     /** @return iterable<string> */
@@ -805,6 +1119,25 @@ class CatalogIHerbPromote extends Command
             && BrandKey::for($row->source_brand_name) === '';
     }
 
+    /**
+     * The cover equivalent of brandUnusable(): would this row be created with an empty `cover`?
+     *
+     * PromotionGate::NO_IMAGE answers the same question from the row's columns, and that is the
+     * answer the report counts and the gate blocks on. This one asks coverUrl() — the exact
+     * expression whose result is written to `products.cover` — so the two derivations drifting apart
+     * costs a staged row rather than a published product page with no photo. Read-only, so --report
+     * and --dry-run may both call it.
+     *
+     * The config key is read here as well as through PromotionGate::contextFrom() on purpose: they
+     * are the same switch, and a `false` must silence BOTH checks or turning the requirement off
+     * would leave rows rejected by a gate the owner believes they disabled.
+     */
+    private function coverUnusable(ExternalCatalogProduct $row): bool
+    {
+        return (bool) config('catalog.promotion.require_image', true)
+            && $this->coverUrl($row) === null;
+    }
+
     /** @return string|null|false false = the user asked for something that cannot match */
     private function brandFilter(): string|null|false
     {
@@ -854,8 +1187,11 @@ class CatalogIHerbPromote extends Command
      * the storefront, nothing enters the sitemap, and ProductSeoObserver::saved skips SeoNotifier
      * entirely when `publier` is falsy — so promoting the whole backlog costs the storefront nothing.
      *
-     * `--publish` is the opposite: every product created fires three HTTP calls at the storefront and
-     * puts a URL in front of Google. So it defaults to one chunk, and you raise it on purpose.
+     * `--publish` is the opposite: every product PUBLISHED fires three HTTP calls at the storefront
+     * and puts a URL in front of Google. So it defaults to one chunk, and you raise it on purpose.
+     * The number it returns bounds publications, not creations — publishBacklog() spends it first and
+     * the creation loop gets whatever is left, because a wave that published 100 backlog products and
+     * then created 100 more would put twice the URLs in front of Google that were asked for.
      */
     private function waveSize(bool $publish): ?int
     {
@@ -885,11 +1221,27 @@ class CatalogIHerbPromote extends Command
         int $scanned,
         array $rejected,
         int $failedWrites,
+        int $failedPublishes,
+        int $backlogPublished,
+        int $backlogFailed,
         array $samples,
         ?int $limit,
     ): int {
-        if ($scanned === 0) {
-            $this->warn('No hydrated rows matched. Run catalog:iherb:hydrate --status to see where the import is.');
+        /*
+         * "Nothing was scanned" is no longer the same question as "nothing happened".
+         *
+         * This branch used to test $scanned alone, which is what turned the broken --publish into a
+         * SILENT no-op: a run whose whole job was publishing already-promoted products scanned zero
+         * hydrated rows by construction, took this branch, and printed advice about hydration. Now
+         * that a wave can be spent entirely on the backlog, the early return has to mean "this run
+         * did nothing at all", so it tests the backlog too — and says which of the two wells is dry.
+         */
+        if ($scanned === 0 && $backlogPublished === 0 && $backlogFailed === 0) {
+            $this->warn($publish
+                ? 'Nothing to do: no product from an earlier run is still waiting to be published '
+                    .'(publier=0 AND seo_robots_index=0), and no hydrated row matched. '
+                    .'Run catalog:iherb:hydrate --status to see where the import is.'
+                : 'No hydrated rows matched. Run catalog:iherb:hydrate --status to see where the import is.');
 
             return self::SUCCESS;
         }
@@ -916,6 +1268,12 @@ class CatalogIHerbPromote extends Command
         $this->line('');
 
         if ($dryRun) {
+            if ($backlogPublished > 0) {
+                $this->info(sprintf(
+                    '%s product(s) promoted by an earlier run would be PUBLISHED. NOTHING WAS WRITTEN.',
+                    number_format($backlogPublished),
+                ));
+            }
             $this->info(sprintf(
                 '%s of %s row(s) would be promoted%s. NOTHING WAS WRITTEN.',
                 number_format($created),
@@ -927,11 +1285,41 @@ class CatalogIHerbPromote extends Command
             return self::SUCCESS;
         }
 
+        // Reported separately from the creation count, because they are two different things that
+        // happened to the catalogue and only one of them added a product. Before publishBacklog()
+        // existed this line could not be written at all — the number was always zero.
+        if ($backlogPublished > 0) {
+            $this->info(sprintf(
+                '%s product(s) promoted by an earlier run were PUBLISHED and submitted to IndexNow.',
+                number_format($backlogPublished),
+            ));
+        }
+
         $this->info(sprintf(
             '%s product(s) created%s.',
             number_format($created),
-            $publish ? ', PUBLISHED and submitted to IndexNow' : ' — unpublished (publier=0, seo_robots_index=0)',
+            $publish
+                ? sprintf(', %s PUBLISHED and submitted to IndexNow', number_format($created - $failedPublishes))
+                : ' — unpublished (publier=0, seo_robots_index=0)',
         ));
+
+        if ($failedPublishes > 0) {
+            $this->warn(sprintf(
+                '%s product(s) were created and committed but the publish save failed. They exist, '
+                .'complete and unpublished (publier=0, seo_robots_index=0), and no URL was submitted '
+                .'for them — publish them from the admin once the error above is understood.',
+                number_format($failedPublishes),
+            ));
+        }
+
+        if ($backlogFailed > 0) {
+            $this->warn(sprintf(
+                '%s product(s) from the backlog could not be published — the save failed. They are '
+                .'unchanged (publier=0, seo_robots_index=0) and no URL was submitted for them; the '
+                .'next --publish run will try them again.',
+                number_format($backlogFailed),
+            ));
+        }
 
         if ($failedWrites > 0) {
             $this->warn(sprintf(
@@ -940,12 +1328,19 @@ class CatalogIHerbPromote extends Command
             ));
         }
 
+        // This instruction is the reason the missing publish path mattered so much: the command told
+        // the operator to run something that did nothing, so following it correctly produced 20,000
+        // invisible products and a success message. It stays, and now it is true.
         if (! $publish && $created > 0) {
             $this->line('  Review them in the admin, then publish in waves:');
             $this->line('     php artisan catalog:iherb:promote --publish --limit=100');
         }
 
-        if ($publish && $limit !== null && $created === $limit) {
+        // The wave is what this run PUBLISHED, backlog and freshly-created together — the same total
+        // $createLimit was computed from. Comparing $created alone said "there is more to do" only
+        // when the wave had been spent on creation, and stayed silent on the run that spent all 100
+        // on a backlog of 20,000.
+        if ($publish && $limit !== null && ($backlogPublished + $backlogFailed + $created) >= $limit) {
             $this->line('  The wave filled up. Re-run the same command to publish the next one.');
         }
 

@@ -209,6 +209,39 @@ return [
         ['sub' => 'post-workout', 'any' => ['post-workout', 'recovery-formula']],
         ['sub' => 'Intra-Workout', 'any' => ['intra-workout']],
 
+        /*
+        | ── Added 10/08/2026, from the FIRST PROMOTION DRY RUN and nothing else ─────────────
+        |
+        | 90 of 875 hydrated rows (10.3%) matched no rule. Reading the twelve samples the report
+        | printed — rather than theorising about what a catalogue contains — showed two clusters
+        | the shop genuinely had no home for, and both are squarely sports nutrition:
+        |
+        |     free amino acids   Taurine · L-Ornithine · Tri-Amino · Amino Athlete · Amino Day
+        |     carbohydrates      Carbo Gain (3.63 kg of maltodextrin) · D-Ribose
+        |
+        | 10% of 42,034 remaining rows is ~4,300 products, so these two rules are worth more than
+        | every rule added on intuition put together.
+        |
+        | Both sit AFTER the specific amino rules above (bcaa, eaa) and after glutamine/carnitine
+        | further down, so a branched-chain or a carnitine product is never swept into the generic
+        | bucket. Every term is a phrase or an `exact` token for the same reason `cla` is: a bare
+        | `amino` would match nothing useful and a bare `energy` would match half the catalogue.
+        |
+        | NOT added: "NOW Foods Energy" and "Thyroid Energy", which were also in the samples. They
+        | are multi-ingredient formulas whose category is a judgement, and a wrong guess here is a
+        | permanent URL. They stay unclassified, which keeps them staged — the safe direction.
+        */
+        [
+            'sub' => 'acides-amines',
+            'exact' => ['taurine', 'ornithine', 'lysine', 'tyrosine', 'glycine', 'methionine', 'phenylalanine', 'threonine', 'carnosine'],
+            'any' => ['tri-amino', 'amino-acid', 'amino-acids', 'amino-complex', 'amino-blend', 'free-form-amino', 'amino-athlete', 'amino-day', 'l-ornithine', 'l-lysine', 'l-taurine', 'l-tyrosine'],
+        ],
+        [
+            'sub' => 'glucides-energie',
+            'exact' => ['ribose', 'dextrose', 'maltodextrin'],
+            'any' => ['carbo-gain', 'd-ribose', 'waxy-maize', 'cluster-dextrin', 'highly-branched-cyclic', 'vitargo', 'carbohydrate'],
+        ],
+
         // ── Weight management ──────────────────────────────────────────────────────────
         ['sub' => 'l-carnitine', 'any' => ['carnitine']],
         // `exact`, not `any`. Measured on the real catalogue, a front-anchored "cla" matched 426
@@ -239,7 +272,10 @@ return [
         // (cream 976, serum 555, butter 520, mask 314) deliberately get no rule — they are handled
         // by the deny list, because a category for them would mean selling cosmetics.
         ['sub' => 'probiotiques', 'any' => ['probiotic', 'acidophilus', 'lactobacillus', 'bifidobacterium', 'bifidus', 'saccharomyces', 'cfu-']],
-        ['sub' => 'digestion', 'any' => ['digestive-enzyme', 'digestive-enzymes', 'digest-', 'psyllium', 'betaine-hcl', 'colon-', 'slippery-elm', 'prebiotic', 'inulin'], 'exact' => ['fiber', 'fibre', 'enzymes']],
+        // `enzyme` singular added 10/08/2026: without it "Multi Enzyme" fell past this rule and was
+        // caught by the `multi` token now on `vitamines` below — filing a digestive enzyme under
+        // vitamins. Every plural in an `exact` list needs its singular, or the rule is half a rule.
+        ['sub' => 'digestion', 'any' => ['digestive-enzyme', 'digestive-enzymes', 'digest-', 'psyllium', 'betaine-hcl', 'colon-', 'slippery-elm', 'prebiotic', 'inulin'], 'exact' => ['fiber', 'fibre', 'enzyme', 'enzymes']],
         ['sub' => 'sommeil-stress', 'any' => ['melatonin', 'sleep', 'valerian', 'l-theanine', 'theanine', 'passionflower', 'chamomile', '5-htp', 'rhodiola', 'holy-basil'], 'exact' => ['gaba']],
         ['sub' => 'immunite', 'any' => ['immune', 'immunity', 'elderberry', 'echinacea', 'mushroom', 'reishi', 'cordyceps', 'chaga', 'lions-mane', 'propolis', 'colostrum', 'olive-leaf', 'oregano-oil', 'andrographis']],
         ['sub' => 'enfants', 'any' => ['kids', 'children', 'child-', 'infant', 'toddler', 'junior', 'baby-']],
@@ -248,7 +284,19 @@ return [
         // been claimed by a more specific rule above (turmeric → articulations, ashwagandha and
         // tribulus → their own, elderberry → immunité).
         ['sub' => 'plantes-et-herbes', 'any' => ['ginkgo', 'saw-palmetto', 'milk-thistle', 'black-cohosh', 'ginseng', 'nettle', 'dandelion', 'hawthorn', 'red-yeast', 'garlic', 'fenugreek', 'moringa', 'spirulina', 'chlorella', 'wheatgrass', 'noni', 'graviola', 'cat-s-claw', 'devil-s-claw', 'horny-goat', 'bilberry', 'butcher-s-broom', 'burdock', 'goldenseal', 'astragalus', 'schisandra', 'eyebright', 'feverfew', 'yarrow', 'nattokinase', 'berberine', 'bacopa', 'gotu-kola'], 'exact' => ['herb', 'herbs', 'herbal']],
-        ['sub' => 'vitamines', 'any' => ['multivitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-']],
+        /*
+         * `multi` as an EXACT token, added 10/08/2026.
+         *
+         * The dry run's unclassified samples included "EcoGreen Multi, Iron-Free" and "Eve, Superior
+         * Women's Multi, Iron-Free" — both plainly multivitamins, both missed because the rule
+         * required the literal word "multivitamin" and the label says "Multi". A whole-token match,
+         * never a substring: it must not reach "multi-collagen" or "multi-mineral" as text.
+         *
+         * It is safe HERE and would not be safe higher up: `collagene` (multi-collagen) and
+         * `digestion` (multi-enzyme) both run before this rule and claim theirs first. That ordering
+         * is the rule — moving this line up files collagen peptides under vitamins.
+         */
+        ['sub' => 'vitamines', 'any' => ['multivitamin', 'multi-vitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-', 'womens-multi', 'mens-multi', 'daily-multi', 'whole-food-multi'], 'exact' => ['multi', 'multivitamins']],
         // `not` disqualifies the whole rule. "iron" as a mineral term matched "iron-free" and
         // "no-iron" — products that advertise the ABSENCE of the thing being matched. Filing an
         // iron-free multivitamin under minerals-for-iron inverts what the label says, which is not

@@ -20,9 +20,27 @@
  *     because the subcategory that would give it a URL does not exist yet
  *   · a brandless row must be rejected, or LegacyColumnDefaults fills brand_id with 0 and the page
  *     ships with a brand relation that resolves to nothing, with no error anywhere
+ *   · a row with NO PHOTO must be rejected, and — the case that matters most — a row with no photo
+ *     that scores 75 on completeness must still be rejected. 30 (title) + 20 (brand) + 25 (price)
+ *     already clears the default min_completeness of 60 with BOTH image components of
+ *     HydrateExternalProductJob::completeness() missing, so the score cannot stand in for this gate
  *   · `source_discontinued` arriving as the STRING "0" must not read as discontinued — PHP's own
  *     (bool) says "0" is false but "0" from some drivers arrives as a string that other casts get
  *     wrong, and the whole catalogue vanishing is a quiet failure
+ *
+ * ── THREE SECTIONS, BECAUSE THREE DIFFERENT THINGS CAN BE WRONG ───────────────────────────
+ * 1. the gate's verdicts, as named fixtures (above);
+ * 2. the image gate's agreement with IHerbClient::imageUrl(). PromotionGate cannot import that
+ *    class — it has to load with no autoloader — so it carries a COPY of the part-number pattern,
+ *    and a copy nobody checks is a copy that drifts. This section requires BOTH files and asserts
+ *    they answer identically for named part numbers, which is the only thing that makes the
+ *    duplication safe;
+ * 3. two ordering invariants of CatalogIHerbPromote, asserted against its SOURCE. That command
+ *    extends Illuminate\Console\Command and cannot be loaded here at all, and the defects in
+ *    question are not values a function returns — they are WHERE a statement sits relative to a
+ *    COMMIT. There is nothing to call, so the file is read and the order of the statements is
+ *    asserted. Crude, and still the difference between "a rolled-back product was submitted to
+ *    IndexNow" being a caught regression and being a live 404 in Bing.
  *
  * The thresholds and rules are REQUIRED from config/catalog.php rather than copied. A copy would let
  * this file pass while the shipped configuration was broken — the same reason slug-relevance-check.php
@@ -31,7 +49,15 @@
 
 require __DIR__.'/../../app/Services/Catalog/SubCategoryClassifier.php';
 require __DIR__.'/../../app/Services/Catalog/PromotionGate.php';
+/*
+ * Loads under a bare `php`: its `use` lines are aliases only (PoliteFetcher, the Log facade) and
+ * nothing in the file is resolved at parse time — the promoted constructor property is typed, and a
+ * type declaration is not resolved until something is instantiated, which this file never does.
+ * Same property that lets imported-product-content-check.php require ProductContentGenerator.
+ */
+require __DIR__.'/../../app/Services/Catalog/IHerb/IHerbClient.php';
 
+use App\Services\Catalog\IHerb\IHerbClient;
 use App\Services\Catalog\PromotionGate;
 
 // config/catalog.php calls env(); it is not loaded here, so provide the fallback-only shape.
@@ -65,8 +91,24 @@ $subcategoryIds = [
 $context = PromotionGate::contextFrom($config, $subcategoryIds);
 
 /**
+ * The same shop with the image requirement switched OFF.
+ *
+ * `require_image` is not a key in the shipped config/catalog.php, so contextFrom() defaults it to
+ * true and the strict behaviour needs no configuration. This second context exists to prove the
+ * switch is real in the other direction as well: an owner who sets `'require_image' => false` under
+ * `promotion` must actually get coverless products, not a gate that ignores them either way.
+ */
+$configImageOptional = $config;
+$configImageOptional['promotion']['require_image'] = false;
+$contextImageOptional = PromotionGate::contextFrom($configImageOptional, $subcategoryIds);
+
+/**
  * A real, complete, promotable row. Every case below is this one with a single thing changed, so a
  * failure can only be caused by the thing the case is named after.
+ *
+ * `external_part_number` carries the shape IHerbClient documents ("OPN-02385" → brand folder `opn`,
+ * asset folder `opn02385`), because without a resolvable cover image the base row is not promotable
+ * at all and every other case here would fail for the wrong reason.
  */
 $base = [
     'status' => 'hydrated',
@@ -77,17 +119,19 @@ $base = [
     'normalized_brand_key' => 'optimum nutrition',
     'source_brand_name' => 'Optimum Nutrition',
     'source_list_price' => '79.99',
+    'external_part_number' => 'OPN-02385',
+    'source_primary_image_index' => 0,
     'completeness' => 90,
     'sous_category_id' => null,
 ];
 
 /**
  * @var list<array{name: string, row: array<string, mixed>, reason: ?string, why: string,
- *                 sub?: ?string, price?: ?float, failures?: int}>
+ *                 sub?: ?string, price?: ?float, failures?: int, context?: array<string, mixed>}>
  */
 $cases = [
     [
-        'name' => 'Gold Standard 100% Whey — complete, priced, classified',
+        'name' => 'Gold Standard 100% Whey — complete, priced, classified, photographed',
         'row' => [],
         'reason' => null,
         'sub' => 'whey-proteine',
@@ -170,6 +214,68 @@ $cases = [
         'price' => 5.0,
         'why' => 'the floor is exclusive; a boundary only ever tested from one side is untested',
     ],
+
+    // ── The image gate. DEFECT: before it existed, every one of these promoted. ──────────
+    [
+        'name' => 'a supplement iHerb lists without a single photo',
+        'row' => ['source_primary_image_index' => null],
+        'reason' => PromotionGate::NO_IMAGE,
+        'sub' => 'whey-proteine',
+        'why' => 'cover would be null and the page would ship a product photo frame with nothing in it',
+    ],
+    [
+        'name' => 'a hydration whose payload carried no partNumber',
+        'row' => ['external_part_number' => null],
+        'reason' => PromotionGate::NO_IMAGE,
+        'sub' => 'whey-proteine',
+        'why' => 'the part number IS the image path — without it there is no URL to build',
+    ],
+    [
+        'name' => 'a part number with a second hyphen, which the URL scheme cannot parse',
+        'row' => ['external_part_number' => 'OPN-02385-XL'],
+        'reason' => PromotionGate::NO_IMAGE,
+        'sub' => 'whey-proteine',
+        'why' => 'IHerbClient::imageUrl matches ^[a-z]{2,4}-?\\w+$ and \\w does not include a hyphen',
+    ],
+    [
+        'name' => 'THE DEFECT: a photoless row that scores 75 and cleared min_completeness anyway',
+        'row' => [
+            // 30 (title) + 20 (brand) + 25 (price). No pack_size, no image index, no part number —
+            // the exact score HydrateExternalProductJob::completeness() gives such a row.
+            'completeness' => 75,
+            'external_part_number' => null,
+            'source_primary_image_index' => null,
+        ],
+        'reason' => PromotionGate::NO_IMAGE,
+        'sub' => 'whey-proteine',
+        'why' => 'min_completeness 60 cannot stand in for this: image is worth 15 of 100, so a threshold '
+            .'strict enough to force it would be above 85 and would also reject every row with no pack size',
+    ],
+    [
+        'name' => 'the same photoless row where the owner set promotion.require_image = false',
+        'row' => [
+            'completeness' => 75,
+            'external_part_number' => null,
+            'source_primary_image_index' => null,
+        ],
+        'context' => $contextImageOptional,
+        'reason' => null,
+        'sub' => 'whey-proteine',
+        'why' => 'the requirement has to be a real switch, or "turn it off" silently means "it was never on"',
+    ],
+    [
+        'name' => 'a photoless row that is ALSO below min_completeness',
+        'row' => [
+            'completeness' => 30,
+            'external_part_number' => null,
+            'source_primary_image_index' => null,
+        ],
+        'reason' => PromotionGate::NO_IMAGE,
+        'sub' => 'whey-proteine',
+        'failures' => 2,
+        'why' => 'report order puts the specific statement ("no photo") ahead of the aggregate one ("scored 30")',
+    ],
+
     [
         'name' => 'a hydration that only got the title and the brand',
         'row' => ['completeness' => 55],
@@ -225,22 +331,40 @@ $cases = [
         'why' => 'the second haystack recovers rows whose French title lost the classifying word',
     ],
     [
-        'name' => 'a discontinued, brandless, unpriced, unclassifiable row',
+        'name' => 'a discontinued, brandless, unpriced, photoless, unclassifiable row',
         'row' => [
             'source_discontinued' => 1,
             'normalized_brand_key' => null,
             'source_brand_name' => null,
             'source_list_price' => null,
+            'external_part_number' => null,
+            'source_primary_image_index' => null,
             'normalized_title' => 'Now Foods L-Lysine – 250 comprimés',
             'external_url_name' => 'now-foods-l-lysine-500-mg-250-tablets',
         ],
         'reason' => PromotionGate::DISCONTINUED,
-        'failures' => 4,
+        'failures' => 5,
         'why' => 'every gate is evaluated; `reason` is the first in report order, not the first coded',
     ],
 ];
 
 $failed = 0;
+
+/** One assertion outside the fixture table, printed in the same shape. */
+function check(string $label, bool $ok, string $detail = ''): void
+{
+    global $failed;
+
+    if (! $ok) {
+        $failed++;
+    }
+
+    printf("  %s  %s\n", $ok ? 'PASS' : 'FAIL', $label);
+
+    if (! $ok && $detail !== '') {
+        printf("        %s\n", $detail);
+    }
+}
 
 echo "\nPromotionGate — ".count($cases)." named fixtures\n";
 printf(
@@ -252,10 +376,15 @@ printf(
     (float) $config['pricing']['customs'],
     (float) $config['pricing']['round_to'],
 );
+printf(
+    "  require_image %s (config key %s)\n",
+    $context['require_image'] ? 'true' : 'false',
+    array_key_exists('require_image', $config['promotion']) ? 'present' : 'absent — defaulted to required',
+);
 echo '  '.count($subcategoryIds)." subcategories known (barres-proteinees deliberately absent)\n\n";
 
 foreach ($cases as $case) {
-    $verdict = PromotionGate::inspect(array_merge($base, $case['row']), $context);
+    $verdict = PromotionGate::inspect(array_merge($base, $case['row']), $case['context'] ?? $context);
 
     $problems = [];
 
@@ -311,6 +440,176 @@ foreach ($cases as $case) {
         printf("        %s — %s\n", $problem, $case['why']);
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| The copied part-number pattern, held to the original
+|--------------------------------------------------------------------------
+| PromotionGate::PART_NUMBER is a COPY of the regex inside IHerbClient::imageUrl(), because the gate
+| has to load in this file with no autoloader and importing IHerbClient would drag PoliteFetcher and
+| the Log facade in with it. A copy is only safe while something proves the two still agree, and
+| "the gate says promotable, the writer produces null" is precisely the failure the image gate was
+| added to prevent — reintroduced one regex edit later.
+|
+| Each pair below is asserted three ways: the gate's answer, IHerbClient's own answer, and the answer
+| a person would expect. All three must agree.
+*/
+echo "\nPromotionGate::hasCoverImage vs IHerbClient::imageUrl — the copied pattern\n\n";
+
+/** @var list<array{0:?string,1:?int,2:bool,3:string}> [part number, primary index, has image, why] */
+$partNumbers = [
+    ['OPN-02385', 0, true, 'the shape IHerbClient documents: brand letters, hyphen, asset id'],
+    ['now-01234', 3, true, 'already lower case, and an index that is not the first image'],
+    ['NOW01234', 1, true, 'no hyphen at all — the hyphen is optional in the pattern'],
+    ['OPN-02385-XL', 0, false, 'a second hyphen; \\w matches no hyphen, so nothing can parse it'],
+    ['12345', 0, false, 'no brand letters at the front'],
+    ['A-1', 0, false, 'one leading letter where the pattern needs at least two'],
+    ['', 0, false, 'no part number at all'],
+    [null, 0, false, 'a null part number, which is what the column holds when the payload had none'],
+    ['OPN-02385', null, false, 'a perfectly good part number and no primary image index'],
+];
+
+foreach ($partNumbers as [$part, $index, $expected, $why]) {
+    $row = ['external_part_number' => $part, 'source_primary_image_index' => $index];
+
+    $gate = PromotionGate::hasCoverImage($row);
+    // Exactly the expression CatalogIHerbPromote::coverUrl() evaluates, cast included.
+    $client = IHerbClient::imageUrl($part, $index === null ? null : (int) $index, 'l') !== null;
+
+    check(
+        sprintf('%-14s index %-4s → %s', $part === null ? '(null)' : '"'.$part.'"', $index === null ? '(null)' : (string) $index, $expected ? 'image' : 'no image'),
+        $gate === $client && $gate === $expected,
+        sprintf('gate says %s, IHerbClient says %s, expected %s — %s', $gate ? 'image' : 'no image', $client ? 'image' : 'no image', $expected ? 'image' : 'no image', $why),
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| CatalogIHerbPromote: two things that are true only because of WHERE they are written
+|--------------------------------------------------------------------------
+| Neither of the defects below is a value any function returns. Both are facts about the position of
+| a statement relative to a database COMMIT, in a class that extends Illuminate\Console\Command and
+| therefore cannot be loaded by this file at all. So the source is read and the ORDER is asserted.
+|
+| This is a blunt instrument and it is used deliberately: the alternative is no check at all on two
+| defects whose symptoms are (a) product URLs that differ between two runs over the same catalogue
+| and (b) a URL submitted to IndexNow for a product that was rolled back. Neither shows up in a type
+| check, neither reproduces locally without a database, and both are permanent once shipped —
+| addresses and index submissions do not get taken back.
+*/
+echo "\nCatalogIHerbPromote — ordering invariants, asserted against the source\n\n";
+
+$commandPath = __DIR__.'/../../app/Console/Commands/CatalogIHerbPromote.php';
+$command = (string) file_get_contents($commandPath);
+
+/**
+ * The text of one method, from its parameter list to whatever ends it.
+ *
+ * A method ends at the next thing written at class-member indentation — another method or another
+ * method's docblock. Everything inside a body is indented deeper than four spaces, so this needs no
+ * brace counting.
+ */
+function methodSource(string $source, string $marker): string
+{
+    $start = strpos($source, $marker);
+
+    if ($start === false) {
+        return '';
+    }
+
+    $rest = substr($source, $start + strlen($marker));
+
+    return preg_match('~\n    (?:/\*\*|(?:private|protected|public) (?:static )?function )~', $rest, $m, PREG_OFFSET_CAPTURE) === 1
+        ? substr($rest, 0, (int) $m[0][1])
+        : $rest;
+}
+
+$promote = methodSource($command, 'function promote(');
+$uniqueSlug = methodSource($command, 'function uniqueSlug(');
+$claimSlug = methodSource($command, 'function claimSlug(');
+$createProduct = methodSource($command, 'function createProduct(');
+$publish = methodSource($command, 'function publish(');
+
+check(
+    'the five methods under test were all found in the source',
+    $promote !== '' && $uniqueSlug !== '' && $claimSlug !== '' && $createProduct !== '' && $publish !== '',
+    'a rename broke this file\'s markers — fix the markers, do not delete the checks',
+);
+
+// ── DEFECT: the slug was claimed before the product existed, and never released ──────────
+// uniqueSlug() used to record `$this->claimedSlugs[$candidate] = true` and return. Everything
+// between that and the COMMIT can still fail — the in-transaction re-read can find the row taken by
+// a concurrent run, Brand::create() can hit 1364 on the legacy `brands` table, the INSERT can hit
+// 1406 — and the claim was never given back. The next row normalising to the same base then skipped
+// a slug nothing owns and took `{base}-{externalId}` instead. Product URLs are permanent, so that
+// makes an address depend on whether an unrelated row failed earlier in the same wave.
+$writesClaim = '~\$this->claimedSlugs\[[^\]]*\]\s*=~';
+
+check(
+    'uniqueSlug() reserves nothing — it only reads the claimed set',
+    preg_match_all($writesClaim, $uniqueSlug) === 0,
+    'uniqueSlug() writes into $claimedSlugs again; a row that then fails to commit burns that slug for the run',
+);
+
+check(
+    'claimSlug() is the only place that records a claim',
+    preg_match_all($writesClaim, $command) === 1 && preg_match_all($writesClaim, $claimSlug) === 1,
+    'there is more than one writer into $claimedSlugs, so "claimed" no longer means "committed"',
+);
+
+$dryRunAt = strpos($promote, 'if ($dryRun) {');
+$firstClaimAt = strpos($promote, '$this->claimSlug($slug);');
+$createAt = strpos($promote, '$product = $this->createProduct(');
+$nullGuardAt = strpos($promote, 'if ($product === null) {');
+$lastClaimAt = strrpos($promote, '$this->claimSlug($slug);');
+$publishAt = strpos($promote, '$this->publish($product, $row)');
+
+check(
+    'the dry run claims immediately — nothing will ever be inserted to be the authority',
+    $dryRunAt !== false && $firstClaimAt !== false && $dryRunAt < $firstClaimAt && $firstClaimAt < $createAt,
+    'without a claim in the dry-run branch, two rows sharing a base are both printed as taking it',
+);
+
+check(
+    'the real run claims only AFTER createProduct() returned a product',
+    $createAt !== false && $nullGuardAt !== false && $lastClaimAt !== false
+        && $createAt < $nullGuardAt && $nullGuardAt < $lastClaimAt,
+    'the claim is recorded before the commit is known to have happened, so a failed row still burns its slug',
+);
+
+// ── DEFECT: SeoNotifier was scheduled from inside the promotion transaction ──────────────
+// Product::create() fires ProductSeoObserver::saved, which — when `publier` is true — registers an
+// afterResponse callback revalidating the product path and submitting the URL to IndexNow. Under
+// `php artisan` that callback runs at command termination, whether or not the transaction it was
+// scheduled from committed. Creating the product already published therefore meant a rollback left
+// no product and still advertised its URL. The fix is structural: the transaction is never told
+// whether the wave is publishing, so it cannot make `publier` true.
+check(
+    'createProduct() cannot know whether the wave is publishing',
+    $createProduct !== '' && ! str_contains($createProduct, '$publish'),
+    'the publish flag is back inside the transaction — a rolled-back product can be submitted to IndexNow',
+);
+
+check(
+    'the product is created unpublished and unindexable, whatever --publish says',
+    str_contains($createProduct, "'publier' => false,") && str_contains($createProduct, "'seo_robots_index' => false,"),
+    'a product created with publier=1 fires SeoNotifier from inside the open transaction',
+);
+
+check(
+    'publication is a separate save, made after the transaction returned',
+    $publishAt !== false && $nullGuardAt !== false && $nullGuardAt < $publishAt
+        && ! str_contains($createProduct, '$this->publish('),
+    'the publish save is inside the transaction again, which is the whole defect',
+);
+
+check(
+    'the publish save sets publier so ProductSeoObserver::saved actually fires',
+    str_contains($publish, '$product->publier = true;')
+        && str_contains($publish, '$product->seo_robots_index = true;')
+        && str_contains($publish, '$product->save();'),
+    'deferring the notification is only correct if the deferred save still triggers it',
+);
 
 echo "\n".($failed === 0 ? 'ALL PASS' : $failed.' FAILED')."\n\n";
 

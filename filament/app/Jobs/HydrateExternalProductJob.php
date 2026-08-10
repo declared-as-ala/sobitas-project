@@ -197,8 +197,8 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
         $attributes = $normalized + [
             'source_payload' => $payload,
             'source_discontinued' => (bool) ($payload['isDiscontinued'] ?? false),
-            'computed_price' => $this->tunisianPrice($normalized),
-            'completeness' => $this->completeness($normalized),
+            'computed_price' => self::tunisianPrice($normalized),
+            'completeness' => self::completeness($normalized),
             'last_synced_at' => now(),
             'status' => $relevant
                 ? ExternalCatalogProduct::STATUS_HYDRATED
@@ -218,8 +218,14 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
      * shop, on their timetable, and pricing our catalogue off it would make our prices move
      * whenever they run a sale. `round_to` rounds UP, because rounding a computed cost down eats
      * the margin the formula was configured to produce.
+     *
+     * PUBLIC STATIC so `catalog:iherb:hydrate --renormalize` recomputes it with THIS function rather
+     * than a copy. That command re-derives every normalised field from the stored `source_payload`
+     * after a normaliser fix, and a second implementation of the price there would be a second thing
+     * to keep in step — the defect that has already cost this project a 2.5x rate error, a 3.4x
+     * throughput error and a 1000x pack size, all in one day.
      */
-    private function tunisianPrice(array $normalized): ?float
+    public static function tunisianPrice(array $normalized): ?float
     {
         $base = $normalized['source_list_price'] ?? $normalized['source_discount_price'] ?? null;
         if ($base === null || (float) $base <= 0) {
@@ -245,8 +251,12 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
      * only counts things that genuinely make a page publishable. Nothing here rewards data we have
      * not got: a product missing a price and a title scores low and stays in staging, which is the
      * correct outcome rather than a problem to be tuned away.
+     *
+     * Public static for the same reason as tunisianPrice() above: --renormalize must rescore rows
+     * with this exact function, because a normaliser fix can change whether `pack_size` parses at all
+     * and the score has to move with it.
      */
-    private function completeness(array $normalized): int
+    public static function completeness(array $normalized): int
     {
         $score = 0;
 
