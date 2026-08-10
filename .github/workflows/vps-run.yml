@@ -57,6 +57,7 @@ on:
           - catalog-discover
           - catalog-hydrate-now
           - catalog-retry-failed
+          - catalog-reset-stuck
           # WRITES: these need confirm=APPLY
           - research-import-apply
           - catalog-promote
@@ -143,6 +144,13 @@ jobs:
             catalog-retry-failed)
               # A write, but to the staging table alone - no product, page or URL changes.
               ARGS="catalog:iherb:hydrate --retry-failed"
+              WRITES=no
+              ;;
+            catalog-reset-stuck)
+              # Reclaim rows a dead worker left in `hydrating`. Staging only. The 10-minute
+              # threshold means a row a live worker is mid-fetch on is never handed to a second
+              # worker.
+              ARGS="catalog:iherb:hydrate --reset-stuck=10"
               WRITES=no
               ;;
             research-import-apply)

@@ -33,6 +33,7 @@ class CatalogIHerbHydrate extends Command
                             {--limit= : How many products to dispatch (default: catalog.hydration.batch)}
                             {--include-neutral : Also hydrate rows the slug filter could not decide}
                             {--retry-failed : Return exhausted rows to the queue and stop}
+                            {--reset-stuck= : Return rows stuck in `hydrating` for N+ minutes to the queue}
                             {--status : Print the state of the import and exit}';
 
     protected $description = 'Dispatch hydration jobs for discovered iHerb products';
@@ -51,6 +52,10 @@ class CatalogIHerbHydrate extends Command
 
         if ($this->option('retry-failed')) {
             return $this->retryFailed();
+        }
+
+        if ($this->option('reset-stuck') !== null) {
+            return $this->resetStuck((int) $this->option('reset-stuck'));
         }
 
         $limit = (int) ($this->option('limit') ?: config('catalog.hydration.batch', 250));
@@ -125,6 +130,49 @@ class CatalogIHerbHydrate extends Command
 
         $this->info(sprintf('%s transient failure(s) returned to the queue.', number_format($reset)));
         $this->line(sprintf('  %s row(s) remain failed permanently (404/410/422) and were left alone.', number_format($permanent)));
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Reclaim rows that were claimed by a worker that then died.
+     *
+     * ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────
+     * claim() moves a row to `hydrating` so no second worker takes it, which is correct and is
+     * exactly what makes a crash between the claim and the write unrecoverable: the row is no
+     * longer selected by awaitingHydration(), so no future run ever picks it up.
+     *
+     * The job's failed() handler covers crashes Laravel can see. It cannot cover a FATAL error
+     * raised while the class is still loading — which is precisely what happened on 10/08/2026,
+     * when a static method named `observe()` on an Eloquent model collided with
+     * Model::observe() and killed every job at the class-load boundary. 500 jobs produced 0
+     * hydrated rows, 0 failures, and a growing pile of rows nothing would ever look at again.
+     *
+     * A minutes threshold rather than a flag, because "stuck" is a question about TIME: a row
+     * legitimately in flight is seconds old, and one untouched for ten minutes is not in flight.
+     * The default is deliberately not zero — resetting a row a live worker is mid-fetch on would
+     * hand the same product to two workers.
+     */
+    private function resetStuck(int $minutes): int
+    {
+        $minutes = max(1, $minutes);
+
+        $reset = ExternalCatalogProduct::where('status', ExternalCatalogProduct::STATUS_HYDRATING)
+            ->where('updated_at', '<', now()->subMinutes($minutes))
+            ->update([
+                'status' => ExternalCatalogProduct::STATUS_QUEUED,
+                'status_reason' => 'reclaimed: worker died mid-fetch',
+                'updated_at' => now(),
+            ]);
+
+        $this->info(sprintf(
+            '%s row(s) stuck in "hydrating" for over %d minute(s) returned to the queue.',
+            number_format($reset),
+            $minutes,
+        ));
+
+        $stillInFlight = ExternalCatalogProduct::where('status', ExternalCatalogProduct::STATUS_HYDRATING)->count();
+        $this->line(sprintf('  %s row(s) remain in flight and were left alone.', number_format($stillInFlight)));
 
         return self::SUCCESS;
     }

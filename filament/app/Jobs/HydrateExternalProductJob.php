@@ -181,7 +181,7 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
         // categories to protein.tn subcategories needs the full list, including the ones we reject,
         // or the worklist silently omits whatever the allow list happens to exclude today.
         if ($categoryId !== null && $categoryId !== '') {
-            ExternalCategoryMapping::observe($categoryId, $normalized['source_root_category_name'] ?? null);
+            ExternalCategoryMapping::remember($categoryId, $normalized['source_root_category_name'] ?? null);
         }
 
         $relevant = in_array(
