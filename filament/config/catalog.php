@@ -142,6 +142,103 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Subcategory classification
+    |--------------------------------------------------------------------------
+    | Which protein.tn subcategory an imported product belongs in. This is the single most
+    | consequential mapping in the import, because the subcategory IS the public URL:
+    | `/{sous_category.slug}/{product.slug}`. Get it wrong and the fix is a 301, forever.
+    |
+    | ── WHY THE PRODUCT NAME AND NOT THE SOURCE CATEGORY ──────────────────────────────────
+    | iHerb's `rootCategoryId` has exactly two useful values — 101046 "Sports" and 1855
+    | "Supplements". Two buckets for 47,537 products is not a taxonomy; it would file every
+    | import into one of two subcategories and produce two pages with 20,000 products each.
+    |
+    | protein.tn's own taxonomy, by contrast, is 41 subcategories named after the very words that
+    | appear in supplement product names: whey-isolate, caseine, creatine, beta-alanine,
+    | l-carnitine, collagene, omega-3, ashwagandha. So the name classifies far better than the
+    | source category ever could.
+    |
+    | ── TARGETS ARE SLUGS, NOT IDS ────────────────────────────────────────────────────────
+    | A numeric id hardcoded here becomes silently wrong the day a subcategory is deleted and its
+    | id reused. A slug that no longer exists simply fails to resolve, and the product stays in
+    | staging — which is the safe direction.
+    |
+    | ── ORDER IS THE ALGORITHM. FIRST MATCH WINS ──────────────────────────────────────────
+    | "whey isolate" must be tested before "whey", or every isolate lands in whey-proteine.
+    | "beta-alanine" before "amino". "mass gainer" before "protein". The sequence below is the
+    | rule, and reordering it changes URLs.
+    |
+    | Anything that matches nothing is NOT promoted. No product is ever guessed into a category,
+    | because guessing a category means guessing a URL and publishing it.
+    */
+    'classification' => [
+        // ── Protein, most specific first ────────────────────────────────────────────────
+        ['sub' => 'whey-hydrolysee', 'any' => ['hydrolyzed-whey', 'whey-hydrolysate', 'hydrolysate']],
+
+        // The NON-whey isolates are tested first, and that order is load-bearing.
+        //
+        // "Gold Standard 100% Isolate" is a real whey isolate whose name never says "whey", so
+        // whey-isolate has to accept a bare "isolate" to catch it. But bare "isolate" also matches
+        // PEA-PROTEIN-ISOLATE, SOY-PROTEIN-ISOLATE and BEEF-ISOLATE — so plant and beef must
+        // claim theirs before whey gets a chance, or every vegan isolate is published as whey.
+        ['sub' => 'proteines-vegetales', 'any' => ['plant-protein', 'plant-based-protein', 'vegan-protein', 'pea-protein', 'rice-protein', 'hemp-protein', 'soy-protein', 'protein-vegan', 'pea-isolate', 'soy-isolate']],
+        ['sub' => 'proteine-de-boeuf', 'any' => ['beef-protein', 'beef-isolate']],
+        ['sub' => 'caseine', 'any' => ['casein', 'caseinate', 'micellar']],
+        ['sub' => 'whey-isolate', 'any' => ['whey-isolate', 'whey-protein-isolate', 'isolate-protein', 'iso-whey', 'isopure', 'isolate']],
+        ['sub' => 'mass-gainers', 'any' => ['mass-gainer', 'weight-gainer', 'serious-mass']],
+        ['sub' => 'gainers-proteines', 'any' => ['gainer']],
+        ['sub' => 'whey-proteine', 'any' => ['whey']],
+        ['sub' => 'proteines-multi-sources', 'any' => ['protein-blend', 'protein-powder', 'protein-matrix']],
+
+        // ── Performance ────────────────────────────────────────────────────────────────
+        ['sub' => 'creatine', 'any' => ['creatine', 'creapure']],
+        ['sub' => 'beta-alanine', 'any' => ['beta-alanine', 'carnosyn']],
+        ['sub' => 'citrulline', 'any' => ['citrulline']],
+        ['sub' => 'l-arginine', 'any' => ['arginine', 'aakg']],
+        ['sub' => 'bcaa', 'any' => ['bcaa', 'branched-chain']],
+        ['sub' => 'eaa', 'any' => ['eaa', 'essential-amino']],
+        ['sub' => 'pre-workout', 'any' => ['pre-workout', 'preworkout', 'pump-formula', 'nitric-oxide']],
+        ['sub' => 'post-workout', 'any' => ['post-workout', 'recovery-formula']],
+        ['sub' => 'Intra-Workout', 'any' => ['intra-workout']],
+
+        // ── Weight management ──────────────────────────────────────────────────────────
+        ['sub' => 'l-carnitine', 'any' => ['carnitine']],
+        // `exact`, not `any`. Measured on the real catalogue, a front-anchored "cla" matched 426
+        // products — among them CAT'S CLAW and DEVIL'S CLAW (herbal supplements) and CLAY POWDER
+        // (a cosmetic), all of which would have been published at /cla/…
+        ['sub' => 'cla', 'exact' => ['cla', 'clas'], 'any' => ['conjugated-linoleic']],
+        ['sub' => 'bruleurs-de-graisse', 'any' => ['fat-burner', 'thermogenic', 'lipo-6', 'garcinia', 'raspberry-ketone']],
+
+        // ── Health and vitality ────────────────────────────────────────────────────────
+        ['sub' => 'glutamine', 'any' => ['glutamine']],
+        ['sub' => 'hmb', 'any' => ['hmb']],
+        ['sub' => 'zma', 'any' => ['zma']],
+        ['sub' => 'ashwagandha', 'any' => ['ashwagandha', 'ksm-66', 'sensoril']],
+        ['sub' => 'tribulus', 'any' => ['tribulus']],
+        // "maca" is `exact` so it cannot swallow MACADAMIA.
+        ['sub' => 'boosters-hormonaux', 'exact' => ['maca', 'dhea'], 'any' => ['testosterone', 'test-booster', 'maca-root']],
+        ['sub' => 'collagene', 'any' => ['collagen']],
+        ['sub' => 'omega-3', 'any' => ['omega-3', 'fish-oil', 'krill-oil', 'epa-dha', 'cod-liver']],
+        ['sub' => 'zinc', 'any' => ['zinc']],
+        ['sub' => 'magnesium', 'any' => ['magnesium']],
+        ['sub' => 'articulations', 'any' => ['glucosamine', 'chondroitin', 'msm', 'joint-support', 'joint-formula', 'turmeric', 'curcumin', 'boswellia']],
+        ['sub' => 'beaute-cheveux', 'any' => ['hair-skin', 'biotin', 'keratin', 'nail-support']],
+        ['sub' => 'antioxydants', 'any' => ['antioxidant', 'resveratrol', 'astaxanthin', 'coq10', 'alpha-lipoic', 'quercetin', 'grape-seed', 'green-tea-extract']],
+        ['sub' => 'vitamines', 'any' => ['multivitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-']],
+        // `not` disqualifies the whole rule. "iron" as a mineral term matched "iron-free" and
+        // "no-iron" — products that advertise the ABSENCE of the thing being matched. Filing an
+        // iron-free multivitamin under minerals-for-iron inverts what the label says, which is not
+        // a near miss. `iron` is also `exact`, so it cannot reach "ironman".
+        [
+            'sub' => 'mineraux',
+            'exact' => ['iron'],
+            'any' => ['mineral', 'calcium', 'potassium', 'selenium', 'chromium', 'iodine', 'electrolyte'],
+            'not' => ['iron-free', 'no-iron', 'without-iron', 'free-of-iron'],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Pricing
     |--------------------------------------------------------------------------
     | iHerb's price is a REFERENCE, never our selling price. This formula turns it into a Tunisian
