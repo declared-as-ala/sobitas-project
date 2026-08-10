@@ -51,6 +51,8 @@ on:
           - catalog-status
           - catalog-promote-dry-run
           - research-import-dry-run
+          - queue-log
+          - scheduler-log
           # staging table only: no customer-visible effect
           - catalog-discover
           - catalog-hydrate-now
@@ -88,11 +90,28 @@ jobs:
         run: |
           set -euo pipefail
 
+          # MODE defaults to artisan; only the log tasks override it.
+          MODE=artisan
+
           # A fixed token -> a fixed argv. Nothing the operator types reaches a shell.
           # WRITES=yes means "can touch the products table" and gates the backup below.
           case "$TASK" in
             catalog-status)
               ARGS="catalog:iherb:hydrate --status"
+              WRITES=no
+              ;;
+            queue-log)
+              # Not artisan - MODE=logs makes the remote script read container logs instead.
+              # The queue worker's log is where a job exception actually lands; the staging row
+              # only records what the job managed to write before it died, which for a crash
+              # between claim and store is nothing at all.
+              ARGS="backend-v2-queue"
+              MODE=logs
+              WRITES=no
+              ;;
+            scheduler-log)
+              ARGS="backend-v2-scheduler"
+              MODE=logs
               WRITES=no
               ;;
             catalog-promote-dry-run)
@@ -153,6 +172,7 @@ jobs:
 
           echo "args=$ARGS"     >> "$GITHUB_OUTPUT"
           echo "writes=$WRITES" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE"     >> "$GITHUB_OUTPUT"
           echo "Resolved '$TASK' -> php artisan $ARGS   (writes: $WRITES)"
 
       - name: Checkout
@@ -208,6 +228,7 @@ jobs:
             COMPOSE_FILE="$APP_DIR/docker-compose.yml"
             ARGS="${{ steps.resolve.outputs.args }}"
             WRITES="${{ steps.resolve.outputs.writes }}"
+            MODE="${{ steps.resolve.outputs.mode }}"
 
             cd "$APP_DIR"
 
@@ -235,12 +256,21 @@ jobs:
               echo "[ok] backup written: $BACKUP"
             fi
 
-            echo ""
-            echo "> php artisan $ARGS"
-            echo ""
-
-            docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
-              php artisan $ARGS --no-interaction
+            if [ "$MODE" = "logs" ]; then
+              # Container logs, not artisan. A job that dies between claim() and the write leaves
+              # NOTHING on its staging row - the exception only exists in the worker's log, so
+              # without this task the one place the answer lives is unreachable from here.
+              echo ""
+              echo "> docker compose logs --tail=200 $ARGS"
+              echo ""
+              docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS"
+            else
+              echo ""
+              echo "> php artisan $ARGS"
+              echo ""
+              docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                php artisan $ARGS --no-interaction
+            fi
 
             echo ""
             echo "[ok] finished."

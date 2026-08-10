@@ -83,10 +83,22 @@ class CatalogIHerbHydrate extends Command
         }
 
         $this->info(sprintf('Dispatched %s hydration job(s).', number_format($ids->count())));
-        $this->line(sprintf(
-            '  At the configured 0.5 req/s that is about %s minutes of work for the queue worker.',
-            round($ids->count() * 2 / 60, 1),
-        ));
+
+        // The rate is READ from the same policy the fetcher obeys, never written into the
+        // arithmetic. This line said "at the configured 0.5 req/s" with 2 seconds hardcoded into
+        // the maths, while config/enrichment.php declared iherb.com TWICE and PHP kept the second
+        // entry at 0.2 — so the printed estimate was wrong by 2.5x, in a command an operator uses
+        // to decide whether to wait or go to lunch. Same defect, same day, in two commands.
+        $rps = (float) (app(\App\Services\Enrichment\PoliteFetcher::class)->policy('iherb.com')['rps']
+            ?? config('enrichment.fetch.default_requests_per_second', 0.33));
+
+        if ($rps > 0) {
+            $this->line(sprintf(
+                '  At the configured %s req/s that is about %s minutes of work for the queue worker.',
+                rtrim(rtrim(number_format($rps, 2, '.', ''), '0'), '.'),
+                round($ids->count() / $rps / 60, 1),
+            ));
+        }
 
         return self::SUCCESS;
     }

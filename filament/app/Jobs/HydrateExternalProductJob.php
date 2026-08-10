@@ -57,6 +57,47 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
         return 'hydrate-external-'.$this->stagingId;
     }
 
+    /**
+     * A crashed job must not strand its row in `hydrating` for ever.
+     *
+     * ── THE BUG THIS CLOSES, OBSERVED ON PRODUCTION 10/08/2026 ────────────────────────────
+     * 500 jobs were dispatched. Two minutes later `hydrating` was 10 and rising, `hydrated` was 0,
+     * and `failed` was 0. With ONE queue worker processing serially, at most one row can genuinely
+     * be in flight at a time — so a dozen simultaneous `hydrating` rows meant a dozen jobs had
+     * claimed a row and then died before writing anything back.
+     *
+     * claim() deliberately moves the row OUT of `queued` so no second worker can take it. That is
+     * correct, and it is exactly why a crash between the claim and the store is unrecoverable
+     * without this hook: the row is no longer selected by awaitingHydration(), so no future run
+     * ever picks it up, and nothing reports it except a "stuck for over an hour" warning that only
+     * appears if somebody happens to run --status.
+     *
+     * `tries = 1` means Laravel calls this on the first and only failure. The row goes back to
+     * `queued` while attempts remain, so the next window retries it; once attempts are exhausted it
+     * lands in `failed` WITH the exception message, which is a fact somebody can act on rather
+     * than a row that quietly stopped existing.
+     */
+    public function failed(?\Throwable $e): void
+    {
+        $row = ExternalCatalogProduct::find($this->stagingId);
+
+        if ($row === null || $row->status !== ExternalCatalogProduct::STATUS_HYDRATING) {
+            return;
+        }
+
+        $attempts = (int) $row->attempts + 1;
+        $exhausted = $attempts >= (int) config('catalog.hydration.max_attempts', 3);
+
+        $row->forceFill([
+            'attempts' => $attempts,
+            'status' => $exhausted
+                ? ExternalCatalogProduct::STATUS_FAILED
+                : ExternalCatalogProduct::STATUS_QUEUED,
+            'status_reason' => 'crashed: '.mb_substr($e?->getMessage() ?? 'unknown error', 0, 200),
+            'last_synced_at' => now(),
+        ])->save();
+    }
+
     public function handle(IHerbClient $client, IHerbNormalizer $normalizer): void
     {
         $row = $this->claim();
