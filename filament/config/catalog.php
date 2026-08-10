@@ -12,6 +12,20 @@ return [
 
     'enabled' => env('CATALOG_IMPORT_ENABLED', true),
 
+    /**
+     * Let the scheduler drive discovery and hydration without anyone logging in.
+     *
+     * On because the owner asked for the import to start itself, and because the two phases it
+     * covers cannot hurt anything: discovery and hydration write ONLY to
+     * `external_catalog_products`. No product is created, no page changes, no URL appears. The one
+     * step that is customer-visible — promotion — is deliberately NOT scheduled and never will be;
+     * it stays a command somebody runs on purpose.
+     *
+     * To stop it: set CATALOG_AUTORUN=false, or set the running job row's status to `paused`, which
+     * the discovery loop checks between sitemaps.
+     */
+    'autorun' => env('CATALOG_AUTORUN', true),
+
     /*
     |--------------------------------------------------------------------------
     | Discovery

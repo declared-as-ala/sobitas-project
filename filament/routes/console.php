@@ -87,3 +87,61 @@ Schedule::command('products:enrich-dsld --limit=25 --apply')->weeklyOn(2, '02:45
 Schedule::command('products:generate-content --limit=15 --max-words=250')
     ->weeklyOn(3, '03:30')
     ->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| External catalogue acquisition (iHerb)
+|--------------------------------------------------------------------------
+| These two entries are what make the import self-driving. Neither is
+| customer-visible: both write only to `external_catalog_products`, and no
+| product, page or URL is created by either one. Promotion — the step that
+| does create products — is deliberately absent from this file and stays a
+| command someone runs on purpose.
+|
+| Gated on catalog.autorun (CATALOG_AUTORUN), so the whole pipeline has a
+| single off switch that does not require editing code.
+*/
+
+// Enumerate the catalogue from iHerb's published sitemaps: three HTTP requests
+// for ~47,537 products, because the id is in the URL. Idempotent — the unique
+// key means a re-run refreshes URLs and never duplicates a row, and it never
+// resets the status of a row that has already been hydrated or promoted.
+//
+// TWO entries, because "weekly" alone has a hole in it. A weekly-on-Sunday
+// schedule deployed on a Monday does nothing at all for six days, and the whole
+// pipeline downstream would sit idle waiting for rows that nobody had asked for
+// yet. So:
+//
+//   · the bootstrap runs HOURLY but only while the staging table is empty, which
+//     means it fires within the hour of the first deploy and then stops being
+//     eligible forever — no flag to set, no state to remember
+//   · the refresh runs weekly to pick up products iHerb has added since
+//
+// The `hasTable` guard matters: the scheduler container starts alongside the
+// backend, and on the very first deploy it can evaluate this before the
+// migration has created the table.
+$catalogueReady = fn () => (bool) config('catalog.autorun', true)
+    && \Illuminate\Support\Facades\Schema::hasTable('external_catalog_products');
+
+Schedule::command('catalog:iherb:discover')
+    ->hourly()
+    ->withoutOverlapping()
+    ->when(fn () => $catalogueReady()
+        && \App\Models\ExternalCatalogProduct::query()->doesntExist());
+
+Schedule::command('catalog:iherb:discover --refresh')
+    ->weeklyOn(0, '02:00')
+    ->withoutOverlapping()
+    ->when($catalogueReady);
+
+// Refill the hydration window. Each run dispatches a bounded batch; the database
+// stays the record of what is left, so a queue flush or a dead worker loses
+// nothing — the rows are still in their state and the next run picks them up.
+//
+// Ten minutes is matched to the pace, not picked for neatness: 250 products at
+// the configured 0.5 req/s is ~8.3 minutes of work for the queue worker, so the
+// window refills just after it drains rather than piling up in Redis.
+Schedule::command('catalog:iherb:hydrate --include-neutral')
+    ->everyTenMinutes()
+    ->withoutOverlapping()
+    ->when($catalogueReady);
