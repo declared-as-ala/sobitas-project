@@ -12,7 +12,6 @@ import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
 // PWA install prompt, moved off the critical path — see DeferredInstallBanner for why.
 import { DeferredInstallBanner } from "@/app/components/DeferredInstallBanner";
-import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 // The cart drawer's mount point. It used to be the last element of HeaderClient, which forced that
 // ~1,050-line component to subscribe to the drawer's open state — so every add-to-cart re-rendered
 // the entire header inside the tap handler. See CartDrawerHost for the measurements.
@@ -294,7 +293,23 @@ export default async function RootLayout({
             <GlobalLoader />
             <DeferredToaster />
             <DeferredInstallBanner />
-            <WhatsAppFab />
+            {/*
+              The floating WhatsApp bubble is gone (owner, 10/08/2026: "take off the popup button of
+              whatsapp from mobile, keep it only in the sidebar").
+
+              It was `md:hidden`, i.e. PHONES ONLY — desktop has WhatsApp in the nav — so unmounting
+              it removes it everywhere it appeared, and WhatsAppFab.tsx is deleted rather than left
+              as dead code.
+
+              The channel is not lost, and that was checked before removing it: the mobile menu in
+              HeaderClient has its own WhatsApp row, added precisely because the bubble had once been
+              the only way to reach WhatsApp on a phone. Deleting the dominant ordering channel for
+              Tunisian COD shoppers would be a conversion bug wearing a layout fix's clothes — so the
+              row was verified present first.
+
+              This also gives the bottom-right corner back to ScrollToTop and the tab bar, which the
+              pack-builder measurement had already flagged as over-crowded.
+            */}
             {/* Mounted once here, not per page, so it never remounts on navigation. */}
             <MobileTabBar />
             <CartDrawerHost />

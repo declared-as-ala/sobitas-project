@@ -767,8 +767,13 @@ export function HeaderClient() {
                   phone numbers a shopper is already scanning for. The desktop nav row now has
                   exactly ONE button, and it is the one that sells.
 
-                  There is still exactly one WhatsApp affordance per breakpoint: the floating
-                  bubble (WhatsAppFab) is `md:hidden` and covers phones. */}
+                  There is still exactly one WhatsApp affordance per breakpoint: the dark contact
+                  strip above on desktop, and the WhatsApp row in the mobile menu on phones.
+
+                  UPDATED 10/08/2026: the floating bubble that used to cover phones (WhatsAppFab) is
+                  gone entirely — owner: "take off the popup button of whatsapp from mobile, keep it
+                  only in the sidebar". The mobile-menu row further down this file is now the only
+                  phone affordance, which is why it must not be removed without replacing it. */}
 
               {/* Accès Pro lives HERE now, beside the pack CTA — not on /pack-builder.
                   Owner: "the Accès Pro button should be beside the composez votre pack in the

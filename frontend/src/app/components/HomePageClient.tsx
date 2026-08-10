@@ -15,6 +15,7 @@ const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferred
 import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { getProductLink } from '@/util/productUrl';
+import { getEffectivePrice, getPriceDisplay } from '@/util/productPrice';
 import type { HeroSlide } from '@/util/heroImage';
 import type { HeroBestSeller } from '@/app/components/HeroBestSellers';
 
@@ -58,7 +59,12 @@ function transformProduct(product: Product) {
   return {
     id: product.id,
     name: product.designation_fr,
-    price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
+    // Same bug as the hero panel had, in the shared card transform: requiring
+    // promo_expiration_date to exist hid every PERMANENT promo (null expiry) and showed the full
+    // price. It also ignored expiry direction and the promo<prix guard. getEffectivePrice is the
+    // one function that gets all three right, and it is what the cart and checkout already use —
+    // so the card, the cart and the invoice now agree by construction.
+    price: getEffectivePrice(product),
     priceText: `${product.prix} DT`,
     image: product.cover ? getStorageUrl(product.cover) : undefined,
     category: product.sous_categorie?.designation_fr || '',
@@ -110,14 +116,26 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
   const heroBestSellers: HeroBestSeller[] = (safeAccueil.best_sellers || [])
     .slice(0, 3)
     .map((p) => {
-      const onPromo = Boolean(p.promo && p.promo_expiration_date && new Date(p.promo_expiration_date).getTime() > Date.now());
+      // getPriceDisplay, NOT a hand-rolled promo check.
+      //
+      // The inline version this replaces required promo_expiration_date to be PRESENT:
+      //   Boolean(p.promo && p.promo_expiration_date && new Date(...) > Date.now())
+      // A permanent promo — a promo price with no end date, which is how most of them are entered —
+      // has a null expiration, so that test was false and the panel showed the FULL price while the
+      // product card two sections below showed the discounted one. Same product, same page, two
+      // prices, and the higher one in the most prominent slot on the site.
+      //
+      // The shared helper also carries a guard the inline check never had: a promo is only active
+      // when promo < prix, so a mis-entered promo above the real price can no longer be shown as a
+      // discount.
+      const { finalPrice, oldPrice } = getPriceDisplay(p);
       return {
         id: p.id,
         name: p.designation_fr || 'Produit',
         href: getProductLink(p),
         image: p.cover ? getStorageUrl(p.cover) : null,
-        price: onPromo ? Number(p.promo) : Number(p.prix),
-        oldPrice: onPromo ? Number(p.prix) : null,
+        price: finalPrice,
+        oldPrice,
         ratingValue: (p as { rating_value?: number | null }).rating_value ?? null,
         reviewCount: (p as { review_count?: number | null }).review_count ?? null,
       };
