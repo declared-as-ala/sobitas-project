@@ -49,24 +49,55 @@ class CatalogIHerbDiscover extends Command
         $dryRun = (bool) $this->option('dry-run');
 
         $this->info('Reading the iHerb sitemap index…');
+        /**
+         * The job row is opened BEFORE the first HTTP request, and that ordering is the fix for a
+         * real failure, not a stylistic preference.
+         *
+         * It used to be created after productSitemaps() returned successfully. So when the fetch
+         * failed, this command exited FAILURE having written nothing at all — no job row, no error,
+         * no timestamp. Run from the scheduler, where nobody reads the exit code, that is
+         * indistinguishable from never having run: the staging table is empty either way.
+         *
+         * Observed exactly that on 10/08/2026. The hourly bootstrap was live from the 07:44 deploy
+         * and by 11:08 `catalog:iherb:hydrate --status` still answered "the staging table is
+         * empty". Whether iHerb was unreachable from the VPS, the circuit breaker was open, or the
+         * schedule never fired at all, there was no way to tell them apart, because the one code
+         * path that could have left evidence ran only on success.
+         *
+         * Opening the row first means every attempt leaves a record, and a failed attempt leaves
+         * the reason. `external_catalog_jobs` becomes the answer to "did it try?", which is a
+         * different and more useful question than "did it work?".
+         */
+        $job = $dryRun ? null : ExternalCatalogJob::start('discover', [
+            'refresh' => (bool) $this->option('refresh'),
+        ]);
+
         $sitemaps = $client->productSitemaps();
 
         // A sitemap index that yields no product sitemaps is a failure, never an empty catalogue.
         // Said plainly because the alternative is the failure mode this project keeps hitting: a
         // command that fetched nothing, wrote nothing, and exited 0 looking like a success.
         if ($sitemaps === []) {
-            $this->error('No product sitemaps found. The index was unreachable or its shape changed.');
-            $this->line('  Check: curl -sI https://www.iherb.com/sitemap_index.xml');
+            $message = 'No product sitemaps found. The index was unreachable, blocked, or its shape changed.';
+
+            $this->error($message);
+            $this->line('  From the VPS, check in this order:');
+            $this->line('   · curl -sI https://www.iherb.com/sitemap_index.xml   (is it reachable at all?)');
+            $this->line('   · storage/logs/laravel.log for [PoliteFetcher] lines (robots, size cap, breaker)');
+            $this->line('   · whether the circuit breaker is open — 5 x 401/403/429 opens it for 30 minutes');
+
+            $job?->recordError('discover', $message);
+            $job?->finish(ExternalCatalogJob::STATUS_FAILED);
 
             return self::FAILURE;
         }
 
         $this->line(sprintf('  %d product sitemap(s).', count($sitemaps)));
 
-        $job = $dryRun ? null : ExternalCatalogJob::start('discover', [
+        $job?->forceFill(['options' => [
             'refresh' => (bool) $this->option('refresh'),
             'sitemaps' => array_column($sitemaps, 'url'),
-        ]);
+        ]])->save();
 
         $allow = (array) config('catalog.relevance.slug_allow', []);
         $deny = (array) config('catalog.relevance.slug_deny', []);
