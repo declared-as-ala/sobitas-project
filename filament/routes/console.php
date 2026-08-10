@@ -143,8 +143,24 @@ Schedule::command('catalog:iherb:discover --refresh')
 // window refills just after it drains rather than piling up in Redis.
 Schedule::command('catalog:iherb:hydrate --include-neutral')
     ->everyTenMinutes()
-    ->withoutOverlapping()
-    ->when($catalogueReady);
+    // BOUNDED. `withoutOverlapping()` with no argument expires after 24 HOURS, so a deploy that
+    // recreates the container mid-run leaves a mutex nothing releases and the pass is silently
+    // dead until tomorrow. This dispatches a bounded window and returns in seconds; 15 minutes is
+    // already generous, and the failure it prevents is a day of nothing with no error anywhere.
+    ->withoutOverlapping(15)
+    ->when($catalogueReady)
+    // EVIDENCE. Both catalogue passes ran unattended and wrote NOTHING - no output log, no
+    // onFailure - which is why a scheduler that could not reach Redis, and therefore never
+    // executed a single command, was indistinguishable from one working perfectly for hours.
+    // Every other entry in this file already had one or the other; the two doing the actual work
+    // had neither.
+    ->appendOutputTo(storage_path('logs/catalog-hydrate.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'catalog:iherb:hydrate FAILED on the schedule - the import is not progressing. '
+            .'See storage/logs/catalog-hydrate.log.',
+        );
+    });
 
 // Read the product PAGES. This is the pass that produces actual content: the
 // overview, the directions, the ingredients, the warnings, the Supplement Facts
@@ -168,8 +184,15 @@ Schedule::command('catalog:iherb:hydrate --include-neutral')
 // describes would not have existed. The expression says what it does.
 Schedule::command('catalog:iherb:content')
     ->cron('5-59/10 * * * *')
-    ->withoutOverlapping()
-    ->when($catalogueReady);
+    ->withoutOverlapping(15)
+    ->when($catalogueReady)
+    ->appendOutputTo(storage_path('logs/catalog-content.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'catalog:iherb:content FAILED on the schedule - no product content is being read. '
+            .'See storage/logs/catalog-content.log.',
+        );
+    });
 
 /*
 |--------------------------------------------------------------------------

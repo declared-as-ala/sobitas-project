@@ -138,6 +138,31 @@ services:
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
+      # ── THE THREE LINES THIS SERVICE WAS MISSING, AND WHAT THEY COST ────────────────────
+      # backend-v2 (line 87), backend-v2-queue (line 177) and fitness-api (line 249) all pin
+      # REDIS_HOST to the service name. This service did not, so it fell through to `.env`,
+      # where REDIS_HOST is `127.0.0.1` — correct for a host process, and inside a container it
+      # points at the container itself, where nothing listens on 6379.
+      #
+      # Measured on production 11/08/2026:
+      #   backend-v2            host=redis
+      #   backend-v2-queue      host=redis
+      #   backend-v2-scheduler  host=127.0.0.1   <- RedisException: Connection refused
+      #
+      # The failure mode is the worst available: `schedule:work` KEEPS RUNNING and keeps logging
+      # "No scheduled commands are ready to run", because it only touches Redis when a command is
+      # actually due — and then `withoutOverlapping()` cannot take its mutex and the command dies
+      # before executing. So `schedule:list` shows every entry with a healthy "Next Due", the
+      # container is `Up`, the deploy is green, and NOTHING HAS EVER RUN. Every scheduled command
+      # in routes/console.php was affected: the SEO watchdog, self-heal, review requests, the
+      # nutrition enrichment, and both catalogue crawls.
+      #
+      # The three lines above it (CACHE/SESSION/QUEUE_CONNECTION: redis) are what made it fatal
+      # rather than merely wrong: they route the scheduler's cache — and therefore every
+      # overlap mutex — at a Redis it cannot reach.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     command: php artisan schedule:work
     networks:
       - sobitas-net
