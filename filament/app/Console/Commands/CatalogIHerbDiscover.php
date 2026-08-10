@@ -230,18 +230,31 @@ class CatalogIHerbDiscover extends Command
         );
 
         $hydratable = $totals['relevant'] + $totals['neutral'];
-        // 0.5 req/s for iherb.com, from config/enrichment.php — one request every two seconds.
-        $hours = round($hydratable * 2 / 3600, 1);
+
+        /**
+         * The rate is READ, not assumed.
+         *
+         * This printed "≈ N hours at the configured 0.5 req/s" with the 2-second interval written
+         * into the arithmetic. The configured rate was not 0.5: `iherb.com` appeared twice in
+         * config/enrichment.php and PHP kept the last duplicate, so the real pace was 0.2 req/s
+         * and every estimate this command printed was 2.5x optimistic — a number an operator
+         * would plan a day around. A figure derived from the same config the fetcher obeys cannot
+         * drift from it.
+         */
+        $rps = (float) (app(\App\Services\Enrichment\PoliteFetcher::class)->policy('iherb.com')['rps']
+            ?? config('enrichment.fetch.default_requests_per_second', 0.33));
+        $secondsEach = $rps > 0 ? 1 / $rps : 0;
 
         $this->line(sprintf(
-            'Hydration budget: %s products ≈ %s hours at the configured 0.5 req/s.',
+            'Hydration budget: %s products ≈ %s hours at the configured %s req/s.',
             number_format($hydratable),
-            $hours,
+            round($hydratable * $secondsEach / 3600, 1),
+            rtrim(rtrim(number_format($rps, 2, '.', ''), '0'), '.'),
         ));
         $this->line(sprintf(
             '  The %s denied rows saved about %s hours of that.',
             number_format($totals['denied']),
-            round($totals['denied'] * 2 / 3600, 1),
+            round($totals['denied'] * $secondsEach / 3600, 1),
         ));
 
         if (! $dryRun) {
