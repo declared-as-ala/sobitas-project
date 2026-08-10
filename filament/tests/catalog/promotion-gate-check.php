@@ -86,6 +86,12 @@ $subcategoryIds = [
     'creatine' => 21,
     'vitamines' => 44,
     'plantes-et-herbes' => 51,
+    // Created by migration 2026_08_10_000006 from the first promotion dry run's unclassified
+    // samples. Present here because they are present in the shop — the whole point of this map is
+    // that it mirrors `sous_categories` as it IS, so a slug the classifier can reach and the
+    // database cannot is reported as SUBCATEGORY_MISSING rather than passing silently.
+    'acides-amines' => 58,
+    'glucides-energie' => 59,
 ];
 
 $context = PromotionGate::contextFrom($config, $subcategoryIds);
@@ -283,14 +289,32 @@ $cases = [
         'why' => 'catalog.promotion.min_completeness is what stands in for somebody reading the row',
     ],
     [
-        'name' => 'Now Foods L-Lysine — a supplement protein.tn has no subcategory for',
+        // WAS: expected UNCLASSIFIED, "a supplement protein.tn has no subcategory for". True of the
+        // SHOP when it was written, and false since migration 000006 created `acides-amines` — the
+        // same staleness that had six cases red in subcategory-classifier-check.php. A free amino
+        // acid is now a product this catalogue can file, so the case asserts the outcome that
+        // actually matters: it reaches the amino rayon and is promotable.
+        'name' => 'Now Foods L-Lysine — a free amino acid, homed by migration 000006',
         'row' => [
             'normalized_title' => 'Now Foods L-Lysine – 250 comprimés',
             'external_url_name' => 'now-foods-l-lysine-500-mg-250-tablets',
         ],
+        'reason' => null,
+        'sub' => 'acides-amines',
+        'why' => 'lysine is an exact token on the acides-amines rule, and the rayon now exists',
+    ],
+    [
+        // The UNCLASSIFIED gate still needs a case, and this is the honest one: a multi-ingredient
+        // formula whose category is a judgement nobody has made. It must stay staged rather than be
+        // guessed into a rayon, because guessing a subcategory means guessing a permanent URL.
+        'name' => 'NOW Foods Thyroid Energy — no rule matched, and none should',
+        'row' => [
+            'normalized_title' => 'NOW Foods Thyroid Energy – 90 gélules végétales',
+            'external_url_name' => 'now-foods-thyroid-energy-90-veg-capsules',
+        ],
         'reason' => PromotionGate::UNCLASSIFIED,
         'sub' => null,
-        'why' => 'no rule matched, and guessing a subcategory means guessing a URL and publishing it',
+        'why' => 'guessing a subcategory means guessing a URL and publishing it',
     ],
     [
         'name' => 'a Quest protein bar on a database where migration 000005 has not run',
@@ -339,8 +363,12 @@ $cases = [
             'source_list_price' => null,
             'external_part_number' => null,
             'source_primary_image_index' => null,
-            'normalized_title' => 'Now Foods L-Lysine – 250 comprimés',
-            'external_url_name' => 'now-foods-l-lysine-500-mg-250-tablets',
+            // Was L-Lysine, which stopped being unclassifiable when migration 000006 created
+            // `acides-amines` — so this case silently became a FOUR-gate case while still asserting
+            // five. Thyroid Energy is unclassifiable on purpose and stays that way: its rayon is a
+            // judgement nobody has made, which is exactly what this slot needs.
+            'normalized_title' => 'NOW Foods Thyroid Energy – 90 gélules végétales',
+            'external_url_name' => 'now-foods-thyroid-energy-90-veg-capsules',
         ],
         'reason' => PromotionGate::DISCONTINUED,
         'failures' => 5,

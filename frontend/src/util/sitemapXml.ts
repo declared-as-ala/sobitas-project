@@ -207,15 +207,33 @@ async function buildSitemapFiles(): Promise<SitemapFileWithEntries[]> {
       continue;
     }
 
-    // Non-product sections are small (static pages, listings, blog, CMS pages) and keep their
-    // single well-known filename — those URLs are already known to Search Console. But they are
-    // still chunked if they ever cross the limit: brand + subcategory listings grow with the
-    // catalogue, and a section that silently exceeded 50,000 URLs would be rejected wholesale.
+    /*
+     * Non-product sections are small (static pages, listings, blog, CMS pages) and keep their
+     * single well-known filename — those URLs are already known to Search Console. But they are
+     * still chunked if they ever cross the limit: brand + subcategory listings grow with the
+     * catalogue, and a section that silently exceeded 50,000 URLs would be rejected wholesale.
+     *
+     * THE FIRST CHUNK'S NAME NEVER CHANGES, WHICH IS WHY THE OVERFLOW COUNTS FROM 1.
+     *
+     * This used to name the chunks `${section}-${i}.xml` as soon as there was more than one of
+     * them, so the day `listings` crossed 5,000 URLs — brand and subcategory pages grow with the
+     * import, and ~20,000 promotable products means a lot of newly non-empty listings —
+     * /sitemaps/listings.xml stopped existing and became /sitemaps/listings-0.xml. The child route
+     * resolves names ONLY from this manifest and 404s anything else, so the rename would have turned
+     * a URL already submitted to Google, and already carrying its crawl history, into a hard 404 at
+     * the exact moment the section grew. A sitemap URL that 404s is not a smaller sitemap; it is a
+     * sitemap Search Console reports as "couldn't fetch", and the fix would have been invisible
+     * because every other status code stayed green.
+     *
+     * So chunk 0 is always `${section}.xml` and overflow files start at `-1`. There is deliberately
+     * no `${section}-0.xml`: the gap in the numbering is the point — it is what keeps the name of the
+     * file that already exists independent of how many files come after it.
+     */
     const chunks = Math.max(1, Math.ceil(entries.length / PRODUCTS_PER_CHUNK));
     for (let i = 0; i < chunks; i++) {
       const slice = chunks === 1 ? entries : entries.slice(i * PRODUCTS_PER_CHUNK, (i + 1) * PRODUCTS_PER_CHUNK);
       files.push({
-        file: chunks === 1 ? `${section}.xml` : `${section}-${i}.xml`,
+        file: i === 0 ? `${section}.xml` : `${section}-${i}.xml`,
         section,
         chunk: i,
         count: slice.length,

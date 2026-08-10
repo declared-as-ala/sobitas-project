@@ -358,6 +358,7 @@ class CatalogIHerbPromote extends Command
 
         // A wave fully spent on the backlog creates nothing, so the scan is skipped outright rather
         // than opened and then abandoned on its first row.
+        /** @var iterable<Collection<int, ExternalCatalogProduct>> $chunks */
         $chunks = $createLimit === 0 ? [] : $this->chunks($brandKey, true);
 
         foreach ($chunks as $rows) {
@@ -571,6 +572,10 @@ class CatalogIHerbPromote extends Command
      * (0, 0) and this will publish it again. The columns cannot tell that apart from "never
      * published", and inventing a staging column to encode it is a schema change for a case the
      * admin can express by deleting the product.
+     *
+     * The 309 pre-existing products are unreachable from here by construction, not by a filter that
+     * could be edited out: selection starts at `external_catalog_products` and they have no staging
+     * row, so no query this method can issue names one of them.
      *
      * The cursor is on `external_catalog_products.id` and only moves forward, so rows dropping out
      * of the result set as they are published cannot make this loop repeat or stall.
@@ -1307,7 +1312,8 @@ class CatalogIHerbPromote extends Command
             $this->warn(sprintf(
                 '%s product(s) were created and committed but the publish save failed. They exist, '
                 .'complete and unpublished (publier=0, seo_robots_index=0), and no URL was submitted '
-                .'for them — publish them from the admin once the error above is understood.',
+                .'for them. They are now part of the backlog, so the next --publish run retries them '
+                .'once the error above is understood; the admin works too.',
                 number_format($failedPublishes),
             ));
         }

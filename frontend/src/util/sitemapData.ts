@@ -170,6 +170,20 @@ function encodeSitemapUrl(url: string): string {
  *     API reported. The real fix is an `orderBy('id')` tiebreaker (or keyset pagination) in
  *     ApisController::allProducts(); that is backend work and out of scope here. Until then this
  *     detects the problem loudly instead of publishing a sitemap with holes in it.
+ *
+ *  4. THE PAGE COUNT DOES NOT ALWAYS ARRIVE, AND IT DOES NOT ALWAYS ARRIVE IN THE SAME PLACE.
+ *     services/api.ts::getAllProducts already normalises TWO upstream envelopes —
+ *     `Array.isArray(raw.products) ? raw.products : (raw.products?.data ?? [])` — i.e. a flat
+ *     `{ products: [...], pagination: {...} }` AND a Laravel paginator at `{ products: { data,
+ *     last_page, total } }`. It then rebuilds its return value as a literal in which `pagination`
+ *     is copied ONLY from `raw.pagination`, so on the paginator envelope the page count does not
+ *     survive the client at all. This crawl used to read the count exclusively from that one block:
+ *     no block meant `lastPage` stayed at its initial 1, the pagination `while` was never entered,
+ *     and /sitemap.xml was published — 200, no warning, then memoised for an hour — containing the
+ *     first 100 products of the catalogue. So the count is now read from whichever envelope is
+ *     present, and when NONE is, the crawl walks by row count instead of stopping: a page that
+ *     comes back full means there is more, and only a short page is the end. Truncation must never
+ *     again be the quiet outcome; the request ceiling below turns "this never ends" into a throw.
  * ──────────────────────────────────────────────────────────────────────────────────────────── */
 
 /** Exactly ApisController::MAX_PER_PAGE. Asking for more is silently clamped, so don't. */
@@ -203,10 +217,68 @@ const MAX_PRODUCT_REQUESTS = 600;
  */
 const MAX_UNROUTABLE_PRODUCT_FRACTION = 0.5;
 
+/** Page count + row total, however the page that carried them was shaped. */
+type PageMeta = { total: number | null; lastPage: number | null };
+
+/**
+ * The paginator metadata on one page, read from whichever envelope actually arrived.
+ *
+ * Three are checked because three are what a paginated Laravel endpoint can emit, and which one
+ * reaches this file is a property of services/api.ts rather than of this crawl (see fact 4 above):
+ *
+ *   • `res.pagination`  — the flat block ApisController::allProducts() sends today, and the only
+ *                         one getAllProducts() currently forwards.
+ *   • `res.meta`        — the API-Resource collection envelope.
+ *   • `res.products`    — a raw LengthAwarePaginator, i.e. `{ data: [...], total, last_page }`,
+ *                         which is the shape getAllProducts() flattens on the way through.
+ *
+ * Reading all three costs three property lookups and removes the class of bug where a change on
+ * either side of the client silently halves the sitemap. `null` means "this page told us nothing
+ * about how many pages exist" — which the caller must treat as unknown, never as one.
+ */
+function readPageMeta(res: unknown): PageMeta | null {
+  if (!res || typeof res !== 'object') return null;
+  const r = res as { pagination?: unknown; meta?: unknown; products?: unknown };
+
+  const envelopes: unknown[] = [r.pagination, r.meta];
+  // A raw paginator only counts as an envelope when it is NOT the already-flattened array.
+  if (r.products && !Array.isArray(r.products)) envelopes.push(r.products);
+
+  for (const envelope of envelopes) {
+    if (!envelope || typeof envelope !== 'object') continue;
+    const e = envelope as { total?: unknown; last_page?: unknown };
+    const total = Number(e.total);
+    const lastPage = Number(e.last_page);
+    const hasTotal = Number.isFinite(total) && total >= 0;
+    const hasLastPage = Number.isFinite(lastPage) && lastPage > 0;
+    if (hasTotal || hasLastPage) {
+      return { total: hasTotal ? total : null, lastPage: hasLastPage ? lastPage : null };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * The product rows on one page, from the flattened array OR from a raw paginator's `data`.
+ *
+ * Symmetric with readPageMeta: the rows and the page count must be read out of the SAME set of
+ * envelopes, or a response shape that the count is understood on would still abort the crawl here.
+ * `null` means the page carried no rows array at all, which is a malformed response, not an empty
+ * catalogue — the caller throws on it.
+ */
+function readPageRows(res: unknown): Product[] | null {
+  if (!res || typeof res !== 'object') return null;
+  const products = (res as { products?: unknown }).products;
+  if (Array.isArray(products)) return products as Product[];
+  const data = (products as { data?: unknown } | null | undefined)?.data;
+  return Array.isArray(data) ? (data as Product[]) : null;
+}
+
 type ProductCrawl = {
   /** Distinct products, in the order first seen. */
   products: Product[];
-  /** Lowest `pagination.total` any page reported, or -1 when the API sent no pagination block. */
+  /** Lowest reported total any page carried, or -1 when no page reported a total at all. */
   expectedTotal: number;
   /** How much `pagination.total` moved while we paginated (max - min). */
   drift: number;
@@ -215,6 +287,13 @@ type ProductCrawl = {
   /** Rows with no usable id. Always 0 unless PRODUCT_LISTING stops selecting `id`. */
   unkeyed: number;
   requests: number;
+  /**
+   * How the crawl knew where to stop: `metadata` when a page reported a `last_page`, `row-count`
+   * when none did and the walk ended on a page shorter than the page size. It exists so the log line
+   * below can say which guarantee is actually behind the file being published. A page that reported
+   * only a `total` is `row-count`: a total says how many rows exist, not where the pages end.
+   */
+  terminatedBy: 'metadata' | 'row-count';
 };
 
 /**
@@ -237,11 +316,13 @@ async function crawlAllProducts(): Promise<ProductCrawl> {
   let sawPagination = false;
   let lastPage = 1;
 
-  const absorb = (res: Awaited<ReturnType<typeof getAllProducts>> | undefined, page: number): void => {
-    if (!res || !Array.isArray(res.products)) {
+  /** Absorb one page and return how many rows it carried (the row count drives termination). */
+  const absorb = (res: Awaited<ReturnType<typeof getAllProducts>> | undefined, page: number): number => {
+    const rows = readPageRows(res);
+    if (rows === null) {
       throw new Error(`[sitemap] /all_products page ${page} returned no products array — aborting the crawl rather than caching a partial catalogue`);
     }
-    for (const p of res.products) {
+    for (const p of rows) {
       const id = Number((p as { id?: unknown })?.id);
       if (!Number.isFinite(id)) {
         // Keep it rather than drop it: a row with no id is a backend regression, and silently
@@ -255,35 +336,77 @@ async function crawlAllProducts(): Promise<ProductCrawl> {
       }
       byId.set(id, p);
     }
-    const pagination = res.pagination;
-    if (pagination) {
-      sawPagination = true;
-      const total = Number(pagination.total);
-      if (Number.isFinite(total) && total >= 0) {
-        minTotal = Math.min(minTotal, total);
-        maxTotal = Math.max(maxTotal, total);
+    const meta = readPageMeta(res);
+    if (meta) {
+      if (meta.total !== null) {
+        minTotal = Math.min(minTotal, meta.total);
+        maxTotal = Math.max(maxTotal, meta.total);
       }
-      const reportedLastPage = Number(pagination.last_page);
-      // Math.max, not assignment: products are sorted created_at DESC, so a promotion wave running
-      // during the crawl adds pages at the END. Taking the max means we still walk to the new end.
-      if (Number.isFinite(reportedLastPage) && reportedLastPage > 0) {
-        lastPage = Math.max(lastPage, reportedLastPage);
+      /*
+       * sawPagination is driven by the PAGE COUNT and by nothing else.
+       *
+       * It used to be set by "any metadata arrived" — i.e. by readPageMeta returning non-null, which
+       * it does on `total` ALONE. A page carrying `{ total: 20000 }` with no `last_page` (the shape
+       * a paginator block loses whenever it is reshaped on the way through services/api.ts)
+       * therefore flipped the crawl into bounded mode while `lastPage` was still its initial 1, and
+       * hasMorePages() evaluated `2 <= 1` = false: the walk stopped after page 1 of 200, with the
+       * row-count fallback that exists for exactly this case disabled. Both outcomes were wrong —
+       * either the completeness check below throws and /sitemap.xml 503s indefinitely, or (when the
+       * page reports total 0) minimumAcceptable is 0, nothing throws, and a 100-URL sitemap is
+       * published and memoised for an hour. `lastPage === null` means UNKNOWN, never one, which is
+       * what readPageMeta's own docblock says.
+       *
+       * Math.max, not assignment: products are sorted created_at DESC, so a promotion wave running
+       * during the crawl adds pages at the END. Taking the max means we still walk to the new end.
+       */
+      if (meta.lastPage !== null) {
+        sawPagination = true;
+        lastPage = Math.max(lastPage, meta.lastPage);
       }
     }
+
+    return rows.length;
   };
 
-  // Page 1 alone first — it is what tells us how many pages exist. Only then can the rest be
-  // parallelised, and only then is the fan-out bounded by something the server actually said.
+  // Page 1 alone first — it is what tells us how many pages exist (or, when nothing on it carries a
+  // page count, whether a full page came back at all). Only then can the rest be parallelised, and
+  // only then is the fan-out bounded by something the server actually said.
   requests++;
-  absorb(await getAllProducts({ perPage: PRODUCTS_PER_REQUEST, page: 1 }), 1);
+  const firstPageRows = absorb(await getAllProducts({ perPage: PRODUCTS_PER_REQUEST, page: 1 }), 1);
 
   let nextPage = 2;
-  while (nextPage <= lastPage) {
+
+  /*
+   * WALKING WITHOUT A PAGE COUNT.
+   *
+   * When no page carries paginator metadata, `lastPage` is not 1 — it is UNKNOWN, and the two must
+   * not be confused: treating unknown as 1 is precisely the bug in fact 4 above, a sitemap silently
+   * cut to its first page. A paginated endpoint returns exactly `per_page` rows for every page but
+   * the last, so a full page is evidence that more exist and a short page is the end of the
+   * catalogue. That is a weaker guarantee than a reported total — it cannot be cross-checked the way
+   * the completeness test below cross-checks one — but it walks to the real end instead of
+   * truncating, and MAX_PRODUCT_REQUESTS still turns "this never ends" into a throw.
+   *
+   * The decision is taken on the HIGHEST-numbered page of each batch, not on any short page in it:
+   * pages are fetched in contiguous batches, so a short page with full pages after it is a hole in
+   * the middle (a concurrent delete), not the end, and stopping there would truncate exactly the way
+   * this is written to prevent.
+   */
+  let exhausted = firstPageRows < PRODUCTS_PER_REQUEST;
+
+  /** True while pages remain: bounded by the reported last_page, or by row count when there is none. */
+  const hasMorePages = (): boolean => (sawPagination ? nextPage <= lastPage : !exhausted);
+
+  while (hasMorePages()) {
     if (requests >= MAX_PRODUCT_REQUESTS) {
-      throw new Error(`[sitemap] product crawl hit the ${MAX_PRODUCT_REQUESTS}-request ceiling (last_page=${lastPage}) — refusing to keep looping`);
+      throw new Error(
+        `[sitemap] product crawl hit the ${MAX_PRODUCT_REQUESTS}-request ceiling ` +
+        `(${sawPagination ? `last_page=${lastPage}` : 'no page reported a last_page; walking by row count'}, ` +
+        `${byId.size} distinct products so far) — refusing to keep looping`
+      );
     }
     const batch: number[] = [];
-    while (batch.length < PRODUCT_FETCH_CONCURRENCY && nextPage <= lastPage && requests < MAX_PRODUCT_REQUESTS) {
+    while (batch.length < PRODUCT_FETCH_CONCURRENCY && hasMorePages() && requests < MAX_PRODUCT_REQUESTS) {
       batch.push(nextPage++);
       requests++;
     }
@@ -292,18 +415,31 @@ async function crawlAllProducts(): Promise<ProductCrawl> {
     const responses = await Promise.all(
       batch.map((page) => getAllProducts({ perPage: PRODUCTS_PER_REQUEST, page }))
     );
-    responses.forEach((res, i) => absorb(res, batch[i]));
+    const rowCounts = responses.map((res, i) => absorb(res, batch[i]));
+    // Only in row-count mode, and only on the last page of the batch (see the block above). If a
+    // page in this batch DID report a last_page, `sawPagination` is now true and the bounded
+    // condition takes over from here.
+    if (!sawPagination) {
+      exhausted = (rowCounts[rowCounts.length - 1] ?? 0) < PRODUCTS_PER_REQUEST;
+    }
     // Termination: `requests` grows by at least 1 per outer iteration and is hard-capped above, so
     // this loop cannot run forever even if `lastPage` keeps climbing.
   }
 
   return {
     products: [...byId.values(), ...unkeyedProducts],
-    expectedTotal: sawPagination && Number.isFinite(minTotal) ? minTotal : -1,
-    drift: sawPagination && Number.isFinite(minTotal) ? Math.max(0, maxTotal - minTotal) : 0,
+    // `Number.isFinite(minTotal)` IS "some page reported a total" — it starts at +Infinity — and it
+    // is now the only thing gating these two. They used to be `sawPagination && …`, which was
+    // harmless while sawPagination meant "any metadata arrived" and is not now that it means "a page
+    // count arrived": a response carrying a total but no last_page is exactly the case the fix above
+    // routes through the row-count walk, and it is also the case whose total makes that walk
+    // verifiable. Gating on sawPagination would throw the total away precisely there.
+    expectedTotal: Number.isFinite(minTotal) ? minTotal : -1,
+    drift: Number.isFinite(minTotal) ? Math.max(0, maxTotal - minTotal) : 0,
     duplicates,
     unkeyed: unkeyedProducts.length,
     requests,
+    terminatedBy: sawPagination ? 'metadata' : 'row-count',
   };
 }
 
@@ -410,9 +546,15 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
         );
       }
     } else {
-      // No pagination block at all: completeness is unverifiable, so say so rather than imply the
-      // sitemap was checked. The zero-guard above is all that is protecting it in this state.
-      console.warn('[sitemap] /all_products returned no pagination metadata — crawl completeness could not be verified');
+      // No reported total to compare against, so completeness is unverifiable — say so rather than
+      // imply the sitemap was checked. What the crawl DID do is stated, because the two states are
+      // not equally safe: `row-count` means it walked to a short page (the end of the catalogue as
+      // the API paginates it) with only the zero-guard above protecting the result, while `metadata`
+      // here means a page count arrived but no total did.
+      console.warn(
+        `[sitemap] /all_products carried no reported total — crawl completeness could not be verified. ` +
+        `Walked to the end by ${crawl.terminatedBy}: ${allProducts.length} distinct products over ${crawl.requests} requests.`
+      );
     }
 
     {
@@ -792,8 +934,12 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
  * different moments, and an index that disagrees with the children it points at is worse than a
  * slightly stale one that agrees with itself.
  *
- * Bust on demand with revalidateTag('sitemap') — once at the END of a promotion wave, not once per
- * product, or the crawl re-runs thousands of times.
+ * Busted on demand with revalidateTag('sitemap'), which must not happen once per product or every
+ * bust opens another window for a crawler poll to pay for a full catalogue crawl that the next bust
+ * discards. That is enforced on the producing side rather than requested in a comment:
+ * App\Services\Seo\SeoNotifier::bustSitemapCache() coalesces to at most one bust per process per
+ * minute, so a promotion wave — one artisan process — refreshes this entry once, after the products
+ * it created are committed, not once per product.
  */
 const cachedSitemapEntries = unstable_cache(
   computeSitemapEntries,
