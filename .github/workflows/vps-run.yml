@@ -52,6 +52,8 @@ on:
           - catalog-promote-dry-run
           - research-import-dry-run
           # staging table only: no customer-visible effect
+          - catalog-discover
+          - catalog-hydrate-now
           - catalog-retry-failed
           # WRITES: these need confirm=APPLY
           - research-import-apply
@@ -99,6 +101,24 @@ jobs:
               ;;
             research-import-dry-run)
               ARGS="products:import-research storage/app/research.json"
+              WRITES=no
+              ;;
+            catalog-discover)
+              # Enumerate the catalogue from iHerb's sitemaps: 3 HTTP requests, ~47,537 rows into
+              # external_catalog_products. Staging only - no product, page or URL is created.
+              #
+              # This task exists because the scheduler did not do it. The hourly bootstrap in
+              # filament/routes/console.php was in place from 07:44, and at 11:08 the staging
+              # table was still empty - so a schedule that looked self-starting had started
+              # nothing, and there was no way to discover that except by asking the box. A manual
+              # trigger is what turns "it should have run" into "it ran".
+              ARGS="catalog:iherb:discover"
+              WRITES=no
+              ;;
+            catalog-hydrate-now)
+              # Dispatch a hydration window immediately rather than waiting for the ten-minute
+              # schedule. Staging only.
+              ARGS="catalog:iherb:hydrate --include-neutral --limit=500"
               WRITES=no
               ;;
             catalog-retry-failed)
