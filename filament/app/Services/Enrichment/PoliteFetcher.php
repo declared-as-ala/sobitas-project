@@ -184,12 +184,46 @@ class PoliteFetcher
         );
 
         foreach ($rules as $rule) {
-            if ($rule === '/' || str_starts_with($path, $rule)) {
+            if ($rule === '/' || self::pathMatchesRule($path, $rule)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    /**
+     * robots.txt path matching, including the `*` and `$` wildcards.
+     *
+     * This was `str_starts_with($path, $rule)`, which silently ignores wildcards — and wildcards in
+     * the MIDDLE of a rule are common. iHerb, for instance, publishes:
+     *
+     *     Disallow: /ugc/api/product/&#42;/review/summarization
+     *
+     * A prefix match never fires on that, because the literal rule text is not a prefix of
+     * `/ugc/api/product/27509/review/summarization`. So the fetcher believed it was honouring
+     * robots.txt while being structurally incapable of enforcing that particular line — the worst
+     * kind of safety check, one that reports success without doing the work.
+     *
+     * `$` anchors the end of the path, per the de-facto standard both Google and Bing implement.
+     */
+    private static function pathMatchesRule(string $path, string $rule): bool
+    {
+        if ($rule === '') {
+            return false;
+        }
+
+        if (! str_contains($rule, '*') && ! str_ends_with($rule, '$')) {
+            return str_starts_with($path, $rule);
+        }
+
+        $anchored = str_ends_with($rule, '$');
+        $body = $anchored ? substr($rule, 0, -1) : $rule;
+
+        // Escape everything, then re-open only the wildcard.
+        $pattern = str_replace('\*', '.*', preg_quote($body, '~'));
+
+        return preg_match('~^'.$pattern.($anchored ? '$' : '').'~', $path) === 1;
     }
 
     /**
@@ -207,7 +241,14 @@ class PoliteFetcher
         $wait = ($last + $interval) - microtime(true);
 
         if ($wait > 0) {
-            usleep((int) min($wait, 30) * 1_000_000);
+            // The cast must wrap the WHOLE product, not just min(). `(int) min($wait, 30) * 1e6`
+            // truncates the seconds first, so a 3.03 s wait slept 3.00 s and — worse at low rates —
+            // a computed 1.97 s wait slept 1.00 s. Every request was up to a second faster than
+            // configured, i.e. roughly double the intended rate at rps 0.5.
+            //
+            // Invisible at a handful of requests. Across a 61,500-product catalogue run it is the
+            // difference between the pace we promised a host and the pace we actually took.
+            usleep((int) (min($wait, 30) * 1_000_000));
         }
 
         Cache::put($key, microtime(true), (int) ceil($interval) + 60);

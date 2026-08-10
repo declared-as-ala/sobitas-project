@@ -1,0 +1,415 @@
+<?php
+
+namespace App\Services\Catalog\IHerb;
+
+/**
+ * Turn an iHerb product record into the fields protein.tn stores.
+ *
+ * ── DELIBERATELY FRAMEWORK-FREE ───────────────────────────────────────────────────────────
+ * No Laravel imports, no facades, no container. This class holds every decision that can be wrong
+ * in a way a customer notices — the pack size, the flavour, the French title — and it has to be
+ * runnable in a standalone harness, because there is no `vendor/` on this machine and
+ * `php artisan test` cannot execute here. Same pattern as Gtin, Figures and NutrientNames.
+ *
+ * ── THE RULE THAT SHAPES ALL OF IT: TRANSCRIBE, NEVER CONVERT ─────────────────────────────
+ * "1.32 lb (600 g)" yields 600 g because the label PRINTS 600 g, not because 1.32 × 453.6 was
+ * computed. A record that gives only pounds keeps pounds. Nothing here multiplies a quantity by a
+ * conversion factor, for the same reason NutritionPanelBuilder does not: a derived number is one
+ * that appears on no packaging anywhere, and on a supplement that is the failure mode that matters.
+ *
+ * ── AND WHERE IT IS UNSURE, IT RETURNS NULL ───────────────────────────────────────────────
+ * A missing flavour is a blank field. A guessed flavour is a wrong product title on a page that
+ * takes money. Every extractor below prefers null to a plausible answer.
+ *
+ * Verified against real payloads from /ugc/api/product/v2/{id} on 10/08/2026:
+ *   id 1      "5-HTP, 100 mg, 60 Veggie Caps"                                  Doctor's Best
+ *   id 68616  "Micronized Creatine Powder, Unflavored, 1.32 lb (600 g)"        Optimum Nutrition
+ *   id 46873  "Curcumin Phytosome™, 180 Veggie Caps (500 mg per Capsule)"      Doctor's Best
+ */
+class IHerbNormalizer
+{
+    /**
+     * Units that denote a pack size, mapped to how protein.tn writes them in French.
+     *
+     * Order matters in the matching regex: longer forms first, so "Veggie Capsules" is not matched
+     * as "Capsules" and "Soft Gels" is not matched as "Gels".
+     */
+    private const UNITS = [
+        'vegetarian capsules' => 'gélules végétales',
+        'veggie capsules' => 'gélules végétales',
+        'vegan capsules' => 'gélules véganes',
+        'veg capsules' => 'gélules végétales',
+        'veggie caps' => 'gélules végétales',
+        'vegan caps' => 'gélules véganes',
+        'veg caps' => 'gélules végétales',
+        'soft gels' => 'capsules molles',
+        'softgels' => 'capsules molles',
+        'softgel' => 'capsules molles',
+        'capsules' => 'gélules',
+        'capsule' => 'gélule',
+        'caps' => 'gélules',
+        'tablets' => 'comprimés',
+        'tablet' => 'comprimé',
+        'tabs' => 'comprimés',
+        'gummies' => 'gommes',
+        'lozenges' => 'pastilles',
+        'packets' => 'sachets',
+        'packet' => 'sachet',
+        'servings' => 'portions',
+        'serving' => 'portion',
+        'fl oz' => 'fl oz',
+        'oz' => 'oz',
+        'lbs' => 'lb',
+        'lb' => 'lb',
+        'kg' => 'kg',
+        'mg' => 'mg',
+        'mcg' => 'µg',
+        'ml' => 'ml',
+        'l' => 'l',
+        'g' => 'g',
+    ];
+
+    /**
+     * Flavour vocabulary. High precision, deliberately incomplete.
+     *
+     * A comma-segment counts as a flavour only if it contains one of these. That misses exotic
+     * flavours, which costs a blank field — whereas treating any unrecognised segment as a flavour
+     * would put "Advanced Growth Formula" or "Children 8+ & Teens" in the flavour slot and print it
+     * on the product title.
+     */
+    private const FLAVOUR_TOKENS = [
+        'chocolate', 'vanilla', 'strawberry', 'banana', 'cookies', 'cream', 'caramel', 'coffee',
+        'mocha', 'peanut butter', 'cinnamon', 'mint', 'berry', 'berries', 'blueberry', 'raspberry',
+        'cherry', 'citrus', 'orange', 'lemon', 'lime', 'grape', 'apple', 'mango', 'peach', 'punch',
+        'watermelon', 'pineapple', 'coconut', 'cookie', 'brownie', 'birthday cake', 'rocky road',
+        'salted', 'unflavored', 'unflavoured', 'natural flavor', 'tropical', 'fruit', 'melon',
+        'blue razz', 'bubblegum', 'candy', 'marshmallow', 'hazelnut', 'pistachio', 'honey',
+    ];
+
+    private const FLAVOUR_FR = [
+        'unflavored' => 'Sans arôme',
+        'unflavoured' => 'Sans arôme',
+    ];
+
+    /**
+     * Normalise one hydrated product.
+     *
+     * @param  array<string, mixed>  $payload  a /ugc/api/product/v2/{id} response
+     * @return array<string, mixed>
+     */
+    public function normalize(array $payload): array
+    {
+        $sourceTitle = trim((string) ($payload['displayName'] ?? ''));
+        $brandName = trim((string) ($payload['brandName'] ?? ''));
+
+        // The v2 endpoint's displayName excludes the brand, but the catalog feed's `Name` includes
+        // it. Strip defensively so a title never reads "Optimum Nutrition Optimum Nutrition ...".
+        $productPart = $this->stripLeadingBrand($sourceTitle, $brandName);
+
+        $pack = $this->packSize($sourceTitle);
+        $flavour = $this->flavour($productPart);
+        $listPrice = $this->price($payload['listPrice'] ?? null);
+        $discountPrice = $this->price($payload['discountPrice'] ?? null);
+
+        return [
+            'external_product_id' => (string) ($payload['id'] ?? ''),
+            'external_part_number' => trim((string) ($payload['partNumber'] ?? '')) ?: null,
+            'external_url' => trim((string) ($payload['url'] ?? '')) ?: null,
+            'external_url_name' => trim((string) ($payload['urlName'] ?? '')) ?: null,
+
+            'source_title' => $sourceTitle ?: null,
+            'source_brand_name' => $brandName ?: null,
+            'source_brand_code' => trim((string) ($payload['brandCode'] ?? '')) ?: null,
+            'source_root_category_id' => isset($payload['rootCategoryId']) ? (string) $payload['rootCategoryId'] : null,
+            'source_root_category_name' => trim((string) ($payload['rootCategoryName'] ?? '')) ?: null,
+            'source_list_price' => $listPrice['amount'] ?? null,
+            'source_discount_price' => $discountPrice['amount'] ?? null,
+            'source_currency' => $listPrice['currency'] ?? $discountPrice['currency'] ?? null,
+            'source_available' => (bool) ($payload['isAvailableToPurchase'] ?? false),
+            'source_primary_image_index' => isset($payload['primaryImageIndex']) ? (int) $payload['primaryImageIndex'] : null,
+
+            'normalized_title' => $this->frenchTitle($brandName, $productPart, $flavour, $pack),
+            'normalized_brand_key' => $this->brandKey($brandName),
+            'flavour' => $flavour,
+            'pack_size' => $pack['quantity'] ?? null,
+            'pack_unit' => $pack['unit'] ?? null,
+        ];
+    }
+
+    /**
+     * `"$138.03"` → `['amount' => 138.03, 'currency' => 'USD']`.
+     *
+     * Thousands separators are stripped before parsing: `(float) "1,234.56"` is 1.0 in PHP, so a
+     * $1,234 product would silently become a $1 product and, once the pricing formula ran, a
+     * catastrophically underpriced one.
+     *
+     * @return array{amount: float, currency: string}|null
+     */
+    public function price(mixed $raw): ?array
+    {
+        $text = trim((string) $raw);
+        if ($text === '') {
+            return null;
+        }
+
+        $currency = match (true) {
+            str_contains($text, '$') => 'USD',
+            str_contains($text, '€') => 'EUR',
+            str_contains($text, '£') => 'GBP',
+            default => 'USD',
+        };
+
+        $digits = preg_replace('~[^0-9.]~', '', str_replace(',', '', $text)) ?? '';
+        if ($digits === '' || ! is_numeric($digits)) {
+            return null;
+        }
+
+        $amount = (float) $digits;
+
+        return $amount > 0 ? ['amount' => round($amount, 2), 'currency' => $currency] : null;
+    }
+
+    /**
+     * The pack size, preferring the metric value the label already prints.
+     *
+     * "1.32 lb (600 g)"                → 600 g      — metric is printed in the parentheses
+     * "5.05 lb (2.29 kg)"              → 2.29 kg
+     * "60 Veggie Caps"                 → 60 gélules végétales
+     * "180 Veggie Caps (500 mg per Capsule)" → 180 gélules végétales, NOT 500 mg
+     * "16 oz"                          → 16 oz     — no metric given, so pounds/ounces are kept
+     *
+     * The per-unit strength trap is real: "(500 mg per Capsule)" is the dose in ONE capsule, not the
+     * pack. Reading it as the pack size would turn a 180-capsule bottle into a 500 mg product.
+     *
+     * @return array{quantity: float, unit: string}|null
+     */
+    public function packSize(string $title): ?array
+    {
+        if ($title === '') {
+            return null;
+        }
+
+        // "per Capsule" / "per Serving" qualifies a dose, never a pack. Remove those spans first.
+        $clean = preg_replace('~\([^)]*\bper\b[^)]*\)~i', ' ', $title) ?? $title;
+
+        $units = implode('|', array_map(
+            static fn (string $u): string => preg_quote($u, '~'),
+            array_keys(self::UNITS)
+        ));
+
+        if (! preg_match_all('~(\d+(?:[.,]\d+)?)\s*('.$units.')\b~i', $clean, $matches, PREG_SET_ORDER)) {
+            return null;
+        }
+
+        $candidates = [];
+        foreach ($matches as $match) {
+            $quantity = (float) str_replace(',', '.', $match[1]);
+            $unitRaw = mb_strtolower(trim($match[2]));
+            if ($quantity <= 0) {
+                continue;
+            }
+            $candidates[] = ['quantity' => $quantity, 'unit' => self::UNITS[$unitRaw] ?? $unitRaw, 'raw' => $unitRaw];
+        }
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        // Metric mass/volume wins when present — it is what a Tunisian customer reads, and it is
+        // printed on the same label, not computed from the imperial figure.
+        foreach (['kg', 'g', 'ml', 'l'] as $preferred) {
+            foreach ($candidates as $candidate) {
+                if ($candidate['raw'] === $preferred) {
+                    return ['quantity' => $candidate['quantity'], 'unit' => $candidate['unit']];
+                }
+            }
+        }
+
+        // Otherwise a countable form (capsules, tablets…), which is the pack size for pill products.
+        foreach ($candidates as $candidate) {
+            if (! in_array($candidate['raw'], ['mg', 'mcg', 'g', 'ml', 'l', 'kg', 'oz', 'fl oz', 'lb', 'lbs'], true)) {
+                return ['quantity' => $candidate['quantity'], 'unit' => $candidate['unit']];
+            }
+        }
+
+        $first = $candidates[0];
+
+        return ['quantity' => $first['quantity'], 'unit' => $first['unit']];
+    }
+
+    /**
+     * The flavour, or null.
+     *
+     * Only a comma-segment carrying a known flavour word qualifies. "Advanced Growth Formula" and
+     * "Children 8+ & Teens" are comma-segments too, and printing either as a flavour would be worse
+     * than printing nothing.
+     */
+    public function flavour(string $title): ?string
+    {
+        foreach (array_map('trim', explode(',', $title)) as $segment) {
+            if ($segment === '') {
+                continue;
+            }
+
+            $lower = mb_strtolower($segment);
+
+            // A segment that is essentially a measurement is a size, not a flavour.
+            if (preg_match('~^\d+(?:[.,]\d+)?\s*[a-z%°\s]*$~i', $segment) === 1) {
+                continue;
+            }
+
+            foreach (self::FLAVOUR_TOKENS as $token) {
+                if (str_contains($lower, $token)) {
+                    foreach (self::FLAVOUR_FR as $needle => $french) {
+                        if (str_contains($lower, $needle)) {
+                            return $french;
+                        }
+                    }
+
+                    // Flavours are proper nouns on the packaging; keep the source's own wording and
+                    // capitalisation rather than translating "Double Rich Chocolate" into something
+                    // that appears on no tub.
+                    return $this->tidy($segment);
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * The customer-facing French title.
+     *
+     * `Optimum Nutrition Gold Standard 100% Whey – Double Rich Chocolate – 2,29 kg`
+     *
+     * Brand first (how Tunisian customers search), then the product, then flavour and size as
+     * separate en-dash segments. Decimal commas, because the rest of the site writes French numbers.
+     * The brand's own spelling is never altered.
+     *
+     * @param  array{quantity: float, unit: string}|null  $pack
+     */
+    public function frenchTitle(string $brand, string $product, ?string $flavour, ?array $pack): ?string
+    {
+        $product = $this->stripTrailingDescriptors($product, $flavour, $pack);
+        $product = $this->tidy($product);
+
+        if ($product === '' && $brand === '') {
+            return null;
+        }
+
+        $parts = [trim(trim($brand).' '.$product)];
+
+        if ($flavour !== null && $flavour !== '') {
+            $parts[] = $flavour;
+        }
+
+        if ($pack !== null) {
+            $parts[] = $this->frenchNumber($pack['quantity']).' '.$pack['unit'];
+        }
+
+        $title = implode(' – ', array_filter($parts, static fn (string $p): bool => trim($p) !== ''));
+
+        // The column is varchar(500); truncate on a word boundary rather than mid-word.
+        return mb_strlen($title) <= 500 ? $title : rtrim(mb_substr($title, 0, mb_strrpos(mb_substr($title, 0, 500), ' ') ?: 500));
+    }
+
+    /**
+     * Remove the segments already promoted to their own fields, so they are not printed twice.
+     *
+     * "Micronized Creatine Powder, Unflavored, 1.32 lb (600 g)" → "Micronized Creatine Powder"
+     *
+     * @param  array{quantity: float, unit: string}|null  $pack
+     */
+    private function stripTrailingDescriptors(string $product, ?string $flavour, ?array $pack): string
+    {
+        $segments = array_map('trim', explode(',', $product));
+        $kept = [];
+
+        foreach ($segments as $index => $segment) {
+            if ($segment === '') {
+                continue;
+            }
+
+            // The first segment is the product name; never drop it, whatever it looks like.
+            if ($index === 0) {
+                $kept[] = $segment;
+
+                continue;
+            }
+
+            // Anything that is purely a size/measurement, or the flavour we already extracted.
+            if (preg_match('~\d~', $segment) === 1 && $pack !== null) {
+                continue;
+            }
+            if ($flavour !== null && $this->tidy($segment) === $flavour) {
+                continue;
+            }
+            if ($flavour !== null && mb_strtolower($segment) === 'unflavored') {
+                continue;
+            }
+
+            $kept[] = $segment;
+        }
+
+        return implode(', ', $kept);
+    }
+
+    /** Drop a leading brand so the title does not repeat it. */
+    private function stripLeadingBrand(string $title, string $brand): string
+    {
+        $brand = trim($brand);
+        if ($brand === '' || $title === '') {
+            return $title;
+        }
+
+        $pattern = '~^\s*'.preg_quote($brand, '~').'\s*[,\-–:]?\s*~iu';
+
+        return trim(preg_replace($pattern, '', $title) ?? $title);
+    }
+
+    /** "2.29" → "2,29"; "600" → "600". French decimals, no rounding. */
+    private function frenchNumber(float $value): string
+    {
+        $formatted = rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
+
+        return str_replace('.', ',', $formatted === '' ? '0' : $formatted);
+    }
+
+    /** Collapse whitespace and strip trademark marks and dangling punctuation. */
+    private function tidy(string $text): string
+    {
+        $clean = str_replace(['®', '™', '©'], '', $text);
+        $clean = preg_replace('~\s+~u', ' ', $clean) ?? $clean;
+
+        return trim($clean, " \t\n\r\0\x0B,;:-–");
+    }
+
+    /** Mirrors App\Support\BrandKey::for(); duplicated so this class stays framework-free. */
+    private function brandKey(string $name): ?string
+    {
+        if (trim($name) === '') {
+            return null;
+        }
+
+        $key = mb_strtolower($this->asciiFold($name), 'UTF-8');
+        $key = preg_replace('~\b(?:sarl|sa|inc|ltd|limited|llc|gmbh|bv|nv|co|corp|corporation|company)\b~u', ' ', $key) ?? $key;
+        $key = preg_replace('~[^a-z0-9]+~', ' ', $key) ?? $key;
+        $key = trim(preg_replace('~\s+~', ' ', $key) ?? $key);
+
+        return $key === '' ? null : $key;
+    }
+
+    /** Minimal accent folding, so this file needs no Illuminate\Support\Str. */
+    private function asciiFold(string $text): string
+    {
+        $map = [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a', 'å' => 'a', 'æ' => 'ae',
+            'ç' => 'c', 'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e', 'ì' => 'i', 'í' => 'i',
+            'î' => 'i', 'ï' => 'i', 'ñ' => 'n', 'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o',
+            'ö' => 'o', 'ø' => 'o', 'œ' => 'oe', 'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ý' => 'y', 'ÿ' => 'y', 'ß' => 'ss', '®' => '', '™' => '', '©' => '',
+        ];
+
+        return strtr(mb_strtolower($text, 'UTF-8'), $map);
+    }
+}

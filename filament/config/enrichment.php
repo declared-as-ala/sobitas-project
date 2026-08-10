@@ -133,6 +133,25 @@ return [
         'query.wikidata.org' => ['trust' => 0.85, 'rps' => 1.0, 'store_text' => true, 'type' => 'open_database'],
         'pubchem.ncbi.nlm.nih.gov' => ['trust' => 0.90, 'rps' => 3.0, 'store_text' => true, 'type' => 'government'],
 
+        /**
+         * ---- iHerb: catalogue acquisition (see App\Services\Catalog\IHerb) ----
+         *
+         * `rps` is 0.5 — one request every two seconds. A 61,500-product import is a background
+         * task measured in days, not a deadline: at this pace a full hydration run is roughly
+         * 34 hours of wall clock, which is fine for something that runs once and then only
+         * re-syncs what changed. Going faster buys hours and risks a permanent block, and a
+         * blocked host yields nothing ever again.
+         *
+         * `store_text` is FALSE. iHerb's product descriptions are their copy, and republishing
+         * them would also be the fastest way for Google to read our pages as duplicates of a far
+         * stronger domain. We take facts — identity, brand, category, pack size — and write our
+         * own French titles from them.
+         */
+        'iherb.com' => ['trust' => 0.70, 'rps' => 0.5, 'store_text' => false, 'type' => 'retailer'],
+        'tn.iherb.com' => ['trust' => 0.70, 'rps' => 0.5, 'store_text' => false, 'type' => 'retailer'],
+        // Static image CDN — no crawl budget concern, but still paced.
+        'cloudinary.images-iherb.com' => ['trust' => 0.70, 'rps' => 2.0, 'store_text' => false, 'type' => 'cdn'],
+
         // ---- Retailers: read for facts, never for prose ----
         // A retailer's specs table is a fine cross-check on a barcode or a serving size. Its
         // description is written copy and its reviews belong to its customers, so neither is kept.
