@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\Log;
  * PoliteFetcher already owns a per-host Redis token bucket shared across queue workers, a cached
  * robots.txt reader, and a circuit breaker that stops for 30 minutes after repeated 401/403/429.
  * A second HTTP stack would mean two independent ideas of how fast we are allowed to go — and with
- * several workers running a 61,500-product import, "several processes each politely pacing
+ * several workers running a 47,537-product import, "several processes each politely pacing
  * themselves" is not polite at all. One bucket, one breaker.
  *
  * ── WHAT IS DELIBERATELY MISSING ──────────────────────────────────────────────────────────
@@ -35,7 +35,7 @@ use Illuminate\Support\Facades\Log;
  * /catalog/iherblive was the obvious candidate and cannot enumerate the catalogue. Measured
  * 10/08/2026: index=801 returns 50 items, index=1001 returns zero. It caps around 850 and repeats
  * popular products — it is a live purchase feed, complete with a buyer country per row. Against
- * ~61,500 products it reaches about 1.4%.
+ * the 47,537 products the sitemaps actually list, it reaches about 1.8%.
  *
  * The sitemap iHerb publishes in its own robots.txt reaches all of it in three requests, and carries
  * lastmod so a weekly re-sync is nearly free.
@@ -69,22 +69,39 @@ class IHerbClient
         }
     }
 
+    /**
+     * Sitemaps are far larger than the fetcher's default page limit, and the default is right.
+     *
+     * Measured 10/08/2026: products-0-www-0 is 3.23 MB, -1 is 3.25 MB, -2 is 1.03 MB, against a
+     * default `enrichment.fetch.max_bytes` of 4 MB. That is 23% of headroom on a file iHerb grows
+     * whenever it adds products — and an oversize body returns null, which reads to the caller
+     * exactly like an unreachable host. Discovery would then report a third of the catalogue as
+     * "found" and exit successfully.
+     *
+     * 24 MB is not a guess at how big the file may get; it is simply far enough above 3.3 MB that
+     * growth cannot quietly reach it, while still bounding memory for a container that also runs
+     * queue workers.
+     */
+    private const SITEMAP_MAX_BYTES = 24 * 1024 * 1024;
+
     /** Every outbound request goes through here, so the invariant cannot be bypassed by accident. */
-    private function fetch(string $url, array $headers = []): ?array
+    private function fetch(string $url, array $headers = [], ?int $maxBytes = null): ?array
     {
         self::assertUrlAllowed($url);
 
-        return $this->fetcher->get($url, $headers);
+        return $this->fetcher->get($url, $headers, $maxBytes);
     }
 
     /**
-     * The product sitemap URLs. Three of them as of 10/08/2026, ~20,500 URLs each.
+     * The product sitemap URLs. Three as of 10/08/2026 — and they are NOT all the same size:
+     * 20,500 + 20,500 + 6,537 = 47,537 products. Assuming three full files overstates the
+     * catalogue by ~14,000.
      *
      * @return list<array{url: string, lastmod: ?string}>
      */
     public function productSitemaps(): array
     {
-        $response = $this->fetch(self::SITEMAP_INDEX);
+        $response = $this->fetch(self::SITEMAP_INDEX, [], self::SITEMAP_MAX_BYTES);
         if ($response === null || ($response['status'] ?? 0) !== 200) {
             Log::warning('[iherb] sitemap index unreachable', ['status' => $response['status'] ?? null]);
 
@@ -106,7 +123,7 @@ class IHerbClient
      * Every (external id, url, slug) in one product sitemap.
      *
      * The numeric product id is the last path segment of a /pr/{slug}/{id} URL, so discovery needs
-     * no per-product request at all — 61,500 identities for three HTTP calls. The slug carries the
+     * no per-product request at all — 47,537 identities for three HTTP calls. The slug carries the
      * product name, which is what lets the relevance prefilter run before any hydration budget is
      * spent.
      *
@@ -114,7 +131,7 @@ class IHerbClient
      */
     public function productsIn(string $sitemapUrl): array
     {
-        $response = $this->fetch($sitemapUrl);
+        $response = $this->fetch($sitemapUrl, [], self::SITEMAP_MAX_BYTES);
         if ($response === null || ($response['status'] ?? 0) !== 200) {
             Log::warning('[iherb] product sitemap unreachable', ['url' => $sitemapUrl]);
 

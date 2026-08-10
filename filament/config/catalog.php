@@ -28,7 +28,7 @@ return [
     | Two stages, because the authoritative category costs one HTTP request per product and the
     | slug costs nothing.
     |
-    | Stage 1 runs over the sitemap slug alone. On ~61,500 products, every row it rejects is a
+    | Stage 1 runs over the sitemap slug alone. On ~47,537 products, every row it rejects is a
     | request never made — at 0.5 req/s that is the difference between a run measured in days and
     | one measured in weeks.
     |
@@ -43,29 +43,74 @@ return [
         ],
 
         /**
-         * Stage-1 slug prefilter.
+         * Stage-1 slug prefilter. ALLOW beats DENY — see App\Services\Catalog\SlugRelevance.
          *
-         * DENY beats ALLOW. The deny list is the load-bearing one: iHerb's catalogue is mostly
-         * cosmetics, groceries and household goods, and none of it belongs on a sports-nutrition
-         * shop. Kept deliberately conservative — a false reject costs one product we could have
-         * sold, while being too permissive costs an HTTP request per mistake across 61,500 rows.
+         * ── WHY THIS LIST IS SHORTER THAN IT LOOKS LIKE IT SHOULD BE ──────────────────────
+         * Measured against all 47,537 real sitemap slugs on 10/08/2026, the first draft of this
+         * list denied 5,994 products and saved 3.3 hours of a 26-hour hydration run. Reading what
+         * it actually caught showed it was also destroying products we sell:
+         *
+         * (The list below denies 4,655 and saves 2.6 h. Verified by
+         *  `php filament/tests/catalog/slug-relevance-check.php`, which asserts named products
+         *  rather than totals — a percentage cannot show that Cat's Claw went missing.)
+         *
+         *     "cat-"        killed every CAT'S CLAW product — a herbal supplement (93 rows)
+         *     "hair-"       killed Hair-Skin-Nails tablets
+         *     "skin-"       killed Skin Eternal tablets
+         *     "pet-"        killed Petadolex butterbur softgels
+         *     "foundation"  killed AGELESS FOUNDATION LABORATORIES, a supplement brand
+         *
+         * The two errors are not symmetrical, and that asymmetry is the whole design:
+         *
+         *   · a term left OFF this list costs one HTTP request, after which `rootCategoryId`
+         *     rejects the product correctly and nothing is published
+         *   · a term wrongly ON this list loses a sellable product SILENTLY — the row is never
+         *     hydrated, so nothing downstream ever notices it is missing
+         *
+         * Three hours of crawl time is not worth several hundred products. So every ambiguous
+         * term was replaced with a specific one, and the authoritative filter does the real work.
+         * Nothing here is a guess: each entry below was checked against what it matches.
          */
         'slug_deny' => [
-            'shampoo', 'conditioner', 'body-wash', 'body-lotion', 'hand-soap', 'bar-soap',
-            'toothpaste', 'mouthwash', 'deodorant', 'lipstick', 'mascara', 'foundation',
-            'nail-polish', 'face-cream', 'face-mask', 'sunscreen', 'baby-wipes', 'diapers',
-            'shaving', 'razor', 'perfume', 'cologne', 'candle', 'incense', 'essential-oil',
-            'detergent', 'dish-soap', 'cleaner', 'air-freshener', 'pet-', 'dog-', 'cat-',
-            'coffee-beans', 'tea-bags', 'chocolate-bar', 'cookies', 'crackers', 'chips',
-            'curling', 'mousse', 'hair-', 'skin-', 'lip-balm', 'toothbrush',
+            // Hair and body care. "shampoo"/"conditioner" carry the category on their own; the
+            // "hair-*" entries are spelled out because bare "hair-" also matches supplements.
+            'shampoo', 'conditioner', 'hair-color', 'hair-colour', 'hair-spray', 'hair-remover',
+            'hair-gel', 'hair-mask', 'hair-serum', 'curling', 'mousse',
+            'body-wash', 'body-lotion', 'body-scrub', 'hand-soap', 'bar-soap', 'soap-bar',
+            'shower-gel', 'bubble-bath',
+
+            // Oral care.
+            'toothpaste', 'mouthwash', 'toothbrush', 'dental-floss',
+
+            // Cosmetics. "foundation" is deliberately absent — it is a supplement brand name.
+            'lipstick', 'lip-gloss', 'lip-balm', 'mascara', 'eyeliner', 'eyeshadow', 'concealer',
+            'nail-polish', 'face-cream', 'face-mask', 'face-serum', 'eye-cream', 'skin-cream',
+            'makeup-remover', 'sunscreen', 'self-tanning',
+
+            // Baby and personal.
+            'baby-wipes', 'diapers', 'shaving', 'razor', 'perfume', 'cologne', 'deodorant',
+
+            // Home.
+            'candle', 'incense', 'detergent', 'dish-soap', 'laundry', 'cleaner', 'air-freshener',
+            'trash-bags', 'paper-towels',
+
+            // Pet. Spelled as phrases: bare "cat-"/"dog-"/"pet-" hit cat's claw, petadolex and
+            // "rose-petals" respectively.
+            'for-dogs', 'for-cats', 'for-pets', 'dog-food', 'cat-food', 'pet-food', 'cat-litter',
+            'dog-treats', 'cat-treats', 'pet-supplies',
+
+            // Groceries that are unambiguously not sports nutrition. "cookies", "chips",
+            // "crackers" and "chocolate-bar" were removed: protein cookies and protein chips are
+            // real products, and stage 2 rejects the ordinary snacks at no risk.
+            'tea-bags', 'coffee-beans', 'essential-oil',
         ],
 
         /**
          * Slugs matching these skip the deny list entirely.
          *
-         * Necessary because the two lists genuinely collide: a "hair, skin & nails" supplement
-         * contains "hair-" and "skin-", and "whey protein cookies and cream" contains "cookies".
-         * Both are products we sell.
+         * Necessary because the lists genuinely collide even after narrowing: a "hair, skin &
+         * nails" supplement still contains "hair-", and Cat's Claw still reads as a cat product to
+         * anything doing substring matching.
          */
         'slug_allow' => [
             'protein', 'whey', 'isolate', 'casein', 'creatine', 'bcaa', 'eaa', 'amino',
@@ -74,6 +119,10 @@ return [
             'calcium', 'iron', 'probiotic', 'electrolyte', 'beta-alanine', 'citrulline',
             'arginine', 'taurine', 'hmb', 'zma', 'testosterone', 'ashwagandha', 'creatina',
             'sport', 'energy-', 'recovery', 'nitric-oxide', 'weight-gainer', 'meal-replacement',
+
+            // Rescued from the deny list by measurement, not by guesswork — every one of these was
+            // observed being wrongly denied in the 47,537-slug run.
+            'cat-s-claw', 'hair-skin', 'skin-eternal', 'petadolex', 'ageless-foundation',
         ],
     ],
 

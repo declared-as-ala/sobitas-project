@@ -9,7 +9,7 @@ use Illuminate\Support\Str;
  *
  * ── WHY THIS EXISTS ───────────────────────────────────────────────────────────────────────
  * `brands` has no slug, no normalisation and no `firstOrCreate` anywhere. Lookups are
- * `LIKE '%name%'`. Feed an importer 61,500 products against that and "Optimum Nutrition",
+ * `LIKE '%name%'`. Feed an importer 47,537 products against that and "Optimum Nutrition",
  * "optimum nutrition", "Optimum Nutrition®" and "OPTIMUM NUTRITION, INC." become four rows, each
  * holding a slice of the catalogue, with no error raised anywhere.
  *

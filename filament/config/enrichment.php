@@ -136,10 +136,10 @@ return [
         /**
          * ---- iHerb: catalogue acquisition (see App\Services\Catalog\IHerb) ----
          *
-         * `rps` is 0.5 — one request every two seconds. A 61,500-product import is a background
-         * task measured in days, not a deadline: at this pace a full hydration run is roughly
-         * 34 hours of wall clock, which is fine for something that runs once and then only
-         * re-syncs what changed. Going faster buys hours and risks a permanent block, and a
+         * `rps` is 0.5 — one request every two seconds. A 47,537-product import is a background
+         * task measured in days, not a deadline: after the slug prefilter removes 4,655 rows,
+         * 42,882 products remain and a full hydration run is roughly 24 hours of wall clock —
+         * fine for something that runs once and then only re-syncs what changed. Going faster buys hours and risks a permanent block, and a
          * blocked host yields nothing ever again.
          *
          * `store_text` is FALSE. iHerb's product descriptions are their copy, and republishing

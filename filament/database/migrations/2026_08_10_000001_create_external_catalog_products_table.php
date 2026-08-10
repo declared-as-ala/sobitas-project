@@ -13,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
  * with no DEFAULT, which is why `App\Support\LegacyColumnDefaults` has to exist at all. It is also
  * the single table the entire business runs on.
  *
- * Bolting twenty nullable `source_*` columns onto it, to serve ~61,500 rows of which most will never
+ * Bolting twenty nullable `source_*` columns onto it, to serve ~47,537 rows of which most will never
  * be sellable, is risk with no upside. Here instead:
  *
  *   · rollback is `DELETE FROM external_catalog_products` and cannot touch a real product
@@ -47,7 +47,7 @@ return new class extends Migration
             $table->string('external_part_number', 60)->nullable();
             $table->text('external_url')->nullable();
             // The slug from the sitemap URL. Carries the product name, which is what lets the
-            // relevance prefilter run over 61,500 rows without spending a single HTTP request.
+            // relevance prefilter run over 47,537 rows without spending a single HTTP request.
             $table->string('external_url_name', 190)->nullable();
 
             // ── Raw source values. Refreshable, never customer-facing as-is ───────────────

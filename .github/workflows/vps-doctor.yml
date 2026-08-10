@@ -1,0 +1,154 @@
+name: VPS Doctor (diagnose SSH deploy failures)
+
+# Why this exists
+#
+# Every deploy since 08/08/2026 dies at the same line:
+#
+#     ssh: handshake failed: unable to authenticate, attempted methods [none password]
+#
+# That message is ambiguous, and the ambiguity has cost days. It appears BOTH when the password in
+# VPS_PASSWORD is wrong AND when the server has stopped accepting passwords at all. Those two have
+# opposite fixes, and guessing wrong means updating a secret over and over while nothing changes.
+#
+# The timeline says guessing is not good enough here:
+#
+#     2026-08-08 13:54:55Z   VPS_PASSWORD updated in GitHub
+#     2026-08-08 13:55:08Z   run #929 attempt 3 started — 13 seconds later — and STILL failed
+#
+# A password that was refused thirteen seconds after being set is not a stale password.
+#
+# What this workflow does
+#
+# It asks the SERVER which authentication methods it accepts, using `PreferredAuthentications=none`.
+# The server answers in its refusal — "Permission denied (publickey,password)" lists what it would
+# have taken. No password, no key, no secret value is used to obtain that answer, so this step runs
+# and reports even when every credential we hold is wrong.
+#
+# Read the result like this:
+#
+#     (publickey,password)  → the server DOES take passwords; VPS_PASSWORD is simply wrong
+#     (publickey)           → the server does NOT take passwords; only a key will ever work,
+#                             and updating VPS_PASSWORD again is wasted effort
+#
+# Run it from the Actions tab → "VPS Doctor" → "Run workflow". Nothing is deployed or changed.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ask the server which auth methods it accepts (no credential used)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+        run: |
+          set +e
+
+          PORT="${VPS_PORT:-22}"
+
+          echo "## VPS Doctor" >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          if [ -z "$VPS_HOST" ] || [ -z "$VPS_USER" ]; then
+            echo "❌ VPS_HOST or VPS_USER secret is not set — nothing to test." >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # ── 1. Is the SSH port even reachable? ────────────────────────────────────────────
+          # Distinguishes "server is down / firewalled / IP changed" from "auth is refused".
+          echo "### 1. Reachability" >> "$GITHUB_STEP_SUMMARY"
+          if timeout 15 bash -c "cat < /dev/null > /dev/tcp/$VPS_HOST/$PORT" 2>/dev/null; then
+            echo "✓ TCP connect to port $PORT succeeded — the server is up and reachable." >> "$GITHUB_STEP_SUMMARY"
+          else
+            {
+              echo "❌ Cannot open a TCP connection to port $PORT."
+              echo ""
+              echo "This is NOT a password problem. Either the VPS is off, the IP in VPS_HOST changed,"
+              echo "the SSH port changed, or a firewall is blocking GitHub's runners."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
+          # ── 2. What does the server's SSH banner say? ─────────────────────────────────────
+          BANNER=$(timeout 15 bash -c "exec 3<>/dev/tcp/$VPS_HOST/$PORT; head -c 120 <&3" 2>/dev/null | tr -d '\r')
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 2. Server identity" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${BANNER:-（no banner returned）}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+          # ── 3. THE ANSWER: which auth methods does it accept? ─────────────────────────────
+          # PreferredAuthentications=none offers nothing, so the server refuses and, in refusing,
+          # names every method it WOULD have accepted. This needs no valid credential.
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+          echo "### 3. Accepted authentication methods" >> "$GITHUB_STEP_SUMMARY"
+
+          PROBE=$(ssh \
+            -o PreferredAuthentications=none \
+            -o PubkeyAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ConnectTimeout=15 \
+            -o BatchMode=yes \
+            -p "$PORT" "$VPS_USER@$VPS_HOST" exit 2>&1 | grep -i "permission denied" | head -1)
+
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "${PROBE:-（server did not name its methods）}" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          echo "" >> "$GITHUB_STEP_SUMMARY"
+
+          # ── 4. Turn that into the one action that will actually fix the deploy ────────────
+          echo "### 4. What to do" >> "$GITHUB_STEP_SUMMARY"
+
+          case "$PROBE" in
+            *password*)
+              {
+                echo "**The server accepts passwords.** So the deploy is failing because the value in"
+                echo "the \`VPS_PASSWORD\` secret is not the server's current root password."
+                echo ""
+                echo "Fix it in the browser, no terminal needed:"
+                echo ""
+                echo "1. Hostinger → VPS → **Settings → Root password** → set a new password."
+                echo "   Choose one with **letters and digits only** — the current one contains \`)\`, \`'\`"
+                echo "   and \`#\`, and quote characters are the classic way a password arrives mangled."
+                echo "2. GitHub → Settings → Secrets and variables → Actions → **VPS_PASSWORD** → Update."
+                echo "   Paste with no leading or trailing space, and no newline."
+                echo "3. Actions → re-run the failed deploy."
+              } >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *publickey*)
+              {
+                echo "**The server does NOT accept passwords — only keys.**"
+                echo ""
+                echo "This is the important case: updating \`VPS_PASSWORD\` again cannot possibly work,"
+                echo "no matter how many times it is re-typed. Something on the VPS set"
+                echo "\`PasswordAuthentication no\` (Hostinger does this when an SSH key is attached to"
+                echo "the server), and the deploy will keep failing until a key is used instead."
+                echo ""
+                echo "Fix, in the browser:"
+                echo ""
+                echo "1. Hostinger → VPS → **SSH keys** → the key attached there is the PUBLIC half."
+                echo "   You need the PRIVATE half — the file you downloaded when the key was created,"
+                echo "   which begins \`-----BEGIN OPENSSH PRIVATE KEY-----\`."
+                echo "2. GitHub → Settings → Secrets and variables → Actions → **New repository secret**"
+                echo "   → name it \`VPS_SSH_KEY\` → paste the whole private key including both"
+                echo "   \`-----BEGIN\` and \`-----END\` lines."
+                echo "3. Actions → re-run the failed deploy. The workflows already prefer the key."
+                echo ""
+                echo "If the private key is lost, generate a fresh pair in Hostinger's SSH keys page"
+                echo "and use the new private half."
+              } >> "$GITHUB_STEP_SUMMARY"
+              ;;
+            *)
+              {
+                echo "The server refused without naming its methods, which is unusual."
+                echo "Check the raw probe output in section 3 above."
+              } >> "$GITHUB_STEP_SUMMARY"
+              ;;
+          esac
+
+          echo ""
+          echo "Diagnosis written to the run summary."

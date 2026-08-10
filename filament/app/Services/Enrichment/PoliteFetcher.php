@@ -31,10 +31,11 @@ class PoliteFetcher
     private array $robotsCache = [];
 
     /**
+     * @param  int|null  $maxBytes  overrides enrichment.fetch.max_bytes for this one request
      * @return array{status:int, body:string, url:string, host:string, hash:string}|null
-     *         null when the fetch was refused, blocked, or failed after retries
+     *                                                                                     null when the fetch was refused, blocked, or failed after retries
      */
-    public function get(string $url, array $headers = []): ?array
+    public function get(string $url, array $headers = [], ?int $maxBytes = null): ?array
     {
         $host = $this->host($url);
         if ($host === null) {
@@ -76,11 +77,21 @@ class PoliteFetcher
             }
 
             $body = (string) $response->body();
-            $max = (int) config('enrichment.fetch.max_bytes', 4194304);
+            $max = $maxBytes ?? (int) config('enrichment.fetch.max_bytes', 4194304);
             if (strlen($body) > $max) {
                 // A page this large is a category listing or a bundled app payload, not a product
                 // page worth parsing. Truncating would corrupt the JSON-LD we came for.
-                Log::info('[PoliteFetcher] response over size limit, skipped', ['url' => $url, 'bytes' => strlen($body)]);
+                //
+                // Logged at WARNING, not info. This return is indistinguishable to the caller from
+                // a network failure, so the only way anyone learns that a fetch was dropped purely
+                // for its size is this line — and a caller that treats "no body" as "no results"
+                // turns it into a silent, plausible-looking zero. Callers that legitimately expect
+                // large documents (sitemaps run to ~3.3 MB) pass their own $maxBytes.
+                Log::warning('[PoliteFetcher] response over size limit, skipped', [
+                    'url' => $url,
+                    'bytes' => strlen($body),
+                    'limit' => $max,
+                ]);
 
                 return null;
             }
@@ -246,7 +257,7 @@ class PoliteFetcher
             // a computed 1.97 s wait slept 1.00 s. Every request was up to a second faster than
             // configured, i.e. roughly double the intended rate at rps 0.5.
             //
-            // Invisible at a handful of requests. Across a 61,500-product catalogue run it is the
+            // Invisible at a handful of requests. Across a 47,537-product catalogue run it is the
             // difference between the pace we promised a host and the pace we actually took.
             usleep((int) (min($wait, 30) * 1_000_000));
         }

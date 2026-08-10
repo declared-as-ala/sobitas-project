@@ -16,7 +16,7 @@ use Illuminate\Support\Str;
  * (ApisController.php:613, :833), and brand *slugs* are computed at request time by
  * `App\Support\PublicSlug` loading EVERY brand and comparing `Str::slug($brand->designation_fr)`.
  *
- * Import 61,500 products against that and "Optimum Nutrition", "optimum nutrition" and
+ * Import 47,537 products against that and "Optimum Nutrition", "optimum nutrition" and
  * "Optimum Nutrition®" become three rows. Each gets a fraction of the products, the brand page shows
  * a third of the catalogue, and no error is ever raised.
  *
