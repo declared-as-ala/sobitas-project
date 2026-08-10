@@ -39,6 +39,15 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'admin.protein.tn' },
+      // Imported-catalogue product photography, referenced rather than mirrored.
+      //
+      // next/image REFUSES to render a host that is not listed here — it throws rather than
+      // falling back. The matching server-side allowlist is config/catalog.php
+      // `media.external_hosts`, which stops ImagePath::normalize() stripping the domain off these
+      // URLs and leaving a path that resolves against our own host. BOTH are required: add a CDN
+      // to one and not the other and every imported image silently disappears.
+      { protocol: 'https', hostname: 'cloudinary.images-iherb.com' },
+      { protocol: 'https', hostname: 's3.images-iherb.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'protein.tn' },
       { protocol: 'https', hostname: 'sobitas.tn' },

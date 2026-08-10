@@ -31,6 +31,25 @@ class ImagePath
 
         // Full URL (any domain) → extract only the relative storage path
         if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            // …EXCEPT for image CDNs we deliberately reference rather than mirror.
+            //
+            // This method assumes every absolute URL is one of OUR files that happens to carry a
+            // domain, so it throws the domain away and keeps the path. That is right for
+            // `https://admin.protein.tn/storage/produits/x.webp` and catastrophic for
+            // `https://cloudinary.images-iherb.com/image/upload/…/1.jpg`: the domain is discarded,
+            // the leftover path is resolved against our own host, and every imported product shows
+            // a broken image while every status code stays 200.
+            //
+            // An allowlisted host is already a usable image reference, so it passes through whole.
+            $host = strtolower((string) parse_url($value, PHP_URL_HOST));
+            $external = array_map('strtolower', (array) config('catalog.media.external_hosts', []));
+
+            foreach ($external as $allowed) {
+                if ($host === $allowed || str_ends_with($host, '.'.$allowed)) {
+                    return $value;
+                }
+            }
+
             $path = ltrim(parse_url($value, PHP_URL_PATH) ?? '', '/');
             // Strip /storage/ prefix that Laravel adds
             if (str_starts_with($path, 'storage/')) {

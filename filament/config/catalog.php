@@ -117,6 +117,14 @@ return [
             // "crackers" and "chocolate-bar" were removed: protein cookies and protein chips are
             // real products, and stage 2 rejects the ordinary snacks at no risk.
             'tea-bags', 'coffee-beans', 'essential-oil',
+
+            // Added 10/08/2026. Clustering the unclassified products surfaced a large cosmetic
+            // tail the earlier list did not reach — cream 976, serum 555, butter 520, mask 314.
+            // Phrases rather than bare words, so a topical JOINT & MUSCLE CREAM is not swept up
+            // with a face cream, and "beauty" alone never denies a beauty-from-within supplement.
+            'body-butter', 'shea-butter', 'body-oil', 'bath-oil', 'massage-oil', 'facial-oil',
+            'beauty-mask', 'mud-bath', 'bath-salts', 'haircolor', 'hair-colour-gel',
+            'insect-repellent', 'diaper-cream', 'nail-file', 'cotton-balls', 'shower-cap',
         ],
 
         /**
@@ -224,6 +232,22 @@ return [
         ['sub' => 'articulations', 'any' => ['glucosamine', 'chondroitin', 'msm', 'joint-support', 'joint-formula', 'turmeric', 'curcumin', 'boswellia']],
         ['sub' => 'beaute-cheveux', 'any' => ['hair-skin', 'biotin', 'keratin', 'nail-support']],
         ['sub' => 'antioxydants', 'any' => ['antioxidant', 'resveratrol', 'astaxanthin', 'coq10', 'alpha-lipoic', 'quercetin', 'grape-seed', 'green-tea-extract']],
+
+        // ── Added 10/08/2026 from measurement, not intuition ────────────────────────────
+        // Tokenising the 34,409 products that matched nothing ranked the clusters the shop had
+        // no home for. Each rule below answers one of them. The clusters that are NOT supplements
+        // (cream 976, serum 555, butter 520, mask 314) deliberately get no rule — they are handled
+        // by the deny list, because a category for them would mean selling cosmetics.
+        ['sub' => 'probiotiques', 'any' => ['probiotic', 'acidophilus', 'lactobacillus', 'bifidobacterium', 'bifidus', 'saccharomyces', 'cfu-']],
+        ['sub' => 'digestion', 'any' => ['digestive-enzyme', 'digestive-enzymes', 'digest-', 'psyllium', 'betaine-hcl', 'colon-', 'slippery-elm', 'prebiotic', 'inulin'], 'exact' => ['fiber', 'fibre', 'enzymes']],
+        ['sub' => 'sommeil-stress', 'any' => ['melatonin', 'sleep', 'valerian', 'l-theanine', 'theanine', 'passionflower', 'chamomile', '5-htp', 'rhodiola', 'holy-basil'], 'exact' => ['gaba']],
+        ['sub' => 'immunite', 'any' => ['immune', 'immunity', 'elderberry', 'echinacea', 'mushroom', 'reishi', 'cordyceps', 'chaga', 'lions-mane', 'propolis', 'colostrum', 'olive-leaf', 'oregano-oil', 'andrographis']],
+        ['sub' => 'enfants', 'any' => ['kids', 'children', 'child-', 'infant', 'toddler', 'junior', 'baby-']],
+        ['sub' => 'barres-proteinees', 'any' => ['protein-bar', 'protein-bars', 'energy-bar', 'snack-bar', 'meal-bar', 'builders-bar']],
+        // Broadest of the new ones, so it runs last among them: a named herb that has not already
+        // been claimed by a more specific rule above (turmeric → articulations, ashwagandha and
+        // tribulus → their own, elderberry → immunité).
+        ['sub' => 'plantes-et-herbes', 'any' => ['ginkgo', 'saw-palmetto', 'milk-thistle', 'black-cohosh', 'ginseng', 'nettle', 'dandelion', 'hawthorn', 'red-yeast', 'garlic', 'fenugreek', 'moringa', 'spirulina', 'chlorella', 'wheatgrass', 'noni', 'graviola', 'cat-s-claw', 'devil-s-claw', 'horny-goat', 'bilberry', 'butcher-s-broom', 'burdock', 'goldenseal', 'astragalus', 'schisandra', 'eyebright', 'feverfew', 'yarrow', 'nattokinase', 'berberine', 'bacopa', 'gotu-kola'], 'exact' => ['herb', 'herbs', 'herbal']],
         ['sub' => 'vitamines', 'any' => ['multivitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-']],
         // `not` disqualifies the whole rule. "iron" as a mineral term matched "iron-free" and
         // "no-iron" — products that advertise the ABSENCE of the thing being matched. Filing an
@@ -293,7 +317,41 @@ return [
     | shipping a hotlink to a competitor's CDN.
     */
     'media' => [
+        /**
+         * Reference the source CDN instead of copying every image.
+         *
+         * The owner's call, and technically it is the better one here: iHerb already serves these
+         * through Cloudinary with `f_auto,q_auto` — format negotiated per browser (WebP/AVIF where
+         * supported) and quality tuned per image — at five sizes. Downloading 20,000 JPEGs to
+         * re-encode them ourselves would spend hours of transfer and gigabytes of disk to arrive
+         * somewhere slightly worse.
+         *
+         * The trade-off, stated once: our product pages then depend on a third party's CDN. If
+         * iHerb blocks referrers or changes its URL scheme, every imported image breaks at once —
+         * and this is a competitor's infrastructure, not a neutral host. Switching to local copies
+         * is `CATALOG_MIRROR_IMAGES=true` plus a backfill; nothing else has to change, because
+         * `cover` holds a reference either way.
+         */
         'mirror_images' => env('CATALOG_MIRROR_IMAGES', false),
+
+        /**
+         * Hosts whose absolute URLs survive ImagePath::normalize() intact.
+         *
+         * That method exists to turn `https://admin.protein.tn/storage/x.webp` into `x.webp`, and
+         * it does so for ANY absolute URL. Without this allowlist it would strip the domain off a
+         * CDN URL, leaving a path that resolves against our own host — a broken image on every
+         * imported product, with a 200 on every request.
+         *
+         * These hosts must ALSO be listed in frontend/next.config.mjs `images.remotePatterns`, or
+         * next/image refuses to render them. Two allowlists, both required; changing one without
+         * the other is how images silently stop appearing.
+         */
+        'external_hosts' => [
+            'cloudinary.images-iherb.com',
+            'images-iherb.com',
+        ],
+
+        // Only used when mirror_images is true.
         'max_bytes' => 5 * 1024 * 1024,
         'allowed_mime' => ['image/jpeg', 'image/png', 'image/webp'],
         'directory' => 'produits',
