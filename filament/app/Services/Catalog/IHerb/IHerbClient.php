@@ -185,6 +185,141 @@ class IHerbClient
     }
 
     /**
+     * How large a product PAGE may be. Measured, not guessed.
+     *
+     * Three real responses on 10/08/2026: 2,084,504 / 2,084,214 / 2,046,706 bytes. The default
+     * `enrichment.fetch.max_bytes` is 4 MB, so the pages fit today with about half the budget spare
+     * — but "fits today" is what the sitemap comment above is also about, and an oversize body
+     * returns null, which is indistinguishable from an unreachable host. 6 MB is far enough above
+     * 2.1 MB that ordinary growth cannot quietly reach it while still bounding the memory of a
+     * container that also runs queue workers.
+     */
+    private const PAGE_MAX_BYTES = 6 * 1024 * 1024;
+
+    /**
+     * The product HTML page — the only place the real content lives.
+     *
+     * ── THE CANONICAL SHAPE, CONFIRMED RATHER THAN ASSUMED ────────────────────────────────
+     * `/pr/{urlName}/{id}`, which is what parseProductUrl() has always parsed OUT of the sitemap and
+     * what the v2 payload's own `url` key returns. Checked live for ids 1, 68616 and 46873:
+     *
+     *     https://www.iherb.com/pr/doctor-s-best-5-htp-100-mg-60-veggie-caps/1
+     *
+     * This method PREFERS the stored `external_url`'s path when one is given and only falls back to
+     * composing `/pr/{urlName}/{id}` — because the stored URL is what iHerb itself published in the
+     * sitemap, and a composed one is our idea of what it should look like.
+     *
+     * ── ROBOTS.TXT SAYS YES TO THIS PATH, AND SAYS SO IN WRITING ──────────────────────────
+     * Read in full before this method was written (tn.iherb.com/robots.txt and www.iherb.com/
+     * robots.txt are byte-identical, 3,581 bytes, one `User-agent: *` group plus `ia_archiver`).
+     * Every rule that mentions `/pr` is a rule about something else:
+     *
+     *     Disallow: /pr/*&#47;lib/*    JS bundles under a product — three path segments, not two
+     *     Disallow: /pr/i/           a prefix that no real urlName produces
+     *     Disallow: /pr/p/           likewise
+     *
+     * `/pr/{urlName}/{id}` appears in no Disallow line. Product pages are what iHerb publishes in
+     * the sitemap it advertises in that same file, which would be incoherent otherwise.
+     *
+     * ── ONE RULE THAT DOES BITE, AND IT IS NOT AN EDGE CASE ───────────────────────────────
+     *     Disallow: /*discontinued
+     *     Disallow: /*Discontinued
+     *
+     * A great many iHerb urlNames end in `-discontinued-item` — five of the six ids that returned a
+     * product at all, out of seven probed at random on 10/08/2026: 200, 3000, 12000, 60000 and 90000
+     * were all "-discontinued-item"; 110000 was not; 25000 had no product. Those are FORBIDDEN, and
+     * PoliteFetcher's rule matcher handles the leading wildcard correctly, so it refuses them before
+     * the wire and this method returns status 0. The caller must treat that as a permanent skip
+     * rather than a transient failure — see ExtractExternalProductContentJob, which does.
+     *
+     * @return array{status: int, body: string|null, url: string|null}
+     *                                                                 status 0 means "refused before the wire": robots, an open breaker, or transport.
+     */
+    public function productPage(string $externalId, ?string $urlName, ?string $storedUrl = null): array
+    {
+        $url = self::pageUrl($externalId, $urlName, $storedUrl);
+
+        if ($url === null) {
+            return ['status' => 0, 'body' => null, 'url' => null];
+        }
+
+        $response = $this->fetch($url, ['Accept' => 'text/html,application/xhtml+xml'], self::PAGE_MAX_BYTES);
+
+        if ($response === null) {
+            return ['status' => 0, 'body' => null, 'url' => $url];
+        }
+
+        $status = (int) ($response['status'] ?? 0);
+        if ($status !== 200) {
+            return ['status' => $status, 'body' => null, 'url' => $url];
+        }
+
+        $body = (string) $response['body'];
+
+        // A 200 that is not a product page is an interstitial, a country splash or an error page.
+        // Storing extracted nulls from one would overwrite content that was fine yesterday, so it is
+        // reported as 422 — the same code, with the same permanent meaning, that product() uses.
+        if (! str_contains($body, 'product-overview') && ! str_contains($body, 'product-specs-list')) {
+            return ['status' => 422, 'body' => null, 'url' => (string) ($response['url'] ?? $url)];
+        }
+
+        return ['status' => 200, 'body' => $body, 'url' => (string) ($response['url'] ?? $url)];
+    }
+
+    /**
+     * Which host renders the page, and therefore WHICH LANGUAGE the transcribed text is in.
+     *
+     * ── THIS IS A PRODUCT DECISION, SO IT LIVES IN CONFIG ─────────────────────────────────
+     * iHerb publishes the same product under 101 hreflang alternates and honours the country
+     * subdomain rather than Accept-Language. Measured on product 1:
+     *
+     *     www.iherb.com   302 → tn.iherb.com from a Tunisian IP
+     *     tn.iherb.com    lang="ar-TN", dir="rtl"  — Arabic
+     *     fr.iherb.com    lang="fr"                — French, no redirect
+     *     ca.iherb.com    lang="en-CA"             — English, no redirect
+     *
+     * The default is fr.iherb.com because protein.tn is a French shop. What that buys and what it
+     * costs is written up in config/catalog.php under `content.host`, and the cost is real: iHerb's
+     * French is machine translation, and iHerb says so on the page. IHerbPageExtractor records
+     * which it was on every row rather than leaving it to a comment.
+     */
+    public static function contentHost(): string
+    {
+        $host = trim((string) config('catalog.content.host', 'fr.iherb.com'));
+
+        return $host === '' ? 'fr.iherb.com' : $host;
+    }
+
+    /**
+     * `/pr/{urlName}/{id}` on the configured content host.
+     *
+     * The PATH comes from the stored sitemap URL when there is one — iHerb's own answer to what this
+     * product's address is — and only the host is swapped for the locale we read in. Composing the
+     * path from `urlName` is the fallback for a row discovered before that column existed.
+     */
+    public static function pageUrl(string $externalId, ?string $urlName, ?string $storedUrl = null): ?string
+    {
+        $host = self::contentHost();
+
+        $stored = trim((string) $storedUrl);
+        if ($stored !== '') {
+            $path = parse_url($stored, PHP_URL_PATH);
+            if (is_string($path) && preg_match('~^/pr/[^/]+/\d+/?$~', $path) === 1) {
+                return 'https://'.$host.$path;
+            }
+        }
+
+        $slug = trim((string) $urlName);
+        $id = trim($externalId);
+
+        if ($slug === '' || $id === '' || preg_match('~^\d+$~', $id) !== 1) {
+            return null;
+        }
+
+        return 'https://'.$host.'/pr/'.rawurlencode($slug).'/'.$id;
+    }
+
+    /**
      * The product-image URL iHerb serves.
      *
      * Recorded as a reference, not mirrored by default — see the media notes in

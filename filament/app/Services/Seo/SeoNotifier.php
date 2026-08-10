@@ -177,7 +177,7 @@ class SeoNotifier
      * Resolve the revalidation context (target URLs + secret) for a product, or
      * null when the product has no indexable path or the frontend is unconfigured.
      *
-     * @return array{internal:string,path:string,publicUrl:string,secret:string}|null
+     * @return array{internal:string,path:string,publicUrl:string,secret:string,submit:bool}|null
      */
     protected function buildContext(Product $product): ?array
     {
@@ -198,30 +198,83 @@ class SeoNotifier
             'path'      => $path,
             'publicUrl' => $public . $path,
             'secret'    => $secret,
+            'submit'    => $this->shouldSubmitToIndexNow($product, $path),
         ];
     }
 
     /**
-     * Fire the three refresh calls. Best-effort — the storefront being slow or
+     * May this product's URL be handed to IndexNow?
+     *
+     * ── THE DEFECT THIS CLOSES ────────────────────────────────────────────────────────────────
+     * The sitemap channel got a robots filter and the IndexNow channel did not. sitemapData.ts
+     * refuses to submit a URL whose product carries `seo_robots_index = 0`, and ApisController's
+     * listing projection was extended with that column specifically so it could. Meanwhile
+     * ProductSeoObserver::saved gated on `publier` ALONE and send() below posted every published
+     * product's public URL to /api/indexnow unconditionally — so the exact state
+     * CatalogIHerbPromote is designed to produce, `publier = 1` + `seo_robots_index = 0`, kept the
+     * URL out of the sitemap and simultaneously ASKED Bing, Yandex, Seznam, Naver and Yep to come
+     * and crawl it. What they find is `<meta robots="noindex">`.
+     *
+     * At 100 published imported products that is 100 wasted crawl invitations. At the planned
+     * ~19,000 it is a standing instruction to five search engines to repeatedly fetch pages we have
+     * told them not to index — the fastest way to be treated as a low-quality source by the engines
+     * that actually consume IndexNow.
+     *
+     * ── AND THE OTHER URL THAT MUST NEVER BE SUBMITTED ────────────────────────────────────────
+     * productPath() falls back to `/shop/{slug}` when no subcategory resolves. The storefront 301s
+     * that to the canonical, so submitting it asks an engine to crawl a redirect — Search Console's
+     * "Page with redirect" bucket, and for the same reason sitemapData.ts drops those products
+     * rather than emitting the /shop form. The revalidate call still wants that path (the page
+     * really is served there, via the redirect target's cache), so this gates ONLY the submission.
+     *
+     * `effective_seo_robots_index` rather than the raw column: NULL means "never set", which is
+     * indexable, and that accessor is the same one ProductDetailResource emits as
+     * `seo.robots.index` — so what is submitted and what the page renders cannot disagree.
+     */
+    protected function shouldSubmitToIndexNow(Product $product, string $path): bool
+    {
+        if (str_starts_with($path, '/shop/')) {
+            return false;
+        }
+
+        return (bool) $product->effective_seo_robots_index;
+    }
+
+    /**
+     * Fire the refresh calls. Best-effort — the storefront being slow or
      * unreachable must never surface as an error to the caller.
      *
-     * @param  array{internal:string,path:string,publicUrl:string,secret:string}  $ctx
+     * TWO per-product HTTP calls at most, and only ONE for a product that is published but not
+     * indexable. filament/tests/catalog/promotion-gate-check.php asserts that count against this
+     * method's source and holds CatalogIHerbPromote's pre-flight warning to it, so a third
+     * per-product call cannot be added here without a harness failing.
+     *
+     * @param  array{internal:string,path:string,publicUrl:string,secret:string,submit:bool}  $ctx
      */
     private static function send(array $ctx): void
     {
         try {
             // 1) Refresh the exact product page (price / stock / stars) immediately. Per product:
-            //    it names one path and no other call can stand in for it.
+            //    it names one path and no other call can stand in for it. Unconditional — a
+            //    noindexed product is still ON the storefront and still sellable, so its cached
+            //    page must follow its price and stock exactly like any other.
             Http::withToken($ctx['secret'])->connectTimeout(2)->timeout(4)
                 ->post($ctx['internal'] . '/api/revalidate?path=' . rawurlencode($ctx['path']));
             // 2) Bust the cached sitemap so <lastmod> reflects the change at once (Google's signal).
             //    Site-wide, therefore coalesced — one bust per process per minute covers every
             //    product in a wave. See bustSitemapCache(). It swallows its own failures, so a
             //    storefront that rejects it cannot stop the IndexNow ping below from going out.
+            //    Still sent for a noindexed product: going noindex REMOVES a URL from the sitemap,
+            //    which is a change Google should see promptly.
             self::bustSitemapCache($ctx['internal'], $ctx['secret']);
-            // 3) Tell Bing/Yandex/etc. to recrawl now (Google relies on the fresh sitemap instead).
-            Http::withToken($ctx['secret'])->connectTimeout(2)->timeout(4)
-                ->asJson()->post($ctx['internal'] . '/api/indexnow', ['urls' => [$ctx['publicUrl']]]);
+            // 3) Tell Bing/Yandex/etc. to recrawl now (Google relies on the fresh sitemap instead) —
+            //    but ONLY for a URL we are actually offering for indexing. See
+            //    shouldSubmitToIndexNow(): a page rendering <meta robots="noindex">, or a /shop/
+            //    path the storefront 301s, must never be pushed to a search engine.
+            if ($ctx['submit']) {
+                Http::withToken($ctx['secret'])->connectTimeout(2)->timeout(4)
+                    ->asJson()->post($ctx['internal'] . '/api/indexnow', ['urls' => [$ctx['publicUrl']]]);
+            }
         } catch (\Throwable $e) {
             Log::warning('SeoNotifier failed', ['url' => $ctx['publicUrl'], 'error' => $e->getMessage()]);
         }

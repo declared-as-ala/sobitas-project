@@ -43,10 +43,17 @@ jobs:
           test -f frontend/Dockerfile || (echo "❌ frontend/Dockerfile not found" && exit 1)
           echo "✓ frontend/Dockerfile found"
 
+      # Node 24, matching frontend/Dockerfile and frontend/.nvmrc.
+      #
+      # `npm run build` runs the prebuild chain, and scripts/check-sitemap-crawl.mjs imports
+      # src/util/sitemapCrawl.ts by its .ts path so the check drives the shipping code. Type
+      # stripping exists from Node 22.6; on Node 20 — what this step used to pin — the runtime
+      # rejects the flag with exit 9 and the build never reaches next build. The Dockerfile carries
+      # the same pin, because the image build runs the same npm script.
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 

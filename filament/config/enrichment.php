@@ -159,7 +159,21 @@ return [
          * stronger domain. We take facts — identity, brand, category, pack size — and write our
          * own French titles from them.
          */
+        /**
+         * `iherb.com` covers EVERY iherb subdomain, and that now matters for pacing as well as
+         * policy.
+         *
+         * The importer talks to two of them: `tn.iherb.com` for the identity JSON and — since
+         * `catalog:iherb:content` — `fr.iherb.com` for the product page, because iHerb serves the
+         * page's language by country subdomain and protein.tn is a French shop.
+         *
+         * PoliteFetcher::bucket() resolves both to THIS key, so they share one token bucket and one
+         * circuit breaker. Without that they would be two independent limiters, each politely
+         * pacing itself at 1.5 req/s while iHerb received 3.
+         */
         'iherb.com' => ['trust' => 0.70, 'rps' => (float) env('CATALOG_IHERB_RPS', 1.5), 'store_text' => false, 'type' => 'retailer'],
+        // Shadowed by the entry above (str_ends_with '.iherb.com' matches first) and kept only as
+        // documentation of which host the identity endpoint lives on. Same values, so nothing moves.
         'tn.iherb.com' => ['trust' => 0.70, 'rps' => (float) env('CATALOG_IHERB_RPS', 1.5), 'store_text' => false, 'type' => 'retailer'],
         // Static image CDN — no crawl budget concern, but still paced.
         'cloudinary.images-iherb.com' => ['trust' => 0.70, 'rps' => 2.0, 'store_text' => false, 'type' => 'cdn'],

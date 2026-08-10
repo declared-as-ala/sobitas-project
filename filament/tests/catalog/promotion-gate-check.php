@@ -948,12 +948,66 @@ check(
         .'step has nothing to measure without recomposing',
 );
 
+/*
+ * ── THIS CHECK USED TO NAME ImportedProductContent::countWords() DIRECTLY ─────────────────
+ * It asserted that bodyWords() called that counter on `$product->description_fr`. bodyWords() now
+ * calls ImportedSourceContent::renderedWordCount(), which calls that same counter on that same
+ * column and ADDS the transcribed suggested-use, ingredients and warnings blocks — which live on
+ * the staging row and render as their own sections on both product routes.
+ *
+ * The old expectation was stale rather than the change wrong, and the reason is the property the
+ * check was protecting in the first place: the gate must measure THE PAGE THAT RENDERS. Once the
+ * page grew three sections that are not in `description_fr`, a bodyWords() that still measured only
+ * that column was measuring a page that does not exist — it would hold a product at
+ * seo_robots_index = 0 for being thin while a customer read three more paragraphs of it.
+ *
+ * So the check is widened rather than relaxed: it still demands the live body and still demands the
+ * staged fallback, and it now additionally demands that the staging row reach the measurement at
+ * all. Asserting `ImportedProductContent::countWords(` here again would be asserting the OLD
+ * behaviour, which is exactly what a stale expectation does.
+ */
 check(
     'bodyWords() prefers the LIVE product body and falls back to the staged count',
     str_contains($bodyWords, '$product->description_fr')
         && str_contains($bodyWords, '$row->composed_word_count')
-        && str_contains($bodyWords, 'ImportedProductContent::countWords('),
+        && str_contains($bodyWords, 'ImportedSourceContent::renderedWordCount('),
     'trusting the staged number alone means copy written in the admin never earns the product an index',
+);
+
+check(
+    'bodyWords() measures the transcribed sections too, not just description_fr',
+    str_contains($bodyWords, '$row->getAttributes()'),
+    'the suggested-use, ingredients and warnings blocks render on BOTH product routes and are stored '
+        .'on the staging row, not in description_fr. A gate that cannot see them measures a page that '
+        .'is not the page, and holds back exactly the products the content pass was built to publish',
+);
+
+/*
+ * The pre-filter that decides which held-back products are even SCANNED has to move with the
+ * measurement, and this is the one place where getting it wrong is silent.
+ *
+ * reindexPublished() cannot pull every body out of the database on every wave, so it pre-filters on
+ * character length — a word needs at least one character, so fewer than N characters cannot be N
+ * words. That is safe only while it bounds the SAME total bodyWords() computes. The moment the count
+ * grew past description_fr, a bound over description_fr alone stopped being a lower bound: a product
+ * with a 60-character description and 900 words of transcribed warnings clears the gate and would
+ * never have been looked at. The ratchet would have refused, silently and for ever, to index
+ * precisely the products this content pass exists to produce.
+ */
+$lowerBound = methodSource($command, 'function bodyLengthLowerBoundSql(');
+// Read here rather than reusing the ratchet section's $reindex, which is not extracted until much
+// further down the file — this check belongs beside the measurement it is about, not beside the
+// method it constrains.
+$reindexSource = methodSource($command, 'function reindexPublished(');
+
+check(
+    'the re-index pre-filter bounds the SAME total bodyWords() measures',
+    str_contains($reindexSource, '$this->bodyLengthLowerBoundSql()')
+        && str_contains($lowerBound, 'products.description_fr')
+        && str_contains($lowerBound, 'ImportedSourceContent::SECTION_COLUMNS'),
+    'a pre-filter that excludes a product which would have passed is not an optimisation, it is a '
+        .'silent refusal — and it must be derived from the section list rather than typed out, or the '
+        .'next section added is one the ratchet cannot see',
 );
 
 check(
@@ -1035,6 +1089,187 @@ check(
             .'the reason the third one is per-wave',
         $perProductPosts,
     ),
+);
+
+/*
+|--------------------------------------------------------------------------
+| The two channels must agree about what is indexable
+|--------------------------------------------------------------------------
+| The sitemap channel got a robots filter and the IndexNow channel did not. sitemapData.ts refuses
+| to submit a URL whose product carries seo_robots_index = 0 — and ApisController::PRODUCT_LISTING
+| was extended with that column specifically so it could — while ProductSeoObserver::saved gated on
+| `publier` alone and SeoNotifier::send() posted every published product's URL to /api/indexnow
+| unconditionally. So the exact state this command is built to produce, (publier=1,
+| seo_robots_index=0), kept a URL OUT of the sitemap and simultaneously asked Bing, Yandex, Seznam,
+| Naver and Yep to come and crawl it — where they find <meta robots="noindex">. At the planned
+| ~19,000 products that is a standing instruction to five engines to crawl pages we told them not to
+| index.
+|
+| Asserted against the source, like the ordering invariants above, because "which call sits inside
+| which `if`" is not a value any function returns.
+*/
+echo "\nSeoNotifier — IndexNow may only be told about genuinely indexable URLs\n\n";
+
+$shouldSubmit = methodSource($notifier, 'function shouldSubmitToIndexNow(');
+$buildContext = methodSource($notifier, 'function buildContext(');
+
+check(
+    'SeoNotifier::shouldSubmitToIndexNow() exists',
+    $shouldSubmit !== '',
+    'the indexability gate is gone; every published product URL is being pushed to IndexNow again, '
+        .'including the ones rendering <meta robots="noindex">',
+);
+
+check(
+    'the gate reads effective_seo_robots_index, the same accessor the PDP renders from',
+    str_contains($shouldSubmit, 'effective_seo_robots_index'),
+    'reading the raw column instead would treat NULL (never set, therefore indexable) as noindex, or '
+        .'let what is submitted disagree with what the page renders',
+);
+
+check(
+    'the gate also refuses the /shop/ fallback path, which the storefront 301s',
+    str_contains($shouldSubmit, "'/shop/'") || str_contains($shouldSubmit, '"/shop/"'),
+    'productPath() returns /shop/{slug} when no subcategory resolves; submitting it asks an engine to '
+        .'crawl a redirect — the same URL sitemapData.ts deliberately drops',
+);
+
+check(
+    'buildContext() carries the decision into the context send() reads',
+    str_contains($buildContext, 'shouldSubmitToIndexNow(') && str_contains($buildContext, "'submit'"),
+    'send() cannot gate on a flag buildContext() does not compute',
+);
+
+/*
+ * The revalidate call must stay UNCONDITIONAL and the IndexNow call must be the guarded one. A
+ * noindexed product is still on the storefront and still sellable, so its cached page must follow
+ * its price and stock exactly like any other; it is only the crawl invitation that is wrong.
+ * Getting these two the wrong way round would be a stock bug wearing an SEO fix's clothes.
+ */
+$indexNowAt = strpos($send, '/api/indexnow');
+$revalidateAt = strpos($send, '/api/revalidate');
+$submitGuardAt = strpos($send, "if (\$ctx['submit'])");
+
+check(
+    'send() guards the IndexNow post behind the submit flag',
+    $submitGuardAt !== false && $indexNowAt !== false && $submitGuardAt < $indexNowAt,
+    'the IndexNow post is not inside the indexability guard',
+);
+
+check(
+    'send() does NOT guard the page revalidation — a noindexed product still sells',
+    $revalidateAt !== false && ($submitGuardAt === false || $revalidateAt < $submitGuardAt),
+    'the revalidate call moved inside the indexability guard, so a held-back product would keep '
+        .'serving a stale price and a stale stock chip',
+);
+
+$observerPath = __DIR__.'/../../app/Observers/ProductSeoObserver.php';
+$observer = is_file($observerPath) ? (string) file_get_contents($observerPath) : '';
+$savedSource = methodSource($observer, 'function saved(');
+
+check(
+    'ProductSeoObserver::saved() fires on seo_robots_index, so the noindex→indexable flip notifies',
+    str_contains($savedSource, "'seo_robots_index'"),
+    'flipping the robots flag would change the sitemap and the rendered <meta robots> and tell nobody: '
+        .'the storefront would keep serving the cached noindex HTML and the sitemap its stale copy for '
+        .'up to an hour. It is also the only thing that makes catalog:iherb:promote --reindex visible.',
+);
+
+check(
+    'ProductSeoObserver::saved() still gates on publier — an unpublished product has no live page',
+    str_contains($savedSource, '! $product->publier'),
+    'the publier gate is what stops drafts revalidating and submitting URLs that are not on the site',
+);
+
+/*
+|--------------------------------------------------------------------------
+| The ratchet has to exist, and the command has to describe the one that exists
+|--------------------------------------------------------------------------
+| reportIndexing() told the operator: "Write real copy into description_fr and the next --publish
+| wave indexes it — the gate measures the LIVE body." Nothing could do that. publishBacklog()
+| selects `publier = 0`; publish() is only reached for a first publication; and seo_robots_index is
+| written nowhere else in filament/app but the Filament toggle. A product published at (1, 0) — every
+| imported product until somebody writes copy — could never become indexable by any automatic route,
+| so following the printed instruction correctly produced nothing.
+*/
+echo "\nCatalogIHerbPromote — the noindex→indexable ratchet\n\n";
+
+$reindex = methodSource($command, 'function reindexPublished(');
+
+check(
+    'reindexPublished() exists — the pass that re-measures an ALREADY-published product',
+    $reindex !== '',
+    'without it, publish() and publishBacklog() are the only writers of seo_robots_index and neither '
+        .'can ever reach a product that is already published',
+);
+
+check(
+    'it selects publier=1 AND seo_robots_index=0 — the exact pair publish() writes below the gate',
+    str_contains($reindex, "where('publier', 1)") && str_contains($reindex, "where('seo_robots_index', 0)"),
+    'the selection no longer names the held-back state',
+);
+
+check(
+    'it treats a NULL robots column as ALREADY indexable, not as a candidate',
+    ! preg_match("~whereNull\('seo_robots_index'\)~", $reindex),
+    'on an already-published product NULL means "never set", which '
+        .'Product::getEffectiveSeoRobotsIndexAttribute() reads as indexable — such a product is already '
+        .'in the sitemap and re-saving it would fire a pointless notification for every one of them',
+);
+
+check(
+    'it can only ever reach IMPORTED products, so the 49 legacy admin-noindexed products are safe',
+    str_contains($reindex, 'ExternalCatalogProduct::query()') && str_contains($reindex, 'IHerbClient::PROVIDER'),
+    'selection must start at external_catalog_products. The 309 legacy hand-made products have no '
+        .'staging row, which is what makes them unreachable by construction rather than by a filter '
+        .'somebody could delete — 49 of them are deliberately noindexed by a human today',
+);
+
+check(
+    'a product that is still short is NOT saved, so a no-op pass costs no requests and no wave',
+    str_contains($reindex, "if (! \$verdict['applied'])") && str_contains($reindex, 'continue;'),
+    'measuring must be free; only an actual flip may cost a save, two HTTP calls and a slot in the wave',
+);
+
+/*
+ * Anchored on the CALLS, not on the names. Both methods are also named in promote()'s comments —
+ * which explain why the ordering matters — and a check that read those would be asserting the
+ * position of the explanation rather than the position of the code.
+ */
+$reindexAt = strpos($promote, '$this->reindexPublished(');
+$backlogAt = strpos($promote, '$this->publishBacklog(');
+
+check(
+    'promote() runs the re-measure pass BEFORE the backlog',
+    $reindexAt !== false && $backlogAt !== false && $reindexAt < $backlogAt,
+    'given a bounded wave, a product that already exists and has just been given real copy is a page '
+        .'that is ready now, while a backlog product is one more thin page. Publishing first would '
+        .'spend the wave on the thin ones',
+);
+
+$reportIndexingSource = methodSource($command, 'function reportIndexing(');
+
+/*
+ * Comments are stripped before the negative half, for the same reason the pre-flight check above is
+ * scoped to the warning string: the method explains the defect by quoting the sentence it used to
+ * print, and a check that forbade those words anywhere in the method would forbid the explanation
+ * along with the defect. What must be true is narrower — the string an operator READS names a
+ * command that exists.
+ */
+$reportIndexingCode = preg_replace(['~/\*[\s\S]*?\*/~', '~(^|[^:])//.*$~m'], ['', '$1'], $reportIndexingSource);
+
+check(
+    'the instruction printed to the operator names a command that can actually do it',
+    str_contains($reportIndexingCode, '--reindex')
+        && ! str_contains($reportIndexingCode, 'next --publish wave indexes it'),
+    'reportIndexing() is printing the old unreachable promise. Whatever it tells somebody to do has to '
+        .'be something this command can do',
+);
+
+check(
+    'the --reindex flag is declared on the command signature',
+    str_contains($command, '{--reindex :'),
+    'the summary points at a flag that does not exist',
 );
 
 echo "\n".($failed === 0 ? 'ALL PASS' : $failed.' FAILED')."\n\n";

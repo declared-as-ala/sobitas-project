@@ -120,6 +120,33 @@ export interface Product {
     flavour?: string | null;
     /** The CDN cover URL; the same value already in `cover`. Not rendered as a second image. */
     image_url?: string | null;
+    /**
+     * The transcribed source PAGE — the manufacturer's own blocks, as opposed to facts read out of
+     * the product name above.
+     *
+     * NULL whenever the row has nothing publishable, which includes every legacy product (no
+     * staging row), every row whose page has not been read yet, and every row whose stored
+     * transcription is not in French. The API decides all of that; nothing on this side re-decides
+     * it, and nothing here may be reconstructed from another field.
+     *
+     * The manufacturer's OVERVIEW is deliberately absent: promotion folded it into
+     * `description_fr`, which is already rendered as the page's description on both routes.
+     */
+    content?: {
+      /** Prose blocks with our French heading and the source's verbatim HTML, in render order. */
+      sections?: Array<{ key: string; heading: string; html: string }> | null;
+      /** The Supplement Facts panel as an HTML table. Rendered in the page's nutrition slot. */
+      nutrition_html?: string | null;
+      /** Specification rows, merged into the same list as `format` and `flavour`. */
+      specs?: Array<{ key: string; label: string; value: string }> | null;
+      /** Product photographs the source page listed. Already size-normalised by the API. */
+      gallery?: string[] | null;
+      /**
+       * One sentence saying the text was transcribed, whether the French is a machine translation,
+       * and that the printed label governs. Composed server-side so both routes say it identically.
+       */
+      attribution?: string | null;
+    } | null;
   } | null;
   /** Server-built schema.org Product graph (preferred over client-side `buildProductJsonLd`). */
   json_ld_product?: Record<string, unknown> | null;

@@ -582,10 +582,45 @@ class ApisController extends Controller
                  * Column-limited on purpose. The staging table also holds a source URL to a
                  * competitor, an upstream rating we are forbidden to surface, and the whole raw
                  * payload; a bare `with('externalCatalogSource')` would put all of it in a public
-                 * JSON response. Only the four transcribed facts the page is allowed to print are
+                 * JSON response. Only the transcribed facts the page is allowed to print are
                  * selected, and `product_id` because Eloquent cannot match a hasOne without it.
+                 *
+                 * ── THE TRANSCRIBED PAGE CONTENT, AND WHAT IS STILL NOT HERE ────────────────
+                 * Migration 2026_08_10_000009 added what the iHerb PRODUCT PAGE carries, and the
+                 * blocks a customer reads are selected below. Absent, each for a stated reason
+                 * (ImportedSourceContent's class docblock carries the argument): `source_content_url`
+                 * (a link to the shop we sourced from — the same decision already recorded for
+                 * `external_url`), `source_manufacturer_url` (an unreviewed outbound link on ~19,000
+                 * pages), `source_spec_shipping_weight`, `source_spec_actual_weight` and
+                 * `source_spec_first_available` (facts about THEIR logistics and THEIR catalogue —
+                 * the two weights are the same number on a real product, see
+                 * ImportedSourceContent::SPEC_COLUMNS), `source_spec_package_quantity` (the pack
+                 * size again, in their words, next to ours), `source_content_excerpt` (4,000
+                 * characters of debugging markup) and every rating column.
+                 *
+                 * `source_overview_html` is absent for a different reason: it is folded into
+                 * `products.description_fr`, which this endpoint returns, so selecting it here would
+                 * ship the manufacturer's paragraph twice and invite a view to render it twice.
+                 *
+                 * THAT FOLD HAPPENS AT ONE MOMENT ONLY — Product::create() in CatalogIHerbPromote —
+                 * so it is true of a product promoted AFTER its page was read, and false of one
+                 * promoted before. For the second kind, `catalog:iherb:promote --recompose` is what
+                 * writes the overview (and the barcode, and seo_schema_description) into the product;
+                 * until it has run, those pages carry the composed body alone. This projection is
+                 * correct either way: it never carries the overview, and description_fr always does
+                 * once the fold has happened.
+                 *
+                 * `source_content_locale` and `source_content_translated` are not decoration. The
+                 * first is the gate — ImportedSourceContent publishes nothing whose stored language
+                 * is not French — and the second is what makes the page able to say that its French
+                 * is a machine translation, which on text containing dosage and contraindications is
+                 * not optional.
                  */
-                'externalCatalogSource:id,product_id,pack_size,pack_unit,flavour,source_image_url',
+                'externalCatalogSource:id,product_id,pack_size,pack_unit,flavour,source_image_url'
+                    .',source_suggested_use_html,source_other_ingredients_html,source_warnings_html'
+                    .',source_supplement_facts_html,source_gallery_images'
+                    .',source_spec_dimensions'
+                    .',source_content_locale,source_content_translated',
             ])
             ->first();
 

@@ -711,8 +711,11 @@ final class ImportedProductContent
      *     pack_unit?: ?string,
      *     flavour?: ?string,
      *     reference?: ?string,
-     *     identity?: ?string
-     * }  $facts  every key optional; every absent key removes the sentence that needed it
+     *     identity?: ?string,
+     *     page_has_nutrition_panel?: bool
+     * }  $facts  every key optional; every absent key removes the sentence that needed it.
+     *            `page_has_nutrition_panel` is the one key that is not a fact about the product —
+     *            see the note beside it in $available.
      * @return array{
      *     description_fr: ?string,
      *     seo_title: ?string,
@@ -858,6 +861,24 @@ final class ImportedProductContent
             'flavour' => $flavour,
             'category' => $catLabel,
             'reference' => $reference,
+            /*
+             * NOT a fact about the product — a fact about the PAGE, and the only one this class is
+             * told.
+             *
+             * The `label_scope` slot says, in every one of its frames, that no nutritional value is
+             * published for this product because nobody has read its label. That was true of every
+             * imported product for as long as this class has existed. It stops being true the moment
+             * the page carries a transcribed Supplement Facts panel — and it then becomes precisely
+             * the defect the "ONLY DURABLE FACTS" section above was written to prevent: a stored
+             * sentence contradicting the page it is printed on, exactly like a stored "disponible"
+             * next to a RUPTURE badge.
+             *
+             * So the caller, which is the only party that knows what the page will render, says so,
+             * and bank() drops the slot. `label` is deliberately KEPT: "la composition et les
+             * conseils d'utilisation figurent sur l'emballage d'origine" is still true beside a
+             * transcribed panel, and is in fact the right disclaimer to have next to one.
+             */
+            'nutrition_panel' => ($facts['page_has_nutrition_panel'] ?? false) === true,
         ];
 
         $paragraphs = [];
@@ -925,6 +946,14 @@ final class ImportedProductContent
             'reference' => $resolved['reference'] ?? null,
             // Stable across a normaliser change; see the note at the call site in compose().
             'identity' => $row['external_part_number'] ?? $row['external_product_id'] ?? null,
+            /*
+             * Passed by the CALLER rather than derived from $row here, and that is deliberate: the
+             * derivation lives in ImportedSourceContent, which applies the language gate, and this
+             * class must not name it. Every harness that require()s ImportedProductContent on its
+             * own — promotion-gate-check.php does — would then need a second require to avoid a
+             * fatal at call time. A defaulted bool costs nothing and keeps this file loadable alone.
+             */
+            'page_has_nutrition_panel' => ($resolved['page_has_nutrition_panel'] ?? false) === true,
         ]);
     }
 
@@ -1089,6 +1118,12 @@ final class ImportedProductContent
         }
 
         if ($slot === 'form' && $available['form'] === null) {
+            return null;
+        }
+
+        // The page publishes a Supplement Facts panel, so the sentence that says none is published
+        // has nothing left to be true about. See the `nutrition_panel` note in compose().
+        if ($slot === 'label_scope' && ($available['nutrition_panel'] ?? false) === true) {
             return null;
         }
 

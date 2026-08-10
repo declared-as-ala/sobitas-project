@@ -58,8 +58,23 @@
 
 require __DIR__.'/../../app/Services/Content/ProductContentGenerator.php';
 require __DIR__.'/../../app/Services/Catalog/ImportedProductContent.php';
+/*
+ * Section 9 — the promotion-time content decision.
+ *
+ * ImportedSourceContent is the class that decides what of a transcribed source page a product page
+ * publishes, and it is framework-free for the same reason everything else here is: it must be
+ * checkable before deploy with no vendor/ and no database. Gtin and IHerbPageExtractor come with it
+ * so the section can drive REAL extractor output over the committed fixtures rather than a
+ * hand-written imitation of it — the whole point of the section is that the two ends of the pipeline
+ * agree, and an invented middle would prove nothing about that.
+ */
+require __DIR__.'/../../app/Services/Catalog/ImportedSourceContent.php';
+require_once __DIR__.'/../../app/Support/Gtin.php';
+require_once __DIR__.'/../../app/Services/Catalog/IHerb/IHerbPageExtractor.php';
 
+use App\Services\Catalog\IHerb\IHerbPageExtractor;
 use App\Services\Catalog\ImportedProductContent;
+use App\Services\Catalog\ImportedSourceContent;
 
 if (! function_exists('env')) {
     function env(string $key, mixed $default = null): mixed
@@ -585,6 +600,573 @@ echo "        would be a check that rewards padding. Promotion should read word_
 echo "        seo_robots_index accordingly. These counts are LOWER than they once were, on purpose:\n";
 echo "        the import and brand-range sentences that used to pad them asserted facts we do not\n";
 echo "        hold, and a shorter true page beats a longer plausible one.\n";
+
+/*
+|--------------------------------------------------------------------------
+| 9. THE PROMOTION-TIME CONTENT DECISION — with a source description, and without one
+|--------------------------------------------------------------------------
+|
+| Everything above this line is about the composed copy, which exists because an imported product
+| had no description. It now can have one: `source_overview_html` holds the manufacturer's own
+| overview, transcribed off the product page. That changes what promotion writes into
+| `products.description_fr`, what the API returns, what both product routes render, and what the
+| indexing gate measures — four things that must not be able to disagree.
+|
+| The section is deliberately organised around the two states rather than around the methods:
+|
+|   ABSENT  — the permanent state of all 309 legacy hand-made products, and the current state of
+|             every imported row whose page has not been read yet. The requirement is not "it works";
+|             it is that the output is BYTE-IDENTICAL to what it was before any of this existed.
+|             Anything else is a change to 309 live pages that earn money.
+|
+|   PRESENT — the new path. The manufacturer's prose leads, the composed block supports it, and the
+|             one composed sentence that the new content makes FALSE is dropped rather than printed
+|             above the panel it denies.
+|
+| The fixtures are the real ones from tests/catalog/fixtures/iherb, driven through the real
+| extractor, mapped to columns exactly as ExtractExternalProductContentJob::store() maps them. A
+| hand-written row would let this section pass while the pipeline that fills those columns produced
+| something else.
+*/
+echo "\nPromotion-time content decision — source description absent\n";
+
+/** A staging row exactly as it looks before the content pass has ever run against it. */
+$rowNoContent = [
+    'normalized_title' => 'Optimum Nutrition Gold Standard 100% Whey – Double Rich Chocolate – 2,27 kg',
+    'source_brand_name' => 'Optimum Nutrition',
+    'pack_size' => 2.27,
+    'pack_unit' => 'kg',
+    'flavour' => 'Double Rich Chocolate',
+    'external_part_number' => 'ON-02046',
+];
+
+$composedOnly = ImportedProductContent::fromStagingRow($rowNoContent, [
+    'brand' => 'Optimum Nutrition',
+    'sub_category_slug' => 'whey-proteine',
+    'sub_category_label' => 'Whey protéine',
+    'category_label' => 'Protéines',
+])['description_fr'];
+
+check(
+    'a row with no transcribed content publishes nothing at all',
+    ImportedSourceContent::overviewHtml($rowNoContent) === null
+        && ImportedSourceContent::sections($rowNoContent) === []
+        && ImportedSourceContent::nutritionHtml($rowNoContent) === null
+        && ImportedSourceContent::specs($rowNoContent) === []
+        && ImportedSourceContent::gallery($rowNoContent) === []
+        && ImportedSourceContent::attribution($rowNoContent) === null
+        && ImportedSourceContent::schemaDescription($rowNoContent) === null,
+    'this is the state of every one of the 309 legacy products, permanently, and of every imported '
+        .'row whose page has not been read yet',
+);
+
+check(
+    'the body is the composed block, byte for byte — no wrapper, no separator, no marker',
+    ImportedSourceContent::body(null, $composedOnly) === $composedOnly,
+    'promotion must write the SAME string it wrote before this pipeline existed, or every product '
+        .'already promoted differs from every product promoted after the deploy for no reason',
+);
+
+check(
+    'the 309 case: no staging row at all is not an error and produces no body',
+    ImportedSourceContent::body(null, null) === null
+        && ImportedSourceContent::publishable([]) === false
+        && ImportedSourceContent::sections([]) === []
+        && ImportedSourceContent::gallery([]) === []
+        && ImportedSourceContent::renderedWordCount(null, []) === 0,
+    'a hand-made product is handed [] by every caller; every accessor has to answer "nothing" rather '
+        .'than reach for a key that is not there',
+);
+
+check(
+    'the word count with no transcribed sections is exactly the old count of description_fr',
+    ImportedSourceContent::renderedWordCount($composedOnly, $rowNoContent)
+        === ImportedProductContent::countWords((string) $composedOnly),
+    'the indexing gate must not move for a product whose page did not change. A gate that reads '
+        .'differently after a deploy re-decides seo_robots_index on products nobody touched',
+);
+
+check(
+    'without a nutrition panel the label_scope sentence is still composed',
+    str_contains((string) $composedOnly, 'valeur nutritionnelle')
+        || str_contains((string) $composedOnly, 'tableau nutritionnel')
+        || str_contains((string) $composedOnly, 'chiffre nutritionnel')
+        || str_contains((string) $composedOnly, 'Les valeurs nutritionnelles ne sont ajoutées'),
+    'the sentence explaining why the page carries no nutrition panel is true — and must stay — on a '
+        .'product that has no panel. Dropping it unconditionally would remove a true policy statement',
+);
+
+echo "\nPromotion-time content decision — source description present\n";
+
+/**
+ * The real fixture, through the real extractor, mapped exactly as the job maps it.
+ *
+ * The map is a copy of ExtractExternalProductContentJob::store()'s, restricted to the columns this
+ * section reads. page-extractor-check.php is what holds THAT map to the extractor's FIELDS and to
+ * the migration; what matters here is that this section is fed the same vocabulary the database
+ * actually receives, so a column renamed on one side cannot pass on the other.
+ *
+ * @return array<string, mixed>
+ */
+$stagingRowFromFixture = static function (string $fixture): array {
+    $html = (string) file_get_contents(__DIR__.'/fixtures/iherb/'.$fixture);
+    $extracted = (new IHerbPageExtractor())->extract($html);
+
+    return [
+        'source_overview_html' => $extracted['overview_html'],
+        'source_suggested_use_html' => $extracted['suggested_use_html'],
+        'source_other_ingredients_html' => $extracted['other_ingredients_html'],
+        'source_warnings_html' => $extracted['warnings_html'],
+        'source_supplement_facts_html' => $extracted['supplement_facts_html'],
+        'source_gallery_images' => $extracted['gallery_image_urls'],
+        'source_spec_first_available' => $extracted['spec_first_available'],
+        'source_spec_shipping_weight' => $extracted['spec_shipping_weight'],
+        'source_spec_package_quantity' => $extracted['spec_package_quantity'],
+        'source_spec_dimensions' => $extracted['spec_dimensions'],
+        'source_spec_actual_weight' => $extracted['spec_actual_weight'],
+        'source_gtin' => $extracted['gtin'],
+        'source_content_locale' => $extracted['content_locale'],
+        'source_content_translated' => $extracted['content_machine_translated'],
+        'source_content_word_count' => $extracted['content_word_count'],
+    ];
+};
+
+$fr1 = $stagingRowFromFixture('fr-1-doctors-best-5-htp.html');
+$fr68616 = $stagingRowFromFixture('fr-68616-optimum-creatine.html');
+$fr110000 = $stagingRowFromFixture('fr-110000-sassy-wonder-wheel.html');
+$en1 = $stagingRowFromFixture('en-1-doctors-best-5-htp.html');
+$ar1 = $stagingRowFromFixture('ar-1-doctors-best-5-htp.html');
+
+check(
+    'the fixtures really do carry a source description — otherwise this whole section proves nothing',
+    ImportedSourceContent::overviewHtml($fr1) !== null
+        && ImportedSourceContent::overviewHtml($fr68616) !== null,
+    'extractor output changed shape and this section is now asserting things about nulls',
+);
+
+$overviewFr1 = (string) ImportedSourceContent::overviewHtml($fr1);
+$bodyFr1 = (string) ImportedSourceContent::body($overviewFr1, $composedOnly);
+
+check(
+    "the manufacturer's prose LEADS the body and the composed block follows it",
+    str_starts_with($bodyFr1, $overviewFr1)
+        && str_ends_with($bodyFr1, (string) $composedOnly)
+        && $bodyFr1 === $overviewFr1.$composedOnly,
+    'the composed block exists to keep a page from being empty, not to be the page. Leading with it '
+        .'means ~19,000 pages open on a sentence that differs by a substituted noun, which is the '
+        .'exact shape the scaled-content policy is aimed at',
+);
+
+check(
+    'nothing is rewritten, summarised or padded — the body is two stored strings concatenated',
+    strlen($bodyFr1) === strlen($overviewFr1) + strlen((string) $composedOnly),
+    'any transformation of the manufacturer\'s sentences here is a fabrication risk on a supplement page',
+);
+
+check(
+    'a source description with NO composed block still becomes the body',
+    ImportedSourceContent::body($overviewFr1, null) === $overviewFr1,
+    'compose() returns nulls for a row with no brand or no rayon; the manufacturer prose must not be '
+        .'lost with it',
+);
+
+// ── The composed sentence the new content makes FALSE ─────────────────────────────────────
+check(
+    'the fixture carries a Supplement Facts panel, so the next check is testing something',
+    ImportedSourceContent::hasNutritionPanel($fr1) === true,
+    'no panel in the fixture means the label_scope suppression below is asserting nothing',
+);
+
+$composedWithPanel = ImportedProductContent::fromStagingRow($rowNoContent, [
+    'brand' => 'Optimum Nutrition',
+    'sub_category_slug' => 'whey-proteine',
+    'sub_category_label' => 'Whey protéine',
+    'category_label' => 'Protéines',
+    'page_has_nutrition_panel' => true,
+])['description_fr'];
+
+check(
+    'the "no nutrition values are published" sentence is DROPPED when the page carries the panel',
+    ! str_contains((string) $composedWithPanel, 'valeur nutritionnelle')
+        && ! str_contains((string) $composedWithPanel, 'tableau nutritionnel')
+        && ! str_contains((string) $composedWithPanel, 'chiffre nutritionnel')
+        && ! str_contains((string) $composedWithPanel, 'valeurs nutritionnelles ne sont ajoutées'),
+    'printing "aucune valeur nutritionnelle n\'est publiée" directly above a transcribed Supplement '
+        .'Facts table is a stored sentence contradicting the page it is printed on — the same defect '
+        .'class as a stored "disponible" beside a RUPTURE badge',
+);
+
+check(
+    'and the label deferral sentence is KEPT, because it is still true beside a panel',
+    str_contains((string) $composedWithPanel, "l'emballage d'origine")
+        || str_contains((string) $composedWithPanel, "l'étiquette d'origine"),
+    '"la composition figure sur l\'emballage d\'origine" is exactly the right disclaimer to have next '
+        .'to a transcribed panel; suppressing it too would throw away a true statement',
+);
+
+check(
+    'suppressing a slot does not corrupt the rest of the body',
+    $composedWithPanel !== null && $composedWithPanel !== '' && $composedWithPanel !== $composedOnly,
+    'the plan must still execute; only the one contradicted sentence may disappear',
+);
+
+// ── The language gate ─────────────────────────────────────────────────────────────────────
+check(
+    'a French page publishes; an English one and an Arabic one publish NOTHING',
+    ImportedSourceContent::publishable($fr1) === true
+        && ImportedSourceContent::publishable($en1) === false
+        && ImportedSourceContent::publishable($ar1) === false
+        && ImportedSourceContent::sections($ar1) === []
+        && ImportedSourceContent::overviewHtml($en1) === null
+        && ImportedSourceContent::nutritionHtml($ar1) === null
+        && ImportedSourceContent::gallery($ar1) === []
+        && ImportedSourceContent::attribution($en1) === null,
+    'www.iherb.com 302s a Tunisian IP to tn.iherb.com, which serves Arabic. "The pipeline stored '
+        .'text" is not the same statement as "the pipeline stored French text", and the difference is '
+        .'an Arabic paragraph on a French product page',
+);
+
+check(
+    'a regional French locale still publishes',
+    ImportedSourceContent::publishable(['source_content_locale' => 'fr-CA']) === true
+        && ImportedSourceContent::publishable(['source_content_locale' => 'FR']) === true,
+    'the gate matches a LANGUAGE, not one exact tag — fr-CA is French',
+);
+
+check(
+    'a missing locale is not French',
+    ImportedSourceContent::publishable(['source_content_locale' => null]) === false
+        && ImportedSourceContent::publishable(['source_content_locale' => '']) === false
+        && ImportedSourceContent::publishable(['source_content_locale' => 'french']) === false,
+    'a row that predates the column, or one whose language was never recorded, must publish nothing '
+        .'rather than be assumed',
+);
+
+// ── What is transcribed, and what is refused ──────────────────────────────────────────────
+$specKeys = array_column(ImportedSourceContent::specs($fr1), 'key');
+$specValues = implode(' | ', array_column(ImportedSourceContent::specs($fr1), 'value'));
+
+/*
+ * THIS EXPECTATION WAS DELIBERATELY CHANGED, AND HERE IS WHY IT WAS THE EXPECTATION THAT WAS WRONG.
+ *
+ * It used to require ['dimensions', 'actual_weight'] — i.e. it PINNED the publication of
+ * `source_spec_actual_weight` under the label "Poids réel". Two measurements against the committed
+ * fixtures say that row should never have been published:
+ *
+ *   · grep "Poids réel" over tests/catalog/fixtures/iherb/ returns nothing. The French page labels
+ *     `product-shipping-weight-label` "Poids de l'article" and gives `#actual-weight` no label at
+ *     all (it shares an <li> whose visible label is "Dimensions:"). "Poids réel" was our invention,
+ *     printed to customers on ~19,000 pages.
+ *   · fr-68616 (a 600 g creatine tub) prints shipping weight 0,68 kg AND #actual-weight 0,68 kg —
+ *     the same number. ImportedSourceContent refuses the first because it measures iHerb's carton;
+ *     publishing the identical value as the product's "real weight", directly under
+ *     "Format : 600 g", published exactly what that refusal exists to prevent.
+ *
+ * So the check now asserts the narrower list, and the refusal check below covers the withdrawn
+ * column too — the row is still extracted and stored, it is simply not printed.
+ */
+check(
+    'the only specification row published is the one whose label the page itself prints',
+    $specKeys === ['dimensions'],
+    'got ['.implode(', ', $specKeys).']. The source\'s SHIPPING weight measures their packaging and '
+        .'their carrier; "actual weight" is the same figure with a label we would have to invent; '
+        .'"first available" is a date in THEIR catalogue; "package quantity" is the pack size we '
+        .'already print from the product name, in different words, one row away',
+);
+
+check(
+    'the refused spec columns are present on the row, so the refusal is a decision and not an absence',
+    trim((string) $fr1['source_spec_shipping_weight']) !== ''
+        && trim((string) $fr1['source_spec_first_available']) !== ''
+        && trim((string) $fr1['source_spec_package_quantity']) !== ''
+        && trim((string) $fr1['source_spec_actual_weight']) !== ''
+        && ! str_contains($specValues, (string) $fr1['source_spec_shipping_weight'])
+        && ! str_contains($specValues, (string) $fr1['source_spec_first_available'])
+        && ! str_contains($specValues, (string) $fr1['source_spec_actual_weight']),
+    'if the fixture carried no shipping weight the check above would pass for the wrong reason',
+);
+
+check(
+    'the two weights the source page prints are the SAME number on a real product',
+    (function (): bool {
+        global $fr68616;
+
+        return trim((string) $fr68616['source_spec_shipping_weight'])
+            === trim((string) $fr68616['source_spec_actual_weight']);
+    })(),
+    'this is the evidence for withdrawing the "Poids réel" row: on a 600 g tub the page reports '
+        .'0,68 kg as the shipping weight AND as #actual-weight, so the second is not an independent '
+        .'measurement of the product. If iHerb ever makes them differ, revisit the decision — but '
+        .'only together with a label transcribed from the page',
+);
+
+check(
+    'the sections are the three prose blocks, in the order both routes print them',
+    array_column(ImportedSourceContent::sections($fr1), 'key')
+        === ['suggested_use', 'other_ingredients', 'warnings'],
+    'the order of ImportedSourceContent::SECTION_COLUMNS IS the render order on both routes; two JSX '
+        .'files cannot be relied on to sort the same way',
+);
+
+check(
+    'every section carries our heading and the source\'s verbatim markup',
+    (function (): bool {
+        global $fr1;
+        foreach (ImportedSourceContent::sections($fr1) as $section) {
+            if (trim($section['heading']) === '' || trim($section['html']) === '') {
+                return false;
+            }
+            if ($section['html'] !== $fr1[array_search($section['key'], ImportedSourceContent::SECTION_COLUMNS, true)]) {
+                return false;
+            }
+        }
+
+        return true;
+    })(),
+    'a heading is ours; the block is theirs. Rewriting a warnings block is a fabrication on a text a '
+        .'customer acts on',
+);
+
+check(
+    'a product page with no ingredients and no panel simply has fewer sections',
+    array_column(ImportedSourceContent::sections($fr110000), 'key') === ['suggested_use', 'warnings']
+        && ImportedSourceContent::nutritionHtml($fr110000) === null,
+    'fixture 110000 is a toy: no Supplement Facts, no ingredient list. An absent block must be absent, '
+        .'never filled from a neighbouring one',
+);
+
+// ── The gallery ───────────────────────────────────────────────────────────────────────────
+$gallery = ImportedSourceContent::gallery($fr1);
+
+check(
+    'the gallery is the enumerated one from the page, not a probe of 1..n',
+    count($gallery) > 1 && count($gallery) === count(array_unique($gallery)),
+    'got '.count($gallery).' image(s). Migration 2026_08_10_000008 recorded that a gallery was '
+        .'impossible against the JSON payload; the PAGE lists them, which is why these are not guesses',
+);
+
+check(
+    'every gallery URL is https, on an allow-listed CDN host, at the size the cover uses',
+    (function () use ($gallery): bool {
+        foreach ($gallery as $url) {
+            if (! str_starts_with($url, 'https://cloudinary.images-iherb.com/')) {
+                return false;
+            }
+            if (preg_match('~/[smkr]/\d+\.jpg$~', $url) === 1) {
+                return false;
+            }
+        }
+
+        return $gallery !== [];
+    })(),
+    'these strings go into a next/image `src`, and next/image THROWS on a host that is not in '
+        .'images.remotePatterns rather than degrading. The size rewrite is the same /l/ variant '
+        .'CatalogIHerbPromote::coverUrl() already requests from the same folder',
+);
+
+check(
+    'a URL that is not the documented path shape is passed through UNCHANGED, not mangled',
+    ImportedSourceContent::gallery([
+        'source_content_locale' => 'fr',
+        'source_gallery_images' => ['https://cloudinary.images-iherb.com/some/other/shape.jpg'],
+    ]) === ['https://cloudinary.images-iherb.com/some/other/shape.jpg'],
+    'a scheme change must cost us thumbnails, never broken images',
+);
+
+check(
+    'a foreign host and a non-https URL are dropped outright',
+    ImportedSourceContent::gallery([
+        'source_content_locale' => 'fr',
+        'source_gallery_images' => [
+            'http://cloudinary.images-iherb.com/image/upload/x/images/drb/drb00077/s/97.jpg',
+            'https://evil.example.com/image/upload/x/images/drb/drb00077/s/97.jpg',
+            '',
+            42,
+        ],
+    ]) === [],
+    'an unlisted host does not render, it throws — and a page that throws is worse than a page with '
+        .'one photo',
+);
+
+check(
+    'the gallery survives arriving as a JSON string rather than an array',
+    ImportedSourceContent::gallery([
+        'source_content_locale' => 'fr',
+        'source_gallery_images' => '["https://cloudinary.images-iherb.com/image/upload/f_auto/images/drb/drb00077/s/97.jpg"]',
+    ]) === ['https://cloudinary.images-iherb.com/image/upload/f_auto/images/drb/drb00077/l/97.jpg'],
+    'the API reads a cast model and promotion reads Model::getAttributes(); one of those hands over '
+        .'the raw JSON, and a class that only accepts one of the two silently publishes nothing on '
+        .'the other path',
+);
+
+// ── The provenance note ───────────────────────────────────────────────────────────────────
+$attribution = (string) ImportedSourceContent::attribution($fr1);
+
+check(
+    'fr.iherb.com is declared machine translated by the fixture, so the note has to say so',
+    $fr1['source_content_translated'] === true
+        && str_contains($attribution, 'traduction automatique')
+        && str_contains($attribution, 'étiquette'),
+    'the transcribed sentences include suggested use and contraindications. A customer reading '
+        .'"prenez 1 capsule par jour" is entitled to know the French is a translation engine\'s and '
+        .'that the printed label governs',
+);
+
+check(
+    'an unverified translation state asserts nothing about translation',
+    (function (): bool {
+        $note = (string) ImportedSourceContent::attribution([
+            'source_content_locale' => 'fr',
+            'source_content_translated' => null,
+            'source_overview_html' => '<p>Texte du fabricant.</p>',
+        ]);
+
+        return $note !== '' && ! str_contains($note, 'traduction');
+    })(),
+    'NULL means "this locale\'s notice is not one the extractor has verified" — saying nothing is '
+        .'right; asserting there was no translation is not',
+);
+
+check(
+    'an un-cast 1 from the driver still produces the translation notice',
+    str_contains(
+        (string) ImportedSourceContent::attribution([
+            'source_content_locale' => 'fr',
+            'source_content_translated' => 1,
+            'source_overview_html' => '<p>Texte du fabricant.</p>',
+        ]),
+        'traduction automatique'
+    ),
+    'promotion hands over Model::getAttributes(), which is whatever the driver returned. A strict '
+        .'=== true there would silently drop the disclosure on every promoted product',
+);
+
+check(
+    'the note is not attached to a page that renders nothing',
+    ImportedSourceContent::attribution(['source_content_locale' => 'fr']) === null,
+    'a provenance note under an empty section is noise',
+);
+
+check(
+    'the note breaks none of the rules the composed copy is held to',
+    ImportedProductContent::unsupportedAssertions($attribution) === [],
+    'it is stored copy on ~19,000 pages like any other: no price, no stock, no availability, no '
+        .'delivery, no import, no review',
+);
+
+check(
+    'the note names no retailer and links nowhere',
+    ! str_contains(strtolower($attribution), 'iherb')
+        && ! str_contains($attribution, 'http')
+        && ! str_contains($attribution, '<a '),
+    'attribution here is about the RELIABILITY of the text. Pointing ~19,000 product pages at the '
+        .'shop we read them from is a different act, and not one to perform by way of a footnote',
+);
+
+// ── What must never be published, asserted against the class source ───────────────────────
+$sourceContentSource = (string) file_get_contents(__DIR__.'/../../app/Services/Catalog/ImportedSourceContent.php');
+$sourceContentCode = (string) preg_replace(['~/\*[\s\S]*?\*/~', '~(^|[^:])//.*$~m'], ['', '$1'], $sourceContentSource);
+
+check(
+    'no rating, no review count, and no link to the shop we sourced from, anywhere in the code',
+    ! str_contains($sourceContentCode, 'source_rating')
+        && ! str_contains($sourceContentCode, 'source_content_url')
+        && ! str_contains($sourceContentCode, 'source_manufacturer_url')
+        && ! str_contains($sourceContentCode, 'aggregateRating'),
+    'the comments explain each refusal and the CODE must not reach for the column anyway. '
+        .'source_rating/source_rating_count are internal reference only and stop at the staging table',
+);
+
+check(
+    'the refused spec columns are named in the prose and absent from the code',
+    str_contains($sourceContentSource, 'source_spec_shipping_weight')
+        && ! str_contains($sourceContentCode, 'source_spec_shipping_weight')
+        && ! str_contains($sourceContentCode, 'source_spec_first_available')
+        && ! str_contains($sourceContentCode, 'source_spec_package_quantity'),
+    'a refusal that is only a comment is not a refusal; a refusal with no comment is a mystery in six '
+        .'months',
+);
+
+// ── The indexing gate, over the real thing ────────────────────────────────────────────────
+echo "\nWhat the indexing gate now measures\n";
+
+$gateSamples = [
+    'fr-1 (Doctor\'s Best 5-HTP)' => $fr1,
+    'fr-68616 (Optimum creatine)' => $fr68616,
+    'fr-110000 (a toy)' => $fr110000,
+];
+
+$clears = 0;
+foreach ($gateSamples as $label => $row) {
+    $composed = ImportedProductContent::fromStagingRow($rowNoContent, [
+        'brand' => 'Optimum Nutrition',
+        'sub_category_slug' => 'whey-proteine',
+        'sub_category_label' => 'Whey protéine',
+        'category_label' => 'Protéines',
+        'page_has_nutrition_panel' => ImportedSourceContent::hasNutritionPanel($row),
+    ])['description_fr'];
+
+    $body = ImportedSourceContent::body(ImportedSourceContent::overviewHtml($row), $composed);
+    $words = ImportedSourceContent::renderedWordCount($body, $row);
+    $composedWords = ImportedProductContent::countWords((string) $composed);
+
+    if ($words >= 250) {
+        $clears++;
+    }
+
+    printf(
+        "  INFO  %-30s %4d words rendered (%d composed + %d transcribed) — %s the 250-word gate\n",
+        $label,
+        $words,
+        $composedWords,
+        $words - $composedWords,
+        $words >= 250 ? 'CLEARS' : 'below',
+    );
+}
+
+printf(
+    "        %d of %d fixture products clear it. That is a THREE-PRODUCT sample of committed\n",
+    $clears,
+    count($gateSamples),
+);
+echo "        fixtures, not a projection over 19,000 — the real proportion is whatever\n";
+echo "        `catalog:iherb:promote --publish --dry-run` reports over the actual backlog, and it\n";
+echo "        is bounded by how many rows the content pass has reached at all.\n";
+echo "        What IS asserted below is that the number moved for the right reason.\n";
+
+check(
+    'a transcribed page measures strictly more than the composed block alone',
+    (function () use ($fr1, $composedOnly): bool {
+        $body = ImportedSourceContent::body(ImportedSourceContent::overviewHtml($fr1), $composedOnly);
+
+        return ImportedSourceContent::renderedWordCount($body, $fr1)
+            > ImportedProductContent::countWords((string) $composedOnly);
+    })(),
+    'if the gate cannot see the new content, every product it was written for still publishes '
+        .'noindexed and the whole pass changes nothing a search engine can act on',
+);
+
+check(
+    'the Supplement Facts table is NOT counted, however large it is',
+    (function () use ($fr1): bool {
+        $withoutPanel = $fr1;
+        $withoutPanel['source_supplement_facts_html'] = null;
+
+        return ImportedSourceContent::renderedWordCount('<p>a</p>', $fr1)
+            === ImportedSourceContent::renderedWordCount('<p>a</p>', $withoutPanel);
+    })(),
+    'countWords() counts every token longer than one character, so a nutrient table contributes its '
+        .'figures, units and daily-value percentages as "words". Letting it answer "is there enough '
+        .'readable copy here" clears the gate for pages with nothing to read',
+);
+
+check(
+    'content in a language we do not publish counts as zero, exactly as it renders',
+    ImportedSourceContent::renderedWordCount('<p>corps</p>', $ar1)
+        === ImportedProductContent::countWords('<p>corps</p>'),
+    'the gate must measure the page that renders. Counting words nobody is served would index a page '
+        .'on the strength of text it does not carry',
+);
 
 echo "\n".($failed === 0 ? 'ALL PASS' : $failed.' FAILED')." ({$checks} checks)\n\n";
 

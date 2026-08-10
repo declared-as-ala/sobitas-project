@@ -28,7 +28,13 @@ import { buildComparison } from '@/util/productComparison';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
-import { productSourceFactRows } from '@/util/productSourceFacts';
+import {
+  productSourceAttribution,
+  productSourceFactRows,
+  productSourceGallery,
+  productSourceNutritionHtml,
+  productSourceSections,
+} from '@/util/productSourceFacts';
 import type { Product } from '@/types';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
@@ -87,6 +93,22 @@ export function CrawlerProductView({
    * below does not render for them and this file's output for those products is unchanged.
    */
   const sourceFacts = productSourceFactRows(product);
+  /*
+   * The transcribed product page: the manufacturer's suggested use, ingredient list and warnings,
+   * the Supplement Facts panel, the photo gallery, and one sentence about where the words came from.
+   *
+   * The manufacturer's OVERVIEW is not here — promotion folded it into `description_fr`, so it
+   * arrives through `descriptionHtml` above and is rendered by the Description section, on this
+   * route and on the human one alike. Rendering it here as well would print the same paragraph
+   * twice on the only page Googlebot sees.
+   *
+   * All four are empty for every one of the 309 hand-made products, so every block below is absent
+   * from their markup exactly as it was before this content existed.
+   */
+  const sourceSections = productSourceSections(product);
+  const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
+  const sourceGallery = productSourceGallery(product);
+  const sourceAttribution = productSourceAttribution(product);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -201,14 +223,57 @@ export function CrawlerProductView({
           </section>
         )}
 
+        {/*
+          The transcribed prose blocks — suggested use, other ingredients, warnings.
+
+          Straight after the description because that is where they sit on the source page and where
+          the human route prints them: the description tab, under the description. Each block's
+          heading is ours (ImportedSourceContent::SECTION_HEADINGS) and each block's CONTENT is the
+          manufacturer's, transcribed verbatim and sanitised — never rewritten, never summarised.
+
+          The warnings block in particular is a safety text a customer acts on. It is rendered whole,
+          in the same words, on both routes; it is not truncated and it is not moved below the fold,
+          because there is no fold on this route and there must be no version of this page where it
+          says less.
+        */}
+        {sourceSections.length > 0 &&
+          sourceSections.map((section) => {
+            const html = sanitizeRichHtml(section.html);
+            if (!html) return null;
+            return (
+              <section key={section.key} aria-label={section.heading} className="my-6">
+                <h2 className="text-lg font-semibold">{section.heading}</h2>
+                <div
+                  className="prose prose-sm mt-2 max-w-none"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              </section>
+            );
+          })}
+
         {/* Nutrition / specs */}
-        {(nutritionHtml || nutritionImages.length > 0) && (
+        {(nutritionHtml || sourceNutritionHtml || nutritionImages.length > 0) && (
           <section aria-label="Valeurs nutritionnelles" className="my-6">
             <h2 className="text-lg font-semibold">Valeurs nutritionnelles</h2>
             {nutritionHtml && (
               <div
                 className="prose prose-sm mt-2 max-w-none"
                 dangerouslySetInnerHTML={{ __html: nutritionHtml }}
+              />
+            )}
+            {/*
+              The Supplement Facts panel transcribed from the source page, as the table it is.
+
+              It sits AFTER `nutrition_values`, which is the column an admin fills in by hand from
+              the physical label of the lot we hold. When both exist the hand-read one leads, because
+              it is evidence about the product in our warehouse and this one is a transcription of a
+              retailer's rendering of the manufacturer's panel. In practice they never both exist:
+              promotion writes no `nutrition_values`, and no legacy product has a staging row.
+            */}
+            {sourceNutritionHtml && (
+              <div
+                className="prose prose-sm mt-2 max-w-none overflow-x-auto"
+                dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
               />
             )}
             {/*
@@ -243,6 +308,58 @@ export function CrawlerProductView({
               </ul>
             )}
           </section>
+        )}
+
+        {/*
+          The product photographs the source page listed.
+
+          Migration 2026_08_10_000008 and CatalogIHerbPromote::coverUrl() both record that a gallery
+          was impossible against the JSON payload — a primary index and no count means probing 1..n
+          and storing URLs that 404. The PAGE lists them outright, so these are enumerated, not
+          guessed; the API drops the source's CMS banners and normalises each URL to the same size
+          variant the cover already uses.
+
+          Plain <img> rather than next/image, like every other image on this route: this view ships
+          no JavaScript on purpose. The alt text names the product and says which photograph it is,
+          because that text is the only part a crawler can read — and Google Images is where a
+          catalogue of product photography actually earns something.
+
+          Absent for all 309 legacy products, which carry no gallery on this route today either.
+        */}
+        {sourceGallery.length > 0 && (
+          <section aria-label="Photos du produit" className="my-6">
+            <h2 className="text-lg font-semibold">Photos du produit</h2>
+            <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {sourceGallery.map((url, i) => (
+                <li key={url}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    width={300}
+                    height={300}
+                    loading="lazy"
+                    alt={`${product.designation_fr ?? 'Produit'} — photo ${i + 1}/${sourceGallery.length}`}
+                    className="h-auto w-full rounded border"
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/*
+          Where the words above came from, said on the page.
+
+          One sentence, composed server-side so this route and the human route cannot word it
+          differently: the text is transcribed from the manufacturer's own listing, the French may be
+          a machine translation (iHerb declares it on every non-English page, and the transcribed
+          sentences include suggested use and contraindications), and the label printed on the
+          packaging is what governs.
+
+          Null for every product with no transcribed content, which is all 309 legacy products.
+        */}
+        {sourceAttribution && (
+          <p className="my-6 text-xs text-gray-600">{sourceAttribution}</p>
         )}
 
         {/* Reviews — all published, inline */}

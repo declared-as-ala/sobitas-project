@@ -631,4 +631,90 @@ return [
 
         'max_attempts' => (int) env('CATALOG_HYDRATE_ATTEMPTS', 3),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Content — reading the product PAGE
+    |--------------------------------------------------------------------------
+    | The identity endpoint (/ugc/api/product/v2/{id}) returns fifteen keys and not one of them is
+    | prose. Everything a customer would actually read — the overview, the directions, the
+    | ingredients, the warnings, the Supplement Facts panel, the image gallery and the barcode — is
+    | on the HTML page. `catalog:iherb:content` is the pass that reads it.
+    */
+    'content' => [
+
+        /**
+         * WHICH HOST RENDERS THE PAGE, WHICH IS TO SAY: WHAT LANGUAGE THE STORED TEXT IS IN.
+         *
+         * ── THE MEASUREMENT, 10/08/2026, PRODUCT 1 ───────────────────────────────────────
+         * iHerb honours the country subdomain, not Accept-Language, and publishes 101 hreflang
+         * alternates of every product page:
+         *
+         *     www.iherb.com   302 → tn.iherb.com from a Tunisian IP
+         *     tn.iherb.com    lang="ar-TN", dir="rtl"     Arabic
+         *     fr.iherb.com    lang="fr"                   French, no redirect
+         *     ca.iherb.com    lang="en-CA"                English, no redirect
+         *
+         * The default is fr.iherb.com because protein.tn is a French shop and this is the only way
+         * to get French text at all without generating it, which is forbidden.
+         *
+         * ── AND THE COST, WHICH THE OWNER SHOULD DECIDE, NOT A DEVELOPER ─────────────────
+         * iHerb's French is MACHINE TRANSLATED and iHerb says so, in the disclaimer at the foot of
+         * every non-English page: "Ce site web a été traduit automatiquement à titre de courtoisie
+         * pour les clients. iHerb ne garantit pas que les traductions sont complètes ou exemptes
+         * d'erreurs". The English page carries no such notice — those are the manufacturer's own
+         * words.
+         *
+         * So this setting is a genuine trade, not a default to accept blindly:
+         *
+         *   fr.iherb.com   French a Tunisian customer can read, from a translation engine iHerb
+         *                  itself will not vouch for. On a supplement, the translated sentences
+         *                  include dosage and contraindications.
+         *   ca.iherb.com   the manufacturer's exact words, in English, on a French storefront.
+         *
+         * ── AND ONE OF THOSE TWO PUBLISHES NOTHING TODAY. SAID PLAINLY. ─────────────────
+         * App\Services\Catalog\ImportedSourceContent::publishable() refuses every locale that is not
+         * French — the prose, the specification strings and the gallery together, deliberately, so
+         * there is ONE rule rather than a per-field matrix. Choosing ca.iherb.com therefore crawls
+         * the catalogue, fills every column and renders NOT ONE BYTE on either product route.
+         *
+         * That was a trap: the pass reported success the whole way. `catalog:iherb:content` now
+         * REFUSES to run against a host that cannot produce a publishable locale (measured from the
+         * stored `source_content_locale` once rows exist, from the host name before that), and
+         * --status prints the publishable/unpublishable split of what has already been read.
+         * `--allow-unpublishable-locale` overrides it for someone who wants the English stored now
+         * and translated by a human later. Switching this to English for real means changing the
+         * language gate in ImportedSourceContent as well, and that is a product decision about what
+         * a French shop prints, not a config edit.
+         *
+         * Whichever is chosen, IHerbPageExtractor records `source_content_locale` and
+         * `source_content_translated` on EVERY row, so the fact travels with the text and the
+         * decision can be revisited per product rather than being lost in a config comment.
+         *
+         * Changing this host invalidates nothing already stored, but it does mean the next pass
+         * writes a different language into the same columns. And any host whose section headings
+         * IHerbPageExtractor::HEADINGS does not list will fill
+         * `source_content_unmapped_sections` instead of guessing — see that class.
+         */
+        'host' => env('CATALOG_IHERB_CONTENT_HOST', 'fr.iherb.com'),
+
+        /** The scheduler's interval, written down. Same meaning as hydration.window_seconds. */
+        'window_seconds' => (int) env('CATALOG_CONTENT_WINDOW', 600),
+
+        /**
+         * Rows dispatched per batch — DERIVED from the rate, for the reason spelled out at
+         * hydration.batch: a literal is correct only until somebody changes the rate in a different
+         * file, and this project has already lost a day to exactly that.
+         *
+         * Overshooting is safe: ExtractExternalProductContentJob is ShouldBeUnique on the staging id
+         * and claims its row with an atomic conditional UPDATE, so a row dispatched twice is fetched
+         * once.
+         */
+        'batch' => (int) env(
+            'CATALOG_CONTENT_BATCH',
+            (int) ceil((float) env('CATALOG_IHERB_RPS', 1.5) * (int) env('CATALOG_CONTENT_WINDOW', 600)),
+        ),
+
+        'max_attempts' => (int) env('CATALOG_CONTENT_ATTEMPTS', 3),
+    ],
 ];

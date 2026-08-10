@@ -133,6 +133,66 @@ class PoliteFetcher
         ];
     }
 
+    /**
+     * The name of the pace bucket, the failure counter and the circuit breaker for a host.
+     *
+     * ── WHY THIS IS NOT SIMPLY THE HOSTNAME ───────────────────────────────────────────────
+     * It used to be, and that was fine while every configured source had exactly one hostname. The
+     * catalogue importer now talks to iHerb under TWO names: `tn.iherb.com` for the identity JSON,
+     * and `fr.iherb.com` for the product page, because iHerb serves the page's language by country
+     * subdomain and protein.tn is a French shop (see IHerbClient::contentHost()).
+     *
+     * Keyed on the raw hostname, those are two independent token buckets — so hydration and the
+     * content pass running in the same hour would each politely pace themselves at the configured
+     * 1.5 req/s and iHerb would receive 3. That is precisely the arithmetic this class's own
+     * docblock says it exists to prevent, one level up: "several processes each politely pacing
+     * themselves is not polite at all". One operator, one pace.
+     *
+     * The breaker and the failure counter move with it deliberately. A run of 403s from
+     * fr.iherb.com is iHerb telling us to stop; carrying on against tn.iherb.com because it is
+     * spelled differently would be reading the message and ignoring it.
+     *
+     * Hosts with no config entry keep their own hostname as the bucket, so nothing that is not
+     * explicitly grouped in config/enrichment.php is affected. The one visible consequence of this
+     * change is that state stored under the OLD keys is ignored on deploy — worst case one extra
+     * request before a breaker that was open re-opens.
+     */
+    public function bucket(string $host): string
+    {
+        foreach (array_keys((array) config('enrichment.hosts', [])) as $pattern) {
+            $pattern = (string) $pattern;
+            if ($host === $pattern || str_ends_with($host, '.'.$pattern)) {
+                return $pattern;
+            }
+        }
+
+        return $host;
+    }
+
+    /**
+     * Would this URL be refused for robots.txt reasons? The same question get() asks itself.
+     *
+     * ── WHY A CALLER EVER NEEDS TO ASK ────────────────────────────────────────────────────
+     * get() returns null for a refusal, and null is deliberately indistinguishable from a transport
+     * failure at the call site — a caller must not be able to tell "forbidden" from "unreachable"
+     * and act differently on the wire. But AFTER a refusal, a caller absolutely needs to tell them
+     * apart to decide what to write on the row: "forbidden" is permanent and must never be retried,
+     * "unreachable" is temporary and must be. iHerb disallows `/*discontinued` and a large share of
+     * its product URLs match, so this is thousands of rows, not an edge case.
+     *
+     * Public so that decision is made from THE RULES THAT WERE ACTUALLY APPLIED. A caller
+     * re-implementing "does this look disallowed" is a second robots matcher, and this class already
+     * has one documented case of a robots matcher that reported success without doing the work.
+     *
+     * Costs nothing: the rules are memoised per host on the instance and cached for a day.
+     */
+    public function disallows(string $url): bool
+    {
+        $host = $this->host($url);
+
+        return $host !== null && ! $this->mayFetch($url, $host);
+    }
+
     private function mayFetch(string $url, string $host): bool
     {
         if (! config('enrichment.fetch.respect_robots', true)) {
@@ -247,7 +307,7 @@ class PoliteFetcher
             ?? (float) config('enrichment.fetch.default_requests_per_second', 0.33);
         $interval = 1.0 / max($rps, 0.01);
 
-        $key = "enrichment:pace:{$host}";
+        $key = 'enrichment:pace:'.$this->bucket($host);
         $last = (float) (Cache::get($key) ?? 0);
         $wait = ($last + $interval) - microtime(true);
 
@@ -267,18 +327,19 @@ class PoliteFetcher
 
     private function breakerIsOpen(string $host): bool
     {
-        return (bool) Cache::get("enrichment:breaker:{$host}");
+        return (bool) Cache::get('enrichment:breaker:'.$this->bucket($host));
     }
 
     private function recordFailure(string $host, int $status): void
     {
-        $key = "enrichment:failures:{$host}";
+        $bucket = $this->bucket($host);
+        $key = "enrichment:failures:{$bucket}";
         $failures = (int) Cache::get($key, 0) + 1;
         Cache::put($key, $failures, 3600);
 
         if ($failures >= (int) config('enrichment.fetch.circuit_breaker_failures', 5)) {
             $cooldown = (int) config('enrichment.fetch.circuit_breaker_cooldown_seconds', 1800);
-            Cache::put("enrichment:breaker:{$host}", true, $cooldown);
+            Cache::put("enrichment:breaker:{$bucket}", true, $cooldown);
             Cache::forget($key);
 
             // Deliberately loud. This is the host telling us to stop, and the correct response is
@@ -293,7 +354,9 @@ class PoliteFetcher
 
     private function clearFailures(string $host): void
     {
-        Cache::forget("enrichment:failures:{$host}");
+        // Must use the SAME key recordFailure() wrote, or the counter only ever climbs and the
+        // breaker eventually opens on a host that has been answering 200 all afternoon.
+        Cache::forget('enrichment:failures:'.$this->bucket($host));
     }
 
     private function host(string $url): ?string

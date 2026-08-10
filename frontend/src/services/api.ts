@@ -1,5 +1,9 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import { apiFetch, ApiError } from '@/services/http';
+// The sitemap's verified paginated crawl, reused by getAllBrands so the brand PAGES and the brand
+// URLs in the sitemap are built from the same rows. See getAllBrands for what the one-shot fetch
+// this replaced actually cost.
+import { crawlPaginated } from '@/util/sitemapCrawl';
 import type {
   Product,
   Category,
@@ -305,6 +309,27 @@ export type ProductsResponse = {
   brands: Brand[];
   categories: Category[];
   pagination?: { total: number; current_page: number; per_page: number; last_page: number };
+};
+
+/**
+ * ONE page of ANY paginated backend list, returned RAW.
+ *
+ * The sitemap crawl needs the envelope, not a tidied array: `meta.total` / `pagination.last_page`
+ * are how it proves it walked to the end, and every existing helper in this file throws exactly
+ * that away. getAllArticles returns `data`, getAllBrands returns `data`, getCategories returns
+ * `data` — so a caller reading any of them cannot tell 100-of-100 from 100-of-224, which is
+ * precisely how 124 published blog articles stayed out of the sitemap with no warning anywhere.
+ *
+ * Deliberately on the SAME axios instance as every other call in this file. A second HTTP stack
+ * would get its own timeouts, its own interceptors and its own share of the API's per-IP budget.
+ */
+export const getApiPage = async (
+  path: string,
+  page: number,
+  perPage: number
+): Promise<unknown> => {
+  const response = await api.get(path, { params: { page, per_page: perPage } });
+  return response.data;
 };
 
 export const getAllProducts = async (params?: {
@@ -781,10 +806,46 @@ export const getPacks = async (): Promise<Product[]> => {
 };
 
 // Brands
+/**
+ * EVERY brand, walked to the end of the pagination — not the first page of it.
+ *
+ * ── WHAT THE ONE-SHOT FETCH COST ─────────────────────────────────────────────────────────────
+ * This was `api.get('/all_brands?per_page=100')`, and ApisController::resolvePerPage() clamps
+ * per_page to 100 anyway. Measured against the live API on 2026-08-10: 100 rows returned,
+ * `meta.total` = 128, `last_page` = 2. So 28 brands were invisible to every caller of this
+ * function — including findBrandBySlug() in app/(shop)/[slug]/page.tsx and in the crawler category
+ * route, which is what turns `/scitec-nutrition` into a page instead of a 404.
+ *
+ * That became a live defect the moment sitemapSources.ts started crawling `/all_brands` properly:
+ * the sitemap then listed the 16 page-2 brands that have published products while this resolver
+ * still could not find them, so every one of those URLs answered HTTP 404 with
+ * `<meta robots="noindex">` — "Submitted URL not found (404)" in Search Console, which is the exact
+ * error class the sitemap rebuild was written to remove. A sitemap and the pages it points at have
+ * to be built from the same set of rows.
+ *
+ * ── THE SAME CRAWLER THE SITEMAP USES, NOT A SECOND ONE ──────────────────────────────────────
+ * util/sitemapCrawl.ts owns "walk to the real end and prove you got there" — the clamped per_page,
+ * the `total`-without-`last_page` envelope, the duplicate rows an unstable sort produces. A second
+ * hand-rolled loop here would be the same guarantee written twice, and it is the second copy that
+ * silently stops at page 1. It runs on the SAME axios instance (getApiPage), so it keeps this
+ * file's timeouts, interceptors and share of the API's per-IP budget.
+ *
+ * It throws when a page comes back malformed, exactly as the single request threw when it failed:
+ * the callers that tolerate an outage already wrap this in try/catch or `.catch(() => [])`. Half a
+ * brand list returned as if it were whole is what produced the 404s above.
+ */
 export const getAllBrands = async (): Promise<Brand[]> => {
-  const response = await api.get('/all_brands?per_page=100');
-  const raw = response.data;
-  return Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
+  const crawl = await crawlPaginated<Brand>({
+    label: '/all_brands',
+    perPage: 100,
+    // 128 brands over 100-row pages is 2 requests today. The ceiling is a guard against a
+    // pagination bug looping, not a budget: 20 pages is 2,000 brands.
+    maxRequests: 20,
+    concurrency: 2,
+    fetchPage: (page, perPage) => getApiPage('/all_brands', page, perPage),
+  });
+
+  return crawl.rows;
 };
 
 // Aromas & Tags

@@ -2,9 +2,12 @@
   "name": "protein-tn-frontend",
   "private": true,
   "version": "0.0.1",
+  "engines": {
+    "node": ">=22.6"
+  },
   "scripts": {
     "dev": "cross-env NODE_ENV=development NODE_OPTIONS=--no-deprecation next dev",
-    "prebuild": "node scripts/check-reserved-routes.mjs",
+    "prebuild": "node scripts/check-reserved-routes.mjs && node scripts/check-sitemap-routes.mjs && node --experimental-strip-types --no-warnings scripts/check-sitemap-crawl.mjs",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "node scripts/assert-no-dev-bundle.mjs",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",
@@ -20,6 +23,8 @@
     "snap": "node scripts/visual-snap.mjs",
     "snap:region": "node scripts/snap-region.mjs",
     "verify-seo": "node scripts/verify-seo.js",
+    "check:sitemap-routes": "node scripts/check-sitemap-routes.mjs",
+    "check:sitemap-crawl": "node --experimental-strip-types --no-warnings scripts/check-sitemap-crawl.mjs",
     "seo-audit-category": "node scripts/seo-audit-category.js"
   },
   "dependencies": {

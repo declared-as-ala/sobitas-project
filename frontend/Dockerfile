@@ -1,6 +1,19 @@
 # syntax=docker/dockerfile:1
 # Production: build then run node server.js (do NOT use next dev on server)
-FROM node:20-alpine AS base
+#
+# NODE 24, NOT NODE 20 — AND THE PIN IS PART OF THE BUILD CONTRACT, NOT A PREFERENCE.
+#
+# `RUN npm run build` below runs the `prebuild` chain, whose sitemap-crawl check imports
+# src/util/sitemapCrawl.ts DIRECTLY (a .ts specifier) so that what it exercises is the code that
+# ships rather than a paraphrase of it. Node strips those types from 22.6 on; Node 20 answers
+# `node: bad option: --experimental-strip-types`, exit 9, and the image build dies before Next.js is
+# ever invoked. The version was left at 20 when that check was added, which meant NOTHING could
+# build — not here and not in .github/workflows/deploy-frontend.yml, which was pinned to 20 as well.
+#
+# Both pins move together, and frontend/package.json `engines.node` (>=22.6) plus frontend/.nvmrc
+# record the floor so a laptop cannot silently disagree with the image. Node 20 also went end of
+# life in April 2026, so staying on it was a security position nobody had chosen either.
+FROM node:24-alpine AS base
 RUN apk add --no-cache libc6-compat
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1

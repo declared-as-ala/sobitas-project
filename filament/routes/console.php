@@ -146,6 +146,31 @@ Schedule::command('catalog:iherb:hydrate --include-neutral')
     ->withoutOverlapping()
     ->when($catalogueReady);
 
+// Read the product PAGES. This is the pass that produces actual content: the
+// overview, the directions, the ingredients, the warnings, the Supplement Facts
+// panel, the image gallery and — the field that unblocks products:enrich-dsld
+// and seo:enrich-nutrition — the barcode. The identity JSON hydration fetches
+// carries none of it.
+//
+// ── WHY IT IS OFFSET FROM HYDRATION AND NOT ON THE SAME TICK ──────────────
+// Both passes now talk to iHerb, under two different hostnames (tn.iherb.com
+// for the JSON, fr.iherb.com for the page). PoliteFetcher paces them in ONE
+// shared bucket, so running them together is safe — it simply halves each. The
+// five-minute offset is so the two windows interleave rather than contend for
+// the same worker at the same instant, and so `--status` on either pass shows
+// movement attributable to that pass.
+//
+// Writes only to `external_catalog_products`. No product changes, no page
+// appears, no URL moves — the same reason discovery and hydration are allowed
+// to run unattended and promotion never will be.
+// `cron()` rather than `everyTenMinutes()->at(...)`: `at()` sets a time of day
+// and is silently ignored on a sub-hourly frequency, so the offset this comment
+// describes would not have existed. The expression says what it does.
+Schedule::command('catalog:iherb:content')
+    ->cron('5-59/10 * * * *')
+    ->withoutOverlapping()
+    ->when($catalogueReady);
+
 /*
 |--------------------------------------------------------------------------
 | One-shot: land the research content that is already committed but unimported

@@ -35,15 +35,41 @@ const BASE_URL = (process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn').repl
  * canonical and a ~92-char CDN image URL):
  *      5,000 URLs ≈ 2.0 MB      10,000 URLs ≈ 4.1 MB      50,000 URLs ≈ 20 MB
  * So the URL count is the binding constraint, not the bytes — but only just, and only because the
- * entries are small. 5,000 keeps a child at ~2 MB: comfortably inside BOTH caps with room for the
- * entry shape to grow, and small enough that a human can curl one and read it. Even at the full
- * 47,537-product import that is ~10 child files, nowhere near the 50,000-child index cap.
+ * entries are small.
  *
- * A crawler is never asked to fetch more than it needs: Google refetches only the children whose
- * <lastmod> in the index moved — which is the entire reason chunking is by ID BAND below and not
- * by array slice.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * THIS CONSTANT NAMES FILES, SO IT IS FROZEN. DO NOT RETUNE IT.
+ * ══════════════════════════════════════════════════════════════════════════════════════════════
+ * A product's child sitemap is `products-{floor(id / PRODUCT_ID_BAND_SIZE)}.xml`. The divisor is
+ * therefore part of every product child sitemap's NAME. Change 5,000 to 10,000 and product 7,300
+ * moves from products-1.xml to products-0.xml — which means products-1.xml, a URL already submitted
+ * to Google and already carrying its own crawl history, stops being produced by buildSitemapFiles()
+ * and the child route (which resolves names ONLY from the manifest) starts answering it 404. Search
+ * Console reports "Sitemap could not be read" for a file it was told about, and nothing in any
+ * status code anywhere else moves.
+ *
+ * This used to be ONE constant — `PRODUCTS_PER_CHUNK` — doing two unrelated jobs: naming the product
+ * bands AND sizing the non-product section chunks. So "the listings section is getting big, let me
+ * raise the chunk size" was a one-token edit that renamed every product sitemap on the site. The two
+ * jobs are now two constants, and only this one is frozen.
+ *
+ * If it ever genuinely must change, the migration is: keep the old bands served until Search Console
+ * has re-read the index, or accept the 404s deliberately. Not a config tweak.
+ *
+ * scripts/check-sitemap-routes.mjs asserts this value, so the edit cannot happen by accident.
  */
-const PRODUCTS_PER_CHUNK = 5000;
+const PRODUCT_ID_BAND_SIZE = 5000;
+
+/**
+ * How many URLs a NON-PRODUCT child sitemap may hold before it overflows into a numbered sibling.
+ *
+ * Free to retune, because the first chunk of every non-product section keeps its bare
+ * `{section}.xml` name whatever this is (see the overflow-from-1 numbering below) — so raising or
+ * lowering it can never rename a file that already exists. It only decides when a `-1` appears.
+ *
+ * Well under the 50,000 protocol cap: a child stays curl-able and a human can read one.
+ */
+const MAX_URLS_PER_CHILD = 5000;
 
 /**
  * The protocol's hard cap. Nothing here may emit a file above it; buildSitemapFiles() asserts it
@@ -102,7 +128,7 @@ function newestLastMod(entries: SectionedSitemapEntry[]): string | null {
 type SitemapFileWithEntries = SitemapFile & { entries: SectionedSitemapEntry[] };
 
 /**
- * Split product entries into child sitemaps by ID BAND: file = floor(productId / 5000).
+ * Split product entries into child sitemaps by ID BAND: file = floor(productId / PRODUCT_ID_BAND_SIZE).
  *
  * WHY NOT `entries.slice(i * 5000, ...)`, WHICH IS WHAT THIS USED TO DO
  *
@@ -133,7 +159,7 @@ function groupProductEntries(entries: SectionedSitemapEntry[]): Array<{ file: st
   for (const entry of entries) {
     const id = entry.productId;
     if (typeof id === 'number' && Number.isFinite(id) && id >= 0) {
-      const band = Math.floor(id / PRODUCTS_PER_CHUNK);
+      const band = Math.floor(id / PRODUCT_ID_BAND_SIZE);
       const list = bands.get(band);
       if (list) list.push(entry);
       else bands.set(band, [entry]);
@@ -152,12 +178,12 @@ function groupProductEntries(entries: SectionedSitemapEntry[]): Array<{ file: st
       ),
     }));
 
-  const unkeyedChunks = Math.ceil(unkeyed.length / PRODUCTS_PER_CHUNK);
+  const unkeyedChunks = Math.ceil(unkeyed.length / MAX_URLS_PER_CHILD);
   for (let i = 0; i < unkeyedChunks; i++) {
     groups.push({
       file: `products-u${i}.xml`,
       chunk: i,
-      entries: unkeyed.slice(i * PRODUCTS_PER_CHUNK, (i + 1) * PRODUCTS_PER_CHUNK),
+      entries: unkeyed.slice(i * MAX_URLS_PER_CHILD, (i + 1) * MAX_URLS_PER_CHILD),
     });
   }
 
@@ -185,13 +211,38 @@ async function buildSitemapFiles(): Promise<SitemapFileWithEntries[]> {
   }
 
   const order: SitemapSection[] = ['static', 'listings', 'products', 'blog', 'pages'];
+
+  /*
+   * SECTIONS THAT MAY NEVER BE EMPTY.
+   *
+   * An empty section is omitted from the index rather than published as an empty <urlset>, which
+   * Search Console flags as an error. That is right for a section that is legitimately empty (blog
+   * tags), and catastrophic for one that is not: if the products section produced zero entries, the
+   * index simply stops listing products-*.xml, /sitemap.xml still answers 200 with its other
+   * children, and Google is told the entire catalogue was removed. The child sitemaps that used to
+   * hold it start 404ing. Nothing in the response says so — which is exactly how a
+   * `<url>`-counting verifier could pass on a sitemap that had lost 100% of the catalogue.
+   *
+   * `static` is here too because it is a compile-time constant list: zero of it means the entry
+   * shape itself broke, not that the site has no pages.
+   */
+  const MUST_NOT_BE_EMPTY: SitemapSection[] = ['static', 'products'];
   const files: SitemapFileWithEntries[] = [];
 
   for (const section of order) {
     const entries = bySection.get(section) ?? [];
-    // An empty section is omitted rather than published as an empty <urlset>, which Search Console
-    // flags as an error.
-    if (entries.length === 0) continue;
+    if (entries.length === 0) {
+      if (MUST_NOT_BE_EMPTY.includes(section)) {
+        throw new Error(
+          `[sitemap] the "${section}" section produced 0 URLs. Omitting it would publish an index that ` +
+          `silently drops every ${section} URL — a removal signal sent to Google from a 200. Refusing. ` +
+          (section === 'products'
+            ? 'Check publier and seo_robots_index: a wave published entirely noindexed empties this section.'
+            : '')
+        );
+      }
+      continue;
+    }
 
     if (section === 'products') {
       for (const group of groupProductEntries(entries)) {
@@ -229,9 +280,9 @@ async function buildSitemapFiles(): Promise<SitemapFileWithEntries[]> {
      * no `${section}-0.xml`: the gap in the numbering is the point — it is what keeps the name of the
      * file that already exists independent of how many files come after it.
      */
-    const chunks = Math.max(1, Math.ceil(entries.length / PRODUCTS_PER_CHUNK));
+    const chunks = Math.max(1, Math.ceil(entries.length / MAX_URLS_PER_CHILD));
     for (let i = 0; i < chunks; i++) {
-      const slice = chunks === 1 ? entries : entries.slice(i * PRODUCTS_PER_CHUNK, (i + 1) * PRODUCTS_PER_CHUNK);
+      const slice = chunks === 1 ? entries : entries.slice(i * MAX_URLS_PER_CHILD, (i + 1) * MAX_URLS_PER_CHILD);
       files.push({
         file: i === 0 ? `${section}.xml` : `${section}-${i}.xml`,
         section,

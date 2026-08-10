@@ -22,7 +22,14 @@ import { buildComparison } from '@/util/productComparison';
 import { embedUrl, videoId, videoTitle } from '@/util/officialVideo';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
-import { productSourceFactRows } from '@/util/productSourceFacts';
+import {
+  hasProductSourceContent,
+  productSourceAttribution,
+  productSourceFactRows,
+  productSourceGallery,
+  productSourceNutritionHtml,
+  productSourceSections,
+} from '@/util/productSourceFacts';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -1169,6 +1176,91 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     >
                       {descExpanded ? 'Voir moins' : 'Lire plus'}
                     </button>
+                    {/*
+                      The transcribed source page — the manufacturer's suggested use, ingredient list
+                      and warnings, then the photographs the source page listed, then one sentence
+                      about where all of it came from.
+
+                      Same blocks, same headings, same order as /x-crawler/product/[slug], from the
+                      same functions. That route is the only one Googlebot is served: a block here
+                      and not there is invisible to Google, and a block there and not here is
+                      cloaking. Keeping the order identical is what makes the parity checkable by
+                      reading the two files side by side.
+
+                      The manufacturer's OVERVIEW is deliberately not among them — promotion folded
+                      it into `description_fr`, which is the block rendered immediately above.
+
+                      Every one of these is empty for all 309 hand-made products (no staging row, so
+                      `source_facts.content` is null), which is why the whole thing is an IIFE that
+                      returns null rather than a wrapper with nothing in it: their description tab
+                      renders exactly what it rendered before.
+                    */}
+                    {(() => {
+                      const sections = productSourceSections(product);
+                      const gallery = productSourceGallery(product);
+                      const attribution = productSourceAttribution(product);
+                      /*
+                       * hasProductSourceContent(), not a hand-written test of two of the four
+                       * things this block can render.
+                       *
+                       * The inline `sections.length === 0 && gallery.length === 0` this replaces
+                       * dropped the provenance sentence for any product whose transcribed content is
+                       * a Supplement Facts panel and/or specification rows and nothing else — while
+                       * /x-crawler/product/[slug] printed it, because that route gates it on nothing
+                       * but the sentence existing. Same page, two routes, different facts, which is
+                       * the one outcome this pipeline is built to prevent.
+                       */
+                      if (!hasProductSourceContent(product)) return null;
+
+                      return (
+                        <div className="mt-8 space-y-6 border-t border-gray-100 dark:border-gray-800 pt-6">
+                          {sections.map((section) => {
+                            const html = sanitizeRichHtml(section.html);
+                            if (!html) return null;
+                            return (
+                              <section key={section.key}>
+                                <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-2 text-gray-900 dark:text-white">
+                                  {section.heading}
+                                </h3>
+                                <div
+                                  className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                                  dangerouslySetInnerHTML={{ __html: html }}
+                                />
+                              </section>
+                            );
+                          })}
+
+                          {gallery.length > 0 && (
+                            <section>
+                              <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-3 text-gray-900 dark:text-white">
+                                Photos du produit
+                              </h3>
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {gallery.map((url, i) => (
+                                  <div
+                                    key={url}
+                                    className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                  >
+                                    <Image
+                                      src={url}
+                                      alt={`${product.designation_fr || 'Produit'} — photo ${i + 1}/${gallery.length}`}
+                                      fill
+                                      sizes="(max-width: 640px) 50vw, 33vw"
+                                      className="object-contain p-1"
+                                      quality={85}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </section>
+                          )}
+
+                          {attribution && (
+                            <p className="text-xs text-gray-500 dark:text-gray-500">{attribution}</p>
+                          )}
+                        </div>
+                      );
+                    })()}
                     </div>
                   </TabsContent>
 
@@ -1178,6 +1270,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         ? ((product as any).nutrition_images as string[]).filter(Boolean)
                         : [];
                       const hasNutritionImages = nutritionImages.length > 0;
+                      /*
+                       * The transcribed Supplement Facts panel.
+                       *
+                       * Sanitised here rather than at the point of use so the empty-state test below
+                       * asks about the string that will actually render: a panel that sanitises down
+                       * to nothing must count as no panel, or the tab would suppress its "not
+                       * available" message and then render nothing at all.
+                       *
+                       * Null for every product with no staging row — all 309 legacy products — so
+                       * this whole tab is unchanged for them. The provenance sentence is rendered
+                       * once per page, by the description tab, and is deliberately not read here.
+                       */
+                      const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
                       return (
                         <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
                           <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-gray-900 dark:text-white">
@@ -1242,13 +1347,54 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
                               />
                             </div>
-                          ) : !hasNutritionImages ? (
+                          ) : null}
+
+                          {/*
+                            The Supplement Facts panel transcribed from the source product page.
+
+                            Rendered AFTER `nutrition_values`, which is the column an admin fills in
+                            by hand from the physical label of the lot we hold: a panel read off that
+                            label is evidence about the product in our warehouse, and this one is a
+                            transcription of a retailer's rendering of the manufacturer's panel. In
+                            practice they never both exist — promotion writes no `nutrition_values`,
+                            and no legacy product has a staging row.
+
+                            Same panel, same position relative to `nutrition_values`, as
+                            /x-crawler/product/[slug]. Null for all 309 legacy products, so their
+                            nutrition tab is unchanged.
+                          */}
+                          {sourceNutritionHtml && (
+                            <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                              <div
+                                className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                                dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
+                              />
+                              {/*
+                                The provenance sentence is NOT repeated here.
+
+                                It used to render in both places, so the ordinary supplement — prose
+                                sections AND a Supplement Facts panel, which is what the fixtures
+                                produce — printed "Informations transcrites de la fiche d'origine du
+                                fabricant…" twice on one page while /x-crawler/product/[slug] printed
+                                it once. One page, one sentence, wherever the transcribed content
+                                starts: the description tab block above renders it, and it opens
+                                whenever this row publishes anything at all.
+                              */}
+                            </div>
+                          )}
+
+                          {/*
+                            "Not available" now has to account for the transcribed panel as well —
+                            otherwise a product that ships a full Supplement Facts table would print
+                            a sentence, directly above it, saying it has none.
+                          */}
+                          {!hasNutritionContent && !hasNutritionImages && !sourceNutritionHtml && (
                             <div className="text-center py-6 sm:py-8">
                               <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
                                 Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
                               </p>
                             </div>
-                          ) : null}
+                          )}
 
                           {/* Lightbox */}
                           {nutritionLightbox >= 0 && (

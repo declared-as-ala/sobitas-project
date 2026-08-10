@@ -10,7 +10,9 @@ use App\Models\SousCategory;
 use App\Services\Catalog\BrandMatcher;
 use App\Services\Catalog\IHerb\IHerbClient;
 use App\Services\Catalog\ImportedProductContent;
+use App\Services\Catalog\ImportedSourceContent;
 use App\Services\Catalog\PromotionGate;
+use App\Support\Gtin;
 use App\Support\BrandKey;
 use Illuminate\Console\Command;
 use Illuminate\Database\QueryException;
@@ -108,7 +110,9 @@ class CatalogIHerbPromote extends Command
                             {--limit= : Maximum products to CREATE in this run (default: all; with --publish, catalog.promotion.chunk)}
                             {--brand= : Only rows of this brand (any spelling — it is folded through BrandKey)}
                             {--subcategory= : Only rows that resolve to this sous_categories slug}
-                            {--publish : Publish a wave (publier=1; seo_robots_index per the measured body gate) — the backlog an earlier run left unpublished first, then anything this run creates}
+                            {--publish : Publish a wave (publier=1; seo_robots_index per the measured body gate) — re-measure already-published noindexed products first, then the backlog an earlier run left unpublished, then anything this run creates}
+                            {--reindex : Run ONLY the re-measure pass: already-published products held back at seo_robots_index=0 whose body now clears the gate become indexable. Creates and publishes nothing.}
+                            {--recompose : Run ONLY the re-compose pass: rewrite the body of ALREADY-PROMOTED products from the page content transcribed since they were created. Creates and publishes nothing, and never touches a body a human has edited.}
                             {--force-index : Publish INDEXABLE even where the body is below catalog.promotion.min_body_words}
                             {--force-noindex : Publish every product of this wave noindexed, whatever it measures}
                             {--dry-run : Print the gate breakdown and write nothing}
@@ -172,6 +176,12 @@ class CatalogIHerbPromote extends Command
 
         if ($this->option('report')) {
             return $this->report($brandKey, $subcategory);
+        }
+
+        // Before the promote path, and alone: it creates nothing, publishes nothing and decides no
+        // robots flag, so folding it into a wave would only make it harder to see what it did.
+        if ($this->option('recompose')) {
+            return $this->recomposePromoted($brandKey, $subcategory);
         }
 
         return $this->promote($brandKey, $subcategory);
@@ -335,7 +345,11 @@ class CatalogIHerbPromote extends Command
     private function promote(?string $brandKey, ?string $subcategorySlug): int
     {
         $dryRun = (bool) $this->option('dry-run');
-        $publish = (bool) $this->option('publish');
+        $reindexOnly = (bool) $this->option('reindex');
+        // --reindex writes seo_robots_index on live products and fires the same notifications a
+        // publish does, so it is a publishing act for every purpose this method cares about: the
+        // wave size, the index mode and the pre-flight arithmetic all apply to it unchanged.
+        $publish = (bool) $this->option('publish') || $reindexOnly;
         $limit = $this->waveSize($publish);
 
         $mode = $this->indexMode($publish);
@@ -363,13 +377,16 @@ class CatalogIHerbPromote extends Command
         if ($publish && ! $dryRun) {
             $this->warn(sprintf(
                 'Publishing %s product(s). ProductSeoObserver::saved fires SeoNotifier for each one, '
-                .'from the post-commit publish and not from inside the transaction — TWO per-product '
-                .'HTTP calls apiece (revalidate the product path, submit the URL to IndexNow). That is '
-                .'~%s requests at the storefront, plus ONE sitemap cache-bust for the whole wave: '
-                .'SeoNotifier::bustSitemapCache() sends at most one per 60s per process and every one '
-                .'of these callbacks runs at command termination. A product held back at '
-                .'seo_robots_index=0 costs exactly the same two calls — ProductSeoObserver::saved '
-                .'tests `publier`, not the robots flag.',
+                .'from the post-commit publish and not from inside the transaction — at most TWO '
+                .'per-product HTTP calls apiece (revalidate the product path, submit the URL to '
+                .'IndexNow). That is ~%s requests at the storefront AT THE UPPER BOUND, plus ONE '
+                .'sitemap cache-bust for the whole wave: SeoNotifier::bustSitemapCache() sends at most '
+                .'one per 60s per process and every one of these callbacks runs at command '
+                .'termination. A product held back at seo_robots_index=0 costs only the FIRST of the '
+                .'two — its page is still revalidated because it is still on the storefront, but '
+                .'SeoNotifier::shouldSubmitToIndexNow() suppresses the submission, because asking an '
+                .'engine to crawl a URL we render <meta robots="noindex"> on is a request we should '
+                .'never make.',
                 $limit === null ? 'every promotable' : number_format($limit),
                 $limit === null ? 'an unbounded number of' : number_format($limit * 2),
             ));
@@ -409,10 +426,42 @@ class CatalogIHerbPromote extends Command
          * and a 20,000-product backlog, publishing last would mean every wave created 100 MORE
          * unpublished products and the backlog would grow faster than it drained.
          */
+        /*
+         * THE RATCHET, WHICH DID NOT EXIST.
+         *
+         * reportIndexing() has been telling the operator, in these words: "Write real copy into
+         * description_fr and the next --publish wave indexes it — the gate measures the LIVE body."
+         * Nothing in this command could do that. publishBacklog() selects products at `publier = 0`;
+         * publish() is only ever reached for a product being published for the first time; and
+         * `seo_robots_index` is written in exactly two places in filament/app — publish(), and the
+         * Filament toggle a human clicks. So a product published at (1, 0) — which is EVERY imported
+         * product whose composed body falls short of the 250-word gate, i.e. all of them until
+         * somebody writes copy — could never become indexable again by any automatic route. The
+         * instruction the command printed was unreachable, and following it correctly produced
+         * nothing at all.
+         *
+         * It runs BEFORE the backlog, and that ordering is the point: a product that already exists
+         * and has just been given real copy is a page that is ready NOW, while a backlog product is
+         * one more thin page. Given a bounded wave, spend it on the finished work first.
+         */
+        $reindexed = 0;
+        $reindexScanned = 0;
+        $reindexFailed = 0;
+        if ($publish) {
+            $reindex = $this->reindexPublished($brandKey, $subcategorySlug, $limit, $dryRun, $mode, $indexing);
+            $reindexed = $reindex['reindexed'];
+            $reindexScanned = $reindex['scanned'];
+            $reindexFailed = $reindex['failed'];
+        }
+
         $backlogPublished = 0;
         $backlogFailed = 0;
-        if ($publish) {
-            $backlog = $this->publishBacklog($brandKey, $subcategorySlug, $limit, $dryRun, $mode, $indexing);
+        // --reindex is deliberately ONLY the re-measure pass: it publishes nothing new and creates
+        // nothing, so an operator who has just written copy can act on it without also putting a
+        // fresh wave of unreviewed products in front of customers.
+        if ($publish && ! $reindexOnly) {
+            $backlogLimit = $limit === null ? null : max(0, $limit - ($reindexed + $reindexFailed));
+            $backlog = $this->publishBacklog($brandKey, $subcategorySlug, $backlogLimit, $dryRun, $mode, $indexing);
             $backlogPublished = $backlog['published'];
             // Kept apart from $failedPublishes, which counts the creation loop's own failures: the
             // summary subtracts THAT one from $created, and a backlog failure has no created
@@ -432,13 +481,14 @@ class CatalogIHerbPromote extends Command
          */
         $createLimit = $limit;
         if ($publish && $limit !== null) {
-            $createLimit = max(0, $limit - ($backlogPublished + $backlogFailed));
+            $createLimit = max(0, $limit - ($reindexed + $reindexFailed + $backlogPublished + $backlogFailed));
         }
 
-        // A wave fully spent on the backlog creates nothing, so the scan is skipped outright rather
-        // than opened and then abandoned on its first row.
+        // A wave fully spent on the re-measure pass or the backlog creates nothing, and --reindex
+        // creates nothing by definition, so the scan is skipped outright rather than opened and then
+        // abandoned on its first row.
         /** @var iterable<Collection<int, ExternalCatalogProduct>> $chunks */
-        $chunks = $createLimit === 0 ? [] : $this->chunks($brandKey, true);
+        $chunks = ($createLimit === 0 || $reindexOnly) ? [] : $this->chunks($brandKey, true);
 
         foreach ($chunks as $rows) {
             // ── Per-chunk caches ──────────────────────────────────────────────────────────
@@ -642,7 +692,442 @@ class CatalogIHerbPromote extends Command
             }
         }
 
-        return $this->summarise($dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $failedPublishes, $backlogPublished, $backlogFailed, $samples, $limit, $mode, $indexing);
+        return $this->summarise(
+            $dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $failedPublishes,
+            $backlogPublished, $backlogFailed,
+            ['reindexed' => $reindexed, 'scanned' => $reindexScanned, 'failed' => $reindexFailed],
+            $samples, $limit, $mode, $indexing,
+        );
+    }
+
+    /**
+     * RE-COMPOSE the body of products that were promoted BEFORE their source page was read.
+     *
+     * ── WHAT WAS BROKEN, AND WHO IT HIT ───────────────────────────────────────────────────────
+     * `ImportedSourceContent::body()` folds the manufacturer's overview into `products.description_fr`
+     * at exactly one place: inside createProduct(), i.e. `Product::create()`. chunks() only ever
+     * yields rows at `status = hydrated AND product_id IS NULL`, so a row that has reached `promoted`
+     * can never re-enter that path; --reindex writes only `seo_robots_index`, --rederive recomputes a
+     * word count, and `catalog:iherb:content --refetch` re-fills staging columns. Nothing wrote
+     * `description_fr`, `gtin` or `seo_schema_description` on a product that already existed.
+     *
+     * Every one of the 812 imported products already exists. Worse, ExternalCatalogProduct::
+     * scopeAwaitingContent orders `promoted` rows FIRST precisely because 100 of them are LIVE pages
+     * — so the content pass spends its first requests fetching overviews for the exact products that
+     * could never receive one. Those pages gained the sections, the panel and the gallery (the API
+     * reads the staging row live) and stayed permanently without the largest block of prose the pass
+     * extracts, without a barcode — leaving `products:enrich-dsld` and `seo:enrich-nutrition` with
+     * nothing to match on — and without the JSON-LD description. Measured on the fixtures, the
+     * overview is ~77-177 words, which is also the difference between clearing the 250-word gate and
+     * being held back by it for ever.
+     *
+     * ── WHAT IT WILL NOT DO: OVERWRITE A HUMAN ────────────────────────────────────────────────
+     * The documented workflow is "promote unpublished, REVIEW IN THE ADMIN, then publish in waves",
+     * and the whole point of the review is to improve the copy. A pass that rewrote `description_fr`
+     * unconditionally would delete that work with no undo, at catalogue scale.
+     *
+     * So a product is rewritten ONLY when its current body is, byte for byte, a body this command
+     * composed: the composed block alone, as createProduct() would have written it with no overview.
+     * Both variants are accepted — with and without the `label_scope` sentence — because whether that
+     * sentence was printed depends on a nutrition panel the row may have gained since. Anything else
+     * (a hand-edited body, a body that already leads with the overview) is counted and left alone.
+     *
+     * `gtin` and `seo_schema_description` are written only when the product's own value is blank, for
+     * the same reason and with the same result: nothing a human entered is replaced.
+     *
+     * ── AND WHAT IT COSTS ─────────────────────────────────────────────────────────────────────
+     * Nothing at the storefront. ProductSeoObserver::saved fires on `prix, promo, qte, rupture,
+     * force_out_of_stock, publier, slug, designation_fr, seo_robots_index` — `description_fr` is in
+     * none of them — so this save sends no revalidate, no IndexNow submission and no sitemap bust.
+     * The new body reaches the page on the storefront's own revalidation, and the indexing decision
+     * is a separate, deliberate act: `--reindex` measures it.
+     *
+     * THE 309 LEGACY PRODUCTS ARE UNREACHABLE HERE BY CONSTRUCTION, not by a filter: selection starts
+     * at `external_catalog_products` and they have no row in it.
+     */
+    private function recomposePromoted(?string $brandKey, ?string $subcategorySlug): int
+    {
+        $dryRun = (bool) $this->option('dry-run');
+        $limit = $this->option('limit') === null ? null : max(0, (int) $this->option('limit'));
+
+        $subId = $subcategorySlug === null ? null : ($this->subcategories()['ids'][$subcategorySlug] ?? -1);
+
+        $scanned = 0;
+        $rewritten = 0;
+        $unchanged = 0;
+        $handEdited = 0;
+        $noContent = 0;
+        $gtins = 0;
+        $schemas = 0;
+        $failed = 0;
+        $wordsBefore = 0;
+        $wordsAfter = 0;
+
+        $chunk = max(1, (int) config('catalog.promotion.chunk', 100));
+        $cursor = 0;
+
+        while ($limit === null || $rewritten + $failed < $limit) {
+            $rows = ExternalCatalogProduct::query()
+                ->with(['product', 'product.brand'])
+                ->where('provider', IHerbClient::PROVIDER)
+                ->where('status', ExternalCatalogProduct::STATUS_PROMOTED)
+                ->whereNotNull('product_id')
+                ->where('id', '>', $cursor)
+                ->when($brandKey !== null, fn ($q) => $q->where('normalized_brand_key', $brandKey))
+                ->when($subId !== null, fn ($q) => $q->where('sous_category_id', $subId))
+                // The pass is only ever useful for a row whose page HAS been read; a row with no
+                // transcribed overview would recompose to exactly what it already holds.
+                ->whereNotNull('source_overview_html')
+                ->orderBy('id')
+                ->limit($chunk)
+                ->get();
+
+            if ($rows->isEmpty()) {
+                break;
+            }
+
+            $cursor = (int) $rows->last()->id;
+            $subcategories = $this->subcategories();
+
+            foreach ($rows as $row) {
+                if ($limit !== null && $rewritten + $failed >= $limit) {
+                    break 2;
+                }
+
+                $product = $row->product;
+                if ($product === null) {
+                    continue;
+                }
+
+                $scanned++;
+
+                $rowSubId = (int) ($row->sous_category_id ?: $product->sous_categorie_id);
+                $brandName = $product->brand?->designation_fr ?? $row->source_brand_name;
+
+                $body = $this->body($row, $brandName, $subcategories, $rowSubId);
+
+                if (! $body['has_source_body']) {
+                    // The row carries an overview column but nothing publishable came out of it —
+                    // the language gate, or markup that sanitises to nothing. Not an error.
+                    $noContent++;
+
+                    continue;
+                }
+
+                $current = (string) $product->description_fr;
+                $next = (string) $body['description_fr'];
+
+                if (trim($current) === trim($next)) {
+                    $unchanged++;
+
+                    continue;
+                }
+
+                if (! $this->bodyIsMachineComposed($current, $row, $brandName, $subcategories, $rowSubId)) {
+                    $handEdited++;
+
+                    continue;
+                }
+
+                $wordsBefore += ImportedSourceContent::renderedWordCount($current, $row->getAttributes());
+                $wordsAfter += $body['word_count'];
+
+                $gtin = Gtin::normalize($row->source_gtin);
+                $writesGtin = $gtin !== null && blank($product->gtin);
+                $writesSchema = $body['schema_description'] !== null && blank($product->seo_schema_description);
+
+                if ($dryRun) {
+                    $rewritten++;
+                    $gtins += $writesGtin ? 1 : 0;
+                    $schemas += $writesSchema ? 1 : 0;
+
+                    continue;
+                }
+
+                try {
+                    $product->description_fr = $next;
+                    if ($writesGtin) {
+                        $product->gtin = $gtin;
+                    }
+                    if ($writesSchema) {
+                        $product->seo_schema_description = $body['schema_description'];
+                    }
+                    $product->save();
+
+                    // The staged figure is what the admin's staging view shows and what bodyWords()
+                    // falls back to; leaving it describing the old body would make the two disagree
+                    // about the same product. Same clamp createProduct() applies.
+                    $row->forceFill(['composed_word_count' => max(0, min(65535, $body['word_count']))])->save();
+                } catch (QueryException $e) {
+                    $failed++;
+                    $this->warn(sprintf(
+                        '  row %d: product %d could not be re-composed: %s',
+                        $row->id,
+                        $product->id,
+                        Str::limit($e->getMessage(), 140),
+                    ));
+
+                    continue;
+                }
+
+                $rewritten++;
+                $gtins += $writesGtin ? 1 : 0;
+                $schemas += $writesSchema ? 1 : 0;
+            }
+        }
+
+        $this->line('');
+        $this->info(sprintf(
+            '%s%s promoted product(s) inspected · %s re-composed · %s already current · %s left alone (body edited since promotion) · %s carried nothing publishable · %s failed.',
+            $dryRun ? '[dry run] ' : '',
+            number_format($scanned),
+            number_format($rewritten),
+            number_format($unchanged),
+            number_format($handEdited),
+            number_format($noContent),
+            number_format($failed),
+        ));
+
+        if ($rewritten > 0) {
+            $this->line(sprintf(
+                '  %s product(s) gained a barcode (products.gtin) · %s gained a JSON-LD description.',
+                number_format($gtins),
+                number_format($schemas),
+            ));
+            $this->line(sprintf(
+                '  Rendered words across those products: %s → %s.',
+                number_format($wordsBefore),
+                number_format($wordsAfter),
+            ));
+            $this->line('  Nothing was published and no robots flag moved. Run '
+                .'`php artisan catalog:iherb:promote --reindex` to let the ones that now clear the '
+                .'gate become indexable.');
+        }
+
+        if ($handEdited > 0) {
+            $this->warn(sprintf(
+                '%s product(s) were skipped because their body is no longer the one this command '
+                .'composed — a human edited it. They are never overwritten; add the manufacturer '
+                .'overview by hand if you want it there.',
+                number_format($handEdited),
+            ));
+        }
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Is this body still exactly what promotion wrote, i.e. safe to replace?
+     *
+     * The composed block is deterministic in the row, the brand name and the subcategory, so it can
+     * be recomposed and compared. Two variants are accepted because ONE sentence in it depends on a
+     * fact that can change after promotion: ImportedProductContent drops the "no nutrition values are
+     * published" line when the page carries a transcribed Supplement Facts panel, and a row promoted
+     * before the content pass had no panel. Both are bodies this command wrote; neither is a human's.
+     *
+     * A body that is anything else — edited in the admin, or already re-composed with the overview in
+     * front — returns false and is left untouched.
+     *
+     * @param  array{ids: array<string, int>, labels: array<int, string>, slugs: array<int, string>, categories: array<int, string>}  $subcategories
+     */
+    private function bodyIsMachineComposed(
+        string $current,
+        ExternalCatalogProduct $row,
+        ?string $brandName,
+        array $subcategories,
+        int $subId,
+    ): bool {
+        $current = trim($current);
+
+        if ($current === '') {
+            // An empty body is not a human's work either, and leaving it empty is what makes
+            // CrawlerProductView fall through to the storefront's identical-for-every-product
+            // boilerplate. Safe to write.
+            return true;
+        }
+
+        $attributes = $row->getAttributes();
+        $fallback = $this->description($row, $brandName, $subcategories['labels'][$subId] ?? null);
+
+        foreach ([true, false] as $hasPanel) {
+            $composed = ImportedProductContent::fromStagingRow($attributes, [
+                'brand' => $brandName,
+                'sub_category_slug' => $subcategories['slugs'][$subId] ?? null,
+                'sub_category_label' => $subcategories['labels'][$subId] ?? null,
+                'category_label' => $subcategories['categories'][$subId] ?? null,
+                'page_has_nutrition_panel' => $hasPanel,
+            ])['description_fr'] ?? $fallback;
+
+            if ($composed !== null && trim((string) $composed) === $current) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * RE-MEASURE products that are already published but were held back at seo_robots_index = 0, and
+     * make the ones whose body now clears the gate indexable. The ratchet the command has been
+     * promising in print and could not perform.
+     *
+     * ── WHAT WAS BROKEN, EXACTLY ──────────────────────────────────────────────────────────────
+     * reportIndexing() prints: "Write real copy into description_fr and the next --publish wave
+     * indexes it — the gate measures the LIVE body." Every clause of that is true about
+     * bodyWords(); none of it was reachable. The only two callers of publish() are the creation loop
+     * (a product that did not exist a second ago) and publishBacklog(), whose selection is
+     * `publier = 0 OR NULL`. A product sitting at (1, 0) matches neither, and `seo_robots_index` is
+     * written nowhere else in filament/app except the Filament toggle. So the documented workflow —
+     * publish the wave noindexed, write the copy, let the next wave index it — terminated after
+     * step one, permanently, for every imported product.
+     *
+     * ── WHAT IT SELECTS, AND WHAT IT CANNOT REACH ─────────────────────────────────────────────
+     * `status = promoted AND product_id IS NOT NULL`, joined to a product that is `publier = 1` AND
+     * `seo_robots_index = 0` — the exact pair publish() writes for a body below the gate.
+     *
+     * `= 0`, never `IS NULL`: on an ALREADY-PUBLISHED product a NULL robots column means "never
+     * set", which Product::getEffectiveSeoRobotsIndexAttribute() reads as INDEXABLE. Such a product
+     * is already in the sitemap and there is nothing to ratchet. (publishBacklog() treats NULL as a
+     * match for the opposite reason — there, an unpublished product with NULL has simply never been
+     * decided about.)
+     *
+     * THE 309 LEGACY HAND-MADE PRODUCTS ARE UNREACHABLE FROM HERE BY CONSTRUCTION, not by a filter
+     * that could be edited out: selection starts at `external_catalog_products` and they have no
+     * staging row, so no query this method can issue names one of them. That matters concretely —
+     * measured 2026-08-10, 49 of the 410 published products carry seo_robots_index = 0 and every one
+     * of them is a legacy product an admin deliberately noindexed. A pass that "helpfully" re-indexed
+     * everything noindexed would overturn 49 human decisions on its first run.
+     *
+     * ── THE CAVEAT, STATED RATHER THAN HIDDEN ─────────────────────────────────────────────────
+     * An owner who uses the Filament robots toggle to noindex an IMPORTED product that has a long
+     * body puts it into exactly the state this selects, and the next run will re-index it. The
+     * columns cannot distinguish "held back by the gate" from "rejected by a human", and inventing a
+     * staging column to encode that is a schema change for a case the admin can express by
+     * unpublishing or deleting the product. This is the same trade publishBacklog() already documents
+     * for `publier`.
+     *
+     * ── WHY THE SCAN IS CHEAP ─────────────────────────────────────────────────────────────────
+     * At 19,000 imported products, measuring every held-back body on every wave would mean pulling
+     * every `description_fr` out of the database each run. So the query pre-filters on
+     * CHAR_LENGTH(description_fr): a word needs at least one character plus a separator, so a body of
+     * fewer than `min_body_words` characters cannot possibly contain `min_body_words` words. It is a
+     * strict LOWER bound — it can never exclude a product that would have passed — and it removes
+     * essentially the whole backlog from the scan, because the composed bodies are short by exactly
+     * the amount that put them here.
+     *
+     * Only a product that ACTUALLY FLIPS costs anything: a row that is scanned and still falls short
+     * is not saved, fires no observer, sends no HTTP call, and does not consume the wave. So this
+     * pass drains itself and is a no-op on a catalogue nobody has written copy for.
+     *
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
+     * @return array{reindexed: int, scanned: int, failed: int}
+     */
+    private function reindexPublished(
+        ?string $brandKey,
+        ?string $subcategorySlug,
+        ?int $limit,
+        bool $dryRun,
+        string $mode,
+        array &$indexing,
+    ): array {
+        $reindexed = 0;
+        $scanned = 0;
+        $failed = 0;
+
+        // --force-noindex means "hold everything back", so a re-measure pass under it can only ever
+        // decide to change nothing. Skipping it outright keeps the summary honest instead of
+        // reporting a scan that was incapable of an outcome.
+        if ($mode === PromotionGate::INDEX_SUPPRESSED) {
+            return ['reindexed' => 0, 'scanned' => 0, 'failed' => 0];
+        }
+
+        $subId = $subcategorySlug === null ? null : ($this->subcategories()['ids'][$subcategorySlug] ?? -1);
+        $minWords = $this->minBodyWords();
+        // Under --force-index the gate is not consulted at all, so the length pre-filter must not
+        // exclude anything either — 0 keeps every held-back product in the scan.
+        $minChars = $mode === PromotionGate::INDEX_FORCED ? 0 : max(0, $minWords);
+
+        $chunk = max(1, (int) config('catalog.promotion.chunk', 100));
+        $cursor = 0;
+
+        while ($limit === null || $reindexed + $failed < $limit) {
+            $rows = ExternalCatalogProduct::query()
+                ->with('product')
+                ->where('provider', IHerbClient::PROVIDER)
+                ->where('status', ExternalCatalogProduct::STATUS_PROMOTED)
+                ->whereNotNull('product_id')
+                ->where('id', '>', $cursor)
+                ->when($brandKey !== null, fn ($q) => $q->where('normalized_brand_key', $brandKey))
+                ->when($subId !== null, fn ($q) => $q->where('sous_category_id', $subId))
+                ->whereHas('product', function ($q) use ($minChars): void {
+                    $q->where('publier', 1)
+                        ->where('seo_robots_index', 0)
+                        ->whereRaw($this->bodyLengthLowerBoundSql().' >= ?', [$minChars]);
+                })
+                ->orderBy('id')
+                // The cursor only ever moves forward, so rows dropping out of the result set as they
+                // are re-indexed cannot make this loop repeat or stall. The chunk is NOT bounded by
+                // the remaining wave, because most rows in it will not flip and must not be counted
+                // against it.
+                ->limit($chunk)
+                ->get();
+
+            if ($rows->isEmpty()) {
+                break;
+            }
+
+            $cursor = (int) $rows->last()->id;
+
+            foreach ($rows as $row) {
+                if ($limit !== null && $reindexed + $failed >= $limit) {
+                    break 2;
+                }
+
+                $product = $row->product;
+                if ($product === null) {
+                    continue;
+                }
+
+                $scanned++;
+
+                $verdict = $this->indexVerdict($product, $row, $mode);
+                if (! $verdict['applied']) {
+                    // Still short. No save, no notification, no wave spent — see the docblock.
+                    continue;
+                }
+
+                if ($dryRun) {
+                    $reindexed++;
+                    $this->recordIndexVerdict($indexing, $verdict);
+
+                    continue;
+                }
+
+                try {
+                    // Assigned rather than forceFill()ed so `wasChanged(['seo_robots_index'])` — which
+                    // ProductSeoObserver::saved now tests — is unambiguously true, and this save is
+                    // what revalidates the page, busts the sitemap and (only now that the product is
+                    // indexable) submits the URL to IndexNow.
+                    $product->seo_robots_index = true;
+                    $product->save();
+                } catch (QueryException $e) {
+                    $failed++;
+                    $this->warn(sprintf(
+                        '  row %d: product %d cleared the gate but could not be re-indexed: %s',
+                        $row->id,
+                        $product->id,
+                        Str::limit($e->getMessage(), 140),
+                    ));
+
+                    continue;
+                }
+
+                $reindexed++;
+                $this->recordIndexVerdict($indexing, $verdict);
+            }
+        }
+
+        return ['reindexed' => $reindexed, 'scanned' => $scanned, 'failed' => $failed];
     }
 
     /**
@@ -896,18 +1381,70 @@ class CatalogIHerbPromote extends Command
         $body = trim((string) $product->description_fr);
 
         if ($body !== '') {
-            // The audit's own definition of a word, so this number and the number
-            // frontend/scripts/audit-pdp-content.mjs will report for the rendered page are the same
-            // kind of number. It is a deliberate UNDER-estimate of the finished page: the crawler
-            // view also renders the title, the spec list and the price/availability section, none of
-            // which are in this column. Erring low means the gate holds back a page it could have
-            // indexed; erring high would mean indexing a page the audit then fails.
-            return ImportedProductContent::countWords($body);
+            /*
+             * The audit's own definition of a word, so this number and the number
+             * frontend/scripts/audit-pdp-content.mjs will report for the rendered page are the same
+             * kind of number. It is a deliberate UNDER-estimate of the finished page: the crawler
+             * view also renders the title, the spec list and the price/availability section, none of
+             * which are counted. Erring low means the gate holds back a page it could have indexed;
+             * erring high would mean indexing a page the audit then fails.
+             *
+             * ── IT NOW REACHES PAST description_fr, BECAUSE THE PAGE DOES ────────────────────
+             * The suggested-use, ingredients and warnings blocks are stored on the staging row and
+             * render as their own sections on BOTH product routes. Measuring the column alone would
+             * hold a product back for being thin while a customer reads three more paragraphs of it,
+             * and would make the gate a measurement of a page that does not exist.
+             *
+             * The staging row is already loaded at every call site — publish() and
+             * reindexPublished() both have it in hand — so this costs no query.
+             */
+            return ImportedSourceContent::renderedWordCount($body, $row->getAttributes());
         }
 
         $staged = $row->composed_word_count;
 
         return $staged === null ? 0 : max(0, (int) $staged);
+    }
+
+    /**
+     * A STRICT LOWER BOUND, in SQL, on the number of words the page renders.
+     *
+     * ── WHY THE PRE-FILTER HAD TO GROW ────────────────────────────────────────────────────
+     * reindexPublished() cannot afford to pull every held-back body out of the database on every
+     * wave, so it pre-filters on character length: a word needs at least one character, therefore a
+     * body of fewer than `min_body_words` CHARACTERS cannot hold `min_body_words` words. That is a
+     * bound that can never exclude a product which would have passed — which is the only property
+     * that makes a pre-filter safe.
+     *
+     * It stopped being that bound the moment bodyWords() started counting the transcribed sections
+     * as well. A product with a 60-character description_fr and 900 words of suggested use,
+     * ingredients and warnings clears the gate and would never have been SCANNED: the ratchet would
+     * have silently refused to index exactly the products this whole content pass was built for.
+     *
+     * So every column the word count reads is summed here, and the list is derived from
+     * ImportedSourceContent::SECTION_COLUMNS rather than typed out — add a section there and this
+     * bound follows it, instead of quietly excluding it.
+     *
+     * The Supplement Facts column is absent for the same reason it is absent from the count: it is
+     * not counted, so including its length would make the bound looser than it needs to be (still
+     * safe, but it would scan rows that cannot flip).
+     *
+     * ── THE TABLE NAMES ARE EXPLICIT ON PURPOSE ───────────────────────────────────────────
+     * This expression is used inside whereHas('product'), i.e. a correlated EXISTS subquery over
+     * `products` nested in a query over `external_catalog_products`. Both tables are in scope there
+     * and only one of them is the subquery's own — an unqualified `description_fr` happens to
+     * resolve, an unqualified `source_warnings_html` would too, and relying on either is how this
+     * breaks the day a column name is added to the other table.
+     */
+    private function bodyLengthLowerBoundSql(): string
+    {
+        $terms = ["CHAR_LENGTH(COALESCE(products.description_fr, ''))"];
+
+        foreach (array_keys(ImportedSourceContent::SECTION_COLUMNS) as $column) {
+            $terms[] = sprintf("CHAR_LENGTH(COALESCE(external_catalog_products.%s, ''))", $column);
+        }
+
+        return '('.implode(' + ', $terms).')';
     }
 
     /**
@@ -1088,6 +1625,43 @@ class CatalogIHerbPromote extends Command
                 $attributes['seo_description'] = $content['seo_description'];
             }
 
+            /*
+             * THE BARCODE. The single most valuable field the page carries, and the only one here
+             * that is structured data rather than rendered copy.
+             *
+             * App\Support\Gtin's own docblock records that `products:enrich-dsld` and
+             * `seo:enrich-nutrition` have been scheduled for months and enrich nothing, because both
+             * match on a GTIN and no product carries one. IHerbPageExtractor only stores a barcode
+             * whose GS1 check digit verifies; Gtin::normalize() re-verifies it here rather than
+             * trusting that, because this value goes straight into schema.org — ProductSchemaBuilder
+             * emits it as `gtin` plus the length-correct `gtin12`/`gtin13`/`gtin14`, and Merchant
+             * Center disapproves an item outright for a wrong one.
+             *
+             * The key is OMITTED when there is no verified barcode, exactly like seo_title above:
+             * writing an explicit NULL over a legacy column is not the same act as leaving it alone.
+             */
+            $gtin = Gtin::normalize($row->source_gtin);
+            if ($gtin !== null) {
+                $attributes['gtin'] = $gtin;
+            }
+
+            /*
+             * The one legitimate upgrade the new content makes to the Product schema.
+             *
+             * ProductSchemaBuilder::plainDescription() prefers `seo_schema_description`, then the
+             * 110-160 character meta description, then `description_fr`. Without this the JSON-LD
+             * `description` of a product with a real manufacturer overview would still be the sized
+             * SERP string compose() wrote. Written ONLY when an overview exists, so no product
+             * without one — which is all 309 legacy products, permanently — has its schema touched.
+             *
+             * Deliberately NOT accompanied by aggregateRating or review markup. `source_rating` and
+             * `source_rating_count` are on the staging row, they are internal reference only, and
+             * nothing in this command reads them.
+             */
+            if ($body['schema_description'] !== null) {
+                $attributes['seo_schema_description'] = $body['schema_description'];
+            }
+
             $product = Product::create($attributes);
 
             /**
@@ -1127,6 +1701,15 @@ class CatalogIHerbPromote extends Command
                  * Clamped to the column's range (unsignedSmallInteger) rather than trusted: a
                  * pathological body must cost a wrong number, not SQLSTATE[22003] in the middle of a
                  * wave.
+                 *
+                 * ── WHAT THIS NUMBER COUNTS WIDENED, AND THE COLUMN COMMENT WITH IT ───────────
+                 * It used to be "words in `products.description_fr`". It is now words in everything
+                 * the PAGE renders as prose: that column plus the suggested-use, ingredients and
+                 * warnings sections, which live on this staging row and render as their own sections
+                 * on both product routes. The Supplement Facts table is excluded on purpose — see
+                 * ImportedSourceContent::renderedWordCount(). bodyWords() measures the same total at
+                 * publish time, so the staged figure and the live measurement still describe the
+                 * same page.
                  */
                 'composed_word_count' => max(0, min(65535, $body['word_count'])),
             ])->save();
@@ -1272,13 +1855,38 @@ class CatalogIHerbPromote extends Command
      * serving. Where compose() DID produce the body, its own number is used verbatim: it is the same
      * counter over the same string, and re-running countWords() would only invite the two to drift.
      *
+     * ── AND THE MANUFACTURER'S OWN PROSE NOW LEADS IT ─────────────────────────────────────
+     * `source_overview_html` is the transcribed overview from the product page — the first real
+     * description this pipeline has ever had. It goes in FRONT of the composed block, and
+     * ImportedSourceContent::body() carries the argument for that ordering. What matters here is the
+     * degradation: an overview that is absent, empty, or in a language we do not publish leaves this
+     * method doing EXACTLY what it did before — compose, or fall back to the spec block.
+     *
+     * Composing still happens either way, and its output is still kept. The composed block is
+     * supporting structure (rayon, pack, flavour, the label disclaimer, who to ask), and it also
+     * produces `seo_title`/`seo_description`, which the overview does not: those two are sized to
+     * the 30-60 / 110-160 SERP windows verify-seo.js checks, and a machine-translated marketing
+     * paragraph is neither sized nor written to be a meta description.
+     *
+     * One thing the overview DOES change about composition: it is told when the page will carry a
+     * Supplement Facts panel, so the `label_scope` sentence — "aucune valeur nutritionnelle n'est
+     * publiée … tant que l'étiquette n'a pas été relevée" — is dropped instead of being printed
+     * directly above the panel it denies.
+     *
      * @param  ?string  $brandName  the display name the copy should print, or null
      * @param  array{ids: array<string, int>, labels: array<int, string>, slugs: array<int, string>, categories: array<int, string>}  $subcategories
-     * @return array{content: array<string, mixed>, description_fr: ?string, word_count: int}
+     * @return array{content: array<string, mixed>, description_fr: ?string, word_count: int, schema_description: ?string, has_source_body: bool}
      */
     private function body(ExternalCatalogProduct $row, ?string $brandName, array $subcategories, int $subId): array
     {
-        $content = ImportedProductContent::fromStagingRow($row->getAttributes(), [
+        // getAttributes(), not attributesToArray(): the same raw row fromStagingRow() has always
+        // been given. ImportedSourceContent is written to tolerate the driver's un-cast values for
+        // exactly this call site.
+        $attributes = $row->getAttributes();
+
+        $overview = ImportedSourceContent::overviewHtml($attributes);
+
+        $content = ImportedProductContent::fromStagingRow($attributes, [
             'brand' => $brandName,
             'sub_category_slug' => $subcategories['slugs'][$subId] ?? null,
             'sub_category_label' => $subcategories['labels'][$subId] ?? null,
@@ -1286,22 +1894,32 @@ class CatalogIHerbPromote extends Command
             // No `reference`: promotion writes no code_product, so the product page prints no
             // "Référence : …" line and a sentence quoting one would describe a field the page does
             // not show.
+            'page_has_nutrition_panel' => ImportedSourceContent::hasNutritionPanel($attributes),
         ]);
 
-        if ($content['description_fr'] !== null) {
-            return [
-                'content' => $content,
-                'description_fr' => $content['description_fr'],
-                'word_count' => (int) $content['word_count'],
-            ];
-        }
+        // compose() returns nulls when too few facts survive to write a true identity sentence. The
+        // spec block is the fallback for exactly those rows, unchanged — and it is now a fallback
+        // for the SUPPORTING half of the body rather than for the whole of it.
+        $composed = $content['description_fr']
+            ?? $this->description($row, $brandName, $subcategories['labels'][$subId] ?? null);
 
-        $fallback = $this->description($row, $brandName, $subcategories['labels'][$subId] ?? null);
+        $description = ImportedSourceContent::body($overview, $composed);
 
         return [
             'content' => $content,
-            'description_fr' => $fallback,
-            'word_count' => $fallback === null ? 0 : ImportedProductContent::countWords($fallback),
+            'description_fr' => $description,
+            /*
+             * Measured over what the PAGE renders, not over this column alone.
+             *
+             * The suggested-use, ingredients and warnings blocks render as their own sections on
+             * both product routes and live on the staging row, so counting `description_fr` by
+             * itself would hold a product at seo_robots_index = 0 for being thin while serving a
+             * customer three more paragraphs. renderedWordCount() carries the full argument,
+             * including why the Supplement Facts table is deliberately excluded from the count.
+             */
+            'word_count' => ImportedSourceContent::renderedWordCount($description, $attributes),
+            'schema_description' => ImportedSourceContent::schemaDescription($attributes),
+            'has_source_body' => $overview !== null,
         ];
     }
 
@@ -1575,6 +2193,7 @@ class CatalogIHerbPromote extends Command
 
     /**
      * @param  array<string, int>  $rejected
+     * @param  array{reindexed:int, scanned:int, failed:int}  $reindex
      * @param  list<array{0:string,1:string,2:string,3:string,4:string}>  $samples
      * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
      */
@@ -1588,6 +2207,7 @@ class CatalogIHerbPromote extends Command
         int $failedPublishes,
         int $backlogPublished,
         int $backlogFailed,
+        array $reindex,
         array $samples,
         ?int $limit,
         string $mode,
@@ -1602,14 +2222,43 @@ class CatalogIHerbPromote extends Command
          * that a wave can be spent entirely on the backlog, the early return has to mean "this run
          * did nothing at all", so it tests the backlog too — and says which of the two wells is dry.
          */
-        if ($scanned === 0 && $backlogPublished === 0 && $backlogFailed === 0) {
+        if ($scanned === 0 && $backlogPublished === 0 && $backlogFailed === 0 && $reindex['reindexed'] === 0 && $reindex['scanned'] === 0) {
             $this->warn($publish
-                ? 'Nothing to do: no product from an earlier run is still waiting to be published '
-                    .'(publier=0 AND seo_robots_index=0), and no hydrated row matched. '
+                ? 'Nothing to do: no published product is waiting to be re-indexed (publier=1 AND '
+                    .'seo_robots_index=0 with a body long enough to clear the gate), no product from an '
+                    .'earlier run is still waiting to be published (publier=0 AND seo_robots_index=0), '
+                    .'and no hydrated row matched. '
                     .'Run catalog:iherb:hydrate --status to see where the import is.'
                 : 'No hydrated rows matched. Run catalog:iherb:hydrate --status to see where the import is.');
 
             return self::SUCCESS;
+        }
+
+        // Printed before everything else because it is the pass that acts on work somebody has just
+        // finished, and because for two files' worth of docblocks it was the pass that did not exist.
+        if ($reindex['scanned'] > 0 || $reindex['reindexed'] > 0) {
+            $stillShort = max(0, $reindex['scanned'] - $reindex['reindexed'] - $reindex['failed']);
+            $this->info(sprintf(
+                '%s already-published product(s) %s RE-INDEXED — their body now clears the %s-word gate, '
+                    .'so they enter the sitemap and lose <meta robots="noindex">%s.',
+                number_format($reindex['reindexed']),
+                $dryRun ? 'would be' : 'were',
+                number_format($this->minBodyWords()),
+                $dryRun ? '. NOTHING WAS WRITTEN' : ' and are submitted to IndexNow',
+            ));
+            if ($stillShort > 0) {
+                $this->line(sprintf(
+                    '  %s more were measured and are still short; nothing was written for them and they cost no requests.',
+                    number_format($stillShort),
+                ));
+            }
+            if ($reindex['failed'] > 0) {
+                $this->warn(sprintf(
+                    '%s product(s) cleared the gate but the save failed — they are unchanged at '
+                        .'seo_robots_index=0 and the next run will try them again.',
+                    number_format($reindex['failed']),
+                ));
+            }
         }
 
         if ($samples !== []) {
@@ -1798,11 +2447,35 @@ class CatalogIHerbPromote extends Command
                 $dryRun ? 'would be' : 'were',
             ));
         } elseif ($indexing['noindex'] > 0) {
+            /*
+             * THIS SENTENCE IS NOW TRUE, AND IT NAMES THE COMMAND THAT MAKES IT TRUE.
+             *
+             * It used to end "…and the next --publish wave indexes it", which was unreachable:
+             * nothing in this command could re-measure a product that was already published. That is
+             * reindexPublished(), which --publish now runs first and which --reindex runs alone. The
+             * instruction printed here is the one an operator will follow, so it has to be an
+             * instruction that works.
+             */
             $this->line(
                 '  Held back because the body is below the gate, which is the intended state and not an error: '
                 .'the product sells, the URL is simply not offered to search engines yet. Write real copy into '
-                .'description_fr and the next --publish wave indexes it — the gate measures the LIVE body. '
-                .'--force-index overrides it for a wave, and says so here when it does.'
+                .'description_fr, then run:'
+            );
+            $this->line('     php artisan catalog:iherb:promote --reindex');
+            $this->line(
+                '  which re-measures the LIVE body of every published-but-noindexed product and indexes the ones '
+                .'that now clear the gate (--publish does the same pass first). --force-index overrides the '
+                .'measurement for a whole wave, and says so here when it does.'
+            );
+            $this->line(
+                '  If these products were promoted BEFORE `catalog:iherb:content` read their pages, the '
+                .'manufacturer overview is on the staging row and not in description_fr — it is folded in at '
+                .'creation and nowhere else. Fold it in first with:'
+            );
+            $this->line('     php artisan catalog:iherb:promote --recompose --dry-run');
+            $this->line(
+                '  which also writes the barcode and the JSON-LD description, refuses to touch a body a human '
+                .'has edited, and publishes nothing.'
             );
         }
     }
