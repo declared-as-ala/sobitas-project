@@ -145,3 +145,187 @@ Schedule::command('catalog:iherb:hydrate --include-neutral')
     ->everyTenMinutes()
     ->withoutOverlapping()
     ->when($catalogueReady);
+
+/*
+|--------------------------------------------------------------------------
+| One-shot: land the research content that is already committed but unimported
+|--------------------------------------------------------------------------
+| filament/storage/app/research.json has been in the repository since
+| 2026-08-08 and has never been imported. Measured from the file itself on
+| 2026-08-10: 14 products, 12 nutrition panels, 133 nutrition rows, 68 FAQ
+| entries and 5 official videos — for the highest-traffic products on the
+| site. That is the reason those pages look empty. The content was researched,
+| adversarially re-verified, committed... and then nothing ever ran the
+| importer, which is the same silent-nothing failure as a schedule with no
+| runner (see the header of this file).
+|
+| Those are counts of what is IN the file, not a promise of what will be
+| written. products:import-research re-validates every row on the way in and
+| drops anything that fails — a FAQ answer whose figures contradict the panel,
+| a video id that is not 11 characters of YouTube's alphabet, a nutrition row
+| with no source URL. The command's own output is the record of what landed.
+|
+| ── WHY THE GUARD IS `is_file()` AND NOT JUST A DATE ──────────────────────
+| The file is NOT in the container image. filament/.dockerignore line 21 is
+| `/storage/app/*` with only `!/storage/app/.gitkeep` negated, and the
+| Dockerfile's `COPY . .` honours it; the only bind-mount on this container is
+| `/var/sobitas/uploads:/var/www/html/storage/app/public` — the *public*
+| subdirectory, not storage/app itself. So the path below is absent on a fresh
+| container and the importer would exit FAILURE with "File not found" every
+| hour, for ever, in a log nobody reads.
+|
+| The guard makes absence a no-op instead of a recurring error. The file is
+| delivered by the "Run pipeline task on VPS" workflow
+| (.github/workflows/vps-run.yml), which `docker cp`s it into THIS container
+| at exactly the path checked here — but only on the `research-import-apply`
+| task, the one that has already passed the APPLY confirmation and taken a
+| pre-command database backup. It used to be copied here on every task,
+| including the ones the dropdown labels "read-only: safe to click at any
+| time", which meant clicking catalog-status armed an unattended write to 14
+| live product rows with no backup to roll back to. Arming an unattended
+| write is itself a write, and it is now gated like one.
+|
+| `hourly()` rather than a fixed time: after that click the import runs by
+| itself within the hour if the synchronous run was interrupted, whereas a
+| daily entry armed at 06:00 would sit idle until tomorrow — the same hole
+| the catalog:iherb:discover bootstrap above was written to avoid.
+|
+| Scheduled commands run with cwd = base_path(), so the relative path in the
+| command string and storage_path('app/research.json') in the guard are
+| provably the same file. They must stay that way: a guard that checks a
+| different path than the command reads is a checker that never enters the
+| state it is guarding.
+|
+| ── WHY IT IS SELF-DISABLING, AND WHY EXIT CODE 0 IS NOT ENOUGH TO LATCH ───
+| The marker is written in onSuccess(), so a failed run is retried next hour
+| rather than silently disabling itself. A task that switches itself off on
+| failure looks identical, in the logs, to one that succeeded — and this
+| project has already been bitten by "green means it worked".
+|
+| But onSuccess proves the command RAN, not that content LANDED, and
+| ImportProductResearch::handle() returns SUCCESS unconditionally after its
+| loop: a product whose slug is not found prints "introuvable", increments
+| totals['skipped'] and continues, exit code still 0 (the only FAILURE paths
+| are "file not found" and "no products"). research.json carries 14 exact
+| `products.slug` keys, so ONE slug drifting in production meant the first run
+| landed 13, skipped 1, exited 0, latched the marker for ever, and logged
+| "ran once and is now disabled" — the same "green means it worked" failure
+| this block claims immunity from, one level up.
+|
+| So the latch asserts on the ARTIFACT: every slug in research.json must
+| resolve to a product row before the entry is allowed to switch itself off.
+| It deliberately does NOT assert that each product ended up with a panel or a
+| FAQ, because the importer legitimately drops rows that fail validation — an
+| unresolvable slug is the one outcome that means "this content will never
+| land without a human". When that happens the entry stays armed and logs the
+| offending slugs by name every hour, which is noisy on purpose: harmless
+| (without --overwrite a repeat run writes nothing) and loud, versus silent
+| and permanent.
+|
+| The marker lives in the cache (redis, on a named volume, so it survives
+| container recreation). If redis is ever flushed the import runs again, and
+| that is harmless rather than a bug worth engineering around: without
+| --overwrite the command skips every field that is already filled
+| ("rien à écrire"), and recordProvenance() uses firstOrNew() keyed on
+| (product_id, field_path, source_id, content_hash), so a repeat run cannot
+| duplicate observation rows either. rescue(..., false) means "if the cache
+| cannot be reached, assume not yet imported" — the safe direction, because
+| the failure mode of running again is nothing.
+|
+| Deliberately NOT here: promotion and publishing. Creating and publishing
+| products stays a command someone runs on purpose, exactly as the catalogue
+| block above says.
+*/
+$researchFile = storage_path('app/research.json');
+$researchImportedKey = 'research.import.completed';
+
+/**
+ * Slugs in research.json that resolve to no product row.
+ *
+ * This is the verification the exit code cannot give: it reads the same file the command reads and
+ * asks the database whether the products it names actually exist. An empty list means every entry
+ * in the file had somewhere to land; a non-empty one names exactly which content did not.
+ *
+ * @return list<string>
+ */
+$researchSlugsNotFound = function () use ($researchFile): array {
+    $payload = json_decode((string) file_get_contents($researchFile), true);
+    $products = $payload['products'] ?? $payload;
+
+    if (! is_array($products) || $products === []) {
+        // Unreadable or empty: the command would have exited FAILURE, so onSuccess should not be
+        // running at all. Report it as unverified rather than as "everything landed".
+        return ['<research.json unreadable or empty>'];
+    }
+
+    $missing = [];
+
+    foreach ($products as $entry) {
+        $slug = is_array($entry) ? trim((string) ($entry['slug'] ?? '')) : '';
+
+        if ($slug === '') {
+            continue;
+        }
+
+        if (! \App\Models\Product::query()->where('slug', $slug)->exists()) {
+            $missing[] = $slug;
+        }
+    }
+
+    return $missing;
+};
+
+Schedule::command('products:import-research storage/app/research.json --apply')
+    ->hourly()
+    ->withoutOverlapping()
+    ->when(fn () => is_file($researchFile)
+        && ! rescue(
+            fn () => \Illuminate\Support\Facades\Cache::has($researchImportedKey),
+            false,
+            false,
+        ))
+    ->appendOutputTo(storage_path('logs/research-import.log'))
+    ->onSuccess(function () use ($researchImportedKey, $researchSlugsNotFound): void {
+        // Exit code 0 only proves the command RAN. Check the artifact before switching the entry
+        // off for ever — see the header block above for the run that lands 13 of 14 and latches.
+        $missing = rescue($researchSlugsNotFound, null, false);
+
+        if ($missing === null) {
+            \Illuminate\Support\Facades\Log::warning(
+                'products:import-research exited 0 but its result could not be verified '
+                .'(research.json or the database was unreachable from the scheduler). '
+                .'NOT disabling the entry — it will run again next hour.',
+            );
+
+            return;
+        }
+
+        if ($missing !== []) {
+            \Illuminate\Support\Facades\Log::error(sprintf(
+                'products:import-research exited 0, but %d slug(s) in research.json match no product: %s. '
+                .'That content has NOT landed, so the entry stays armed and will retry next hour. '
+                .'Fix the slug in research.json (or rename the product back) — nothing changes until you do. '
+                .'Output: storage/logs/research-import.log.',
+                count($missing),
+                implode(', ', array_slice($missing, 0, 20)),
+            ));
+
+            return;
+        }
+
+        \Illuminate\Support\Facades\Cache::forever($researchImportedKey, now()->toIso8601String());
+        \Illuminate\Support\Facades\Log::info(
+            'products:import-research ran, every slug in research.json resolved to a product, and the '
+            .'entry is now disabled. Output: storage/logs/research-import.log. '
+            ."To run it again, forget the cache key [{$researchImportedKey}] — the "
+            .'"research-import-rearm" task in the "Run pipeline task on VPS" workflow does exactly that.',
+        );
+    })
+    ->onFailure(function (): void {
+        // Loud on purpose. The whole point of this entry is that content lands without
+        // anyone watching, so the one thing that must never be quiet is it not landing.
+        \Illuminate\Support\Facades\Log::error(
+            'products:import-research FAILED — content did not land. It will be retried next hour. '
+            .'See storage/logs/research-import.log.',
+        );
+    });

@@ -64,7 +64,21 @@ export default function robots(): MetadataRoute.Robots {
         disallow, // On applique les mêmes blocages pour protéger les données privées
       })),
     ],
-    // URL absolue du sitemap pour Lighthouse
+    /*
+     * URL absolue du sitemap INDEX (et de lui seul).
+     *
+     * /sitemap.xml is a <sitemapindex> that points at the child sitemaps under /sitemaps/
+     * (products-0.xml, listings.xml, blog.xml…). Declaring the index is enough: Google follows it
+     * to every child, and the split stays a pure implementation detail we can rechunk freely.
+     *
+     * DO NOT add the children here. A child that is BOTH listed in robots.txt and reachable
+     * through the index counts as submitted twice, which splits Search Console coverage across two
+     * submission sources — destroying exactly the per-content-type diagnosability ("products
+     * indexed" separately from "blog indexed") that the index split exists to buy.
+     *
+     * Nothing under /sitemaps/ is in `disallow` above, and it must stay that way: blocking the
+     * children would make the index point at URLs Googlebot is forbidden to fetch.
+     */
     sitemap: `${ORIGIN}/sitemap.xml`,
   };
 }

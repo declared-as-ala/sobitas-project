@@ -1,0 +1,348 @@
+name: Run pipeline task on VPS
+
+# One clickable button for the catalogue pipeline, for an owner who has no terminal
+# and cannot SSH.
+#
+# Actions -> "Run pipeline task on VPS" -> Run workflow -> pick a task -> green button.
+# The job log is the output. That is the whole interaction.
+#
+# ── THE SECURITY PROPERTY THIS FILE IS BUILT AROUND ───────────────────────────────────────
+# The dropdown value is a TOKEN, never a command string. A `case` statement inside the remote
+# script maps the token to a hardcoded artisan argv, and there is no free-text input that
+# reaches a shell. This matters because GitHub interpolates ${{ }} into the remote script as
+# LITERAL TEXT before the script is sent (deploy-filament.yml line 157 does exactly that with
+# GHCR_PAT). So a `${{ inputs.something }}` holding operator-typed text inside `script:` is
+# remote code execution through a web form, not a variable. Values therefore travel through
+# appleboy's `envs:` forwarding, and the only free-text input (`confirm`) is compared against a
+# fixed string on the runner and never crosses into the remote script at all.
+#
+# Because `ARGS` is only ever assigned from literals in that case block, leaving it unquoted at
+# the end (so it word-splits into separate arguments) is safe. That is a deliberate exception,
+# not an oversight.
+
+run-name: "${{ inputs.task }} · by ${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "What to run"
+        type: choice
+        required: true
+        default: catalog-status
+        options:
+          # ── read-only: safe to click at any time, any number of times ──
+          - catalog-status
+          - catalog-promote-dry-run
+          - research-import-dry-run
+          # ── staging-table only: no customer-visible effect ──
+          - catalog-retry-failed
+          # ── WRITES: these need confirm=APPLY ──
+          - research-import-apply
+          - catalog-promote
+          - catalog-publish-wave-500
+          # Re-arms the one-shot hourly import in filament/routes/console.php by forgetting its
+          # cache marker. It writes no product row itself, but the import it re-arms does — so it
+          # is confirmed and backed up like a write. Without it there was no way at all to re-run
+          # that import from this workflow, for an owner who cannot SSH.
+          - research-import-rearm
+      confirm:
+        description: "Writing tasks only (catalog-promote, catalog-publish-wave-500, research-import-apply, research-import-rearm): type APPLY"
+        required: false
+        default: ""
+
+# Serialise every run. Two artisan writes against the same tables at the same moment is a
+# problem nobody would enjoy diagnosing from a phone. cancel-in-progress stays false for the
+# same reason it is false in deploy-filament.yml: never kill a half-finished write.
+concurrency:
+  group: vps-artisan
+  cancel-in-progress: false
+
+permissions:
+  contents: read # this workflow builds and pushes nothing
+
+jobs:
+  run:
+    name: "${{ inputs.task }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      # Fail before opening an SSH session. Costs nothing, and keeps the "are you sure" out of
+      # the remote script where it would be mixed up with real failures.
+      - name: Check the confirmation for writing tasks
+        env:
+          TASK: ${{ inputs.task }}
+          CONFIRM: ${{ inputs.confirm }}
+        run: |
+          set -euo pipefail
+          case "$TASK" in
+            research-import-apply|catalog-promote|catalog-publish-wave-500|research-import-rearm)
+              if [ "$CONFIRM" != "APPLY" ]; then
+                echo "::error::'$TASK' writes to the live database. Re-run it and type APPLY in the confirm box."
+                exit 1
+              fi
+              echo "✓ '$TASK' confirmed by ${{ github.actor }}"
+              ;;
+            *)
+              echo "✓ '$TASK' does not write to products — no confirmation needed."
+              ;;
+          esac
+
+      - name: Checkout
+        # Only so research.json is on the runner for the next step.
+        uses: actions/checkout@v5
+
+      # Ship research.json to the VPS — for the research tasks only.
+      #
+      # The file is committed (filament/storage/app/research.json, 190,016 bytes) but it is NOT in
+      # the container image: filament/.dockerignore line 21 is `/storage/app/*` with only
+      # `!/storage/app/.gitkeep` negated, and the Dockerfile's `COPY . .` honours .dockerignore.
+      # The only bind-mount on the backend containers is `/var/sobitas/uploads` mounted at
+      # storage/app/**public** — not storage/app. So without this step,
+      # `php artisan products:import-research storage/app/research.json` exits FAILURE with
+      # "File not found" on first click.
+      #
+      # ── WHY THIS IS NO LONGER UNCONDITIONAL ────────────────────────────────────────────────
+      # It used to run for every task, "so the FIRST click of any task at all — including a
+      # harmless catalog-status — arms that import". That is precisely what made it a defect: the
+      # hourly entry in filament/routes/console.php runs
+      # `products:import-research … --apply` gated only on this file existing, so a task the
+      # dropdown labels "read-only: safe to click at any time" scheduled an unattended
+      # forceFill()->save() onto 14 live product rows, within the hour, having passed neither the
+      # APPLY confirmation below nor the mandatory pre-command database backup — leaving no
+      # db-pre-command-*.sql.gz to roll back to, because no writing task was ever selected.
+      # Arming an unattended write is a write. It is gated like one now.
+      - name: Ship research.json to the VPS
+        if: startsWith(inputs.task, 'research-')
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          # Key first, password as fallback — appleboy uses the key when VPS_SSH_KEY is set and
+          # falls back to the password when it is not. Same pairing as deploy-filament.yml,
+          # written after a password rotation broke every deploy on 07/08/2026.
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: filament/storage/app/research.json
+          target: /root/sobitas-project/inbox
+          strip_components: 3 # filament/storage/app/ -> research.json
+          overwrite: true
+
+      - name: Run the task
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          TASK: ${{ inputs.task }}
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 120s
+          # Promotion of a 500-product wave and the research import are minutes of work, not
+          # seconds. Still bounded, so a wedged command cannot hold the runner for ever.
+          command_timeout: 3600s
+          # No retry, no continue-on-error anywhere in this job. script_stop + `set -e` + a
+          # non-zero artisan exit must turn the run RED, because the colour of that circle is
+          # the only signal the owner gets. This workflow is not the deploy; there is no poller
+          # behind it to make a missed run right later.
+          script_stop: true
+          # TASK crosses as an environment variable, NOT as ${{ }} inside the script.
+          envs: TASK
+          script: |
+            set -euo pipefail
+
+            APP_DIR="/root/sobitas-project"
+            COMPOSE_FILE="$APP_DIR/docker-compose.yml"
+
+            cd "$APP_DIR"
+
+            # ── Pre-flight: is the backend actually up? ────────────────────────────────────
+            # A deploy recreates backend-v2, and exec'ing into a container mid-recreate produces
+            # a failure that reads like a bug in the artisan command. Name the real reason.
+            if ! docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
+              echo "❌ backend-v2 is not ready — a deploy is probably running right now."
+              echo "   Wait two minutes and click Run workflow again."
+              exit 1
+            fi
+
+            # ── The allowlist ─────────────────────────────────────────────────────────────
+            # A fixed token -> a fixed argv. Nothing the operator types reaches this shell.
+            # WRITES=yes means "touches the products table" and gates the backup below.
+            case "$TASK" in
+              catalog-status)
+                ARGS="catalog:iherb:hydrate --status";                           WRITES=no ;;
+              catalog-promote-dry-run)
+                ARGS="catalog:iherb:promote --dry-run";                          WRITES=no ;;
+              research-import-dry-run)
+                ARGS="products:import-research storage/app/research.json";       WRITES=no ;;
+              # Resets only transient failures in external_catalog_products back to queued.
+              # It is a write, but to the staging table alone — no product, page or URL changes
+              # — so it needs no confirmation and no backup.
+              catalog-retry-failed)
+                ARGS="catalog:iherb:hydrate --retry-failed";                     WRITES=no ;;
+              research-import-apply)
+                ARGS="products:import-research storage/app/research.json --apply"; WRITES=yes ;;
+              # Forgets the one-shot marker so the hourly entry in filament/routes/console.php can
+              # run again. cache:forget touches no product row itself, so WRITES=yes is not about
+              # this command — it is about the unattended --apply import it re-arms, which will run
+              # within the hour with nobody watching. This is the last moment a backup can be taken
+              # before that happens, so it is taken here.
+              research-import-rearm)
+                ARGS="cache:forget research.import.completed";                     WRITES=yes ;;
+              catalog-promote)
+                ARGS="catalog:iherb:promote";                                    WRITES=yes ;;
+              catalog-publish-wave-500)
+                ARGS="catalog:iherb:promote --publish --limit=500";              WRITES=yes ;;
+              *)
+                # Unreachable from the UI, which validates the choice. This is the backstop for
+                # a dispatch made through the REST API.
+                echo "❌ unknown task: $TASK"
+                exit 1 ;;
+            esac
+
+            ARTISAN_CMD="${ARGS%% *}"
+
+            # ── Pre-flight: does the command exist in the RUNNING image? ───────────────────
+            # Checked before the backup, so a typo or an unbuilt command costs nothing.
+            #
+            # This is not hypothetical, and the failure it catches is a TIMING one rather than a
+            # missing-code one. `catalog:iherb:promote` exists in the repository — but this
+            # workflow talks to the image that is RUNNING on the VPS, and the backend only picks
+            # up a new command when the Filament deploy has rebuilt and recreated the container.
+            # Click a promote task in the window between merging the command and that deploy
+            # finishing, and artisan answers "Command is not defined" — which reads like a broken
+            # pipeline rather than "wait two minutes". This says which of the two it is.
+            if ! docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                 php artisan help "$ARTISAN_CMD" >/dev/null 2>&1; then
+              echo "❌ '$ARTISAN_CMD' is not a registered artisan command in the deployed image."
+              echo ""
+              echo "   Either the command has not been written yet, or it has been written but"
+              echo "   not deployed — the backend only picks up new commands when the Filament"
+              echo "   deploy workflow rebuilds and ships the image."
+              echo ""
+              echo "   Commands the running image DOES have in the '${ARTISAN_CMD%%:*}' namespace:"
+              docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                php artisan list "${ARTISAN_CMD%%:*}" 2>&1 | sed 's/^/     /' || true
+              exit 1
+            fi
+
+            # ── Backup before anything that writes ─────────────────────────────────────────
+            # Lifted from deploy-filament.yml, with ONE deliberate difference: there the backup
+            # must never gate the deploy (a failed backup once killed three releases). Here it
+            # DOES gate, because nothing is waiting on a hand-clicked import — the owner can
+            # free some disk and click again, and that is a far better outcome than creating
+            # hundreds of products with no way back.
+            if [ "$WRITES" = "yes" ]; then
+              echo "🗄️  Pre-command database backup..."
+              mkdir -p /var/sobitas/backups 2>/dev/null || true
+              # Prune BEFORE writing: retention that only runs after a successful write can
+              # never free the space that write needs.
+              ls -1t /var/sobitas/backups/db-pre-command-*.sql.gz 2>/dev/null | tail -n +30 | xargs -r rm -f || true
+              BACKUP_FILE="/var/sobitas/backups/db-pre-command-$(date +%Y%m%d-%H%M%S).sql.gz"
+              # Probe writability in a SUBSHELL: a failed redirection is a fatal shell error
+              # that would otherwise kill the script outright, bypassing this very check.
+              if ! ( : > "$BACKUP_FILE" ) 2>/dev/null; then
+                rm -f "$BACKUP_FILE" 2>/dev/null || true
+                echo "❌ /var/sobitas/backups is not writable — refusing to run a writing command."
+                df -h /var 2>&1 | sed 's/^/    /'
+                exit 1
+              fi
+              # Single quotes on purpose: MYSQL_* expand inside the mysql container, never here.
+              if docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP_FILE"; then
+                echo "✓ Backup written: $BACKUP_FILE ($(du -h "$BACKUP_FILE" 2>/dev/null | cut -f1))"
+              else
+                rm -f "$BACKUP_FILE" || true
+                echo "❌ Database backup FAILED — refusing to run a writing command."
+                exit 1
+              fi
+            fi
+
+            # ── Deliver research.json INTO the containers ──────────────────────────────────
+            # storage/app is not a mounted volume, so the file has to be copied into each
+            # container that reads it.
+            #
+            # THIS BLOCK RUNS AFTER THE BACKUP, NOT BEFORE IT, AND THAT ORDER IS THE POINT.
+            # The two target containers are not equivalent:
+            #   · sobitas-backend-v2 is where THIS job runs artisan, synchronously, in the
+            #     foreground, under the confirmation and backup gates above. Delivering the file
+            #     there has no effect of its own; nothing in that container reads it unattended.
+            #   · sobitas-backend-v2-scheduler runs schedule:work, and the hourly entry in
+            #     filament/routes/console.php fires `products:import-research … --apply` the
+            #     moment this path exists. Delivering the file THERE schedules a write to live
+            #     product rows that nobody is watching.
+            #
+            # So the scheduler copy happens only on the two research-* tasks that arm that import,
+            # both of which require confirm=APPLY and are marked WRITES=yes — and it happens only
+            # once the backup they gate has actually been written. Delivering it earlier meant a
+            # failed backup could still leave the scheduler armed, which is the same defect one
+            # step smaller. Every other task, including all the read-only ones, leaves the
+            # scheduler untouched.
+            #
+            # Copied to storage/app/ and NOT storage/app/public/, even though public/ is the
+            # persistent bind-mount: that directory is served by nginx read-only, so putting an
+            # internal working file there would publish it at a URL on admin.protein.tn. This
+            # copy does not survive a container recreate, and does not need to — the scheduled
+            # import only has to run once, and another research-import-apply click puts it back.
+            RESEARCH_TARGETS="sobitas-backend-v2"
+            case "$TASK" in
+              # research-import-rearm is here for the same reason as -apply: it exists to make the
+              # scheduled import run again, which it cannot do if the scheduler has no file to find.
+              research-import-apply|research-import-rearm)
+                RESEARCH_TARGETS="sobitas-backend-v2 sobitas-backend-v2-scheduler" ;;
+            esac
+
+            if [ -f "$APP_DIR/inbox/research.json" ]; then
+              for C in $RESEARCH_TARGETS; do
+                if [ "$(docker inspect -f '{{.State.Running}}' "$C" 2>/dev/null || echo false)" = "true" ]; then
+                  docker cp "$APP_DIR/inbox/research.json" "$C":/var/www/html/storage/app/research.json
+                  # `docker cp` lands the file owned by root. The task below execs artisan as
+                  # www-data (-u www-data), so ownership is aligned explicitly here rather than
+                  # left to depend on the mode bits the file happened to arrive with.
+                  docker exec -u root "$C" chown www-data:www-data /var/www/html/storage/app/research.json
+                  echo "✓ research.json delivered to $C"
+                fi
+              done
+            fi
+
+            # ── Run it ────────────────────────────────────────────────────────────────────
+            # -T because the runner's SSH session has no TTY (compose dies with "the input
+            #    device is not a TTY" without it).
+            # -u www-data because php-fpm serves as www-data: artisan run as root leaves
+            #    root-owned files in storage/logs and bootstrap/cache that www-data then cannot
+            #    write until the next container start fixes ownership.
+            # --no-interaction so a command that would prompt takes the safe default and exits
+            #    instead of hanging until command_timeout.
+            # $ARGS is deliberately unquoted so it splits into arguments — safe because every
+            #    value it can hold is a literal from the case block above.
+            echo ""
+            echo "▶ php artisan $ARGS"
+            echo ""
+            docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+              php artisan $ARGS --no-interaction
+
+            echo ""
+            echo "✅ $TASK finished."
+
+      - name: Summary
+        if: always()
+        env:
+          TASK: ${{ inputs.task }}
+          OUTCOME: ${{ job.status }}
+        run: |
+          {
+            echo "## ${TASK}"
+            echo ""
+            echo "| | |"
+            echo "|---|---|"
+            echo "| Task | \`${TASK}\` |"
+            echo "| Run by | @${{ github.actor }} |"
+            echo "| Result | **${OUTCOME}** |"
+            echo ""
+            # Deliberately does NOT reproduce the command's output. appleboy/ssh-action streams
+            # remote stdout to the step log, not to anything this step can read, and claiming
+            # otherwise would be the "green means it worked" failure this repo already has
+            # scars from.
+            echo "The command's full output is in the **Run the task** step above."
+          } >> "$GITHUB_STEP_SUMMARY"

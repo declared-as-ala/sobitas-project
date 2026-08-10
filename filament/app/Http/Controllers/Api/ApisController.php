@@ -83,6 +83,17 @@ class ApisController extends Controller
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
         'qte', 'rupture', 'force_out_of_stock', 'low_stock_threshold',
         'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
+        // seo_robots_index is here for ONE consumer: the sitemap builder. sitemapData.ts refuses to
+        // submit a URL that renders <meta robots="noindex"> — but this projection is the only thing
+        // /all_products returns, it carried no robots column at all, and /product_details (the only
+        // endpoint that emits `seo.robots.index`) is not what the sitemap reads. So the filter tested
+        // `undefined !== false`, which is a constant true, and every published-but-noindex product
+        // was submitted anyway. That is invisible today because none of the 309 existing products is
+        // noindexed; it becomes 5,000 "Submitted URL marked noindex" errors the first time a wave of
+        // imported products is published with seo_robots_index = 0, which is precisely the workflow
+        // CatalogIHerbPromote and ImportedProductContent describe. One column, cast to boolean by
+        // the model, so the frontend receives true/false/null rather than a MySQL tinyint.
+        'seo_robots_index',
         // Timestamps power <lastmod> in the sitemap. Without them the frontend fell back to
         // `new Date()`, so EVERY product claimed to have been modified at the moment of the fetch —
         // Google discounts a lastmod it can prove is untrustworthy, which wasted the signal

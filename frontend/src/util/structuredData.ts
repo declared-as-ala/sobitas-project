@@ -8,6 +8,7 @@ import { getStorageUrl } from '@/services/api';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
+import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
@@ -83,6 +84,67 @@ function defaultPriceValidUntil(): string {
 
 /** Shipping destination is required by Google alongside shippingRate/deliveryTime. */
 const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } as const;
+
+/**
+ * OfferShippingDetails — emitted ONLY for a product that is actually in stock.
+ *
+ * `deliveryTime` asserts handling in 0-1 days and transit in 1-3 days. That is a true statement
+ * about a product sitting in the Sousse shop and a false one about a product we do not hold: the
+ * catalogue import promotes every product with qte = 0 (catalog.promotion.initial_qte), so without
+ * this gate ~20,000 Offers would each carry a delivery commitment for goods that have never been in
+ * the country, right next to `availability: OutOfStock` that says so.
+ *
+ * The trade-off, stated rather than hidden: shippingDetails is a RECOMMENDED field for merchant
+ * listings, so out-of-stock products may show "missing field shippingDetails" as a non-critical
+ * Search Console warning. That is the correct side to be wrong on — an out-of-stock item is not
+ * eligible for a merchant listing anyway, so the field buys nothing, while a shipping promise we
+ * cannot keep is a claim about the real world. Everything Google actually requires on the Offer —
+ * price, priceCurrency, availability, itemCondition, url, hasMerchantReturnPolicy — stays
+ * unconditional.
+ */
+function buildShippingDetails(product: Product, price: number): Record<string, unknown> | null {
+  if (!isInStock(product)) return null;
+
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: { '@type': 'MonetaryAmount', value: price >= 300 ? 0 : 10, currency: 'TND' },
+    shippingDestination: SHIPPING_DESTINATION,
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+      transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
+    },
+  };
+}
+
+/**
+ * The Product `description`, never empty, and never the same sentence 20,000 times.
+ *
+ * This used to end in one hardcoded literal — "{name} — complément alimentaire authentique
+ * disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie." — duplicated in
+ * both builders. Two problems, and the catalogue import turns both from cosmetic into structural:
+ *
+ * 1. It is IDENTICAL across every product that lacks a description, differing only by the substituted
+ *    name. At 309 products that was a handful of pages. At ~20,000 imported products it is the
+ *    single most repeated string on the domain, and "many pages whose text differs only by a
+ *    substituted noun" is the literal description of scaled content abuse.
+ * 2. It did not match the visible page. The PDP renders generateProductFallbackDescription() in its
+ *    Description section, so the structured data described the product one way and the body another.
+ *
+ * Both are fixed by deriving from the same generator the page renders: the text is attribute-driven
+ * (name, brand, subcategory, flavours, price, stock) so it varies with the product, and structured
+ * data and visible text now state the same thing. It still asserts nothing we do not hold — every
+ * value in it comes from a column.
+ *
+ * The literal remains as a last resort for the case where even that generator produces nothing,
+ * because "Missing field description" must not be reachable.
+ */
+function factualProductDescription(product: Product): string {
+  const generated = stripHtml(generateProductFallbackDescription(product), 500);
+  if (generated) return generated;
+
+  return `${product.designation_fr || 'Produit'} — produit référencé chez ${SITE_BRAND_NAME}.`;
+}
 
 
 export type BreadcrumbItem = { name: string; url: string };
@@ -365,7 +427,6 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     return null;
   }
 
-  const shippingRateValue = price >= 300 ? 0 : 10;
   const offersPayload: Record<string, unknown> = {
     '@type': 'Offer',
     url: canonicalUrl,
@@ -374,18 +435,12 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     availability,
     itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
     seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
-    shippingDetails: {
-      '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
-      shippingDestination: SHIPPING_DESTINATION,
-      deliveryTime: {
-        '@type': 'ShippingDeliveryTime',
-        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
-      },
-    },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
+
+  // In-stock only — see buildShippingDetails.
+  const shippingDetails = buildShippingDetails(product, price);
+  if (shippingDetails) offersPayload.shippingDetails = shippingDetails;
 
   // On an active promo, the sale price is only valid until the promo expires — tell Google so it
   // doesn't keep showing a stale sale price after the promotion ends.
@@ -404,10 +459,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: cleanSchemaName(product.designation_fr),
-    // Never empty (GSC "Missing field description") — factual fallback from real product identity.
-    description:
-      description ||
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
+    // Never empty (GSC "Missing field description") — see factualProductDescription.
+    description: description || factualProductDescription(product),
     // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
     image: dedupedImages.length > 0 ? dedupedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     sku,
@@ -483,10 +536,22 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const availability =
     (typeof product.schema?.availability === 'string' && product.schema.availability) ||
     (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
-  const price = formatSchemaPrice(getSchemaPrice(product));
-  const brandName = (product.schema?.brand || product.brand?.designation_fr || SITE_BRAND_NAME).toString();
+  const priceNumber = getSchemaPrice(product);
+  const price = formatSchemaPrice(priceNumber);
+  /**
+   * The brand, or NO brand node at all.
+   *
+   * This used to fall back to SITE_BRAND_NAME, which made every brandless product declare
+   * `brand: { name: "Protéine Tunisie" }` — asserting that the shop manufactures the goods it
+   * resells, and inventing a Brand @id URL to go with it. buildProductJsonLd has always omitted the
+   * node instead (`brand: … : undefined`), so the two builders disagreed about the same product
+   * depending on whether the backend graph happened to be present.
+   *
+   * `brand` is recommended, not required, for Product rich results. Omitting it costs a recommended
+   * field; filling it with the retailer's name states something untrue about who makes the product.
+   */
+  const realBrand = (product.schema?.brand || product.brand?.designation_fr || '').toString().trim();
 
-  const shippingRateValue = getSchemaPrice(product) >= 300 ? 0 : 10;
   const offersInput =
     (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
   const offers: Record<string, unknown> = {
@@ -503,18 +568,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
       name: SITE_BRAND_NAME,
       url: PRODUCTION_ORIGIN,
     },
-    shippingDetails: {
-      '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
-      shippingDestination: SHIPPING_DESTINATION,
-      deliveryTime: {
-        '@type': 'ShippingDeliveryTime',
-        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
-      },
-    },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
+
+  // In-stock only — see buildShippingDetails. The `delete` matters as much as the assignment: the
+  // backend Offer arrives through `...offersInput` and can carry its own shippingDetails, so simply
+  // not setting ours would let the upstream delivery promise survive on an out-of-stock product.
+  const sanitizeShipping = buildShippingDetails(product, priceNumber);
+  if (sanitizeShipping) offers.shippingDetails = sanitizeShipping;
+  else delete offers.shippingDetails;
 
   // Mirror buildProductJsonLd: on an active promo the sale price expires with the promo.
   const sanitizeUntilRaw = product.schema?.price_valid_until
@@ -537,11 +599,6 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     mainEntityOfPage: canonical,
     sku,
     productID: sku,
-    brand: {
-      '@type': 'Brand',
-      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
-      name: brandName,
-    },
     // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
     image: normalizedImages.length > 0 ? normalizedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     description:
@@ -550,10 +607,22 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
         500
       ) ||
       (typeof source.description === 'string' && source.description.trim() ? source.description : '') ||
-      // Factual fallback so "Missing field description" can't occur (never an empty string).
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
+      // Never empty (GSC "Missing field description") — see factualProductDescription.
+      factualProductDescription(product),
     offers,
   };
+
+  if (realBrand) {
+    sanitized.brand = {
+      '@type': 'Brand',
+      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(realBrand.toLowerCase().replace(/\s+/g, '-'))}`,
+      name: realBrand,
+    };
+  } else {
+    // No brand we can name. Drop whatever `...source` supplied rather than letting the backend's
+    // own fallback stand in for one.
+    delete sanitized.brand;
+  }
 
   if (normalizedImages.length > 0) {
     sanitized.image = normalizedImages;
