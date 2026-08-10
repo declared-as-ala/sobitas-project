@@ -159,7 +159,7 @@ jobs:
             cd "$APP_DIR"
 
             # ── Pre-flight: is the backend actually up? ────────────────────────────────────
-            # A deploy recreates backend-v2, and exec'ing into a container mid-recreate produces
+            # A deploy recreates backend-v2, and running exec into a container mid-recreate produces
             # a failure that reads like a bug in the artisan command. Name the real reason.
             if ! docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
               echo "❌ backend-v2 is not ready — a deploy is probably running right now."
@@ -172,29 +172,45 @@ jobs:
             # WRITES=yes means "touches the products table" and gates the backup below.
             case "$TASK" in
               catalog-status)
-                ARGS="catalog:iherb:hydrate --status";                           WRITES=no ;;
+                ARGS="catalog:iherb:hydrate --status"
+                WRITES=no
+                ;;
               catalog-promote-dry-run)
-                ARGS="catalog:iherb:promote --dry-run";                          WRITES=no ;;
+                ARGS="catalog:iherb:promote --dry-run"
+                WRITES=no
+                ;;
               research-import-dry-run)
-                ARGS="products:import-research storage/app/research.json";       WRITES=no ;;
+                ARGS="products:import-research storage/app/research.json"
+                WRITES=no
+                ;;
               # Resets only transient failures in external_catalog_products back to queued.
               # It is a write, but to the staging table alone — no product, page or URL changes
               # — so it needs no confirmation and no backup.
               catalog-retry-failed)
-                ARGS="catalog:iherb:hydrate --retry-failed";                     WRITES=no ;;
+                ARGS="catalog:iherb:hydrate --retry-failed"
+                WRITES=no
+                ;;
               research-import-apply)
-                ARGS="products:import-research storage/app/research.json --apply"; WRITES=yes ;;
+                ARGS="products:import-research storage/app/research.json --apply"
+                WRITES=yes
+                ;;
               # Forgets the one-shot marker so the hourly entry in filament/routes/console.php can
               # run again. cache:forget touches no product row itself, so WRITES=yes is not about
               # this command — it is about the unattended --apply import it re-arms, which will run
               # within the hour with nobody watching. This is the last moment a backup can be taken
               # before that happens, so it is taken here.
               research-import-rearm)
-                ARGS="cache:forget research.import.completed";                     WRITES=yes ;;
+                ARGS="cache:forget research.import.completed"
+                WRITES=yes
+                ;;
               catalog-promote)
-                ARGS="catalog:iherb:promote";                                    WRITES=yes ;;
+                ARGS="catalog:iherb:promote"
+                WRITES=yes
+                ;;
               catalog-publish-wave-500)
-                ARGS="catalog:iherb:promote --publish --limit=500";              WRITES=yes ;;
+                ARGS="catalog:iherb:promote --publish --limit=500"
+                WRITES=yes
+                ;;
               *)
                 # Unreachable from the UI, which validates the choice. This is the backstop for
                 # a dispatch made through the REST API.
@@ -307,7 +323,7 @@ jobs:
             fi
 
             # ── Run it ────────────────────────────────────────────────────────────────────
-            # -T because the runner's SSH session has no TTY (compose dies with "the input
+            # -T because the runner SSH session has no TTY (compose dies with "the input
             #    device is not a TTY" without it).
             # -u www-data because php-fpm serves as www-data: artisan run as root leaves
             #    root-owned files in storage/logs and bootstrap/cache that www-data then cannot
