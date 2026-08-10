@@ -363,9 +363,53 @@ return [
     |--------------------------------------------------------------------------
     */
     'hydration' => [
-        // Rows dispatched per batch. Pacing is PoliteFetcher's job (0.5 req/s for iherb.com);
-        // this only bounds how much work sits in Redis at once.
-        'batch' => (int) env('CATALOG_HYDRATE_BATCH', 250),
+        /**
+         * How long a dispatched window is meant to keep the worker busy.
+         *
+         * This is NOT a tuning knob — it is the scheduler's interval, written down. routes/console.php
+         * refills the window with `->everyTenMinutes()`, so a window that covers less than 600 seconds
+         * of work leaves the worker idle until the next tick.
+         */
+        'window_seconds' => (int) env('CATALOG_HYDRATE_WINDOW', 600),
+
+        /**
+         * Rows dispatched per batch — DERIVED, not chosen.
+         *
+         * ── THE DEFECT THIS REPLACES, MEASURED 10/08/2026 ─────────────────────────────────
+         * The value was a literal 250 with a comment claiming the rate was 0.5 req/s. Both numbers
+         * were wrong and they were wrong independently:
+         *
+         *   · the real rate is CATALOG_IHERB_RPS (1.5), set in config/enrichment.php
+         *   · at 1.5 req/s a 250-row window is 167 seconds of work inside a 600-second schedule
+         *
+         * So the worker ran for 2.8 minutes and then sat idle for 7.2, and the import's actual
+         * throughput was 0.42 req/s — 28% of the rate the owner had configured and the operator
+         * believed was running. Nothing reports this: `--status` shows rows moving, the queue log
+         * shows jobs completing, and the only symptom is that 42,034 rows take 28 hours instead of 8.
+         *
+         * ── WHY IT IS COMPUTED AND NOT JUST RAISED TO 900 ─────────────────────────────────
+         * A literal 900 is correct only while the rate is exactly 1.5, and the rate lives in a
+         * different file. This project has now been bitten three times in one day by two numbers that
+         * had to agree and silently stopped agreeing: a duplicate `iherb.com` key that made the real
+         * rate 0.2 while the config said 0.5, a hardcoded 2-second sleep in the estimate printed by
+         * this very command, and this window. Deriving it means changing the rate changes the window,
+         * with no second place to remember.
+         *
+         * env('CATALOG_IHERB_RPS') is read directly rather than through config('enrichment'): config
+         * files are loaded in an order that is not guaranteed, so config() from inside a config file
+         * can legitimately return null. The default here MUST stay in step with the one in
+         * config/enrichment.php — the same literal, on purpose, because there is no earlier moment at
+         * which one file can read the other.
+         *
+         * Overshooting is safe and is the intended direction: HydrateExternalProductJob is
+         * ShouldBeUnique on the staging id, and claim() is an atomic conditional UPDATE, so a row
+         * dispatched twice is fetched once. An undershoot costs hours; an overshoot costs nothing.
+         */
+        'batch' => (int) env(
+            'CATALOG_HYDRATE_BATCH',
+            (int) ceil((float) env('CATALOG_IHERB_RPS', 1.5) * (int) env('CATALOG_HYDRATE_WINDOW', 600)),
+        ),
+
         'max_attempts' => (int) env('CATALOG_HYDRATE_ATTEMPTS', 3),
     ],
 ];

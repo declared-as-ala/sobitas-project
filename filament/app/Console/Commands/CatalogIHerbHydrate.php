@@ -177,6 +177,80 @@ class CatalogIHerbHydrate extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * When will this finish, and is it actually running at the rate it was configured to run at?
+     *
+     * ── WHY AN ETA IS WORTH COMPUTING AND A PROGRESS BAR IS NOT ───────────────────────────
+     * The status table above is honest but it cannot answer the only question anybody asks of a
+     * long import: is it going to be done tonight or on Thursday. Two numbers decide that — the
+     * rate PoliteFetcher enforces and how much of each scheduler window the dispatched batch
+     * actually fills — and both are read here from the SAME places the running system reads them,
+     * never from a literal in this file.
+     *
+     * That second number is the one that hid a 3.4x slowdown for a day. routes/console.php refills
+     * the window every ten minutes; a batch covering only 167 seconds of that leaves the worker
+     * idle for the remaining 433, and nothing in a row count can show it. `$perWindow` below is
+     * `min(rate, batch / window)`, which is the throughput the import will really sustain, and the
+     * line is printed loudly when the two disagree.
+     *
+     * @param  \Illuminate\Support\Collection<string, int>  $counts
+     */
+    private function printThroughput($counts): void
+    {
+        $remaining = (int) ($counts[ExternalCatalogProduct::STATUS_QUEUED] ?? 0)
+            + (int) ($counts[ExternalCatalogProduct::STATUS_DISCOVERED] ?? 0);
+
+        if ($remaining === 0) {
+            $this->info('Nothing left to hydrate. Next step: php artisan catalog:iherb:promote --report');
+
+            return;
+        }
+
+        $rps = (float) (app(\App\Services\Enrichment\PoliteFetcher::class)->policy('iherb.com')['rps']
+            ?? config('enrichment.fetch.default_requests_per_second', 0.33));
+
+        $batch = (int) config('catalog.hydration.batch', 250);
+        $window = max(1, (int) config('catalog.hydration.window_seconds', 600));
+
+        // What the schedule can actually deliver: a window is capped by the rate AND by how many
+        // rows were put in it. Whichever is smaller is the truth.
+        $perWindow = min($rps, $batch / $window);
+
+        if ($perWindow <= 0) {
+            return;
+        }
+
+        $hours = $remaining / $perWindow / 3600;
+
+        $this->line(sprintf(
+            '  %s row(s) left · %s req/s sustained · about %s to go (finishing around %s).',
+            number_format($remaining),
+            rtrim(rtrim(number_format($perWindow, 2, '.', ''), '0'), '.'),
+            $hours < 1
+                ? round($hours * 60).' minutes'
+                : round($hours, 1).' hours',
+            now()->addSeconds((int) ($hours * 3600))->format('D H:i'),
+        ));
+
+        // The batch is derived from the rate in config/catalog.php, so this should never fire. It is
+        // here because it DID fire for a day: an explicit CATALOG_HYDRATE_BATCH in the VPS .env
+        // overrides the derivation, and an override that silently throttles the import to a third of
+        // its configured rate must announce itself rather than be inferred from a finish date.
+        if ($perWindow < $rps * 0.95) {
+            $this->warn(sprintf(
+                'The queue worker is idle most of every window: the batch (%s rows) covers only %ds of '
+                .'a %ds schedule at %s req/s, so the import runs at %s req/s instead. '
+                .'Raise CATALOG_HYDRATE_BATCH to %s (or unset it and let config/catalog.php derive it).',
+                number_format($batch),
+                (int) round($batch / $rps),
+                $window,
+                rtrim(rtrim(number_format($rps, 2, '.', ''), '0'), '.'),
+                rtrim(rtrim(number_format($perWindow, 2, '.', ''), '0'), '.'),
+                number_format((int) ceil($rps * $window)),
+            ));
+        }
+    }
+
     /** Progress as counted rows. Never a percentage of something nobody measured. */
     private function printStatus(): int
     {
@@ -211,6 +285,8 @@ class CatalogIHerbHydrate extends Command
         $rows[] = ['—', 'total staged', number_format($total), ''];
 
         $this->table(['status', 'meaning', 'rows', 'share'], $rows);
+
+        $this->printThroughput($counts);
 
         // A row in `hydrating` for a long time means a worker died mid-fetch. Surfaced rather than
         // left to be discovered by someone wondering why the numbers stopped moving.
