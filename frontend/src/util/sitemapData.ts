@@ -237,7 +237,19 @@ async function computeSitemapEntries(): Promise<SectionedSitemapEntry[]> {
       }
 
       const productUrls = enrichedProducts
-        .filter((p: Product) => p.slug && (p.publier == 1 || p.publier === undefined))
+        .filter((p: Product) => {
+          if (!p.slug) return false;
+          if (!(p.publier == 1 || p.publier === undefined)) return false;
+          // Never submit a URL that renders <meta robots="noindex"> — that is exactly the
+          // "Submitted URL marked noindex" bucket in Search Console. Same rule already applied to
+          // tags below; products were missing it, which did not matter while every product was
+          // indexable and matters a great deal once a catalogue is published in waves.
+          //
+          // `!== false` rather than `=== true`: a product with no robots field is indexable, so
+          // the 309 existing products are unaffected.
+          const robotsIndex = (p as { seo?: { robots?: { index?: boolean } } })?.seo?.robots?.index;
+          return robotsIndex !== false;
+        })
         .map((p: Product) => {
           // Derive the subcategory the SAME way the canonical/link builder does
           // (getProductPrimarySubCategory → sous_categories[0] then sous_categorie),

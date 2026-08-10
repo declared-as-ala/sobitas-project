@@ -152,9 +152,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: { absolute: title },
       description,
       keywords: productKeywords(product),
+      // Published AND not individually held back. Both must be true.
+      //
+      // `publier` is the shop's "is this for sale" switch; `seo.robots.index` is the separate
+      // "may Google list it" switch. Honouring only the first meant a product could be marked
+      // noindex in Filament and still be advertised as indexable here — and this route must agree
+      // with x-crawler/product, which bots are rewritten to, or the two views of the same product
+      // disagree about whether it belongs in the index.
       robots: {
-        index: isPublished,
-        follow: isPublished,
+        index: isPublished && (product.seo?.robots?.index ?? true),
+        follow: isPublished && (product.seo?.robots?.follow ?? true),
       },
       alternates: {
         canonical: canonicalUrl,

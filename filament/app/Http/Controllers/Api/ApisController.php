@@ -77,7 +77,7 @@ class ApisController extends Controller
         'meta_title', 'meta_description', 'seo_title', 'seo_description',
     ];
 
-    /** Same as backend ApisController::PRODUCT_LISTING — used for /api/all_products (no pagination). */
+    /** Same as backend ApisController::PRODUCT_LISTING — used for /api/all_products, which paginates. */
     private const PRODUCT_LISTING = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
@@ -636,9 +636,34 @@ class ApisController extends Controller
             $query->latest('created_at');
         }
 
-        $products = $query->get();
-        $brandIds = $products->pluck('brand_id')->filter()->unique()->values()->all();
-        $brands = Brand::whereIn('id', $brandIds)->get();
+        // ── PAGINATED. It was not, and that was a live hazard. ──────────────────────────────
+        //
+        // This method ended in `$query->get()`: every published product, with brands and
+        // categories, JSON-encoded into one body and cached for 60s. At 309 products that is
+        // merely wasteful. At the scale of an imported catalogue it is a multi-megabyte response
+        // rebuilt every minute, on the endpoint that both the shop page AND the sitemap depend on
+        // — so the storefront and Google's discovery of it fail together.
+        //
+        // The client was ALREADY written for pagination: it sends per_page/page, reads
+        // `raw.products?.data` as a fallback, and sitemapData.ts loops on `pagination.last_page`.
+        // Only the server never paginated, so that loop always broke after one pass. Nothing on
+        // the frontend has to change.
+        $perPage = $this->resolvePerPage($request, 24);
+        $paginator = $query->paginate($perPage);
+        $products = $paginator->getCollection();
+
+        // Brands for the WHOLE published catalogue — deliberately NOT derived from this page.
+        //
+        // The old code took brand_ids from the products it had, which was every product. Keeping
+        // that line after paginating would have quietly reduced the shop's brand filter to the
+        // brands of whichever 24 products happened to be on page 1: a filter that hides most of
+        // the catalogue, on a page that still returns 200. A subquery rather than pluck(), so the
+        // id list never travels through PHP.
+        $brands = Brand::whereIn(
+            'id',
+            Product::where('publier', 1)->whereNotNull('brand_id')->select('brand_id')
+        )->get();
+
         $categories = Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
 
         $this->normalizeCollectionImages($products, 'cover');
@@ -649,6 +674,17 @@ class ApisController extends Controller
             'products'   => $products,
             'brands'     => $brands,
             'categories' => $categories,
+            // Both `page` and `current_page`. The shared paginationMeta() helper emits `page`,
+            // but this endpoint's client reads `current_page` (services/api.ts) — emitting only
+            // one of them leaves the shop's pager with an undefined current page while every
+            // status code stays 200.
+            'pagination' => [
+                'page'         => $paginator->currentPage(),
+                'current_page' => $paginator->currentPage(),
+                'per_page'     => $paginator->perPage(),
+                'total'        => $paginator->total(),
+                'last_page'    => $paginator->lastPage(),
+            ],
         ]);
     }
 

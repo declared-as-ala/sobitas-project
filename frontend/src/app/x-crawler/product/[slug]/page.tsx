@@ -62,7 +62,22 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       // Canonical points at the REAL product URL, never /x-crawler/*.
       alternates: { canonical, languages: { 'fr-TN': canonical, 'x-default': canonical } },
-      robots: { index: true, follow: true },
+      // The product's OWN robots directive, not a hardcoded yes.
+      //
+      // This route is the only one Googlebot ever sees for a product (middleware rewrites bot
+      // traffic here), so a literal `index: true` meant the `seo_robots_index` column, its
+      // Filament toggle and its API field were all decorative — there was no way to keep a single
+      // product out of the index, and no way to pull one back once it was in.
+      //
+      // Harmless at 309 hand-curated products. Not harmless the moment an imported catalogue can
+      // be published: publishing in controlled waves, holding thin pages back, and reversing a
+      // wave that went badly ALL depend on this one value being real.
+      //
+      // Default true when the field is absent, so existing products behave exactly as before.
+      robots: {
+        index: product.seo?.robots?.index ?? true,
+        follow: product.seo?.robots?.follow ?? true,
+      },
       // Product photo as og:image, identical to the human route. Without this the route emitted no
       // openGraph at all, so the root layout's site-wide banner (og-banner.jpg) was inherited —
       // and since middleware rewrites bots here, GOOGLE saw the generic banner on every product
