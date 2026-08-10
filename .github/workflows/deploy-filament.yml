@@ -17,34 +17,13 @@ on:
         required: false
         default: 'false'
 
-# Serialise deploys. Two merges close together each build and push the SAME `:latest` tag, then
-# each pulls `:latest` on the VPS — so the image that ends up running is whichever build finished
-# last, not whichever commit is newest. That is not theoretical: PRs #183 and #184 merged 13s
-# apart, their deploys finished 2s apart, and the box came up running the earlier commit's image.
-# The category fix in #184 was reported green and was simply not on the server; Googlebot kept
-# seeing 20 of 79 products until the run was re-triggered by hand.
-#
-# cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
-# mid-recreate; queueing costs a few minutes and always converges on the newest commit.
-# ── The group name deliberately does NOT include github.workflow ──────────────────────────────
-#
-# It used to, which gave each of the three deploy workflows (filament, frontend, fitness-api) its
-# OWN queue. Since all three trigger on the same push and all three SSH into the SAME box, that
-# serialised nothing: three simultaneous SSH sessions on every deploy.
-#
-# Measured 10/08/2026. Run #935 deployed cleanly at 08:10. Run #936 was refused at 08:25 with
-# "unable to authenticate, attempted methods [none password]" — while frontend run #407, pushed at
-# the same moment, succeeded. Asking the server directly with no credential still returned
-# "Permission denied (publickey,password)", so passwords were enabled and the password was right.
-# An auth failure that is intermittent, and that lands on one of three concurrent sessions, is
-# contention — not a wrong secret. Chasing it as a wrong secret is how a day gets lost.
-#
-# One shared group means the three deploys queue behind each other and open one SSH session at a
-# time. Slower by a couple of minutes; no longer a coin flip.
-#
-# cancel-in-progress stays FALSE: cancelling a half-finished deploy could leave the VPS mid-recreate.
+# Per-workflow group, NOT a shared one. Sharing it was tried on 10/08/2026 and was worse:
+# GitHub keeps at most ONE pending run per concurrency group, so with all three deploy
+# workflows in one group the frontend deploy (#408) was CANCELLED outright rather than
+# queued — a silently dropped deploy, which beats an intermittent failure only in that it
+# fails quietly. SSH contention is handled by backoff between attempts instead.
 concurrency:
-  group: vps-deploy-${{ github.ref }}
+  group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 env:
@@ -261,6 +240,24 @@ jobs:
             docker compose -f "$COMPOSE_FILE" logs --tail=50 backend-v2 || true
 
             echo "🚀 Deploy complete!"
+
+      - name: Back off before retrying SSH
+        # The retry used to fire instantly, which is the one timing guaranteed to fail again.
+        #
+        # Every push starts three deploy workflows (filament, frontend, fitness-api) and all three
+        # SSH into the same VPS at the same second. Measured 10/08/2026: run #935 deployed cleanly
+        # at 08:10 and #936 was refused at 08:25 with "unable to authenticate", while frontend run
+        # #407 from the same push succeeded — and a credential-free probe confirmed the server was
+        # still accepting passwords. That is contention, not a bad secret.
+        #
+        # A shared concurrency group was tried and was worse: GitHub keeps only one PENDING run per
+        # group, so it cancelled the frontend deploy outright. Waiting is the cheap, correct answer
+        # — 90 seconds is longer than the other workflows' SSH phases, so the retry lands in a quiet
+        # window instead of the same pile-up.
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        run: |
+          echo "Attempt 1 failed. Waiting 90s so a concurrent deploy's SSH session can finish."
+          sleep 90
 
       - name: Deploy to VPS (attempt 2 on transient SSH failure)
         if: steps.deploy_attempt_1.outcome == 'failure'
