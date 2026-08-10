@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getAllProducts } from '@/services/api';
+import { getAllProducts, getAllProductsComplete } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
@@ -41,7 +41,10 @@ export default async function OffresPage() {
   // loadForCache: getAllProducts() rethrows on the server, so a failed fetch (e.g. a 403 during
   // `next build`) calls noStore() and defers to runtime instead of baking an empty promos page.
   const { products, categories } = await loadForCache(
-    () => getAllProducts(),
+    // The promo list is a FILTER over the whole catalogue, so it must see the whole catalogue.
+    // getAllProducts() defaults to per_page 24, which silently reduced /offres to the promos that
+    // happen to fall in the first 24 products — see getAllProductsComplete's docblock.
+    () => getAllProductsComplete(),
     { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>,
   );
   let promoProducts: Product[] = [];

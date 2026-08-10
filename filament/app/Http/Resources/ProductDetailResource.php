@@ -23,6 +23,16 @@ class ProductDetailResource extends JsonResource
 
         unset($base['review'], $base['aggregateRating'], $base['seo_review'], $base['seo_aggregate_rating']);
 
+        /*
+         * The raw relation never reaches the response.
+         *
+         * parent::toArray() serialises every loaded relation, so `externalCatalogSource` would
+         * arrive at the storefront as a staging row under a snake_case key — internal column names,
+         * and a shape nothing on the frontend is typed for. `source_facts` below is the only
+         * contract; this line is what makes that true rather than intended.
+         */
+        unset($base['external_catalog_source']);
+
         $canonical = $this->resolveCanonicalProductUrl();
         $builder = app(ProductSchemaBuilder::class);
         $jsonLd = $builder->buildGraph($this->resource, $canonical);
@@ -62,7 +72,69 @@ class ProductDetailResource extends JsonResource
                 'image_alt' => $this->resolveCoverImageAlt($coverMedia),
             ],
             'schema' => $schemaFacts,
+            'source_facts' => $this->sourceFacts(),
         ]);
+    }
+
+    /**
+     * The transcribed facts an imported product carries, or NULL.
+     *
+     * ── WHAT THIS IS AND IS NOT ───────────────────────────────────────────────────────────
+     * `pack_size`/`pack_unit`/`flavour` are read off the source product NAME by IHerbNormalizer,
+     * which transcribes and never converts — "1.32 lb (600 g)" yields 600 g because the label prints
+     * 600 g. They are the only structured facts an imported row has beyond its name and price, and
+     * today they exist only inside the composed prose, where a shopper has to read a paragraph to
+     * find the format. This block is what lets both product views print them as a specification.
+     *
+     * Everything else on the staging row stays there, and each omission is a decision:
+     *   · `external_url` is a link to the shop we sourced the record from. Not on our product page.
+     *   · `source_rating` / `source_rating_count` are another shop's ratings. They are internal
+     *     reference only, they never become aggregateRating, and they never appear on a page.
+     *   · `external_part_number` is iHerb's catalogue number, not the manufacturer's MPN. Printing
+     *     it as a reference would invite it into schema.org `mpn`, where it would be wrong.
+     *   · `source_available` / `source_discontinued` describe THEIR stock, not ours. The page's
+     *     availability comes from our own `qte` and must not be contradicted.
+     *   · `source_list_price` is a foreign price in a foreign currency.
+     *
+     * ── NULL FOR ALL 309 LEGACY PRODUCTS, STRUCTURALLY ────────────────────────────────────
+     * The relation is `external_catalog_products.product_id`, which only promotion ever writes. A
+     * hand-made product has no such row, so this returns null, so the storefront renders exactly
+     * what it renders today. Returning null rather than an array of nulls matters: the two product
+     * views test the block for existence, and an object full of nulls would render an empty section.
+     *
+     * @return array{format: ?string, flavour: ?string, image_url: ?string}|null
+     */
+    private function sourceFacts(): ?array
+    {
+        $source = $this->resource->relationLoaded('externalCatalogSource')
+            ? $this->resource->getRelation('externalCatalogSource')
+            : null;
+
+        if ($source === null) {
+            return null;
+        }
+
+        // Built by the normaliser, not here: it owns the French number formatting AND the rule that
+        // a mg/µg "pack unit" is a per-unit dose and must not be printed as a conditionnement. A
+        // second formatter here is how the specification row and the description paragraph end up
+        // disagreeing about the same tub.
+        $format = \App\Services\Catalog\IHerb\IHerbNormalizer::packLabel($source->pack_size, $source->pack_unit);
+        $flavour = trim((string) ($source->flavour ?? '')) ?: null;
+        $imageUrl = trim((string) ($source->source_image_url ?? '')) ?: null;
+
+        // A row that yielded no printable fact gets no block at all, rather than an empty heading.
+        if ($format === null && $flavour === null) {
+            return null;
+        }
+
+        return [
+            'format' => $format,
+            'flavour' => $flavour,
+            // Not rendered as a second image anywhere — `cover` already holds this URL. Exposed so
+            // the storefront can tell a referenced CDN cover from a mirrored local one without
+            // re-deriving it from a part number.
+            'image_url' => $imageUrl,
+        ];
     }
 
     /**

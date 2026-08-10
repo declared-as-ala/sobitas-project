@@ -575,6 +575,17 @@ class ApisController extends Controller
                 'tags:id,designation_fr',
                 'aromes:id,designation_fr',
                 'reviews' => fn ($q) => $q->where('publier', 1)->with('user:id,name,avatar')->latest(),
+                /**
+                 * The staging row an imported product was promoted from — NULL for all 309 legacy
+                 * products, which have no such row and never will.
+                 *
+                 * Column-limited on purpose. The staging table also holds a source URL to a
+                 * competitor, an upstream rating we are forbidden to surface, and the whole raw
+                 * payload; a bare `with('externalCatalogSource')` would put all of it in a public
+                 * JSON response. Only the four transcribed facts the page is allowed to print are
+                 * selected, and `product_id` because Eloquent cannot match a hasOne without it.
+                 */
+                'externalCatalogSource:id,product_id,pack_size,pack_unit,flavour,source_image_url',
             ])
             ->first();
 

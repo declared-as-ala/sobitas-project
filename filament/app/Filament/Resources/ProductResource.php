@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
+use App\Filament\Support\ExternalImageUpload;
 use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Models\Review;
@@ -184,37 +185,48 @@ class ProductResource extends Resource
                                 ]),
                             Section::make('Médias')
                                 ->schema([
-                                    FileUpload::make('cover')
-                                        ->label('Couverture (image principale)')
-                                        ->disk('public')
-                                        ->directory('produits')
-                                        ->image()
-                                        ->imageEditor()
-                                        ->maxSize(4096)
-                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('produits', 'public');
-                                            if (! $path) {
-                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                                            }
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                                        }),
-                                    FileUpload::make('images')
-                                        ->label('Gallery (images secondaires)')
-                                        ->disk('public')
-                                        ->directory('produits')
-                                        ->image()
-                                        ->multiple()
-                                        ->reorderable()
-                                        ->maxSize(4096)
-                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('produits', 'public');
-                                            if (! $path) {
-                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                                            }
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                                        }),
+                                    // ExternalImageUpload::allow() — REQUIRED on any upload whose
+                                    // column can hold an imported cover. Without it Filament's own
+                                    // hydration drops the CDN URL (the public disk has no such
+                                    // file), the field renders empty, and the next save writes that
+                                    // emptiness back over the column. See that class for the full
+                                    // mechanism; it is a no-op for a relative path on the disk,
+                                    // which is what all 309 legacy products carry.
+                                    ExternalImageUpload::allow(
+                                        FileUpload::make('cover')
+                                            ->label('Couverture (image principale)')
+                                            ->disk('public')
+                                            ->directory('produits')
+                                            ->image()
+                                            ->imageEditor()
+                                            ->maxSize(4096)
+                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                                $path = $file->store('produits', 'public');
+                                                if (! $path) {
+                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                }
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                                            })
+                                    ),
+                                    ExternalImageUpload::allow(
+                                        FileUpload::make('images')
+                                            ->label('Gallery (images secondaires)')
+                                            ->disk('public')
+                                            ->directory('produits')
+                                            ->image()
+                                            ->multiple()
+                                            ->reorderable()
+                                            ->maxSize(4096)
+                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                                $path = $file->store('produits', 'public');
+                                                if (! $path) {
+                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                }
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                                            })
+                                    ),
                                 ]),
                             Section::make('Flags produit')
                                 ->schema([

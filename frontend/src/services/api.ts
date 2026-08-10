@@ -357,6 +357,95 @@ export const getAllProducts = async (params?: {
   }
 };
 
+/**
+ * EVERY published product, by walking the paginated /all_products endpoint.
+ *
+ * ── THE REGRESSION THIS EXISTS TO FIX ─────────────────────────────────────────────────────
+ * /api/all_products used to ignore `per_page` and return the whole catalogue in one response.
+ * Server-side pagination was then added, with a comment stating "Nothing on the frontend has to
+ * change" — and for the sitemap crawler, which loops on `pagination.last_page`, that was true.
+ * It was NOT true for the three pages that render the shop, because they filter, sort and
+ * paginate CLIENT-SIDE over whatever array they are handed:
+ *
+ *   ShopPageClient.tsx  const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
+ *                       return filteredProducts.slice(startIndex, endIndex);
+ *
+ * `handlePageChange` only sets a number — it never fetches another page. So the moment the
+ * server honoured `per_page: 24`, the boutique could display at most 24 products out of 410,
+ * the pager showed a single page, and every brand/category/price filter silently operated on
+ * 6% of the catalogue. This hit the 309 original hand-built products, not just imported ones,
+ * and every status code stayed 200 throughout.
+ *
+ * ── WHY A WALK RATHER THAN "ASK FOR EVERYTHING" ───────────────────────────────────────────
+ * ApisController::MAX_PER_PAGE caps a single request at 100, so `per_page: 100000` silently
+ * returns 100 — the same bug wearing a different number. The page count is read from the
+ * server's own `last_page`, never assumed from the row count.
+ *
+ * ── THE CAP IS REAL AND IT IS LOUD ────────────────────────────────────────────────────────
+ * Handing the browser the entire catalogue is fine at 410 products and is NOT fine at 19,000,
+ * which is where the iHerb import is heading. So this stops at `cap` and says so, in the
+ * console and in the returned `truncated` flag. When that warning starts firing, the fix is
+ * server-side filtering in ShopPageClient — not a bigger cap. Truncation must never be the
+ * quiet outcome, which is exactly the lesson sitemapData.ts already carries.
+ */
+export const getAllProductsComplete = async (
+  opts?: { cap?: number }
+): Promise<ProductsResponse & { truncated?: boolean }> => {
+  const PER_PAGE = 100; // ApisController::MAX_PER_PAGE — a larger value is silently clamped.
+  const cap = opts?.cap ?? 3000;
+
+  const first = await getAllProducts({ perPage: PER_PAGE, page: 1 });
+  const seen = new Set<number>();
+  const products: Product[] = [];
+
+  const absorb = (rows: unknown) => {
+    if (!Array.isArray(rows)) return 0;
+    let added = 0;
+    for (const row of rows as Product[]) {
+      const id = Number((row as { id?: unknown }).id);
+      // Dedupe on id: paging a table whose ordering is not fully deterministic can repeat a row
+      // across page boundaries, and a duplicated product renders twice in the grid.
+      if (Number.isFinite(id)) {
+        if (seen.has(id)) continue;
+        seen.add(id);
+      }
+      products.push(row);
+      added++;
+    }
+    return added;
+  };
+
+  absorb(first.products);
+
+  const lastPage = Number(first.pagination?.last_page ?? 1);
+  const total = Number(first.pagination?.total ?? products.length);
+
+  for (let page = 2; page <= lastPage && products.length < cap; page++) {
+    const next = await getAllProducts({ perPage: PER_PAGE, page });
+    // A page that comes back with nothing means the walk is over. Breaking here rather than
+    // continuing to `lastPage` avoids hammering the API when the catalogue shrank mid-crawl.
+    if (absorb(next.products) === 0) break;
+  }
+
+  const truncated = Number.isFinite(total) && total > 0 && products.length < total;
+
+  if (truncated) {
+    console.warn(
+      `[getAllProductsComplete] returning ${products.length} of ${total} published products ` +
+        `(cap ${cap}). The shop filters client-side, so every facet is now operating on a subset. ` +
+        `This is the point at which ShopPageClient needs server-side filtering.`
+    );
+  }
+
+  return {
+    products,
+    brands: first.brands || [],
+    categories: first.categories || [],
+    pagination: first.pagination,
+    truncated,
+  };
+};
+
 const RETRY_DELAY_MS = 800;
 
 async function withRetry<T>(fn: () => Promise<T>, isRetryable: (err: any) => boolean): Promise<T> {

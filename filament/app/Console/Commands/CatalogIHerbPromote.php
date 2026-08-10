@@ -54,6 +54,32 @@ use Illuminate\Support\Str;
  * state rather than a comment: publier = 1 + seo_robots_index = 0 now renders a noindex page AND
  * keeps the URL out of the sitemap, instead of submitting a URL marked noindex.
  *
+ * ── AND THAT STATE IS NOW REACHABLE, WHICH IT WAS NOT ─────────────────────────────────────
+ * The paragraph above described (1, 0) as a state this command produces. It did not produce it.
+ * publish() hardcoded BOTH `publier = true` AND `seo_robots_index = true`, and no flag existed to
+ * separate them — so the command could only create (0, 0) or publish (1, 1), while THREE files
+ * planned around (1, 0): this docblock, ImportedProductContent's ("a promotion path that wants pages
+ * indexed should treat a short result as promote with seo_robots_index = 0") and
+ * frontend/src/util/sitemapData.ts ("the exact state CatalogIHerbPromote creates"). Three
+ * descriptions of a state the code could not reach is not documentation, it is a plan nobody
+ * executed.
+ *
+ * `seo_robots_index` is now DECIDED, per product, by PromotionGate::indexable() over a MEASURED word
+ * count — `catalog.promotion.min_body_words`, which is frontend/scripts/audit-pdp-content.mjs
+ * MIN_NEW_PRODUCT_WORDS (250). Below it the product is published and NOINDEXED: on the storefront,
+ * sellable, out of the sitemap, `<meta robots="noindex">`. At or above it the product is published
+ * indexable. Both counts, and the reason, are printed by summarise(). The overrides are
+ * --force-index and --force-noindex, one in each direction, and the DEFAULT is the measured gate —
+ * because the failure direction of getting this wrong is thousands of thin pages submitted for
+ * indexing, and that is not a decision to make by omission.
+ *
+ * Where the number comes from is the other half of the fix: ImportedProductContent::compose()
+ * already returned `word_count`, computed the way the audit computes `bodyWords` and documented as
+ * being for exactly this comparison — and createProduct() read the copy out of that array and threw
+ * the number away. It is now persisted on the staging row (`composed_word_count`, migration
+ * 2026_08_10_000007) at promotion time, so a publish wave never has to recompose to find out what it
+ * is publishing. See bodyWords() for why the LIVE product body still wins when there is one.
+ *
  * ── ATOMICITY ─────────────────────────────────────────────────────────────────────────────
  * Product creation, the subcategory pivot row and the staging row's `promoted` bookkeeping happen in
  * one transaction. A half-promotion — a product with no pivot row, or a staging row pointing at a
@@ -82,11 +108,23 @@ class CatalogIHerbPromote extends Command
                             {--limit= : Maximum products to CREATE in this run (default: all; with --publish, catalog.promotion.chunk)}
                             {--brand= : Only rows of this brand (any spelling — it is folded through BrandKey)}
                             {--subcategory= : Only rows that resolve to this sous_categories slug}
-                            {--publish : Publish a wave (publier=1, seo_robots_index=1) — the backlog an earlier run left unpublished first, then anything this run creates}
+                            {--publish : Publish a wave (publier=1; seo_robots_index per the measured body gate) — the backlog an earlier run left unpublished first, then anything this run creates}
+                            {--force-index : Publish INDEXABLE even where the body is below catalog.promotion.min_body_words}
+                            {--force-noindex : Publish every product of this wave noindexed, whatever it measures}
                             {--dry-run : Print the gate breakdown and write nothing}
                             {--report : Print counts per rejection reason and exit}';
 
     protected $description = 'Promote hydrated iHerb staging rows into products';
+
+    /**
+     * What publish() did to one product. Three outcomes, not a bool, because "published" and
+     * "published indexable" stopped being the same event the moment the robots flag became a
+     * decision — and a summary that cannot tell them apart is a summary that hides the only thing
+     * about this wave anybody needs to check.
+     */
+    private const PUBLISHED_INDEXABLE = 'indexable';
+    private const PUBLISHED_NOINDEX = 'noindex';
+    private const PUBLISH_FAILED = 'failed';
 
     /**
      * Slugs already handed out in THIS run — and only ones that were actually TAKEN.
@@ -300,16 +338,55 @@ class CatalogIHerbPromote extends Command
         $publish = (bool) $this->option('publish');
         $limit = $this->waveSize($publish);
 
+        $mode = $this->indexMode($publish);
+        if ($mode === false) {
+            return self::FAILURE;
+        }
+
+        /*
+         * THE PRE-FLIGHT ARITHMETIC, AS IT ACTUALLY IS.
+         *
+         * This used to promise "three HTTP calls apiece (revalidate path, revalidate sitemap tag,
+         * IndexNow) … ~limit*3 requests", and it stopped being true when SeoNotifier learned to
+         * coalesce the sitemap bust: send() still posts the per-product revalidate and the per-product
+         * IndexNow submission, but the third call now goes through bustSitemapCache(), which returns
+         * without sending if this process sent one inside the last 60 seconds. Every one of these
+         * notifications is an afterResponse callback, and under `php artisan` "after response" is
+         * command TERMINATION — so the whole wave's busts happen back-to-back at the end of the run
+         * and collapse into one, or one per minute if the tail runs long.
+         *
+         * A number a warning prints is a number somebody plans a maintenance window around. The
+         * multiplier is asserted against SeoNotifier's own source in
+         * filament/tests/catalog/promotion-gate-check.php, so a third per-product call cannot be added
+         * there without this line failing a harness.
+         */
         if ($publish && ! $dryRun) {
             $this->warn(sprintf(
                 'Publishing %s product(s). ProductSeoObserver::saved fires SeoNotifier for each one, '
-                .'from the post-commit publish and not from inside the transaction — three HTTP calls '
-                .'apiece (revalidate path, revalidate sitemap tag, IndexNow). '
-                .'That is ~%s requests at the storefront.',
+                .'from the post-commit publish and not from inside the transaction — TWO per-product '
+                .'HTTP calls apiece (revalidate the product path, submit the URL to IndexNow). That is '
+                .'~%s requests at the storefront, plus ONE sitemap cache-bust for the whole wave: '
+                .'SeoNotifier::bustSitemapCache() sends at most one per 60s per process and every one '
+                .'of these callbacks runs at command termination. A product held back at '
+                .'seo_robots_index=0 costs exactly the same two calls — ProductSeoObserver::saved '
+                .'tests `publier`, not the robots flag.',
                 $limit === null ? 'every promotable' : number_format($limit),
-                $limit === null ? 'unbounded' : number_format($limit * 3),
+                $limit === null ? 'an unbounded number of' : number_format($limit * 2),
             ));
         }
+
+        /**
+         * The indexing tally for this wave, filled by the backlog pass and the creation loop alike.
+         *
+         * `below_gate` is counted from the MEASURED verdict whatever mode is in force, which is what
+         * makes the overrides reportable rather than merely obeyed: under --force-index it is the
+         * number of thin pages the operator chose to index anyway, and under --force-noindex it is
+         * the complement of the pages that would have qualified. min/max words are carried so the
+         * summary can state the size of the shortfall instead of asserting one.
+         *
+         * @var array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}
+         */
+        $indexing = ['indexable' => 0, 'noindex' => 0, 'below_gate' => 0, 'min_words' => null, 'max_words' => null];
 
         $created = 0;
         $scanned = 0;
@@ -335,7 +412,7 @@ class CatalogIHerbPromote extends Command
         $backlogPublished = 0;
         $backlogFailed = 0;
         if ($publish) {
-            $backlog = $this->publishBacklog($brandKey, $subcategorySlug, $limit, $dryRun);
+            $backlog = $this->publishBacklog($brandKey, $subcategorySlug, $limit, $dryRun, $mode, $indexing);
             $backlogPublished = $backlog['published'];
             // Kept apart from $failedPublishes, which counts the creation loop's own failures: the
             // summary subtracts THAT one from $created, and a backlog failure has no created
@@ -347,9 +424,11 @@ class CatalogIHerbPromote extends Command
          * `--limit` bounds what this run PUBLISHES, so the backlog spends the same wave.
          *
          * A product published out of the backlog costs the storefront exactly what one published at
-         * creation costs — three HTTP calls and one URL handed to IndexNow — and the whole point of
-         * the wave is that somebody chose that number. Attempts count, not successes: a failed
-         * publish already fired its save.
+         * creation costs — TWO per-product HTTP calls (revalidate the path, submit the URL to
+         * IndexNow); the third, the sitemap bust, is coalesced by SeoNotifier::bustSitemapCache() to
+         * one per 60s per process and is therefore a cost of the WAVE, not of the product. The whole
+         * point of the wave is that somebody chose that number. Attempts count, not successes: a
+         * failed publish already fired its save.
          */
         $createLimit = $limit;
         if ($publish && $limit !== null) {
@@ -393,7 +472,9 @@ class CatalogIHerbPromote extends Command
                     $rejected[$reason] = ($rejected[$reason] ?? 0) + 1;
 
                     if ($dryRun && count($samples) < 25) {
-                        $samples[] = ['·', $reason, (string) $verdict['detail'], Str::limit($verdict['title'], 46)];
+                        // Fifth cell empty: a rejected row has no body, so it has no word count and
+                        // no indexing verdict. The column exists for the rows that do.
+                        $samples[] = ['·', $reason, (string) $verdict['detail'], Str::limit($verdict['title'], 46), ''];
                     }
 
                     continue;
@@ -455,12 +536,29 @@ class CatalogIHerbPromote extends Command
                         $this->claimSlug($slug);
 
                         $created++;
+
+                        /*
+                         * THE DRY RUN FORECASTS THE INDEXING DECISION TOO, because that is now the
+                         * part of a --publish wave that cannot be undone. The body is composed here
+                         * exactly as createProduct() would compose it, with one difference stated
+                         * rather than hidden: the brand string is the RAW `source_brand_name`, not
+                         * BrandMatcher's tidied `designation_fr`, because the matcher CREATES brand
+                         * rows and --dry-run writes nothing. The two spellings differ by at most a
+                         * token or two, so this is a forecast accurate to a word, not a promise.
+                         */
+                        $words = $this->body($row, $row->source_brand_name, $subcategories, (int) $verdict['sub_id'])['word_count'];
+                        $forecast = $this->verdictFor($words, $mode);
+                        if ($publish) {
+                            $this->recordIndexVerdict($indexing, $forecast);
+                        }
+
                         if (count($samples) < 25) {
                             $samples[] = [
                                 '+',
                                 sprintf('%.3f DT', (float) $verdict['price']),
                                 sprintf('/%s/%s', (string) $verdict['sub_slug'], $slug),
                                 Str::limit($verdict['title'], 46),
+                                sprintf('%d w %s', $words, $publish ? ($forecast['applied'] ? '→ index' : '→ noindex') : '(not published)'),
                             ];
                         }
 
@@ -538,13 +636,13 @@ class CatalogIHerbPromote extends Command
                  * — invisible to customers and to Google, fixable in the admin — and it is the
                  * opposite of the direction the old code failed in.
                  */
-                if ($publish && ! $this->publish($product, $row)) {
+                if ($publish && $this->publish($product, $row, $mode, $indexing) === self::PUBLISH_FAILED) {
                     $failedPublishes++;
                 }
             }
         }
 
-        return $this->summarise($dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $failedPublishes, $backlogPublished, $backlogFailed, $samples, $limit);
+        return $this->summarise($dryRun, $publish, $created, $scanned, $rejected, $failedWrites, $failedPublishes, $backlogPublished, $backlogFailed, $samples, $limit, $mode, $indexing);
     }
 
     /**
@@ -573,6 +671,14 @@ class CatalogIHerbPromote extends Command
      * published", and inventing a staging column to encode it is a schema change for a case the
      * admin can express by deleting the product.
      *
+     * That caveat GREW when publish() started writing (1, 0) for a body below the gate. A product
+     * held back at noindex which the owner then unpublishes with the Filament `publier` toggle alone
+     * lands in (0, 0) — indistinguishable from "never published" — and the next wave republishes it,
+     * noindexed. Before the gate existed, publish() always wrote (1, 1), so that same toggle left
+     * (0, 1) and the rejection stuck. The remedy is the one already named above: delete the product,
+     * or leave it unpublished only in a state the pair can express. Worth knowing exactly, because
+     * the products this now applies to are ALL of them until real copy exists.
+     *
      * The 309 pre-existing products are unreachable from here by construction, not by a filter that
      * could be edited out: selection starts at `external_catalog_products` and they have no staging
      * row, so no query this method can issue names one of them.
@@ -580,10 +686,20 @@ class CatalogIHerbPromote extends Command
      * The cursor is on `external_catalog_products.id` and only moves forward, so rows dropping out
      * of the result set as they are published cannot make this loop repeat or stall.
      *
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
+     *         by reference: the wave's indexing tally is one tally across both passes, and the
+     *         summary has to be able to say "of the 100 published, 12 indexable" without the
+     *         operator adding up two separate reports
      * @return array{published: int, failed: int}
      */
-    private function publishBacklog(?string $brandKey, ?string $subcategorySlug, ?int $limit, bool $dryRun): array
-    {
+    private function publishBacklog(
+        ?string $brandKey,
+        ?string $subcategorySlug,
+        ?int $limit,
+        bool $dryRun,
+        string $mode,
+        array &$indexing,
+    ): array {
         $published = 0;
         $failed = 0;
 
@@ -623,14 +739,6 @@ class CatalogIHerbPromote extends Command
             $cursor = (int) $rows->last()->id;
 
             foreach ($rows as $row) {
-                if ($dryRun) {
-                    // Same promise --dry-run makes everywhere else in this command: it reports and
-                    // writes nothing. No save means no ProductSeoObserver, no IndexNow.
-                    $published++;
-
-                    continue;
-                }
-
                 $product = $row->product;
                 if ($product === null) {
                     // whereHas matched but the eager load did not: the product was deleted between
@@ -638,10 +746,23 @@ class CatalogIHerbPromote extends Command
                     continue;
                 }
 
-                if ($this->publish($product, $row)) {
+                if ($dryRun) {
+                    // Same promise --dry-run makes everywhere else in this command: it reports and
+                    // writes nothing. No save means no ProductSeoObserver, no IndexNow.
+                    //
+                    // The indexing verdict IS computed, and it is exact here rather than a forecast
+                    // — the product exists, so the body being measured is the one that would be
+                    // served. This is the number to look at before running the wave for real.
                     $published++;
-                } else {
+                    $this->recordIndexVerdict($indexing, $this->indexVerdict($product, $row, $mode));
+
+                    continue;
+                }
+
+                if ($this->publish($product, $row, $mode, $indexing) === self::PUBLISH_FAILED) {
                     $failed++;
+                } else {
+                    $published++;
                 }
             }
         }
@@ -657,20 +778,39 @@ class CatalogIHerbPromote extends Command
      * publishBacklog() (a product committed by an earlier run). They are the same act — the whole
      * defect publishBacklog() exists to fix was that only the first of them existed.
      *
+     * ── PUBLISHING AND INDEXING ARE TWO DECISIONS, AND ONLY ONE OF THEM IS THIS COMMAND'S ──
+     * `publier = true` is the operator's decision, made by typing --publish. `seo_robots_index` is a
+     * MEASUREMENT: does the body this product ships with clear catalog.promotion.min_body_words?
+     * This method used to assert both — `$product->seo_robots_index = true` with no way to say
+     * otherwise — which is how the (1, 0) state three separate docblocks describe came to be
+     * unreachable. Now the flag is whatever PromotionGate::indexable() returns, and the two
+     * overrides are the operator's way of overruling the measurement in either direction, in
+     * writing, with the count printed in the summary.
+     *
+     * Below the gate the product is still PUBLISHED: on the storefront, in the listings, sellable.
+     * It is simply not offered to search engines — out of the sitemap (sitemapData.ts filters on
+     * this exact column) and rendered `<meta robots="noindex">`. That is a weaker claim than
+     * "unpublished", and it is the right one for a page whose only defect is that nobody has written
+     * its copy yet.
+     *
      * Guarded like every other per-row write in this command: one product whose UPDATE fails must
      * not abort the wave and lose the counters for everything already created. The product survives
      * as an unpublished, complete row, so the repair is a publish in the admin and not a re-import.
+     *
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
+     * @return self::PUBLISHED_INDEXABLE|self::PUBLISHED_NOINDEX|self::PUBLISH_FAILED
      */
-    private function publish(Product $product, ExternalCatalogProduct $row): bool
+    private function publish(Product $product, ExternalCatalogProduct $row, string $mode, array &$indexing): string
     {
+        $verdict = $this->indexVerdict($product, $row, $mode);
+        $indexable = $verdict['applied'];
+
         try {
             // Assigned rather than forceFill()ed so `wasChanged(['publier'])` — the condition
             // ProductSeoObserver::saved actually tests — is unambiguously true here.
             $product->publier = true;
-            $product->seo_robots_index = true;
+            $product->seo_robots_index = $indexable;
             $product->save();
-
-            return true;
         } catch (QueryException $e) {
             $this->warn(sprintf(
                 '  row %d: product %d was created but could not be published: %s',
@@ -679,8 +819,163 @@ class CatalogIHerbPromote extends Command
                 Str::limit($e->getMessage(), 140),
             ));
 
+            return self::PUBLISH_FAILED;
+        }
+
+        // Counted only after the save succeeded. A wave that reports "88 published noindexed" must
+        // mean 88 rows in that state, not 88 attempts.
+        $this->recordIndexVerdict($indexing, $verdict);
+
+        return $indexable ? self::PUBLISHED_INDEXABLE : self::PUBLISHED_NOINDEX;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | The indexing gate
+    |--------------------------------------------------------------------------
+    */
+
+    /**
+     * Should THIS product be indexable, and what did it measure?
+     *
+     * `measured` is the verdict the body alone gives and is recorded whatever mode is in force;
+     * `applied` is what actually gets written. They differ exactly when an override is in play,
+     * which is what lets the summary print "12 were indexed below the gate because --force-index was
+     * given" instead of silently obeying.
+     *
+     * @return array{words:int, measured:bool, applied:bool}
+     */
+    private function indexVerdict(Product $product, ExternalCatalogProduct $row, string $mode): array
+    {
+        return $this->verdictFor($this->bodyWords($product, $row), $mode);
+    }
+
+    /**
+     * The same decision from a bare word count — the form the dry run needs, where no product exists
+     * yet. One implementation, so a forecast and a real run cannot disagree about the same number.
+     *
+     * @return array{words:int, measured:bool, applied:bool}
+     */
+    private function verdictFor(int $words, string $mode): array
+    {
+        $min = $this->minBodyWords();
+
+        return [
+            'words' => $words,
+            'measured' => PromotionGate::indexable($words, $min, PromotionGate::INDEX_MEASURED),
+            'applied' => PromotionGate::indexable($words, $min, $mode),
+        ];
+    }
+
+    /**
+     * How many words the page this product will serve actually carries.
+     *
+     * ── THE LIVE BODY WINS OVER THE STAGED NUMBER, AND THAT IS THE POINT ──────────────────
+     * `external_catalog_products.composed_word_count` is what promotion measured when it wrote the
+     * copy, and it exists so a publish wave never has to recompose (see the migration). But the
+     * documented workflow between the two steps is "review them in the admin, THEN publish in
+     * waves", and the whole reason to review an imported product is to improve its copy. Trusting
+     * the staged number would mean an operator could write 400 words of real French into
+     * description_fr and still watch the product publish noindexed, with the only escape being a
+     * --force-index that then also indexes every untouched product in the wave. Measuring the column
+     * that will actually be served makes the gate a ratchet that opens as the copy improves, one
+     * product at a time.
+     *
+     * At promotion time the two numbers are the same string measured twice, because createProduct()
+     * writes both in one transaction — promotion-gate-check.php asserts that equivalence on a real
+     * composed body rather than assuming it.
+     *
+     * The staged count is the fallback for the one case the live body cannot answer: a product whose
+     * description_fr is empty. And a NULL staged count — every row promoted before migration
+     * 2026_08_10_000007, which is all 812 currently sitting at publier = 0 — reads as 0, i.e. below
+     * any positive gate, i.e. published noindexed. That is the safe direction, and in practice those
+     * rows never reach it: they all have a description_fr, so they are measured properly.
+     */
+    private function bodyWords(Product $product, ExternalCatalogProduct $row): int
+    {
+        $body = trim((string) $product->description_fr);
+
+        if ($body !== '') {
+            // The audit's own definition of a word, so this number and the number
+            // frontend/scripts/audit-pdp-content.mjs will report for the rendered page are the same
+            // kind of number. It is a deliberate UNDER-estimate of the finished page: the crawler
+            // view also renders the title, the spec list and the price/availability section, none of
+            // which are in this column. Erring low means the gate holds back a page it could have
+            // indexed; erring high would mean indexing a page the audit then fails.
+            return ImportedProductContent::countWords($body);
+        }
+
+        $staged = $row->composed_word_count;
+
+        return $staged === null ? 0 : max(0, (int) $staged);
+    }
+
+    /**
+     * The gate, from config, with PromotionGate's constant as the strict fallback.
+     *
+     * Read here rather than passed down from contextFrom() because publishBacklog() builds no gate
+     * context at all — it never inspects a staging row, it publishes products an earlier run already
+     * accepted.
+     */
+    private function minBodyWords(): int
+    {
+        return (int) config('catalog.promotion.min_body_words', PromotionGate::DEFAULT_MIN_BODY_WORDS);
+    }
+
+    /**
+     * Which of the three index modes this run is in, or false when the operator asked for two
+     * contradictory things.
+     *
+     * The DEFAULT IS THE MEASURED GATE, deliberately and not merely conventionally: this decides
+     * whether URLs are offered to search engines, the failure direction is thousands of thin pages
+     * in the index, and an index submission is not something that gets taken back. Both overrides
+     * therefore have to be typed, and both are named in the summary next to their counts.
+     *
+     * @return string|false
+     */
+    private function indexMode(bool $publish): string|false
+    {
+        $force = (bool) $this->option('force-index');
+        $suppress = (bool) $this->option('force-noindex');
+
+        if ($force && $suppress) {
+            $this->error('--force-index and --force-noindex contradict each other. Pass one, or neither to use the measured gate.');
+
             return false;
         }
+
+        if (($force || $suppress) && ! $publish) {
+            // Not fatal — the run is still a valid promote — but silence here would let somebody
+            // believe a wave had been forced when nothing was published at all.
+            $this->warn('--force-index/--force-noindex only affect publication and this run has no --publish. Products will be created at publier=0, seo_robots_index=0 as usual.');
+        }
+
+        if ($force) {
+            return PromotionGate::INDEX_FORCED;
+        }
+
+        return $suppress ? PromotionGate::INDEX_SUPPRESSED : PromotionGate::INDEX_MEASURED;
+    }
+
+    /**
+     * Fold one product's verdict into the wave's tally.
+     *
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
+     * @param  array{words:int, measured:bool, applied:bool}  $verdict
+     */
+    private function recordIndexVerdict(array &$indexing, array $verdict): void
+    {
+        $indexing[$verdict['applied'] ? 'indexable' : 'noindex']++;
+
+        // From `measured`, NOT from `applied` — under an override these two are exactly the number
+        // the operator overruled, and reporting `applied` would make every forced wave claim it had
+        // nothing below the gate.
+        if (! $verdict['measured']) {
+            $indexing['below_gate']++;
+        }
+
+        $indexing['min_words'] = $indexing['min_words'] === null ? $verdict['words'] : min($indexing['min_words'], $verdict['words']);
+        $indexing['max_words'] = $indexing['max_words'] === null ? $verdict['words'] : max($indexing['max_words'], $verdict['words']);
     }
 
     /**
@@ -718,32 +1013,19 @@ class CatalogIHerbPromote extends Command
             $subId = (int) $verdict['sub_id'];
 
             /**
-             * The page body and its metadata, composed from the facts on the row.
+             * The page body, its metadata, and the length of the body that will be stored.
              *
-             * This call is the whole point of App\Services\Catalog\ImportedProductContent, and it
-             * was missing: createProduct() built its own four-item spec block (~25 words) via
-             * $this->description() and set seo_title/seo_description nowhere, so the class shipped
-             * as dead code and not one imported product ever received the copy it composes. A
-             * service nothing calls is a deliverable that did not ship.
+             * The BRAND ROW's display name is passed, not the source's: BrandKey::displayName() has
+             * already tidied it, and it is the spelling the brand page and the PDP print. The raw
+             * source name is the fallback for the (config-permitted) no-brand case.
              *
-             * compose() returns nulls when too few facts survive to write a true identity sentence
-             * (no brand, no rayon, or a title whose head is nothing but the brand). That is not an
-             * error, so the old spec block stays as the fallback for exactly those rows — it is
-             * still better than an empty description_fr, which makes the storefront fall through to
-             * generateProductFallbackDescription() and emit the same boilerplate on every product.
+             * body() is shared with the dry run so a forecast and a real run compose the same
+             * sentences; see it for what compose() does when too few facts survive, and for why the
+             * word count has to be measured on the string that is actually written rather than taken
+             * from compose() unconditionally.
              */
-            $content = ImportedProductContent::fromStagingRow($row->getAttributes(), [
-                // The BRAND ROW's display name, not the source's: BrandKey::displayName() has
-                // already tidied it, and it is the spelling the brand page and the PDP print. The
-                // raw source name is the fallback for the (config-permitted) no-brand case.
-                'brand' => $brand?->designation_fr ?? $row->source_brand_name,
-                'sub_category_slug' => $subcategories['slugs'][$subId] ?? null,
-                'sub_category_label' => $subcategories['labels'][$subId] ?? null,
-                'category_label' => $subcategories['categories'][$subId] ?? null,
-                // No `reference`: promotion writes no code_product, so the product page prints no
-                // "Référence : …" line and a sentence quoting one would describe a field the page
-                // does not show.
-            ]);
+            $body = $this->body($row, $brand?->designation_fr ?? $row->source_brand_name, $subcategories, $subId);
+            $content = $body['content'];
 
             /**
              * Product::create(), never insert()/upsert()/the query builder.
@@ -763,8 +1045,7 @@ class CatalogIHerbPromote extends Command
             $attributes = [
                 'designation_fr' => $verdict['title'],
                 'slug' => $slug,
-                'description_fr' => $content['description_fr']
-                    ?? $this->description($row, $brand, $subcategories['labels'][$subId] ?? null),
+                'description_fr' => $body['description_fr'],
                 'cover' => $this->coverUrl($row),
                 'prix' => $verdict['price'],
                 'qte' => (int) config('catalog.promotion.initial_qte', 0),
@@ -833,6 +1114,21 @@ class CatalogIHerbPromote extends Command
                 // the price actually charged means the admin's staging view and the product page can
                 // never disagree about what this product costs.
                 'computed_price' => $verdict['price'],
+                /*
+                 * THE MEASUREMENT THE PUBLISH STEP EXISTS TO READ.
+                 *
+                 * ImportedProductContent::compose() has always returned this number, computed the
+                 * way frontend/scripts/audit-pdp-content.mjs computes `bodyWords` and documented as
+                 * being for exactly this comparison — and this method used to read the copy out of
+                 * that array and discard it, leaving publish() with nothing to measure and a
+                 * hardcoded `seo_robots_index = true`. Written inside the same transaction as the
+                 * body it describes, so the two can never disagree about the same product.
+                 *
+                 * Clamped to the column's range (unsignedSmallInteger) rather than trusted: a
+                 * pathological body must cost a wrong number, not SQLSTATE[22003] in the middle of a
+                 * wave.
+                 */
+                'composed_word_count' => max(0, min(65535, $body['word_count'])),
             ])->save();
 
             return $product;
@@ -955,6 +1251,61 @@ class CatalogIHerbPromote extends Command
     }
 
     /**
+     * The body this row gets, and how many words it is.
+     *
+     * ── ONE COMPOSER FOR THE REAL RUN AND THE FORECAST ────────────────────────────────────
+     * createProduct() calls it inside its transaction; the --dry-run branch calls it with the raw
+     * source brand name, because BrandMatcher WRITES and a dry run must not. Splitting it out is
+     * what makes "the dry run tells you how many of this wave would be indexable" a claim about the
+     * same sentences the real run will store, rather than a second, drifting derivation.
+     *
+     * compose() returns nulls when too few facts survive to write a true identity sentence (no
+     * brand, no rayon, or a title whose head is nothing but the brand). That is not an error, so the
+     * old spec block stays as the fallback for exactly those rows — an empty description_fr makes
+     * the storefront fall through to generateProductFallbackDescription() and emit the same
+     * boilerplate on every product.
+     *
+     * ── THE COUNT IS MEASURED ON THE STRING THAT IS ACTUALLY STORED ───────────────────────
+     * Not taken from compose() unconditionally. On the rows compose() declines, its `word_count` is
+     * 0 while `description_fr` is the spec block — so trusting it would record 0 words for a body
+     * that has some, and publish() would hold a product back on a measurement of a string it is not
+     * serving. Where compose() DID produce the body, its own number is used verbatim: it is the same
+     * counter over the same string, and re-running countWords() would only invite the two to drift.
+     *
+     * @param  ?string  $brandName  the display name the copy should print, or null
+     * @param  array{ids: array<string, int>, labels: array<int, string>, slugs: array<int, string>, categories: array<int, string>}  $subcategories
+     * @return array{content: array<string, mixed>, description_fr: ?string, word_count: int}
+     */
+    private function body(ExternalCatalogProduct $row, ?string $brandName, array $subcategories, int $subId): array
+    {
+        $content = ImportedProductContent::fromStagingRow($row->getAttributes(), [
+            'brand' => $brandName,
+            'sub_category_slug' => $subcategories['slugs'][$subId] ?? null,
+            'sub_category_label' => $subcategories['labels'][$subId] ?? null,
+            'category_label' => $subcategories['categories'][$subId] ?? null,
+            // No `reference`: promotion writes no code_product, so the product page prints no
+            // "Référence : …" line and a sentence quoting one would describe a field the page does
+            // not show.
+        ]);
+
+        if ($content['description_fr'] !== null) {
+            return [
+                'content' => $content,
+                'description_fr' => $content['description_fr'],
+                'word_count' => (int) $content['word_count'],
+            ];
+        }
+
+        $fallback = $this->description($row, $brandName, $subcategories['labels'][$subId] ?? null);
+
+        return [
+            'content' => $content,
+            'description_fr' => $fallback,
+            'word_count' => $fallback === null ? 0 : ImportedProductContent::countWords($fallback),
+        ];
+    }
+
+    /**
      * FALLBACK description, built ONLY from facts already on the row.
      *
      * Since ImportedProductContent was wired into createProduct() this is no longer the normal path:
@@ -977,13 +1328,18 @@ class CatalogIHerbPromote extends Command
      * real copy, not a substitute for it: these pages are created unpublished precisely because
      * thin content at 13,000-page scale is a ranking problem, and the publish step is where that
      * judgement gets made.
+     *
+     * ── IT TAKES THE BRAND NAME, NOT THE BRAND ROW ────────────────────────────────────────
+     * It only ever read `$brand?->designation_fr`, and the dry run has no Brand model to offer —
+     * BrandMatcher creates missing brands, so a dry run cannot call it. A string is what both
+     * callers actually have.
      */
-    private function description(ExternalCatalogProduct $row, ?Brand $brand, ?string $subcategoryLabel): ?string
+    private function description(ExternalCatalogProduct $row, ?string $brandName, ?string $subcategoryLabel): ?string
     {
         $facts = [];
 
-        if (filled($brand?->designation_fr)) {
-            $facts['Marque'] = (string) $brand->designation_fr;
+        if (filled($brandName)) {
+            $facts['Marque'] = (string) $brandName;
         }
 
         if ($row->pack_size !== null && filled($row->pack_unit)) {
@@ -1007,8 +1363,8 @@ class CatalogIHerbPromote extends Command
             $items .= '<li><strong>'.e($label).'</strong> : '.e($value).'</li>';
         }
 
-        $lead = filled($brand?->designation_fr)
-            ? sprintf('<p><strong>%s</strong> de %s.</p>', e((string) $row->normalized_title), e((string) $brand->designation_fr))
+        $lead = filled($brandName)
+            ? sprintf('<p><strong>%s</strong> de %s.</p>', e((string) $row->normalized_title), e((string) $brandName))
             : sprintf('<p><strong>%s</strong>.</p>', e((string) $row->normalized_title));
 
         return $lead.'<ul>'.$items.'</ul>';
@@ -1192,8 +1548,10 @@ class CatalogIHerbPromote extends Command
      * the storefront, nothing enters the sitemap, and ProductSeoObserver::saved skips SeoNotifier
      * entirely when `publier` is falsy — so promoting the whole backlog costs the storefront nothing.
      *
-     * `--publish` is the opposite: every product PUBLISHED fires three HTTP calls at the storefront
-     * and puts a URL in front of Google. So it defaults to one chunk, and you raise it on purpose.
+     * `--publish` is the opposite: every product PUBLISHED fires two per-product HTTP calls at the
+     * storefront — revalidate the path, submit the URL to IndexNow — plus one sitemap bust coalesced
+     * across the whole wave (SeoNotifier::bustSitemapCache), and it puts a URL in front of Google.
+     * So it defaults to one chunk, and you raise it on purpose.
      * The number it returns bounds publications, not creations — publishBacklog() spends it first and
      * the creation loop gets whatever is left, because a wave that published 100 backlog products and
      * then created 100 more would put twice the URLs in front of Google that were asked for.
@@ -1217,7 +1575,8 @@ class CatalogIHerbPromote extends Command
 
     /**
      * @param  array<string, int>  $rejected
-     * @param  list<array{0:string,1:string,2:string,3:string}>  $samples
+     * @param  list<array{0:string,1:string,2:string,3:string,4:string}>  $samples
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
      */
     private function summarise(
         bool $dryRun,
@@ -1231,6 +1590,8 @@ class CatalogIHerbPromote extends Command
         int $backlogFailed,
         array $samples,
         ?int $limit,
+        string $mode,
+        array $indexing,
     ): int {
         /*
          * "Nothing was scanned" is no longer the same question as "nothing happened".
@@ -1253,7 +1614,7 @@ class CatalogIHerbPromote extends Command
 
         if ($samples !== []) {
             $this->line('');
-            $this->table(['', 'price / reason', 'URL / detail', 'product'], $samples);
+            $this->table(['', 'price / reason', 'URL / detail', 'product', 'body / robots'], $samples);
             if (count($samples) === 25) {
                 $this->line('  … first 25 rows only. Use --report for the full breakdown.');
             }
@@ -1285,6 +1646,11 @@ class CatalogIHerbPromote extends Command
                 number_format($scanned),
                 $publish ? ' AND PUBLISHED' : ' (unpublished)',
             ));
+
+            if ($publish) {
+                $this->reportIndexing($mode, $indexing, true);
+            }
+
             $this->line('  Drop --dry-run to run it.');
 
             return self::SUCCESS;
@@ -1307,6 +1673,10 @@ class CatalogIHerbPromote extends Command
                 ? sprintf(', %s PUBLISHED and submitted to IndexNow', number_format($created - $failedPublishes))
                 : ' — unpublished (publier=0, seo_robots_index=0)',
         ));
+
+        if ($publish) {
+            $this->reportIndexing($mode, $indexing, false);
+        }
 
         if ($failedPublishes > 0) {
             $this->warn(sprintf(
@@ -1351,5 +1721,89 @@ class CatalogIHerbPromote extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * What this wave did to `seo_robots_index`, with the counts and the reason.
+     *
+     * ── WHY THIS IS NOT ONE LINE ──────────────────────────────────────────────────────────
+     * "N published" is the number the operator asked for and therefore the number they will not
+     * check. The number worth printing is the split: how many of those N are actually offered to
+     * search engines, how many are sitting on the storefront noindexed waiting for copy, and on what
+     * evidence. Under an override it also has to say that the measurement was overruled and by which
+     * flag — a wave that indexed 100 thin pages because somebody typed --force-index must not read
+     * identically to a wave that indexed 100 good ones.
+     *
+     * The word range is printed rather than described. `catalog.promotion.min_body_words` is 250 and
+     * the composed bodies measure in the low hundreds, so "74-116 words against a 250 gate" tells the
+     * operator in one line why nothing cleared it and roughly how far off it is — which is a content
+     * decision to take, not a flag to flip.
+     *
+     * @param  array{indexable:int, noindex:int, below_gate:int, min_words:?int, max_words:?int}  $indexing
+     */
+    private function reportIndexing(string $mode, array $indexing, bool $dryRun): void
+    {
+        $total = $indexing['indexable'] + $indexing['noindex'];
+
+        if ($total === 0) {
+            return;
+        }
+
+        $min = $this->minBodyWords();
+        $verb = $dryRun ? 'would be' : 'were';
+
+        $this->line('');
+        $this->line(sprintf(
+            '  Indexing gate: catalog.promotion.min_body_words = %s word(s)%s.',
+            number_format($min),
+            $min <= 0 ? ' — DISABLED, everything published is indexable' : ' (audit-pdp-content.mjs MIN_NEW_PRODUCT_WORDS)',
+        ));
+
+        $this->line(sprintf(
+            '    %s %s published INDEXABLE  — in the sitemap, seo_robots_index=1',
+            str_pad(number_format($indexing['indexable']), 7, ' ', STR_PAD_LEFT),
+            $verb,
+        ));
+        $this->line(sprintf(
+            '    %s %s published NOINDEXED  — visible to customers and sellable, out of the sitemap, <meta robots="noindex">',
+            str_pad(number_format($indexing['noindex']), 7, ' ', STR_PAD_LEFT),
+            $verb,
+        ));
+
+        if ($indexing['min_words'] !== null) {
+            $this->line(sprintf(
+                '    bodies measured %s-%s words against a %s-word gate.',
+                number_format((int) $indexing['min_words']),
+                number_format((int) $indexing['max_words']),
+                number_format($min),
+            ));
+        }
+
+        // The reason, and it names the flag when a flag is what decided it.
+        if ($mode === PromotionGate::INDEX_FORCED) {
+            $this->warn(sprintf(
+                '  --force-index: the measured gate was OVERRULED. %s of the %s indexed %s below %s words '
+                .'and %s indexed anyway. Nothing else in this repo will hold them back — sitemapData.ts '
+                .'submits them and audit-pdp-content.mjs will fail them on its next run.',
+                number_format($indexing['below_gate']),
+                number_format($total),
+                $indexing['below_gate'] === 1 ? 'is' : 'are',
+                number_format($min),
+                $dryRun ? 'would be' : 'were',
+            ));
+        } elseif ($mode === PromotionGate::INDEX_SUPPRESSED) {
+            $this->line(sprintf(
+                '  --force-noindex: the measured gate was not consulted. %s of these clear it and %s held back anyway.',
+                number_format($total - $indexing['below_gate']),
+                $dryRun ? 'would be' : 'were',
+            ));
+        } elseif ($indexing['noindex'] > 0) {
+            $this->line(
+                '  Held back because the body is below the gate, which is the intended state and not an error: '
+                .'the product sells, the URL is simply not offered to search engines yet. Write real copy into '
+                .'description_fr and the next --publish wave indexes it — the gate measures the LIVE body. '
+                .'--force-index overrides it for a wave, and says so here when it does.'
+            );
+        }
     }
 }

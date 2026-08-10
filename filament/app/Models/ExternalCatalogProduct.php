@@ -39,6 +39,13 @@ class ExternalCatalogProduct extends Model
 
     protected $casts = [
         'source_payload' => 'array',
+        /**
+         * Payload keys IHerbNormalizer did not consume. `[]` is a measurement ("the source sent
+         * nothing we ignored"); NULL means the row has not been normalised since the column existed.
+         * The two must stay distinguishable, so this is cast to array and never to a collection with
+         * a default.
+         */
+        'source_unmapped_keys' => 'array',
         'source_list_price' => 'decimal:2',
         'source_discount_price' => 'decimal:2',
         'source_rating' => 'decimal:2',
@@ -47,6 +54,15 @@ class ExternalCatalogProduct extends Model
         'category_mapping_required' => 'boolean',
         'pack_size' => 'decimal:3',
         'computed_price' => 'decimal:3',
+        /**
+         * Words in the body promotion wrote into `products.description_fr`, measured the way
+         * frontend/scripts/audit-pdp-content.mjs measures `bodyWords`. NULL means "never measured"
+         * (promoted before migration 2026_08_10_000007), which is not the same as 0 and must not be
+         * cast into one — CatalogIHerbPromote::bodyWords() falls back to measuring the product's own
+         * stored body when it is null. The cast is here so a driver returning "96" cannot make a
+         * `>= 250` comparison a string comparison.
+         */
+        'composed_word_count' => 'integer',
         'first_seen_at' => 'datetime',
         'last_synced_at' => 'datetime',
         'promoted_at' => 'datetime',

@@ -65,6 +65,31 @@ final class PromotionGate
      */
     public const PART_NUMBER = '~^([a-z]{2,4})-?(\w+)$~';
 
+    /**
+     * The body-length bar a published product must clear to be INDEXABLE, when config says nothing.
+     *
+     * Not a number chosen here: it is frontend/scripts/audit-pdp-content.mjs MIN_NEW_PRODUCT_WORDS,
+     * the bar that audit already applies to every product it holds no baseline for — which is every
+     * product this import creates. It is duplicated as a constant for the same reason `require_image`
+     * defaults to true in contextFrom(): a deployment whose config/catalog.php predates the key must
+     * get the STRICT behaviour, not an ungated one, because the failure direction here is 13,000
+     * thin pages submitted for indexing and there is no taking that back.
+     *
+     * filament/tests/catalog/promotion-gate-check.php reads the .mjs file and asserts this constant,
+     * the shipped config value and that file's constant are all the same number.
+     */
+    public const DEFAULT_MIN_BODY_WORDS = 250;
+
+    /**
+     * The three ways the publish step may decide `seo_robots_index`. MEASURED is the default and the
+     * only one that consults the body; the other two are the operator's explicit overrides, one in
+     * each direction, and both are named in the run's summary so a wave can never be indexed or
+     * suppressed without the reason appearing next to the counts.
+     */
+    public const INDEX_MEASURED = 'measured';
+    public const INDEX_FORCED = 'forced';
+    public const INDEX_SUPPRESSED = 'suppressed';
+
     // ── Rejection reasons ─────────────────────────────────────────────────────────────────
     public const NOT_HYDRATED = 'not_hydrated';
     public const ALREADY_PROMOTED = 'already_promoted';
@@ -143,7 +168,58 @@ final class PromotionGate
              * many of the promotable rows that actually is.
              */
             'require_image' => (bool) ($promotion['require_image'] ?? true),
+            /*
+             * The indexability gate, not a promotability one — inspect() never reads it. It is
+             * carried here so the command, the report and the harness all take the number from one
+             * builder instead of three `config()` calls that can disagree, exactly like min_price.
+             */
+            'min_body_words' => (int) ($promotion['min_body_words'] ?? self::DEFAULT_MIN_BODY_WORDS),
         ];
+    }
+
+    /**
+     * May a product carrying a body of this many words be published INDEXABLE?
+     *
+     * ── WHY THIS IS A FUNCTION AND NOT TWO LINES INSIDE THE COMMAND ───────────────────────
+     * Because that is where it was, inverted, for the whole life of the import:
+     * CatalogIHerbPromote::publish() hardcoded `seo_robots_index = true` while its own class
+     * docblock, ImportedProductContent's docblock and frontend/src/util/sitemapData.ts all three
+     * described `publier = 1 + seo_robots_index = 0` as a state "CatalogIHerbPromote creates". It
+     * created (0,0) or published (1,1); the state three files planned around did not exist. A gate
+     * living inside a class that extends Illuminate\Console\Command cannot be executed by any
+     * harness in this repo — there is no vendor/ and no database — so it could invert again and
+     * nothing would say so. Here it is a pure function over two integers and a mode, and
+     * promotion-gate-check.php asserts its verdict on a thin body and a thick one.
+     *
+     * ── THE COMPARISON IS `>=`, DELIBERATELY ──────────────────────────────────────────────
+     * frontend/scripts/audit-pdp-content.mjs fails a new product when `bodyWords < MIN_NEW_PRODUCT_
+     * WORDS`. Indexing a page that the repo's own audit would then fail is the one outcome this
+     * function exists to prevent, so it clears at exactly the number the audit accepts and not one
+     * word later. The boundary is asserted from both sides in the harness.
+     *
+     * @param  int  $bodyWords  words in the body that will actually be SERVED, counted the way
+     *                          ImportedProductContent::countWords() counts them
+     * @param  int  $minBodyWords  the gate; 0 or less disables it entirely
+     * @param  string  $mode  one of INDEX_MEASURED (default), INDEX_FORCED, INDEX_SUPPRESSED
+     */
+    public static function indexable(int $bodyWords, int $minBodyWords, string $mode = self::INDEX_MEASURED): bool
+    {
+        // The overrides are checked first and answer without measuring anything. That ordering IS
+        // the override: an operator who passed --force-noindex has said the body is not the
+        // question, and a gate that still let a thick body through would be ignoring them.
+        if ($mode === self::INDEX_SUPPRESSED) {
+            return false;
+        }
+
+        if ($mode === self::INDEX_FORCED) {
+            return true;
+        }
+
+        if ($minBodyWords <= 0) {
+            return true;
+        }
+
+        return $bodyWords >= $minBodyWords;
     }
 
     /**

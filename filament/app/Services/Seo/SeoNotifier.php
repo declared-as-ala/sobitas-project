@@ -100,9 +100,15 @@ class SeoNotifier
      * unstable_cache(tag: 'sitemap') and its docblock states the contract this class is supposed to
      * honour: bust it "once at the END of a promotion wave, not once per product". Nothing here did
      * that. Every product save reached send() below, and every send() posted its own
-     * `?tag=sitemap` — which CatalogIHerbPromote's own pre-flight warning already spells out to the
-     * operator ("three HTTP calls apiece ... ~%s requests at the storefront"). A comment describing
-     * behaviour the code lacks is worse than no comment, because the next person plans around it.
+     * `?tag=sitemap` — which CatalogIHerbPromote's own pre-flight warning used to spell out to the
+     * operator ("three HTTP calls apiece ... ~limit*3 requests at the storefront"). A comment
+     * describing behaviour the code lacks is worse than no comment, because the next person plans
+     * around it.
+     *
+     * That warning has since been corrected to the two per-product calls send() actually makes, and
+     * the multiplier it prints is asserted against THIS file in
+     * filament/tests/catalog/promotion-gate-check.php — so a third per-product call added below
+     * fails a harness instead of quietly making an operator's maintenance window wrong.
      *
      * ── WHY DUPLICATE BUSTS ARE NOT MERELY REDUNDANT ──────────────────────────────────────────
      * Invalidating the same tag N times does not invalidate it any harder than once. What the extra

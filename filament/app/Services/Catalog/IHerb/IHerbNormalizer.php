@@ -25,9 +25,60 @@ namespace App\Services\Catalog\IHerb;
  *   id 1      "5-HTP, 100 mg, 60 Veggie Caps"                                  Doctor's Best
  *   id 68616  "Micronized Creatine Powder, Unflavored, 1.32 lb (600 g)"        Optimum Nutrition
  *   id 46873  "Curcumin Phytosome™, 180 Veggie Caps (500 mg per Capsule)"      Doctor's Best
+ *
+ * ── WHAT THE SOURCE DOES NOT CARRY, SAID OUT LOUD ─────────────────────────────────────────
+ * /ugc/api/product/v2/{id} is an IDENTITY AND PRICE record. Every key it is known to return is
+ * listed in KNOWN_PAYLOAD_KEYS below, and none of them is a description, an ingredient list, a
+ * Supplement Facts panel, a video, an image COUNT or a second image URL. So there is no unread
+ * "rich data" sitting in `source_payload` waiting to be mapped: an imported row genuinely arrives
+ * with a name, a brand, a price, a category, one image index and two booleans.
+ *
+ * That is a fact about the source, not a gap in this class, and the honest response to it is
+ * `source_unmapped_keys`: every key the payload carried that this class did NOT consume is recorded
+ * on the row. If iHerb ever starts returning a description, a nutrition block or a media array, it
+ * shows up there on the next hydrate (and on every existing row after
+ * `catalog:iherb:hydrate --renormalize`, which costs no HTTP request) instead of being silently
+ * discarded. `catalog:iherb:payload-audit` prints the same thing across the whole staging table.
  */
 class IHerbNormalizer
 {
+    /**
+     * Every payload key this class reads. Anything else lands in `source_unmapped_keys`.
+     *
+     * This list IS the definition of "captured", which is why unmappedKeys() derives from it rather
+     * than from a second hand-written list: a key added to normalize() and forgotten here would be
+     * reported as unmapped forever, and the reverse — a key listed here and read nowhere — is caught
+     * by the harness, which asserts every entry is actually referenced in this file.
+     */
+    public const KNOWN_PAYLOAD_KEYS = [
+        'brandCode',
+        'brandName',
+        'discountPrice',
+        'displayName',
+        'id',
+        'isAvailableToPurchase',
+        'isDiscontinued',
+        'listPrice',
+        'partNumber',
+        'primaryImageIndex',
+        'rootCategoryId',
+        'rootCategoryName',
+        'url',
+        'urlName',
+    ];
+
+    /** Image variants iHerb serves. Mirrors the set IHerbClient::imageUrl() accepts. */
+    private const IMAGE_SIZES = ['s', 'm', 'l', 'k', 'r'];
+
+    /**
+     * Pack units that measure a PER-UNIT DOSE rather than the pack.
+     *
+     * Same rule, and the same reason, as ImportedProductContent::UNIT_GROUPS' `dose` group: "500 mg"
+     * reaching `pack_unit` is the strength of one capsule, so printing it as the conditionnement
+     * turns a 180-capsule bottle into a 500 mg product. packLabel() returns null for these, which is
+     * what keeps the specification table and the composed body saying the same thing.
+     */
+    private const DOSE_UNITS = ['mg', 'µg', 'mcg'];
     /**
      * Units that denote a pack size, mapped to how protein.tn writes them in French.
      *
@@ -126,7 +177,33 @@ class IHerbNormalizer
             'source_discount_price' => $discountPrice['amount'] ?? null,
             'source_currency' => $listPrice['currency'] ?? $discountPrice['currency'] ?? null,
             'source_available' => (bool) ($payload['isAvailableToPurchase'] ?? false),
+            /**
+             * Derived HERE and not in HydrateExternalProductJob::store().
+             *
+             * store() used to add it alongside the normalised array, which meant
+             * `catalog:iherb:hydrate --renormalize` — the command whose entire purpose is to
+             * re-derive every payload-derived column with no HTTP request — could not refresh it.
+             * One payload key, two derivations, one of them unreachable from the recovery path.
+             * (PHP's `+` already gave this array precedence over store()'s literal, so moving it
+             * changes no stored value on any existing row; it changes which command can fix it.)
+             */
+            'source_discontinued' => (bool) ($payload['isDiscontinued'] ?? false),
             'source_primary_image_index' => isset($payload['primaryImageIndex']) ? (int) $payload['primaryImageIndex'] : null,
+            /**
+             * The cover URL, resolved once and stored.
+             *
+             * CatalogIHerbPromote::coverUrl() rebuilds this from the part number and the image index
+             * at promotion time, which is fine and stays. Storing it here is what lets the staging
+             * row, the Filament admin and any report show the exact URL a promotion WOULD use —
+             * before anything is promoted — instead of each caller re-deriving it. Still a single
+             * primary image; see unmappedKeys() for why there is no gallery.
+             */
+            'source_image_url' => self::imageUrl(
+                trim((string) ($payload['partNumber'] ?? '')) ?: null,
+                isset($payload['primaryImageIndex']) ? (int) $payload['primaryImageIndex'] : null,
+            ),
+            /** Everything the source sent that nothing above reads. See the class docblock. */
+            'source_unmapped_keys' => self::unmappedKeys($payload),
 
             'normalized_title' => $this->frenchTitle($brandName, $productPart, $flavour, $pack),
             'normalized_brand_key' => $this->brandKey($brandName),
@@ -134,6 +211,93 @@ class IHerbNormalizer
             'pack_size' => $pack['quantity'] ?? null,
             'pack_unit' => $pack['unit'] ?? null,
         ];
+    }
+
+    /**
+     * The payload keys nothing in this class reads, sorted.
+     *
+     * ── WHY THIS IS A STORED COLUMN AND NOT A COMMENT ─────────────────────────────────────
+     * The question the owner actually asked is "are we getting the full rich data". A docblock
+     * listing fifteen keys answers it for the day it was written and never again: the moment iHerb
+     * adds a `description`, an `ingredients` or a `media` array, this class keeps mapping the same
+     * fourteen fields and throws the new one away on every one of ~19,000 rows, silently, forever.
+     *
+     * Recording what was NOT consumed makes that visible without storing anything twice — the full
+     * response is already in `source_payload`, so this is an index into it, not a copy of it. An
+     * empty array is a real answer ("the source carried nothing we ignored"); NULL means the row has
+     * not been re-normalised since this column existed, which is a different statement.
+     *
+     * @param  array<string, mixed>  $payload
+     * @return list<string>
+     */
+    public static function unmappedKeys(array $payload): array
+    {
+        $unknown = array_values(array_diff(array_keys($payload), self::KNOWN_PAYLOAD_KEYS));
+        sort($unknown);
+
+        return $unknown;
+    }
+
+    /**
+     * The product-image URL iHerb serves — the same construction as IHerbClient::imageUrl().
+     *
+     * ── WHY THIS IS A SECOND COPY, DELIBERATELY ───────────────────────────────────────────
+     * IHerbClient imports PoliteFetcher and Log, so a class that `use`s it cannot be loaded by a
+     * standalone harness — and this class exists precisely because there is no vendor/ here and its
+     * decisions have to be runnable under a bare `php`. PromotionGate already carries the same copy
+     * for the same reason and documents it, and promotion-gate-check.php asserts the two agree case
+     * by case rather than trusting that they do. normalizer-payload-capture-check.php does the same
+     * for this one, against the identical case table: a copy nobody checks is a copy that drifts.
+     *
+     * Recorded as a reference, not mirrored — see the media notes in config/catalog.php.
+     */
+    public static function imageUrl(?string $partNumber, ?int $imageIndex, string $size = 'l'): ?string
+    {
+        $part = strtolower(trim((string) $partNumber));
+        if ($part === '' || $imageIndex === null || ! in_array($size, self::IMAGE_SIZES, true)) {
+            return null;
+        }
+
+        // "OPN-02385" → brand folder "opn", asset folder "opn02385"
+        if (preg_match('~^([a-z]{2,4})-?(\w+)$~', $part, $m) !== 1) {
+            return null;
+        }
+
+        return sprintf(
+            'https://cloudinary.images-iherb.com/image/upload/f_auto,q_auto:eco/images/%s/%s%s/%s/%d.jpg',
+            $m[1], $m[1], $m[2], $size, $imageIndex
+        );
+    }
+
+    /**
+     * The pack, written the way a French page prints it — "600 g", "60 gélules végétales" — or null.
+     *
+     * Null for a dose unit (see DOSE_UNITS) and null for a missing or non-positive quantity. This is
+     * the string the product page's specification row shows, and it is built with the SAME number
+     * formatting and the SAME dose rule as the composed description, so a page cannot say "600 g" in
+     * one place and something else three paragraphs down.
+     */
+    public static function packLabel(mixed $size, mixed $unit): ?string
+    {
+        $unitText = trim((string) ($unit ?? ''));
+        if ($unitText === '') {
+            return null;
+        }
+
+        if (in_array(mb_strtolower($unitText), self::DOSE_UNITS, true)) {
+            return null;
+        }
+
+        if (! is_numeric($size)) {
+            return null;
+        }
+
+        $quantity = (float) $size;
+        if ($quantity <= 0) {
+            return null;
+        }
+
+        return self::frenchNumber($quantity).' '.$unitText;
     }
 
     /**
@@ -328,7 +492,7 @@ class IHerbNormalizer
         }
 
         if ($pack !== null) {
-            $parts[] = $this->frenchNumber($pack['quantity']).' '.$pack['unit'];
+            $parts[] = self::frenchNumber($pack['quantity']).' '.$pack['unit'];
         }
 
         $title = implode(' – ', array_filter($parts, static fn (string $p): bool => trim($p) !== ''));
@@ -391,8 +555,8 @@ class IHerbNormalizer
         return trim(preg_replace($pattern, '', $title) ?? $title);
     }
 
-    /** "2.29" → "2,29"; "600" → "600". French decimals, no rounding. */
-    private function frenchNumber(float $value): string
+    /** "2.29" → "2,29"; "600" → "600". French decimals, no rounding. Static so packLabel() shares it. */
+    private static function frenchNumber(float $value): string
     {
         $formatted = rtrim(rtrim(number_format($value, 3, '.', ''), '0'), '.');
 

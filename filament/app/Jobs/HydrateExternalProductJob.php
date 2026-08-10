@@ -194,9 +194,20 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
         // mismatch there would move the row onto a different product.
         unset($normalized['external_product_id']);
 
+        /*
+         * `source_discontinued` used to be derived here, from $payload['isDiscontinued'].
+         *
+         * It moved into IHerbNormalizer::normalize() — not for tidiness, but because
+         * `catalog:iherb:hydrate --renormalize` re-derives columns by calling THAT method and
+         * nothing else. A payload-derived column computed in this file is one the recovery path
+         * cannot fix without re-fetching 955 products from a host paced at 0.5 req/s.
+         *
+         * The stored value does not change: PHP's `+` keeps the LEFT operand's key, so the
+         * normaliser's answer already won over the literal that used to sit here, and both read the
+         * same key of the same payload.
+         */
         $attributes = $normalized + [
             'source_payload' => $payload,
-            'source_discontinued' => (bool) ($payload['isDiscontinued'] ?? false),
             'computed_price' => self::tunisianPrice($normalized),
             'completeness' => self::completeness($normalized),
             'last_synced_at' => now(),

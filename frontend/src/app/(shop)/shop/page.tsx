@@ -1,5 +1,5 @@
 import { Metadata } from 'next';
-import { getAllProducts, getCategories, getAllBrands } from '@/services/api';
+import { getAllProducts, getAllProductsComplete, getCategories, getAllBrands } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { getProductLink } from '@/util/productUrl';
@@ -67,8 +67,16 @@ async function getShopData() {
   // an empty catalog for the whole revalidate window (the PR #77 empty-bake risk). Categories/brands
   // are incidental facets — they fail soft so a hiccup on them doesn't blank the whole boutique.
   const [productsResponse, categories, brands] = await Promise.all([
+    // getAllProductsComplete, NOT getAllProducts({ perPage: 24 }).
+    //
+    // ShopPageClient filters, sorts and pages entirely client-side over the array it is given
+    // (`filteredProducts.slice(startIndex, endIndex)`), and handlePageChange never fetches — so
+    // whatever arrives here IS the whole boutique as far as a shopper is concerned. Asking for 24
+    // meant 24 products out of 410, one page in the pager, and every brand and price filter
+    // operating on 6% of the catalogue, including the 309 original products. It only ever worked
+    // because /api/all_products used to ignore per_page.
     loadForCache(
-      () => getAllProducts({ perPage: 24, page: 1 }),
+      () => getAllProductsComplete(),
       { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>
     ),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),

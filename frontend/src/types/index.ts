@@ -103,6 +103,24 @@ export interface Product {
     /** Return policy indicator for schema.org Product */
     has_merchant_return_policy?: boolean | null;
   };
+  /**
+   * Facts transcribed from the external catalogue row this product was promoted from.
+   *
+   * NULL for every hand-made product — the 309 legacy products have no staging row and never will,
+   * so both product views render no specification block for them, exactly as before this field
+   * existed. Present only on imported products, and only when at least one fact is printable.
+   *
+   * Deliberately narrow. The staging row also holds the source shop's URL, its rating, its stock
+   * flags and its price; none of those may appear on our page, so none of them is in this contract.
+   */
+  source_facts?: {
+    /** "600 g", "60 gélules végétales" — as the label prints it. Null for a per-unit dose (mg/µg). */
+    format?: string | null;
+    /** "Sans arôme", "Double Rich Chocolate" — the source's own wording. */
+    flavour?: string | null;
+    /** The CDN cover URL; the same value already in `cover`. Not rendered as a second image. */
+    image_url?: string | null;
+  } | null;
   /** Server-built schema.org Product graph (preferred over client-side `buildProductJsonLd`). */
   json_ld_product?: Record<string, unknown> | null;
   zone1?: string;

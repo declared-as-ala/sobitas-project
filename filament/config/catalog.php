@@ -181,7 +181,24 @@ return [
     */
     'classification' => [
         // ── Protein, most specific first ────────────────────────────────────────────────
-        ['sub' => 'whey-hydrolysee', 'any' => ['hydrolyzed-whey', 'whey-hydrolysate', 'hydrolysate']],
+        /*
+         * `not` added 10/08/2026, and it fixes a product that was already being mis-filed.
+         *
+         * This is rule ONE, so nothing above it can protect anything from it — and the bare
+         * `hydrolysate` term matched "Great Lakes Wellness COLLAGEN HYDROLYSATE", publishing a
+         * collagen powder at /whey-hydrolysee/…  Verified against the shipped rules before the
+         * change: the classifier returned whey-hydrolysee on term `hydrolysate`.
+         *
+         * A `not` here can only ever push a product DOWN to a later rule; it can never claim one.
+         * "collagen" never appears in the name of a whey hydrolysate, so the blast radius is
+         * exactly the products that were wrong, and they now reach `collagene` at rule 29.
+         *
+         * NOT fixed here, because it needs the production corpus to size and this file is not the
+         * place to guess: `hydrolysate` equally matches CASEIN, BEEF and PEA/RICE protein
+         * hydrolysates, all of which have their own rules below and all of which this rule still
+         * takes first. Reported, not patched blind.
+         */
+        ['sub' => 'whey-hydrolysee', 'any' => ['hydrolyzed-whey', 'whey-hydrolysate', 'hydrolysate'], 'not' => ['collagen']],
 
         // The NON-whey isolates are tested first, and that order is load-bearing.
         //
@@ -222,10 +239,8 @@ return [
         | 10% of 42,034 remaining rows is ~4,300 products, so these two rules are worth more than
         | every rule added on intuition put together.
         |
-        | Both sit AFTER the specific amino rules above (bcaa, eaa) and after glutamine/carnitine
-        | further down, so a branched-chain or a carnitine product is never swept into the generic
-        | bucket. Every term is a phrase or an `exact` token for the same reason `cla` is: a bare
-        | `amino` would match nothing useful and a bare `energy` would match half the catalogue.
+        | Both sit AFTER the specific amino rules above (bcaa at 13, eaa at 14), so a branched-chain
+        | or an essential-amino product is never swept into the generic bucket.
         |
         | NOT added: "NOW Foods Energy" and "Thyroid Energy", which were also in the samples. They
         | are multi-ingredient formulas whose category is a judgement, and a wrong guess here is a
@@ -233,7 +248,54 @@ return [
         */
         [
             'sub' => 'acides-amines',
-            'exact' => ['taurine', 'ornithine', 'lysine', 'tyrosine', 'glycine', 'methionine', 'phenylalanine', 'threonine', 'carnosine'],
+
+            /*
+             * ── `not`, added 10/08/2026. IT FIXES PRODUCTS THAT WERE ALREADY WRONG. ───────────
+             *
+             * An earlier comment on this rule claimed it sits "after glutamine/carnitine further
+             * down". It does not, and the words "further down" say so: this is rule 18, l-carnitine
+             * is 20, glutamine is 23, collagene is 29, zinc 31, magnesium 32, mineraux 44. Every one
+             * of those runs AFTER this rule, so order protects none of them — and the pre-existing
+             * `amino-acid` term was already taking their products. Measured against the shipped
+             * rules before this change, all four of these returned `acides-amines` on term
+             * `amino-acid`:
+             *
+             *     Solgar Chelated Zinc, AMINO ACID CHELATE            → should be zinc
+             *     NOW Iron 18 mg, Iron Bisglycinate AMINO ACID CHELATE → should be mineraux
+             *     NOW Sports L-Glutamine, Free Form AMINO ACID         → should be glutamine
+             *     NOW Sports L-Carnitine Liquid, AMINO ACID            → should be l-carnitine
+             *     Neocell Super Collagen + C, AMINO ACID Peptides      → should be collagene
+             *
+             * "Amino acid chelate" is how the label of a MINERAL states its delivery form; glutamine,
+             * carnitine and collagen are all, technically, amino acids with a more specific rayon of
+             * their own. `not` sends each of them back down to the rule that should have had it.
+             * `chelate` front-anchored also covers "chelated".
+             *
+             * A `not` cannot claim a product — it can only push one down — so this list can make the
+             * classifier wrong in exactly one direction: an amino blend that happens to name
+             * glutamine or collagen lands in the more specific rayon instead. That is a correct URL,
+             * just a narrower one.
+             */
+            'not' => ['glutamine', 'carnitine', 'collagen', 'chelate'],
+
+            /*
+             * `amino` as an EXACT token, added 10/08/2026 from the 63 rows the promotion report
+             * still could not classify. "Source Naturals Super Amino Night" (120 and 240 count) is a
+             * free amino-acid blend, and nothing reached it: every amino term here was a PHRASE —
+             * tri-amino, amino-acid, amino-complex — and the label just says "Amino". Same for "NOW
+             * Foods Amino Complete".
+             *
+             * EXACT, for the same reason as `cla`: front-anchored it would also match aminobenzoate,
+             * aminophylline and aminosculpt. Whole token only.
+             *
+             * What stops it stealing from the rules that must win:
+             *   · bcaa, eaa, l-arginine, beta-alanine, citrulline are rules 10–14, ABOVE this one.
+             *     Structural. Named cases in subcategory-classifier-check.php pin all five, so a
+             *     reorder is caught rather than discovered in the sitemap.
+             *   · glutamine, l-carnitine, collagene and the mineral chelates are BELOW, and are
+             *     covered by the `not` above — which the same harness pins by name.
+             */
+            'exact' => ['taurine', 'ornithine', 'lysine', 'tyrosine', 'glycine', 'methionine', 'phenylalanine', 'threonine', 'carnosine', 'amino'],
             'any' => ['tri-amino', 'amino-acid', 'amino-acids', 'amino-complex', 'amino-blend', 'free-form-amino', 'amino-athlete', 'amino-day', 'l-ornithine', 'l-lysine', 'l-taurine', 'l-tyrosine'],
         ],
         [
@@ -263,7 +325,22 @@ return [
         ['sub' => 'zinc', 'any' => ['zinc']],
         ['sub' => 'magnesium', 'any' => ['magnesium']],
         ['sub' => 'articulations', 'any' => ['glucosamine', 'chondroitin', 'msm', 'joint-support', 'joint-formula', 'turmeric', 'curcumin', 'boswellia']],
-        ['sub' => 'beaute-cheveux', 'any' => ['hair-skin', 'biotin', 'keratin', 'nail-support']],
+        /*
+         * `skin-eternal` added 10/08/2026 for one of the 63 unclassified rows: "Source Naturals Skin
+         * Eternal with DMAE, Lipoic Acid, & C Ester". A named product LINE, not a widening — it
+         * matches that Source Naturals family and nothing else in the catalogue, the same shape as
+         * `isopure`, `lipo-6`, `creapure` and `carbo-gain` already in this file. `skin-eternal` is
+         * also already on `slug_allow` above, put there because the deny list was killing it.
+         *
+         * This rayon is the right one and not a guess: the rule already carries `hair-skin`, so
+         * skin-support supplements are its subject, and the product's head noun is "Skin".
+         *
+         * Residual risk, stated rather than hidden: the same line includes "Skin Eternal Cream", a
+         * TOPICAL. It is kept out by the authoritative stage-2 filter — a cream sits under iHerb's
+         * Beauty root, not 101046/1855 — not by this term. If root filtering is ever relaxed, this
+         * term needs revisiting.
+         */
+        ['sub' => 'beaute-cheveux', 'any' => ['hair-skin', 'biotin', 'keratin', 'nail-support', 'skin-eternal']],
         ['sub' => 'antioxydants', 'any' => ['antioxidant', 'resveratrol', 'astaxanthin', 'coq10', 'alpha-lipoic', 'quercetin', 'grape-seed', 'green-tea-extract']],
 
         // ── Added 10/08/2026 from measurement, not intuition ────────────────────────────
@@ -283,7 +360,16 @@ return [
         // Broadest of the new ones, so it runs last among them: a named herb that has not already
         // been claimed by a more specific rule above (turmeric → articulations, ashwagandha and
         // tribulus → their own, elderberry → immunité).
-        ['sub' => 'plantes-et-herbes', 'any' => ['ginkgo', 'saw-palmetto', 'milk-thistle', 'black-cohosh', 'ginseng', 'nettle', 'dandelion', 'hawthorn', 'red-yeast', 'garlic', 'fenugreek', 'moringa', 'spirulina', 'chlorella', 'wheatgrass', 'noni', 'graviola', 'cat-s-claw', 'devil-s-claw', 'horny-goat', 'bilberry', 'butcher-s-broom', 'burdock', 'goldenseal', 'astragalus', 'schisandra', 'eyebright', 'feverfew', 'yarrow', 'nattokinase', 'berberine', 'bacopa', 'gotu-kola'], 'exact' => ['herb', 'herbs', 'herbal']],
+        //
+        // `kudzu`, `petadolex` and `butterbur` added 10/08/2026 from the 63 unclassified rows:
+        // "Planetary Herbals Kudzu Recovery" and "Nature's Way Petadolex, Pro-Active". Both are
+        // single named plants — kudzu (Pueraria), butterbur (Petasites, sold as Petadolex) — which
+        // is exactly the shape of every other term in this list, so each adds one plant and nothing
+        // else. `petadolex` is on `slug_allow` above for the same product.
+        //
+        // NOT added: `herbals`. It would catch every product from the brand PLANETARY HERBALS,
+        // including the ones that are not herbs — classifying by brand rather than by contents.
+        ['sub' => 'plantes-et-herbes', 'any' => ['ginkgo', 'saw-palmetto', 'milk-thistle', 'black-cohosh', 'ginseng', 'nettle', 'dandelion', 'hawthorn', 'red-yeast', 'garlic', 'fenugreek', 'moringa', 'spirulina', 'chlorella', 'wheatgrass', 'noni', 'graviola', 'cat-s-claw', 'devil-s-claw', 'horny-goat', 'bilberry', 'butcher-s-broom', 'burdock', 'goldenseal', 'astragalus', 'schisandra', 'eyebright', 'feverfew', 'yarrow', 'nattokinase', 'berberine', 'bacopa', 'gotu-kola', 'kudzu', 'petadolex', 'butterbur'], 'exact' => ['herb', 'herbs', 'herbal']],
         /*
          * `multi` as an EXACT token, added 10/08/2026.
          *
@@ -295,16 +381,73 @@ return [
          * It is safe HERE and would not be safe higher up: `collagene` (multi-collagen) and
          * `digestion` (multi-enzyme) both run before this rule and claim theirs first. That ordering
          * is the rule — moving this line up files collagen peptides under vitamins.
+         *
+         * ── WHAT THIS RULE CAN AND CANNOT REACH, 10/08/2026 ──────────────────────────────────
+         * This is rule 43 of 45. Only the mineral rules come after it, so widening it can steal from
+         * NOTHING except minerals — collagene (29), digestion (37) and every protein and performance
+         * rule are structurally out of reach, and the harness pins Multi Collagen Protein and Multi
+         * Enzyme Complex by name so a reorder is what fails, not the sitemap.
+         *
+         * `multiple` and `mega-one`, added for the "No Iron" cluster in the 63 unclassified rows:
+         *
+         *     Source Naturals Life Force MULTIPLE, No Iron   (120 tablets and 120 capsules)
+         *     Source Naturals MEGA-ONE, No Iron              (60 tablets)
+         *
+         * Both are multivitamins. Both were missed for the same reason "EcoGreen Multi" was: this
+         * rule spells the word out, and the label does not. `multiple` is the supplement industry's
+         * own word for a multivitamin ("Men's Multiple", "Life Force Multiple") and is EXACT so it
+         * stays a whole token; `mega-one` is a named Source Naturals line.
+         *
+         * `mega-one` is a near miss worth naming: front-anchoring is the only thing that keeps it
+         * out of `omega-3` at rule 30 — "-mega-one-" does not contain "-omega". Pinned by name.
+         *
+         * ── `not`, AND THE DEFECT IT FIXES ───────────────────────────────────────────────────
+         * The claim above that `multi` "must not reach multi-mineral" was simply not true, and the
+         * normaliser is why: "Multi Mineral" and "multi-mineral" both normalise to `-multi-mineral-`,
+         * which contains the whole token `-multi-`. Measured against the shipped rules before this
+         * change, "Country Life Target-Mins Multi Mineral Complex" returned VITAMINES on term
+         * `multi` — a mineral complex with no vitamins in it, published at /vitamines/…
+         *
+         * Order cannot fix it, because mineraux is the rule after this one. `not` can: it fires only
+         * when the multi token is IMMEDIATELY followed by mineral, so "Multivitamin with Chelated
+         * Minerals" is untouched and still lands here, while "Multi Mineral" and "Multiple Minerals"
+         * fall through to the mineral rule below.
          */
-        ['sub' => 'vitamines', 'any' => ['multivitamin', 'multi-vitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-', 'womens-multi', 'mens-multi', 'daily-multi', 'whole-food-multi'], 'exact' => ['multi', 'multivitamins']],
-        // `not` disqualifies the whole rule. "iron" as a mineral term matched "iron-free" and
-        // "no-iron" — products that advertise the ABSENCE of the thing being matched. Filing an
-        // iron-free multivitamin under minerals-for-iron inverts what the label says, which is not
-        // a near miss. `iron` is also `exact`, so it cannot reach "ironman".
+        [
+            'sub' => 'vitamines',
+            'any' => ['multivitamin', 'multi-vitamin', 'vitamin-', 'vitamins', 'ascorbic-acid', 'cholecalciferol', 'folate', 'folic-acid', 'biotin-', 'womens-multi', 'mens-multi', 'daily-multi', 'whole-food-multi', 'mega-one'],
+            'exact' => ['multi', 'multivitamins', 'multiple'],
+            'not' => ['multi-mineral', 'multiple-mineral'],
+        ],
+
+        /*
+        | ── THE MINERAL RULE IS TWO RULES, SPLIT 10/08/2026 ──────────────────────────────────
+        |
+        | It used to be one rule carrying `iron` plus the positive mineral words, with a single `not`
+        | for "iron-free"/"no-iron". `not` disqualifies the WHOLE rule — that is what makes it strong
+        | enough to stop "no iron" being read as "iron", and it is also what made it too blunt:
+        |
+        |     Source Naturals LIFE MINERALS, NO IRON — a multimineral, matched on `mineral`, and then
+        |     disqualified by its own label for saying which mineral it leaves out.
+        |
+        | That product was one of the 63 rows nothing could classify, and it is not a judgement call:
+        | an iron-free multimineral is a mineral supplement. "No iron" only ever needed to disqualify
+        | the IRON token, never the word "mineral" standing next to it.
+        |
+        | Splitting is safe in a way no other edit in this file is, and it is worth writing down why:
+        | these are the LAST rules in the list. Nothing runs after them. So loosening a `not` here can
+        | only ever turn "unclassified" into "mineraux" — it cannot take a product away from any other
+        | rayon, because there is no rayon left to take one from.
+        */
+        ['sub' => 'mineraux', 'any' => ['mineral', 'multimineral', 'calcium', 'potassium', 'selenium', 'chromium', 'iodine', 'electrolyte']],
+
+        // `iron` alone still needs the guard, and this is the rule that carries it: "iron-free" and
+        // "no-iron" advertise the ABSENCE of the thing being matched, and filing an iron-free
+        // multivitamin under minerals-for-iron inverts what the label says. `iron` is also `exact`,
+        // so it cannot reach "ironman".
         [
             'sub' => 'mineraux',
             'exact' => ['iron'],
-            'any' => ['mineral', 'calcium', 'potassium', 'selenium', 'chromium', 'iodine', 'electrolyte'],
             'not' => ['iron-free', 'no-iron', 'without-iron', 'free-of-iron'],
         ],
     ],
@@ -354,6 +497,34 @@ return [
         // Publication is always a separate, explicit step (--publish), never a side effect.
         'publish_on_promote' => false,
         'chunk' => (int) env('CATALOG_PROMOTE_CHUNK', 100),
+
+        /**
+         * Words a published product's body must carry before it is allowed to be INDEXABLE.
+         *
+         * This is not a promotion gate — a row below it is still promoted and, under --publish,
+         * still published and visible to customers. It is the gate on `seo_robots_index`, i.e. on
+         * whether the URL enters the sitemap and renders without <meta robots="noindex">.
+         *
+         * ── THE NUMBER IS NOT CHOSEN HERE ─────────────────────────────────────────────────
+         * 250 is frontend/scripts/audit-pdp-content.mjs MIN_NEW_PRODUCT_WORDS — the bar that script
+         * already applies to any product it has no baseline entry for, i.e. to every product this
+         * import creates. Setting a different number here would mean publishing pages as indexable
+         * that the repo's own content audit fails on the next run. filament/tests/catalog/
+         * promotion-gate-check.php reads that .mjs file and asserts the two agree, so this cannot
+         * drift away from it silently.
+         *
+         * ── WHAT IT MEANS IN PRACTICE, STATED PLAINLY ─────────────────────────────────────
+         * ImportedProductContent composes 74-116 words on the fact sets this catalogue actually
+         * holds (imported-product-content-check.php prints the measurement every run). So with this
+         * value, EVERY imported product publishes noindexed until somebody adds real copy. That is
+         * the intended reading of the number, not an accident of it: 13,000 near-identical thin
+         * pages in the index is the scaled-content risk the whole content programme exists to avoid,
+         * and the products are still on the storefront and still sellable while they wait.
+         *
+         * 0 disables the gate (everything published is indexable). The per-run overrides are
+         * --force-index / --force-noindex on catalog:iherb:promote.
+         */
+        'min_body_words' => (int) env('CATALOG_MIN_BODY_WORDS', 250),
     ],
 
     /*

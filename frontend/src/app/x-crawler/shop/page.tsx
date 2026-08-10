@@ -1,4 +1,4 @@
-import { getAllProducts, getCategories } from '@/services/api';
+import { getAllProducts, getAllProductsComplete, getCategories } from '@/services/api';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { loadForCache } from '@/util/loadForCache';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
@@ -38,7 +38,10 @@ export default async function CrawlerShopPage() {
   // or Googlebot gets an empty boutique pinned for the whole revalidate window.
   const [productsResponse, categories] = await Promise.all([
     loadForCache(
-      () => getAllProducts(),
+      // This route is the ONLY thing Googlebot sees for /shop. At the per_page default of 24 it
+      // served a 24-product boutique to the crawler while humans saw the same 24 — consistent, and
+      // consistently wrong. Must stay in step with (shop)/shop/page.tsx or it becomes cloaking.
+      () => getAllProductsComplete(),
       { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>
     ),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),

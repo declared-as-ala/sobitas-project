@@ -28,7 +28,7 @@
  *     (bool) says "0" is false but "0" from some drivers arrives as a string that other casts get
  *     wrong, and the whole catalogue vanishing is a quiet failure
  *
- * ── THREE SECTIONS, BECAUSE THREE DIFFERENT THINGS CAN BE WRONG ───────────────────────────
+ * ── FOUR SECTIONS, BECAUSE FOUR DIFFERENT THINGS CAN BE WRONG ─────────────────────────────
  * 1. the gate's verdicts, as named fixtures (above);
  * 2. the image gate's agreement with IHerbClient::imageUrl(). PromotionGate cannot import that
  *    class — it has to load with no autoloader — so it carries a COPY of the part-number pattern,
@@ -40,7 +40,15 @@
  *    question are not values a function returns — they are WHERE a statement sits relative to a
  *    COMMIT. There is nothing to call, so the file is read and the order of the statements is
  *    asserted. Crude, and still the difference between "a rolled-back product was submitted to
- *    IndexNow" being a caught regression and being a live 404 in Bing.
+ *    IndexNow" being a caught regression and being a live 404 in Bing;
+ * 4. THE INDEXING GATE — whether a published product is offered to search engines. It is a separate
+ *    section rather than more fixtures above because it answers a different question: inspect()
+ *    decides whether a row becomes a PRODUCT, indexable() decides whether that product's URL becomes
+ *    a SUBMISSION. The second decision had no test and, for the whole life of the import, no
+ *    implementation either — publish() hardcoded `seo_robots_index = true` while three separate
+ *    docblocks in this repo described `publier = 1 + seo_robots_index = 0` as a state this command
+ *    produces. A gate nothing tests is a gate that silently inverts, and inverting THIS one means
+ *    ~13,000 thin pages submitted for indexing, which is not an action anybody takes back.
  *
  * The thresholds and rules are REQUIRED from config/catalog.php rather than copied. A copy would let
  * this file pass while the shipped configuration was broken — the same reason slug-relevance-check.php
@@ -56,8 +64,17 @@ require __DIR__.'/../../app/Services/Catalog/PromotionGate.php';
  * Same property that lets imported-product-content-check.php require ProductContentGenerator.
  */
 require __DIR__.'/../../app/Services/Catalog/IHerb/IHerbClient.php';
+/*
+ * Section 4 gates a body ImportedProductContent actually composes, rather than an invented integer.
+ * Both files load under a bare `php` for the same reason everything else here does — no facades, no
+ * container, no config() — and ProductContentGenerator comes first because ImportedProductContent
+ * names it (as an alias only, but the order costs nothing and states the dependency).
+ */
+require __DIR__.'/../../app/Services/Content/ProductContentGenerator.php';
+require __DIR__.'/../../app/Services/Catalog/ImportedProductContent.php';
 
 use App\Services\Catalog\IHerb\IHerbClient;
+use App\Services\Catalog\ImportedProductContent;
 use App\Services\Catalog\PromotionGate;
 
 // config/catalog.php calls env(); it is not loaded here, so provide the fallback-only shape.
@@ -590,7 +607,10 @@ $firstClaimAt = strpos($promote, '$this->claimSlug($slug);');
 $createAt = strpos($promote, '$product = $this->createProduct(');
 $nullGuardAt = strpos($promote, 'if ($product === null) {');
 $lastClaimAt = strrpos($promote, '$this->claimSlug($slug);');
-$publishAt = strpos($promote, '$this->publish($product, $row)');
+// No closing paren in the marker: publish() grew the index mode and the wave's tally as arguments,
+// and a marker that pinned the OLD arity made this check report a defect that was actually a
+// signature change. It pins what the check is about — the call site, and where it sits.
+$publishAt = strpos($promote, '$this->publish($product, $row,');
 
 check(
     'the dry run claims immediately — nothing will ever be inserted to be the authority',
@@ -634,9 +654,387 @@ check(
 check(
     'the publish save sets publier so ProductSeoObserver::saved actually fires',
     str_contains($publish, '$product->publier = true;')
-        && str_contains($publish, '$product->seo_robots_index = true;')
         && str_contains($publish, '$product->save();'),
     'deferring the notification is only correct if the deferred save still triggers it',
+);
+
+/*
+|--------------------------------------------------------------------------
+| SECTION 4 — the indexing gate
+|--------------------------------------------------------------------------
+| `publier` says the product is on the storefront. `seo_robots_index` says its URL is offered to
+| Google. Those were the same statement — publish() wrote `$product->seo_robots_index = true` with no
+| way to say otherwise — while THREE files described (1, 0) as a state this command produces:
+| CatalogIHerbPromote's own docblock, ImportedProductContent's ("a promotion path that wants pages
+| indexed should treat a short result as promote with seo_robots_index = 0") and
+| frontend/src/util/sitemapData.ts ("the exact state CatalogIHerbPromote creates").
+|
+| The decision now lives in PromotionGate::indexable(), which is a pure function over two integers
+| and a mode precisely so this file can execute it. What follows asserts, in order:
+|
+|   · the gate's NUMBER is one number in three files, not three numbers that happen to match today;
+|   · its verdict on a THIN body and a THICK one, at the boundary from both sides, with both
+|     operator overrides and with the gate disabled;
+|   · the same verdict on a body ImportedProductContent actually composes, rather than on an
+|     invented integer — including that `word_count` and countWords() agree, which is what lets
+|     CatalogIHerbPromote store one and measure the other;
+|   · that the command still WIRES all of that to the column, from its source.
+*/
+echo "\nPromotionGate::indexable — the body gate, on a thin body and a thick one\n\n";
+
+/*
+ * THE GATE IS frontend/scripts/audit-pdp-content.mjs MIN_NEW_PRODUCT_WORDS, READ FROM THAT FILE.
+ *
+ * Three places state this number: the .mjs constant (the audit that will FAIL these pages),
+ * config/catalog.php `promotion.min_body_words` (what production runs on) and
+ * PromotionGate::DEFAULT_MIN_BODY_WORDS (what a deployment whose config predates the key gets).
+ * Copying it here would let this harness pass while the shipped configuration published pages the
+ * repo's own audit then fails, which is the same reason every threshold above is required from
+ * config rather than restated.
+ */
+$auditPath = __DIR__.'/../../../frontend/scripts/audit-pdp-content.mjs';
+$auditSource = is_file($auditPath) ? (string) file_get_contents($auditPath) : '';
+$auditGate = preg_match('~const\s+MIN_NEW_PRODUCT_WORDS\s*=\s*(\d+)~', $auditSource, $m) === 1
+    ? (int) $m[1]
+    : null;
+
+check(
+    'frontend/scripts/audit-pdp-content.mjs still declares MIN_NEW_PRODUCT_WORDS',
+    $auditGate !== null,
+    'the audit constant could not be read from '.$auditPath.' — the gate below is then unanchored, '
+        .'and "250" in config becomes a number nobody can point at',
+);
+
+$configuredGate = (int) ($config['promotion']['min_body_words'] ?? -1);
+
+check(
+    sprintf(
+        'the gate is ONE number in three files (audit %s, config %d, PromotionGate %d)',
+        $auditGate === null ? '?' : (string) $auditGate,
+        $configuredGate,
+        PromotionGate::DEFAULT_MIN_BODY_WORDS,
+    ),
+    $auditGate !== null
+        && $configuredGate === $auditGate
+        && PromotionGate::DEFAULT_MIN_BODY_WORDS === $auditGate,
+    'config/catalog.php and audit-pdp-content.mjs disagree about the bar, so promotion will publish '
+        .'as indexable exactly the pages the content audit fails on its next run',
+);
+
+check(
+    'contextFrom() carries the gate, so the command and the report read one builder',
+    ($context['min_body_words'] ?? null) === $configuredGate,
+    'min_body_words is missing from the gate context; three call sites will each do their own config() lookup',
+);
+
+/**
+ * @var list<array{0:int,1:int,2:string,3:bool,4:string}> [body words, gate, mode, indexable, why]
+ */
+$indexCases = [
+    [
+        0, 250, PromotionGate::INDEX_MEASURED, false,
+        'compose() declined and the spec-block fallback was empty too — there is no body to index',
+    ],
+    [
+        96, 250, PromotionGate::INDEX_MEASURED, false,
+        'THE THIN BODY: what this pipeline actually composes today. It publishes, noindexed — visible '
+            .'and sellable, out of the sitemap. This is the whole state the three docblocks promised',
+    ],
+    [
+        249, 250, PromotionGate::INDEX_MEASURED, false,
+        'the boundary from below: audit-pdp-content.mjs fails a new product at bodyWords < 250, so 249 '
+            .'indexed is a page the repo fails itself on the next audit run',
+    ],
+    [
+        250, 250, PromotionGate::INDEX_MEASURED, true,
+        'the boundary from above, and the reason the comparison is >= and not >: the audit ACCEPTS 250, '
+            .'so holding it back would be a second, stricter bar nobody wrote down',
+    ],
+    [
+        251, 250, PromotionGate::INDEX_MEASURED, true,
+        'THE THICK BODY: real copy was written into description_fr, so the URL is offered to Google',
+    ],
+    [
+        4000, 250, PromotionGate::INDEX_MEASURED, true,
+        'a hand-written legacy-length body clears it and keeps clearing it',
+    ],
+
+    // ── The two overrides. Each must beat the measurement, in its own direction, and only there. ──
+    [
+        96, 250, PromotionGate::INDEX_FORCED, true,
+        '--force-index is the operator overruling the measurement upward; if it consulted the body it '
+            .'would not be an override',
+    ],
+    [
+        0, 250, PromotionGate::INDEX_FORCED, true,
+        '--force-index on a bodyless product too — the flag means "do not measure", and a half-honoured '
+            .'override is worse than none because the summary would still report it as honoured',
+    ],
+    [
+        4000, 250, PromotionGate::INDEX_SUPPRESSED, false,
+        '--force-noindex must hold back a body that clears the gate, or "publish this wave noindexed" '
+            .'quietly means "publish most of it noindexed"',
+    ],
+    [
+        96, 250, PromotionGate::INDEX_SUPPRESSED, false,
+        'and it agrees with the measurement where the measurement already said no',
+    ],
+
+    // ── The gate turned off. config/catalog.php documents 0 as "everything published is indexable". ──
+    [
+        0, 0, PromotionGate::INDEX_MEASURED, true,
+        'min_body_words = 0 disables the gate, exactly as config/catalog.php says it does',
+    ],
+    [
+        96, -1, PromotionGate::INDEX_MEASURED, true,
+        'a negative gate is off, not inverted — it must never mean "index only what is SHORTER than"',
+    ],
+];
+
+foreach ($indexCases as [$words, $min, $mode, $expected, $why]) {
+    $got = PromotionGate::indexable($words, $min, $mode);
+
+    check(
+        sprintf(
+            '%5d word(s), gate %-4d, %-10s → %s',
+            $words,
+            $min,
+            $mode,
+            $expected ? 'INDEXABLE' : 'noindexed',
+        ),
+        $got === $expected,
+        sprintf('got %s, expected %s — %s', $got ? 'indexable' : 'noindexed', $expected ? 'indexable' : 'noindexed', $why),
+    );
+}
+
+/*
+|--------------------------------------------------------------------------
+| The same verdict, on a body this pipeline really composes
+|--------------------------------------------------------------------------
+| The integers above pin the comparison. They cannot pin the thing that actually decides ~13,000
+| pages: what ImportedProductContent produces from the columns we hold, and whether the number it
+| REPORTS is the number a reader would count. CatalogIHerbPromote stores compose()'s `word_count` on
+| the staging row and later measures the stored body with countWords() — bodyWords() says outright
+| that "at promotion time the two numbers are the same string measured twice". If they are not, a
+| product can be held back by a measurement of a string it is not serving.
+*/
+echo "\nImportedProductContent — the composed body, measured and gated\n\n";
+
+$composed = ImportedProductContent::compose([
+    // The base fixture above, as the promote path would hand it over: normalized title, brand,
+    // resolved rayon, resolved parent category, pack from the staging columns.
+    'name' => $base['normalized_title'],
+    'brand' => $base['source_brand_name'],
+    'sub_category_slug' => 'whey-proteine',
+    'sub_category_label' => 'Whey protéine',
+    'category_label' => 'Protéines',
+    'pack_size' => 2.27,
+    'pack_unit' => 'kg',
+    'flavour' => 'Double Rich Chocolate',
+    'identity' => $base['external_part_number'],
+]);
+
+$composedBody = (string) ($composed['description_fr'] ?? '');
+$composedWords = (int) $composed['word_count'];
+
+check(
+    'compose() produced a body for a complete, promotable row',
+    $composedBody !== '' && $composedWords > 0,
+    'the fact set of the one row that must always promote produced no copy at all',
+);
+
+check(
+    sprintf('compose() reports %d words and countWords() counts the same', $composedWords),
+    $composedBody !== '' && ImportedProductContent::countWords($composedBody) === $composedWords,
+    sprintf(
+        'word_count says %d, countWords() on the stored body says %d — CatalogIHerbPromote persists the '
+            .'first and measures the second, so the staged number would describe a different string',
+        $composedWords,
+        ImportedProductContent::countWords($composedBody),
+    ),
+);
+
+check(
+    sprintf(
+        'the REAL composed body (%d words) is below the %d-word gate → published NOINDEXED',
+        $composedWords,
+        $configuredGate,
+    ),
+    PromotionGate::indexable($composedWords, $configuredGate) === false,
+    'this pipeline composes from brand, rayon, pack and flavour and nothing else; if that now clears '
+        .'250 words either the gate moved or the composer started saying more than it knows. Both are '
+        .'changes to make deliberately, and neither should be discovered in production',
+);
+
+check(
+    'the same body with --force-index would be INDEXED, and that is the only way it can be',
+    PromotionGate::indexable($composedWords, $configuredGate, PromotionGate::INDEX_FORCED) === true,
+    'the override does not reach the real composed body, so the escape hatch the summary advertises does not exist',
+);
+
+/*
+ * A thick body, measured rather than asserted: real copy written into description_fr by whoever
+ * reviews the product. This is the ratchet bodyWords() describes — the gate measures the LIVE body,
+ * so improving one product's copy indexes that one product on the next wave.
+ */
+$thickBody = '<p>'.implode(' ', array_fill(0, 300, 'référencé')).'</p>';
+$thickWords = ImportedProductContent::countWords($thickBody);
+
+check(
+    sprintf('a reviewed body of %d words clears the gate → published INDEXABLE', $thickWords),
+    $thickWords >= $configuredGate && PromotionGate::indexable($thickWords, $configuredGate) === true,
+    'a product whose copy has been written must become indexable without --force-index, or the gate is '
+        .'a wall rather than a ratchet and nobody can ever earn their way past it',
+);
+
+/*
+|--------------------------------------------------------------------------
+| The command still wires the decision to the column
+|--------------------------------------------------------------------------
+| indexable() being right is worth nothing if publish() goes back to writing a literal. This is the
+| exact defect that shipped, so it is asserted against the source the same way the ordering
+| invariants above are.
+*/
+echo "\nCatalogIHerbPromote — the gate is wired to the column, asserted against the source\n\n";
+
+$indexVerdict = methodSource($command, 'function indexVerdict(');
+$bodyWords = methodSource($command, 'function bodyWords(');
+$indexMode = methodSource($command, 'function indexMode(');
+$reportIndexing = methodSource($command, 'function reportIndexing(');
+
+check(
+    'the four gate methods were all found in the source',
+    $indexVerdict !== '' && $bodyWords !== '' && $indexMode !== '' && $reportIndexing !== '',
+    'a rename broke this file\'s markers — fix the markers, do not delete the checks',
+);
+
+check(
+    'publish() writes the VERDICT into seo_robots_index, never a literal',
+    str_contains($publish, '$product->seo_robots_index = $indexable;')
+        && preg_match('~seo_robots_index\s*=\s*(?:true|1)\b~', $publish) !== 1,
+    'THE DEFECT IS BACK: publish() hardcodes the robots flag again, so publier=1 + seo_robots_index=0 '
+        .'is once more a state three docblocks describe and no code can produce',
+);
+
+check(
+    'the flag publish() writes comes from PromotionGate, not from a second copy of the rule',
+    str_contains($indexVerdict, '$this->bodyWords($product, $row)')
+        && str_contains($command, 'PromotionGate::indexable('),
+    'the command decides indexability by itself again; the rule is then in a class no harness can load',
+);
+
+check(
+    'the measured gate is the DEFAULT — both overrides have to be typed',
+    str_contains($indexMode, 'PromotionGate::INDEX_MEASURED')
+        && str_contains($indexMode, 'PromotionGate::INDEX_FORCED')
+        && str_contains($indexMode, 'PromotionGate::INDEX_SUPPRESSED')
+        && str_contains($command, '{--force-index :')
+        && str_contains($command, '{--force-noindex :'),
+    'an override that is reachable without being typed is a default, and the failure direction of THIS '
+        .'default is thousands of thin pages submitted for indexing',
+);
+
+check(
+    '--force-index and --force-noindex together are refused, not silently ordered',
+    str_contains($indexMode, 'contradict each other'),
+    'passing both would resolve by whichever branch is written first, which is a coin flip over the sitemap',
+);
+
+check(
+    'createProduct() persists the composed word count instead of discarding it',
+    str_contains($createProduct, "'composed_word_count' =>")
+        && str_contains($createProduct, "\$body['word_count']"),
+    'the number compose() computes for exactly this comparison is thrown away again, and the publish '
+        .'step has nothing to measure without recomposing',
+);
+
+check(
+    'bodyWords() prefers the LIVE product body and falls back to the staged count',
+    str_contains($bodyWords, '$product->description_fr')
+        && str_contains($bodyWords, '$row->composed_word_count')
+        && str_contains($bodyWords, 'ImportedProductContent::countWords('),
+    'trusting the staged number alone means copy written in the admin never earns the product an index',
+);
+
+check(
+    'the wave reports BOTH counts, and the tally is fed only after a successful save',
+    str_contains($reportIndexing, 'INDEXABLE') && str_contains($reportIndexing, 'NOINDEXED')
+        && str_contains($publish, '$this->recordIndexVerdict($indexing, $verdict);')
+        && strpos($publish, '$product->save();') < strpos($publish, '$this->recordIndexVerdict('),
+    'a summary that counts attempts reports N products in a state that N rows are not in',
+);
+
+/*
+|--------------------------------------------------------------------------
+| The pre-flight arithmetic, held to SeoNotifier's own source
+|--------------------------------------------------------------------------
+| The warning prints a request count an operator plans a maintenance window around. It used to
+| promise "three HTTP calls apiece … ~limit*3" and that stopped being true when SeoNotifier learned
+| to coalesce the sitemap bust: send() makes TWO per-product posts, and the third goes through
+| bustSitemapCache(), which returns without sending if this process sent one inside the last 60s.
+| Asserting the multiplier against the notifier's source is what stops a third per-product call being
+| added there while this number keeps saying two.
+*/
+echo "\nCatalogIHerbPromote's pre-flight count vs SeoNotifier::send() — the multiplier\n\n";
+
+$notifierPath = __DIR__.'/../../app/Services/Seo/SeoNotifier.php';
+$notifier = is_file($notifierPath) ? (string) file_get_contents($notifierPath) : '';
+$send = methodSource($notifier, 'function send(');
+
+check(
+    'SeoNotifier::send() was found in the source',
+    $send !== '',
+    'the notifier could not be read from '.$notifierPath.', so the multiplier below is unanchored',
+);
+
+$perProductPosts = preg_match_all('~Http::~', $send);
+
+check(
+    sprintf('send() makes %d per-product HTTP call(s), and the bust is not one of them', $perProductPosts),
+    $perProductPosts === 2 && str_contains($send, 'self::bustSitemapCache('),
+    'send() no longer makes exactly two direct calls per product; the warning\'s multiplier is now wrong '
+        .'in whichever direction that changed',
+);
+
+check(
+    'the sitemap bust really is coalesced, so it is a cost of the wave and not of the product',
+    str_contains($notifier, 'SITEMAP_BUST_WINDOW_SECONDS')
+        && str_contains(methodSource($notifier, 'function bustSitemapCache('), 'self::$sitemapBustAt'),
+    'bustSitemapCache() sends unconditionally again — then it IS a third per-product call and the '
+        .'warning is under-counting by one call per product',
+);
+
+/*
+ * Scoped to the WARNING ITSELF and not to promote(), deliberately. The method's comment quotes the
+ * old promise ("three HTTP calls apiece … ~limit*3 requests") to explain what was wrong with it, and
+ * a check that forbade those words anywhere in the method would forbid the explanation along with
+ * the defect. What must be true is narrower: the string an operator READS says two.
+ */
+$preflightAt = strpos($promote, 'if ($publish && ! $dryRun) {');
+$preflightEnd = $preflightAt === false ? false : strpos($promote, "\n        }", $preflightAt);
+$preflight = $preflightAt === false || $preflightEnd === false
+    ? ''
+    : substr($promote, $preflightAt, $preflightEnd - $preflightAt);
+
+check(
+    'the pre-flight warning block was found',
+    $preflight !== '',
+    'the `if ($publish && ! $dryRun)` warning is gone or was reshaped — the operator now plans a '
+        .'maintenance window with no number at all',
+);
+
+check(
+    'the warning multiplies the wave by 2, and promises no third per-product call',
+    str_contains($preflight, 'number_format($limit * 2)')
+        && ! str_contains($preflight, '$limit * 3')
+        && stripos($preflight, 'three') === false
+        && str_contains($preflight, 'bustSitemapCache'),
+    sprintf(
+        'the pre-flight warning prints a request count SeoNotifier does not make. send() issues %d '
+            .'per-product call(s); the warning must multiply by that and name bustSitemapCache() as '
+            .'the reason the third one is per-wave',
+        $perProductPosts,
+    ),
 );
 
 echo "\n".($failed === 0 ? 'ALL PASS' : $failed.' FAILED')."\n\n";

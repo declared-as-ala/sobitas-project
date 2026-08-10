@@ -28,6 +28,7 @@ import { buildComparison } from '@/util/productComparison';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import { productSourceFactRows } from '@/util/productSourceFacts';
 import type { Product } from '@/types';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
@@ -79,6 +80,13 @@ export function CrawlerProductView({
   const comparison = buildComparison(product, similarProducts);
   const subCategoryName = getProductPrimarySubCategory(product)?.designation_fr ?? '';
   const officialVideoId = videoId(product.official_video);
+  /*
+   * Transcribed specifications — the same rows, from the same function, as the human page.
+   *
+   * Empty for every one of the 309 hand-made products (they carry no source_facts), so the section
+   * below does not render for them and this file's output for those products is unchanged.
+   */
+  const sourceFacts = productSourceFactRows(product);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -153,6 +161,32 @@ export function CrawlerProductView({
                 <li key={a.id}>{a.designation_fr}</li>
               ))}
             </ul>
+          </section>
+        )}
+
+        {/*
+          Transcribed specifications.
+
+          For an imported product this is the only structured fact on the page besides the price:
+          the format printed on the packaging, and the flavour variant. Both come from the source
+          product name via IHerbNormalizer, which transcribes and never converts, and both are
+          rendered here in the same words and the same order as on the human page — the parity
+          requirement that makes this route a projection rather than a second, different page.
+
+          Nothing renders when the list is empty, which is the permanent state of all 309 hand-made
+          products.
+        */}
+        {sourceFacts.length > 0 && (
+          <section aria-label="Caractéristiques" className="my-6">
+            <h2 className="text-lg font-semibold">Caractéristiques</h2>
+            <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+              {sourceFacts.map((row) => (
+                <div key={row.key} className="contents">
+                  <dt className="font-medium">{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
           </section>
         )}
 

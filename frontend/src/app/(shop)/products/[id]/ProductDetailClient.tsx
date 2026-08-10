@@ -22,6 +22,7 @@ import { buildComparison } from '@/util/productComparison';
 import { embedUrl, videoId, videoTitle } from '@/util/officialVideo';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import { productSourceFactRows } from '@/util/productSourceFacts';
 import { useAuth } from '@/contexts/AuthContext';
 import { toast } from 'sonner';
 import {
@@ -1124,6 +1125,35 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-gray-900 dark:text-white">
                       {product.zone1 || 'Description du produit'}
                     </h2>
+                    {/*
+                      Transcribed specifications — the format printed on the packaging and the
+                      flavour variant, for products imported from the external catalogue.
+
+                      Rendered from the SAME function as /x-crawler/product/[slug], which is the
+                      only view Googlebot is served: a fact shown here and missing there is
+                      invisible to Google, and a fact shown there and missing here is cloaking.
+                      Placed above the description because it is above the description on that route
+                      too — parity is about the content, and keeping the order the same is what
+                      makes it checkable by reading the two files.
+
+                      It renders NOTHING when product.source_facts is null, which is the permanent
+                      state of all 309 hand-made products: no wrapper, no heading, no empty row, so
+                      their description tab is byte-identical to what it was.
+                    */}
+                    {(() => {
+                      const sourceFacts = productSourceFactRows(product);
+                      if (sourceFacts.length === 0) return null;
+                      return (
+                        <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+                          {sourceFacts.map((row) => (
+                            <div key={row.key} className="contents">
+                              <dt className="font-medium text-gray-900 dark:text-white">{row.label}</dt>
+                              <dd className="text-gray-600 dark:text-gray-400">{row.value}</dd>
+                            </div>
+                          ))}
+                        </dl>
+                      );
+                    })()}
                     <div
                       className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
