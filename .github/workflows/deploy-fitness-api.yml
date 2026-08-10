@@ -22,8 +22,12 @@ on:
 #
 # cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
 # mid-recreate; queueing costs a few minutes and always converges on the newest commit.
+# Shared with deploy-filament.yml and the other deploy workflow ON PURPOSE — see the long note
+# in deploy-filament.yml. All three trigger on the same push and SSH into the same VPS, so a
+# per-workflow group serialised nothing and produced intermittent "unable to authenticate"
+# failures that look exactly like a wrong password. One group means one SSH session at a time.
 concurrency:
-  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  group: vps-deploy-${{ github.ref }}
   cancel-in-progress: false
 
 env:

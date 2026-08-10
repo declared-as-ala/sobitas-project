@@ -26,8 +26,25 @@ on:
 #
 # cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
 # mid-recreate; queueing costs a few minutes and always converges on the newest commit.
+# ── The group name deliberately does NOT include github.workflow ──────────────────────────────
+#
+# It used to, which gave each of the three deploy workflows (filament, frontend, fitness-api) its
+# OWN queue. Since all three trigger on the same push and all three SSH into the SAME box, that
+# serialised nothing: three simultaneous SSH sessions on every deploy.
+#
+# Measured 10/08/2026. Run #935 deployed cleanly at 08:10. Run #936 was refused at 08:25 with
+# "unable to authenticate, attempted methods [none password]" — while frontend run #407, pushed at
+# the same moment, succeeded. Asking the server directly with no credential still returned
+# "Permission denied (publickey,password)", so passwords were enabled and the password was right.
+# An auth failure that is intermittent, and that lands on one of three concurrent sessions, is
+# contention — not a wrong secret. Chasing it as a wrong secret is how a day gets lost.
+#
+# One shared group means the three deploys queue behind each other and open one SSH session at a
+# time. Slower by a couple of minutes; no longer a coin flip.
+#
+# cancel-in-progress stays FALSE: cancelling a half-finished deploy could leave the VPS mid-recreate.
 concurrency:
-  group: deploy-${{ github.workflow }}-${{ github.ref }}
+  group: vps-deploy-${{ github.ref }}
   cancel-in-progress: false
 
 env:
