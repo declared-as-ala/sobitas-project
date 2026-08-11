@@ -121,6 +121,27 @@ function buildRedirects() {
     // `/page/19/?s=Proteine&post_type=product&product_cat=0&product-page=4` — so /shop is the
     // honest destination: it is the same kind of page, and it exists.
     { source: '/page/:n(\\d+)', destination: '/shop', permanent: true },
+    //
+    // ── THE LEGAL PAGES HAVE A REAL HOME, AND `/page/:slug` WAS NOT SENDING THEM TO IT ────
+    // Checked live on 11/08/2026: /page/a-propos 308s to /a-propos, which is 404, and
+    // /page/cookies 308s to /cookies, which is 404. A redirect into a 404 is worse than a plain
+    // 404 — Google follows the hop, still finds nothing, and the redirect is cacheable.
+    //
+    // Both destinations below were verified 200 before being written here.
+    //
+    // ── AND A BIGGER FINDING THIS ONLY PATCHES ────────────────────────────────────────────
+    // src/app/(shop)/page/[slug]/page.tsx IS a real route for exactly these URLs, and it carries
+    // its own slugMapping — cookies → politique-des-cookies, conditions-generales →
+    // conditions-generale-de-ventes-protein.tn, mentions-legales, politique-de-remboursement — plus
+    // a canonical that already points at the non-/page/ URL. next.config redirects run BEFORE the
+    // filesystem, so `/page/:slug` below shadows that route entirely and it has never served a
+    // request. Deleting the catch-all would let it work, and would also fix
+    // /page/conditions-generales and /page/mentions-legales, whose CMS slugs this file cannot see.
+    // That is left for a change that can be tested against the CMS rather than guessed at from
+    // outside, because the same catch-all is what currently makes /page/creatine-monohydrate-tunisie
+    // and /page/proteine-tunisie resolve (both 200, both real traffic in Search Console).
+    p('/page/a-propos', '/qui-sommes-nous'),
+    p('/page/cookies', '/politique-des-cookies'),
     { source: '/page/:slug', destination: '/:slug', permanent: true },
     // Anything deeper than one segment has no /{slug} equivalent — keep the old behaviour.
     p('/page/:path*', '/qui-sommes-nous'),
