@@ -446,49 +446,34 @@ export const getAllProductsComplete = async (
   const total = Number(first.pagination?.total ?? products.length);
 
   /*
-   * ── THE REMAINING PAGES ARE FETCHED IN PARALLEL, IN BOUNDED BATCHES ─────────────────────
+   * ── THIS WALK STAYS SEQUENTIAL. A PARALLEL VERSION WAS TRIED AND REVERTED. ──────────────
    *
-   * This loop used to be strictly sequential: `await` one page, absorb it, ask for the next. That
-   * was fine at 410 published products (5 pages) and stopped being fine the moment the catalogue
-   * import began publishing waves.
+   * The obvious optimisation is to fetch pages 2..N concurrently: /api/all_products costs ~5s per
+   * call even at per_page=1 (it returns the brand and category sets alongside the page, so the cost
+   * is largely fixed), and at 660 published products that is 7 x 5s in series. /shop was measured
+   * at 16.9s.
    *
-   * Measured on 11/08/2026: 660 published products, and `/api/all_products` takes ~5s per call
-   * EVEN AT per_page=1 — the endpoint returns the brand and category sets alongside the page, so
-   * its cost is largely fixed rather than proportional to page size. Sequentially that is 7 x 5s,
-   * and the live storefront was serving /shop in 16.9s while the sitemap children timed out into
-   * their 503 fallback. Both symptoms are this one walk.
+   * It was implemented in batches of 4, deployed, and measured again: /shop 17.2s. NO improvement,
+   * because the bottleneck is not latency we can overlap — it is the API's per-IP budget. Firing
+   * four at once against a rate-limited origin does not finish sooner, it just arrives in a burst.
    *
-   * The request COUNT is unchanged — the same pages are fetched either way — so this is not extra
-   * load on the API, only a different arrangement of it in time. BATCH_SIZE is deliberately small:
-   * the point is to stop paying the fixed per-call latency N times in series, not to open as many
-   * sockets as possible against an origin that is already the slow part.
+   * And the burst is actively harmful here, which is the real reason this is reverted rather than
+   * merely dropped. util/sitemapCrawl.ts keeps its own concurrency deliberately low with the note
+   * "the SSR container shares the API's per-IP budget" — the same budget this function spends. Every
+   * /shop render competes with the sitemap crawl, and when that crawl loses it throws and
+   * /sitemap.xml answers 503. Making this function burstier makes that outcome more likely, for a
+   * measured gain of zero.
    *
-   * Ordering is preserved: results are absorbed in page order within each batch, so `seen`
-   * dedupes exactly as it did before and the grid renders in the same sequence.
-   *
-   * The early-exit is kept and still means "the catalogue ended sooner than last_page claimed",
-   * but it is now evaluated per BATCH rather than per page — a batch that yields nothing new ends
-   * the walk. It cannot end it early on a single empty page in the middle of a batch, which is the
-   * one behaviour that changes, and it changes in the safe direction: more pages read, never fewer.
+   * The actual fix is not in this function at all: ShopPageClient filters and paginates in the
+   * browser, so the whole catalogue has to be loaded to render one page of it. Server-side
+   * pagination and filtering removes the walk instead of rearranging it. The `truncated` warning
+   * below marks where that stops being optional.
    */
-  const BATCH_SIZE = 4;
-
-  for (let page = 2; page <= lastPage && products.length < cap; page += BATCH_SIZE) {
-    const pages: number[] = [];
-    for (let i = 0; i < BATCH_SIZE && page + i <= lastPage; i++) pages.push(page + i);
-
-    const batch = await Promise.all(
-      pages.map((p) =>
-        getAllProducts({ perPage: PER_PAGE, page: p }).catch(() => ({ products: [] as Product[] }))
-      )
-    );
-
-    let addedInBatch = 0;
-    for (const next of batch) addedInBatch += absorb(next.products);
-
-    // A whole batch with nothing new means the walk is over. Breaking here rather than continuing
-    // to `lastPage` avoids hammering the API when the catalogue shrank mid-crawl.
-    if (addedInBatch === 0) break;
+  for (let page = 2; page <= lastPage && products.length < cap; page++) {
+    const next = await getAllProducts({ perPage: PER_PAGE, page });
+    // A page that comes back with nothing means the walk is over. Breaking here rather than
+    // continuing to `lastPage` avoids hammering the API when the catalogue shrank mid-crawl.
+    if (absorb(next.products) === 0) break;
   }
 
   const truncated = Number.isFinite(total) && total > 0 && products.length < total;
