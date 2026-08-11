@@ -75,7 +75,18 @@ Schedule::command('products:recover-gtin')->weeklyOn(2, '02:30');
 // --apply IS passed here, unlike products:recover-gtin, because this command publishes only on a
 // barcode match. A name-only match records a pending observation and touches no product, so the
 // worst a cron can do is queue something for a human to look at.
-Schedule::command('products:enrich-dsld --limit=25 --apply')->weeklyOn(2, '02:45');
+//
+// ── MOVED, NOT DELETED ────────────────────────────────────────────────────────────────────
+// This entry used to be `weeklyOn(2, '02:45')` with --limit=25. It now lives in the catalogue
+// block further down, daily at 02:20 with a larger limit, because the population it can serve
+// changed: page transcription captures the barcode and promotion copies it to `products.gtin`, so
+// there are now thousands of barcoded products for it to match on instead of the twelve the legacy
+// catalogue carried.
+//
+// It is defined in ONE place. Two Schedule::command() entries for the same command do not merge —
+// they both run — and this repository has already lost a day to a duplicate declaration silently
+// doubling a rate (config/enrichment.php had `iherb.com` twice, so the documented pace was wrong
+// by 5x for weeks). See the "Supplement Facts for the imported catalogue" block below.
 
 // Draft copy for thin product pages. 15 a week, queued one job per product.
 //
@@ -209,6 +220,101 @@ Schedule::command('catalog:iherb:content --include-filtered')
             .'See storage/logs/catalog-content.log.',
         );
     });
+
+/*
+|--------------------------------------------------------------------------
+| Publication: turning transcribed pages into pages a customer can see
+|--------------------------------------------------------------------------
+| Everything above writes ONLY to `external_catalog_products`. The three
+| entries below are the ones that create and publish products, and they were
+| deliberately absent from this file until now — the header of the block above
+| says so, and the reason was sound: with no page content transcribed, every
+| promoted product would have been a thin page, and ~19,000 thin pages is the
+| shape Google's scaled-content-abuse policy targets.
+|
+| That premise no longer holds. `catalog:iherb:content` transcribes the
+| manufacturer's own overview, directions, ingredients, warnings and Supplement
+| Facts panel from the product page, so a promoted product now carries real
+| copy. The owner has asked, repeatedly and explicitly, for the pipeline to
+| publish without a human in the loop.
+|
+| ── WHAT MAKES THAT SAFE IS THE GATE, NOT THE CADENCE ─────────────────────
+| PromotionGate still decides, unchanged: a row is promotable only with a
+| mapped subcategory, a computed price, a brand, a cover image and a
+| completeness score, and never when discontinued. Separately, the MEASURED
+| body gate decides `seo_robots_index` — a product whose transcribed body is
+| under catalog.promotion.min_body_words is published but NOT offered to search
+| engines, and `--reindex` promotes it later if its body grows.
+|
+| So the worst case of running this unattended is a sellable product page that
+| Google is not yet told about. That is recoverable. The failure it is worth
+| protecting against — thin pages entering the index at scale — is exactly what
+| the gate refuses, and no entry here passes --force-index.
+*/
+
+// 1. Rewrite the bodies of products promoted BEFORE their page had been read.
+//
+// 812 products were promoted while the content pass was failing, so their bodies are the composed
+// fact block alone. --recompose replaces those with the transcribed manufacturer copy now sitting on
+// the staging row. It creates nothing, publishes nothing, and never overwrites a body a human has
+// edited, which is why it can run unattended ahead of the wave below.
+Schedule::command('catalog:iherb:promote --recompose')
+    ->hourlyAt(20)
+    ->withoutOverlapping(30)
+    ->when($catalogueReady)
+    ->appendOutputTo(storage_path('logs/catalog-publish.log'));
+
+// 2. Publish a bounded wave.
+//
+// --publish re-measures already-published noindexed products first, then clears the backlog an
+// earlier run left unpublished, then publishes what this run creates. The wave is bounded by
+// --limit deliberately: a wave is observable in Search Console and reversible, and an unbounded
+// nightly publish of tens of thousands of URLs is neither. Raise CATALOG_PUBLISH_WAVE once the
+// first waves have been watched.
+Schedule::command('catalog:iherb:promote --publish --limit='.(int) env('CATALOG_PUBLISH_WAVE', 250))
+    ->hourlyAt(35)
+    ->withoutOverlapping(45)
+    ->when($catalogueReady)
+    ->appendOutputTo(storage_path('logs/catalog-publish.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'catalog:iherb:promote --publish FAILED - no new products are reaching the storefront. '
+            .'See storage/logs/catalog-publish.log.',
+        );
+    });
+
+// 3. Free the products held back as thin once their body clears the gate.
+//
+// Separate from the wave above so it still runs when the wave is a no-op, and so "a page became
+// indexable" is attributable in the log to this entry rather than buried in a publish run.
+Schedule::command('catalog:iherb:promote --reindex')
+    ->dailyAt('03:15')
+    ->withoutOverlapping(60)
+    ->when($catalogueReady)
+    ->appendOutputTo(storage_path('logs/catalog-publish.log'));
+
+/*
+|--------------------------------------------------------------------------
+| Supplement Facts for the imported catalogue, by barcode
+|--------------------------------------------------------------------------
+| The page transcription captures the BARCODE (`source_gtin`), and promotion
+| copies it to `products.gtin`. That is what makes this entry newly worth
+| running often: products:enrich-dsld publishes a real Supplement Facts panel
+| ONLY on a barcode match, and until the page pass existed the imported
+| catalogue had no barcodes at all, so there was nothing for it to match on.
+|
+| Measured 11/08/2026 against the US brands iHerb actually sells, DSLD returns
+| a correct-brand label for 28 of 30 sampled products. A name match remains a
+| pending observation that publishes nothing — see DsldClient::findFor(), which
+| now also refuses a candidate whose brand is not ours.
+|
+| Kept at a modest limit and off the hour: DSLD is a free public service run by
+| the NIH and there is no deadline here worth being rude to it for.
+*/
+Schedule::command('products:enrich-dsld --limit=60 --apply')
+    ->dailyAt('02:20')
+    ->withoutOverlapping(60)
+    ->appendOutputTo(storage_path('logs/catalog-dsld.log'));
 
 /*
 |--------------------------------------------------------------------------
