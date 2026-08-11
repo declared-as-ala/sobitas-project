@@ -280,10 +280,36 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       width="wide"
       defer
       aria-labelledby="ventes-flash-heading"
-      /* The band's own edge, overriding the 1px `[data-band]` seam. See the note above for why
-         this wins on layer order and why the measurement was checked in the emitted CSS. */
-      className="border-t-4 border-brand"
     >
+      {/* ── THE BANNER IS AN INNER PANEL, NOT THE BAND ────────────────────────────────────
+          Owner, 11/08/2026: "the ventes flash section design looks super bad — redesign it, make
+          it a banner with a dark background, rounded, and give it margin so it looks outer like
+          the browse-by-category images."
+
+          Previously the band ITSELF was the banner: `surface="sunken"` painted edge to edge and a
+          4px brand rule sat on its top seam. Edge-to-edge is what made it read as another section
+          rather than as one object on the page. Floating a dark panel inside the rail gives it the
+          margin the category tiles have, and a boundary the eye can actually see.
+
+          `pt-slab` is the DARK TOKEN SCOPE, not a background utility: every `text-ink-*`,
+          `border-hairline` and `ring-focus` inside it resolves against the dark surface, which is
+          what keeps the header, the countdown pill and the focus rings legible without a single
+          `dark:` pair. Section.tsx bans `surface="slab"` for content BANDS — this is not a band,
+          it is a component inside one, which is the case that docblock explicitly leaves open.
+
+          THE TEXTURE IS A GRADIENT, NOT AN UNSPLASH PHOTO. The owner offered a photo; a CSS
+          gradient is the better answer here and costs nothing: no extra request in front of a
+          band that already lazy-loads four packshots, no third-party host on the critical path,
+          nothing to go 404 later, and no licence to track. Two radial washes plus a fine diagonal
+          hatch read as polished granite and weigh zero bytes. */}
+      <div className="pt-slab relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_15%_0%,#2C2C35_0%,#191920_55%,#0F0F14_100%)] px-4 py-5 shadow-lg sm:px-6 sm:py-7">
+        {/* The granite hatch. `pointer-events-none` and aria-hidden — it is texture, not content.
+            Kept at 4% so it survives an OLED black and never fights the packshots. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:repeating-linear-gradient(135deg,#fff_0_1px,transparent_1px_5px)]"
+        />
+        <div className="relative">
       {/* THE KICKER CARRIES THE NUMBER. It used to be an 11px line of prose BELOW the products
           ("Jusqu'à −24% sur une sélection…") — the band's only quantity, set at its smallest size,
           under the fold of its own rail, restating the orange badge already painted on every card.
@@ -340,52 +366,56 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           which assistive tech cannot perceive — a list announces its size. `role` is required, not
           belt-and-braces: preflight's `list-style: none` makes Safari+VoiceOver drop list
           semantics. */}
+      {/* ── A GRID, NOT A SCROLLER ────────────────────────────────────────────────────────
+          Owner: "make the cards inside it visible, not all in one row, and in mobile maybe show
+          2 in each row."
+
+          This was a snap scroller sized on its items — a good answer to "an unknown number of
+          offers", and the wrong answer to "show me the offers". A swipe hides content behind a
+          gesture most visitors never make, which is exactly what the owner is describing when he
+          says the cards are not visible. Four known deals fit a grid at every width.
+
+          `grid-cols-2` on phones is what the card was reshaped for: below `sm` FlashDealCard is
+          now a COLUMN (packshot over name over price), because a row card at ~170px has no room
+          for a name beside a thumbnail. From `sm` it returns to the row shape the banner was
+          designed around.
+
+          Everything the scroller needed — snap points, scroll padding, overscroll containment,
+          the min/max width clamps — is gone with it. A grid needs none of it, and each of those
+          was a defect surface. `role="list"` stays: preflight's `list-style:none` makes
+          Safari+VoiceOver drop list semantics, and the count is still worth announcing. */}
       <ul
         role="list"
-        className="scrollbar-hide -mx-4 flex snap-x snap-proximity items-stretch gap-3 overflow-x-auto overscroll-x-contain scroll-px-4 px-4 sm:mx-0 sm:scroll-px-0 sm:px-0"
+        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
       >
-        {/* ── SIZED FOR A ROW CARD, WHICH IS THE OPPOSITE PROBLEM TO A COLUMN CARD ──────────
-            A column card had to be kept NARROW, because its height followed its width and that is
-            what made the band a section. A row card has a fixed 64px thumbnail, so its height is
-            constant and width costs nothing — it wants to be WIDE enough for a two-line product
-            name beside that thumbnail.
-
-            `min-w-[264px]` is the floor, re-derived when the thumbnail grew to 80/96px: 96 + 12
-            gap + 48 button + 24 padding + 12 gap = 192px of fixed furniture, leaving ~72px for the
-            name at the floor and ~180px at the 400px cap. Below 264 the name clamps to a handful
-            of characters and the card starts lying about what it contains.
-
-            `max-w-[400px]`, up from 340: at 1920 four cards now divide the rail EXACTLY
-            ((1536−36)/4 = 375), so the 140px of dead rail the 340 cap used to leave is gone. */}
         {products.map((product) => (
-          <li
-            key={product.id}
-            className="min-w-[264px] max-w-[400px] grow basis-[300px] snap-start"
-          >
+          <li key={product.id}>
             <FlashDealCard product={product} />
           </li>
         ))}
       </ul>
 
       {/* THE PHONE GETS ITS OWN ROUTE TO /offres.
-          `SectionHeader` correctly hides the view-all below `sm` — that is what makes the clip
-          impossible — and for CategoryRail that is the end of it, because its tiles ARE the
-          navigation. This rail is different: it hides products behind a swipe, so the way to the
-          full list has to exist somewhere. As a full-width bar it is a 48px target where there used
-          to be a 0px-wide clipped one.
+          `SectionHeader` hides the view-all below `sm`, so without this there is no way to the full
+          promo list from a phone at all. The ORIGINAL reason written here — "this rail hides
+          products behind a swipe" — died with the scroller; every card is now visible in the grid.
+          It stays on the honest remaining ground: these four are a SELECTION, and /offres is the
+          rest of them.
 
-          `border-rule-strong` (3.10:1 on sand), not `border-hairline` (1.16:1): a ghost button's
-          border is its only boundary, so WCAG 1.4.11's 3:1 applies to it.
-          `ring-offset-sunken` because Tailwind's default ring-offset is white, which on this sand
-          band paints a white gap between the control and its focus ring. */}
+          `border-rule-strong` — still 3:1, but now resolved in the panel's DARK scope, because a
+          ghost button's border is its only boundary and WCAG 1.4.11 applies to it. The ring offset
+          follows the panel too: Tailwind's default offset is white, which on a near-black banner
+          paints a white halo around the control. */}
       <Link
         href="/offres"
         aria-label="Tout voir les offres flash"
-        className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-rule-strong px-5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-sunken sm:hidden [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
+        className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-rule-strong px-5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:hidden [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
       >
         Tout voir les offres
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </Link>
+        </div>
+      </div>
     </Section>
   );
 });

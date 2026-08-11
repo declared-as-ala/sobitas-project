@@ -166,13 +166,23 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
        owner's "it doesn't look like the design system". It matters more now than it did: inside the
        deleted plate these sat white-on-white with a 1.16:1 hairline as their only edge, and on the
        sand band they are white-on-sand with a shadow, so the card is finally an object. */
-    <div className="group relative flex h-full w-full items-center gap-3 overflow-hidden rounded-2xl border border-hairline bg-elevated p-3 font-poppins shadow-sm transition-[box-shadow,border-color] [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+    /* ── COLUMN ON PHONES, ROW FROM `sm` (owner, 11/08/2026) ──────────────────────────────
+       The banner now lays these out `grid-cols-2` on phones instead of scrolling them, which
+       gives each card ~170px. The row shape documented above needs 264px minimum — 96px of
+       thumbnail plus a 48px control leaves ~70px for a name — so at 2-up it would clamp the
+       product name to a few characters and the card would start lying about what it contains.
+       Below `sm` it stacks; from `sm` it is exactly the row card described above, unchanged.
+
+       The frame stays white ON PURPOSE. It sits on a near-black banner now, and a white card on
+       dark ground is the highest-contrast, most "visible" object available — which is precisely
+       what the owner asked for. It also means the card needs no dark variant of its own. */
+    <div className="group relative flex h-full w-full flex-col gap-2 overflow-hidden rounded-2xl border border-hairline bg-elevated p-3 font-poppins shadow-sm transition-[box-shadow,border-color] sm:flex-row sm:items-center sm:gap-3 [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
         /* `ring-inset`, not `ring-offset-2`: the link is not the root, so an outset ring would be
            clipped by the root's `overflow-hidden`. */
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
+        className="flex min-w-0 flex-1 flex-col items-center gap-2 rounded-xl text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:flex-row sm:items-center sm:gap-3 sm:text-left"
       >
         {/* THE THUMBNAIL IS A FIXED SIZE, AND IT IS THE BAND'S HEIGHT DIAL.
             80px on phones, 96px from `sm` — up from a flat 64, which measured correct but read as
@@ -181,7 +191,10 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
             a one-line change with a predictable cost: +16px of thumbnail is +16px of band.
             96 + 24px of padding = a 120px card, so the band lands ~273px — still inside the 320px
             banner ceiling the guard asserts. */}
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sunken sm:h-24 sm:w-24">
+        {/* Stacked, the packshot IS the card's picture and gets the full column width (capped so
+            it never dominates a two-line name); from `sm` it returns to the fixed 96px thumbnail
+            that keeps the row card's height constant. */}
+        <div className="relative aspect-square w-full max-w-[112px] shrink-0 overflow-hidden rounded-xl bg-sunken sm:aspect-auto sm:h-24 sm:w-24 sm:max-w-none">
           {image ? (
             <Image
               src={image}
@@ -227,7 +240,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
 
               `Rupture` replaces the whole row when there is no stock, rather than being a fourth
               thing next to a price the visitor cannot act on. */}
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <div className="mt-1 flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-0.5 sm:justify-start">
             {outOfStock ? (
               <span className="text-xs font-semibold text-ink-3">Rupture de stock</span>
             ) : (
@@ -273,7 +286,9 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
               ? `Stock maximum atteint pour ${name}`
               : `Ajouter ${name} au panier`
         }
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
+        /* Full-width bar when stacked, 48px square in the row. Both clear the 44px floor; a
+           48x48 square floating under a centred column would read as an orphan. */
+        className={`flex h-11 w-full shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated sm:h-12 sm:w-12 ${
           state === 'ok'
             ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
             : 'cursor-not-allowed bg-sunken text-ink-3'
