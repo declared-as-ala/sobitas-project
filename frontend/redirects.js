@@ -1,8 +1,64 @@
+/**
+ * Give every static rule a trailing-slash twin, so `/x/` reaches the target in ONE hop.
+ *
+ * ── THE CHAIN THIS REMOVES ────────────────────────────────────────────────────────────────
+ * With `trailingSlash: false` (the default) Next normalises `/x/` to `/x` with its own redirect.
+ * When only `/x` has a rule, the crawler therefore walks TWO hops to get anywhere:
+ *
+ *     308 /product-category/prise-de-masse/  ->  308 /product-category/prise-de-masse  ->  200 /shop
+ *
+ * Measured against the live site on 11/08/2026 over the URLs Search Console has complained about,
+ * that pattern was 44 of the 134 verified redirect chains — the single largest cause. Every hop is
+ * crawl budget spent on a site whose central problem is indexation, and old WordPress and
+ * WooCommerce URLs almost always carry the trailing slash, so this is precisely the population that
+ * still has inbound links and residual ranking.
+ *
+ * Twenty-four such twins had already been written out by hand, which set the convention and is also
+ * the argument for generating them: the hand-written list covered 24 of 194 and nothing said which
+ * ones were missing.
+ *
+ * ── WHAT IS DELIBERATELY LEFT ALONE ───────────────────────────────────────────────────────
+ *   · rules whose source carries a `:param` — a wildcard already spans the trailing slash, and
+ *     `/blogs/:slug*` vs `/blogs/:slug*!/` is a pattern-matching question, not a routing one
+ *   · anything with `has` (the host-conditional www and partner-subdomain rules), which match on
+ *     host rather than path and must stay exactly as written, in their original position
+ *   · `/` itself, which has no meaningful twin
+ *   · any twin that ALREADY exists — the hand-written ones win, and duplicates would be dead rules
+ *
+ * Twins are appended AFTER the hand-written rules. Next matches in array order, and every generated
+ * source ends in `/` while no hand-written rule it could shadow does, so appending cannot change
+ * which rule answers an existing URL.
+ *
+ * @param {import('next').Redirect[]} rules
+ * @returns {import('next').Redirect[]}
+ */
+function withTrailingSlashTwins(rules) {
+  const existing = new Set(rules.map((r) => (typeof r.source === 'string' ? r.source : '')));
+  const twins = [];
+
+  for (const rule of rules) {
+    const { source } = rule;
+    if (typeof source !== 'string') continue;
+    if (rule.has) continue;                       // host-conditional: leave untouched
+    if (source === '/' || source.length < 2) continue;
+    if (source.endsWith('/')) continue;           // already a trailing-slash rule
+    if (source.includes(':')) continue;           // parameterised: the wildcard covers it
+
+    const twin = `${source}/`;
+    if (existing.has(twin)) continue;
+
+    existing.add(twin);
+    twins.push({ ...rule, source: twin });
+  }
+
+  return rules.concat(twins);
+}
+
 /** @type {() => import('next').Redirect[]} */
 function buildRedirects() {
   const p = (source, destination) => ({ source, destination, permanent: true });
 
-  return [
+  return withTrailingSlashTwins([
     // ── www → non-www (host-conditional, must stay first) ─────────────────
     {
       source: '/:path*',
@@ -133,8 +189,8 @@ function buildRedirects() {
      * whenever a rayon is added, because publication is now automatic and a shadowed rayon is
      * invisible rather than noisy.
      */
-    p('/banc-de-musculation-developpe-incline', '/musculation'),
-    p('/banc-reglable-mnd-fitness', '/musculation'),
+    p('/banc-de-musculation-developpe-incline', '/materiel-de-musculation'),
+    p('/banc-reglable-mnd-fitness', '/materiel-de-musculation'),
     p('/bcaa-gluta-500g-scenit-nutrition', '/bcaa'),
     p('/beef-mass-plus-27kg-big-ramy-labs', '/proteine-de-boeuf/beef-mass-plus-27kg-big-ramy-labs'),
     p('/big-ramy-labs-beef-mass-gainer-4-9kg', '/big-ramy-labs'),
@@ -201,9 +257,9 @@ function buildRedirects() {
     // /musculation used to live here; combined with the admin-managed /musculation →
     // /materiel-de-musculation redirect (Filament → Redirections), it formed an infinite
     // 301/308 loop on the real page. Never re-add a rule that redirects this slug away.
-    p('/ceinture-de-musculation', '/musculation'),
-    p('/gants-de-musculation-et-fitness', '/musculation'),
-    p('/bandes-de-soutien-musculaire', '/musculation'),
+    p('/ceinture-de-musculation', '/materiel-de-musculation'),
+    p('/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
+    p('/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
     p('/shakers-et-bouteilles-sportives', '/accessoires'),
     p('/equipement-cardio-fitness', '/cardio-fitness'),
     p('/t-shirts-de-sport', '/vetements'),
@@ -242,7 +298,12 @@ function buildRedirects() {
     p('/categorie/acides-amines', '/acides-amines'),
     p('/categorie/complements-alimentaires', '/proteines'),
     p('/categorie/complements-d-entrainement', '/performance'),
-    p('/categorie/equipements-et-accessoires-sportifs', '/shop'),
+    // Two paths that were landing on /shop now name the rayon they were actually about. A generic
+    // catalogue page answers no query the visitor typed, and /shop already ranks poorly (position
+    // 25.34) precisely because it is what everything gets dumped onto.
+    p('/categorie/perte-de-poids', '/bruleurs-de-graisse'),
+    p('/categorie/prise-de-masse', '/prise-de-masse'),
+    p('/categorie/equipements-et-accessoires-sportifs', '/materiel-de-musculation'),
     p('/categorie/pre-intra-and-post-workout', '/shop'),
     p('/categorie/proteines', '/proteines'),
     p('/categorie/vetements-et-accessoires', '/vetements'),
@@ -320,15 +381,27 @@ function buildRedirects() {
     p('/subcategories/acides-amines', '/acides-amines'),
     p('/subcategories/boosters-hormonaux', '/boosters-hormonaux'),
     p('/subcategories/bruleurs-de-graisse', '/bruleurs-de-graisse'),
-    p('/subcategories/ceinture-de-musculation', '/musculation'),
+    p('/subcategories/ceinture-de-musculation', '/materiel-de-musculation'),
     p('/subcategories/equipement-cardio-fitness', '/cardio-fitness'),
     p('/subcategories/fat-burner', '/bruleurs-de-graisse'),
-    p('/subcategories/materiel-de-musculation', '/musculation'),
+    p('/subcategories/materiel-de-musculation', '/materiel-de-musculation'),
     p('/subcategories/proteine-whey', '/whey-isolate'),
     p('/subcategories/recuperation-apres-entrainement', '/shop'),
     p('/subcategories/:path*', '/shop'),
 
     // ── /product-category/  (WordPress legacy) ────────────────────────────
+    //
+    // THE SINGLE-SEGMENT ONES, NAMED. Without these they fall to the
+    // `/product-category/:path*` catch-all at the end of this block and land on /shop — the same
+    // defect that was fixed for `/category/*`, where a URL ranking at position 2.97 was dropping
+    // its visitor on a generic catalogue. Every path below is one Search Console has actually
+    // reported, and every destination was verified 200 before being written here.
+    p('/product-category/acides-amines', '/acides-amines'),
+    p('/product-category/perte-de-poids', '/bruleurs-de-graisse'),
+    p('/product-category/prise-de-masse', '/prise-de-masse'),
+    p('/product-category/proteines', '/proteines'),
+    p('/product-category/perte-de-poids/cla', '/cla'),
+    p('/product-category/vetements-et-accessoires-de-musculation/ceinture-de-musculation-abdominal', '/materiel-de-musculation'),
     p('/product-category/acides-amines/stimulants-hormonaux', '/shop'),
     p('/product-category/acides-amines/stimulants-hormonaux/', '/shop'),
     p('/product-category/acides-amines/vitamines', '/vitamines'),
@@ -357,11 +430,11 @@ function buildRedirects() {
     p('/shop/complements-d-entrainement/pendant-l-entrainement', '/shop'),
     p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/shop'),
     p('/shop/crea-core-250g-procell', '/shop'),
-    p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/musculation'),
-    p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/equipement-cardio-fitness', '/cardio-fitness'),
-    p('/shop/equipements-et-accessoires-sportifs/gants-de-musculation-et-fitness', '/musculation'),
-    p('/shop/equipements-et-accessoires-sportifs/materiel-de-musculation', '/musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/materiel-de-musculation', '/materiel-de-musculation'),
     p('/shop/fish-oil-100-softgels', '/shop'),
     p('/shop/fish-oil-100-softgels/', '/shop'),
     p('/shop/hard', '/shop'),
@@ -386,7 +459,7 @@ function buildRedirects() {
     p('/shop/xtend-bcaa-420g/', '/bcaa/xtend-bcaa-420g'),
     p('/shop/zma-pro-90-caps', '/zma/zma-pro-90-caps'),
     p('/shop/zma-pro-90-caps/', '/zma/zma-pro-90-caps'),
-  ];
+  ]);
 }
 
 module.exports = buildRedirects;
