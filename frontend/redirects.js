@@ -1,64 +1,35 @@
-/**
- * Give every static rule a trailing-slash twin, so `/x/` reaches the target in ONE hop.
+/*
+ * ── A TRAILING-SLASH RULE IN THIS FILE CAN NEVER FIRE. MEASURED, NOT ASSUMED. ─────────────
  *
- * ── THE CHAIN THIS REMOVES ────────────────────────────────────────────────────────────────
- * With `trailingSlash: false` (the default) Next normalises `/x/` to `/x` with its own redirect.
- * When only `/x` has a rule, the crawler therefore walks TWO hops to get anywhere:
+ * It is tempting to give every rule a `/x/` twin so `/x/` reaches its target in one hop instead
+ * of two. It does not work, and this note exists so nobody spends the afternoon on it twice.
  *
- *     308 /product-category/prise-de-masse/  ->  308 /product-category/prise-de-masse  ->  200 /shop
+ * With `trailingSlash: false` (the default) Next strips the trailing slash with its OWN 308
+ * BEFORE consulting the redirects declared here. `/x/` is therefore answered by that
+ * normalisation, and a `/x/` rule in this array is unreachable.
  *
- * Measured against the live site on 11/08/2026 over the URLs Search Console has complained about,
- * that pattern was 44 of the 134 verified redirect chains — the single largest cause. Every hop is
- * crawl budget spent on a site whose central problem is indexation, and old WordPress and
- * WooCommerce URLs almost always carry the trailing slash, so this is precisely the population that
- * still has inbound links and residual ranking.
+ * Verified against the LIVE site on 11/08/2026 using twins hand-written here long before:
+ * /shop/pack-3/, /shop/the-shadow-270g/ and /shop/xtend-bcaa-420g/ all answer
+ * `308 -> <the same path without the slash>` — Next’s normalisation — never their own
+ * destination. Twenty-four such twins were in this file and not one had ever fired.
  *
- * Twenty-four such twins had already been written out by hand, which set the convention and is also
- * the argument for generating them: the hand-written list covered 24 of 194 and nothing said which
- * ones were missing.
+ * A generated version was added and reverted in the same session for exactly this reason: 186
+ * rules that read as though they did something and provably did not. The claim that they removed
+ * 44 redirect chains was wrong, and is corrected here rather than left standing.
  *
- * ── WHAT IS DELIBERATELY LEFT ALONE ───────────────────────────────────────────────────────
- *   · rules whose source carries a `:param` — a wildcard already spans the trailing slash, and
- *     `/blogs/:slug*` vs `/blogs/:slug*!/` is a pattern-matching question, not a routing one
- *   · anything with `has` (the host-conditional www and partner-subdomain rules), which match on
- *     host rather than path and must stay exactly as written, in their original position
- *   · `/` itself, which has no meaningful twin
- *   · any twin that ALREADY exists — the hand-written ones win, and duplicates would be dead rules
+ * The extra hop is accepted. It is standard Next behaviour, Google follows it without complaint,
+ * and the alternative — `skipTrailingSlashRedirect: true` — means owning slash normalisation for
+ * every route on the site, a large risk to buy back one hop.
  *
- * Twins are appended AFTER the hand-written rules. Next matches in array order, and every generated
- * source ends in `/` while no hand-written rule it could shadow does, so appending cannot change
- * which rule answers an existing URL.
- *
- * @param {import('next').Redirect[]} rules
- * @returns {import('next').Redirect[]}
+ * The hand-written twins are left where they are: inert either way, and deleting them is churn in
+ * a file where every line is a URL somebody may still link to.
  */
-function withTrailingSlashTwins(rules) {
-  const existing = new Set(rules.map((r) => (typeof r.source === 'string' ? r.source : '')));
-  const twins = [];
-
-  for (const rule of rules) {
-    const { source } = rule;
-    if (typeof source !== 'string') continue;
-    if (rule.has) continue;                       // host-conditional: leave untouched
-    if (source === '/' || source.length < 2) continue;
-    if (source.endsWith('/')) continue;           // already a trailing-slash rule
-    if (source.includes(':')) continue;           // parameterised: the wildcard covers it
-
-    const twin = `${source}/`;
-    if (existing.has(twin)) continue;
-
-    existing.add(twin);
-    twins.push({ ...rule, source: twin });
-  }
-
-  return rules.concat(twins);
-}
 
 /** @type {() => import('next').Redirect[]} */
 function buildRedirects() {
   const p = (source, destination) => ({ source, destination, permanent: true });
 
-  return withTrailingSlashTwins([
+  return [
     // ── www → non-www (host-conditional, must stay first) ─────────────────
     {
       source: '/:path*',
@@ -138,6 +109,18 @@ function buildRedirects() {
     // A dead slug now 404s instead of landing on About Us. That is the correct outcome: Google
     // reads a redirect to an unrelated page as a soft 404 anyway, and a real 404 at least stops
     // the URL diluting a page it has nothing to do with.
+    //
+    // ── NUMERIC /page/N IS WORDPRESS PAGINATION, NOT A CMS PAGE ───────────────────────────
+    // This rule has to come FIRST, because `/page/:slug` below would otherwise map `/page/24/?s=/`
+    // to `/24?s=/` — a bare number at the root, which resolves to no category, no brand and no CMS
+    // page, so it 404s. Measured over the Search Console exports on 11/08/2026, that accounted for
+    // a large share of the redirects that landed on a dead page: every one looked handled and none
+    // was.
+    //
+    // The real URLs are paginated PRODUCT SEARCH listings —
+    // `/page/19/?s=Proteine&post_type=product&product_cat=0&product-page=4` — so /shop is the
+    // honest destination: it is the same kind of page, and it exists.
+    { source: '/page/:n(\\d+)', destination: '/shop', permanent: true },
     { source: '/page/:slug', destination: '/:slug', permanent: true },
     // Anything deeper than one segment has no /{slug} equivalent — keep the old behaviour.
     p('/page/:path*', '/qui-sommes-nous'),
@@ -459,7 +442,7 @@ function buildRedirects() {
     p('/shop/xtend-bcaa-420g/', '/bcaa/xtend-bcaa-420g'),
     p('/shop/zma-pro-90-caps', '/zma/zma-pro-90-caps'),
     p('/shop/zma-pro-90-caps/', '/zma/zma-pro-90-caps'),
-  ]);
+  ];
 }
 
 module.exports = buildRedirects;
