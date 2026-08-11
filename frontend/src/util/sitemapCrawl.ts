@@ -178,6 +178,65 @@ export type CrawlOptions<T> = {
  * the authoritative sitemap for an hour. Google reads a sitemap that shrank as "these URLs were
  * removed". A throw reaches the route handlers, which answer 503 + Retry-After and cache nothing.
  */
+/**
+ * One page fetch, retried through a transient failure.
+ *
+ * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────────
+ * crawlPaginated throws on any failed page, deliberately: an incomplete set must never reach the
+ * cache, because Google reads a sitemap that shrank as "these URLs were removed". That rule is
+ * right and is unchanged.
+ *
+ * What was wrong is that it threw on the FIRST blip, with no retry. The crawl issues ~20 requests
+ * (12 pages of /all_products at 1,160 published products, plus brands, categories, pages and
+ * articles), every one against a backend that shares its database with the catalogue import —
+ * hydration and content passes every ten minutes, promote/publish hourly, queue workers throughout.
+ * Measured 11/08/2026, the SAME request varied between 1.2s and 4.5s purely on load. At twenty
+ * chances, one timeout or one 502 takes the entire sitemap to 503, and it did: /sitemap.xml and
+ * every child were 503 on six consecutive checks while a hand-run crawl of the identical endpoints
+ * completed with no shortfall at all.
+ *
+ * So: retry the TRANSPORT, keep refusing partial DATA. A page that never arrives is still fatal —
+ * it just now takes three failures instead of one to say so. Malformed-but-delivered pages are not
+ * retried here at all; absorb() throws on those, and re-requesting a shape the server is confident
+ * about would only waste the budget.
+ *
+ * Backoff is jittered because the whole point is that the origin is momentarily busy: three
+ * retries landing in lockstep with the other pages of the same batch would recreate the burst that
+ * caused the failure. The delays are short — this runs inside a request that Googlebot is waiting
+ * on, and a sitemap that takes 10s is fine while one that 503s is not.
+ */
+async function fetchPageWithRetry(
+  fetchPage: (page: number, perPage: number) => Promise<unknown>,
+  page: number,
+  perPage: number,
+  label: string
+): Promise<unknown> {
+  const ATTEMPTS = 3;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+    try {
+      return await fetchPage(page, perPage);
+    } catch (error) {
+      lastError = error;
+      if (attempt === ATTEMPTS) break;
+      // 250ms, 500ms, plus up to 250ms of jitter.
+      const backoff = 250 * 2 ** (attempt - 1) + Math.floor(Math.random() * 250);
+      console.warn(
+        `[sitemap] ${label} page ${page} failed (attempt ${attempt}/${ATTEMPTS}), retrying in ${backoff}ms: ` +
+        `${error instanceof Error ? error.message : String(error)}`
+      );
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+    }
+  }
+
+  throw new Error(
+    `[sitemap] ${label} page ${page} failed ${ATTEMPTS} time(s) — aborting the crawl rather than ` +
+    `caching a partial ${label}. Last error: ` +
+    `${lastError instanceof Error ? lastError.message : String(lastError)}`
+  );
+}
+
 export async function crawlPaginated<T>(opts: CrawlOptions<T>): Promise<PaginatedCrawl<T>> {
   const { label, perPage, maxRequests, rowsKey } = opts;
   const concurrency = Math.max(1, opts.concurrency ?? 4);
@@ -249,7 +308,7 @@ export async function crawlPaginated<T>(opts: CrawlOptions<T>): Promise<Paginate
   // actually honoured. Only then can the rest be parallelised, and only then is the fan-out bounded
   // by something the server said rather than something we assumed.
   requests++;
-  const firstPageRows = absorb(await opts.fetchPage(1, perPage), 1);
+  const firstPageRows = absorb(await fetchPageWithRetry(opts.fetchPage, 1, perPage, label), 1);
 
   /*
    * THE PAGE SIZE IS READ BACK, NEVER ASSUMED.
@@ -292,7 +351,9 @@ export async function crawlPaginated<T>(opts: CrawlOptions<T>): Promise<Paginate
     }
     // Promise.all, not allSettled: one failed page means an incomplete set, and an incomplete set
     // must never reach the cache. Let the rejection propagate.
-    const responses = await Promise.all(batch.map((page) => opts.fetchPage(page, perPage)));
+    const responses = await Promise.all(
+      batch.map((page) => fetchPageWithRetry(opts.fetchPage, page, perPage, label))
+    );
     const rowCounts = responses.map((res, i) => absorb(res, batch[i]));
     /*
      * The decision is taken on the HIGHEST-numbered page of the batch, not on any short page in it:

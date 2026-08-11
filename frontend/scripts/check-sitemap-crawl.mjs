@@ -98,6 +98,108 @@ const opts = (fetchPage, extra = {}) => ({
   ...extra,
 });
 
+/* -- TRANSIENT-FAILURE RETRY -----------------------------------------------------------------
+ *
+ * THE INCIDENT: on 11/08/2026 /sitemap.xml and every child answered 503 on six consecutive checks,
+ * while a hand-run crawl of the identical endpoints completed with NO shortfall. The crawl was not
+ * wrong about the data; it was losing single requests. It issues ~20 (12 pages of /all_products at
+ * 1,160 published products, plus brands, categories, pages, articles) against a backend sharing its
+ * database with the catalogue import, where the SAME request measured between 1.2s and 4.5s purely
+ * on load. With Promise.all and no retry, one blip anywhere took the whole sitemap down.
+ *
+ * The rule that a partial crawl must NEVER be published is unchanged and is asserted below too --
+ * the retry buys resilience to the transport, not tolerance of missing rows.
+ */
+function flakyEndpoint({ total, failuresByPage }) {
+  const remaining = new Map(Object.entries(failuresByPage).map(([p, n]) => [Number(p), n]));
+  const attempts = new Map();
+  const rows = Array.from({ length: total }, (_, i) => ({ id: i + 1 }));
+  return {
+    attempts,
+    fetchPage: async (page, size) => {
+      attempts.set(page, (attempts.get(page) ?? 0) + 1);
+      const left = remaining.get(page) ?? 0;
+      if (left > 0) {
+        remaining.set(page, left - 1);
+        throw new Error(`simulated transient failure on page ${page}`);
+      }
+      const start = (page - 1) * size;
+      return {
+        rows: rows.slice(start, start + size),
+        pagination: { total, last_page: Math.max(1, Math.ceil(total / size)), per_page: size, current_page: page },
+      };
+    },
+  };
+}
+
+console.log('\nsitemap crawl - transient-failure retry\n');
+
+{
+  const ep = flakyEndpoint({ total: 410, failuresByPage: { 3: 2 } });
+  let crawl = null, threw = null;
+  try { crawl = await crawlPaginated(opts(ep.fetchPage)); } catch (e) { threw = e; }
+  check(
+    'a page that fails twice then succeeds no longer takes the whole sitemap down',
+    threw === null && crawl?.rows.length === 410 && describeCrawl('fixture', crawl).verified,
+    threw ? `threw: ${threw.message}` : `got ${crawl?.rows.length} rows`
+  );
+  check(
+    'the retried page was actually attempted 3 times (2 failures + 1 success)',
+    ep.attempts.get(3) === 3,
+    `attempts on page 3: ${ep.attempts.get(3)}`
+  );
+  check(
+    'pages that succeeded first time were not retried',
+    ep.attempts.get(2) === 1 && ep.attempts.get(4) === 1,
+    `page2=${ep.attempts.get(2)} page4=${ep.attempts.get(4)}`
+  );
+}
+
+{
+  const ep = flakyEndpoint({ total: 250, failuresByPage: { 1: 2 } });
+  let crawl = null, threw = null;
+  try { crawl = await crawlPaginated(opts(ep.fetchPage)); } catch (e) { threw = e; }
+  check(
+    'the FIRST page retries as well (it is fetched outside the batch loop)',
+    threw === null && crawl?.rows.length === 250,
+    threw ? `threw: ${threw.message}` : `got ${crawl?.rows.length} rows`
+  );
+}
+
+{
+  const ep = flakyEndpoint({ total: 410, failuresByPage: { 3: 99 } });
+  let crawl = null, threw = null;
+  try { crawl = await crawlPaginated(opts(ep.fetchPage)); } catch (e) { threw = e; }
+  check(
+    'a page that NEVER succeeds still aborts the crawl - a partial sitemap is never published',
+    threw !== null && crawl === null,
+    threw ? '' : `did not throw; got ${crawl?.rows.length} rows`
+  );
+  check(
+    'it gave up after a bounded number of attempts rather than looping for ever',
+    ep.attempts.get(3) === 3,
+    `attempts on page 3: ${ep.attempts.get(3)}`
+  );
+  check(
+    'the fatal error names the endpoint and the page, so the log says what to look at',
+    threw !== null && /fixture/.test(threw.message) && /page 3/.test(threw.message),
+    threw ? threw.message.slice(0, 140) : ''
+  );
+}
+
+{
+  let calls = 0;
+  const fetchPage = async () => { calls++; return { pagination: { total: 10, last_page: 1, per_page: 100 } }; };
+  let threw = null;
+  try { await crawlPaginated(opts(fetchPage)); } catch (e) { threw = e; }
+  check(
+    'a malformed page (200, no rows array) is NOT retried - it throws on first sight',
+    threw !== null && calls === 1,
+    `calls=${calls} ${threw ? threw.message.slice(0, 90) : 'did not throw'}`
+  );
+}
+
+
 console.log('\nsitemap crawl — response shapes\n');
 
 /* ── 1. last_page present ──────────────────────────────────────────────────────────────────── */
