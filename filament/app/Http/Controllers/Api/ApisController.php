@@ -716,10 +716,46 @@ class ApisController extends Controller
         // brands of whichever 24 products happened to be on page 1: a filter that hides most of
         // the catalogue, on a page that still returns 200. A subquery rather than pluck(), so the
         // id list never travels through PHP.
+        /*
+         * ── SELECT THE SIX COLUMNS THE CLIENT ACTUALLY READS, NOT THE WHOLE ROW ───────────
+         *
+         * This was a bare ->get(), so every call returned all 18 brand columns — including
+         * content_seo, review, aggregateRating, nutrition_values, questions, more_details and
+         * description_fr, none of which any caller reads.
+         *
+         * Measured against the live API on 11/08/2026: 84 brands serialised to 364,297 bytes, on a
+         * request for per_page=1 whose products array was 1,599 bytes. The brand list is a FIXED
+         * cost paid on every page of the walk — it is deliberately computed over the whole
+         * published catalogue rather than the current page, so the shop's brand filter is not
+         * reduced to the brands of whichever products landed on page 1 — and getAllProductsComplete
+         * requests seven pages to render /shop. That is ~2.5 MB of brand JSON built, encoded and
+         * transferred per render, for a filter that needs a name, an id and a logo.
+         *
+         * It is the reason this endpoint costs ~4.5s even at per_page=1 with all middleware
+         * stripped (measured on /all_products_fast), and therefore the reason /shop took 16.9s and
+         * the sitemap crawl fell into its 503 fallback: both depend on this walk.
+         *
+         * The column list is exactly what callers read, verified two ways rather than assumed.
+         * By grep over the frontend: the only brand fields any component touches are
+         * designation_fr (30 uses), id (15), logo (4) and alt_cover (2). description_fr is declared
+         * optional on the Brand type and read nowhere, and it is one of the large text columns, so
+         * it is deliberately not selected — an absent optional field is type-safe, a 4 KB one
+         * nobody renders is not free.
+         *
+         * AND against the live payload's own key list, which is what caught the mistake: the first
+         * version of this select() asked for `designation_ar`, because the frontend's Brand type
+         * declares it. THERE IS NO designation_ar COLUMN ON `brands` — the type is wrong, not the
+         * table. Selecting it would have thrown SQLSTATE 42S22 and taken /api/all_products, the
+         * shop page and the sitemap down together, on the one endpoint least able to afford it.
+         * A select() list is only as safe as the schema it was checked against.
+         *
+         * productsByCategoryId() below already selects its brand columns this way; this brings the
+         * busiest endpoint in line with it.
+         */
         $brands = Brand::whereIn(
             'id',
             Product::where('publier', 1)->whereNotNull('brand_id')->select('brand_id')
-        )->get();
+        )->select('id', 'designation_fr', 'slug', 'logo', 'alt_cover')->get();
 
         $categories = Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
 
