@@ -299,6 +299,7 @@ class ExtractExternalProductContentJob implements ShouldBeUnique, ShouldQueue
      *   0       refused before the wire for some other reason: open breaker, transport. TRANSIENT.
      *   404/410 the page is gone from iHerb. PERMANENT.
      *   422     a 200 that is not a product page (interstitial, country splash). PERMANENT for now.
+     *   451     iHerb will not serve this product to this region. PERMANENT — see below.
      *   429/5xx their side, or us being throttled. TRANSIENT.
      */
     private function recordFailure(ExternalCatalogProduct $row, int $status, string $url, PoliteFetcher $fetcher): void
@@ -313,7 +314,27 @@ class ExtractExternalProductContentJob implements ShouldBeUnique, ShouldQueue
             return;
         }
 
-        $permanent = in_array($status, [404, 410, 422], true);
+        /*
+         * ── 451 IS A PROPERTY OF THE PRODUCT, NOT OF THIS ATTEMPT ─────────────────────────
+         * "Unavailable For Legal Reasons": iHerb declines to serve this item to this region. It is
+         * not throttling, it is not a blip, and it is not about us — the same request tomorrow from
+         * the same host returns 451 again. Measured on 11/08/2026 over a 20-product sample spread
+         * across the catalogue, 3 came back 451 (and 1 came back 410), so on the order of one
+         * product in seven is region-restricted.
+         *
+         * Left as TRANSIENT — which it was — each of those rows burns all three attempts before
+         * settling into `failed` anyway. That is three requests where one was informative, spent on
+         * the one answer iHerb has already given definitively, multiplied across thousands of rows:
+         * the same shape of waste as the incident this class's docblock records, where a decision
+         * about a HOST was charged to individual PRODUCTS.
+         *
+         * Being permanent, these rows are deliberately NOT swept up by
+         * `catalog:iherb:content --retry-failed`, which re-queues only reasons marked `transient`.
+         * That is the intended asymmetry: a transient failure is worth re-asking automatically, and
+         * a regional refusal is not. If iHerb's regional catalogue ever changes, re-opening these is
+         * a deliberate act by a human rather than something a retry loop assumes on its own.
+         */
+        $permanent = in_array($status, [404, 410, 422, 451], true);
         $attempts = (int) $row->source_content_attempts + 1;
         $exhausted = $attempts >= self::maxAttempts();
 

@@ -373,7 +373,10 @@ class CatalogIHerbContent extends Command
         $blocked = ExternalCatalogProduct::where('source_content_status', ExternalCatalogProduct::CONTENT_BLOCKED)->count();
 
         $this->info(sprintf('%s transient failure(s) returned to the queue.', number_format($reset)));
-        $this->line(sprintf('  %s row(s) remain permanently failed (404/410/422) and were left alone.', number_format($permanent)));
+        // The code list is printed so an operator can tell "left alone on purpose" from "missed".
+        // It must stay in step with ExtractExternalProductContentJob::recordFailure()'s $permanent
+        // set — 451 was added there on 11/08/2026 and this string is the only place it surfaces.
+        $this->line(sprintf('  %s row(s) remain permanently failed (404/410/422/451) and were left alone.', number_format($permanent)));
         $this->line(sprintf(
             '  %s row(s) are `blocked` — robots.txt forbids their URL. Those are NOT retried, ever.',
             number_format($blocked),
