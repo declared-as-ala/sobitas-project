@@ -65,6 +65,64 @@ final class BrandKey
     }
 
     /**
+     * How confident are we that two brand strings denote the same brand: 2 identical, 1 one contains
+     * the other, 0 unrelated.
+     *
+     * ── WHY sameBrand() IS NOT ENOUGH, AND WHY THIS IS STILL NOT FUZZY MATCHING ────────────────
+     * This exists for one caller: choosing which external-database label to attach to a product as a
+     * review candidate. Those databases append a product-line word to the manufacturer on a large
+     * share of records — measured against DSLD, "Optimum Nutrition" is filed as "ON Optimum
+     * Nutrition", "NOW Foods" as "NOW Sports" or plain "NOW", "MuscleTech" as "MuscleTech Performance
+     * Series", "California Gold Nutrition" as "California Gold Nutrition SPORT". sameBrand()'s exact
+     * key equality rejects every one of those CORRECT labels, so used as the filter it throws away as
+     * many right answers as wrong ones.
+     *
+     * Token containment is the loosest test that is still safe here: every significant token of the
+     * shorter folded key must appear in the longer. "optimum nutrition" ⊆ "on optimum nutrition" and
+     * "muscletech" ⊆ "muscletech performance series" both pass; "spring valley", "member s mark",
+     * "zhou" and "pure prescriptions" — the actual wrong-brand hits this was written to reject, 5 of
+     * 30 sampled iHerb products — share no token and score 0.
+     *
+     * This is deliberately NOT the fuzzy matching for() forbids, and the distinction is load-bearing:
+     * nothing here creates, renames or MERGES a brands row. A score of 1 or 2 never publishes anything
+     * on its own — the caller still requires a barcode identification before any figure reaches a page
+     * (see DsldClient::findFor). It only ranks candidates for a human to confirm, where the failure of
+     * a loose match is a rejected review lead, not a wrong brand page.
+     */
+    public static function affinity(?string $a, ?string $b): int
+    {
+        $keyA = self::for($a);
+        $keyB = self::for($b);
+
+        if ($keyA === '' || $keyB === '') {
+            return 0;
+        }
+
+        if ($keyA === $keyB) {
+            return 2;
+        }
+
+        $tokensA = array_values(array_filter(explode(' ', $keyA), static fn (string $t): bool => $t !== ''));
+        $tokensB = array_values(array_filter(explode(' ', $keyB), static fn (string $t): bool => $t !== ''));
+
+        if ($tokensA === [] || $tokensB === []) {
+            return 0;
+        }
+
+        // Whole-token containment, shorter inside longer. Whole tokens, not substrings, so "now" does
+        // not match "snow" and "gold" does not match "goldwyn".
+        [$short, $long] = count($tokensA) <= count($tokensB) ? [$tokensA, $tokensB] : [$tokensB, $tokensA];
+
+        foreach ($short as $token) {
+            if (! in_array($token, $long, true)) {
+                return 0;
+            }
+        }
+
+        return 1;
+    }
+
+    /**
      * A display name we are willing to create a brand row with.
      *
      * Trailing punctuation and legal suffixes are dropped, but the brand's own capitalisation and

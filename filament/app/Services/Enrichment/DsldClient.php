@@ -2,6 +2,7 @@
 
 namespace App\Services\Enrichment;
 
+use App\Support\BrandKey;
 use App\Support\Gtin;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -29,6 +30,15 @@ use Illuminate\Support\Facades\Log;
  *
  * So a name-only match is recorded at low confidence, is never written into nutrition_values, and
  * exists to give a human a candidate to confirm.
+ *
+ * ── AND THE NAME-MATCH MUST AT LEAST BE THE SAME BRAND ────────────────────────────────────
+ * DSLD's search is a relevance ranker, not a brand filter: the top hit for "NOW Foods Ashwagandha"
+ * comes back filed under ZHOU, for "NOW Vitamin D-3" under Member's Mark, for "Sports Research
+ * Omega-3" under Spring Valley — 5 of 30 sampled iHerb products had a WRONG-BRAND top hit, each a
+ * real, complete panel for a product we do not sell. findFor() therefore keeps a name candidate only
+ * when BrandKey::affinity() says its brand is ours, and prefers the highest-affinity label. This is
+ * a filter on which candidate to SHOW a reviewer, never a licence to publish one: the barcode is
+ * still the only thing that writes a panel.
  *
  * ── A USEFUL SIDE EFFECT ──────────────────────────────────────────────────────────────────
  * DSLD publishes `upcSku`, and it validates as a GTIN. For a US-brand product with no barcode yet,
@@ -113,11 +123,37 @@ class DsldClient
             return null;
         }
 
-        $firstNameMatch = null;
+        /*
+         * ── THE FALLBACK MUST BE THE SAME BRAND, NOT MERELY THE TOP HIT ──────────────────────
+         * This method used to keep `$firstNameMatch ??= $label` — the first label returned, whatever
+         * brand it carried. Measured against the iHerb catalogue that was wrong on 5 of 30 sampled
+         * products: the top hit for "NOW Foods Ashwagandha" is filed under ZHOU, for "NOW Vitamin
+         * D-3" under Member's Mark, for "Sports Research Omega-3" under Spring Valley — a real,
+         * complete panel, for a product we do not sell, which recordObservations() would then attach
+         * to our page as a candidate AND propose that other product's barcode for. A wrong candidate
+         * barcode is the worst outcome this class has, because once confirmed it sends every future
+         * lookup to somebody else's item.
+         *
+         * So a name-match candidate is now kept only when its brand has affinity with ours, and the
+         * highest-affinity label wins (search rank breaks ties). The barcode path below is untouched:
+         * a UPC equal to ours is a deterministic identification and overrides any brand-string
+         * difference, so those hits are still fetched and checked even when the brand text diverges.
+         */
+        $bestCandidate = null;
+        $bestAffinity = 0;
 
         foreach ($hits as $hit) {
             $id = $hit['_id'] ?? null;
             if ($id === null) {
+                continue;
+            }
+
+            // Decide brand affinity from the search hit itself, before spending a request on the full
+            // label. With no barcode to verify against, a hit whose brand is not ours can never become
+            // anything — not a publication, not a candidate — so it is not worth fetching.
+            $affinity = BrandKey::affinity($brand, (string) ($hit['_source']['brandName'] ?? ''));
+
+            if ($gtin === null && $affinity === 0) {
                 continue;
             }
 
@@ -135,10 +171,13 @@ class DsldClient
                 ];
             }
 
-            $firstNameMatch ??= $label;
+            if ($affinity > $bestAffinity) {
+                $bestAffinity = $affinity;
+                $bestCandidate = $label;
+            }
         }
 
-        if ($firstNameMatch === null) {
+        if ($bestCandidate === null) {
             return null;
         }
 
@@ -146,7 +185,7 @@ class DsldClient
         // reviewer has something to look at — and so its upc can be proposed as a barcode — but the
         // confidence keeps it out of anything that publishes.
         return [
-            'label' => $firstNameMatch,
+            'label' => $bestCandidate,
             'match_method' => 'brand_name',
             'confidence' => 0.60,
         ];
