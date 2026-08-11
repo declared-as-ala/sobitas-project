@@ -664,7 +664,28 @@ class ApisController extends Controller
             ->with('sousCategorie:id,slug,designation_fr,categorie_id')
             ->select(self::PRODUCT_LISTING)
             ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
-            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars');
+            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars')
+            /*
+             * The SECOND product photograph, for the card's hover state.
+             *
+             * On an iHerb listing the first image is the front of the pack and the second is
+             * overwhelmingly the back — which on a supplement is the Supplement Facts panel. That is
+             * the single most useful thing a shopper can see without opening the page, so the card
+             * swaps to it on hover.
+             *
+             * ── WHY A CONSTRAINED EAGER LOAD AND NOT A JOIN ───────────────────────────────────
+             * This endpoint was taking 10.2s at per_page=100 until the brand payload was cut down,
+             * and it is walked page by page by both /shop and the sitemap. A join would multiply the
+             * product rows; `with()` is ONE extra query for the ids on this page, and the closure
+             * selects only two columns, so the ~19 other source_* columns (which include several
+             * large HTML blocks) never leave the database. `product_id` is not optional in that
+             * select: without the foreign key Eloquent cannot match the rows back and every relation
+             * silently comes back null.
+             *
+             * Legacy products have no staging row at all, so the relation is null and the card falls
+             * back to the cover exactly as before — which is what keeps the 309 untouched.
+             */
+            ->with(['externalCatalogSource:product_id,source_gallery_images']);
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -762,6 +783,43 @@ class ApisController extends Controller
         $this->normalizeCollectionImages($products, 'cover');
         $this->normalizeCollectionImages($brands, 'logo');
         $this->normalizeCollectionImages($categories, 'cover');
+
+        /*
+         * Flatten the staging relation to ONE string the card can use, and drop the relation.
+         *
+         * `hover_image` is the second product photograph — on an iHerb listing the first is the
+         * front of the pack and the second is the back, which on a supplement is the Supplement
+         * Facts panel. Showing it on hover puts the nutrition table one mouse-move away from the
+         * grid instead of one page load.
+         *
+         * The relation itself is UNSET afterwards, deliberately. Eloquent serialises every loaded
+         * relation, so leaving it on would ship `source_gallery_images` — up to twelve URLs per
+         * product — inside a payload this endpoint pays for on every page of the catalogue walk.
+         * That is the same mistake as the 364 KB brand blob, one level down, and the fix is the
+         * same: send the one value that gets rendered.
+         *
+         * `/l/` rather than the stored `/s/`: the gallery is captured at thumbnail size, and this
+         * URL goes into a next/image `src` sized for a card. ImportedSourceContent::largeVariant()
+         * performs the identical rewrite for the detail page, anchored on the same documented path
+         * shape, and a URL that does not match it is passed through untouched rather than mangled.
+         */
+        $products->each(function ($product): void {
+            $source = $product->relationLoaded('externalCatalogSource')
+                ? $product->getRelation('externalCatalogSource')
+                : null;
+
+            $gallery = $source?->source_gallery_images;
+            $second = is_array($gallery) && isset($gallery[1]) && is_string($gallery[1]) ? $gallery[1] : null;
+
+            $product->setAttribute(
+                'hover_image',
+                $second === null
+                    ? null
+                    : preg_replace('~(/images/[^/]+/[^/]+)/[smlkr]/(\d+\.jpg)$~', '$1/l/$2', $second)
+            );
+
+            $product->unsetRelation('externalCatalogSource');
+        });
 
         return response()->json([
             'products'   => $products,

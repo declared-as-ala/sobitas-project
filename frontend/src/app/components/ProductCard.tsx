@@ -240,6 +240,7 @@ export const ProductCard = memo(function ProductCard({
           scale={productData.imagePresentation.scale}
           product={product as any}
           priority={priority}
+          hoverImageSrc={(product as any).hover_image ?? null}
         />
 
         {/* Badges — top-left. Discount = the brand accent; Rupture / TOP VENTE = a dark chip.

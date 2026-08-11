@@ -27,6 +27,17 @@ interface PackCardImageProps {
   /** Image-frame background. 'dark' = the GPT card's dark gradient (product pops); 'light' keeps
    *  the previous white surface. */
   surface?: 'light' | 'dark';
+  /**
+   * The SECOND product photograph, revealed on hover.
+   *
+   * On an iHerb listing the first image is the front of the pack and the second is the back —
+   * which on a supplement is the Supplement Facts panel. Putting it one mouse-move from the grid
+   * is the single most useful thing a shopper can see without opening the page.
+   *
+   * Absent for the 309 legacy products (no staging row, so the API sends null) and the card
+   * behaves exactly as it did before.
+   */
+  hoverImageSrc?: string | null;
 }
 
 export function PackCardImage({
@@ -41,8 +52,12 @@ export function PackCardImage({
   product,
   priority = false,
   surface = 'light',
+  hoverImageSrc = null,
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
+  // A hover image that 404s must not leave a hole where the packshot was: on error we simply stop
+  // rendering the second layer and the front image, which is underneath it, shows through.
+  const [hoverFailed, setHoverFailed] = useState(false);
   const productHref = product ? buildProductUrlPath(product) : `/shop/${encodeURIComponent(slug || String(productId))}`;
 
   const isContain = mode === 'contain';
@@ -105,6 +120,44 @@ export function PackCardImage({
               quality={75}
               onError={() => setHasError(true)}
             />
+
+            {/*
+              THE BACK OF THE PACK, ON HOVER.
+
+              Stacked over the front image and faded in by the card's `group` hover, so the two
+              cross-fade in place rather than the layout shifting.
+
+              ── WHY IT IS GATED ON `[@media(hover:hover)]` ──────────────────────────────────
+              A touch device has no hover, and browsers emulate one on tap: without the gate the
+              first tap on a phone would swap the image instead of opening the product, which reads
+              as a broken card. The same guard is already used on this card's title colour and its
+              shadow, so the rule is consistent across the component.
+
+              `loading="lazy"` always — never `priority`. This image is invisible until a deliberate
+              hover, so preloading it on an above-the-fold card would compete with the LCP image for
+              bandwidth to show something nobody has asked for yet.
+
+              aria-hidden and an empty alt: it is the same product, and a screen reader announcing
+              the packshot twice is noise. The alt text on the front image already names it.
+            */}
+            {hoverImageSrc && !hoverFailed && (
+              <Image
+                src={hoverImageSrc}
+                alt=""
+                aria-hidden="true"
+                fill
+                className={cn(
+                  imageClasses,
+                  'pointer-events-none opacity-0 transition-opacity duration-300 ease-out',
+                  '[@media(hover:hover)]:group-hover:opacity-100'
+                )}
+                style={{ objectPosition: 'center center' }}
+                loading="lazy"
+                sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
+                quality={75}
+                onError={() => setHoverFailed(true)}
+              />
+            )}
           </span>
         ) : (
           <div

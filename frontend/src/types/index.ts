@@ -7,6 +7,15 @@ export interface ApiResponse<T> {
 
 // Product Types
 export interface Product {
+  /**
+   * The second product photograph, for the card's hover state.
+   *
+   * Sent by /api/all_products, derived from the import staging row's gallery: on an iHerb listing
+   * the first image is the front of the pack and the second is the back, which on a supplement is
+   * the Supplement Facts panel. Null for the 309 legacy products, which have no staging row.
+   */
+  hover_image?: string | null;
+
   id: number;
   slug: string;
   designation_fr: string;
