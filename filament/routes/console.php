@@ -182,7 +182,23 @@ Schedule::command('catalog:iherb:hydrate --include-neutral')
 // `cron()` rather than `everyTenMinutes()->at(...)`: `at()` sets a time of day
 // and is silently ignored on a sub-hourly frequency, so the offset this comment
 // describes would not have existed. The expression says what it does.
-Schedule::command('catalog:iherb:content')
+// ── `--include-filtered`: READ EVERY PRODUCT'S PAGE, INCLUDING THE ONES THE SLUG PREFILTER
+//    SET ASIDE ────────────────────────────────────────────────────────────────────────────
+// The owner's instruction is explicit and repeated: do not filter anything out of the import.
+// Without this flag the pass only ever reads pages for `hydrated` and `promoted` rows, so several
+// thousand `filtered_out` rows would never have their content read at all — and the prefilter that
+// set them aside is a KEYWORD match on a URL slug, which is a cheap heuristic, not a verdict.
+//
+// It costs nothing that matters and risks nothing that is visible:
+//   · scopeAwaitingContent() orders `promoted` → `hydrated` → `filtered_out`, so the products that
+//     are actually live keep their place at the front of the queue and gain no latency from this
+//   · the pass writes ONLY to `external_catalog_products`. Reading a page does not create a
+//     product, a URL or a page — promotion still requires a classified subcategory, so a shampoo
+//     whose page we read remains unsellable and unpublished exactly as before
+//
+// So the flag buys back the rows a keyword guessed wrong about, and leaves the gate that actually
+// protects the storefront untouched.
+Schedule::command('catalog:iherb:content --include-filtered')
     ->cron('5-59/10 * * * *')
     ->withoutOverlapping(15)
     ->when($catalogueReady)
