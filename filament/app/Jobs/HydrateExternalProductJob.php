@@ -6,6 +6,7 @@ use App\Models\ExternalCatalogProduct;
 use App\Models\ExternalCategoryMapping;
 use App\Services\Catalog\IHerb\IHerbClient;
 use App\Services\Catalog\IHerb\IHerbNormalizer;
+use App\Services\Enrichment\PoliteFetcher;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
@@ -98,8 +99,37 @@ class HydrateExternalProductJob implements ShouldBeUnique, ShouldQueue
         ])->save();
     }
 
-    public function handle(IHerbClient $client, IHerbNormalizer $normalizer): void
+    public function handle(IHerbClient $client, IHerbNormalizer $normalizer, PoliteFetcher $fetcher): void
     {
+        /*
+         * OUR OWN PAUSE IS NOT THIS PRODUCT'S FAULT — CHECK BEFORE CLAIMING ANYTHING.
+         *
+         * On 11/08/2026 the content pass took 5 failures on fr.iherb.com, which opened the circuit
+         * breaker for the shared `iherb.com` bucket (PoliteFetcher::bucket groups the two iHerb
+         * hostnames on purpose, so one pace and one breaker cover both). Every queued hydration job
+         * then ran: claim() moved its row to `hydrating`, the fetch returned null in microseconds
+         * without a request leaving the machine, and recordFailure() wrote `http:0 transient` and
+         * burned an attempt. Three of those per row, and 8,103 products were permanently `failed`
+         * in eleven minutes — from a THIRTY-MINUTE cooldown.
+         *
+         * Returning here leaves the row exactly as it was: still `queued`, attempts untouched, no
+         * status_reason. The next scheduler window re-dispatches it. That is the whole difference
+         * between "iHerb paused us for half an hour" and "8,000 products are gone", and it costs
+         * one cache read.
+         *
+         * NOT `$this->release()`: `tries = 1` means a released job is failed on its next pass, and
+         * the attempt budget that matters lives on the ROW rather than on the job (see the
+         * constructor's note). Doing nothing is the correct action when the correct action is to
+         * wait.
+         */
+        // `API_HOST`, not `PROVIDER`. PROVIDER is the slug 'iherb' — a provider key, not a
+        // hostname — and bucket() would map it to itself, so the guard would check a breaker key
+        // that is never written and NEVER FIRE. The bucket for both iHerb hostnames is the config
+        // pattern `iherb.com`, which bucket() derives from the real host by suffix.
+        if ($fetcher->isPaused(IHerbClient::API_HOST)) {
+            return;
+        }
+
         $row = $this->claim();
 
         // Somebody else got there first, or the row moved on. Not an error.

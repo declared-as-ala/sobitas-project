@@ -48,6 +48,17 @@ class IHerbClient
     private const SITEMAP_INDEX = 'https://www.iherb.com/sitemap_index.xml';
 
     /**
+     * The hostname the identity JSON is read from — a HOST, deliberately distinct from PROVIDER.
+     *
+     * PROVIDER is the slug stored on the staging row ('iherb'). Anything asking PoliteFetcher about
+     * pacing or the circuit breaker needs a HOSTNAME, because bucket() resolves the shared
+     * `iherb.com` bucket by matching a real host against the config patterns. Handing it the slug
+     * returns the slug, which points at a breaker key nothing ever writes — a guard that reads as
+     * correct and silently never fires.
+     */
+    public const API_HOST = 'tn.iherb.com';
+
+    /**
      * Paths this connector must never request, whatever anyone adds later.
      *
      * Checked on every fetch rather than trusted to code review. A future method that accidentally

@@ -157,6 +157,36 @@ class PoliteFetcher
      * change is that state stored under the OLD keys is ignored on deploy — worst case one extra
      * request before a breaker that was open re-opens.
      */
+    /**
+     * Are we DELIBERATELY PAUSED against this host right now?
+     *
+     * ── WHY A CALLER MUST BE ABLE TO ASK ──────────────────────────────────────────────────
+     * get() returns a bare `null` for every refusal it can make: an unparseable host, an open
+     * breaker, a robots.txt disallow, a 401/403/429, any non-2xx, an oversize body, a timeout.
+     * Callers therefore cannot tell "iHerb refused this product" from "WE decided to stop asking
+     * for half an hour", and on 11/08/2026 that cost 8,103 products.
+     *
+     * The sequence: the content pass took 5 failures on fr.iherb.com, which opened the breaker for
+     * the shared `iherb.com` bucket exactly as designed. Every queued hydration job then called
+     * get(), got `null` in microseconds without a request leaving the machine, and
+     * HydrateExternalProductJob classified it `http:0 transient` and burned an attempt. Three
+     * instant refusals per row, so a THIRTY-MINUTE COOLDOWN converted 8,103 rows to `failed`
+     * permanently — in eleven minutes, against a rate limit of 1.5 requests per second.
+     *
+     * The breaker is not a failure of the product being fetched. It is a decision by this class,
+     * about a host, and the row it happens to be pointed at must be untouched by it. A job that
+     * asks this first can return without claiming anything, and the next window picks the row up
+     * exactly where it was.
+     *
+     * Accepts a URL or a bare hostname so callers do not have to parse one to ask.
+     */
+    public function isPaused(string $hostOrUrl): bool
+    {
+        $host = str_contains($hostOrUrl, '://') ? $this->host($hostOrUrl) : $hostOrUrl;
+
+        return $host !== null && $this->breakerIsOpen($host);
+    }
+
     public function bucket(string $host): string
     {
         foreach (array_keys((array) config('enrichment.hosts', [])) as $pattern) {

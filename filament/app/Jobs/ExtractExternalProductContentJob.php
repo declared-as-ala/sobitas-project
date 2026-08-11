@@ -85,6 +85,23 @@ class ExtractExternalProductContentJob implements ShouldBeUnique, ShouldQueue
 
     public function handle(IHerbClient $client, IHerbPageExtractor $extractor, PoliteFetcher $fetcher): void
     {
+        /*
+         * SAME GUARD AS HydrateExternalProductJob, AND FOR THE SAME REASON.
+         *
+         * This pass is the one that OPENED the breaker on 11/08/2026 — five failures against
+         * fr.iherb.com, which PoliteFetcher::bucket() groups with tn.iherb.com under `iherb.com`
+         * deliberately, so one pause covers both. It then kept running into its own pause: every
+         * job claimed a row, was refused in microseconds without a request leaving the machine, and
+         * spent one of that row's attempts on a decision this class had made about a HOST.
+         *
+         * 7,077 content rows and 8,103 hydration rows were burned that way inside eleven minutes.
+         * Checking before claim() leaves the row untouched — `not read`, attempts intact — so the
+         * next window simply tries again once the cooldown expires.
+         */
+        if ($fetcher->isPaused(IHerbClient::contentHost())) {
+            return;
+        }
+
         $row = $this->claim();
 
         if ($row === null) {
