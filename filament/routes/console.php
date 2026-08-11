@@ -318,6 +318,88 @@ Schedule::command('products:enrich-dsld --limit=60 --apply')
 
 /*
 |--------------------------------------------------------------------------
+| Land the harvested iHerb product content that ships with the image
+|--------------------------------------------------------------------------
+| WHY A FILE, WHEN catalog:iherb:content ALREADY FETCHES THIS OVER HTTP.
+| Because on this deployment it does not. Measured against the live API on
+| 11/08/2026, ten consecutive imported products returned
+| `source_facts.content = null` and every staging column behind it was empty,
+| while the SAME product pages fetch perfectly from a developer machine.
+| Hydration reaches iHerb from this server (those products have prices, covers
+| and subcategories); the content pass does not. The HTTP pass stays scheduled
+| above and remains the right mechanism the day that changes — this entry
+| simply stops customers waiting for it.
+|
+| Writes ONLY to `external_catalog_products`, like every other entry in the
+| catalogue block. No product, price, stock or publication state is touched.
+| The customer-visible effect needs no promotion: ProductDetailResource builds
+| `source_facts.content` from the staging row live on every request, so a row
+| that gains a gallery and a Supplement Facts panel renders them on the next
+| page view.
+|
+| ── WHY THE LATCH IS KEYED ON THE FILE'S CONTENT HASH ─────────────────────
+| The import is idempotent (a row that already has content is skipped without
+| --overwrite), so a repeat run is harmless — but it is not free: it decompresses
+| ~6,700 records and issues a lookup for each. Latching on a fixed key would mean
+| shipping a LARGER data file later did nothing, silently, which is the failure
+| mode this project keeps meeting. Keying on sha1_file() makes the marker part of
+| the artefact: the same file runs once, a new file re-arms automatically, and
+| nobody has to remember to clear a cache key.
+|
+| rescue(..., false) on both the read and the write, for the reason the research
+| entry gives at length: an unreachable cache must degrade to "not yet imported"
+| — the safe direction, because the cost of running again is a no-op — and must
+| never throw out of a scheduled task.
+*/
+$catalogContentFile = base_path('database/catalog-content/iherb-content.jsonl.gz');
+
+Schedule::command('catalog:iherb:import-content')
+    ->hourly()
+    ->withoutOverlapping(30)
+    ->when(function () use ($catalogContentFile): bool {
+        if (! is_file($catalogContentFile)) {
+            return false;
+        }
+
+        $key = 'catalog.content.import.'.(rescue(fn () => sha1_file($catalogContentFile), '', false) ?: 'unknown');
+
+        return ! rescue(
+            fn () => \Illuminate\Support\Facades\Cache::has($key),
+            false,
+            false,
+        );
+    })
+    ->appendOutputTo(storage_path('logs/catalog-content-import.log'))
+    ->onSuccess(function () use ($catalogContentFile): void {
+        $hash = rescue(fn () => sha1_file($catalogContentFile), '', false) ?: 'unknown';
+
+        $latched = rescue(
+            fn () => \Illuminate\Support\Facades\Cache::forever(
+                'catalog.content.import.'.$hash,
+                now()->toIso8601String(),
+            ) !== false,
+            false,
+            false,
+        );
+
+        \Illuminate\Support\Facades\Log::info(
+            $latched
+                ? 'catalog:iherb:import-content ran; this data file is now marked imported. '
+                    .'Output: storage/logs/catalog-content-import.log.'
+                : 'catalog:iherb:import-content ran, but the completion marker could not be written '
+                    .'(cache unreachable). It will run again next hour, which is a no-op for rows that '
+                    .'already have content.',
+        );
+    })
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'catalog:iherb:import-content FAILED - product pages are still missing their gallery and '
+            .'Supplement Facts. See storage/logs/catalog-content-import.log.',
+        );
+    });
+
+/*
+|--------------------------------------------------------------------------
 | One-shot: land the research content that is already committed but unimported
 |--------------------------------------------------------------------------
 | filament/storage/app/research.json has been in the repository since
