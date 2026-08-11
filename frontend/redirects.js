@@ -112,7 +112,27 @@ function buildRedirects() {
 
     // ── Flat product slugs (old URLs without category prefix) ─────────────
     p('/accessoires-rack-jx-fitness', '/musculation/accessoires-rack-jx-fitness'),
-    p('/acides-amines', '/bcaa'),
+    /*
+     * `/acides-amines` IS A REAL RAYON NOW — the rule that used to send it to /bcaa is gone.
+     *
+     * It was correct when written: `acides-amines` was a dead slug inherited from the old site, and
+     * /bcaa was the nearest live page. It stopped being correct when the catalogue import added
+     * `acides-amines` to config/catalog.php's classification rules, which made it a subcategory the
+     * classifier assigns products to and which sous_categories therefore carries.
+     *
+     * The result was a page that could never be seen and a sitemap that contradicted itself: the
+     * live sitemap advertises https://protein.tn/acides-amines while this file answered it with a
+     * 308 to /bcaa. Submitting a URL for indexing and redirecting it away are opposite instructions,
+     * and it is the one defect a full crawl of all 699 advertised URLs turned up.
+     *
+     * Not a duplicate of /bcaa: the classifier treats `acides-amines` and `bcaa` as separate rayons
+     * (amino acids generally versus BCAA specifically), and both are in its slug list.
+     *
+     * Cross-checked at the time of this change: of the 45 subcategory slugs the classifier can
+     * assign, this was the ONLY one shadowed by a root-level redirect. Worth re-running that check
+     * whenever a rayon is added, because publication is now automatic and a shadowed rayon is
+     * invisible rather than noisy.
+     */
     p('/banc-de-musculation-developpe-incline', '/musculation'),
     p('/banc-reglable-mnd-fitness', '/musculation'),
     p('/bcaa-gluta-500g-scenit-nutrition', '/bcaa'),
@@ -219,7 +239,7 @@ function buildRedirects() {
     { source: '/brands/:path+', destination: '/brands', permanent: true },
 
     // ── /categorie/:path* ─────────────────────────────────────────────────
-    p('/categorie/acides-amines', '/bcaa'),
+    p('/categorie/acides-amines', '/acides-amines'),
     p('/categorie/complements-alimentaires', '/proteines'),
     p('/categorie/complements-d-entrainement', '/performance'),
     p('/categorie/equipements-et-accessoires-sportifs', '/shop'),
@@ -252,7 +272,7 @@ function buildRedirects() {
     //
     // The catch-all stays last for genuinely unknown slugs. Keep this list in slug order.
     p('/category/749-packs', '/packs'),
-    p('/category/acides-amines', '/bcaa'),
+    p('/category/acides-amines', '/acides-amines'),
     p('/category/ashwagandha', '/ashwagandha'),
     p('/category/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
     p('/category/bcaa', '/bcaa'),
@@ -297,7 +317,7 @@ function buildRedirects() {
     p('/category/:path*', '/shop'),
 
     // ── /subcategories/:slug ──────────────────────────────────────────────
-    p('/subcategories/acides-amines', '/bcaa'),
+    p('/subcategories/acides-amines', '/acides-amines'),
     p('/subcategories/boosters-hormonaux', '/boosters-hormonaux'),
     p('/subcategories/bruleurs-de-graisse', '/bruleurs-de-graisse'),
     p('/subcategories/ceinture-de-musculation', '/musculation'),
@@ -333,7 +353,7 @@ function buildRedirects() {
     p('/shop/cell-tech-creactor-120-servings-muscletech', '/shop'),
     p('/shop/citruargin-300-g', '/citrulline/citruargin-300-g-real-pharm'),
     p('/shop/citruargin-300-g/', '/citrulline/citruargin-300-g-real-pharm'),
-    p('/shop/complements-alimentaires/acides-amines', '/bcaa'),
+    p('/shop/complements-alimentaires/acides-amines', '/acides-amines'),
     p('/shop/complements-d-entrainement/pendant-l-entrainement', '/shop'),
     p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/shop'),
     p('/shop/crea-core-250g-procell', '/shop'),
