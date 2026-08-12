@@ -311,9 +311,27 @@ Schedule::command('catalog:iherb:promote --reindex')
 | Kept at a modest limit and off the hour: DSLD is a free public service run by
 | the NIH and there is no deadline here worth being rude to it for.
 */
-Schedule::command('products:enrich-dsld --limit=60 --apply')
+/*
+ * 300 a night, up from 60, because the input side changed underneath this entry.
+ *
+ * catalog:iherb:import-content landed barcodes on 6,721 staging rows in one pass, and
+ * `--recompose` copies each to products.gtin. At 60/night that queue drains in 112 days and the
+ * catalogue is still growing; at 300 it is about three weeks.
+ *
+ * ── THE POLITENESS ARITHMETIC, SINCE THIS IS SOMEONE ELSE'S PUBLIC SERVICE ────────────────
+ * DsldClient spaces every request by 500ms and identifies itself. findFor() spends one search plus
+ * a label fetch per BRAND-MATCHED candidate — and since the brand filter went in it stops fetching
+ * labels for candidates that are not ours, which is most of them, so the realistic cost is 2-4
+ * requests per product. 300 products is therefore roughly 5-10 minutes of traffic, once a night,
+ * against an API that publishes no rate limit at all. That is a guest's share, not a burden.
+ *
+ * The command only ever considers published products whose `nutrition_values` is empty, so this
+ * number is a ceiling on NEW work: once the backlog is cleared the nightly run finds nothing and
+ * costs one query.
+ */
+Schedule::command('products:enrich-dsld --limit=300 --apply')
     ->dailyAt('02:20')
-    ->withoutOverlapping(60)
+    ->withoutOverlapping(90)
     ->appendOutputTo(storage_path('logs/catalog-dsld.log'));
 
 /*
