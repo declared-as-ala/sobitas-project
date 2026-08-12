@@ -6,6 +6,7 @@
 
 import { getStorageUrl } from '@/services/api';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
@@ -615,7 +616,31 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   if (realBrand) {
     sanitized.brand = {
       '@type': 'Brand',
-      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(realBrand.toLowerCase().replace(/\s+/g, '-'))}`,
+      /*
+       * THE BRAND @id MUST BE THE BRAND PAGE'S REAL URL, AND IT WAS NOT.
+       *
+       * This was `realBrand.toLowerCase().replace(/\s+/g, '-')`, which collapses spaces and leaves
+       * every other character alone. Measured live on 12/08/2026 for "Nature's Way":
+       *
+       *     emitted   https://protein.tn/nature's-way   -> 404
+       *     the page  https://protein.tn/nature-s-way   -> 200
+       *
+       * An `@id` is an identifier Google resolves and follows; pointing it at a 404 tells Google
+       * the brand entity does not exist, on every product of that brand. Apostrophes, ampersands
+       * and dots are common in supplement brand names (Nature's Way, Doctor's Best, Nature's
+       * Bounty), so this was not one product — it was a whole class of them.
+       *
+       * brandNameToSlug is the function that ALREADY decides this site's brand URLs: it folds
+       * accents, turns every non-alphanumeric run into a single hyphen (so "Nature's Way" becomes
+       * "nature-s-way", matching the live page) and applies BRAND_SLUG_OVERRIDES, which exists
+       * because `app/api/` shadows the `(shop)/[slug]` route and the brand "API" would otherwise
+       * point at a route handler. Deriving the URL a second way here could only ever drift from
+       * the router, and did.
+       *
+       * encodeURIComponent stays as a belt-and-braces guard; the slug it now receives is already
+       * URL-safe, so it is a no-op rather than the thing producing %27.
+       */
+      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandNameToSlug(realBrand))}`,
       name: realBrand,
     };
   } else {
