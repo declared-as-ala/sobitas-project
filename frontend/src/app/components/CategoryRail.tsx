@@ -97,7 +97,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           `gap-3 sm:gap-4` and not more: the tiles are the content, the gutter is not. Anything
           past 16px starts competing with the band padding above and reintroduces the whitespace
           this change exists to remove. */}
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6 lg:gap-3">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -202,12 +202,12 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     height, so a two-line category name grows the plate instead of being squeezed.
                     16px also equals the container gutter, so the label sits on the same left rail
                     as the section heading above it. */}
-                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-2 px-3 py-3 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
+                <div className="flex min-h-[48px] flex-1 items-center justify-between gap-1.5 px-2.5 py-2.5 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[52px] sm:gap-2 sm:px-3 sm:py-3">
                   {/* 15px on phones (up from 13), 14 from `sm`. That inversion is deliberate: the
                       phone tile is the widest this label ever gets relative to its column, and it
                       is the only place the label is read at arm's length. Owner asked for bigger
                       mobile text specifically. */}
-                  <span className="min-w-0 font-display font-compressed text-[15px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 sm:text-sm">
+                  <span className="min-w-0 line-clamp-2 font-display font-compressed text-[13px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[14px]">
                     {label}
                   </span>
                   <ArrowRight

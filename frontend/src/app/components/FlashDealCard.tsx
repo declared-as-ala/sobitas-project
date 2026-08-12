@@ -176,7 +176,26 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
        The frame stays white ON PURPOSE. It sits on a near-black banner now, and a white card on
        dark ground is the highest-contrast, most "visible" object available — which is precisely
        what the owner asked for. It also means the card needs no dark variant of its own. */
-    <div className="group relative flex h-full w-full flex-col gap-2 overflow-hidden rounded-2xl border border-hairline bg-elevated p-3 font-poppins shadow-sm transition-[box-shadow,border-color] sm:flex-row sm:items-center sm:gap-3 [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+    /*
+      `.pt-plate`, NOT `bg-elevated`.
+
+      This card is a WHITE card sitting inside VentesFlashSection's `.pt-slab` banner, and it used
+      `bg-elevated` — which paints the light background but leaves the SLAB's ink tokens inherited.
+      styles/tokens.css says what that costs, in a comment written when the scope was designed:
+      "without the `color` line the slab's inherited ink (#C6C6CC) lands on a white card at 1.70:1.
+      Verified." That is what was on the live homepage — every flash-deal title rendered pale grey
+      on white, effectively unreadable, against a WCAG AA floor of 4.5:1.
+
+      `.pt-plate` exists for exactly this: it re-points the consumed token set back at `--page-*`,
+      so the card renders as a normal light card in both themes with no `dark:` variant. ProductCard
+      already opens with it, which is why product cards elsewhere on the same page were fine and
+      only these were not.
+
+      The rule, stated once: a light surface nested in a dark scope must RE-ENTER page scope, never
+      merely repaint its background. Painting the background alone changes what you see and not what
+      you inherit.
+    */
+    <div className="pt-plate group relative flex h-full w-full flex-col gap-2 overflow-hidden rounded-2xl border border-hairline p-3 font-poppins shadow-sm transition-[box-shadow,border-color] sm:flex-row sm:items-center sm:gap-3 [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"

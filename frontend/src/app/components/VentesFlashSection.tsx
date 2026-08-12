@@ -386,7 +386,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           Safari+VoiceOver drop list semantics, and the count is still worth announcing. */}
       <ul
         role="list"
-        className="grid grid-cols-2 gap-3 lg:grid-cols-4"
+        className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4"
       >
         {products.map((product) => (
           <li key={product.id}>
