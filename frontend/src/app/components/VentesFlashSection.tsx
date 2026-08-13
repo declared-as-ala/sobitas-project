@@ -324,7 +324,7 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           no request in front of a band that already lazy-loads four packshots, adds no third-party
           host to the critical path, and cannot 404 later. The hatch flips from white to black lines
           because it now sits on a light surface. */}
-      <div className="pt-plate relative overflow-hidden rounded-3xl border border-brand/25 bg-elevated px-4 py-5 shadow-lg sm:px-6 sm:py-7">
+      <div className="pt-plate relative overflow-hidden rounded-3xl border border-brand/25 bg-elevated px-4 py-5 shadow-lg sm:px-6 sm:py-6">
         {/* The warm brand wash — a TINT over the surface, so it composites on either theme. */}
         <div
           aria-hidden="true"

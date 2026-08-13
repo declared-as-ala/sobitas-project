@@ -97,13 +97,13 @@ function ProductBadges({
         </Badge>
       )}
       {isNew && (
-        <Badge variant="outline" className={cn('gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
-          <Sparkles className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Nouveau
+        <Badge variant="outline" className={cn('gap-1 bg-elevated text-ink-1 border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
+          <Sparkles className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />Nouveau
         </Badge>
       )}
       {isBestSeller && (
-        <Badge variant="outline" className={cn('gap-1 bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
-          <TrendingUp className="h-3 w-3 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />Top Vendu
+        <Badge variant="outline" className={cn('gap-1 bg-elevated text-ink-1 border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
+          <TrendingUp className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />Top Vendu
         </Badge>
       )}
     </>
@@ -532,13 +532,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
 
       <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-36 sm:pb-36 lg:pb-12">
         {/* Breadcrumb — single scrollable line on mobile (was flex-wrap → 2–3 tall rows); the long
             final crumb truncates on phones and the row swipes horizontally instead of eating height. */}
         {breadcrumbItems.length > 0 && (
-          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-xs sm:text-sm text-ink-3">
             <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
               {breadcrumbItems.map((item, i) => (
                 <li key={i} className="flex shrink-0 items-center gap-x-1.5">
@@ -548,7 +548,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       {item.name}
                     </Link>
                   ) : (
-                    <span className="max-w-[46vw] truncate whitespace-nowrap font-medium text-gray-900 dark:text-white sm:max-w-none" aria-current="page">{item.name}</span>
+                    <span className="max-w-[46vw] truncate whitespace-nowrap font-medium text-ink-1 sm:max-w-none" aria-current="page">{item.name}</span>
                   )}
                 </li>
               ))}
@@ -561,7 +561,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           <div className="hidden lg:block lg:col-span-5 min-w-0">
             <div className="sticky top-24 max-w-[520px] xl:max-w-[560px]">
               <div
-                className="relative w-full rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm group aspect-square min-h-[290px] xl:min-h-[350px] bg-gray-50 dark:bg-gray-900"
+                className="relative w-full rounded-xl overflow-hidden border border-hairline shadow-sm group aspect-square min-h-[290px] xl:min-h-[350px] bg-sunken"
                 onTouchStart={handleGalleryTouchStart}
                 onTouchEnd={handleGalleryTouchEnd}
               >
@@ -612,7 +612,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         'relative aspect-square rounded-lg overflow-hidden border transition-colors',
                         index === safeSelectedImage
                           ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
-                          : 'border-gray-100 dark:border-gray-800 hover:border-red-300'
+                          : 'border-hairline hover:border-red-300'
                       )}
                       aria-label={`Voir image ${index + 1}`}
                     >
@@ -641,7 +641,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {product.sous_categorie?.slug ? (
                   <Link
                     href={`/${product.sous_categorie.slug}`}
-                    className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-red-600 dark:text-red-400"
+                    className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-brand"
                   >
                     <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
                     {product.sous_categorie.designation_fr}
@@ -661,7 +661,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {/* Product Image - slightly smaller on mobile */}
               <div className="w-full max-w-[260px] sm:max-w-[320px] mx-auto">
                 <div
-                  className="relative rounded-xl overflow-hidden shadow-sm border border-gray-100 dark:border-gray-800 group w-full aspect-square bg-gray-50 dark:bg-gray-900"
+                  className="relative rounded-xl overflow-hidden shadow-sm border border-hairline group w-full aspect-square bg-sunken"
                   onTouchStart={handleGalleryTouchStart}
                   onTouchEnd={handleGalleryTouchEnd}
                 >
@@ -711,7 +711,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           'relative aspect-square rounded-lg overflow-hidden border transition-colors',
                           index === safeSelectedImage
                             ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
-                            : 'border-gray-100 dark:border-gray-800'
+                            : 'border-hairline'
                         )}
                         aria-label={`Voir image ${index + 1}`}
                       >
@@ -732,7 +732,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* 1. Title — mobile mirror of desktop H1; rendered as <p> to avoid duplicate H1 in DOM */}
               <div className="min-w-0 px-1">
-                <p className="font-display uppercase tracking-tight text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] break-words line-clamp-3">
+                <p className="font-display uppercase tracking-tight text-2xl sm:text-3xl font-bold text-ink-1 leading-[0.95] break-words line-clamp-3">
                   {product.designation_fr}
                 </p>
               </div>
@@ -758,7 +758,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         />
                       ))}
                     </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
+                    <span className="text-sm text-ink-2 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
                       ({rating.toFixed(1)}) · {reviewCount} avis
                     </span>
                   </button>
@@ -767,7 +767,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <>
                     {/* Separator only when there is something to its left. */}
                     {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
-                    <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                    <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-ink-2 hover:text-red-600 dark:hover:text-red-400">
                       {product.brand.designation_fr}
                     </Link>
                   </>
@@ -776,7 +776,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Meta Description - directly under reviews count */}
               {metaDescription && (
-                <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed px-1 line-clamp-4 whitespace-pre-wrap break-words">
+                <p className="text-sm text-ink-2 leading-relaxed px-1 line-clamp-4 whitespace-pre-wrap break-words">
                   {metaDescription}
                 </p>
               )}
@@ -787,7 +787,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-brand">{displayPrice} DT</span>
                       {oldPrice && (
                         <span className="font-display tracking-tight tabular-nums text-lg sm:text-xl text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
                       )}
@@ -810,7 +810,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {/* Arômes */}
                 {product.aromes && product.aromes.length > 0 && (
                   <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Arôme</p>
+                    <p className="text-sm font-semibold text-ink-1 mb-2">Arôme</p>
                     <div className="flex flex-wrap gap-2">
                       {product.aromes.map((arome) => {
                         const isSelected = selectedAromaId === arome.id;
@@ -822,7 +822,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             size="default"
                             className={cn(
                               'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                              isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                              isSelected && 'bg-brand hover:bg-brand-hover text-white'
                             )}
                             onClick={() => setSelectedAromaId(arome.id)}
                           >
@@ -837,7 +837,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {/* Quantity + running total */}
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
-                    <span className="text-sm font-semibold text-gray-900 dark:text-white">Quantité</span>
+                    <span className="text-sm font-semibold text-ink-1">Quantité</span>
                     <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                       <Button
                         variant="ghost"
@@ -862,7 +862,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </Button>
                     </div>
                   </div>
-                  <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(2)} DT</span></span>
+                  <span className="text-sm text-ink-2 tabular-nums">Total <span className="font-bold text-ink-1">{(displayPrice * quantity).toFixed(2)} DT</span></span>
                 </div>
               </div>
 
@@ -874,15 +874,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               )}
 
               {/* Trust row — borderless so the mobile column reads as clean content, not stacked cards */}
-              <div className="mx-1 grid grid-cols-3 gap-2 border-t border-gray-100 dark:border-gray-800 pt-4">
+              <div className="mx-1 grid grid-cols-3 gap-2 border-t border-hairline pt-4">
                 {[
                   { Icon: Truck, label: 'Livraison 24–72h' },
                   { Icon: CreditCard, label: 'Paiement à la livraison' },
                   { Icon: Shield, label: '100% authentique' },
                 ].map(({ Icon, label }) => (
                   <div key={label} className="flex flex-col items-center gap-1 text-center">
-                    <Icon className="h-5 w-5 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
-                    <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{label}</span>
+                    <Icon className="h-5 w-5 text-brand" strokeWidth={1.75} aria-hidden="true" />
+                    <span className="text-[11px] leading-tight text-ink-3">{label}</span>
                   </div>
                 ))}
               </div>
@@ -896,7 +896,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {product.sous_categorie?.slug ? (
                     <Link
                       href={`/${product.sous_categorie.slug}`}
-                      className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-red-600 dark:text-red-400 hover:underline"
+                      className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-brand hover:underline"
                     >
                       <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
                       {product.sous_categorie.designation_fr}
@@ -914,7 +914,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 </div>
 
-                <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-gray-900 dark:text-white leading-[0.95] line-clamp-3 break-words">
+                <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-ink-1 leading-[0.95] line-clamp-3 break-words">
                   {product.designation_fr}
                 </h1>
 
@@ -945,14 +945,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
                         ))}
                       </div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
+                      <span className="text-sm text-ink-2 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
                     </button>
                   )}
                   {product.brand?.designation_fr && (
                     <>
                       {/* Separator only when there is something to its left. */}
                       {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
-                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400">
+                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-ink-2 hover:text-red-600 dark:hover:text-red-400">
                         {product.brand.designation_fr}
                       </Link>
                     </>
@@ -960,7 +960,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
 
                 {metaDescription && (
-                  <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words">{metaDescription}</p>
+                  <p className="text-sm text-ink-2 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words">{metaDescription}</p>
                 )}
 
                 {/* BUY CARD — price, variant, quantity, CTAs, trust grouped into one clean block */}
@@ -969,7 +969,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="font-display font-bold tracking-tight tabular-nums text-3xl xl:text-4xl text-red-600 dark:text-red-400">{displayPrice} DT</span>
+                        <span className="font-display font-bold tracking-tight tabular-nums text-3xl xl:text-4xl text-brand">{displayPrice} DT</span>
                         {oldPrice && (
                           <span className="font-display tracking-tight tabular-nums text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
                         )}
@@ -992,7 +992,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {/* Arômes */}
                   {product.aromes && product.aromes.length > 0 && (
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 dark:text-white mb-2">Arôme</p>
+                      <p className="text-sm font-semibold text-ink-1 mb-2">Arôme</p>
                       <div className="flex flex-wrap gap-2">
                         {product.aromes.map((arome) => {
                           const isSelected = selectedAromaId === arome.id;
@@ -1004,7 +1004,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               size="default"
                               className={cn(
                                 'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                                isSelected && 'bg-red-600 hover:bg-red-700 text-white'
+                                isSelected && 'bg-brand hover:bg-brand-hover text-white'
                               )}
                               onClick={() => setSelectedAromaId(arome.id)}
                             >
@@ -1019,7 +1019,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {/* Quantity + running total on one row */}
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-gray-900 dark:text-white">Quantité</span>
+                      <span className="text-sm font-semibold text-ink-1">Quantité</span>
                       <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
                         <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
                           <Minus className="h-4 w-4" />
@@ -1030,14 +1030,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         </Button>
                       </div>
                     </div>
-                    <span className="text-sm text-gray-600 dark:text-gray-400 tabular-nums">Total <span className="font-bold text-gray-900 dark:text-white">{(displayPrice * quantity).toFixed(2)} DT</span></span>
+                    <span className="text-sm text-ink-2 tabular-nums">Total <span className="font-bold text-ink-1">{(displayPrice * quantity).toFixed(2)} DT</span></span>
                   </div>
 
                   {/* CTAs */}
                   <div className="flex flex-col gap-2">
                     <Button
                       size="default"
-                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
+                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-bold"
                       onClick={handleAddToCart}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -1047,7 +1047,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Button
                       size="default"
                       variant="outline"
-                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
                       onClick={handleQuickOrderClick}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -1064,8 +1064,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       { Icon: Shield, label: '100% authentique' },
                     ].map(({ Icon, label }) => (
                       <div key={label} className="flex flex-col items-center gap-1 text-center">
-                        <Icon className="h-4 w-4 text-red-600 dark:text-red-400" strokeWidth={1.75} aria-hidden="true" />
-                        <span className="text-[11px] leading-tight text-gray-500 dark:text-gray-400">{label}</span>
+                        <Icon className="h-4 w-4 text-brand" strokeWidth={1.75} aria-hidden="true" />
+                        <span className="text-[11px] leading-tight text-ink-3">{label}</span>
                       </div>
                     ))}
                   </div>
@@ -1073,7 +1073,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                 {/* Secondary meta: tags + SKU (de-emphasized, below the buy card) */}
                 {((product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-gray-500 dark:text-gray-400">
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
                     {product.tags?.map((tag) => (
                       <Link
                         key={tag.id}
@@ -1095,7 +1095,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         </div>
 
         {/* Description / Nutrition / Questions — full width; spacing so sections never overlap */}
-        <section className="mx-auto w-full pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10" aria-label="Description et informations produit">
+        <section className="mx-auto w-full pt-8 sm:pt-10 lg:pt-12 pb-6 sm:pb-8 border-t border-hairline mt-8 sm:mt-10" aria-label="Description et informations produit">
           <div className="w-full mb-0">
             {(() => {
               const hasNutritionContent = product.nutrition_values != null &&
@@ -1127,9 +1127,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     )}
                   </TabsList>
 
-                  <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
-                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-gray-900 dark:text-white">
+                  <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
+                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
                       {product.zone1 || 'Description du produit'}
                     </h2>
                     {/*
@@ -1154,15 +1154,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
                           {sourceFacts.map((row) => (
                             <div key={row.key} className="contents">
-                              <dt className="font-medium text-gray-900 dark:text-white">{row.label}</dt>
-                              <dd className="text-gray-600 dark:text-gray-400">{row.value}</dd>
+                              <dt className="font-medium text-ink-1">{row.label}</dt>
+                              <dd className="text-ink-2">{row.value}</dd>
                             </div>
                           ))}
                         </dl>
                       );
                     })()}
                     <div
-                      className={`text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
                       // top-level headings on the page whose only h1 should be the product name —
                       // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
@@ -1172,7 +1172,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <button
                       type="button"
                       onClick={() => setDescExpanded(!descExpanded)}
-                      className="text-sm font-medium text-red-600 dark:text-red-400 hover:underline mt-3"
+                      className="text-sm font-medium text-brand hover:underline mt-3"
                     >
                       {descExpanded ? 'Voir moins' : 'Lire plus'}
                     </button>
@@ -1213,17 +1213,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       if (!hasProductSourceContent(product)) return null;
 
                       return (
-                        <div className="mt-8 space-y-6 border-t border-gray-100 dark:border-gray-800 pt-6">
+                        <div className="mt-8 space-y-6 border-t border-hairline pt-6">
                           {sections.map((section) => {
                             const html = sanitizeRichHtml(section.html);
                             if (!html) return null;
                             return (
                               <section key={section.key}>
-                                <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-2 text-gray-900 dark:text-white">
+                                <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-2 text-ink-1">
                                   {section.heading}
                                 </h3>
                                 <div
-                                  className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                                  className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white"
                                   dangerouslySetInnerHTML={{ __html: html }}
                                 />
                               </section>
@@ -1232,14 +1232,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                           {gallery.length > 0 && (
                             <section>
-                              <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-3 text-gray-900 dark:text-white">
+                              <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-3 text-ink-1">
                                 Photos du produit
                               </h3>
                               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                 {gallery.map((url, i) => (
                                   <div
                                     key={url}
-                                    className="relative aspect-square rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-800"
+                                    className="relative aspect-square rounded-xl overflow-hidden border border-hairline bg-white dark:bg-gray-800"
                                   >
                                     <Image
                                       src={url}
@@ -1264,7 +1264,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
+                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
                     {(() => {
                       const nutritionImages = Array.isArray((product as any).nutrition_images)
                         ? ((product as any).nutrition_images as string[]).filter(Boolean)
@@ -1284,8 +1284,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                        */
                       const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
                       return (
-                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
-                          <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-hairline">
+                          <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-ink-1">
                             {product.zone3 || 'Valeurs Nutritionnelles'}
                           </h2>
 
@@ -1296,7 +1296,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 <button
                                   type="button"
                                   onClick={() => setNutritionLightbox(0)}
-                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-gray-100 dark:border-gray-800 shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
+                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-hairline shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
                                   aria-label="Agrandir l'image nutritionnelle"
                                 >
                                   <Image
@@ -1343,7 +1343,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           {hasNutritionContent ? (
                             <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                               <div
-                                className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                                className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
                                 dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
                               />
                             </div>
@@ -1366,7 +1366,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           {sourceNutritionHtml && (
                             <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                               <div
-                                className="nutrition-content text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                                className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
                                 dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
                               />
                               {/*
@@ -1390,7 +1390,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           */}
                           {!hasNutritionContent && !hasNutritionImages && !sourceNutritionHtml && (
                             <div className="text-center py-6 sm:py-8">
-                              <p className="text-gray-500 dark:text-gray-400 text-sm sm:text-base">
+                              <p className="text-ink-3 text-sm sm:text-base">
                                 Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
                               </p>
                             </div>
@@ -1460,9 +1460,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     })()}
                   </TabsContent>
 
-                  <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-gray-100 dark:border-gray-800">
-                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-gray-900 dark:text-white">
+                  <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
+                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
                       {product.zone4 || 'Questions Fréquentes'}
                     </h2>
                     {hasProductFaq ? (
@@ -1470,13 +1470,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {productFaqItems.map((item) => (
                           <div
                             key={item.id}
-                            className="border-b border-gray-100 dark:border-gray-800 pb-5 last:border-0 last:pb-0"
+                            className="border-b border-hairline pb-5 last:border-0 last:pb-0"
                           >
-                            <h4 className="font-semibold text-gray-900 dark:text-white mb-2 flex items-start gap-2">
-                              <span className="text-red-600 dark:text-red-400 shrink-0">Q.</span>
+                            <h4 className="font-semibold text-ink-1 mb-2 flex items-start gap-2">
+                              <span className="text-brand shrink-0">Q.</span>
                               <span>{item.q || '—'}</span>
                             </h4>
-                            <div className="pl-6 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed whitespace-pre-wrap">
+                            <div className="pl-6 text-sm sm:text-base text-ink-2 leading-relaxed whitespace-pre-wrap">
                               {item.a}
                             </div>
                           </div>
@@ -1484,7 +1484,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                     ) : hasLegacyQuestionsHtml ? (
                       <div
-                        className="text-base text-gray-600 dark:text-gray-400 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
                         dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
                       />
                     ) : null}
@@ -1498,10 +1498,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             {/* Avis clients — below tabs (no longer sidebar) */}
             <div
               id="reviews"
-              className="min-w-0 pt-8 sm:pt-10 border-t border-gray-100 dark:border-gray-800 mt-8 sm:mt-10"
+              className="min-w-0 pt-8 sm:pt-10 border-t border-hairline mt-8 sm:mt-10"
             >
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-gray-900 dark:text-white border-b border-gray-100 dark:border-gray-800 pb-3 sm:pb-4">Avis clients</h2>
+              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-ink-1 border-b border-hairline pb-3 sm:pb-4">Avis clients</h2>
 
               {reviewCount > 0 ? (
                 <>
@@ -1509,10 +1509,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <div className="grid gap-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6">
                     <div className="flex flex-col items-center sm:items-start sm:border-r sm:border-gray-200 sm:pr-8 dark:sm:border-gray-800">
                       <div className="flex items-baseline gap-1.5">
-                        <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-gray-900 dark:text-white">
+                        <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-ink-1">
                           {rating > 0 ? rating.toFixed(1) : '–'}
                         </span>
-                        <span className="text-gray-500 dark:text-gray-400 text-base tabular-nums">/ 5</span>
+                        <span className="text-ink-3 text-base tabular-nums">/ 5</span>
                       </div>
                       <div className="mt-1.5 flex items-center gap-1">
                         {[1, 2, 3, 4, 5].map((i) => (
@@ -1522,7 +1522,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           />
                         ))}
                       </div>
-                      <p className="mt-2 text-xs sm:text-sm text-gray-500 dark:text-gray-400">Basé sur {reviewCount} avis</p>
+                      <p className="mt-2 text-xs sm:text-sm text-ink-3">Basé sur {reviewCount} avis</p>
                     </div>
                     <div className="space-y-1.5">
                       {[5, 4, 3, 2, 1].map((starLevel) => {
@@ -1530,13 +1530,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
                         return (
                           <div key={starLevel} className="flex items-center gap-2">
-                            <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-gray-600 dark:text-gray-400 tabular-nums">
+                            <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
                               {starLevel} <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
                             </span>
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                               <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
                             </div>
-                            <span className="w-7 shrink-0 text-right text-xs text-gray-500 dark:text-gray-400 tabular-nums">{count}</span>
+                            <span className="w-7 shrink-0 text-right text-xs text-ink-3 tabular-nums">{count}</span>
                           </div>
                         );
                       })}
@@ -1555,12 +1555,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       const initial = reviewerName.slice(0, 1).toUpperCase();
                       return (
                         <li key={review.id} className="flex gap-3 py-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 font-display text-sm font-bold text-red-600 dark:bg-red-950/40 dark:text-red-400">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 font-display text-sm font-bold text-brand dark:bg-red-950/40">
                             {initial}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-semibold text-gray-900 dark:text-white">{reviewerName}</span>
+                              <span className="truncate text-sm font-semibold text-ink-1">{reviewerName}</span>
                               <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">
                                 {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                               </span>
@@ -1589,7 +1589,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       Charger plus d'avis ({sortedReviews.length - reviewsToShowOnPage.length} restants sur {reviewCount})
                     </Button>
                   ) : (
-                    <p className="text-sm text-center text-gray-500 dark:text-gray-400">
+                    <p className="text-sm text-center text-ink-3">
                       Tous les avis sont affichés ({reviewCount})
                     </p>
                   )}
@@ -1598,7 +1598,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
+                      className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1607,7 +1607,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Button
                       onClick={() => router.push('/login')}
                       variant="outline"
-                      className="w-full border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      className="w-full border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       Connectez-vous pour laisser un avis
@@ -1616,13 +1616,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </>
               ) : (
                 <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-gray-600 dark:text-gray-400 text-center mb-4">
+                  <p className="text-sm text-ink-2 text-center mb-4">
                     Aucun avis pour le moment
                   </p>
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
+                      className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1631,7 +1631,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Button
                       onClick={() => router.push('/login')}
                       variant="outline"
-                      className="w-full border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      className="w-full border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       Connectez-vous pour laisser un avis
@@ -1643,10 +1643,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {/* Review Form */}
               {showReviewForm && isAuthenticated && (
                 <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-red-200 dark:border-red-900/50 min-w-0">
-                  <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-gray-900 dark:text-white">Votre avis</h4>
+                  <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
                   <div className="space-y-2 sm:space-y-3">
                     <div>
-                      <label className="block text-xs sm:text-sm font-semibold mb-2 text-gray-900 dark:text-white">Note *</label>
+                      <label className="block text-xs sm:text-sm font-semibold mb-2 text-ink-1">Note *</label>
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label={`Noter ${star} étoile${star > 1 ? 's' : ''}`}>
@@ -1656,12 +1656,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-semibold mb-1 text-gray-900 dark:text-white">Commentaire (optionnel)</label>
-                      <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
+                      <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">Commentaire (optionnel)</label>
+                      <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-ink-1 text-sm" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
                       <p className="text-xs mt-0.5 text-gray-500">{reviewComment.length}/500</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold" size="sm">
+                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold" size="sm">
                         {isSubmittingReview ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Publication...</> : 'Publier'}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); }}>Annuler</Button>
@@ -1685,7 +1685,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {officialVideoId && (
           <div className="min-w-0">
             <SectionHeader kicker="En vidéo" title="Vidéo officielle" />
-            <div className="overflow-hidden rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="overflow-hidden rounded-xl border border-hairline">
               <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
                 <iframe
                   src={embedUrl(officialVideoId)}
@@ -1699,7 +1699,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </div>
             </div>
             {initialProduct.official_video?.channel && (
-              <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+              <p className="mt-2 text-sm text-ink-2">
                 Vidéo publiée par {initialProduct.official_video.channel}.
               </p>
             )}
@@ -1716,10 +1716,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {comparisonRows.length > 0 && (
           <div className="min-w-0">
             <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
-            <div className="overflow-x-auto rounded-xl border border-gray-100 dark:border-gray-800">
+            <div className="overflow-x-auto rounded-xl border border-hairline">
               <table className="w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-50 dark:bg-gray-900">
+                  <tr className="bg-sunken">
                     <th scope="col" className="p-3 text-left font-semibold">Produit</th>
                     <th scope="col" className="p-3 text-left font-semibold">Marque</th>
                     <th scope="col" className="p-3 text-left font-semibold">Format</th>
@@ -1733,7 +1733,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       key={row.id}
                       className={row.isCurrent ? 'bg-orange-50/60 dark:bg-orange-950/20' : undefined}
                     >
-                      <th scope="row" className="border-t border-gray-100 p-3 text-left font-normal dark:border-gray-800">
+                      <th scope="row" className="border-t border-hairline p-3 text-left font-normal">
                         {row.isCurrent ? (
                           <span aria-current="true" className="font-semibold">
                             {row.name} <span className="font-normal text-gray-500">(cette page)</span>
@@ -1744,13 +1744,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           </Link>
                         )}
                       </th>
-                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.brand || '—'}</td>
-                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">{row.format || '—'}</td>
-                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                      <td className="border-t border-hairline p-3">{row.brand || '—'}</td>
+                      <td className="border-t border-hairline p-3">{row.format || '—'}</td>
+                      <td className="border-t border-hairline p-3">
                         {formatTnd(row.price)}
                         {row.hasPromo && <span className="ml-1 text-green-700 dark:text-green-400">promo</span>}
                       </td>
-                      <td className="border-t border-gray-100 p-3 dark:border-gray-800">
+                      <td className="border-t border-hairline p-3">
                         {row.inStock ? 'En stock' : 'En rupture'}
                       </td>
                     </tr>
@@ -1785,7 +1785,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
       {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}
       <div
-        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-white dark:bg-gray-950 border-t border-gray-100 dark:border-gray-800 px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-sticky-cta"
+        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-canvas border-t border-hairline px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-sticky-cta"
         // Was z-50 — above the tab bar — so this bar painted over the raised Boutique tile on
         // every product page. Now below it, with `--tabbar-raise` of bottom padding so the tile
         // overlaps this surface and never these buttons. dark:bg-gray-950 matches the tab bar so
@@ -1796,14 +1796,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         <div className="w-full mx-auto max-w-7xl flex flex-col gap-2">
           <div className="flex items-center gap-3">
             <div className="flex flex-col leading-tight shrink-0">
-              <span className="text-[10px] font-display uppercase tracking-wide text-gray-500 dark:text-gray-400">Total</span>
-              <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
+              <span className="text-[10px] font-display uppercase tracking-wide text-ink-3">Total</span>
+              <span className="font-display font-bold tracking-tight tabular-nums text-lg text-brand">
                 {(displayPrice * quantity).toFixed(2)} DT
               </span>
             </div>
             <Button
               size="default"
-              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-bold"
+              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-bold"
               onClick={handleAddToCart}
               disabled={stockStatus.isOutOfStock}
               aria-label="Ajouter au panier"
@@ -1815,7 +1815,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           <Button
             size="default"
             variant="outline"
-            className="w-full min-h-[44px] h-auto py-2 text-sm bg-transparent border-red-600 text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 dark:text-red-400 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+            className="w-full min-h-[44px] h-auto py-2 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
             onClick={handleQuickOrderClick}
             disabled={stockStatus.isOutOfStock}
             aria-label="Commander maintenant"
