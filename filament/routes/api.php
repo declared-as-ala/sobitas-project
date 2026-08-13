@@ -3,6 +3,7 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApisController;
+use App\Http\Controllers\Api\CatalogHealthController;
 use App\Http\Controllers\Api\ClientController;
 use App\Http\Controllers\Api\CommandeController;
 use App\Http\Controllers\Api\CouponController;
@@ -105,6 +106,22 @@ Route::post('/send_mail', [ApisController::class, 'send_email'])->middleware(['a
 
 // Google Merchant Center & Meta Catalog feed (public, cached 30 min)
 Route::middleware(['cache.api:1800', 'cache.headers.api:1800'])->get('/merchant-feed', [ProductFeedController::class, 'feed']);
+
+/*
+ * Content-pipeline health. Aggregate COUNTS ONLY — no row, slug, URL, price or credential.
+ *
+ * Unauthenticated on purpose. The commands that answer these questions
+ * (`catalog:iherb:content --status`, `catalog:iherb:promote --status`) all require a shell, and SSH
+ * to this host has been failing on password auth since 10/08 — so on 14/08 the question "why is
+ * every imported product noindexed" had to be answered by sampling /product_details forty times and
+ * inferring the staging state from what did and did not appear in the payload. The pipeline had
+ * excellent diagnostics and no way to read them.
+ *
+ * The endpoint is throttled and cached rather than gated, because a token nobody can retrieve
+ * without SSH would reproduce the exact problem it exists to solve.
+ */
+Route::middleware(['throttle:30,1', 'cache.headers.api:300'])
+    ->get('/catalog_health', CatalogHealthController::class);
 
 // Auth — login + register throttled to blunt credential-stuffing / account spam
 Route::middleware('throttle:10,1')->post('/login', [ClientController::class, 'login']);
