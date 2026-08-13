@@ -39,9 +39,12 @@ const config: Config = {
           "system-ui",
           "sans-serif",
         ],
-        // Poppins — the GPT product-card typeface. Scoped via `font-poppins` (card-first rollout).
+        // `font-poppins` NOW RESOLVES TO INTER, and the utility is kept only so the 13 cards using
+        // it do not need touching. Poppins was a card-only prototype and its own stack already
+        // listed Inter as the next step; the family was dropped because every next/font/google
+        // import is a build-time fetch of fonts.gstatic.com, and one of those failing took a whole
+        // deploy down on 13/08/2026. Retire the utility when those 13 call sites are next edited.
         poppins: [
-          "var(--font-poppins)",
           "var(--font-inter)",
           "system-ui",
           "sans-serif",

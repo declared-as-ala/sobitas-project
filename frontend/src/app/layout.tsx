@@ -1,5 +1,30 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Arabic, Archivo, Poppins } from "next/font/google";
+/*
+ * TWO FAMILIES, DOWN FROM FOUR.
+ *
+ * Every next/font/google family is a BUILD-TIME FETCH of fonts.gstatic.com, and on 13/08/2026 one
+ * of them failed: next/font exhausted its three internal retries on Noto Sans Arabic and threw
+ * `TypeError: Cannot read properties of null (reading '1')`, taking the whole deploy down with no
+ * code change involved. Four families is four chances for that per build; two is two.
+ *
+ * WHAT WENT, AND WHY IT IS SAFE:
+ *   Poppins            13 uses of `font-poppins`, a card-only prototype. Its own Tailwind stack
+ *                      already listed var(--font-inter) as the next step, so those cards now render
+ *                      in Inter — the face the rest of the body already uses.
+ *   Noto Sans Arabic   `font-arabic` IS NOT IN tailwind.config.ts at all, so that class was always
+ *                      a no-op. The real consumer is globals.css, which declares
+ *                      `var(--font-arabic), "Noto Sans Arabic", "Segoe UI", Tahoma, Arial` — a
+ *                      complete Arabic fallback chain that resolves on every modern device without
+ *                      the download.
+ *
+ * WHAT STAYED, AND WHY NOT ONE FAMILY:
+ *   Archivo  309 uses of `font-display` — the condensed athletic face on every heading, price,
+ *            badge and countdown. It IS the storefront's visual identity.
+ *   Inter    the body/UI face, applied through `sans`.
+ * Collapsing to a single family would mean setting body copy in a condensed display face, which is
+ * a legibility regression on the paragraphs that actually get read. Two is the honest floor.
+ */
+import { Inter, Archivo } from "next/font/google";
 import { Suspense } from "react";
 
 import Script from "next/script";
@@ -32,17 +57,6 @@ const inter = Inter({
   variable: "--font-inter",
   adjustFontFallback: true,
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
-});
-
-const notoArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "600", "700"],
-  display: "swap",
-  variable: "--font-arabic",
-  // The site default is French; the Arabic subset must NOT be preloaded on every page
-  // (it added ~4 render-blocking font requests to a French-default site). It is still
-  // applied via the CSS variable when the user switches to Arabic (dir=rtl).
-  preload: false,
 });
 
 /**
@@ -94,15 +108,6 @@ const archivo = Archivo({
 // Poppins — the typeface of the new GPT-designed product card. Scoped to the card for now (used
 // via the `font-poppins` utility), not preloaded (below-the-fold, and the body stays Inter under
 // the "card-first" rollout). Will widen to the rest of the site as more prototypes land.
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-poppins",
-  preload: false,
-  fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
-});
-
 const SITE_TITLE_DEFAULT =
   'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie';
 const SITE_DESCRIPTION =
@@ -229,7 +234,7 @@ export default async function RootLayout({
   const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${archivo.variable} ${poppins.variable}`}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${archivo.variable}`}>
       <head>
         {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
             same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously
