@@ -82,7 +82,27 @@ class ApisController extends Controller
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
         'qte', 'rupture', 'force_out_of_stock', 'low_stock_threshold',
-        'brand_id', 'sous_categorie_id', 'meta_title', 'meta_description', 'seo_title', 'seo_description',
+        'brand_id', 'sous_categorie_id',
+        /*
+         * meta_title, meta_description, seo_title and seo_description ARE DELIBERATELY ABSENT.
+         *
+         * They were 407 of the 920 bytes each product costs — 44% of the payload — and NOTHING
+         * reads them from this endpoint. Verified by grep across the whole frontend: the shop grid
+         * and ProductCard never touch them, and the only documented consumer of this projection,
+         * the sitemap builder, reads exactly three fields (seo_robots_index, updated_at,
+         * created_at). Product pages get their own meta from /product_details, a different
+         * projection entirely.
+         *
+         * The cost was not theoretical. /shop embeds the WHOLE catalogue in its RSC payload because
+         * ShopPageClient filters client-side, so at 3,087 products the page transferred 4.87 MB of
+         * HTML — ten times the homepage. On the mobile connections that are most of this site's
+         * traffic that is a page which appears to hang, which is what the owner reported as the
+         * site being down. These four columns alone were ~1.26 MB of it.
+         *
+         * This does not fix the architecture — the whole-catalogue walk is still the real problem
+         * and still needs server-side pagination — but it removes a quarter of the weight for the
+         * cost of four strings nobody was reading.
+         */
         // seo_robots_index is here for ONE consumer: the sitemap builder. sitemapData.ts refuses to
         // submit a URL that renders <meta robots="noindex"> — but this projection is the only thing
         // /all_products returns, it carried no robots column at all, and /product_details (the only
