@@ -981,12 +981,40 @@ class ApisController extends Controller
          * productsByCategoryId() below already selects its brand columns this way; this brings the
          * busiest endpoint in line with it.
          */
-        $brands = Brand::whereIn(
-            'id',
-            Product::where('publier', 1)->whereNotNull('brand_id')->select('brand_id')
-        )->select('id', 'designation_fr', 'slug', 'logo', 'alt_cover')->get();
+        /*
+         * ── ?light=1 DROPS THE TWO SETS THAT DOMINATE THIS RESPONSE ──────────────────────────
+         *
+         * Measured against production on 13/08/2026, at per_page=12:
+         *
+         *     products     12,011 bytes   (12 rows — what the caller asked for)
+         *     brands       56,111 bytes   (566 rows — 4.7x the products)
+         *     categories      761 bytes
+         *
+         * The brand list is a FIXED cost paid on every single request, and the iHerb import took it
+         * from 84 brands to 566. Two callers pay it for nothing:
+         *
+         *   • The sitemap crawler walks ~107 pages of this endpoint and reads only `products`. That
+         *     is roughly 6 MB of brand JSON built, encoded and transferred per sitemap rebuild —
+         *     on the endpoint whose worker-pool saturation took admin.protein.tn down with 504s.
+         *   • /shop already receives the full brand list from getAllBrands(), and its facet counts
+         *     from /api/shop_facets. `productsData.brands` is used only as a fallback lookup behind
+         *     that same list, so it is pure duplication.
+         *
+         * Opt-in rather than a changed default: /offres and the category fallback clients still read
+         * `brands` off this response, and silently emptying it for them would blank their filter
+         * rails with a 200 on every request — the exact class of invisible failure this endpoint has
+         * already produced twice.
+         */
+        $light = $request->boolean('light');
 
-        $categories = Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
+        $brands = $light
+            ? collect()
+            : Brand::whereIn(
+                'id',
+                Product::where('publier', 1)->whereNotNull('brand_id')->select('brand_id')
+            )->select('id', 'designation_fr', 'slug', 'logo', 'alt_cover')->get();
+
+        $categories = $light ? collect() : Categ::select('id', 'slug', 'designation_fr', 'cover')->get();
 
         $this->normalizeCollectionImages($products, 'cover');
         $this->normalizeCollectionImages($brands, 'logo');
@@ -1046,6 +1074,35 @@ class ApisController extends Controller
                 ->selectRaw('MIN(prix) as min_price, MAX(prix) as max_price')
                 ->first();
 
+            /*
+             * ── THE SLIDER NEEDS THE 99th PERCENTILE, NOT THE MAXIMUM ────────────────────────
+             *
+             * Measured: min 11 DT, max 40 000 DT. A slider spanning that is unusable — a shopper
+             * looking in the 50-150 DT band, which is most of them, is aiming at the first 0.4% of
+             * the track, and one outlier item is what put it there.
+             *
+             * p99 is the reported ceiling instead. Nothing becomes unreachable, because the
+             * frontend treats "handle at maximum" as NO upper bound rather than as `max_price=p99`
+             * — so an untouched slider still shows the 40 000 DT item, and dragging down filters as
+             * expected. The only thing lost is the ability to set a ceiling BETWEEN p99 and the
+             * true max, which is a range nobody shops in.
+             *
+             * OFFSET rather than a window function: it is one indexed scan on `prix`, and it does
+             * not depend on the MySQL version the VPS happens to be running.
+             */
+            $priced = Product::where('publier', 1)->whereNotNull('prix')->where('prix', '>', 0)->count();
+            $p99 = null;
+            if ($priced > 0) {
+                $offset = max(0, (int) floor($priced * 0.99) - 1);
+                $p99 = Product::where('publier', 1)
+                    ->whereNotNull('prix')
+                    ->where('prix', '>', 0)
+                    ->orderBy('prix')
+                    ->offset($offset)
+                    ->limit(1)
+                    ->value('prix');
+            }
+
             // Counts per TOP category. Joined rather than eager-loaded because the answer is one
             // integer per aisle — pulling 10,700 rows into PHP to count them is what the frontend
             // was doing and what this endpoint exists to stop.
@@ -1095,7 +1152,12 @@ class ApisController extends Controller
             return [
                 'price' => [
                     'min' => (int) floor((float) ($bounds->min_price ?? 0)),
+                    // The TRUE maximum, kept for reference and for anything that needs the real
+                    // ceiling. It is deliberately NOT what the slider spans — see p99 below.
                     'max' => (int) ceil((float) ($bounds->max_price ?? 1000)),
+                    // What the slider should span. Falls back to the true max when the catalogue is
+                    // too small for a percentile to mean anything.
+                    'p99' => (int) ceil((float) ($p99 ?? $bounds->max_price ?? 1000)),
                 ],
                 'flavors' => $flavors,
                 'category_counts' => $categoryCounts,

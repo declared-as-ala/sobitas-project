@@ -553,7 +553,7 @@ export const getShopPage = async (
  */
 export const getShopFacets = async (): Promise<ShopFacets> => {
   const empty: ShopFacets = {
-    price: { min: 0, max: 1000 },
+    price: { min: 0, max: 1000, p99: 1000 },
     flavors: [],
     category_counts: {},
     brand_counts: {},
@@ -571,6 +571,9 @@ export const getShopFacets = async (): Promise<ShopFacets> => {
         min: Number(raw.price?.min ?? 0) || 0,
         // Never 0: a max of 0 collapses the slider to a point and filters everything out.
         max: Number(raw.price?.max ?? 1000) || 1000,
+        // Falls back to the true max so a backend that predates the p99 field still works — the
+        // slider is merely wide again rather than broken.
+        p99: Number(raw.price?.p99 ?? raw.price?.max ?? 1000) || 1000,
       },
       flavors: Array.isArray(raw.flavors) ? raw.flavors.filter((f: unknown) => typeof f === 'string') : [],
       category_counts: raw.category_counts && typeof raw.category_counts === 'object' ? raw.category_counts : {},

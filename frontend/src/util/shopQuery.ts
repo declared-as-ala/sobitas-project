@@ -76,7 +76,17 @@ export const EMPTY_SHOP_QUERY: ShopQuery = {
  * be derived from a 12-row page, which is why the endpoint exists.
  */
 export interface ShopFacets {
-  price: { min: number; max: number };
+  /**
+   * `p99` is what the slider spans, not `max`.
+   *
+   * Measured on the live catalogue: min 11 DT, max 40 000 DT. A slider across that range puts every
+   * price a shopper actually browses — 50 to 150 DT — inside the first 0.4% of the track, because
+   * of a single outlier. p99 is the 99th percentile.
+   *
+   * Nothing becomes unreachable: a handle at its maximum is written as NO upper bound (null), not
+   * as `max_price=p99`, so an untouched slider still returns the 40 000 DT item.
+   */
+  price: { min: number; max: number; p99: number };
   flavors: string[];
   /** category slug -> published product count */
   category_counts: Record<string, number>;
@@ -173,6 +183,16 @@ export function shopQueryToApiParams(query: ShopQuery, perPage = SHOP_PER_PAGE):
     page: query.page,
     per_page: perPage,
     sort: query.sort,
+    /*
+     * Drop the brand and category sets from the response. Measured at per_page=12, `brands` is
+     * 56 KB against the products' 12 KB — 566 brands after the iHerb import, 4.7x the payload the
+     * caller actually asked for, rebuilt on every request.
+     *
+     * Safe here specifically: /shop receives the full brand list from getAllBrands() and its facet
+     * counts from /api/shop_facets, and ShopPageClient only ever reads productsData.brands as a
+     * fallback BEHIND that list. Other callers of /all_products keep the default and are untouched.
+     */
+    light: 1,
   };
 
   if (query.search) params.search = query.search;

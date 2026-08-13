@@ -459,7 +459,10 @@ function ShopContent({
   // Pulled out as primitives so everything downstream can depend on the VALUES rather than on the
   // `facets` object, whose identity changes on every server render. See priceBounds.
   const facetsMin = facets?.price.min;
-  const facetsMax = facets?.price.max;
+  // p99, NOT max. The catalogue runs 11 to 40 000 DT and one outlier put every real price in
+  // the first 0.4% of the slider track. A handle at maximum is written as no upper bound, so
+  // the 40 000 DT item stays reachable — see ShopFacets.price.
+  const facetsMax = facets?.price.p99 ?? facets?.price.max;
   // NOTE: useSearchParams() is deliberately NOT called here — it lives in <UrlFilterSync> below.
   // Calling it at this level is a dynamic API that opts every route rendering this component out of
   // static rendering; on /shop that meant the boutique answered no-store to every visitor. Isolating
@@ -486,8 +489,10 @@ function ShopContent({
    * observe the wrong value and act on it.
    */
   const initialPriceRange = (): [number, number] => {
-    const lo = serverQuery?.minPrice ?? facets?.price.min ?? 0;
-    const hi = serverQuery?.maxPrice ?? facets?.price.max ?? 1000;
+    // facetsMax is p99, matching priceBounds — seeding from the true max would put the handle
+    // outside the track the slider actually renders.
+    const lo = serverQuery?.minPrice ?? facetsMin ?? 0;
+    const hi = serverQuery?.maxPrice ?? facetsMax ?? 1000;
     return [lo, hi];
   };
   const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);

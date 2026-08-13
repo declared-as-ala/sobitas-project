@@ -379,7 +379,15 @@ const productsSource: SitemapSource = {
   load: async (ctx) => {
     const { crawl, verified, note } = await crawlSource<Product>({
       label: '/all_products',
-      path: '/all_products',
+      /*
+       * ?light=1 — this walk reads `products` and nothing else, and the brand set it was also being
+       * handed is 56 KB per page against 12 KB of products (566 brands since the iHerb import).
+       * Over the ~107 pages of a 10,669-product catalogue that is roughly 6 MB of brand JSON built,
+       * encoded and transferred per sitemap rebuild, on the endpoint whose worker-pool saturation
+       * took admin.protein.tn down with 504s on every URL. The rows this crawl consumes are
+       * identical with the flag set.
+       */
+      path: '/all_products?light=1',
       rowsKey: 'products',
       critical: true,
     });
