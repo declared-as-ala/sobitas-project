@@ -1,6 +1,7 @@
-import { getAllProducts, getAllProductsComplete, getCategories } from '@/services/api';
+import { getShopPage, getCategories } from '@/services/api';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { loadForCache } from '@/util/loadForCache';
+import { parseShopQuery, buildShopUrl, type RawSearchParams } from '@/util/shopQuery';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 
 /**
@@ -24,25 +25,38 @@ import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/craw
  * drift. A bot sees the products a shopper sees; it just gets them as plain anchors instead of a
  * client-side grid. Divergence between the two views is what makes dynamic rendering indefensible,
  * and it has bitten this codebase repeatedly — keep them equal.
+ *
+ * ── NOW PAGINATED, AND PARITY IS WHY ──────────────────────────────────────────────────────────
+ * This fetched the whole catalogue in one page, which was right when the catalogue was 410 products
+ * and became wrong at 10,669. Two things broke at once:
+ *
+ *   1. getAllProductsComplete() caps at 3,000, so the crawler view silently listed 3,097 products
+ *      and no link existed to the other 7,572 — from anywhere on the site.
+ *   2. Even at the cap, a 3,000-anchor document is one Googlebot truncates, and it flattens the
+ *      catalogue into a single undifferentiated list.
+ *
+ * The human page now reads ?page=N and renders twelve. This does the same, from the same parser and
+ * the same URL builder, so the two views cannot drift on which twelve. That is the parity rule
+ * above applied to pagination rather than abandoned because of it.
  */
 
 // Same metadata object as the human page: title, description, canonical, facet noindex rules and
-// prev/next. Re-exported rather than re-declared so the two can never disagree.
+// prev/next. Re-exported rather than re-declared so the two can never disagree — including the
+// page-N canonical and the "— Page N" title suffix that arrived with server-side pagination.
 export { generateMetadata } from '@/app/(shop)/shop/page';
 
-export const revalidate = 300;
+type PageProps = { searchParams: Promise<RawSearchParams> };
 
-export default async function CrawlerShopPage() {
+export default async function CrawlerShopPage({ searchParams }: PageProps) {
+  const query = parseShopQuery(await searchParams);
+
   // loadForCache, not a bare catch: a transient upstream failure (the build runner getting
-  // Cloudflare-403'd is the known one) renders empty but must NOT be baked into the ISR cache,
-  // or Googlebot gets an empty boutique pinned for the whole revalidate window.
+  // Cloudflare-403'd is the known one) renders empty but must NOT be baked into any cache entry,
+  // or Googlebot gets an empty boutique pinned for the whole window.
   const [productsResponse, categories] = await Promise.all([
     loadForCache(
-      // This route is the ONLY thing Googlebot sees for /shop. At the per_page default of 24 it
-      // served a 24-product boutique to the crawler while humans saw the same 24 — consistent, and
-      // consistently wrong. Must stay in step with (shop)/shop/page.tsx or it becomes cloaking.
-      () => getAllProductsComplete(),
-      { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>
+      () => getShopPage(query),
+      { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
     ),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
   ]);
@@ -50,9 +64,13 @@ export default async function CrawlerShopPage() {
   const rawProducts = Array.isArray(productsResponse.products) ? productsResponse.products : [];
 
   // Resolve each product's subcategory so every link is the canonical /{subcategory}/{slug} and
-  // never the legacy /shop/{slug}, which 301s. Linking 303 products through redirects would have
+  // never the legacy /shop/{slug}, which 301s. Linking products through redirects would have
   // recreated at a stroke the exact problem just fixed across the category pages.
   const products = enrichProductsWithSubcategory(rawProducts, categories);
+
+  const totalPages = Math.max(1, productsResponse.pagination?.last_page ?? 1);
+  const currentPage = Math.min(Math.max(1, productsResponse.pagination?.current_page ?? query.page), totalPages);
+  const total = productsResponse.pagination?.total ?? products.length;
 
   const categoryLinks: CrawlerListLink[] = (categories ?? [])
     .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
@@ -66,7 +84,7 @@ export default async function CrawlerShopPage() {
       title="Boutique — Protéines & Compléments Alimentaires en Tunisie"
       introHtml={
         '<p>Tout le catalogue Protéine Tunisie : whey, créatine, gainers, BCAA, vitamines et ' +
-        'équipement. Livraison partout en Tunisie, paiement à la livraison.</p>'
+        `équipement — ${total} références. Livraison partout en Tunisie, paiement à la livraison.</p>`
       }
       breadcrumbs={[
         { name: 'Accueil', url: '/' },
@@ -74,6 +92,13 @@ export default async function CrawlerShopPage() {
       ]}
       products={products}
       subCategories={categoryLinks}
+      pagination={{
+        currentPage,
+        totalPages,
+        // The same builder the human pager uses, so /shop?page=7 and the bot's "page suivante" are
+        // byte-identical URLs rather than two spellings of one page.
+        buildHref: (page) => buildShopUrl({ ...query, page }),
+      }}
     />
   );
 }

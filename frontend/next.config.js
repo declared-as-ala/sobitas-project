@@ -81,7 +81,12 @@ const nextConfig = {
     //
     // `has` entries are AND-ed within a rule, so each facet key needs its own rule to get OR.
     // `page` is deliberately absent: pagination is not a duplicate and must stay indexable.
-    const FACET_KEYS = ['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter'];
+    // `flavors` and `in_stock` joined the list when /shop moved to server-side filtering: they are
+    // now real, shareable URLs that return a narrowed slice of the boutique, which is exactly the
+    // duplicate this rule exists to keep out of the index. A facet key that is not listed here is
+    // indexed, and the cost of that mistake compounds — /shop?search={search_term_string} reached
+    // 169 impressions at position 76 before anyone noticed it was in there at all.
+    const FACET_KEYS = ['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter', 'flavors', 'in_stock'];
     const facetedShopNoindex = FACET_KEYS.map((key) => ({
       source: '/shop',
       has: [{ type: 'query', key }],

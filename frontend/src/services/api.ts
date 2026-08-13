@@ -4,6 +4,7 @@ import { apiFetch, ApiError } from '@/services/http';
 // URLs in the sitemap are built from the same rows. See getAllBrands for what the one-shot fetch
 // this replaced actually cost.
 import { crawlPaginated } from '@/util/sitemapCrawl';
+import { shopQueryToApiParams, SHOP_PER_PAGE, type ShopQuery, type ShopFacets } from '@/util/shopQuery';
 import type {
   Product,
   Category,
@@ -493,6 +494,95 @@ export const getAllProductsComplete = async (
     pagination: first.pagination,
     truncated,
   };
+};
+
+/**
+ * ONE page of the boutique, filtered and sorted by the SERVER.
+ *
+ * This is the replacement for getAllProductsComplete() on /shop, and the difference is not a
+ * refinement — it is the difference between a correct catalogue and a truncated one. The walk above
+ * stops at 3,000 of 10,669 products and then the browser filters what it got; this asks the database
+ * the actual question and gets the actual answer, in one request instead of thirty.
+ *
+ * Measured cost of the old path: ~30 sequential calls at ~5s each against a rate-limited origin,
+ * producing a 3.35 MB payload the shopper reads 12 rows of. Measured cost of this one: one call.
+ *
+ * getAllProductsComplete is NOT deleted — the sitemap crawler still walks the catalogue and is
+ * right to, because it genuinely wants every row. It is /shop that never did.
+ */
+export const getShopPage = async (
+  query: ShopQuery,
+  perPage: number = SHOP_PER_PAGE
+): Promise<ProductsResponse> => {
+  try {
+    const response = await api.get('/all_products', { params: shopQueryToApiParams(query, perPage) });
+    const raw = response.data;
+    if (!raw) return { products: [], brands: [], categories: [] };
+
+    const products = Array.isArray(raw.products) ? raw.products : (raw.products?.data ?? []);
+    return {
+      products,
+      brands: raw.brands || [],
+      categories: raw.categories || [],
+      pagination: raw.pagination
+        ? {
+            total: raw.pagination.total,
+            current_page: raw.pagination.current_page,
+            per_page: raw.pagination.per_page,
+            last_page: raw.pagination.last_page,
+          }
+        : undefined,
+    };
+  } catch (error) {
+    console.error('[getShopPage] API error:', error);
+    // Same contract as getAllProducts: rethrow on the server so loadForCache can refuse to bake an
+    // empty boutique into the ISR entry, fail soft in the browser.
+    if (typeof window === 'undefined') throw error;
+    return { products: [], brands: [], categories: [] };
+  }
+};
+
+/**
+ * The filter sidebar's view of the WHOLE catalogue — price bounds, flavours, per-facet counts.
+ *
+ * Separate from the product page on purpose. The sidebar describes the catalogue, not the 12 rows
+ * currently on screen, and once the server started sending 12 rows the sidebar had no other source
+ * for that. Deriving it from the page would have shrunk the price slider to the range of whatever
+ * landed on page 1 and then filtered page 1 by its own bounds — a sidebar that lies about the grid
+ * beside it, with a 200 on both. See ApisController::shopFacets.
+ */
+export const getShopFacets = async (): Promise<ShopFacets> => {
+  const empty: ShopFacets = {
+    price: { min: 0, max: 1000 },
+    flavors: [],
+    category_counts: {},
+    brand_counts: {},
+    subcategories: [],
+    total_published: 0,
+  };
+
+  try {
+    const response = await api.get('/shop_facets');
+    const raw = response.data;
+    if (!raw || typeof raw !== 'object') return empty;
+
+    return {
+      price: {
+        min: Number(raw.price?.min ?? 0) || 0,
+        // Never 0: a max of 0 collapses the slider to a point and filters everything out.
+        max: Number(raw.price?.max ?? 1000) || 1000,
+      },
+      flavors: Array.isArray(raw.flavors) ? raw.flavors.filter((f: unknown) => typeof f === 'string') : [],
+      category_counts: raw.category_counts && typeof raw.category_counts === 'object' ? raw.category_counts : {},
+      brand_counts: raw.brand_counts && typeof raw.brand_counts === 'object' ? raw.brand_counts : {},
+      subcategories: Array.isArray(raw.subcategories) ? raw.subcategories : [],
+      total_published: Number(raw.total_published ?? 0) || 0,
+    };
+  } catch (error) {
+    // Facets are incidental — a failure here must degrade the sidebar, never blank the boutique.
+    console.error('[getShopFacets] API error:', error);
+    return empty;
+  }
 };
 
 const RETRY_DELAY_MS = 800;

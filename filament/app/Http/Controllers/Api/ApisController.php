@@ -40,6 +40,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -850,6 +852,27 @@ class ApisController extends Controller
             );
         }
 
+        /*
+         * TOP-LEVEL categories, by slug. `subcategories` above is the rayon; this is the aisle.
+         *
+         * This is the filter that was missing when the four above shipped, and its absence is why
+         * /shop could not go server-side: ShopPageClient's `selectedCategories` holds TOP category
+         * slugs ('proteines', 'creatine'), never subcategory slugs, so a server-side shop had no way
+         * to express the one filter the sidebar uses most. Products hang off sous_categorie_id only,
+         * so the aisle has to be resolved down through its rayons — two nested subqueries rather
+         * than joins, for the same reason as above: a join would multiply rows and inflate the
+         * paginator's total().
+         */
+        if ($categorySlugs = $csv('categories')) {
+            $query->whereIn(
+                'sous_categorie_id',
+                SousCategory::whereIn(
+                    'categorie_id',
+                    Categ::whereIn('slug', $categorySlugs)->select('id')
+                )->select('id')
+            );
+        }
+
         if ($flavors = $csv('flavors')) {
             // whereHas, not a join: a product with three matching aromas must appear ONCE. A join
             // would return it three times and quietly inflate both the page and the total count.
@@ -870,12 +893,32 @@ class ApisController extends Controller
 
         $this->orderAvailableFirst($query);
 
-        $sort = $request->get('sort');
+        /*
+         * ── THE SORT VOCABULARY IS THE UI'S, NOT A SECOND ONE ────────────────────────────────
+         * The dropdown in ShopPageClient offers five orders: popularity, price-asc, price-desc,
+         * newest, best-sellers. This branch understood two of them, and it spelt those two with an
+         * underscore while the UI writes a hyphen — so once /shop sends its own sort value, four of
+         * the five would silently fall through to "newest" and the shopper would pick "Prix :
+         * croissant" and get the newest products. A sort that quietly does something else is worse
+         * than one that errors, because the page still looks right.
+         *
+         * Normalising the separator means both spellings work and no existing caller breaks.
+         * `popularity` and `best-sellers` reproduce the exact expressions the client-side engine
+         * used (best_seller * 2 + new_product, and best_seller desc), so switching /shop over cannot
+         * reorder a grid a shopper has already learned.
+         */
+        $sort = str_replace('-', '_', strtolower(trim((string) $request->get('sort', ''))));
         if ($sort === 'price_asc') {
             $query->orderBy('prix');
         } elseif ($sort === 'price_desc') {
             $query->orderByDesc('prix');
+        } elseif ($sort === 'best_sellers') {
+            $query->orderByRaw('COALESCE(best_seller, 0) DESC')->latest('created_at');
+        } elseif ($sort === 'popularity') {
+            $query->orderByRaw('(COALESCE(best_seller, 0) * 2 + COALESCE(new_product, 0)) DESC')
+                ->latest('created_at');
         } else {
+            // 'newest' and anything unrecognised.
             $query->latest('created_at');
         }
 
@@ -967,6 +1010,102 @@ class ApisController extends Controller
                 'last_page'    => $paginator->lastPage(),
             ],
         ]);
+    }
+
+    /**
+     * Everything the shop's filter sidebar needs to describe the WHOLE catalogue in one small call.
+     *
+     * ── WHY THIS HAS TO EXIST BEFORE /shop CAN PAGINATE ON THE SERVER ────────────────────────
+     * The sidebar is not a view of the current page — it is a view of the catalogue. Price slider
+     * bounds, the flavour list, and the counts beside each checkbox all answered "across everything
+     * published" because ShopPageClient was handed everything published. The moment the server
+     * sends 24 products instead, every one of those becomes a description of those 24: the price
+     * slider would collapse to the range of one page and then filter the page by its own bounds, the
+     * flavour list would show whichever three aromas happened to land, and the counts would read 24.
+     *
+     * That is the failure mode that makes a half-finished server-side migration worse than no
+     * migration: the grid is correct and the sidebar lies about it, with a 200 on both.
+     *
+     * So the facets are computed separately, over the full published set, and cached. Four aggregate
+     * queries — no product rows cross the wire, which is the whole point: the payload is a couple of
+     * KB against the 3.35 MB the shop used to ship to derive the same numbers in the browser.
+     *
+     * Cached for 10 minutes. Facets move when the catalogue does (an import, a price edit), never
+     * per request, and a slightly stale count beside a checkbox costs nothing while recomputing
+     * four GROUP BYs over ~10,700 rows on every shop render costs a great deal.
+     */
+    public function shopFacets(Request $request): JsonResponse
+    {
+        $payload = Cache::remember('shop:facets:v1', 600, static function (): array {
+            // Price bounds. `prix` is the list price; promo prices are lower but the slider is a
+            // coarse instrument and the client already filters on the effective price within the
+            // range, so widening the bounds here would only ever show an empty band at the bottom.
+            $bounds = Product::where('publier', 1)
+                ->whereNotNull('prix')
+                ->where('prix', '>', 0)
+                ->selectRaw('MIN(prix) as min_price, MAX(prix) as max_price')
+                ->first();
+
+            // Counts per TOP category. Joined rather than eager-loaded because the answer is one
+            // integer per aisle — pulling 10,700 rows into PHP to count them is what the frontend
+            // was doing and what this endpoint exists to stop.
+            $categoryCounts = Product::query()
+                ->join('sous_categories', 'products.sous_categorie_id', '=', 'sous_categories.id')
+                ->join('categs', 'sous_categories.categorie_id', '=', 'categs.id')
+                ->where('products.publier', 1)
+                ->groupBy('categs.slug')
+                ->selectRaw('categs.slug as slug, COUNT(*) as total')
+                ->pluck('total', 'slug');
+
+            $brandCounts = Product::where('publier', 1)
+                ->whereNotNull('brand_id')
+                ->groupBy('brand_id')
+                ->selectRaw('brand_id, COUNT(*) as total')
+                ->pluck('total', 'brand_id');
+
+            // Only aromas that are actually ON a published product. The `aromas` table carries
+            // historical entries no current product uses, and a filter offering a value that can
+            // only ever return zero results is a bug the shopper has to discover by clicking it.
+            $flavors = Aroma::whereIn(
+                'id',
+                DB::table('product_aromas')
+                    ->join('products', 'product_aromas.product_id', '=', 'products.id')
+                    ->where('products.publier', 1)
+                    ->select('product_aromas.aroma_id')
+            )
+                ->whereNotNull('designation_fr')
+                ->orderBy('designation_fr')
+                ->pluck('designation_fr')
+                ->unique()
+                ->values();
+
+            // Rayons, with their aisle, so the sidebar can group them without a second call.
+            $subcategories = SousCategory::query()
+                ->select('id', 'designation_fr', 'slug', 'categorie_id')
+                ->orderBy('designation_fr')
+                ->get()
+                ->map(static fn ($s) => [
+                    'id' => (int) $s->id,
+                    'name' => (string) $s->designation_fr,
+                    'slug' => (string) $s->slug,
+                    'categoryId' => $s->categorie_id === null ? null : (int) $s->categorie_id,
+                ])
+                ->values();
+
+            return [
+                'price' => [
+                    'min' => (int) floor((float) ($bounds->min_price ?? 0)),
+                    'max' => (int) ceil((float) ($bounds->max_price ?? 1000)),
+                ],
+                'flavors' => $flavors,
+                'category_counts' => $categoryCounts,
+                'brand_counts' => $brandCounts,
+                'subcategories' => $subcategories,
+                'total_published' => Product::where('publier', 1)->count(),
+            ];
+        });
+
+        return response()->json($payload);
     }
 
     /**

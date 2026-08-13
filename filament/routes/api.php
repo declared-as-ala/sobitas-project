@@ -62,6 +62,9 @@ Route::middleware(['cache.api:60', 'cache.headers.api:60'])->group(function () {
     Route::get('/seo_page/{name}', [ApisController::class, 'seoPage']);
     Route::get('/page/{slug}', [ApisController::class, 'getPageBySlug']);
     Route::get('/all_products', [ApisController::class, 'allProducts']);
+    // Filter-sidebar facets over the whole published catalogue (price bounds, flavours, counts).
+    // Needed because /shop now paginates on the server: see ApisController::shopFacets.
+    Route::get('/shop_facets', [ApisController::class, 'shopFacets']);
     Route::get('/all_articles', [ApisController::class, 'allArticles']);
     Route::get('/blog/category/{slug}', [ApisController::class, 'articlesByBlogCategorySlug']);
     Route::get('/blog/tag/{slug}', [ApisController::class, 'articlesByBlogTagSlug']);
