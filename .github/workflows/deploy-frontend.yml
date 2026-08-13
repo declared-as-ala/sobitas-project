@@ -210,6 +210,14 @@ jobs:
           node scripts/check-internal-links.mjs || fail=1
           echo "::endgroup::"
 
+          # Six categories and fifty subcategories showed twelve products each with no pager, which
+          # left /shop?page=1..890 as the only crawl path to the 10,669th product. This asserts every
+          # listing can still be paged, that page 2 is not a duplicate of page 1, and that it
+          # self-canonicalises.
+          echo "::group::listing pagination"
+          node scripts/check-listing-pagination.mjs || fail=1
+          echo "::endgroup::"
+
           echo "::group::card hover endpoints"
           node scripts/check-hover-endpoints.mjs || fail=1
           echo "::endgroup::"
