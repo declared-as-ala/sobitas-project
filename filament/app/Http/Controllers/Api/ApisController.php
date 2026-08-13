@@ -1518,11 +1518,36 @@ class ApisController extends Controller
         return $this->paginatedResponse($articles);
     }
 
+    /**
+     * ── AN ARTICLE IS NOT A PRODUCT, AND THIS ENDPOINT SPENT A DAY RETURNING 500 BECAUSE OF IT ──
+     *
+     * f0d7da4e added `externalCatalogSource:id,product_id,source_gallery_images` to every endpoint
+     * that renders a product card, so the hover image would stop being null. The edit was applied by
+     * matching on the eager-load string rather than on the model, and Article has no such relation —
+     * it is defined on Product alone. Eloquent answers an unknown relation with
+     * RelationNotFoundException, which is a 500, which is what every one of the 224 article URLs
+     * served from that deploy until it was measured here.
+     *
+     * It went unnoticed for a day because nothing looked. `/blog` and `/blog/category/{slug}` both
+     * return 200 — they use allArticles(), which was untouched — so the blog looked alive from the
+     * outside while every article inside it was down. And check-hover-endpoints.mjs, added in the
+     * same commit precisely so this class of bug would stop recurring, walks the PRODUCT card
+     * endpoints; it had no reason to fetch an article and so it passed.
+     *
+     * The cost is the reason this note is long. The blog is 43,400 impressions a month, 38% of
+     * everything Google shows for this site, and `/blog/whey-protein-en-tunisie` at position 11.2 is
+     * the best-placed URL the site owns. Serving Google a 500 on those is worse than serving a thin
+     * page: repeated 5xx is how a URL leaves the index.
+     *
+     * The guard that would actually have caught it is not another product check — it is asserting
+     * 200 on ONE LIVE URL OF EVERY ROUTE TYPE after each deploy. That is scripts/check-routes.mjs,
+     * and it now runs on every frontend and backend deploy.
+     */
     public function articleDetails(string $slug): JsonResponse
     {
         $article = Article::where('slug', $slug)
             ->where('publier', 1)
-            ->with(['categories:id,name,slug', 'tags:id,name,slug', 'externalCatalogSource:id,product_id,source_gallery_images'])
+            ->with(['categories:id,name,slug', 'tags:id,name,slug'])
             ->first();
 
         if (! $article) {

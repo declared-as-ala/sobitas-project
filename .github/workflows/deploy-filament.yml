@@ -448,6 +448,35 @@ jobs:
             exit 1
           fi
 
+      # ── EVERY ROUTE TYPE MUST STILL ANSWER 200 AFTER A BACKEND DEPLOY ──────────────────────
+      #
+      # This workflow had no live check at all, and on 13/08/2026 that cost the site its blog for a
+      # day: a product-only eager load was added to the ARTICLE endpoint, Eloquent raised
+      # RelationNotFoundException, and all 224 article URLs served 500. The image built, the deploy
+      # was green, and `/blog` itself stayed 200 because it runs through a different method — so
+      # nothing anywhere reported a problem while Google was being handed 5xx on the best-ranking
+      # pages the site owns.
+      #
+      # A PHP relation is resolved at request time. No build step, no typecheck and no container
+      # health check can see it. Only fetching the page can, which is why this asks the live site.
+      #
+      # `if: always()` because the SSH steps above routinely fail on this host while the deploy
+      # itself still lands — the VPS pulls the new image on its own poll (scripts/vps-autodeploy.sh).
+      # Skipping the check whenever SSH was unhappy would skip it on exactly the deploys nobody
+      # watched.
+      - name: Every route type still answers 200
+        if: always()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "Waiting for the API to serve the new image..."
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://admin.protein.tn/api/categories?per_page=1 || echo 000)
+            [ "$code" = "200" ] && break
+            sleep 20
+          done
+          cd frontend && node scripts/check-routes.mjs
+
       - name: Report what actually happened
         if: always()
         run: |

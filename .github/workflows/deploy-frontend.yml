@@ -190,6 +190,14 @@ jobs:
           fail=0
           cd frontend
 
+          # FIRST, and shallowest. The three checks below are deep checks of one surface each and
+          # every one of them is about products; on 13/08/2026 all three passed while all 224 article
+          # URLs served 500. A page that does not answer cannot be audited for anything else, so
+          # "does every route type answer 200" runs before any question about what a page contains.
+          echo "::group::every route type answers 200"
+          node scripts/check-routes.mjs || fail=1
+          echo "::endgroup::"
+
           echo "::group::availability schema"
           node scripts/check-availability-schema.mjs || fail=1
           echo "::endgroup::"
