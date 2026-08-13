@@ -456,6 +456,10 @@ function ShopContent({
    * three props individually, so there is no path on which two of them are honoured and one is not.
    */
   const isServerMode = Boolean(serverQuery && serverPagination);
+  // Pulled out as primitives so everything downstream can depend on the VALUES rather than on the
+  // `facets` object, whose identity changes on every server render. See priceBounds.
+  const facetsMin = facets?.price.min;
+  const facetsMax = facets?.price.max;
   // NOTE: useSearchParams() is deliberately NOT called here — it lives in <UrlFilterSync> below.
   // Calling it at this level is a dynamic API that opts every route rendering this component out of
   // static rendering; on /shop that meant the boutique answered no-store to every visitor. Isolating
@@ -473,8 +477,21 @@ function ShopContent({
   const [searchQuery, setSearchQuery] = useState(serverQuery?.search ?? '');
   const [selectedCategories, setSelectedCategories] = useState<string[]>(serverQuery?.categories ?? []);
   const [selectedBrands, setSelectedBrands] = useState<number[]>(serverQuery?.brands ?? []);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>([0, 1000]);
+  /*
+   * Seeded from the URL and the real catalogue bounds on the FIRST render, not reconciled afterwards.
+   *
+   * The old `[0, 1000]` literal was a guess that happened to be wrong by a factor of forty — the
+   * catalogue runs 11 to 40000 DT — and the reconciliation effect that fixed it up afterwards is
+   * what the redirect loop was made of. Starting correct removes the window in which anything could
+   * observe the wrong value and act on it.
+   */
+  const initialPriceRange = (): [number, number] => {
+    const lo = serverQuery?.minPrice ?? facets?.price.min ?? 0;
+    const hi = serverQuery?.maxPrice ?? facets?.price.max ?? 1000;
+    return [lo, hi];
+  };
+  const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>(initialPriceRange);
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
 
@@ -734,8 +751,8 @@ function ShopContent({
      * excludes anything outside them. Page 2 recomputes a different range and the shop appears to
      * lose products as you page through it — with no error and a plausible-looking slider.
      */
-    if (isServerMode && facets) {
-      return { min: facets.price.min, max: facets.price.max };
+    if (isServerMode && facetsMin !== undefined && facetsMax !== undefined) {
+      return { min: facetsMin, max: facetsMax };
     }
 
     const prices = products
@@ -746,7 +763,11 @@ function ShopContent({
       min: Math.floor(Math.min(...prices)),
       max: Math.ceil(Math.max(...prices)),
     };
-  }, [products, isServerMode, facets]);
+    // Depends on the two NUMBERS, not on the `facets` object. The server sends a new object on every
+    // render, so depending on it made this memo — and therefore the seeding effect below, and
+    // everything downstream of that — re-fire on every navigation. That churn is what turned one
+    // bad push into a loop.
+  }, [products, isServerMode, facetsMin, facetsMax]);
 
   // Update price range when bounds change
   useEffect(() => {
@@ -778,25 +799,46 @@ function ShopContent({
   }, [priceRange]);
 
   /*
-   * Server mode: the settled price range becomes a navigation.
+   * ── THE PRICE FILTER NAVIGATES ON A GESTURE, NEVER FROM AN EFFECT ────────────────────────
    *
-   * Driven off the DEBOUNCED value, not the live one, so dragging the slider fires one request when
-   * the shopper lets go rather than one per pixel — the same reason the debounce existed for the
-   * client-side filter.
+   * This was an effect watching `debouncedPriceRange` and pushing whenever it disagreed with the
+   * URL. It shipped, and it put /shop into a redirect loop: /shop -> ?max_price=1000 -> /shop -> …
    *
-   * A range equal to the catalogue bounds is written as "no filter" (null) rather than as explicit
-   * min/max. That keeps the canonical boutique at /shop instead of /shop?min_price=0&max_price=1290,
-   * and it means the guard below sees no change on first mount and does not navigate on load.
+   * The mechanism, because it is worth not rebuilding: `priceRange` initialises to [0, 1000], while
+   * the real catalogue bounds are min 11 / max 40000. On mount the effect therefore read a max of
+   * 1000, correctly observed that 1000 < 40000, concluded the shopper had narrowed the price, and
+   * wrote ?max_price=1000. The seeding effect then reconciled the slider to the true bounds, which
+   * changed the debounced value, which re-ran the push effect, which now saw 40000 >= 40000 and
+   * wrote the filter back off. Each write is a navigation, each navigation is a new server render
+   * with a fresh `facets` object, and a fresh `facets` re-fires the whole chain.
+   *
+   * No guard on the comparison fixes this, because the bug is not the comparison — it is that an
+   * effect reconciling derived state is allowed to change the URL at all. On mount, "the state does
+   * not match the URL" means the state has not been seeded yet; it does NOT mean the shopper asked
+   * for anything.
+   *
+   * So the push now hangs off the slider's own handler, exactly like handleSearchChange. It cannot
+   * fire on mount, because on mount nobody has touched the slider. Same 400 ms debounce, so dragging
+   * is one navigation rather than one per pixel.
    */
-  useEffect(() => {
-    if (!isServerMode || !serverQuery) return;
-    const [lo, hi] = debouncedPriceRange;
-    const nextMin = lo <= priceBounds.min ? null : lo;
-    const nextMax = hi >= priceBounds.max ? null : hi;
-    if (nextMin === serverQuery.minPrice && nextMax === serverQuery.maxPrice) return;
-    pushQuery({ minPrice: nextMin, maxPrice: nextMax });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debouncedPriceRange, isServerMode, priceBounds.min, priceBounds.max, serverQueryKey]);
+  const priceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handlePriceChange = (range: [number, number]) => {
+    setPriceRange(range);
+    if (!isServerMode) return;
+    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current);
+    priceDebounceRef.current = setTimeout(() => {
+      const [lo, hi] = range;
+      // A range at the catalogue bounds is "no filter" (null), not an explicit min/max — that keeps
+      // the canonical boutique at /shop rather than /shop?min_price=11&max_price=40000.
+      pushQuery({
+        minPrice: lo <= priceBounds.min ? null : lo,
+        maxPrice: hi >= priceBounds.max ? null : hi,
+      });
+    }, 400);
+  };
+  useEffect(() => () => {
+    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current);
+  }, []);
 
   // Calculate filter counts
   const filterCounts = useMemo(() => {
@@ -1468,7 +1510,9 @@ function ShopContent({
     selectedBrands,
     toggleBrand,
     priceRange,
-    setPriceRange,
+    // The handler, not the raw setter. In server mode the price filter is ?min_price/?max_price, and
+    // the push has to originate here — from the drag — rather than from an effect watching state.
+    setPriceRange: handlePriceChange,
     priceBounds,
     sortBy,
     setSortBy: handleSortChange,
