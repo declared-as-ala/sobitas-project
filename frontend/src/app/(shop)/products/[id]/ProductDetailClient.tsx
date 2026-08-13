@@ -542,7 +542,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
               {breadcrumbItems.map((item, i) => (
                 <li key={i} className="flex shrink-0 items-center gap-x-1.5">
-                  {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-gray-400 dark:text-gray-500 shrink-0" aria-hidden />}
+                  {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-ink-3 shrink-0" aria-hidden />}
                   {i < breadcrumbItems.length - 1 ? (
                     <Link href={item.url} className="whitespace-nowrap hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
                       {item.name}
@@ -588,14 +588,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       if (parent && !parent.querySelector('.error-placeholder')) {
                         const ph = document.createElement('div');
                         ph.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                        ph.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                        ph.innerHTML = '<svg class="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
                         parent.appendChild(ph);
                       }
                     }}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                    <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <svg className="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                     </svg>
                   </div>
@@ -687,14 +687,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         if (parent && !parent.querySelector('.error-placeholder')) {
                           const placeholder = document.createElement('div');
                           placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                          placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
+                          placeholder.innerHTML = '<svg class="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
                           parent.appendChild(placeholder);
                         }
                       }}
                     />
                   ) : (
                     <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <svg className="h-24 w-24 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <svg className="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                       </svg>
                     </div>
@@ -789,7 +789,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <div className="flex flex-wrap items-baseline gap-2">
                       <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-brand">{displayPrice} DT</span>
                       {oldPrice && (
-                        <span className="font-display tracking-tight tabular-nums text-lg sm:text-xl text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                        <span className="font-display tracking-tight tabular-nums text-lg sm:text-xl text-ink-3 line-through">{oldPrice} DT</span>
                       )}
                     </div>
                     {oldPrice && (
@@ -822,7 +822,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             size="default"
                             className={cn(
                               'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                              isSelected && 'bg-brand hover:bg-brand-hover text-white'
+                              isSelected && 'bg-brand hover:bg-brand-hover text-on-brand'
                             )}
                             onClick={() => setSelectedAromaId(arome.id)}
                           >
@@ -868,7 +868,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Reference — one quiet line (tags kept in the description/footer to keep mobile clean) */}
               {(product.sku || product.code_product) && (
-                <p className="px-1 text-xs text-gray-400 dark:text-gray-500">
+                <p className="px-1 text-xs text-ink-3">
                   Réf. {product.sku || product.code_product}
                 </p>
               )}
@@ -971,7 +971,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <div className="flex flex-wrap items-baseline gap-2">
                         <span className="font-display font-bold tracking-tight tabular-nums text-3xl xl:text-4xl text-brand">{displayPrice} DT</span>
                         {oldPrice && (
-                          <span className="font-display tracking-tight tabular-nums text-lg text-gray-400 dark:text-gray-500 line-through">{oldPrice} DT</span>
+                          <span className="font-display tracking-tight tabular-nums text-lg text-ink-3 line-through">{oldPrice} DT</span>
                         )}
                       </div>
                       {oldPrice && (
@@ -1004,7 +1004,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               size="default"
                               className={cn(
                                 'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                                isSelected && 'bg-brand hover:bg-brand-hover text-white'
+                                isSelected && 'bg-brand hover:bg-brand-hover text-on-brand'
                               )}
                               onClick={() => setSelectedAromaId(arome.id)}
                             >
@@ -1037,7 +1037,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <div className="flex flex-col gap-2">
                     <Button
                       size="default"
-                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-bold"
+                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
                       onClick={handleAddToCart}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -1162,7 +1162,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       );
                     })()}
                     <div
-                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
                       // top-level headings on the page whose only h1 should be the product name —
                       // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
@@ -1223,7 +1223,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                   {section.heading}
                                 </h3>
                                 <div
-                                  className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                                  className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
                                   dangerouslySetInnerHTML={{ __html: html }}
                                 />
                               </section>
@@ -1256,7 +1256,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           )}
 
                           {attribution && (
-                            <p className="text-xs text-gray-500 dark:text-gray-500">{attribution}</p>
+                            <p className="text-xs text-ink-3">{attribution}</p>
                           )}
                         </div>
                       );
@@ -1484,7 +1484,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                     ) : hasLegacyQuestionsHtml ? (
                       <div
-                        className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-gray-400 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
                         dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
                       />
                     ) : null}
@@ -1561,7 +1561,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <span className="truncate text-sm font-semibold text-ink-1">{reviewerName}</span>
-                              <span className="shrink-0 text-xs text-gray-400 dark:text-gray-500">
+                              <span className="shrink-0 text-xs text-ink-3">
                                 {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                               </span>
                             </div>
@@ -1598,7 +1598,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold"
+                      className="w-full bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1622,7 +1622,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold"
+                      className="w-full bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1658,10 +1658,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <div>
                       <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">Commentaire (optionnel)</label>
                       <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-ink-1 text-sm" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
-                      <p className="text-xs mt-0.5 text-gray-500">{reviewComment.length}/500</p>
+                      <p className="text-xs mt-0.5 text-ink-3">{reviewComment.length}/500</p>
                     </div>
                     <div className="flex gap-2">
-                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-semibold" size="sm">
+                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold" size="sm">
                         {isSubmittingReview ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Publication...</> : 'Publier'}
                       </Button>
                       <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); }}>Annuler</Button>
@@ -1736,7 +1736,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <th scope="row" className="border-t border-hairline p-3 text-left font-normal">
                         {row.isCurrent ? (
                           <span aria-current="true" className="font-semibold">
-                            {row.name} <span className="font-normal text-gray-500">(cette page)</span>
+                            {row.name} <span className="font-normal text-ink-3">(cette page)</span>
                           </span>
                         ) : (
                           <Link href={row.url} className="text-red-700 hover:underline dark:text-red-400">
@@ -1803,7 +1803,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
             <Button
               size="default"
-              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide font-bold"
+              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
               onClick={handleAddToCart}
               disabled={stockStatus.isOutOfStock}
               aria-label="Ajouter au panier"
