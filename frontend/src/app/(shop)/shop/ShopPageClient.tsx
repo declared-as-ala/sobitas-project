@@ -404,6 +404,18 @@ interface ShopPageClientProps {
   /** The whole catalogue's facets — see ApisController::shopFacets for why these cannot come from the page. */
   facets?: ShopFacets;
   serverPagination?: { total: number; totalPages: number; currentPage: number; perPage: number };
+  /**
+   * The path this listing lives at — '/shop', '/sante-vitalite', '/whey-isolate'.
+   *
+   * Server mode writes state into the URL, so it has to know WHICH URL. Without this every control
+   * on a category page pushed to /shop and navigated the shopper out of the category they were
+   * browsing; and the pager, which is the crawl path, emitted /shop?page=2 from /sante-vitalite.
+   *
+   * The path-implied filter is deliberately NOT repeated in the query string: /sante-vitalite?page=2
+   * rather than /sante-vitalite?category=sante-vitalite&page=2. Two URLs for one page is the
+   * duplicate-content problem this whole migration exists to reduce.
+   */
+  serverBasePath?: string;
 }
 
 type UrlFilters = { category: string | null; brand: string | null; search: string | null };
@@ -450,6 +462,7 @@ function ShopContent({
   serverQuery,
   facets,
   serverPagination,
+  serverBasePath = '/shop',
 }: ShopPageClientProps) {
   /**
    * The one switch. See the prop docblock: everything downstream reads this rather than testing the
@@ -564,8 +577,32 @@ function ShopContent({
   const pushQuery = (patch: Partial<ShopQuery>) => {
     if (!serverQuery) return;
     const next: ShopQuery = { ...serverQuery, ...patch, page: patch.page ?? 1 };
+
+    /*
+     * ── A CATEGORY CHANGE ON A SCOPED LISTING LEAVES THAT LISTING ───────────────────────────
+     *
+     * On /sante-vitalite the category filter is not a query parameter — it is the PATH, and the
+     * server page re-applies it on every render. So writing `?category=proteines` onto that path
+     * would produce a ticked checkbox above a grid that never changed: the parameter is parsed,
+     * then overwritten by the scope. A control that visibly does nothing is worse than one that
+     * is not offered.
+     *
+     * Ticking another category is an unambiguous request to browse it, so it goes to the boutique
+     * with that filter applied — /shop?category=proteines — which is a URL where the choice is
+     * real. Everything else (price, brand, flavour, sort, page) stays on the current path, because
+     * those genuinely do narrow the scoped listing.
+     */
+    const scoped = serverBasePath !== '/shop';
+    const changesScope =
+      scoped && (patch.categories !== undefined || patch.subcategories !== undefined);
+
     setIsNavigating(true);
-    router.push(buildShopUrl(next), { scroll: false });
+    router.push(
+      changesScope
+        ? buildShopUrl({ ...next, subcategories: [] }, '/shop')
+        : buildShopUrl(next, serverBasePath),
+      { scroll: false }
+    );
   };
 
   /*
@@ -576,7 +613,7 @@ function ShopContent({
    * beside it unticked. The dependency is the serialised query rather than the object, which is a
    * new identity on every render and would loop.
    */
-  const serverQueryKey = serverQuery ? buildShopUrl(serverQuery) : '';
+  const serverQueryKey = serverQuery ? buildShopUrl(serverQuery, serverBasePath) : '';
   useEffect(() => {
     if (!serverQuery) return;
     setSearchQuery(serverQuery.search);
@@ -1009,6 +1046,25 @@ function ShopContent({
 
   // Handle filtering
   useEffect(() => {
+    /*
+     * ── IN SERVER MODE THIS EFFECT MUST NOT RUN AT ALL ──────────────────────────────────────
+     *
+     * It exists to reproduce the server's filtering in the browser, and in server mode the server
+     * has already done it — `productsData` IS the answer for the current URL. Letting it run does
+     * two harmful things at once:
+     *
+     *   · it overwrites the correct server-rendered page with a client-fetched one, so the grid
+     *     changes under the shopper a moment after the page appears;
+     *   · getProductsByCategory() walks the WHOLE category 100 rows at a time. For sante-vitalite
+     *     that is 8,849 products over 88 requests, issued concurrently, FROM THE BROWSER. The same
+     *     walk on the server side is the shape that exhausted the php-fpm pool on 12/08 —
+     *     ~40 concurrent per_page=100&page=N requests in three seconds, every child busy.
+     *
+     * The legacy (non-server) surfaces still need it, so this is an early return rather than a
+     * deletion.
+     */
+    if (isServerMode) return;
+
     const isInitialCategoryLoad = initialCategory && 
                                    selectedCategories.length > 0 && 
                                    selectedCategories[0] === initialCategory &&
@@ -1170,7 +1226,7 @@ function ShopContent({
     } else {
       applyFilters();
     }
-  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
+  }, [isServerMode, searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
 
   useEffect(() => {
     setIsDescriptionExpanded(false);
@@ -1957,7 +2013,7 @@ function ShopContent({
                          client state and has no URL to point at. */
                       buildHref={
                         isServerMode && serverQuery
-                          ? (page) => buildShopUrl({ ...serverQuery, page })
+                          ? (page) => buildShopUrl({ ...serverQuery, page }, serverBasePath)
                           : undefined
                       }
                     />
