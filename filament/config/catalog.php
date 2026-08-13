@@ -108,6 +108,36 @@ return [
             'candle', 'incense', 'detergent', 'dish-soap', 'laundry', 'cleaner', 'air-freshener',
             'trash-bags', 'paper-towels',
 
+            /*
+             * Groceries and paper goods. ADDED 13/08/2026 after the harvest crossed out of
+             * supplements: the last 2,000 records fetched were cinnamon, vanilla powder, paprika,
+             * cumin, honey, crystal salt and flushable wipes. Complete records fell 75% -> 44% and
+             * skips rose 1% -> 9%, which read like a broken scraper and was not one — those items
+             * genuinely have no Supplement Facts, and food/household lines are geo-blocked (451)
+             * far more often than supplements.
+             *
+             * Nothing was reaching the shop: stage 2 filters on rootCategoryId and only 101046
+             * (Sports) and 1855 (Supplements) survive. The cost was purely REQUESTS — every one of
+             * these spent a fetch, at 0.5 req/s, on a product that could never be sold.
+             *
+             * ── WHY THIS LIST IS NARROWER THAN THE PROBLEM ────────────────────────────────
+             * Most spices ARE also supplements on iHerb. Cinnamon, turmeric and ginger are sold as
+             * capsules; manuka honey and epsom salt are supplement listings; "green coffee bean" is
+             * a weight-management extract. Denying the bare ingredient word would drop real stock.
+             *
+             * So each entry below is a FORM word, not an ingredient: the packaging or preparation
+             * that only a grocery item carries. `ground-coffee` denies the bag and leaves
+             * `green-coffee-bean-extract` alone. ALLOW still beats DENY, so anything that also
+             * matches the allow list survives regardless.
+             *
+             * `flushable-wipes` is spelled out because the existing `baby-wipes` did not catch it,
+             * which is how a pack of toilet wipes ended up in the harvest.
+             */
+            'flushable-wipes', 'facial-tissue', 'paper-plates', 'aluminum-foil', 'parchment-paper',
+            'ground-coffee', 'coffee-beans', 'coffee-pods', 'k-cup', 'tea-bags',
+            'pasta-sauce', 'tomato-sauce', 'salad-dressing', 'ketchup', 'mayonnaise',
+            'crackers', 'tortilla-chips', 'potato-chips', 'popcorn',
+
             // Pet. Spelled as phrases: bare "cat-"/"dog-"/"pet-" hit cat's claw, petadolex and
             // "rose-petals" respectively.
             'for-dogs', 'for-cats', 'for-pets', 'dog-food', 'cat-food', 'pet-food', 'cat-litter',
