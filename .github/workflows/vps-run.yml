@@ -51,6 +51,7 @@ on:
           - catalog-status
           - catalog-promote-dry-run
           - research-import-dry-run
+          - seo-ctr-pass-dry-run
           - queue-log
           - scheduler-log
           # staging table only: no customer-visible effect
@@ -60,6 +61,7 @@ on:
           - catalog-reset-stuck
           # WRITES: these need confirm=APPLY
           - research-import-apply
+          - seo-ctr-pass
           - catalog-promote
           - catalog-publish-wave-500
       confirm:
@@ -121,6 +123,20 @@ jobs:
               ;;
             research-import-dry-run)
               ARGS="products:import-research storage/app/research.json"
+              WRITES=no
+              ;;
+            seo-ctr-pass-dry-run)
+              ARGS="seo:ctr-pass --dry-run"
+              WRITES=no
+              ;;
+            seo-ctr-pass)
+              # Rewrites meta_title/meta_description on six category pages that already rank on
+              # page one and take almost no clicks - "omega 3 fish oil" alone is 3,331 impressions
+              # at position 7.5 for zero visits. WRITES=no because it touches categs /
+              # sous_categories only; the products table, which the backup gate exists to protect,
+              # is not involved. The command is idempotent: a second run reports "already correct"
+              # and writes nothing, so it can never silently revert a later edit made in Filament.
+              ARGS="seo:ctr-pass"
               WRITES=no
               ;;
             catalog-discover)
