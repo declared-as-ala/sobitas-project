@@ -65,8 +65,20 @@ jobs:
         run: npm run lint
         working-directory: frontend
 
+      # ── ONE RETRY, BECAUSE THE BUILD DEPENDS ON A THIRD-PARTY CDN ──────────────────────
+      # layout.tsx loads four families through next/font/google (Inter, Noto Sans Arabic, Archivo,
+      # Poppins), so EVERY build has to reach fonts.gstatic.com. On 13/08/2026 that fetch failed,
+      # next/font exhausted its own 3 internal retries and then threw
+      # `TypeError: Cannot read properties of null (reading '1')`, and the whole deploy failed with
+      # no code change involved — a contrast fix sat unshipped while the live page still measured
+      # its six failures.
+      #
+      # A retry is a mitigation, not the cure. The real fix is to vendor the woff2 files and switch
+      # to next/font/local, which removes the network from the build entirely; that needs the font
+      # files committed and is tracked separately. Until then one clean retry turns the common case
+      # (a transient CDN blip) from a failed deploy into a slower one.
       - name: Build (Next.js)
-        run: npm run build
+        run: npm run build || (echo "::warning::build failed once — retrying, usually a next/font CDN blip" && sleep 15 && npm run build)
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
