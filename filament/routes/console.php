@@ -635,3 +635,63 @@ Schedule::command('products:import-research storage/app/research.json --apply')
             .'See storage/logs/research-import.log.',
         );
     });
+
+
+/*
+|--------------------------------------------------------------------------
+| CTR pass — run once, then never again
+|--------------------------------------------------------------------------
+| seo:ctr-pass rewrites meta_title/meta_description on six category pages that already rank on page
+| one and take almost no clicks. "omega 3 fish oil" alone is 3,331 impressions at position 7.5 for
+| zero visits, and nothing but the printed title and description decides that number.
+|
+| ── WHY THIS IS SCHEDULED AND NOT RUN BY HAND ────────────────────────────────────────────
+| The vps-run workflow is the normal way to run a one-off artisan command, and it is currently
+| BROKEN: seo-ctr-pass-dry-run, catalog-status (a day earlier) and vps-doctor itself all fail within
+| seconds with no remote output. The deploy workflows still work, so the box is fine and SSH key
+| auth is fine — it is vps-run's password auth that the server is refusing. Until someone fixes that
+| secret, the scheduler is the only path that reaches artisan, and it demonstrably works: the
+| catalog content import has been landing through it all week.
+|
+| ── WHY IT LATCHES INSTEAD OF REPEATING ──────────────────────────────────────────────────
+| This command is idempotent, so repeating it is harmless in the narrow sense — but it is NOT
+| harmless in the useful sense. Titles are owner-editable in Filament, and an entry that reasserted
+| this copy every hour would silently revert any later edit and be almost impossible to diagnose
+| from the admin side. So it runs once, latches on success, and stays quiet.
+|
+| The key carries a version suffix. Changing the copy in SeoCtrPass::TARGETS means bumping it, which
+| is a deliberate act with a diff attached — exactly the property the sha1 latch gives the content
+| import, expressed by hand because the input here is a PHP constant rather than a file.
+*/
+$ctrPassKey = 'seo.ctr-pass.v1';
+
+Schedule::command('seo:ctr-pass')
+    ->hourly()
+    ->withoutOverlapping(10)
+    ->when(fn (): bool => ! rescue(
+        fn () => \Illuminate\Support\Facades\Cache::has($ctrPassKey),
+        false,
+        false,
+    ))
+    ->appendOutputTo(storage_path('logs/seo-ctr-pass.log'))
+    ->onSuccess(function () use ($ctrPassKey): void {
+        rescue(
+            fn () => \Illuminate\Support\Facades\Cache::forever($ctrPassKey, now()->toIso8601String()),
+            null,
+            false,
+        );
+
+        \Illuminate\Support\Facades\Log::info(
+            'seo:ctr-pass applied and latched. Titles are owner-editable from here on; this entry '
+            ."will not run again unless the cache key [{$ctrPassKey}] is forgotten or the version is "
+            .'bumped. Output: storage/logs/seo-ctr-pass.log.',
+        );
+    })
+    ->onFailure(function (): void {
+        // Loud, because a silent failure here looks identical to "the copy was already correct".
+        \Illuminate\Support\Facades\Log::error(
+            'seo:ctr-pass FAILED — the CTR copy did not land. A MISSING slug returns FAILURE, so the '
+            .'likeliest cause is a renamed category. It retries next hour. '
+            .'See storage/logs/seo-ctr-pass.log.',
+        );
+    });
