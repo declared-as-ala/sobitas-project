@@ -1120,6 +1120,38 @@ class ApisController extends Controller
                 ->selectRaw('brand_id, COUNT(*) as total')
                 ->pluck('total', 'brand_id');
 
+            /*
+             * ── THE SIDEBAR'S BRAND LIST, THREE COLUMNS WIDE ─────────────────────────────────
+             *
+             * /shop used to build this from getAllBrands(), and that cost far more than it looked:
+             *
+             *   • ~100 KB in the page, because /api/all_brands returns id, logo, designation_fr,
+             *     alt_cover, updated_at AND created_at for 589 brands. Two of those are timestamps
+             *     that nothing on a filter checkbox has ever rendered.
+             *   • SIX sequential API calls per render, because getAllBrands() walks the paginated
+             *     endpoint 100 rows at a time. On the busiest page on the site, against the origin
+             *     whose worker pool ran out earlier today.
+             *
+             * A checkbox needs an id and a name. It is already getting its count from `brand_counts`
+             * beside this, so shipping it from here costs one query and no extra round trip.
+             *
+             * whereIn on the published set, not every row in `brands`: 23 of the 589 have no
+             * published product, and a filter offering a value that can only ever return zero
+             * results is a dead end the shopper has to discover by clicking it.
+             */
+            $brands = Brand::whereIn(
+                'id',
+                Product::where('publier', 1)->whereNotNull('brand_id')->select('brand_id')
+            )
+                ->orderBy('designation_fr')
+                ->get(['id', 'designation_fr', 'slug'])
+                ->map(static fn ($b) => [
+                    'id' => (int) $b->id,
+                    'designation_fr' => (string) $b->designation_fr,
+                    'slug' => (string) $b->slug,
+                ])
+                ->values();
+
             // Only aromas that are actually ON a published product. The `aromas` table carries
             // historical entries no current product uses, and a filter offering a value that can
             // only ever return zero results is a bug the shopper has to discover by clicking it.
@@ -1160,6 +1192,7 @@ class ApisController extends Controller
                     'p99' => (int) ceil((float) ($p99 ?? $bounds->max_price ?? 1000)),
                 ],
                 'flavors' => $flavors,
+                'brands' => $brands,
                 'category_counts' => $categoryCounts,
                 'brand_counts' => $brandCounts,
                 'subcategories' => $subcategories,

@@ -88,6 +88,15 @@ export interface ShopFacets {
    */
   price: { min: number; max: number; p99: number };
   flavors: string[];
+  /**
+   * The sidebar's brand list — id and name only, and only brands that HAVE a published product.
+   *
+   * /shop used to build this from getAllBrands(), which cost ~100 KB in the page (589 rows carrying
+   * `created_at`/`updated_at` that nothing on a checkbox renders) and six sequential API calls per
+   * render, because that endpoint is walked 100 rows at a time. A checkbox needs an id and a name;
+   * its count comes from `brand_counts` below.
+   */
+  brands: Array<{ id: number; designation_fr: string; slug: string }>;
   /** category slug -> published product count */
   category_counts: Record<string, number>;
   /** brand id (as a string key, because JSON) -> published product count */

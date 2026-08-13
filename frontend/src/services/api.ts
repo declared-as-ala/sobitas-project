@@ -555,6 +555,7 @@ export const getShopFacets = async (): Promise<ShopFacets> => {
   const empty: ShopFacets = {
     price: { min: 0, max: 1000, p99: 1000 },
     flavors: [],
+    brands: [],
     category_counts: {},
     brand_counts: {},
     subcategories: [],
@@ -576,6 +577,11 @@ export const getShopFacets = async (): Promise<ShopFacets> => {
         p99: Number(raw.price?.p99 ?? raw.price?.max ?? 1000) || 1000,
       },
       flavors: Array.isArray(raw.flavors) ? raw.flavors.filter((f: unknown) => typeof f === 'string') : [],
+      // Guarded rather than trusted: a backend that predates this field returns undefined, and the
+      // shop must render with an empty brand rail instead of throwing on .map().
+      brands: Array.isArray(raw.brands)
+        ? raw.brands.filter((b: unknown) => b && typeof b === 'object' && 'id' in (b as object))
+        : [],
       category_counts: raw.category_counts && typeof raw.category_counts === 'object' ? raw.category_counts : {},
       brand_counts: raw.brand_counts && typeof raw.brand_counts === 'object' ? raw.brand_counts : {},
       subcategories: Array.isArray(raw.subcategories) ? raw.subcategories : [],

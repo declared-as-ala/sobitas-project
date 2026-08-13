@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
-import { getShopPage, getShopFacets, getCategories, getAllBrands } from '@/services/api';
+import { getShopPage, getShopFacets, getCategories } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { getProductLink } from '@/util/productUrl';
@@ -134,15 +134,35 @@ async function getShopData(query: ShopQuery) {
     { revalidate: 300, tags: ['shop', 'products'] }
   );
 
-  const [productsResponse, facets, categories, brands] = await Promise.all([
+  const [productsResponse, facets, categories] = await Promise.all([
     loadForCache(
       cachedShopPage,
       { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
     ),
     getShopFacets(),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
-    getAllBrands().catch(() => [] as Awaited<ReturnType<typeof getAllBrands>>),
   ]);
+
+  /*
+   * ── getAllBrands() IS GONE FROM THIS PAGE, AND IT WAS COSTING MORE THAN IT LOOKED ────────
+   *
+   * It supplied the sidebar's brand checkboxes, and to do that it:
+   *   • made SIX sequential API calls per render, because /api/all_brands is walked 100 rows at a
+   *     time and there are 589 brands — on the busiest page on the site, against the origin whose
+   *     php-fpm pool ran out earlier today;
+   *   • put ~100 KB in the page, because each row carries logo, alt_cover, created_at and
+   *     updated_at, and a filter checkbox renders none of those.
+   *
+   * /api/shop_facets already had to compute `brand_counts` for the numbers beside those checkboxes,
+   * so it now returns the id/name/slug alongside them. One query it was already making, no extra
+   * round trip, and the list is restricted to brands that HAVE a published product — 23 of the 589
+   * do not, and a filter offering a value that can only ever return zero results is a dead end the
+   * shopper has to discover by clicking it.
+   *
+   * The Brand type declares everything except id and designation_fr optional, so this is a
+   * narrowing rather than a cast: what is dropped is what was never read.
+   */
+  const brands = facets.brands.map((b) => ({ id: b.id, designation_fr: b.designation_fr }));
 
   return {
     productsData: {
