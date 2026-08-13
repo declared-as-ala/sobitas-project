@@ -27,82 +27,10 @@ import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
 import { Suspense } from 'react';
 import type { Category, SubCategory } from '@/types';
-import { getShopPage } from '@/services/api';
-import { loadForCache } from '@/util/loadForCache';
-import {
-  parseShopQuery,
-  buildShopUrl,
-  EMPTY_SHOP_QUERY,
-  SHOP_PER_PAGE,
-  type RawSearchParams,
-  type ShopQuery,
-} from '@/util/shopQuery';
-
-/**
- * One page of a listing, scoped by the path rather than by the query string.
- *
- * `scope` is applied on top of the parsed query and is NOT written back into the URL — a
- * subcategory page is /whey-isolate?page=2, never /whey-isolate?subcategory=whey-isolate&page=2.
- * Two URLs for one page is the duplicate-content problem this migration exists to reduce.
- *
- * loadForCache stays on the OUTSIDE for the reason it always has: a transient upstream failure must
- * render empty without that emptiness being baked into the ISR entry for the next ten minutes.
- */
-async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery>) {
-  const scoped: ShopQuery = { ...query, ...scope };
-  const res = await loadForCache(
-    () => getShopPage(scoped, SHOP_PER_PAGE),
-    { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
-  );
-
-  const total = res.pagination?.total ?? res.products.length;
-  const totalPages = Math.max(1, res.pagination?.last_page ?? 1);
-
-  return {
-    productsData: { products: res.products, brands: res.brands, categories: res.categories },
-    serverPagination: {
-      total,
-      totalPages,
-      // Clamp: ?page=99999 must not render an empty grid and claim to be page 99999.
-      currentPage: Math.min(Math.max(1, res.pagination?.current_page ?? query.page), totalPages),
-      perPage: SHOP_PER_PAGE,
-    },
-  };
-}
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
-  /**
-   * Optional because /x-crawler/category/[slug] delegates here without one. Reading it is what
-   * makes ?page=N work; a route that ignores it renders page 1 for every page number.
-   */
-  searchParams?: Promise<RawSearchParams>;
 };
-
-/**
- * ── WHY THIS ROUTE NOW PAGINATES, AND WHY THAT IS THE BIGGEST SEO CHANGE IN THE FILE ──────────
- *
- * Measured live on 14/08/2026, before this change:
- *
- *     /sante-vitalite        8,849 products in the category, 12 product links on the page, 0 ?page= links
- *     /proteines               561 products,                 13 links,                      0 ?page= links
- *     /probiotiques             (subcategory)                12 links,                      0 ?page= links
- *     /sante-vitalite?page=2   200 OK, and a byte-for-byte DUPLICATE of page 1
- *
- * Six category pages and fifty subcategory pages, each exposing twelve products. So the ONLY crawl
- * path to the 10,669th product was /shop?page=1 through ?page=890 — one 890-link chain that Google
- * walks slowly, shallowly and last. That is the structural reason the deep catalogue is not indexed,
- * and no amount of per-product content fixes it.
- *
- * Paginating here turns that one 890-page chain into fifty-six short ones, each topically coherent:
- * /whey-isolate?page=3 is a page about whey isolate, which is both a better crawl path and a better
- * ranking target than the same twelve products buried at /shop?page=417.
- *
- * The machinery already existed — ShopPageClient's server mode, shopQuery, the pager's real hrefs —
- * and its own docblock predicted this exact gap: "the other four surfaces would be left showing 12
- * products each, which is precisely the failure this migration exists to fix, moved rather than
- * removed." This is that job finished.
- */
 
 // ISR (see app/[slug]/page.tsx): cacheable category HTML for better Core Web Vitals.
 export const revalidate = 600;
@@ -228,10 +156,9 @@ function metaKeywordsList(merged: MergedCategorySeo): string[] | undefined {
   return parts.length ? [...new Set(parts)] : undefined;
 }
 
-export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const canonicalSlug = getCanonicalSlug(slug?.trim() ?? '');
-  const metaQuery = parseShopQuery(searchParams ? await searchParams : undefined);
   try {
     const { type, data } = await fetchCategoryOrSubCategory(canonicalSlug);
     const apiTitle =
@@ -292,22 +219,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     // forceProteinDomain only normalised the HOST, so it accepted '/musculation' verbatim even
     // though the admin redirect table 301s /musculation straight back to this page. The guard
     // catches that and falls back to the (always-live) self canonical.
-    /*
-     * ── PAGE N SELF-CANONICALISES; PAGE 1 KEEPS THE ADMIN OVERRIDE ─────────────────────────
-     *
-     * Since Google retired rel=prev/next, its guidance is that a paginated page points at itself.
-     * /sante-vitalite?page=7 holds twelve products that appear on no other URL, so canonicalising
-     * it to /sante-vitalite tells Google those twelve do not exist — and with 8,849 products in
-     * that one category, that is the difference between a crawl path to the deep catalogue and no
-     * path at all.
-     *
-     * `merged.canonicalUrl` is an admin override and is honoured on page 1 only: an override
-     * pointing every page of a series at one URL is the mistake described above, spelled out by
-     * hand.
-     */
-    const canonicalUrl = metaQuery.page > 1
-      ? await resolveCanonicalUrl(undefined, buildShopUrl({ ...EMPTY_SHOP_QUERY, page: metaQuery.page }, `/${encodeURIComponent(canonicalSlug)}`))
-      : await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
+    const canonicalUrl = await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
     const descTrimmed = description.slice(0, 155);
     const ogImageRaw = merged.ogImage || undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
@@ -361,9 +273,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   }
 }
 
-export default async function CategoryPage({ params, searchParams }: PageProps) {
+export default async function CategoryPage({ params }: PageProps) {
   const { slug } = await params;
-  const listingQuery = parseShopQuery(searchParams ? await searchParams : undefined);
   const cleanSlug = slug?.trim();
   if (!cleanSlug) notFound();
 
@@ -397,20 +308,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         sous_categories: any[];
         pagination?: any;
       };
-      /*
-       * The products come from a PAGINATED call rather than from `sub.products`.
-       *
-       * fetchCategoryOrSubCategory returns a fixed first page and is still what supplies the
-       * taxonomy, the brands and the SEO copy below — but it has no notion of ?page=N, which is
-       * why /probiotiques showed the same twelve products at every page number.
-       */
-      const { productsData, serverPagination } = await loadListingPage(listingQuery, {
-        subcategories: [canonicalSlug],
-        // A subcategory page must never also carry the /shop category filter: the two would
-        // intersect and a shopper arriving from a filtered /shop link would see an empty grid.
+      const productsData = {
+        products: sub.products ?? [],
+        brands: sub.brands ?? [],
         categories: [],
-      });
-      const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
+      };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const parentCat = sub.sous_category?.categorie;
       const seoJson = await getCategorySeoContent(canonicalSlug);
@@ -560,9 +462,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               brands={sub.brands ?? []}
               initialCategory={canonicalSlug}
               isSubcategory
-              serverQuery={serverQuery}
-              serverPagination={serverPagination}
-              serverBasePath={`/${canonicalSlug}`}
               parentCategory={sub.sous_category?.categorie?.slug ?? undefined}
               categoryBreadcrumbLabel={merged.breadcrumbLabel}
               categorySeoLanding={categorySeoLanding}
@@ -580,13 +479,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         products: any[];
         brands: any[];
       };
-      // Same reasoning as the subcategory branch: /sante-vitalite holds 8,849 products and showed
-      // twelve of them, with ?page=2 answering 200 and rendering a duplicate of page 1.
-      const { productsData, serverPagination } = await loadListingPage(listingQuery, {
-        categories: [canonicalSlug],
-        subcategories: [],
-      });
-      const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
+      const productsData = {
+        products: cat.products ?? [],
+        brands: cat.brands ?? [],
+        categories: [],
+      };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const seoJsonCat = await getCategorySeoContent(canonicalSlug);
       const apiSeoCat = (cat as { seo?: CategorySeoFromApi }).seo;
@@ -719,9 +616,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categories={categories}
               brands={cat.brands ?? []}
               initialCategory={canonicalSlug}
-              serverQuery={serverQuery}
-              serverPagination={serverPagination}
-              serverBasePath={`/${canonicalSlug}`}
               categoryBreadcrumbLabel={mergedCat.breadcrumbLabel}
               categorySeoLanding={categorySeoLanding}
               categorySeoLandingBottom={categorySeoLandingBottom}

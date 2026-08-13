@@ -132,7 +132,7 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   };
 }
 
-export async function generateMetadata({ params, searchParams }: RootSlugPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: RootSlugPageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) {
@@ -140,9 +140,7 @@ export async function generateMetadata({ params, searchParams }: RootSlugPagePro
   }
 
   if (await hasCategoryOrSubCategory(cleanSlug)) {
-    // searchParams forwarded, or ?page=7 would inherit page 1's canonical and declare the other
-    // pages of the series non-existent — see the note on canonicalUrl in the category route.
-    return generateCategoryMetadata({ params, searchParams });
+    return generateCategoryMetadata({ params });
   }
 
   const brand = await findBrandBySlug(cleanSlug);
@@ -160,7 +158,7 @@ export async function generateMetadata({ params, searchParams }: RootSlugPagePro
   return { title: 'Page introuvable | Proteine Tunisie', robots: { index: false, follow: false } };
 }
 
-export default async function RootSlugPage({ params, searchParams }: RootSlugPageProps) {
+export default async function RootSlugPage({ params }: RootSlugPageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
 
@@ -169,9 +167,7 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
   }
 
   if (await hasCategoryOrSubCategory(cleanSlug)) {
-    // Without searchParams this route renders page 1 for every page number: /sante-vitalite?page=2
-    // answered 200 and was a byte-for-byte duplicate of page 1, measured 14/08/2026.
-    return <CategoryPage params={params} searchParams={searchParams} />;
+    return <CategoryPage params={params} />;
   }
 
   const brand = await findBrandBySlug(cleanSlug);
