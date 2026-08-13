@@ -136,6 +136,37 @@ class ApisController extends Controller
         return $base;
     }
 
+    /**
+     * Put products a customer can actually buy at the top of every listing.
+     *
+     * ── WHY THIS IS A PRIMARY SORT AND NOT A FILTER ──────────────────────────────────────────
+     * 170+ of the catalogue is out of stock at any time, and until now nothing separated those
+     * rows from the rest — so `latest('created_at')` on a freshly imported catalogue could fill an
+     * entire first page with items that cannot be sold. That is the worst possible use of the only
+     * screen most visitors ever see.
+     *
+     * They are ORDERED DOWN, never removed. An out-of-stock product page still ranks, still earns
+     * links, and still converts later; hiding it from the grid would orphan URLs Google has already
+     * indexed and lose the "Rupture" signal the card is designed to show. Sorting keeps everything
+     * reachable and simply stops the dead stock from taking the fold.
+     *
+     * ── WHY BOTH COLUMNS ─────────────────────────────────────────────────────────────────────
+     * `rupture` is the derived flag and Product::saving() keeps it true whenever force_out_of_stock
+     * is set or qte hits zero — so on paper it is sufficient. In practice the model's own docblock
+     * warns that admin document pages mutate `qte` through raw query-builder decrement()/increment()
+     * calls that BYPASS that hook and leave `rupture` stale, which is why recalculateRupture()
+     * exists at all. Testing force_out_of_stock as well costs nothing and means a hard override is
+     * honoured even against a stale flag. It is also exactly what the frontend's cartStock.ts does,
+     * so the grid order and the card's own badge can never disagree.
+     *
+     * Applied BEFORE the caller's own orderBy, so availability is the primary key and price/recency
+     * order within each group rather than across them.
+     */
+    private function orderAvailableFirst($query)
+    {
+        return $query->orderByRaw('(COALESCE(force_out_of_stock, 0) = 1 OR COALESCE(rupture, 0) = 1) ASC');
+    }
+
     private function resolvePerPage(Request $request, int $default = self::DEFAULT_PER_PAGE): int
     {
         $perPage = (int) $request->query('per_page', $request->query('limit', $default));
@@ -785,6 +816,8 @@ class ApisController extends Controller
             $query->where('prix', '<=', (float) $request->get('max_price'));
         }
 
+        $this->orderAvailableFirst($query);
+
         $sort = $request->get('sort');
         if ($sort === 'price_asc') {
             $query->orderBy('prix');
@@ -906,6 +939,7 @@ class ApisController extends Controller
             ->whereIn('sous_categorie_id', SousCategory::where('categorie_id', $category->id)->select('id'))
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
+            ->orderByRaw('(COALESCE(force_out_of_stock, 0) = 1 OR COALESCE(rupture, 0) = 1) ASC')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -961,6 +995,7 @@ class ApisController extends Controller
             ->where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
+            ->orderByRaw('(COALESCE(force_out_of_stock, 0) = 1 OR COALESCE(rupture, 0) = 1) ASC')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -1030,6 +1065,7 @@ class ApisController extends Controller
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images'])
+            ->orderByRaw('(COALESCE(force_out_of_stock, 0) = 1 OR COALESCE(rupture, 0) = 1) ASC')
             ->latest('created_at')
             ->get();
 
@@ -1074,6 +1110,9 @@ class ApisController extends Controller
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
+            // Search results are capped at 50, so ordering is not cosmetic here: without this an
+            // out-of-stock match can occupy a slot that an available product never gets.
+            ->orderByRaw('(COALESCE(force_out_of_stock, 0) = 1 OR COALESCE(rupture, 0) = 1) ASC')
             ->limit(50)
             ->get();
 
