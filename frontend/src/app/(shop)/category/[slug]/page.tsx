@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import { htmlToText } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
@@ -50,8 +51,32 @@ import {
  */
 async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery>) {
   const scoped: ShopQuery = { ...query, ...scope };
-  const res = await loadForCache(
+
+  /*
+   * ── unstable_cache IS WHAT PAYS FOR THIS ROUTE GOING DYNAMIC ──────────────────────────────
+   *
+   * Reading searchParams costs /[slug] its generateStaticParams and therefore its Full Route
+   * Cache (see the long note at the foot of that file). Without a data cache that would mean one
+   * API call per visitor on the listing pages — and, far more importantly, no protection when the
+   * origin is unwell. The API has been observed answering 504 on every endpoint; a cached page
+   * rides through that, a naively dynamic one serves an empty category.
+   *
+   * Keyed on the fully-scoped query, so /proteines, /proteines?page=2 and /whey-isolate are three
+   * entries rather than one wrong one. 600s to mirror the ISR window this replaces.
+   *
+   * loadForCache stays OUTSIDE, for the reason it always does: it turns a throw into an empty
+   * render, and inside the cache that empty render is what would be stored for the next ten
+   * minutes. Outside, the throw propagates, unstable_cache stores nothing, and the previous good
+   * page keeps being served.
+   */
+  const cached = unstable_cache(
     () => getShopPage(scoped, SHOP_PER_PAGE),
+    ['listing-page', buildShopUrl(scoped, scope.subcategories?.[0] ?? scope.categories?.[0] ?? 'shop')],
+    { revalidate: 600, tags: ['shop', 'products'] }
+  );
+
+  const res = await loadForCache(
+    cached,
     { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
   );
 

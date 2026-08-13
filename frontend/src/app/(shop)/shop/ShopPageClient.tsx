@@ -1046,6 +1046,25 @@ function ShopContent({
 
   // Handle filtering
   useEffect(() => {
+    /*
+     * ── IN SERVER MODE THIS EFFECT MUST NOT RUN AT ALL ──────────────────────────────────────
+     *
+     * It exists to reproduce the server's filtering in the browser, and in server mode the server
+     * has already done it — `productsData` IS the answer for the current URL. Letting it run does
+     * two harmful things at once:
+     *
+     *   · it overwrites the correct server-rendered page with a client-fetched one, so the grid
+     *     changes under the shopper a moment after the page appears;
+     *   · getProductsByCategory() walks the WHOLE category 100 rows at a time. For sante-vitalite
+     *     that is 8,849 products over 88 requests, issued concurrently, FROM THE BROWSER. The same
+     *     walk on the server side is the shape that exhausted the php-fpm pool on 12/08 —
+     *     ~40 concurrent per_page=100&page=N requests in three seconds, every child busy.
+     *
+     * The legacy (non-server) surfaces still need it, so this is an early return rather than a
+     * deletion.
+     */
+    if (isServerMode) return;
+
     const isInitialCategoryLoad = initialCategory && 
                                    selectedCategories.length > 0 && 
                                    selectedCategories[0] === initialCategory &&
@@ -1207,7 +1226,7 @@ function ShopContent({
     } else {
       applyFilters();
     }
-  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
+  }, [isServerMode, searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
 
   useEffect(() => {
     setIsDescriptionExpanded(false);

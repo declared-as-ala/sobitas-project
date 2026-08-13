@@ -270,25 +270,32 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
 }
 
 /**
- * Opt this route into the Full Route Cache.
+ * ── generateStaticParams IS GONE, AND THAT IS THE PRICE OF ?page=N ────────────────────────────
  *
- * Next only registers a dynamic segment in `prerenderManifest.dynamicRoutes` when the route
- * exports generateStaticParams. Without it the route is compiled as `ƒ` (server-rendered on
- * demand) and `export const revalidate` above is inert — which is why every listing and product
- * URL was answering `Cache-Control: private, no-cache, no-store` no matter how many fetch-level
- * cache fixes landed, while param-less routes like `/` cached normally.
+ * It used to return an empty array purely to register this route in `prerenderManifest.dynamicRoutes`,
+ * which is what made `export const revalidate = 600` take effect. That note was correct and the
+ * measurement behind it still holds — without the export the route compiles as `ƒ` and every request
+ * re-renders.
  *
- * Returning an EMPTY array is deliberate, and is enough. Verified with a controlled build against
- * this project's own Next 15.5.9:
- *   no generateStaticParams  -> `ƒ /[slug]`, dynamicRoutes: []          , every request re-renders
- *   `return []`              -> `● /[slug]`, dynamicRoutes: ["/[slug]"] , 1st request MISS, 2nd HIT
- * So on-demand ISR covers every slug; nothing needs to be enumerated.
+ * It had to go because the two are mutually exclusive. A route registered as statically renderable
+ * may not read `searchParams`, and reading `searchParams` is the only way to serve ?page=2. Shipping
+ * both produced exactly what Next promises it will: every category and subcategory URL answered
  *
- * Enumerating the catalogue here would be actively worse: `next build` runs in CI where Cloudflare
- * 403s the runner, so the list would come back empty or partial and bake bad pages — the exact
- * failure this codebase has hit before. An empty list cannot bake anything wrong; it only skips
- * build-time prewarming, and the first visitor to each URL warms it.
+ *     Error: An error occurred in the Server Components render
+ *     digest: 'DYNAMIC_SERVER_USAGE'
+ *
+ * i.e. HTTP 500 on /proteines, /probiotiques and every other listing — live, for the twenty minutes
+ * it took to notice and revert. The build passes, because with an empty param list there is nothing
+ * to prerender and therefore nothing to fail; the throw only happens when a real request arrives.
+ * That is the whole reason this comment is here rather than a one-line removal.
+ *
+ * ── WHAT PAYS FOR IT ─────────────────────────────────────────────────────────────────────────
+ * The same thing that paid for it on /shop, which made this identical trade for the identical
+ * reason: the DATA is cached with unstable_cache even though the RENDER is not. The expensive part
+ * of this route was never React — it was the API walk, and that is now one 12-row request behind a
+ * 600s cache instead of up to 88 concurrent 100-row requests per render.
+ *
+ * So the route loses its HTML cache and gains a data cache, and the origin load goes DOWN rather
+ * than up. Bots are unaffected either way: middleware rewrites them to /x-crawler/category/{slug},
+ * which keeps its own generateStaticParams and its own full-catalogue render.
  */
-export function generateStaticParams(): { slug: string }[] {
-  return [];
-}
