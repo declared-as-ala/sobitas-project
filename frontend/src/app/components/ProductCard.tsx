@@ -1,7 +1,7 @@
 'use client';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield, Mail } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import type { Product as ApiProduct } from '@/types';
@@ -413,14 +413,43 @@ export const ProductCard = memo(function ProductCard({
               <span className="truncate">{stock.stockLabel}</span>
             </span>
           )}
-          <span className="inline-flex shrink-0 items-center gap-1">
-            <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-            24–48h
-          </span>
+          {/* NOT on a back-order card. "24-48h" beside "Sur commande" is a delivery promise for
+              something nobody has in a warehouse, and it contradicts the product page, which drops
+              shippingDetails from its schema for exactly these items (see buildShippingDetails).
+              A shipping estimate is a claim; it is only allowed where the stock is real. */}
+          {!stock.isBackOrder && (
+            <span className="inline-flex shrink-0 items-center gap-1">
+              <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              24–48h
+            </span>
+          )}
         </div>
 
         {/* CTA. min-h 44, not 46: 44 is the tap-target floor and 46 was two pixels of nothing. */}
         <div className="mt-auto pt-1">
+          {stock.isBackOrder ? (
+            /*
+              A REAL LINK, NOT A DEAD BUTTON.
+
+              This was a disabled button reading "Sur commande" — a control that names an action and
+              then refuses to perform it, on 10,535 of 10,669 cards. Saying "on request" while
+              offering no way to request is the one version of this that misleads.
+
+              Safe as an anchor here because the card is NOT wrapped in one: only the title block is
+              a LinkWithLoading, so this sits outside every anchor and nests nothing. It is styled
+              as the outline variant rather than the brand fill so it still reads as secondary to a
+              real "Ajouter au panier" elsewhere in the grid.
+            */
+            <LinkWithLoading
+              href={`/contact?produit=${encodeURIComponent(productData.name)}`}
+              loadingMessage="Chargement"
+              className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-brand bg-transparent px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap text-brand transition-colors duration-150 active:scale-[0.98] hover:bg-brand hover:text-on-brand"
+              aria-label={`Demander ${productData.name}`}
+            >
+              <Mail className="size-4 shrink-0" aria-hidden="true" />
+              <span className="truncate">Demander</span>
+            </LinkWithLoading>
+          ) : (
           <Button
             size="sm"
             className={`flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-colors duration-150 active:scale-[0.98] ${
@@ -453,6 +482,7 @@ export const ProductCard = memo(function ProductCard({
               </span>
             )}
           </Button>
+          )}
         </div>
       </div>
     </article>
