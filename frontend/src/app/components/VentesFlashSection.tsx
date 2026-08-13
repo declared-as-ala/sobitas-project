@@ -281,33 +281,60 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       defer
       aria-labelledby="ventes-flash-heading"
     >
-      {/* ── THE BANNER IS AN INNER PANEL, NOT THE BAND ────────────────────────────────────
-          Owner, 11/08/2026: "the ventes flash section design looks super bad — redesign it, make
-          it a banner with a dark background, rounded, and give it margin so it looks outer like
-          the browse-by-category images."
+      {/* ── A FLOATING BANNER, BUT A LIGHT ONE ────────────────────────────────────────────
+          Owner, 11/08/2026: "make it a banner with a dark background, rounded, and give it margin
+          so it looks outer like the browse-by-category images."
+          Owner, 13/08/2026: "redesign the vente flash, make it fit the landing page design."
 
-          Previously the band ITSELF was the banner: `surface="sunken"` painted edge to edge and a
-          4px brand rule sat on its top seam. Edge-to-edge is what made it read as another section
-          rather than as one object on the page. Floating a dark panel inside the rail gives it the
-          margin the category tiles have, and a boundary the eye can actually see.
+          Those two asks conflict only on the COLOUR, so the colour is the only thing that changed.
+          It is still an inner panel with margin, still rounded, still shadowed — that is what makes
+          it read as one object rather than as another section, and it was right.
 
-          `pt-slab` is the DARK TOKEN SCOPE, not a background utility: every `text-ink-*`,
-          `border-hairline` and `ring-focus` inside it resolves against the dark surface, which is
-          what keeps the header, the countdown pill and the focus rings legible without a single
-          `dark:` pair. Section.tsx bans `surface="slab"` for content BANDS — this is not a band,
-          it is a component inside one, which is the case that docblock explicitly leaves open.
+          ── WHY DARK WAS NEVER AVAILABLE HERE ────────────────────────────────────────────
+          tokens.css sets the rule as a measurable test, not a preference: "on the homepage at
+          1440px, no more than ~12% of painted area above the footer may be a dark surface", with
+          the allowed list being the utility bar, THE FLASH COUNTDOWN TILES, the hero scrim, the
+          footer and small marks — and "BANNED: any full-width content band above the footer".
+          Measured after that pass, the page sat at 8.4%.
 
-          THE TEXTURE IS A GRADIENT, NOT AN UNSPLASH PHOTO. The owner offered a photo; a CSS
-          gradient is the better answer here and costs nothing: no extra request in front of a
-          band that already lazy-loads four packshots, no third-party host on the critical path,
-          nothing to go 404 later, and no licence to track. Two radial washes plus a fine diagonal
-          hatch read as polished granite and weigh zero bytes. */}
-      <div className="pt-slab relative overflow-hidden rounded-3xl bg-[radial-gradient(120%_120%_at_15%_0%,#2C2C35_0%,#191920_55%,#0F0F14_100%)] px-4 py-5 shadow-lg sm:px-6 sm:py-7">
-        {/* The granite hatch. `pointer-events-none` and aria-hidden — it is texture, not content.
-            Kept at 4% so it survives an OLED black and never fights the packshots. */}
+          At 1440 this panel is roughly 1376x432 ≈ 594k px² of dark against about 415k px² of
+          headroom. It does not fit under the ceiling; it is 1.4x the entire remaining budget on its
+          own. This component's own docblock had already done that arithmetic and reached the same
+          conclusion — the dark version shipped anyway, and the page has been over its own budget
+          since. That is the real reason it stopped looking like the rest of the site.
+
+          ── WHAT CARRIES THE URGENCY INSTEAD ────────────────────────────────────────────
+          Not darkness — SATURATION. A brand-tinted wash over the normal elevated surface, a
+          brand-coloured hairline, the flame, the `Jusqu'a -24%` kicker, and the orange discount
+          badge already painted on each card. The COUNTDOWN PILL STAYS DARK: it carries its own
+          `.pt-slab` and is on the allowed list by name, at ~5k px² rather than 594k.
+
+          The wash is a TINT OVER the surface (`from-brand/10`), never a literal colour, so it
+          composites correctly on both themes. The previous version could hard-code #191920 only
+          because `.pt-slab` pinned it dark in both; a hard-coded cream would have been a dark-mode
+          bug of exactly the kind this file has already shipped once.
+
+          `.pt-plate` REPLACES `.pt-slab`. It is the page-scope class, so `text-ink-*`,
+          `border-hairline` and `ring-focus` inside the panel resolve against a LIGHT surface again.
+          It also makes FlashDealCard's own `.pt-plate` a harmless no-op instead of a repair: the
+          card was re-entering page scope to escape this panel's dark scope (1.1:1 titles, fixed in
+          fe1e4cd3), and with the dark scope gone there is nothing left to escape from.
+
+          THE TEXTURE IS STILL A CSS GRADIENT, NOT A PHOTO. The owner offered one; a gradient costs
+          no request in front of a band that already lazy-loads four packshots, adds no third-party
+          host to the critical path, and cannot 404 later. The hatch flips from white to black lines
+          because it now sits on a light surface. */}
+      <div className="pt-plate relative overflow-hidden rounded-3xl border border-brand/25 bg-elevated px-4 py-5 shadow-lg sm:px-6 sm:py-7">
+        {/* The warm brand wash — a TINT over the surface, so it composites on either theme. */}
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.04] [background-image:repeating-linear-gradient(135deg,#fff_0_1px,transparent_1px_5px)]"
+          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand/10 via-brand/[0.03] to-transparent"
+        />
+        {/* The hatch. `pointer-events-none` + aria-hidden — texture, not content. Black at 3.5%
+            because the surface underneath is light now; white lines would be invisible. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:repeating-linear-gradient(135deg,#000_0_1px,transparent_1px_5px)]"
         />
         <div className="relative">
       {/* THE KICKER CARRIES THE NUMBER. It used to be an 11px line of prose BELOW the products
