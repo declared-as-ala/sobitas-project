@@ -1485,7 +1485,7 @@ function ShopContent({
                 </Button>
               </div>
             ) : showSkeleton ? (
-              <ProductsSkeleton showBreadcrumb={false} showFilters={false} />
+              <ProductsSkeleton showBreadcrumb={false} showFilters={false} gridClassName="lg:grid-cols-3" />
             ) : filteredProducts.length === 0 ? (
               <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
                 <EmptyState
@@ -1506,13 +1506,38 @@ function ShopContent({
               </div>
             ) : (
               <div className="space-y-8 sm:space-y-12">
-                <ProductGrid className="min-w-0 w-full">
+                {/*
+                  THREE ACROSS ON DESKTOP, NOT FOUR.
+
+                  Owner, 13/08/2026: "make them more bigger on /shop to show 3 beside each other so
+                  the image is clear." The complaint is about the PACKSHOT, not the column count —
+                  three columns is the means.
+
+                  ── WHY AN OVERRIDE AND NOT AN EDIT TO ProductGrid ──────────────────────────
+                  ProductGrid is the one canonical grid for six surfaces: the homepage rails, this
+                  page, /offres, /packs, /favoris and the skeletons. Changing its constant would
+                  re-column the homepage too, which nobody asked for. `cn` is tailwind-merge, so
+                  `lg:grid-cols-3` here replaces `lg:grid-cols-4` for THIS grid only and leaves the
+                  1/2/3 steps below `lg` exactly as the docblock reasoned them out.
+
+                  The same string is passed to <ProductsSkeleton gridClassName> below. That is not
+                  tidiness: the skeleton renders through this same primitive, so if it stayed 4-up
+                  the grid would visibly re-column the moment hydration swapped one for the other —
+                  CLS on the page with the most cards on it.
+                */}
+                <ProductGrid className="min-w-0 w-full lg:grid-cols-3">
                   {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       variant="compact"
                       imageContext="packs"
+                      /* Three columns, so the card is 285px with the filter rail open and 389px
+                         with it closed at 1280 — against the default declaration's 205px. Without
+                         this the browser keeps fetching the 4-up file and paints it into a box
+                         nearly twice as wide, which is exactly the softness the wider cards were
+                         meant to cure. Steps below `lg` are unchanged because the grid is. */
+                      imageSizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, 30vw"
                       // Mobile-first: the shop grid is 2-col on phones (81% of traffic), so only
                       // the first 2 cards are above the fold. Eager-loading 4 made cards 3–4
                       // (off-screen on mobile) compete with the LCP image. Prioritize just the
@@ -1551,7 +1576,7 @@ export function ShopPageClient(props: ShopPageClientProps) {
     <Suspense fallback={
       <>
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <ProductsSkeleton />
+          <ProductsSkeleton gridClassName="lg:grid-cols-3" />
         </main>
       </>
     }>

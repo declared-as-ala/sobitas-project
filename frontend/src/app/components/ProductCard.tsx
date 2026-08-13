@@ -44,6 +44,15 @@ interface ProductCardProps {
   imageContext?: 'default' | 'packs';
   /** Above-the-fold cards: paint immediately (no entrance fade) + eager-load the image for a faster LCP. */
   priority?: boolean;
+  /**
+   * `sizes` override for the packshot, for a surface whose grid is not ProductGrid's default.
+   *
+   * /shop renders 3-up at `lg` instead of 4-up, which makes a card 389px at 1280 against a
+   * declared 205px — so without this the wider cards would have fetched the SAME small file and
+   * rendered it softer. Left undefined everywhere else, which keeps the default string and the
+   * current bytes on the homepage rails.
+   */
+  imageSizes?: string;
   /** Resolved brand name (e.g. "MUSCLETECH"). The grid payload only carries brand_id; the caller
    *  resolves it against the brands list. Omitted when unavailable → the brand row is hidden. */
   brandName?: string;
@@ -74,6 +83,7 @@ export const ProductCard = memo(function ProductCard({
   hideCountdown = false,
   imageContext = 'default',
   priority = false,
+  imageSizes,
   brandName,
 }: ProductCardProps) {
   const { locale } = useI18n();
@@ -241,6 +251,7 @@ export const ProductCard = memo(function ProductCard({
           product={product as any}
           priority={priority}
           hoverImageSrc={(product as any).hover_image ?? null}
+          sizes={imageSizes}
         />
 
         {/* Badges — top-left. Discount = the brand accent; Rupture / TOP VENTE = a dark chip.

@@ -38,6 +38,15 @@ interface PackCardImageProps {
    * behaves exactly as it did before.
    */
   hoverImageSrc?: string | null;
+  /**
+   * `sizes` for the packshot, when this surface's columns differ from the default grid.
+   *
+   * The default describes ProductGrid's 1/2/3/4 steps. /shop overrides its own grid to 3-up, where
+   * a card is 389px at 1280 rather than 286px — against a declared 16vw (205px) that is a 1.9x
+   * upscale, i.e. three columns would have made the packshot BLURRIER, which is the opposite of
+   * what widening the cards was for. A surface that changes its column count must declare it here.
+   */
+  sizes?: string;
 }
 
 export function PackCardImage({
@@ -53,6 +62,7 @@ export function PackCardImage({
   priority = false,
   surface = 'light',
   hoverImageSrc = null,
+  sizes = '(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw',
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
   // A hover image that 404s must not leave a hole where the packshot was: on error we simply stop
@@ -116,7 +126,7 @@ export function PackCardImage({
                 transform: !isContain && scale > 1 ? `scale(${scale})` : undefined,
               }}
               {...(priority ? { priority: true, fetchPriority: 'high' as const } : { loading: 'lazy' as const })}
-              sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
+              sizes={sizes}
               quality={75}
               onError={() => setHasError(true)}
             />
@@ -153,7 +163,7 @@ export function PackCardImage({
                 )}
                 style={{ objectPosition: 'center center' }}
                 loading="lazy"
-                sizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw"
+                sizes={sizes}
                 quality={75}
                 onError={() => setHoverFailed(true)}
               />
