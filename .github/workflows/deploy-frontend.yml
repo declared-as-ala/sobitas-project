@@ -156,12 +156,75 @@ jobs:
 
             echo "✅ Frontend deploy done"
 
+      # ── POST-DEPLOY SMOKE TESTS AGAINST THE LIVE SITE ──────────────────────────────────────
+      #
+      # Three bugs reached production on 13/08/2026, and every one of them passed typecheck, passed
+      # the build, and answered HTTP 200 while being wrong:
+      #
+      #   1. /shop navigated itself in a loop — /shop -> ?max_price=1000 -> /shop, twelve times in
+      #      six seconds. It only existed once React had mounted and run its effects, so nothing
+      #      static could see it, and it also wiped ?page=N on arrival.
+      #   2. Every product page emitted schema.org/OutOfStock while the visible page correctly said
+      #      "Sur commande" — availability has two authors and the PHP one silently wins.
+      #   3. The brand list was serialised into /shop twice, 36 KB of exact duplicate.
+      #
+      # The common property is that none was visible at a layer cheaper than the rendered output. So
+      # these run against the DEPLOYED site, after the deploy, and they are the reason a fourth one
+      # of this class should not reach a customer.
+      #
+      # continue-on-error, deliberately: the deploy has already happened by this point and failing
+      # the job would not undo it. What this must do is make the failure LOUD in the run summary,
+      # not pretend the release can be recalled.
+      - name: Smoke test the live site
+        id: smoke
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "Waiting for the new container to answer..."
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://protein.tn/shop || echo 000)
+            [ "$code" = "200" ] && break
+            sleep 15
+          done
+
+          fail=0
+          cd frontend
+
+          echo "::group::availability schema"
+          node scripts/check-availability-schema.mjs || fail=1
+          echo "::endgroup::"
+
+          echo "::group::card hover endpoints"
+          node scripts/check-hover-endpoints.mjs || fail=1
+          echo "::endgroup::"
+
+          echo "::group::self-navigation (needs a browser)"
+          # Chrome ships on the GitHub runner image; puppeteer's own download is unreliable here.
+          export CHROME_PATH="${CHROME_PATH:-/usr/bin/google-chrome}"
+          if [ -x "$CHROME_PATH" ]; then
+            node scripts/check-shop-no-loop.mjs || fail=1
+          else
+            echo "::warning::no Chrome at $CHROME_PATH — the redirect-loop check did not run"
+          fi
+          echo "::endgroup::"
+
+          if [ "$fail" = "1" ]; then
+            echo "::error::Live smoke tests FAILED. The deploy is already out — investigate now."
+            exit 1
+          fi
+          echo "All live smoke tests passed."
+
       - name: Report what actually happened
         if: always()
         run: |
           {
             echo "### Image built and published to GHCR"
             echo ""
+            if [ "${{ steps.smoke.outcome }}" = "failure" ]; then
+              echo "**LIVE SMOKE TESTS FAILED.** The release is already serving. See the"
+              echo "\"Smoke test the live site\" step for which check broke."
+              echo ""
+            fi
             if [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
               echo "The VPS was asked to pull it immediately, and did."
             else
