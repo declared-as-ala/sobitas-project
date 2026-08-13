@@ -897,6 +897,7 @@ class ApisController extends Controller
             ->get();
 
         $this->normalizePaginatorImages($productsPaginator, 'cover');
+        $this->attachHoverImages($productsPaginator);
         $this->normalizeCollectionImages($brands, 'logo');
         $category->cover = ImagePath::normalize($category->cover);
 
@@ -948,6 +949,7 @@ class ApisController extends Controller
             ->paginate($perPage);
 
         $this->normalizePaginatorImages($productsPaginator, 'cover');
+        $this->attachHoverImages($productsPaginator);
         $this->normalizePaginatorImages($brandsPaginator, 'logo');
         $brand->logo = ImagePath::normalize($brand->logo);
 
@@ -1079,7 +1081,7 @@ class ApisController extends Controller
         $query = Product::where('publier', 1)
             ->where('designation_fr', 'LIKE', "%{$text}%")
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id');
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images');
 
         if ($sous_category) {
             $query->where('sous_categorie_id', $sous_category->id);
@@ -1117,7 +1119,7 @@ class ApisController extends Controller
     {
         $article = Article::where('slug', $slug)
             ->where('publier', 1)
-            ->with(['categories:id,name,slug', 'tags:id,name,slug'])
+            ->with(['categories:id,name,slug', 'tags:id,name,slug', 'externalCatalogSource:id,product_id,source_gallery_images'])
             ->first();
 
         if (! $article) {
