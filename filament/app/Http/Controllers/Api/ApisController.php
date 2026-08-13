@@ -127,6 +127,87 @@ class ApisController extends Controller
         return min($perPage, self::MAX_PER_PAGE);
     }
 
+    /**
+     * Give each product ONE extra string: the packshot the card cross-fades to on hover.
+     *
+     * On an iHerb listing the first photograph is the front of the pack and the next is the back —
+     * on a supplement, the Supplement Facts panel. Putting it one mouse-move from the grid is the
+     * most useful thing a shopper can see without opening the page.
+     *
+     * ── WHY THIS IS A HELPER AND NOT FOUR COPIES ─────────────────────────────────────────────
+     * Product cards are served by FIVE endpoints — /all_products, by-category, by-subcategory,
+     * by-brand and similar_products — and the first version of this feature was written into
+     * /all_products alone. The result was a hover that worked on /shop and silently did nothing on
+     * every category and brand page, which is indistinguishable from "the feature is broken"
+     * because those are the pages a shopper actually browses. One implementation, called from each.
+     *
+     * ── THE TWO THINGS THAT MADE THIS SUBTLE ────────────────────────────────────────────────
+     * 1. The caller's eager load MUST be `externalCatalogSource:id,product_id,source_gallery_images`.
+     *    Laravel's docs: "always include the id column and any relevant foreign key columns". Drop
+     *    `id` and Eloquent cannot hydrate the related model, so the relation is null, this method
+     *    returns null for everything, and the endpoint still answers 200. That exact omission is
+     *    what made the feature look like missing data for a day.
+     *
+     * 2. The hover image is the first gallery entry that DIFFERS FROM THE COVER, not gallery[1].
+     *    `cover` is not guaranteed to be gallery[0] — for an imported product it is built from the
+     *    part number and a primary index — so taking index 1 on faith can swap the packshot for an
+     *    identical packshot, which reads as a broken hover rather than as a coincidence.
+     *
+     * The relation is UNSET afterwards: Eloquent serialises every loaded relation, so leaving it on
+     * would ship up to twelve gallery URLs per product in a payload the catalogue walk pays for on
+     * every page. Send the one value that gets rendered.
+     *
+     * @param  \Illuminate\Support\Collection<int, Product>|\Illuminate\Pagination\LengthAwarePaginator  $products
+     */
+    private function attachHoverImages($products): void
+    {
+        /*
+         * Both sides are compared as the /l/ variant. The same photograph is stored as /s/ in the
+         * gallery and served as /l/ in the cover, so comparing raw strings would call one image two.
+         * A URL that does not match the documented path shape is passed through untouched rather
+         * than mangled — the same rule ImportedSourceContent::largeVariant() follows.
+         */
+        $normalise = static fn (?string $url): string => $url === null
+            ? ''
+            : (string) preg_replace('~(/images/[^/]+/[^/]+)/[smlkr]/(\d+\.jpg)$~', '$1/l/$2', $url);
+
+        foreach ($products as $product) {
+            $source = $product->relationLoaded('externalCatalogSource')
+                ? $product->getRelation('externalCatalogSource')
+                : null;
+
+            $gallery = $source?->source_gallery_images;
+
+            // The column is cast to 'array', so this is normally redundant — but the failure mode
+            // here is silent (a non-array simply yields null, which looks like "no gallery"), and
+            // that silence is what made the original bug expensive to find.
+            if (is_string($gallery)) {
+                $gallery = json_decode($gallery, true);
+            }
+
+            $cover = $normalise(is_string($product->cover) ? $product->cover : null);
+            $hover = null;
+
+            if (is_array($gallery)) {
+                foreach ($gallery as $candidate) {
+                    if (! is_string($candidate) || $candidate === '') {
+                        continue;
+                    }
+
+                    $large = $normalise($candidate);
+
+                    if ($large !== $cover) {
+                        $hover = $large;
+                        break;
+                    }
+                }
+            }
+
+            $product->setAttribute('hover_image', $hover);
+            $product->unsetRelation('externalCatalogSource');
+        }
+    }
+
     private function paginationMeta(LengthAwarePaginator $paginator): array
     {
         return [
@@ -258,7 +339,7 @@ class ApisController extends Controller
     {
         return Product::where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)]);
     }
 
@@ -661,46 +742,10 @@ class ApisController extends Controller
         //    at all. That failure is invisible in a status code; it has to be checked in the
         //    payload.
         $query = Product::where('publier', 1)
-            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->select(self::PRODUCT_LISTING)
             ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
-            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars')
-            /*
-             * The SECOND product photograph, for the card's hover state.
-             *
-             * On an iHerb listing the first image is the front of the pack and the second is
-             * overwhelmingly the back — which on a supplement is the Supplement Facts panel. That is
-             * the single most useful thing a shopper can see without opening the page, so the card
-             * swaps to it on hover.
-             *
-             * ── WHY A CONSTRAINED EAGER LOAD AND NOT A JOIN ───────────────────────────────────
-             * This endpoint was taking 10.2s at per_page=100 until the brand payload was cut down,
-             * and it is walked page by page by both /shop and the sitemap. A join would multiply the
-             * product rows; `with()` is ONE extra query for the ids on this page, and the closure
-             * selects only two columns, so the ~19 other source_* columns (which include several
-             * large HTML blocks) never leave the database. `product_id` is not optional in that
-             * select: without the foreign key Eloquent cannot match the rows back and every relation
-             * silently comes back null.
-             *
-             * Legacy products have no staging row at all, so the relation is null and the card falls
-             * back to the cover exactly as before — which is what keeps the 309 untouched.
-             *
-             * ── `id` IS NOT OPTIONAL IN THIS SELECT, AND LEAVING IT OUT COST A DAY ────────────
-             * The first version asked for `product_id,source_gallery_images` and shipped a
-             * hover_image that was null for EVERY product — including ones whose /product_details
-             * response was returning an eight-image gallery from this very column, which is what
-             * made it look like missing data rather than a bug.
-             *
-             * Laravel's own documentation states the rule: "when using this feature, you should
-             * always include the id column and any relevant foreign key columns in the list of
-             * columns you wish to retrieve." Without the primary key Eloquent cannot hydrate the
-             * related model, so the relation resolves to null and every downstream read of it is
-             * silently empty — no error, no warning, a 200 with a null field.
-             *
-             * The eager load at the productDetails endpoint above already had this right
-             * (`externalCatalogSource:id,product_id,…`). This one now matches it.
-             */
-            ->with(['externalCatalogSource:id,product_id,source_gallery_images']);
+            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars');
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -799,83 +844,7 @@ class ApisController extends Controller
         $this->normalizeCollectionImages($brands, 'logo');
         $this->normalizeCollectionImages($categories, 'cover');
 
-        /*
-         * Flatten the staging relation to ONE string the card can use, and drop the relation.
-         *
-         * `hover_image` is the second product photograph — on an iHerb listing the first is the
-         * front of the pack and the second is the back, which on a supplement is the Supplement
-         * Facts panel. Showing it on hover puts the nutrition table one mouse-move away from the
-         * grid instead of one page load.
-         *
-         * The relation itself is UNSET afterwards, deliberately. Eloquent serialises every loaded
-         * relation, so leaving it on would ship `source_gallery_images` — up to twelve URLs per
-         * product — inside a payload this endpoint pays for on every page of the catalogue walk.
-         * That is the same mistake as the 364 KB brand blob, one level down, and the fix is the
-         * same: send the one value that gets rendered.
-         *
-         * `/l/` rather than the stored `/s/`: the gallery is captured at thumbnail size, and this
-         * URL goes into a next/image `src` sized for a card. ImportedSourceContent::largeVariant()
-         * performs the identical rewrite for the detail page, anchored on the same documented path
-         * shape, and a URL that does not match it is passed through untouched rather than mangled.
-         */
-        $products->each(function ($product): void {
-            $source = $product->relationLoaded('externalCatalogSource')
-                ? $product->getRelation('externalCatalogSource')
-                : null;
-
-            /*
-             * The column is cast to 'array' on the model, so this is normally an array already. It
-             * is decoded defensively anyway because the previous failure here was silent: a value
-             * that is not an array simply yielded null, which is indistinguishable from "this
-             * product has no gallery" and is exactly why the real cause took so long to find.
-             */
-            $gallery = $source?->source_gallery_images;
-
-            if (is_string($gallery)) {
-                $gallery = json_decode($gallery, true);
-            }
-
-            /*
-             * THE FIRST IMAGE THAT IS NOT THE ONE ALREADY ON SCREEN — not blindly gallery[1].
-             *
-             * The card's front is `cover`, and `cover` is not guaranteed to be gallery[0]: for an
-             * imported product it is built from the part number and a primary index, so depending on
-             * the product it can equal gallery[0], gallery[1] or none of them. Taking index 1 on
-             * faith therefore produces the one bug the whole feature exists to avoid — a hover that
-             * swaps the packshot for an identical packshot, which reads as "the hover is broken"
-             * rather than as "these two images happen to match".
-             *
-             * Comparing on the /l/-normalised form on both sides, because the same photograph is
-             * stored as /s/ in the gallery and served as /l/ in the cover, and comparing the raw
-             * strings would call those two different images.
-             */
-            $normalise = static fn (?string $url): string => $url === null
-                ? ''
-                : (string) preg_replace('~(/images/[^/]+/[^/]+)/[smlkr]/(\d+\.jpg)$~', '$1/l/$2', $url);
-
-            $cover = $normalise(is_string($product->cover) ? $product->cover : null);
-
-            $second = null;
-
-            if (is_array($gallery)) {
-                foreach ($gallery as $candidate) {
-                    if (! is_string($candidate) || $candidate === '') {
-                        continue;
-                    }
-
-                    $large = $normalise($candidate);
-
-                    if ($large !== $cover) {
-                        $second = $large;
-                        break;
-                    }
-                }
-            }
-
-            $product->setAttribute('hover_image', $second);
-
-            $product->unsetRelation('externalCatalogSource');
-        });
+        $this->attachHoverImages($products);
 
         return response()->json([
             'products'   => $products,
@@ -916,7 +885,7 @@ class ApisController extends Controller
         $productsPaginator = Product::where('publier', 1)
             ->whereIn('sous_categorie_id', SousCategory::where('categorie_id', $category->id)->select('id'))
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -970,7 +939,7 @@ class ApisController extends Controller
         $productsPaginator = Product::where('brand_id', $brand_id)
             ->where('publier', 1)
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id')
+            ->with('aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->latest('created_at')
             ->paginate($perPage);
 
@@ -1038,7 +1007,7 @@ class ApisController extends Controller
                     });
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
-            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id', 'sousCategorie:id,slug,designation_fr,categorie_id'])
+            ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images'])
             ->latest('created_at')
             ->get();
 
@@ -1053,6 +1022,7 @@ class ApisController extends Controller
             ->get();
 
         $this->normalizeCollectionImages($products, 'cover');
+        $this->attachHoverImages($products);
         $this->normalizeCollectionImages($brands, 'logo');
 
         return response()->json([
@@ -1090,6 +1060,7 @@ class ApisController extends Controller
             ->get();
 
         $this->normalizeCollectionImages($products, 'cover');
+        $this->attachHoverImages($products);
         $this->normalizeCollectionImages($brands, 'logo');
 
         return compact('products', 'brands');
@@ -1121,6 +1092,7 @@ class ApisController extends Controller
             ->get();
 
         $this->normalizeCollectionImages($products, 'cover');
+        $this->attachHoverImages($products);
         $this->normalizeCollectionImages($brands, 'logo');
 
         return compact('products', 'brands');
@@ -1467,7 +1439,7 @@ class ApisController extends Controller
             ->where('publier', 1)
             ->where('qte', '>', 0)
             ->select(self::PRODUCT_LIST_COLUMNS)
-            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
             ->limit(4)
             ->get();
@@ -1480,13 +1452,17 @@ class ApisController extends Controller
                 ->whereNotIn('id', $existingIds)
                 ->whereHas('sousCategorie', fn ($q) => $q->where('categorie_id', $sous_category->categorie_id))
                 ->select(self::PRODUCT_LIST_COLUMNS)
-                ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+                ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
                 ->limit(4 - $products->count())
                 ->get();
 
             $products = $products->merge($extra);
         }
+
+        // The PDP's "Produits similaires" rail renders the same ProductCard as every other grid, so
+        // it gets the same hover. Called after the merge so the topped-up rows are covered too.
+        $this->attachHoverImages($products);
 
         return ['products' => $products];
     }
