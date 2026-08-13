@@ -80,6 +80,24 @@ class ApisController extends Controller
     ];
 
     /** Same as backend ApisController::PRODUCT_LISTING — used for /api/all_products, which paginates. */
+    /*
+     * Exactly what the sitemap reads, and nothing else. Requested with ?fields=index.
+     *
+     * Derived by reading util/sitemapSources.ts rather than guessed: it uses `slug` and
+     * `sousCategorie` to build the canonical URL, `publier` and `seo_robots_index` to decide whether
+     * to emit it at all, `brand_id` and the subcategory to record which listing pages are non-empty,
+     * `id` for the sitemap's stable id-band chunking, `cover` for the image entry, and
+     * updated_at/created_at for lastModified. That is the whole list.
+     *
+     * `designation_fr` is present only because normalizeCollectionImages and the shared response
+     * shape expect a titled row; dropping it saves little and risks an empty <title> if this
+     * projection is ever reused for a listing.
+     */
+    private const PRODUCT_INDEX = [
+        'id', 'slug', 'designation_fr', 'cover', 'brand_id', 'sous_categorie_id',
+        'publier', 'seo_robots_index', 'updated_at', 'created_at',
+    ];
+
     private const PRODUCT_LISTING = [
         'id', 'slug', 'designation_fr', 'cover', 'new_product', 'best_seller', 'note',
         'alt_cover', 'description_cover', 'prix', 'pack', 'promo', 'promo_expiration_date',
@@ -794,11 +812,41 @@ class ApisController extends Controller
         //    last silently discards both — the query still returns 200, just with no rating fields
         //    at all. That failure is invisible in a status code; it has to be checked in the
         //    payload.
+        /*
+         * ── ?fields=index — THE SITEMAP'S PROJECTION, AND WHY IT IS WORTH A BRANCH ───────────
+         *
+         * util/sitemapSources.ts walks this endpoint across the whole catalogue and reads exactly
+         * NINE fields per row: id, slug, publier, brand_id, cover, updated_at, created_at,
+         * seo_robots_index and the sousCategorie relation. It reads no price, no stock, no rating
+         * and no hover image.
+         *
+         * The default projection below gives it all of those anyway, and two of them are not columns
+         * at all — withCount and withAvg are correlated subqueries against `reviews`, evaluated per
+         * row. Over 10,669 products that is ~21,000 subqueries per full walk, plus an eager load of
+         * externalCatalogSource and a PHP pass over every row in attachHoverImages(), to produce
+         * fields the sitemap discards.
+         *
+         * That walk is not hypothetical load. The php-fpm log during today's outage showed this
+         * endpoint being hit with per_page=100&page=N from page 2 to page 56 inside three seconds,
+         * ~40 workers deep, with customer requests queued behind them until the proxy gave up at 60s.
+         *
+         * per_page rises to 500 for this projection only: 22 requests instead of 107, each one a
+         * plain indexed scan. crawlPaginated reads the HONOURED per_page back off page 1, so if this
+         * ever gets clamped the crawl adjusts rather than silently truncating.
+         *
+         * Implies light: brands and categories are not sent either.
+         */
+        $indexOnly = $request->get('fields') === 'index';
+
         $query = Product::where('publier', 1)
-            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
-            ->select(self::PRODUCT_LISTING)
-            ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
-            ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars');
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id')
+            ->select($indexOnly ? self::PRODUCT_INDEX : self::PRODUCT_LISTING);
+
+        if (! $indexOnly) {
+            $query->with('externalCatalogSource:id,product_id,source_gallery_images')
+                ->withCount(['reviews as review_count' => fn ($q) => $q->attested()])
+                ->withAvg(['reviews as rating_value' => fn ($q) => $q->attested()], 'stars');
+        }
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -934,7 +982,12 @@ class ApisController extends Controller
         // `raw.products?.data` as a fallback, and sitemapData.ts loops on `pagination.last_page`.
         // Only the server never paginated, so that loop always broke after one pass. Nothing on
         // the frontend has to change.
-        $perPage = $this->resolvePerPage($request, 24);
+        // 500 for the index projection (22 requests instead of 107 over 10,669 products), the
+        // usual 100 ceiling otherwise. crawlPaginated reads the honoured per_page back off
+        // page 1, so a future clamp adjusts the crawl rather than truncating it silently.
+        $perPage = $indexOnly
+            ? min(max(1, (int) $request->query('per_page', 500)), 500)
+            : $this->resolvePerPage($request, 24);
         $paginator = $query->paginate($perPage);
         $products = $paginator->getCollection();
 
@@ -1005,7 +1058,8 @@ class ApisController extends Controller
          * rails with a 200 on every request — the exact class of invisible failure this endpoint has
          * already produced twice.
          */
-        $light = $request->boolean('light');
+        // fields=index implies light — the sitemap reads neither set.
+        $light = $indexOnly || $request->boolean('light');
 
         $brands = $light
             ? collect()
@@ -1020,7 +1074,11 @@ class ApisController extends Controller
         $this->normalizeCollectionImages($brands, 'logo');
         $this->normalizeCollectionImages($categories, 'cover');
 
-        $this->attachHoverImages($products);
+        // No hover image on the index projection: externalCatalogSource was never eager-loaded
+        // for it, so this would run its normalise loop over every row to attach null.
+        if (! $indexOnly) {
+            $this->attachHoverImages($products);
+        }
 
         return response()->json([
             'products'   => $products,

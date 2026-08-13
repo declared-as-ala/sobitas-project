@@ -245,10 +245,12 @@ async function crawlSource<T>(args: {
   path: string;
   rowsKey?: string;
   critical: boolean;
+  /** Override the default page size. Only meaningful where the endpoint honours a larger one. */
+  perPage?: number;
 }): Promise<{ crawl: PaginatedCrawl<T>; verified: boolean; note: string }> {
   const crawl = await crawlPaginated<T>({
     label: args.label,
-    perPage: PER_PAGE,
+    perPage: args.perPage ?? PER_PAGE,
     maxRequests: MAX_REQUESTS,
     concurrency: CONCURRENCY,
     rowsKey: args.rowsKey,
@@ -380,16 +382,36 @@ const productsSource: SitemapSource = {
     const { crawl, verified, note } = await crawlSource<Product>({
       label: '/all_products',
       /*
-       * ?light=1 — this walk reads `products` and nothing else, and the brand set it was also being
-       * handed is 56 KB per page against 12 KB of products (566 brands since the iHerb import).
-       * Over the ~107 pages of a 10,669-product catalogue that is roughly 6 MB of brand JSON built,
-       * encoded and transferred per sitemap rebuild, on the endpoint whose worker-pool saturation
-       * took admin.protein.tn down with 504s on every URL. The rows this crawl consumes are
-       * identical with the flag set.
+       * ── ?fields=index — THE PROJECTION THIS WALK ACTUALLY READS ────────────────────────────
+       *
+       * The mapping below uses NINE fields per row: id, slug, publier, brand_id, cover, updated_at,
+       * created_at, seo_robots_index and the sousCategorie relation. No price, no stock, no rating,
+       * no hover image.
+       *
+       * The default projection supplied all of those anyway, and two of them were not columns at
+       * all — `review_count` and `rating_value` are correlated subqueries against `reviews`,
+       * evaluated per row. Across 10,669 products that is ~21,000 subqueries per rebuild, plus an
+       * eager load of externalCatalogSource and a PHP pass over every row to attach a hover image,
+       * to produce fields this loop discards on the next line.
+       *
+       * That load is not hypothetical: during today's outage the php-fpm log showed this endpoint
+       * being walked page 2 to page 56 inside three seconds, ~40 workers deep, with customer
+       * requests queued behind them until the proxy gave up at 60s.
+       *
+       * fields=index also implies light=1 — brands and categories are not sent either.
        */
-      path: '/all_products?light=1',
+      path: '/all_products?fields=index',
       rowsKey: 'products',
       critical: true,
+      /*
+       * 500, and the endpoint honours it for this projection only.
+       *
+       * 22 requests instead of 107 over 10,669 products. crawlPaginated reads the HONOURED per_page
+       * back off page 1, so if the server ever clamps this the crawl adjusts rather than silently
+       * returning a fifth of the catalogue — which is the failure this whole module is built to
+       * refuse.
+       */
+      perPage: 500,
     });
 
     if (crawl.rows.length === 0) {
