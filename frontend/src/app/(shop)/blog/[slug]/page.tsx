@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getLatestArticles } from '@/services/api';
+import { getLatestArticles, getCategories } from '@/services/api';
+import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 // Request-scoped cache: generateMetadata + the page body used to issue TWO separate
 // article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
@@ -130,15 +131,36 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   
   try {
-    // relatedArticles is incidental — its failure must not 404 the article itself.
-    const [article, relatedArticles] = await Promise.all([
+    // relatedArticles and the taxonomy are both incidental — neither failure may 404 the article.
+    const [article, relatedArticles, categories] = await Promise.all([
       getArticleDetails(slug),
       getLatestArticles().catch(() => [] as Awaited<ReturnType<typeof getLatestArticles>>),
+      getCategories(undefined, { perPage: 50 }).catch(() => []),
     ]);
 
     if (!article) {
       notFound();
     }
+
+    /*
+     * ── LINK TARGETS FOR IN-CONTENT LINKS ────────────────────────────────────────────────────
+     * Built on the server so the anchors are in the initial HTML. That is the whole point: the
+     * article page's existing route to the shop is BlogRecommendedProducts, which fetches on an
+     * IntersectionObserver, so its links do not exist until something scrolls — and Googlebot
+     * renders but does not scroll.
+     *
+     * The synonyms below are the ones a category NAME cannot supply. "Whey Protéine" is the
+     * category; "whey" on its own is what the articles say, and it is the term the site is trying
+     * to rank for. Everything else is derived from the live taxonomy, so renaming a category in
+     * Filament updates the linking with no code change.
+     */
+    const linkTargets: LinkTarget[] = targetsFromTaxonomy(categories, {
+      'whey-proteine': ['whey', 'whey isolate', 'protéine de lactosérum'],
+      creatine: ['créatine monohydrate', 'monohydrate de créatine'],
+      proteines: ['protéine en poudre', 'poudre de protéine'],
+      'prise-de-masse': ['gainer', 'mass gainer'],
+      'acides-amines': ['bcaa', 'acides aminés'],
+    });
 
     const filteredRelated = relatedArticles.filter(a => a.slug !== slug).slice(0, 3);
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -157,7 +179,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-        <ArticleDetailClient article={article} relatedArticles={filteredRelated}>
+        <ArticleDetailClient article={article} relatedArticles={filteredRelated} linkTargets={linkTargets}>
           <BlogSeoBlock slug={slug} />
         </ArticleDetailClient>
       </>

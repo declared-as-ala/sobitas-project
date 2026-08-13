@@ -202,6 +202,14 @@ jobs:
           node scripts/check-availability-schema.mjs || fail=1
           echo "::endgroup::"
 
+          # Asserts the in-content links to the shop are in the RAW HTML of an article. The page
+          # already had a product rail that fetches on an IntersectionObserver, so it rendered fine
+          # for a human and contributed nothing to a crawler — this is the check that tells those
+          # two apart.
+          echo "::group::in-content internal links"
+          node scripts/check-internal-links.mjs || fail=1
+          echo "::endgroup::"
+
           echo "::group::card hover endpoints"
           node scripts/check-hover-endpoints.mjs || fail=1
           echo "::endgroup::"
