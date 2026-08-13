@@ -809,6 +809,58 @@ class ApisController extends Controller
         if ($request->filled('brand_id')) {
             $query->where('brand_id', $request->get('brand_id'));
         }
+
+        /*
+         * ── THE FILTERS SERVER-SIDE PAGINATION NEEDS ─────────────────────────────────────────
+         * /shop currently loads the WHOLE catalogue and filters in the browser, which is why the
+         * page shipped 4.87 MB. It cannot paginate on the server until the server can express every
+         * filter the UI offers — otherwise picking a second brand would silently return the wrong
+         * page rather than a wider one.
+         *
+         * Auditing ShopPageClient, the gap is four, not the eight it first appears:
+         *   brands[]        multi-select; `brand_id` above only ever matched one
+         *   subcategories[] multi-select over rayon SLUGS, which is what the UI actually holds
+         *   flavors[]       matched against the `aromes` relation the card already eager-loads
+         *   in_stock        the "disponible uniquement" toggle
+         * `types` and `goals` are deliberately NOT here: ShopPageClient gates both behind
+         * `isCreatineCategory`, so they are a creatine-only refinement rather than a shop filter,
+         * and adding a general API surface for them would invent a contract the UI never had.
+         *
+         * Every one is comma-separated and ADDITIVE-OR within itself, AND across the group — the
+         * same semantics the client-side code has today, so switching over cannot change results.
+         * Each is skipped entirely when absent, so existing callers are untouched.
+         */
+        $csv = static fn (string $key): array => array_values(array_filter(
+            array_map('trim', explode(',', (string) $request->get($key, ''))),
+            static fn ($v) => $v !== ''
+        ));
+
+        if ($brands = $csv('brands')) {
+            // Cast: ids arrive as strings from the query string and a loose whereIn against an
+            // integer column makes MySQL fall back to a full scan on some collations.
+            $query->whereIn('brand_id', array_map('intval', $brands));
+        }
+
+        if ($subcategories = $csv('subcategories')) {
+            // Slugs, not ids. The UI's filter state holds slugs (they are what appears in the URL),
+            // so resolving here keeps the shareable link readable instead of a list of numbers.
+            $query->whereIn(
+                'sous_categorie_id',
+                SousCategory::whereIn('slug', $subcategories)->select('id')
+            );
+        }
+
+        if ($flavors = $csv('flavors')) {
+            // whereHas, not a join: a product with three matching aromas must appear ONCE. A join
+            // would return it three times and quietly inflate both the page and the total count.
+            $query->whereHas('aromes', fn ($q) => $q->whereIn('designation_fr', $flavors));
+        }
+
+        if ($request->boolean('in_stock')) {
+            // Same expression as orderAvailableFirst() and the frontend's cartStock.ts, so the
+            // filter and the badge can never disagree about what "available" means.
+            $query->whereRaw('(COALESCE(force_out_of_stock, 0) = 0 AND COALESCE(rupture, 0) = 0)');
+        }
         if ($request->filled('min_price')) {
             $query->where('prix', '>=', (float) $request->get('min_price'));
         }
