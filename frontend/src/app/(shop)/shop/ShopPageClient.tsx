@@ -683,36 +683,18 @@ function ShopContent({
   }, [urlFilters, initialCategory, initialBrand, safeProductsData.products, isServerMode]);
 
   // Get unique subcategories from ALL products (not just filtered) for proper mapping
-  const subCategories = useMemo(() => {
-    // Server mode: the rayon list describes the catalogue, and the catalogue is no longer in the
-    // browser. Deriving it from the 12 products on screen would rebuild the sidebar on every page
-    // turn out of whatever happened to land there.
-    if (isServerMode && facets) {
-      return facets.subcategories.map((s) => ({
-        id: s.id,
-        name: s.name,
-        slug: s.slug,
-        categoryId: s.categoryId ?? undefined,
-      }));
-    }
-
-    const subs = new Map<string, { id: number; name: string; slug: string; categoryId?: number }>();
-    const allProducts = safeProductsData.products || [];
-    allProducts.forEach(p => {
-      if (p.sous_categorie) {
-        const key = p.sous_categorie.id.toString();
-        if (!subs.has(key)) {
-          subs.set(key, {
-            id: p.sous_categorie.id,
-            name: p.sous_categorie.designation_fr,
-            slug: p.sous_categorie.slug,
-            categoryId: p.sous_categorie.categorie_id,
-          });
-        }
-      }
-    });
-    return Array.from(subs.values());
-  }, [safeProductsData.products, isServerMode, facets]);
+  /*
+   * `subCategories` USED TO BE COMPUTED HERE AND READ BY NOTHING.
+   *
+   * A useMemo built a Map of every rayon on every render — from all products in client mode, and
+   * from facets.subcategories in server mode — and no line in this 1,600-line file ever consumed
+   * the result. Dead code is cheap to leave alone right up until it starts costing bytes: it was
+   * the only reason `facets.subcategories` was serialised into the page, and it made the facets
+   * object look load-bearing when it was not.
+   *
+   * Removed rather than commented out. If a rayon rail is wanted here later, it should read
+   * facets.subcategories directly at the render site, where its cost is visible.
+   */
 
   // Real, crawlable SSR links to this TOP category's subcategories. On a top-category view the
   // subcategories are otherwise only reachable through filter checkboxes (client state) or bot-only

@@ -164,6 +164,27 @@ async function getShopData(query: ShopQuery) {
    */
   const brands = facets.brands.map((b) => ({ id: b.id, designation_fr: b.designation_fr }));
 
+  /*
+   * ── THE BRAND LIST WAS BEING SERIALISED TWICE ───────────────────────────────────────────
+   *
+   * Measured on the live page: `designation_fr` appeared 1,269 times in the HTML, 1,212 of them in
+   * a single RSC flight chunk. 566 of those are the brand rail above — and the other 566 were the
+   * SAME brands travelling again inside `facets`, because the whole facets object was handed to the
+   * client and it carries `brands` for this page to derive the rail from.
+   *
+   * Deriving and then also shipping the source is a bug that only ever shows up on a scale: at 84
+   * brands it was 5 KB nobody would notice, and at 566 it is 36 KB of pure duplicate.
+   *
+   * `subcategories` goes the same way and for a blunter reason — the memo that read it was dead
+   * code, computed on every render and consumed by nothing (see the note where it used to live).
+   *
+   * The fields are emptied rather than the type loosened: ShopFacets still describes what the
+   * ENDPOINT returns, which is what a future consumer needs to know. What changes is only what this
+   * page forwards, and it forwards exactly what it uses — price bounds, flavours and the two count
+   * maps.
+   */
+  const facetsForClient = { ...facets, brands: [], subcategories: [] };
+
   return {
     productsData: {
       products: productsResponse.products,
@@ -171,7 +192,9 @@ async function getShopData(query: ShopQuery) {
       categories: productsResponse.categories,
       pagination: productsResponse.pagination,
     },
-    facets,
+    // facetsForClient, not facets: the brand list is already travelling as `brands` above, and
+    // shipping the source it was derived from as well put 566 duplicate brand records in the page.
+    facets: facetsForClient,
     categories,
     brands,
   };
