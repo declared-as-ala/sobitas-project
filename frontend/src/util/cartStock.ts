@@ -73,10 +73,35 @@ export function getStockDisponible(product: ProductLike): number {
 export interface ProductStockStatus {
   qte: number;
   isOutOfStock: boolean;
+  /**
+   * Not held, but obtainable on request — "Sur commande".
+   *
+   * ── WHY THIS IS A SEPARATE FLAG AND NOT A THIRD VALUE OF isOutOfStock ────────────────────
+   * Measured on the live catalogue, 13/08/2026:
+   *
+   *     134     qte>0,  rupture=false, force_out_of_stock=false   real inventory
+   *     10,535  qte=0,  rupture=true,  force_out_of_stock=false   the imported iHerb catalogue
+   *
+   * 98.7% of the shop is a catalogue the business does not physically hold. Labelling all of it
+   * "Rupture de stock" is both discouraging and inaccurate — these were never in stock and never
+   * sold out; they are items that can be brought in. It also costs Google merchant-listing
+   * eligibility, which OutOfStock forfeits and BackOrder does not.
+   *
+   * `isOutOfStock` STAYS TRUE for these. That is the entire safety design: every add-to-cart guard,
+   * quantity check and cart validation in the app already keys off isOutOfStock, and flipping it
+   * would have made 10,535 products addable to the basket in one edit — real orders for goods
+   * nobody has. The owner's decision was request-only, so this flag changes what a shopper is TOLD
+   * and OFFERED, never what the cart accepts.
+   *
+   * `force_out_of_stock` is the discriminator, and it is the right one: it is the owner's explicit
+   * "do not sell this" switch, currently false on every row in the catalogue. When they set it, they
+   * mean it, and it keeps saying "Rupture de stock".
+   */
+  isBackOrder: boolean;
   isLowStock: boolean;
   /** True when the payload carried no stock fields — the answer is genuinely unknown. */
   isUnknown: boolean;
-  stockLabel: 'Rupture de stock' | 'Stock faible' | 'En stock';
+  stockLabel: 'Rupture de stock' | 'Sur commande' | 'Stock faible' | 'En stock';
 }
 
 /**
@@ -107,11 +132,19 @@ export function getProductStockStatus(product: ProductLike): ProductStockStatus 
   const threshold = Number((product as ProductLike & { low_stock_threshold?: number }).low_stock_threshold ?? 0);
   const isLowStock = !isOutOfStock && !isUnknown && product.qte != null && threshold > 0 && qte <= threshold;
 
+  // Unavailable, but not because the owner said so — see ProductStockStatus.isBackOrder.
+  // `isUnknown` is excluded deliberately: a payload with no stock columns must not be advertised as
+  // orderable-on-request any more than it is advertised as in stock.
+  const forced = (product as any).force_out_of_stock;
+  const isForced = forced === true || forced === 1 || forced === '1';
+  const isBackOrder = isOutOfStock && !isForced && !isUnknown;
+
   let stockLabel: ProductStockStatus['stockLabel'] = 'En stock';
-  if (isOutOfStock) stockLabel = 'Rupture de stock';
+  if (isBackOrder) stockLabel = 'Sur commande';
+  else if (isOutOfStock) stockLabel = 'Rupture de stock';
   else if (isLowStock) stockLabel = 'Stock faible';
 
-  return { qte, isOutOfStock, isLowStock, isUnknown, stockLabel };
+  return { qte, isOutOfStock, isBackOrder, isLowStock, isUnknown, stockLabel };
 }
 
 /**

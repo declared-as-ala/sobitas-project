@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -21,6 +21,35 @@ export default function ContactPageClient({
     email: '',
     message: '',
   });
+
+  /*
+   * Filled AFTER mount, in an effect, and that placement is the whole point.
+   *
+   * A lazy useState initialiser looks tidier and is wrong here: it runs on the SERVER too, where
+   * there is no location, so the server renders an empty textarea and the client's first render
+   * produces a full one — a hydration mismatch on a form, which React resolves by discarding and
+   * re-rendering. An effect runs only on the client and only after hydration has matched.
+   *
+   * window.location rather than useSearchParams(): the hook is a dynamic API and would opt
+   * /contact out of static rendering entirely, which is a large price for prefilling one textarea.
+   */
+  useEffect(() => {
+    let produit = '';
+    try {
+      produit = new URLSearchParams(window.location.search).get('produit') ?? '';
+    } catch {
+      return;
+    }
+    if (!produit) return;
+    setFormData((prev) =>
+      prev.message
+        ? prev // never clobber something the shopper has already typed
+        : {
+            ...prev,
+            message: `Bonjour, je souhaite commander ce produit : ${produit}.\n\nMerci de me confirmer la disponibilité, le prix et le délai.`,
+          }
+    );
+  }, []);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {

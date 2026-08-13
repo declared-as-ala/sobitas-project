@@ -8,7 +8,7 @@ import { getStorageUrl } from '@/services/api';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
-import { isInStock } from '@/util/cartStock';
+import { isInStock, getProductStockStatus } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import type { Product, FAQ, Review } from '@/types';
 
@@ -103,6 +103,24 @@ const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } 
  * price, priceCurrency, availability, itemCondition, url, hasMerchantReturnPolicy — stays
  * unconditional.
  */
+/**
+ * schema.org availability, with BackOrder for the catalogue the shop does not physically hold.
+ *
+ * Three states, not two. 10,535 of 10,669 published products are imported catalogue entries with
+ * qte=0 — they were never in stock and never sold out. Declaring those OutOfStock is both wrong and
+ * expensive: OutOfStock forfeits Google merchant-listing and free-product-listing eligibility, while
+ * BackOrder ("orderable but not in stock") keeps it.
+ *
+ * OutOfStock is reserved for `force_out_of_stock`, the owner's explicit "do not sell this" switch.
+ * That distinction is the whole point — a blanket BackOrder would advertise as obtainable the one
+ * category of product the owner has deliberately marked unobtainable.
+ */
+function availabilityFor(product: Parameters<typeof getProductStockStatus>[0]): string {
+  const status = getProductStockStatus(product);
+  if (!status.isOutOfStock) return 'https://schema.org/InStock';
+  return status.isBackOrder ? 'https://schema.org/BackOrder' : 'https://schema.org/OutOfStock';
+}
+
 function buildShippingDetails(product: Product, price: number): Record<string, unknown> | null {
   if (!isInStock(product)) return null;
 
@@ -408,7 +426,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     : (parsePriceForSchema(product.schema?.price) ?? effectivePrice);
   const availability =
     product.schema?.availability
-    ?? (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
+    ?? availabilityFor(product);
   const description = stripHtml(
     product.seo?.description || product.seo_description || product.meta_description || product.description_cover || product.description_fr || '',
     500
@@ -536,7 +554,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
   const availability =
     (typeof product.schema?.availability === 'string' && product.schema.availability) ||
-    (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
+    availabilityFor(product);
   const priceNumber = getSchemaPrice(product);
   const price = formatSchemaPrice(priceNumber);
   /**

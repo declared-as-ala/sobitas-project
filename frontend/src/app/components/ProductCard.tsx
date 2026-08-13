@@ -266,8 +266,11 @@ export const ProductCard = memo(function ProductCard({
             and the colour of type is supposed to flip. */}
         <div className="pointer-events-none absolute left-2 top-2 z-10 flex flex-col items-start gap-1 sm:left-3 sm:top-3 sm:gap-1.5">
           {!inStock && (
+            /* "Sur commande" for the 10,535 imported catalogue items, "Rupture" only for the ones
+               the owner has explicitly switched off. They never sold out — they were never stocked
+               — and a grid where 98.7% of the cards shout RUPTURE reads like a dead shop. */
             <span className="pt-slab inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
-              Rupture
+              {stock.isBackOrder ? 'Sur commande' : 'Rupture'}
             </span>
           )}
           {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
@@ -431,7 +434,7 @@ export const ProductCard = memo(function ProductCard({
           >
             <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
             {!inStock ? (
-              <span className="truncate">Rupture</span>
+              <span className="truncate">{stock.isBackOrder ? 'Sur commande' : 'Rupture'}</span>
             ) : !canAddMore ? (
               <span className="truncate">Stock max</span>
             ) : isAdding ? (

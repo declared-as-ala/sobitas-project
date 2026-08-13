@@ -11,7 +11,7 @@ import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -1035,25 +1035,61 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                   {/* CTAs */}
                   <div className="flex flex-col gap-2">
-                    <Button
-                      size="default"
-                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
-                      onClick={handleAddToCart}
-                      disabled={stockStatus.isOutOfStock}
-                    >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
-                    </Button>
-                    <Button
-                      size="default"
-                      variant="outline"
-                      className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
-                      onClick={handleQuickOrderClick}
-                      disabled={stockStatus.isOutOfStock}
-                    >
-                      <Zap className="h-4 w-4 mr-2" />
-                      Commander maintenant
-                    </Button>
+                    {stockStatus.isBackOrder ? (
+                      /*
+                        SUR COMMANDE — a request, not a purchase.
+
+                        10,535 of 10,669 published products are catalogue entries the shop does not
+                        physically hold. Two disabled buttons reading "Rupture de stock" is both
+                        discouraging and inaccurate: these never sold out, they were never stocked,
+                        and they CAN be brought in. But the owner's decision was request-only, so
+                        this must not be a basket — an add-to-cart here would generate real orders
+                        for goods nobody has.
+
+                        So the primary CTA becomes a link to the contact form with the product name
+                        carried in the query string. That is what makes the "Sur commande" label
+                        honest: saying "on request" while offering no way to request is the one
+                        version of this that misleads a customer.
+                      */
+                      <>
+                        <Button
+                          asChild
+                          size="default"
+                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
+                        >
+                          <Link href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}>
+                            <Mail className="h-4 w-4 mr-2" />
+                            Demander ce produit
+                          </Link>
+                        </Button>
+                        <p className="text-xs text-ink-3 text-center">
+                          Ce produit n'est pas en stock. Nous le commandons pour vous sur demande —
+                          nous vous confirmons le prix et le délai avant toute commande.
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <Button
+                          size="default"
+                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
+                          onClick={handleAddToCart}
+                          disabled={stockStatus.isOutOfStock}
+                        >
+                          <ShoppingCart className="h-4 w-4 mr-2" />
+                          {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
+                        </Button>
+                        <Button
+                          size="default"
+                          variant="outline"
+                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                          onClick={handleQuickOrderClick}
+                          disabled={stockStatus.isOutOfStock}
+                        >
+                          <Zap className="h-4 w-4 mr-2" />
+                          Commander maintenant
+                        </Button>
+                      </>
+                    )}
                   </div>
 
                   {/* Trust row — icons instead of bullet text */}
@@ -1801,28 +1837,49 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 {(displayPrice * quantity).toFixed(2)} DT
               </span>
             </div>
+            {/* Sur commande: one request CTA instead of two dead buttons. Mirrors the desktop
+                block above — the mobile sticky bar is 81% of this site's traffic, so leaving it on
+                the old branch would have meant almost nobody saw the change. */}
+            {stockStatus.isBackOrder ? (
+              <Button
+                asChild
+                size="default"
+                className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
+              >
+                <Link
+                  href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}
+                  aria-label="Demander ce produit"
+                >
+                  <Mail className="h-4 w-4 mr-2 shrink-0" />
+                  Demander ce produit
+                </Link>
+              </Button>
+            ) : (
+              <Button
+                size="default"
+                className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
+                onClick={handleAddToCart}
+                disabled={stockStatus.isOutOfStock}
+                aria-label="Ajouter au panier"
+              >
+                <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
+                {stockStatus.isOutOfStock ? 'Rupture' : 'Ajouter au panier'}
+              </Button>
+            )}
+          </div>
+          {!stockStatus.isBackOrder && (
             <Button
               size="default"
-              className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
-              onClick={handleAddToCart}
+              variant="outline"
+              className="w-full min-h-[44px] h-auto py-2 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+              onClick={handleQuickOrderClick}
               disabled={stockStatus.isOutOfStock}
-              aria-label="Ajouter au panier"
+              aria-label="Commander maintenant"
             >
-              <ShoppingCart className="h-4 w-4 mr-2 shrink-0" />
-              {stockStatus.isOutOfStock ? 'Rupture' : 'Ajouter au panier'}
+              <Zap className="h-4 w-4 mr-2 shrink-0" />
+              Commander maintenant
             </Button>
-          </div>
-          <Button
-            size="default"
-            variant="outline"
-            className="w-full min-h-[44px] h-auto py-2 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
-            onClick={handleQuickOrderClick}
-            disabled={stockStatus.isOutOfStock}
-            aria-label="Commander maintenant"
-          >
-            <Zap className="h-4 w-4 mr-2 shrink-0" />
-            Commander maintenant
-          </Button>
+          )}
         </div>
       </div>
 
