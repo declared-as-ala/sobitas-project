@@ -48,6 +48,13 @@ export interface ShopQuery {
   search: string;
   /** TOP-level category slugs ('proteines'), never subcategory slugs. */
   categories: string[];
+  /**
+   * Subcategory slugs ('whey-isolate'). Separate from `categories` because the API branches on the
+   * two differently — `categories` resolves through Categ -> SousCategory, `subcategories` matches
+   * SousCategory directly — and because a subcategory page must be able to scope itself without
+   * dragging in its 8,849 siblings.
+   */
+  subcategories: string[];
   brands: number[];
   flavors: string[];
   inStock: boolean;
@@ -61,6 +68,7 @@ export const EMPTY_SHOP_QUERY: ShopQuery = {
   page: 1,
   search: '',
   categories: [],
+  subcategories: [],
   brands: [],
   flavors: [],
   inStock: false,
@@ -169,6 +177,7 @@ export function parseShopQuery(searchParams: RawSearchParams | undefined): ShopQ
       }
     })(),
     categories: csv(sp.category).concat(csv(sp.categories)),
+    subcategories: csv(sp.subcategory).concat(csv(sp.subcategories)),
     // Dedupe: `?brand=72&brands=72` is one brand, and a duplicated id in a whereIn is a wasted
     // index probe on a 10,669-row table.
     brands: Array.from(new Set(brands)),
@@ -206,6 +215,7 @@ export function shopQueryToApiParams(query: ShopQuery, perPage = SHOP_PER_PAGE):
 
   if (query.search) params.search = query.search;
   if (query.categories.length > 0) params.categories = query.categories.join(',');
+  if (query.subcategories.length > 0) params.subcategories = query.subcategories.join(',');
   if (query.brands.length > 0) params.brands = query.brands.join(',');
   if (query.flavors.length > 0) params.flavors = query.flavors.join(',');
   if (query.inStock) params.in_stock = 1;
@@ -228,6 +238,7 @@ export function buildShopUrl(query: ShopQuery, basePath = '/shop'): string {
 
   if (query.search) add('search', query.search);
   if (query.categories.length > 0) add('category', query.categories.join(','));
+  if (query.subcategories.length > 0) add('subcategory', query.subcategories.join(','));
   if (query.brands.length > 0) add('brand', query.brands.join(','));
   if (query.flavors.length > 0) add('flavors', query.flavors.join(','));
   if (query.inStock) add('in_stock', '1');
@@ -244,6 +255,7 @@ export function isShopFiltered(query: ShopQuery): boolean {
   return (
     query.search !== '' ||
     query.categories.length > 0 ||
+    query.subcategories.length > 0 ||
     query.brands.length > 0 ||
     query.flavors.length > 0 ||
     query.inStock ||
