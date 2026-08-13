@@ -54,6 +54,9 @@ on:
           - seo-ctr-pass-dry-run
           - queue-log
           - scheduler-log
+          # Robots/indexability. The dry run reports how many products are noindexed and how many
+          # are nofollowed; it changes nothing.
+          - seo-robots-audit
           # staging table only: no customer-visible effect
           - catalog-discover
           - catalog-hydrate-now
@@ -64,8 +67,13 @@ on:
           - seo-ctr-pass
           - catalog-promote
           - catalog-publish-wave-500
+          # Repairs `nofollow` on published products. Never touches the index flag.
+          - seo-robots-fix
+          # Re-measures products held at seo_robots_index=0 and indexes the ones whose body now
+          # clears catalog.promotion.min_body_words. Creates and publishes nothing.
+          - catalog-reindex
       confirm:
-        description: "Writing tasks only (research-import-apply, catalog-promote, catalog-publish-wave-500): type APPLY"
+        description: "Writing tasks only (research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
         required: false
         default: ""
 
@@ -181,6 +189,31 @@ jobs:
               ;;
             catalog-publish-wave-500)
               ARGS="catalog:iherb:promote --publish --limit=500"
+              WRITES=yes
+              ;;
+            seo-robots-audit)
+              ARGS="seo:products-robots-audit"
+              WRITES=no
+              ;;
+            seo-robots-fix)
+              # Sets seo_robots_follow = 1 on published products explicitly marked nofollow.
+              #
+              # `noindex` says "do not list this page"; `nofollow` says "and do not follow any link
+              # on it", so the page stops passing signal to its category, brand and related
+              # products. A live audit found 49 of the ORIGINAL catalogue in that state — C4
+              # Original, Gold Creatine Kevin Levrone, Mass Gainer Eric Favre. Flagship SKUs acting
+              # as dead ends. There is no product page for which nofollow is correct.
+              #
+              # The index flag is deliberately untouched: see catalog-reindex.
+              ARGS="seo:products-robots-audit --apply"
+              WRITES=yes
+              ;;
+            catalog-reindex)
+              # The CORRECT way to reduce the noindexed population. It re-measures each held-back
+              # product's body against catalog.promotion.min_body_words and flips only the ones that
+              # now clear it — as opposed to forcing ~10,000 thin pages into the index, which costs
+              # more than it gains. Creates nothing and publishes nothing.
+              ARGS="catalog:iherb:promote --reindex"
               WRITES=yes
               ;;
             *)
