@@ -43,43 +43,61 @@ for (const url of URLS) {
     await page.waitForSelector('article', { timeout: 30_000 }).catch(() => {});
     await new Promise((r) => setTimeout(r, 2500));
 
-    const report = await page.evaluate(async () => {
+    /*
+     * TWO THINGS THIS TEST GOT WRONG THE FIRST TIME, both of which produce a false BROKEN:
+     *
+     * 1. A dispatched MouseEvent DOES NOT TRIGGER CSS :hover. Only a real pointer position does, so
+     *    the move has to go through page.hover() / the CDP mouse, not element.dispatchEvent().
+     * 2. Headless Chrome can report `(hover: none)`, and the hover layer is deliberately gated on
+     *    `@media (hover: hover)` so a phone's emulated tap-hover cannot swap the image. If the test
+     *    browser claims no hover capability, the CSS is correct to do nothing and the run proves
+     *    nothing — so it is reported rather than silently failed.
+     */
+    const canHover = await page.evaluate(() => matchMedia('(hover: hover)').matches);
+
+    const found = await page.evaluate(() => {
       const cards = [...document.querySelectorAll('article')];
-      const out = { cards: cards.length, withHoverLayer: 0, tested: null };
-
-      for (const card of cards) {
-        const imgs = [...card.querySelectorAll('img')];
-        // The hover layer is the aria-hidden sibling stacked over the packshot.
-        const hover = imgs.find((i) => i.getAttribute('aria-hidden') === 'true');
-        if (!hover) continue;
-        out.withHoverLayer++;
-
-        if (out.tested) continue;
-
-        const front = imgs.find((i) => i !== hover);
-        const before = getComputedStyle(hover).opacity;
-
-        card.dispatchEvent(new MouseEvent('mouseover', { bubbles: true }));
-        card.dispatchEvent(new MouseEvent('mouseenter', { bubbles: true }));
-        // Let the 300ms transition run.
-        await new Promise((r) => setTimeout(r, 600));
-
-        out.tested = {
-          frontSrc: (front?.currentSrc || front?.src || '').slice(-40),
-          hoverSrc: (hover.currentSrc || hover.src || '').slice(-40),
-          opacityBefore: before,
-          opacityAfter: getComputedStyle(hover).opacity,
-        };
-      }
-      return out;
+      let idx = -1;
+      let total = 0;
+      cards.forEach((c, i) => {
+        const hov = [...c.querySelectorAll('img')].some((im) => im.getAttribute('aria-hidden') === 'true');
+        if (hov) { total++; if (idx < 0) idx = i; }
+      });
+      return { cards: cards.length, withHoverLayer: total, idx };
     });
+
+    let report = { ...found, canHover, tested: null };
+
+    if (found.idx >= 0) {
+      const sel = `article:nth-of-type(${found.idx + 1})`;
+      const before = await page.evaluate((s) => {
+        const el = document.querySelector(s)?.querySelector('img[aria-hidden="true"]');
+        return el ? getComputedStyle(el).opacity : null;
+      }, sel);
+
+      // A REAL pointer move. This is the part element.dispatchEvent() cannot do.
+      await page.hover(sel).catch(() => {});
+      await new Promise((r) => setTimeout(r, 700));
+
+      report.tested = await page.evaluate((s) => {
+        const card = document.querySelector(s);
+        const hover = card?.querySelector('img[aria-hidden="true"]');
+        const front = [...(card?.querySelectorAll('img') || [])].find((i) => i !== hover);
+        return {
+          frontSrc: (front?.currentSrc || '').slice(-34),
+          hoverSrc: (hover?.currentSrc || '').slice(-34),
+          opacityAfter: hover ? getComputedStyle(hover).opacity : null,
+        };
+      }, sel);
+      report.tested.opacityBefore = before;
+    }
 
     const t = report.tested;
     const ok = t && Number(t.opacityBefore) < 0.05 && Number(t.opacityAfter) > 0.9 && t.frontSrc !== t.hoverSrc;
     if (!ok) anyFail = true;
 
     console.log(`\n${url}`);
-    console.log(`  cards: ${report.cards} | with a hover layer: ${report.withHoverLayer}`);
+    console.log(`  cards: ${report.cards} | with a hover layer: ${report.withHoverLayer} | browser reports hover:hover = ${report.canHover}`);
     if (!t) {
       console.log('  RESULT: no card on this page has a hover image yet (content not imported)');
     } else {
