@@ -684,8 +684,23 @@ class ApisController extends Controller
              *
              * Legacy products have no staging row at all, so the relation is null and the card falls
              * back to the cover exactly as before — which is what keeps the 309 untouched.
+             *
+             * ── `id` IS NOT OPTIONAL IN THIS SELECT, AND LEAVING IT OUT COST A DAY ────────────
+             * The first version asked for `product_id,source_gallery_images` and shipped a
+             * hover_image that was null for EVERY product — including ones whose /product_details
+             * response was returning an eight-image gallery from this very column, which is what
+             * made it look like missing data rather than a bug.
+             *
+             * Laravel's own documentation states the rule: "when using this feature, you should
+             * always include the id column and any relevant foreign key columns in the list of
+             * columns you wish to retrieve." Without the primary key Eloquent cannot hydrate the
+             * related model, so the relation resolves to null and every downstream read of it is
+             * silently empty — no error, no warning, a 200 with a null field.
+             *
+             * The eager load at the productDetails endpoint above already had this right
+             * (`externalCatalogSource:id,product_id,…`). This one now matches it.
              */
-            ->with(['externalCatalogSource:product_id,source_gallery_images']);
+            ->with(['externalCatalogSource:id,product_id,source_gallery_images']);
 
         if ($search = trim((string) $request->get('search', ''))) {
             $matchingBrandIds = Brand::where('designation_fr', 'like', '%' . $search . '%')->pluck('id');
@@ -808,15 +823,56 @@ class ApisController extends Controller
                 ? $product->getRelation('externalCatalogSource')
                 : null;
 
+            /*
+             * The column is cast to 'array' on the model, so this is normally an array already. It
+             * is decoded defensively anyway because the previous failure here was silent: a value
+             * that is not an array simply yielded null, which is indistinguishable from "this
+             * product has no gallery" and is exactly why the real cause took so long to find.
+             */
             $gallery = $source?->source_gallery_images;
-            $second = is_array($gallery) && isset($gallery[1]) && is_string($gallery[1]) ? $gallery[1] : null;
 
-            $product->setAttribute(
-                'hover_image',
-                $second === null
-                    ? null
-                    : preg_replace('~(/images/[^/]+/[^/]+)/[smlkr]/(\d+\.jpg)$~', '$1/l/$2', $second)
-            );
+            if (is_string($gallery)) {
+                $gallery = json_decode($gallery, true);
+            }
+
+            /*
+             * THE FIRST IMAGE THAT IS NOT THE ONE ALREADY ON SCREEN — not blindly gallery[1].
+             *
+             * The card's front is `cover`, and `cover` is not guaranteed to be gallery[0]: for an
+             * imported product it is built from the part number and a primary index, so depending on
+             * the product it can equal gallery[0], gallery[1] or none of them. Taking index 1 on
+             * faith therefore produces the one bug the whole feature exists to avoid — a hover that
+             * swaps the packshot for an identical packshot, which reads as "the hover is broken"
+             * rather than as "these two images happen to match".
+             *
+             * Comparing on the /l/-normalised form on both sides, because the same photograph is
+             * stored as /s/ in the gallery and served as /l/ in the cover, and comparing the raw
+             * strings would call those two different images.
+             */
+            $normalise = static fn (?string $url): string => $url === null
+                ? ''
+                : (string) preg_replace('~(/images/[^/]+/[^/]+)/[smlkr]/(\d+\.jpg)$~', '$1/l/$2', $url);
+
+            $cover = $normalise(is_string($product->cover) ? $product->cover : null);
+
+            $second = null;
+
+            if (is_array($gallery)) {
+                foreach ($gallery as $candidate) {
+                    if (! is_string($candidate) || $candidate === '') {
+                        continue;
+                    }
+
+                    $large = $normalise($candidate);
+
+                    if ($large !== $cover) {
+                        $second = $large;
+                        break;
+                    }
+                }
+            }
+
+            $product->setAttribute('hover_image', $second);
 
             $product->unsetRelation('externalCatalogSource');
         });
