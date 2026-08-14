@@ -143,6 +143,14 @@ jobs:
           # it replaced and it hides the real status from every report.
           guard "dead-product-urls"  node scripts/check-dead-product-urls.mjs
 
+          # ── Do the pages that already rank waste their one SERP line? ────────────────────
+          # /omega-3 sat at position 7.5 on 2,827 impressions with ZERO clicks while showing
+          # "Oméga 3 Fish Oil Tunisie | EPA DHA - | Protéine Tunisie" — a title truncated to make
+          # room for the brand suffix, which was then appended after the orphaned hyphen. Nothing
+          # in the repo asserted the RENDERED title, so a defect made by two correct-looking
+          # components interacting was invisible to every other check.
+          guard "serp-titles"        node scripts/check-serp-titles.mjs
+
           # ── Is the blog still linking to the pages that sell? ─────────────────────────────
           guard "internal-links"     node scripts/check-internal-links.mjs
 

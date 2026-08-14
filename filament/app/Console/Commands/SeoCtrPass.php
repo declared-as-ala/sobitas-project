@@ -56,9 +56,33 @@ class SeoCtrPass extends Command
      *
      * @var array<string, array{0: string, 1: string, 2: string}>
      */
+    /**
+     * ── EVERY TITLE HERE MUST FIT 60 CHARACTERS *INCLUDING* THE BRAND SUFFIX ──────────────
+     *
+     * The storefront appends ' | Protéine Tunisie' — 19 characters — so the string in this file
+     * has a budget of about 41, not 60. Two of these were written to 49 and 51, and the result on
+     * the live SERP was measured on 14/08/2026:
+     *
+     *     stored    Oméga 3 Fish Oil Tunisie | EPA DHA - Livraison 24h
+     *     rendered  Oméga 3 Fish Oil Tunisie | EPA DHA - | Protéine Tunisie
+     *                                                  ^^^
+     *
+     * The tail is cut to make room and the suffix is appended after the orphaned hyphen, so the
+     * result reads as broken markup on the one line a searcher uses to choose. Both affected pages
+     * are page-one rankings with ZERO clicks — `omega 3 fish oil` at 2,827 impressions and position
+     * 7.5, `creatine monohydrate` at 651 and 11.4. At that position the ranking is not the problem.
+     *
+     * Keeping the title short is the fix that holds regardless of WHICH layer does the cutting,
+     * which matters because this one is assembled across three of them. `check-serp-titles.mjs`
+     * asserts the rendered result on the live site, since that is the only version Google sees.
+     */
     private const TARGETS = [
         'omega-3' => [
-            'Oméga 3 Fish Oil Tunisie | EPA DHA - Livraison 24h',
+            // 40 chars. See the budget note above TARGETS: 40 + 19 = 59, inside the line, so
+            // nothing truncates and no orphan can be left behind. "EPA DHA" was dropped rather
+            // than "Livraison 24h" — the delivery promise is the differentiator against an
+            // importer, and EPA/DHA is already the first line of the description.
+            'Oméga 3 Fish Oil Tunisie — Livraison 24h',
             'Oméga 3 fish oil en Tunisie : capsules EPA & DHA, marques testées en laboratoire. Paiement à la livraison, livraison 24-72h, gratuite dès 300 DT.',
             'omega 3 fish oil — 3,331 impressions, 0 clicks, position 7.5. The largest pool of wasted visibility on the site. The query is English; the old title answered only in French.',
         ],
@@ -73,7 +97,9 @@ class SeoCtrPass extends Command
             'pre workout — 589 impressions, 0 clicks, position 9.3. No price signal in the old snippet.',
         ],
         'creatine' => [
-            'Créatine Tunisie | Monohydrate Creapure - Prix 2026',
+            // 39 chars, 58 with the suffix. Leads with `creatine monohydrate` — 651 impressions
+            // at position 11.4 and zero clicks — instead of burying it behind "Créatine Tunisie".
+            'Créatine Monohydrate Tunisie — Prix 2026',
             'Créatine monohydrate en Tunisie : Creapure et micronisée, dosage 3-5 g/jour. 100% authentique, paiement à la livraison, livraison 24-72h.',
             'creatine tunisie — 604 impressions, 45 clicks, CTR 7.5% at position 17.4; creatine monohydrate — 657 impressions, 0 clicks at 11.8. The best-converting term on the site is still leaving clicks behind.',
         ],
