@@ -71,6 +71,9 @@ on:
           - catalog-hydrate-now
           - catalog-retry-failed
           - catalog-reset-stuck
+          # Content-side repairs. Staging only, same as the two above.
+          - content-retry-failed
+          - content-reset-stuck
           # WRITES: these need confirm=APPLY
           - research-import-apply
           - seo-ctr-pass
@@ -231,6 +234,24 @@ jobs:
             catalog-retry-failed)
               # A write, but to the staging table alone - no product, page or URL changes.
               ARGS="catalog:iherb:hydrate --retry-failed"
+              WRITES=no
+              ;;
+            content-retry-failed)
+              # The CONTENT equivalents of catalog-retry-failed / catalog-reset-stuck, which both
+              # target hydrate only. Content is the stage that is actually stalled, and until now
+              # it had no repair button at all.
+              #
+              # Staging table only - no product, page or URL changes - so WRITES=no by the same
+              # standard as the two hydrate tasks below.
+              ARGS="catalog:iherb:content --retry-failed"
+              WRITES=no
+              ;;
+            content-reset-stuck)
+              # A job that claims a row sets source_content_status='fetching' BEFORE its HTTP call.
+              # If the worker then dies - container restart, OOM, deploy - the row keeps that value
+              # forever, and claim() only ever matches NULL or 'queued'. Those rows are then
+              # dispatched, refused by claim() in about a millisecond, and reported DONE.
+              ARGS="catalog:iherb:content --reset-stuck=30"
               WRITES=no
               ;;
             catalog-reset-stuck)
