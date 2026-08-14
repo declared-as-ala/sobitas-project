@@ -160,10 +160,29 @@ own pipeline on the day you set it up. Delete it once Step 5 has been green twic
 
 ## Step 5 — Prove it, then keep it proven
 
-Run **Actions → VPS Doctor → Run workflow**. It is read-only, changes nothing, and reports whether
-the server accepted the key. Green means done.
+Run **Actions → VPS Doctor → Run workflow**. It is read-only, changes nothing, and answers four
+questions in order: is the server reachable, what auth does it accept, does `VPS_SSH_KEY` parse as
+a private key, and — the one that matters — **does that key actually log in**. Green means done.
+
+> Before 14/08/2026 this workflow did not read `VPS_SSH_KEY` at all, so it could not report on the
+> key whether the key was perfect or missing. If you ran it and saw a red X, that told you nothing
+> about your key. Re-run it now.
+>
+> It forces `PreferredAuthentications=publickey`, so a working password cannot mask a broken key and
+> show a false green — which matters here, because the server still accepts passwords and every
+> deploy is currently passing on that path.
 
 Then run a real deploy — **Actions → Deploy Filament → Run workflow** — and watch the SSH step.
+
+### While you are in the secrets page: re-save `VPS_HOST`
+
+Its value ends in a stray newline, left by whatever paste created it. Open the secret, retype the
+IP with no trailing Enter, and save.
+
+Deploys are not affected — `appleboy/ssh-action` trims its own inputs — which is exactly why this
+went unnoticed for six months. Anything hand-written that uses the value directly does not trim, and
+fails instantly in a way that reads as an authentication problem. VPS Doctor now trims defensively
+and warns when it has to, but the secret is still worth cleaning.
 
 To revoke this key later:
 
