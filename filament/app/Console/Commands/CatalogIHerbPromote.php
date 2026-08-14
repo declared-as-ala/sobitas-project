@@ -850,7 +850,25 @@ class CatalogIHerbPromote extends Command
                     if ($writesGtin) {
                         $product->gtin = $gtin;
                     }
-                    if ($writesSchema) {
+                    /*
+                     * ── THE COLUMN CHECK IS NOT DEFENSIVE PROGRAMMING, IT IS A BUG FIX ────────
+                     *
+                     * `products.seo_schema_description` was absent in production while `faq` and
+                     * `nutrition_values` from the same migration file were present. This assignment
+                     * therefore made every save raise `Unknown column`, the QueryException below
+                     * caught it, the row counted as failed — and `description_fr` and `gtin` went
+                     * down with it, on exactly the rows that had an overview to copy.
+                     *
+                     * Measured before the fix: 5,843 promoted rows carried a verified barcode and
+                     * 253 products had one; 4,197 carried manufacturer prose and the average body
+                     * was 118 words against a 250-word gate. Three independent values, coupled into
+                     * one save, all lost to the least important of the three.
+                     *
+                     * The migration added alongside this restores the column. This guard makes the
+                     * coupling impossible to repeat: the body and the barcode no longer depend on a
+                     * column neither of them uses.
+                     */
+                    if ($writesSchema && self::productsHaveSchemaDescription()) {
                         $product->seo_schema_description = $body['schema_description'];
                     }
                     $product->save();
@@ -962,6 +980,23 @@ class CatalogIHerbPromote extends Command
         }
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Does `products.seo_schema_description` exist?
+     *
+     * Resolved once per process rather than per row: this runs inside a loop over ~10,000 products
+     * and `Schema::hasColumn` issues a query every time it is called.
+     *
+     * A static rather than a config flag because the answer is a fact about the database, and the
+     * whole failure this guards against was a mismatch between what the code assumed and what the
+     * database actually had.
+     */
+    private static ?bool $hasSchemaDescription = null;
+
+    private static function productsHaveSchemaDescription(): bool
+    {
+        return self::$hasSchemaDescription ??= \Illuminate\Support\Facades\Schema::hasColumn('products', 'seo_schema_description');
     }
 
     /**
@@ -1706,7 +1741,10 @@ class CatalogIHerbPromote extends Command
              * `source_rating_count` are on the staging row, they are internal reference only, and
              * nothing in this command reads them.
              */
-            if ($body['schema_description'] !== null) {
+            // Same guard as the recompose path, for the same reason: this column was absent in
+            // production, and an INSERT naming a column that does not exist fails the WHOLE product
+            // creation — not just the one optional field. See the note at the recompose save.
+            if ($body['schema_description'] !== null && self::productsHaveSchemaDescription()) {
                 $attributes['seo_schema_description'] = $body['schema_description'];
             }
 
