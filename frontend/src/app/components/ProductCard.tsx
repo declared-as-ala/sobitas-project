@@ -227,7 +227,10 @@ export const ProductCard = memo(function ProductCard({
   const inStock = !stock.isOutOfStock && stockDisponible > 0;
 
   return (
-    <>
+    // The comment block below sits OUTSIDE the fragment on purpose: inside one it would be JSX
+    // CHILDREN, where a comment is rendered as literal text rather than stripped. eslint's
+    // react/jsx-no-comment-textnodes catches exactly that, and it fired here the moment the
+    // fragment was added to host the request dialog.
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
     // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
     /*
@@ -241,6 +244,7 @@ export const ProductCard = memo(function ProductCard({
       not against the image. In the row layout the image is a 124px thumbnail on the left, so a
       heart anchored to it would sit on top of the packshot instead of in the card's corner.
     */
+    <>
     <article className="pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-lg">
       {/* 124px thumbnail on phones, full-width image from `sm`. `self-stretch` gives the frame's
           `h-full` a height to resolve against (see util/productCardFrame.ts). */}
