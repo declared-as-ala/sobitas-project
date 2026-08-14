@@ -72,6 +72,7 @@ class CatalogHealthController extends Controller
             'min_body_words' => $this->minBodyWords(),
             'products' => $products,
             'staging' => $staging,
+            'runs' => $this->runs(),
             'chain' => $this->chain($products, $staging),
         ];
     }
@@ -273,6 +274,62 @@ class CatalogHealthController extends Controller
                 })()
                 : null,
         ];
+    }
+
+    /**
+     * The most recent run of each scheduled pass, and what it decided.
+     *
+     * ── WHY A COUNT OF SKIPPED ROWS IS THE MOST USEFUL NUMBER HERE ────────────────────────────
+     * Every pass prints a good summary to storage/logs/*.log and every one of those needs SSH,
+     * which has been failing on this host since 10/08/2026. So the schedule has been running
+     * hourly, unobserved, for days.
+     *
+     * That is precisely the gap the current bug lives in. `catalog:iherb:promote --recompose` is
+     * the code that copies the manufacturer overview and the barcode from the staging row onto the
+     * product, and both are missing from the storefront while both are present in staging — 253
+     * products carry a GTIN against 26,820 captured. The pass therefore either is not running, or
+     * is running and declining nearly every row, and the counter that separates those two
+     * (`hand_edited` — the body no longer matches what the composer would have written, so it is
+     * left alone) existed only in an unreadable log.
+     *
+     * `errors` is deliberately NOT returned. It can contain row-level detail, and this endpoint is
+     * public.
+     */
+    private function runs(): array
+    {
+        if (! Schema::hasTable('external_catalog_jobs')) {
+            return ['available' => false];
+        }
+
+        $out = ['available' => true];
+
+        foreach (['recompose', 'promote', 'reindex', 'discover', 'hydrate', 'content'] as $kind) {
+            $row = DB::table('external_catalog_jobs')
+                ->where('kind', $kind)
+                ->orderByDesc('id')
+                ->first(['status', 'processed', 'created', 'updated', 'skipped', 'failed', 'options', 'completed_at']);
+
+            if ($row === null) {
+                continue;
+            }
+
+            $options = is_string($row->options ?? null) ? json_decode($row->options, true) : ($row->options ?? null);
+
+            $out[$kind] = [
+                'status' => $row->status,
+                'processed' => (int) $row->processed,
+                'created' => (int) $row->created,
+                'updated' => (int) $row->updated,
+                'skipped' => (int) $row->skipped,
+                'failed' => (int) $row->failed,
+                'completed_at' => $row->completed_at instanceof \DateTimeInterface
+                    ? $row->completed_at->format(\DATE_ATOM)
+                    : ($row->completed_at === null ? null : (string) $row->completed_at),
+                'detail' => is_array($options) ? $options : null,
+            ];
+        }
+
+        return $out;
     }
 
     /**

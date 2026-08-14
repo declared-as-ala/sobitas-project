@@ -93,6 +93,39 @@ if (s.available) {
   console.log(`  last page fetch      ${s.last_content_fetch ?? '—'}`);
 }
 
+/*
+ * What the scheduled passes actually decided, last time each ran.
+ *
+ * `--recompose` is the code that copies the manufacturer overview and the barcode from a staging
+ * row onto the product. Both are missing from the storefront and present in staging, so its
+ * `skipped` breakdown is the single most diagnostic thing on this page: a large `hand_edited` means
+ * the pass ran and declined the rows, which is a different bug from the pass not running at all.
+ */
+const runs = h.runs ?? {};
+if (runs.available) {
+  const kinds = Object.keys(runs).filter((k) => k !== 'available');
+  if (kinds.length) {
+    console.log('\nLAST RUN OF EACH SCHEDULED PASS');
+    for (const k of kinds) {
+      const r = runs[k];
+      console.log(
+        `  ${pad(k, 12)} ${pad(r.status, 11)} processed ${n(r.processed).padStart(8)}` +
+          `  updated ${n(r.updated).padStart(7)}  skipped ${n(r.skipped).padStart(7)}` +
+          `  failed ${n(r.failed).padStart(6)}   ${r.completed_at ?? ''}`
+      );
+      if (r.detail) {
+        const parts = Object.entries(r.detail)
+          .filter(([, v]) => v !== null && v !== false && v !== 0)
+          .map(([kk, v]) => `${kk}=${typeof v === 'number' ? n(v) : v}`);
+        if (parts.length) console.log(`               ${parts.join('  ')}`);
+      }
+    }
+  } else {
+    console.log('\nLAST RUN OF EACH SCHEDULED PASS');
+    console.log('  (no run recorded yet — the passes record themselves from the next deploy on)');
+  }
+}
+
 const starved = h.chain?.first_starved_stage;
 console.log('');
 if (starved) {

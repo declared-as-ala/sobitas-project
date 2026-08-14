@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Brand;
 use App\Models\Categ;
+use App\Models\ExternalCatalogJob;
 use App\Models\ExternalCatalogProduct;
 use App\Models\Product;
 use App\Models\SousCategory;
@@ -911,6 +912,53 @@ class CatalogIHerbPromote extends Command
                 .'overview by hand if you want it there.',
                 number_format($handEdited),
             ));
+        }
+
+        /*
+         * ── RECORD WHAT THIS PASS DID, WHERE SOMETHING WITHOUT A SHELL CAN READ IT ────────────
+         *
+         * This pass runs hourly on the scheduler and prints the summary above to
+         * storage/logs/catalog-publish.log, which needs SSH to read — and SSH to this host has been
+         * failing on password auth since 10/08/2026.
+         *
+         * That is not a comfort problem, it is why the current bug went unexplained for a day.
+         * Measured from the public API on 14/08: 26,820 staging rows carry a verified barcode and
+         * 253 products carry one; 21,273 rows carry a manufacturer overview and the average product
+         * body is 118 words against a 250-word gate. Both values are copied by THIS method. So the
+         * pass either is not running, or is running and skipping nearly every row — and the counter
+         * that separates those two is `$handEdited`, which until now existed only in a log nobody
+         * could open.
+         *
+         * `external_catalog_jobs` already models exactly this and is already read by the admin, so
+         * the run lands there rather than in a new table. Wrapped in a catch because a bookkeeping
+         * failure must never fail the pass that did the real work.
+         */
+        try {
+            ExternalCatalogJob::create([
+                'provider' => IHerbClient::PROVIDER,
+                'kind' => 'recompose',
+                'status' => ExternalCatalogJob::STATUS_COMPLETED,
+                'processed' => $scanned,
+                'updated' => $rewritten,
+                // Everything the pass declined to rewrite, for any reason. The breakdown is in
+                // `options` — the reason is the whole question here, so it must not be flattened.
+                'skipped' => $unchanged + $handEdited + $noContent,
+                'failed' => $failed,
+                'options' => [
+                    'dry_run' => $dryRun,
+                    'unchanged' => $unchanged,
+                    'hand_edited' => $handEdited,
+                    'no_content' => $noContent,
+                    'gtins_written' => $gtins,
+                    'schema_descriptions_written' => $schemas,
+                    'words_before' => $wordsBefore,
+                    'words_after' => $wordsAfter,
+                ],
+                'started_at' => now(),
+                'completed_at' => now(),
+            ]);
+        } catch (\Throwable $e) {
+            $this->warn('Could not record this run in external_catalog_jobs: '.$e->getMessage());
         }
 
         return self::SUCCESS;
