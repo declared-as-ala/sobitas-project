@@ -392,11 +392,16 @@ class CatalogIHerbContent extends Command
         ));
 
         $this->warn(
-            'This recomputes only fields that are a function of the STORED sections — the word count. '
-            .'The page itself was NOT kept (~2 MB x 47,537 = ~95 GB against ~43 GB free), so a fix to '
-            .'the extractor\'s section-finding cannot be replayed for free the way '
-            .'`catalog:iherb:hydrate --renormalize` replays a normaliser fix. Use --refetch for that, '
-            .'and read the cost it prints.'
+            'This re-slices the sections out of the OVERVIEW CONTAINER already stored on each '
+            .'row, and recomputes the word count from the result. No page was fetched. What it '
+            .'cannot replay is a change to anything OUTSIDE that container: the full page was '
+            .'not kept (~2 MB x 47,537 = ~95 GB against ~43 GB free). Use --refetch for that, '
+            .'and read the cost it prints first.'
+        );
+
+        $this->line(
+            'Run `catalog:iherb:promote --recompose` to carry the recovered sections into product '
+            .'bodies. The scheduled pass already does this daily.'
         );
 
         return self::SUCCESS;
