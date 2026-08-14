@@ -427,8 +427,28 @@ jobs:
               echo ""
               echo "> php artisan $ARGS"
               echo ""
-              docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
-                php artisan $ARGS --no-interaction
+              # Capture instead of streaming, and print unconditionally.
+              #
+              # With `script_stop: true` a non-zero exit ends the remote shell immediately and
+              # appleboy does not surface what was written before it. On 14/08 both catalog-status
+              # and content-status failed this way: "Process exited with status 1" and not one line
+              # of output, which is the least useful possible report from a diagnostic tool - it
+              # cannot even distinguish a broken command from a container that is not running.
+              #
+              # stderr is folded in because Laravel writes its errors there, and `|| true` keeps
+              # the shell alive long enough to print them. The real code is propagated at the end.
+              set +e
+              OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                php artisan $ARGS --no-interaction 2>&1)
+              RC=$?
+              set -e
+              echo "$OUT"
+              echo ""
+              echo "[artisan exited $RC]"
+              if [ "$RC" -ne 0 ]; then
+                echo "[X] the command failed - its output is above, not hidden."
+                exit "$RC"
+              fi
             fi
 
             echo ""
