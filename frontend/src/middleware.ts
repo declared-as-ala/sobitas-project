@@ -357,6 +357,31 @@ export async function middleware(request: NextRequest) {
     return redirectPreservingQuery(request, `/${legacyCategory[1]}`);
   }
 
+  // ── The French shop prefix ────────────────────────────────────────────────────────────────
+  // Two of /boutique's shapes are hard 404s. Measured on production, 14/08/2026:
+  //
+  //     /boutique                                404
+  //     /boutique/                               308 → /boutique → 404
+  //     /boutique/creatine/gold-creatine-300g    404
+  //     /boutique/proteines                      308 → /proteines        (already correct)
+  //
+  // That last one works BY ACCIDENT and the accident is worth naming, because it is what makes
+  // this rule narrower than it looks: /boutique/{x} matches the real two-segment product route
+  // (`[slug]/[productSlug]`), whose product lookup fails and whose dead-end fallback redirects to
+  // /{x}. It already lands in one hop on the right page. Routing it through /shop/{x} — the
+  // obvious "normalise the prefix" version of this rule — would replace that one hop with two,
+  // making the only working shape worse in order to fix the broken ones.
+  //
+  // So: the bare path goes to the boutique, and anything three segments deep drops the prefix
+  // onto the real /{category}/{product} route, which knows how to resolve a live product and how
+  // to retire a dead one. Two-segment paths are deliberately left alone.
+  const legacyBoutique = pathname.match(/^\/boutique(?:\/(.+?))?\/?$/);
+  if (legacyBoutique) {
+    const rest = legacyBoutique[1];
+    if (!rest) return redirectPreservingQuery(request, '/shop');
+    if (rest.includes('/')) return redirectPreservingQuery(request, `/${rest}`);
+  }
+
   // Legacy brand URLs: /brand/{NAME} or /brand/{NAME}/{id}. The NAME must be slugified
   // (e.g. "BIOTECH USA" → "biotech-usa") — the old code redirected to the RAW name, which
   // 404'd for every multi-word/uppercase brand. Lands on /{brand-slug}, which resolves.

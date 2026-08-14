@@ -399,7 +399,28 @@ jobs:
           # right later.
           script_stop: true
           script: |
-            set -euo pipefail
+            # ── NO `set -e`, AND THAT IS THE WHOLE POINT ──────────────────────────────────
+            # `set -e` plus `script_stop: true` plus appleboy's discard-stdout-on-non-zero is a
+            # three-part trap, and on 14/08 it sprang for the SIXTH time. The artisan block below
+            # was already rewritten to survive it. The PREAMBLE was not, so `content-status` still
+            # returned:
+            #
+            #     2026/08/14 15:41:33 Process exited with status 1
+            #
+            # and nothing else — three seconds after connecting, with the resolve step having
+            # correctly produced `php artisan catalog:iherb:content --status`, and with VPS Doctor
+            # having logged in with the key fifty seconds earlier. Every candidate (a missing
+            # APP_DIR, a stopped container, a bad compose file) produces exactly that same empty
+            # report, which is the definition of a useless diagnostic.
+            #
+            # `set -e` is the wrong tool for a script whose entire product is its output: it turns
+            # every failure into silence at precisely the moment the failure is the thing you want
+            # to read. Each command that genuinely must stop the run is guarded EXPLICITLY below
+            # (the backup before a writing task is the one that matters), which works the same
+            # without `-e` and reads better with it gone.
+            #
+            # `-u` and `pipefail` stay. They catch typos and hide nothing.
+            set -uo pipefail
 
             APP_DIR="/root/sobitas-project"
             COMPOSE_FILE="$APP_DIR/docker-compose.yml"
@@ -408,7 +429,26 @@ jobs:
             MODE="${{ steps.resolve.outputs.mode }}"
             SVC="${{ steps.resolve.outputs.svc }}"
 
-            cd "$APP_DIR"
+            # Announce BEFORE anything can fail, so a run always proves it got this far.
+            echo "[..] connected. task mode=$MODE svc=$SVC writes=$WRITES"
+            echo "[..] args: $ARGS"
+
+            if ! cd "$APP_DIR"; then
+              echo "================================================================"
+              echo "[X] cannot cd to $APP_DIR — this is where the deploy lives."
+              echo "================================================================"
+              ls -la /root 2>&1 | head -20
+              exit 0
+            fi
+
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              echo "================================================================"
+              echo "[X] no compose file at $COMPOSE_FILE"
+              echo "================================================================"
+              ls -la "$APP_DIR" 2>&1 | head -20
+              exit 0
+            fi
+            echo "[ok] $COMPOSE_FILE present"
 
             # Retried, and its failure is REPORTED rather than propagated.
             #
@@ -466,7 +506,11 @@ jobs:
               echo ""
               echo "> docker compose logs --tail=200 $ARGS"
               echo ""
-              docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS"
+              # Captured, like the artisan branch. A failure here used to end the shell and take
+              # the whole log with it — on a task whose only product IS a log.
+              OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
+              echo "$OUT"
+              [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
             elif [ "$MODE" = "filelog" ]; then
               # A file inside the container, not a container's stdout.
               #
@@ -481,8 +525,10 @@ jobs:
               echo ""
               echo "> [$SVC] tail -n 300 storage/logs/$ARGS"
               echo ""
-              docker compose -f "$COMPOSE_FILE" exec -T "$SVC" \
-                sh -c 'D=/var/www/html/storage/logs; F=$(ls -t $D/'"$ARGS"' 2>/dev/null | head -1); if [ -n "$F" ]; then echo "reading $F"; echo "---"; tail -n 300 "$F"; else echo "(no file matching '"$ARGS"' in this container)"; ls -la $D 2>/dev/null | head -20; fi'
+              OUT=$(docker compose -f "$COMPOSE_FILE" exec -T "$SVC" \
+                sh -c 'D=/var/www/html/storage/logs; F=$(ls -t $D/'"$ARGS"' 2>/dev/null | head -1); if [ -n "$F" ]; then echo "reading $F"; echo "---"; tail -n 300 "$F"; else echo "(no file matching '"$ARGS"' in this container)"; ls -la $D 2>/dev/null | head -20; fi' 2>&1); RC=$?
+              echo "$OUT"
+              [ "$RC" -ne 0 ] && echo "[X] reading the log file exited $RC (output above)"
             else
               echo ""
               echo "> php artisan $ARGS"
@@ -501,7 +547,6 @@ jobs:
               OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
                 php artisan $ARGS --no-interaction 2>&1)
               RC=$?
-              set -e
               echo "$OUT"
               echo ""
               if [ "$RC" -ne 0 ]; then

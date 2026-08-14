@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
+import { isTaxonomySlug, bestCategoryForSlug } from '@/util/taxonomySlugs';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -233,22 +234,50 @@ export default async function NewProductPage({ params }: PageProps) {
       /**
        * DEAD END, not a detour. We are here only because the API gave a DEFINITIVE 404 for the
        * full slug (and, for a legacy -N slug, for the base slug too). The old fallback redirected
-       * to /shop/{slug} — but middleware then re-runs the exact same lookup there
-       * (resolveShopSlug → lookupProduct → 404 → no numeric suffix → `/{slug}`) and 301s again,
-       * producing a 308 → 301 → 404 THREE-hop chain for every genuinely deleted product (~150
-       * URLs in the GSC "Not found" export). Google attributes the final 404 to the original URL
-       * regardless, so the extra hops only burn crawl budget.
+       * to /shop/{slug} — but middleware then re-ran the same lookup there and 301'd again,
+       * producing a 308 → 301 → 404 THREE-hop chain for every genuinely deleted product.
        *
-       * Go directly to the single destination that chain could ever reach: the root listing path.
-       * Same outcome, one hop — it still resolves when the segment is really a category/brand/CMS
-       * slug (/proteines/whey-isolate → /whey-isolate) and returns a clean hard 404 when it is not.
-       * To upgrade that terminal 404 to a 410 for a confirmed-deleted product, add the canonical
-       * path to Filament → Redirections with code 410: middleware checks that in-process map FIRST
-       * (util/adminRedirects.ts, ~1 backend hit per 5 min per worker), so it costs no extra
-       * request on the hot path and needs no guessing here.
+       * ── AND THEN IT TRADED THREE HOPS FOR ONE HOP INTO THE SAME 404 ────────────────────
+       * The fix for that chain was `permanentRedirect('/' + rootSlug)`, and the comment that
+       * shipped with it said the quiet part out loud: it "returns a clean hard 404 when it is
+       * not" a category. There is no such thing as a clean 404 behind a 301. Google spends the
+       * hop, caches the redirect, still finds nothing, and every report shows the DESTINATION's
+       * status instead of the URL that was actually requested — which is exactly how 1,060 pages
+       * accumulated in the Search Console "Not found" bucket without anything naming the cause.
+       *
+       * Measured on production 14/08/2026, after the middleware half of this fix had shipped:
+       *
+       *     /creatine/gold-creatine-300g   301 → /gold-creatine-300g   404
+       *
+       * the last surviving failure in `check-dead-product-urls.mjs`, and it was this line.
+       *
+       * ── SAME RESOLUTION AS MIDDLEWARE, AND DELIBERATELY THE SAME HELPERS ───────────────
+       * `isTaxonomySlug` answers the question the old code assumed: /proteines/whey-isolate is a
+       * real category and must still redirect; /creatine/gold-creatine-300g is a deleted product
+       * whose root segment is a product slug, and must not pretend otherwise.
+       *
+       *   true   a real category/brand → 301, unchanged behaviour, link equity kept
+       *   null   the backend could not answer → 301 anyway. Unknown is not evidence of absence,
+       *          and 404-ing live listings during a backend hiccup is far worse than one wasted
+       *          hop. Same fail-open contract as util/taxonomySlugs.ts itself.
+       *   false  positively not taxonomy → try for a RELEVANT category, else a terminal 404.
+       *
+       * 404 rather than 410 only because a Server Component cannot set an arbitrary status;
+       * `notFound()` is the honest terminal answer available here, and it is strictly better than
+       * a redirect into one. For a confirmed-deleted product worth a 410, add the path to
+       * Filament → Redirections with code 410 — middleware checks that map FIRST, so it never
+       * reaches this route.
        */
       const rootSlug = baseSlug && baseSlug !== cleanProductSlug ? baseSlug : cleanProductSlug;
-      permanentRedirect(`/${encodeURIComponent(rootSlug)}`);
+      const rootIsTaxonomy = await isTaxonomySlug(rootSlug);
+      if (rootIsTaxonomy !== false) {
+        permanentRedirect(`/${encodeURIComponent(rootSlug)}`);
+      }
+      const relatedCategory = await bestCategoryForSlug(rootSlug);
+      if (relatedCategory) {
+        permanentRedirect(`/${encodeURIComponent(relatedCategory)}`);
+      }
+      notFound();
     }
     // Transient failure (429/5xx/timeout): rethrow. This ISR route (revalidate 300) would
     // otherwise CACHE a wrong 404 for a healthy product — the worst affichage bug possible

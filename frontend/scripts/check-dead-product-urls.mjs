@@ -63,8 +63,18 @@ const CASES = [
   { path: '/en/shop/gainer-xtreme-54-kg/', why: 'legacy locale prefix + trailing slash' },
   { path: '/blogs/qu-est-ce-que-la-proteine-whey', why: 'plural /blogs/ → /blog/' },
   // Nested category/product paths from the old site.
-  { path: '/creatine/gold-creatine-300g', why: 'nested legacy path, product gone' },
+  //
+  // gold-creatine-300g was the LAST failure in this file after the middleware fix shipped, and it
+  // failed in a different layer: app/(shop)/[slug]/[productSlug] ended with
+  // `permanentRedirect('/' + rootSlug)` — the same guess, one route up. Its own comment admitted
+  // it "returns a clean hard 404 when it is not" a category. There is no clean 404 behind a 301.
+  { path: '/creatine/gold-creatine-300g', why: 'nested legacy path, product gone; stems to creatine' },
   { path: '/musculation/presse-cuisse-35', why: 'nested legacy path, live product' },
+  // The French shop prefix. /boutique/{x} already worked; the bare path and the 3-segment form
+  // were hard 404s until the /boutique rule in middleware.ts.
+  { path: '/boutique', why: 'the old French path for the shop' },
+  { path: '/boutique/creatine/gold-creatine-300g', why: '3 segments: drop the prefix, then retire the product' },
+  { path: '/boutique/proteines', why: 'already correct in ONE hop — must not gain a second' },
 ];
 
 console.log(`DEAD PRODUCT URLS — ${BASE}`);
@@ -90,7 +100,20 @@ for (const { path, why } of CASES) {
       status = res.status;
 
       if (status >= 300 && status < 400) {
-        const loc = res.headers.get('location');
+        /* `Headers.get()` JOINS repeated headers with ", ", and `next start` emits the SAME
+           `location` value twice on a cache MISS — verified on a cold URL:
+
+               HTTP/1.1 308 Permanent Redirect
+               location: /whey-isolate
+               location: /whey-isolate
+
+           so `get()` returned "/whey-isolate, /whey-isolate" and this loop then fetched
+           `/whey-isolate,%20/whey-isolate`, reporting a bogus 3-hop chain for a clean 1-hop
+           redirect. It reproduces on `permanentRedirect` call sites nobody has edited, is gone on
+           the second (cached) request, and production serves a single header — a browser and
+           Googlebot both take the first value, so the page is fine and only a programmatic reader
+           is fooled. Take the first value, like they do. */
+        const loc = res.headers.get('location')?.split(', ')[0];
         if (!loc) break;
         url = new URL(loc, url).toString();
         chain.push(url.replace(BASE, ''));
