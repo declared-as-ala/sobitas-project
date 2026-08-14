@@ -134,6 +134,12 @@ services:
       # Host bind-mount: uploaded files persist across container recreations.
       # php-fpm writes here; nginx reads the same host directory via its own mount.
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
     # ── THE CHECK THAT WAS MISSING WHEN admin.protein.tn WENT DOWN ───────────────────────────
     #
     # This service had `restart: unless-stopped` and no healthcheck, and that pairing is a trap:
@@ -236,6 +242,12 @@ services:
         condition: service_healthy
     volumes:
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
 
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -289,6 +301,12 @@ services:
         condition: service_healthy
     volumes:
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
 
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
@@ -300,6 +318,12 @@ services:
     volumes:
       - backend-v2-public:/public
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |

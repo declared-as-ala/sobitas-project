@@ -178,6 +178,19 @@ jobs:
             # Two fixes. Prune BEFORE writing — retention that only runs after a successful write
             # can never free the space that write needs. And probe writability inside a SUBSHELL,
             # so a fatal redirect kills the subshell and is caught here as a plain false.
+            # ── THE SHARED LOG DIRECTORY, PREPARED BEFORE ANY CONTAINER MOUNTS IT ───────
+            # docker-compose now bind-mounts /var/sobitas/logs into all four backend services so
+            # they write to ONE place that survives a deploy. That mount is only safe if the host
+            # directory exists and www-data can write to it: Laravel's log handler throws
+            # `UnexpectedValueException: The stream or file could not be opened` when it cannot,
+            # and on a fresh container that surfaces as a 500 rather than as a missing log.
+            #
+            # uid/gid 33 is www-data on the Debian base these images use. Numeric on purpose —
+            # the name does not exist on the HOST, only inside the container.
+            mkdir -p /var/sobitas/logs 2>/dev/null || true
+            chown -R 33:33 /var/sobitas/logs 2>/dev/null || true
+            chmod 775 /var/sobitas/logs 2>/dev/null || true
+
             mkdir -p /var/sobitas/backups 2>/dev/null || true
             # Keep the 29 newest, so the one about to be written lands inside the cap of 30.
             ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +30 | xargs -r rm -f || true

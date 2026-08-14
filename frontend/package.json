@@ -14,6 +14,7 @@
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx --max-warnings 999",
     "lint:design": "node scripts/lint-design.mjs",
     "lint:design:update": "node scripts/lint-design.mjs --update",
+    "verify": "npm run lint && npm run typecheck && npm run lint:design && npm run build",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
     "audit:pdp": "node scripts/audit-pdp-content.mjs",
     "audit:pdp:update": "node scripts/audit-pdp-content.mjs --update",
