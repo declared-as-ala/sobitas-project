@@ -60,6 +60,8 @@ on:
           - content-status
           - content-log
           - promote-log
+          - ctr-log
+          - publish-log
           - hydrate-log
           - dsld-log
           - laravel-log
@@ -157,6 +159,20 @@ jobs:
               # exist" — which is what happened on the first attempt at this and reads exactly
               # like "the pass never ran".
               ARGS="catalog-content.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            ctr-log)
+              # seo:ctr-pass has failed every hour today. Its own log is the only place the
+              # missing slug is named.
+              ARGS="seo-ctr-pass.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            publish-log)
+              ARGS="catalog-publish.log"
               SVC=backend-v2-scheduler
               MODE=filelog
               WRITES=no
@@ -375,10 +391,35 @@ jobs:
 
             cd "$APP_DIR"
 
-            if ! docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready; then
-              echo "[X] backend-v2 is not ready - a deploy is probably running right now."
-              echo "    Wait two minutes and click Run workflow again."
-              exit 1
+            # Retried, and its failure is REPORTED rather than propagated.
+            #
+            # This single line ate five diagnostic runs on 14/08. It is the only `exit 1` before
+            # the task itself, and appleboy discards remote stdout on a non-zero exit - so a run
+            # that tripped here printed "Process exited with status 1" and NOTHING else, which is
+            # indistinguishable from the artisan command failing. Everything below was rewritten
+            # to preserve output; this was still throwing it away.
+            #
+            # Three attempts because the box is genuinely slow right now: /api/catalog_health takes
+            # 6 s, one SSH dispatch died with `dial tcp: i/o timeout`, and the content pass is
+            # dispatching 900 no-op jobs every five minutes on top of the real load.
+            READY=no
+            for attempt in 1 2 3; do
+              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>/dev/null; then
+                READY=yes
+                break
+              fi
+              echo "[..] backend-v2 not ready (attempt $attempt/3)"
+              sleep 10
+            done
+
+            if [ "$READY" != "yes" ]; then
+              echo "================================================================"
+              echo "[X] backend-v2 never reported ready after 3 attempts."
+              echo "    A deploy may be running, or the container is unhealthy."
+              echo "    docker compose ps output follows:"
+              echo "================================================================"
+              docker compose -f "$COMPOSE_FILE" ps || true
+              exit 0
             fi
 
             if [ -f "$APP_DIR/inbox/research.json" ]; then
