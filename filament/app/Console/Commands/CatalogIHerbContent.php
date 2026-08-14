@@ -41,6 +41,7 @@ class CatalogIHerbContent extends Command
                             {--retry-failed : Return transient failures to the queue and stop}
                             {--reset-stuck= : Return rows stuck in `fetching` for N+ minutes to the queue}
                             {--rederive : Recompute what CAN be recomputed with no HTTP (see --help output)}
+                            {--dry-run : With --rederive, report what would change and write nothing}
                             {--refetch= : Re-queue N already-read rows for a fresh crawl. Costs requests}
                             {--allow-unpublishable-locale : Read pages anyway when the configured host serves a language ImportedSourceContent will never publish}
                             {--status : Print the state of the content pass and exit}';
@@ -252,40 +253,137 @@ class CatalogIHerbContent extends Command
      * be: the HTML is ~2 MB a page and 47,537 of them is ~95 GB against ~43 GB free, so the document
      * is discarded by design.
      *
-     * What this recomputes is therefore exactly the fields that are functions of the STORED HTML —
-     * today the word count. A fix to how a SECTION is located, or to which sections exist, changes
-     * the stored HTML itself and needs the page again. `--refetch` is that, and it prints the bill
-     * first. Anything else would be implying a recovery path that does not exist.
+     * What this recomputes is therefore exactly the fields that are functions of the STORED HTML.
+     *
+     * ── AND THE PARAGRAPH THAT USED TO BE HERE WAS WRONG ──────────────────────────────────
+     * It read: "A fix to how a SECTION is located, or to which sections exist, changes the stored
+     * HTML itself and needs the page again." That sentence is why `suggested_use` and `warnings`
+     * sat at exactly 0 for days while the fix was one local pass away, and why the only remedy on
+     * offer was `--refetch`, which costs 47,537 HTTP requests against a source that is currently
+     * refusing us.
+     *
+     * `source_overview_html` does not hold the Aperçu section. It holds iHerb's ENTIRE overview
+     * container — median 9.8 KB — with every other section nested inside it. Measured over
+     * database/catalog-content/iherb-content.jsonl.gz, 27,221 records:
+     *
+     *     overview_html non-empty                                 21,600
+     *     ...opening with `<div class="container product-overview` 21,600  (100%)
+     *     ...containing an "Usage suggéré" heading                 20,215  (93.6%)
+     *     ...containing "Autres ingrédients"                       20,995  (97.2%)
+     *     ...containing "Avertissements"                           18,791  (87.0%)
+     *     ...containing a supplement-facts-container inline        14,579
+     *
+     * `IHerbPageExtractor::overviewRegion()` searches for exactly the string those blobs BEGIN
+     * with, so the unmodified extractor runs on the stored column. Over a 1-in-7 sample of 3,098
+     * blobs it returned null zero times, produced no unmapped sections, and recovered
+     * 93.7% / 97.3% / 86.8% — matching the heading prevalence above to a tenth of a percent.
+     *
+     * So the sections were never missing from what we hold. They were missing from the COLUMNS,
+     * and re-deriving them is local, free and repeatable.
+     *
+     * `--refetch` remains the answer for a page whose CONTENT changed at the source. It is not the
+     * answer for a section we already have and did not file.
      */
     private function rederive(): int
     {
+        $dryRun = (bool) $this->option('dry-run');
+
         $changed = 0;
         $scanned = 0;
+        $resliced = 0;
+        $gained = ['suggested_use' => 0, 'other_ingredients' => 0, 'warnings' => 0, 'supplement_facts' => 0];
+
+        $extractor = new IHerbPageExtractor();
 
         ExternalCatalogProduct::query()
             ->whereNotNull('source_content_status')
             ->orderBy('id')
             // chunkById, not chunk(): this loop writes to the rows it pages over.
-            ->chunkById(200, function ($rows) use (&$changed, &$scanned): void {
+            ->chunkById(200, function ($rows) use (&$changed, &$scanned, &$resliced, &$gained, $extractor, $dryRun): void {
                 foreach ($rows as $row) {
                     $scanned++;
 
-                    $row->forceFill([
-                        'source_content_word_count' => IHerbPageExtractor::wordCount([
-                            $row->source_overview_html,
-                            $row->source_suggested_use_html,
-                            $row->source_other_ingredients_html,
-                            $row->source_warnings_html,
-                            $row->source_supplement_facts_html,
-                        ]),
+                    $fill = [];
+
+                    /*
+                     * ── RE-SLICE THE SECTIONS OUT OF THE STORED CONTAINER ────────────────
+                     * Only when the column still holds the whole container, which is what
+                     * `overviewRegion()` keys off. A row already reduced to its Aperçu returns
+                     * null here and is left exactly as it is, so this pass is idempotent and can
+                     * be run as often as you like.
+                     */
+                    $stored = (string) ($row->source_overview_html ?? '');
+
+                    if ($stored !== '' && IHerbPageExtractor::overviewRegion($stored) !== null) {
+                        $out = $extractor->extract($stored);
+
+                        /*
+                         * NEVER trade a populated column for an empty one. Extraction returning
+                         * null for a section is "not present on this page", and on a re-slice that
+                         * is indistinguishable from "my matcher regressed". Writing only where we
+                         * gained something makes a bad extractor build a no-op instead of a
+                         * data-loss event -- which is the difference between this pass being safe
+                         * to re-run and being a thing you run once and pray over.
+                         */
+                        foreach ([
+                            'suggested_use' => 'source_suggested_use_html',
+                            'other_ingredients' => 'source_other_ingredients_html',
+                            'warnings' => 'source_warnings_html',
+                            'supplement_facts' => 'source_supplement_facts_html',
+                        ] as $name => $column) {
+                            $value = $out[$name.'_html'] ?? null;
+                            if (filled($value) && blank($row->{$column})) {
+                                $fill[$column] = $value;
+                                $gained[$name]++;
+                            }
+                        }
+
+                        // The overview column itself is reduced to the Aperçu it was always meant
+                        // to hold. Until now promote prepended the ENTIRE container into
+                        // description_fr, so ~21,000 product pages shipped iHerb's own headings and
+                        // ~14,500 shipped a second copy of the Supplement Facts table in the
+                        // description tab, above the panel's own tab.
+                        if (filled($out['overview_html'] ?? null)) {
+                            $fill['source_overview_html'] = $out['overview_html'];
+                            $resliced++;
+                        }
+                    }
+
+                    $fill['source_content_word_count'] = IHerbPageExtractor::wordCount([
+                        $fill['source_overview_html'] ?? $row->source_overview_html,
+                        $fill['source_suggested_use_html'] ?? $row->source_suggested_use_html,
+                        $fill['source_other_ingredients_html'] ?? $row->source_other_ingredients_html,
+                        $fill['source_warnings_html'] ?? $row->source_warnings_html,
+                        $fill['source_supplement_facts_html'] ?? $row->source_supplement_facts_html,
                     ]);
 
+                    $row->forceFill($fill);
+
                     if ($row->isDirty()) {
-                        $row->save();
+                        if (! $dryRun) {
+                            $row->save();
+                        }
                         $changed++;
                     }
                 }
             });
+
+        $this->newLine();
+        $this->line(sprintf('  overview containers re-sliced   %s', number_format($resliced)));
+        foreach ($gained as $name => $count) {
+            $this->line(sprintf('  %-30s %s', $name.' gained', number_format($count)));
+        }
+        $this->newLine();
+
+        if ($dryRun) {
+            $this->warn(sprintf(
+                'DRY RUN — %s of %s row(s) WOULD change. Nothing was written.',
+                number_format($changed),
+                number_format($scanned),
+            ));
+
+            return self::SUCCESS;
+        }
 
         $this->info(sprintf(
             '%s of %s row(s) re-derived from their stored HTML. No HTTP requests were made.',
