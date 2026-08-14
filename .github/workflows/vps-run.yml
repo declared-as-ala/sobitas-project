@@ -108,8 +108,11 @@ jobs:
         run: |
           set -euo pipefail
 
-          # MODE defaults to artisan; only the log tasks override it.
+          # MODE defaults to artisan; only the log tasks override it. SVC names the container a
+          # filelog task reads from - storage/logs is NOT a shared volume, so the container is
+          # part of the path.
           MODE=artisan
+          SVC=backend-v2
 
           # A fixed token -> a fixed argv. Nothing the operator types reaches a shell.
           # WRITES=yes means "can touch the products table" and gates the backup below.
@@ -142,17 +145,29 @@ jobs:
             content-log)
               # The scheduler redirects this pass into its own file, so the container log shows
               # only "DONE in 2 s" and never the reason. This is that reason.
+              #
+              # SVC matters: only /var/www/html/storage/app/public is a bind mount, so
+              # storage/logs is private to each container. The scheduler's redirect lands inside
+              # the SCHEDULER, and reading the same path in backend-v2 reports "file does not
+              # exist" — which is what happened on the first attempt at this and reads exactly
+              # like "the pass never ran".
               ARGS="catalog-content.log"
+              SVC=backend-v2-scheduler
               MODE=filelog
               WRITES=no
               ;;
             promote-log)
               ARGS="catalog-promote.log"
+              SVC=backend-v2-scheduler
               MODE=filelog
               WRITES=no
               ;;
             laravel-log)
+              # backend-v2 sets LOG_CHANNEL=stderr, so the web container's laravel.log is usually
+              # empty and its output is in `docker compose logs backend-v2` instead. This is the
+              # scheduler's copy, which is where an artisan pass's stack trace lands.
               ARGS="laravel.log"
+              SVC=backend-v2-scheduler
               MODE=filelog
               WRITES=no
               ;;
@@ -261,6 +276,7 @@ jobs:
           echo "args=$ARGS"     >> "$GITHUB_OUTPUT"
           echo "writes=$WRITES" >> "$GITHUB_OUTPUT"
           echo "mode=$MODE"     >> "$GITHUB_OUTPUT"
+          echo "svc=$SVC"       >> "$GITHUB_OUTPUT"
           echo "Resolved '$TASK' -> php artisan $ARGS   (writes: $WRITES)"
 
       - name: Checkout
@@ -317,6 +333,7 @@ jobs:
             ARGS="${{ steps.resolve.outputs.args }}"
             WRITES="${{ steps.resolve.outputs.writes }}"
             MODE="${{ steps.resolve.outputs.mode }}"
+            SVC="${{ steps.resolve.outputs.svc }}"
 
             cd "$APP_DIR"
 
