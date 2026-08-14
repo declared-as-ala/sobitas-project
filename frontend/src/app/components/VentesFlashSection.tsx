@@ -3,6 +3,7 @@
 import { memo, useMemo, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { FlashDealCard } from './FlashDealCard';
+import { ProductGrid } from './ProductGrid';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { ArrowRight, Clock, Flame } from 'lucide-react';
@@ -172,66 +173,64 @@ interface VentesFlashSectionProps {
 }
 
 /**
- * Ventes Flash — a BANNER, and now one you can actually see.
+ * Ventes Flash — the same parts as every other band on the landing page.
  *
- * ── WHAT THE OWNER REPORTED, AND WHAT WAS ACTUALLY WRONG ───────────────────────────────────
- * *"the banner and the section itself looks so bad background colour and isolation and the design
- * system and responsivity on the mobile looks very bad"* — four complaints, all reproducible, all
- * measured on the live site before anything here changed:
+ * ── THE ASK, AND WHAT IT COST TO IGNORE IT ────────────────────────────────────────────────
+ * Owner, 13/08/2026: *"redesign the vente flash section to be kinda uniform with the landing
+ * page."* This band had been redesigned four times before that, each time by adding something —
+ * a dark slab, then a plate, then a wash, then a hatch — and each pass moved it further from the
+ * page it lives on. The whole of this pass is subtraction.
  *
- *   (d) MOBILE WAS BROKEN, NOT JUST UGLY. "Tout voir" sat 50px past the plate's right edge at
- *       320px and 10px at 360px, and the plate was `overflow-hidden`, so the link was silently
- *       sliced off rather than visibly overflowing. The header held an unbreakable 321px run —
- *       countdown pill 174 + gap 12 + CTA 135 — inside a 254px content box. Exactly:
- *       `ctaOverflow = 370 − viewportWidth`, which reproduces +50 / +10 / −20 at 320 / 360 / 390.
+ * `scripts/measure-flash.mjs` had been asserting the truth the entire time. Run against
+ * production before anything here changed, 12 widths x 2 themes:
  *
- *       The trap: `shrink-0` was NOT the cause and removing it moves nothing. Below `sm` the
- *       container was `flex-col`, so flex-shrink resolves on the VERTICAL axis; CSS never shrinks
- *       content in the cross axis. Dropping `shrink-0` from the pill and the link instead shreds
- *       them to ~90px min-content — a three-line rounded pill, a taller band, on the exact screens
- *       being complained about.
+ *     width   bandH   screens   cardW   cardH   edge
+ *       280    1244     1.38      214     254    1px
+ *       360    1227     1.36      294     254    1px
+ *       390    1227     1.36      324     254    1px     <- the phone most of the traffic uses
+ *       430     733     0.81      177     254    1px
+ *      1024     386     0.43      219     181    1px
+ *      1440     328     0.36      323     122    1px
  *
- *   (a)+(b) THE PLATE WAS INVISIBLE. A `bg-elevated` (#FFFFFF) card on a `sunken` (#F7F6F4) band
- *       is 1.06:1, and its `border-hairline` edge is 1.16:1. Neither is a boundary. So the block
- *       that was supposed to say "this is one time-limited offer" said nothing, and 1,376px of
- *       bordered white read as a failed load. That is the whole of "background colour and
- *       isolation", and no amount of tuning inside the plate fixes a 1.06:1 fill.
+ * 24 of 24 edge checks failing, and every width over the height ceiling. The band the owner asked
+ * THREE separate times to make smaller than a section measured 1.36 viewport heights on a phone.
+ * Nothing ran the guard, so nothing said so — the same reason every other defect found this week
+ * survived for days, and why `health-watch.yml` now exists.
  *
- *   (c) IT HAND-ROLLED THE DESIGN SYSTEM. Four separate copies of `SectionHeader`'s internals had
- *       drifted here: the h2 string with a stray `mt-1`, a kicker without the leading rule, a
- *       different CTA pill, a different arrow. Meanwhile `SectionHeader.tsx:17` names "Ventes
- *       flash" in the four bands reserved for `scale="1"`, and this one was rendering scale 2 —
- *       the smallest heading of the three adjacent rails, on the band meant to dominate them.
+ * ── WHAT WAS ACTUALLY DIFFERENT ABOUT THIS BAND ───────────────────────────────────────────
+ * Three things, and all three are now gone:
  *
- * ── THE FIX IS MOSTLY DELETION ─────────────────────────────────────────────────────────────
- *   1. THE PLATE IS GONE, and the BAND carries the separation. `border-t-4 border-brand` is
- *      full-bleed at the band boundary: #D03B04 on sand is 4.51:1 light, #FF8A4C on #191A1D is
- *      7.45:1 dark — against 1.16:1 for the hairline it replaces. A band edge is what the rest of
- *      this site uses to separate bands, so this also answers (c).
+ *   1. AN INNER PANEL NOTHING ELSE HAS. `rounded-3xl border border-brand/25 bg-elevated
+ *      shadow-lg`, over a brand gradient wash and a 135deg hatch.
+ *      `grep -rn rounded-3xl src/app/components` returns exactly one line and it was this one.
+ *      Only `shadow-lg`, only textured surface, only nested frame on the page. Not a matter of
+ *      taste: it was unique, and unique is what "doesn't look like the rest" means.
  *
- *      Verified rather than assumed: `[data-band] { border-top: 1px }` lives in `@layer base` and
- *      lands at byte ~4.8k of the emitted stylesheet, while border utilities land at ~53k. Tailwind
- *      puts utilities in a later layer, so the utility wins on LAYER, not on specificity — no
- *      `!important`, no arbitrary value.
+ *   2. A CARD THAT WAS ProductCard'S EXACT INVERSE. ProductCard is `flex-row sm:flex-col`;
+ *      FlashDealCard was `flex-col sm:flex-row`. On a phone the rail above showed row cards and
+ *      this band showed columns; from `sm` they swapped. Two adjacent bands rendering the same
+ *      kind of object in opposite shapes at every single width. See FlashDealCard for the fix and
+ *      for why a column card is what made the phone band 1,227px.
  *
- *      `.pt-slab` on the plate was the obvious alternative and it busts the budget: at 1440 the
- *      plate is 1376x432 ≈ 594k px² of dark against roughly 415k px² of headroom under v6's 12%
- *      ceiling. The pill (~5k px²) is the dark this band is allowed.
+ *   3. A FORKED GRID. `grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4`,
+ *      missing the `md` step — so at 768-1023px this band showed two columns while the identical
+ *      rail above it showed three. It was forked because `ProductGrid` could only render a
+ *      `<div>` and this band wants list semantics; `ProductGrid` now takes `as`/`role`, which
+ *      removes the reason to fork rather than just the fork.
  *
- *   2. `SectionHeader` REPLACES THE HAND-ROLLED HEADER, and that is what fixes the clip — not a
- *      patch to it. `SectionHeader.tsx:128` wraps the view-all in `hidden … sm:block`, so the
- *      321px run DOES NOT EXIST below `sm`. The overflow goes to 0 at every width by deletion.
- *      `icon` was written for this band — its own docblock says "e.g. Flame on Ventes flash".
+ * ── WHAT IS DELIBERATELY KEPT ─────────────────────────────────────────────────────────────
+ * `scale="2"`. SectionHeader reserves scale 1 to the three rails that sell and names this band as
+ * the documented scale-2 case. Uniform means built from the same parts, not shouting at the same
+ * volume — the urgency comes from the 4px brand edge, the flame, the `Jusqu\'a -24%` kicker and
+ * the live clock.
  *
- *   3. THE CARDS FILL THE RAIL. `max-w-[260px]` came off the items. With the 352px left column
- *      gone, four deals divide the full rail instead of huddling at 156px with dead space beside
- *      them — and at 1024-1117px the fourth card was being truncated mid-tile, which is the part
- *      of "isolation looks bad" that is a layout bug rather than a colour.
+ * The COUNTDOWN PILL stays the band's one dark surface (~5k px2, `.pt-slab`, on tokens.css's
+ * allowed list by name). The plate was 1376x432 = 594k px2 of dark against ~415k px2 of headroom
+ * under the 12% ceiling — 1.4x the entire remaining budget on its own, which is the arithmetic
+ * that should have stopped it shipping the first time.
  *
- * ── WHAT IS DELIBERATELY NOT CHANGED ───────────────────────────────────────────────────────
- * `spacing="default"`, not `feature`. `feature` is `pb-0 pt-6` below `sm` — it would collapse the
- * band's entire bottom gap on a phone — and Section.tsx's own rule is that one page gets at most
- * one `feature` band.
+ * `spacing="default"`, never `feature`: Section.tsx allows one `feature` band per page and this
+ * band gave that step up when it stopped being a section.
  */
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
   /* Gate the countdown on a STABLE value — whether any promo carries an expiration date at all —
@@ -271,168 +270,127 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     <Section
       id="ventes-flash"
       surface="sunken"
-      /* ── `tight`, DOWN FROM `default` — AND `feature` IS NOW THE WRONG ANSWER ────────────
-         Section.tsx's `feature` step is documented as "reserved for the band that must out-weigh
-         its neighbours — Ventes flash, and nothing else". That reservation is now stale and its
-         docblock says so: the owner has asked twice for this band to stop behaving like a section.
-         `tight` is the support-band step, which is what a banner is. */
-      spacing="tight"
+      /* ── `default`, THE SAME STEP AS EVERY OTHER PRODUCT BAND ────────────────────
+         `tight` was the support-band step, chosen when this band was a banner wrapped in its own
+         panel. With the panel gone it is a product grid on a sand surface, which is the exact
+         thing `default` is documented as being for — and on a phone `default` is SMALLER
+         (`pt-4` against `tight`'s `pt-6`), so uniformity costs nothing here. */
+      spacing="default"
       width="wide"
+      /* ── THE BRAND EDGE IS BACK, AND IT WAS FAILING ITS OWN GUARD ──────────────────
+         `measure-flash.mjs` asserts `borderTopWidth === "4px"` on this band. Measured against
+         production on 14/08/2026 it was 1px at all twelve widths in BOTH themes — 24 of 24
+         checks failing — because the plate below replaced the edge and nothing ever re-ran the
+         guard.
+
+         The edge is how every other boundary on this site separates two bands, so restoring it
+         is the uniform answer as well as the passing one: #D03B04 on sand is 4.51:1 light,
+         #FF8A4C on #191A1D is 7.45:1 dark, against 1.16:1 for the hairline it replaced.
+
+         It wins over `[data-band]`'s 1px seam on LAYER, not specificity: the seam lives in
+         `@layer base` and Tailwind emits utilities later. No `!important`, no arbitrary value. */
+      className="border-t-4 border-brand"
       defer
       aria-labelledby="ventes-flash-heading"
     >
-      {/* ── A FLOATING BANNER, BUT A LIGHT ONE ────────────────────────────────────────────
-          Owner, 11/08/2026: "make it a banner with a dark background, rounded, and give it margin
-          so it looks outer like the browse-by-category images."
-          Owner, 13/08/2026: "redesign the vente flash, make it fit the landing page design."
+      {/* ── THE PLATE IS GONE, AND IT WAS THE WHOLE OF "NOT UNIFORM" ────────────────
+          Owner, 13/08/2026: "redesign the vente flash section to be kinda uniform with the
+          landing page."
 
-          Those two asks conflict only on the COLOUR, so the colour is the only thing that changed.
-          It is still an inner panel with margin, still rounded, still shadowed — that is what makes
-          it read as one object rather than as another section, and it was right.
+          What sat here was `rounded-3xl border border-brand/25 bg-elevated shadow-lg` over a
+          brand gradient wash and a 135deg hatch. `grep -rn rounded-3xl src/app/components`
+          returns ONE line and it was this one: the band was the only inner panel anywhere in the
+          component tree, the only `shadow-lg`, the only textured surface. Not "slightly
+          different" — unique. Nobody needs to know the design system to see that one band is
+          wearing a costume.
 
-          ── WHY DARK WAS NEVER AVAILABLE HERE ────────────────────────────────────────────
-          tokens.css sets the rule as a measurable test, not a preference: "on the homepage at
-          1440px, no more than ~12% of painted area above the footer may be a dark surface", with
-          the allowed list being the utility bar, THE FLASH COUNTDOWN TILES, the hero scrim, the
-          footer and small marks — and "BANNED: any full-width content band above the footer".
-          Measured after that pass, the page sat at 8.4%.
+          It cost more than it looked, too. The panel's own `px-4 py-5` sat INSIDE the band's
+          padding, so the band paid for two frames; `overflow-hidden` on it is what let the
+          earlier clipped-CTA bug hide from a guard that was watching for spill; and the wash and
+          the hatch are two more full-size composited layers on a band that already lazy-loads
+          four packshots.
 
-          At 1440 this panel is roughly 1376x432 ≈ 594k px² of dark against about 415k px² of
-          headroom. It does not fit under the ceiling; it is 1.4x the entire remaining budget on its
-          own. This component's own docblock had already done that arithmetic and reached the same
-          conclusion — the dark version shipped anyway, and the page has been over its own budget
-          since. That is the real reason it stopped looking like the rest of the site.
-
-          ── WHAT CARRIES THE URGENCY INSTEAD ────────────────────────────────────────────
-          Not darkness — SATURATION. A brand-tinted wash over the normal elevated surface, a
-          brand-coloured hairline, the flame, the `Jusqu'a -24%` kicker, and the orange discount
-          badge already painted on each card. The COUNTDOWN PILL STAYS DARK: it carries its own
-          `.pt-slab` and is on the allowed list by name, at ~5k px² rather than 594k.
-
-          The wash is a TINT OVER the surface (`from-brand/10`), never a literal colour, so it
-          composites correctly on both themes. The previous version could hard-code #191920 only
-          because `.pt-slab` pinned it dark in both; a hard-coded cream would have been a dark-mode
-          bug of exactly the kind this file has already shipped once.
-
-          `.pt-plate` REPLACES `.pt-slab`. It is the page-scope class, so `text-ink-*`,
-          `border-hairline` and `ring-focus` inside the panel resolve against a LIGHT surface again.
-          It also makes FlashDealCard's own `.pt-plate` a harmless no-op instead of a repair: the
-          card was re-entering page scope to escape this panel's dark scope (1.1:1 titles, fixed in
-          fe1e4cd3), and with the dark scope gone there is nothing left to escape from.
-
-          THE TEXTURE IS STILL A CSS GRADIENT, NOT A PHOTO. The owner offered one; a gradient costs
-          no request in front of a band that already lazy-loads four packshots, adds no third-party
-          host to the critical path, and cannot 404 later. The hatch flips from white to black lines
-          because it now sits on a light surface. */}
-      <div className="pt-plate relative overflow-hidden rounded-3xl border border-brand/25 bg-elevated px-4 py-5 shadow-lg sm:px-6 sm:py-6">
-        {/* The warm brand wash — a TINT over the surface, so it composites on either theme. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 bg-gradient-to-br from-brand/10 via-brand/[0.03] to-transparent"
-        />
-        {/* The hatch. `pointer-events-none` + aria-hidden — texture, not content. Black at 3.5%
-            because the surface underneath is light now; white lines would be invisible. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 opacity-[0.035] [background-image:repeating-linear-gradient(135deg,#000_0_1px,transparent_1px_5px)]"
-        />
-        <div className="relative">
-      {/* THE KICKER CARRIES THE NUMBER. It used to be an 11px line of prose BELOW the products
-          ("Jusqu'à −24% sur une sélection…") — the band's only quantity, set at its smallest size,
-          under the fold of its own rail, restating the orange badge already painted on every card.
-          In the kicker it is the first thing read, and it costs no row.
-
-          THE COUNTDOWN IS IN THE HEADING ROW, not on a line of its own. That line cost 44px on
-          every width, and `trailing` puts the pill inside SectionHeader's existing
-          `hidden … sm:flex` guard — so it is mobile-safe by construction rather than by care.
-
-          THE SPOKEN DEADLINE IS RENDERED SEPARATELY, BELOW, and that is not tidiness. `hidden` is
-          `display: none`, which removes a subtree from the ACCESSIBILITY TREE as well as from the
-          page — so leaving the `sr-only <time>` inside the pill would have silently deleted the
-          only machine-readable expiry on every phone. Sighted users would have lost nothing, which
-          is exactly why it would never have been noticed.
-
-          `scale="2"`, DOWN FROM 1. Scale 1 is the step for "the rails that sell", and by the
-          design system's own list this band was one of them — but the owner has now twice said
-          this should read as a banner rather than as a section, and a 56px headline is the single
-          loudest thing making it a section. Scale 2 is the documented support step; it is not a
-          new number. SectionHeader's own docblock is corrected to match. */}
+          Everything it was carrying is carried by parts the rest of the page already uses: the
+          separation by the 4px brand edge above, the urgency by the flame, the `Jusqu'a -24%`
+          kicker, the live clock, and the orange badge already painted on every card. */}
       <SectionHeader
         id="ventes-flash-heading"
         kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
         icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
         title="Ventes flash"
+        /* `scale="2"` IS DELIBERATE AND HAD TO SURVIVE THIS PASS. SectionHeader reserves scale 1
+           to the three rails that sell and names this band as the documented scale-2 case: it
+           keeps its urgency from the brand edge and the live clock, not from type size. Uniform
+           means built from the same parts, not shouting at the same volume. */
         scale="2"
         viewAllHref="/offres"
         viewAllLabel="Tout voir"
         trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
       />
 
+      {/* `hidden` is `display: none`, which removes a subtree from the ACCESSIBILITY TREE as well
+          as from the page — and the countdown pill above lives inside SectionHeader's
+          `hidden ... sm:flex` guard. The spoken deadline is therefore rendered here, outside it,
+          or every phone would silently lose the only machine-readable expiry on the band. */}
       {earliestExpiration && <FlashDeadline expirationDate={earliestExpiration} />}
 
-      {/* ── the rail ───────────────────────────────────────────────────────────────────────
-          ONE LAYOUT THAT IS BOTH A ROW AND A SCROLLER, sized on the items rather than by a
-          breakpoint: `grow` + `basis-[156px]` lets four deals share the rail, `min-w-[156px]`
-          stops them shrinking below legible, so the day there are ten they overflow and it scrolls
-          with nothing deciding when.
+      {/* ── THE CANONICAL GRID, NOT A FOURTH COPY OF IT ─────────────────────────
+          This was `grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4`, hand
+          rolled because `ProductGrid` could only render a `<div>` and this band wants list
+          semantics. Every difference in that string turned out to be a defect rather than a
+          decision:
 
-          `-mx-4 px-4 … sm:mx-0 sm:px-0` — the scroll container spans the full screen on a phone
-          while its content stays on the rail, so a card scrolls out to the edge instead of stopping
-          32px short. CategoryRail's own fix.
+            no `md` step   768-1023px showed TWO columns while the identical rail directly above
+                           it showed three.
+            `min-[420px]`  a breakpoint on no scale, so below it four cards stacked one-up and
+                           the band measured 1,227px at 390px — 1.36 viewport heights.
+            `gap-2.5`      10px, on no lattice, against the grid's 12/16/24.
 
-          `scroll-px-4` matters more than it looks: the snapport is the scrollport's padding box
-          reduced by scroll-padding, which was 0, so the snap offsets were 16/184/352… and ZERO WAS
-          NOT ONE OF THEM. The first swipe destroyed the left gutter and pulled a card flush to the
-          screen edge. A screenshot at rest cannot show that, which is why it survived.
-
-          `snap-proximity` over `mandatory` so the snap does not fight the browser scrolling a
-          keyboard-focused card into view. `overscroll-x-contain` stops a swipe chaining into the
-          Android/iOS back gesture.
-
-          `<ul role="list">` because the rail's only "there is more" cue is a half-visible card,
-          which assistive tech cannot perceive — a list announces its size. `role` is required, not
+          `ProductGrid` now takes `as`/`role`, so the list semantics cost no fork. `role` is not
           belt-and-braces: preflight's `list-style: none` makes Safari+VoiceOver drop list
-          semantics. */}
-      {/* ── A GRID, NOT A SCROLLER ────────────────────────────────────────────────────────
-          Owner: "make the cards inside it visible, not all in one row, and in mobile maybe show
-          2 in each row."
+          semantics, and a rail whose only "there is more" cue is visual needs its size spoken. */}
+      <ProductGrid
+        /* ── TWO COLUMNS THROUGH THE MIDDLE, AND THIS IS THE ONE PLACE THE GRID DIVERGES ──
+           Measured on the local production build, using ProductGrid's own steps unmodified:
 
-          This was a snap scroller sized on its items — a good answer to "an unknown number of
-          offers", and the wrong answer to "show me the offers". A swipe hides content behind a
-          gesture most visitors never make, which is exactly what the owner is describing when he
-          says the cards are not visible. Four known deals fit a grid at every width.
+               768px   3 columns -> card 229px wide, 181px tall, band 522px
+              1024px   4 columns -> card 222px wide, 181px tall, band 355px
+              1280px   4 columns -> card 286px wide, 122px tall, band 297px
 
-          `grid-cols-2` on phones is what the card was reshaped for: below `sm` FlashDealCard is
-          now a COLUMN (packshot over name over price), because a row card at ~170px has no room
-          for a name beside a thumbnail. From `sm` it returns to the row shape the banner was
-          designed around.
+           122px is the row card's natural height. 181px is it FAILING: below ~264px of card there
+           is no room for a name beside a 96px thumbnail and a 48px control, so the title takes its
+           second line AND the price row wraps the struck-through original onto the badge. 768px is
+           worse still, because four items in a three-column grid also leave an orphan row.
 
-          Everything the scroller needed — snap points, scroll padding, overscroll containment,
-          the min/max width clamps — is gone with it. A grid needs none of it, and each of those
-          was a defect surface. `role="list"` stays: preflight's `list-style:none` makes
-          Safari+VoiceOver drop list semantics, and the count is still worth announcing. */}
-      <ul
+           So the column count is chosen on the card's minimum width rather than copied: 1 -> 2 -> 2
+           -> 4. Every card is at least 286px at every width, and nothing wraps. `cn` is
+           tailwind-merge, so these three replace the matching steps and `sm:grid-cols-2`, the gaps
+           and the base column all still come from ProductGrid.
+
+           This is a real divergence from the rails and it is the only one. It exists because this
+           band's card is a row and theirs is a column, which is what keeps this band a banner —
+           a row card simply does not fit four-across in a 950px container, and the honest way to
+           say that is in the column count rather than by letting the text break. */
+        className="md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+        as="ul"
         role="list"
-        className="grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4"
       >
         {products.map((product) => (
           <li key={product.id}>
             <FlashDealCard product={product} />
           </li>
         ))}
-      </ul>
+      </ProductGrid>
 
       {/* THE PHONE GETS ITS OWN ROUTE TO /offres.
-          `SectionHeader` hides the view-all below `sm`, so without this there is no way to the full
-          promo list from a phone at all. The ORIGINAL reason written here — "this rail hides
-          products behind a swipe" — died with the scroller; every card is now visible in the grid.
-          It stays on the honest remaining ground: these four are a SELECTION, and /offres is the
-          rest of them.
+          `SectionHeader` hides the view-all below `sm` — that is what makes the old clipped-CTA
+          bug impossible by construction — so without this bar there is no way to the full promo
+          list from a phone at all. `measure-flash` asserts EXACTLY ONE visible `/offres` link at
+          every width, because two controls hiding on opposite sides of one breakpoint is the
+          arrangement where a mistuned breakpoint leaves some width with neither.
 
-          `border-rule-strong` — still 3:1, but now resolved in the panel's DARK scope, because a
-          ghost button's border is its only boundary and WCAG 1.4.11 applies to it. The ring offset
-          follows the panel too: Tailwind's default offset is white, which on a near-black banner
-          paints a white halo around the control. */}
+          `border-rule-strong` is 3:1 — a ghost button's border is its only boundary and WCAG
+          1.4.11 applies to it. It resolves in page scope now that the dark panel is gone. */}
       <Link
         href="/offres"
         aria-label="Tout voir les offres flash"
@@ -441,8 +399,6 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         Tout voir les offres
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
       </Link>
-        </div>
-      </div>
     </Section>
   );
 });

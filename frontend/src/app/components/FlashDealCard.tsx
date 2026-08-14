@@ -1,17 +1,22 @@
 'use client';
 
 /**
- * A single deal inside the Ventes Flash banner.
+ * A single deal in the Ventes Flash band.
  *
  * ── WHY THIS EXISTS AND ProductCard DOES NOT FIT ───────────────────────────────────────────
- * Owner: *"make it like a banner section, not a wall section. Make the card smaller."*
+ * Owner: *"make it like a banner section, not a wall section."*
  *
- * The banner's cards are ~156–176px wide. `ProductCard` carries, in order: a discount badge, a
- * favourite button, the packshot, a brand row with a verified tick, a two-line title, a price with
- * a struck-through original AND a savings pill, a stock line, a delivery line, and a full-width
- * add-to-cart. That is ten things. It is the right card for a 300px grid cell and it is the wrong
- * one at 168px — squeezing it there produces a denser card, which is the opposite of what was
- * asked for.
+ * The band sits between two rails of `ProductCard`, and it must not be as tall as they are — that
+ * is the only thing separating a banner from a third section. `ProductCard` carries, in order: a
+ * discount badge, a favourite button, the packshot, a brand row with a verified tick, a two-line
+ * title, a price with a struck-through original AND a savings pill, a stock line, a delivery line,
+ * and a full-width add-to-cart. Ten things, and a column layout from `sm` up, so it is ~250-300px
+ * tall wherever it lands. Four of those is a section by definition.
+ *
+ * This card carries FOUR — packshot, name, price line, add — in a row that stays a row at every
+ * width, so it measures ~104-122px. Same grid, same frame, same helpers, a third of the height.
+ * That is the whole difference, and it is deliberately the ONLY difference: see the note at the
+ * root for what happened when it was also a different SHAPE from its neighbours.
  *
  * ── AND WHY THIS IS NOT A SECOND ProductCard ───────────────────────────────────────────────
  * There WAS a `FlashProductCard` once. It was deleted because it had drifted into a buggy
@@ -128,27 +133,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
   const state = outOfStock ? 'out' : atLimit ? 'limit' : 'ok';
 
   return (
-    /* ── THE CARD IS A ROW, NOT A COLUMN, AND THAT IS THE WHOLE BANNER FIX ─────────────────
-       Owner, third pass: "make it a banner not a full section, just a small part of the landing
-       page, make the cards smaller."
-
-       The three previous attempts all cut chrome — band padding, heading scale, a countdown row —
-       and the band still measured half a screen, because the chrome was never what made it tall.
-       A VERTICAL card stacks a square packshot on top of a name, a price and a button, so its
-       height is its width plus ~127px of text: at 172px wide that is a 299px card, and no amount
-       of tightening the band around it gets below that.
-
-       Turned on its side, the packshot is a fixed 64px thumbnail beside the text instead of above
-       it, and the card's height stops depending on its width entirely — it is `max(64, text)` plus
-       padding, about 84px. Measured across the band: 736px -> ~240px at 1920.
-
-       It is also, on its own terms, the more honest shape for the job. A vertical card is for
-       BROWSING a grid; this rail is four known offers the visitor scans and either takes or does
-       not, and a scannable list of offers is a row. The band above it ("Les plus vendus") keeps the
-       vertical card, so the two now read as different KINDS of thing, which is what a banner among
-       sections is supposed to do.
-
-       ── THE ROOT IS A PLAIN DIV, AND THE LINK IS INSIDE IT ────────────────────────────────
+    /* ── THE ROOT IS A PLAIN DIV, AND THE LINK IS INSIDE IT ────────────────────────────────
        It used to be `<LinkWithLoading>` wrapping everything, with the add-to-cart `<button>` as a
        descendant. `LinkWithLoading` renders a real `<a>`, and `<button>` is interactive content,
        which `<a>`'s transparent content model forbids — invalid HTML that browsers are free to
@@ -158,50 +143,61 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
 
        The house structure (ProductCard) is this one: a non-focusable root that owns the frame and
        the hover group, the link scoped to the things that actually navigate, and the button as its
-       SIBLING.
+       SIBLING. */
+    /* ── A ROW AT EVERY WIDTH, WHICH IS WHAT MADE THE BAND UNIFORM ────────────────────────
+       Owner, 13/08/2026: "redesign the vente flash section to be kinda uniform with the landing
+       page."
 
-       ── AND THE FRAME IS NOW THE HOUSE RECIPE ──────────────────────────────────────────────
-       `font-poppins rounded-2xl … shadow-sm` matches ProductCard exactly. These were the only cards
-       on the homepage in a different typeface, at a different radius, with no shadow — part of the
-       owner's "it doesn't look like the design system". It matters more now than it did: inside the
-       deleted plate these sat white-on-white with a 1.16:1 hairline as their only edge, and on the
-       sand band they are white-on-sand with a shadow, so the card is finally an object. */
-    /* ── COLUMN ON PHONES, ROW FROM `sm` (owner, 11/08/2026) ──────────────────────────────
-       The banner now lays these out `grid-cols-2` on phones instead of scrolling them, which
-       gives each card ~170px. The row shape documented above needs 264px minimum — 96px of
-       thumbnail plus a 48px control leaves ~70px for a name — so at 2-up it would clamp the
-       product name to a few characters and the card would start lying about what it contains.
-       Below `sm` it stacks; from `sm` it is exactly the row card described above, unchanged.
+       This card and `ProductCard` — the card in the rails directly above and below it — were
+       EXACTLY INVERTED at every width. ProductCard is `flex-row sm:flex-col`; this was
+       `flex-col sm:flex-row`. So on a phone the best-seller rail showed image-left/text-right row
+       cards and this band showed stacked columns, and from `sm` they swapped over. Two adjacent
+       bands rendering the same kind of object in opposite shapes at every single width is the most
+       literal form the complaint can take.
 
-       The frame stays white ON PURPOSE. It sits on a near-black banner now, and a white card on
-       dark ground is the highest-contrast, most "visible" object available — which is precisely
-       what the owner asked for. It also means the card needs no dark variant of its own. */
+       Both halves of that inversion were also measurably wrong on their own terms:
+
+         PHONES  the previous grid was `grid-cols-1` below 420px, so at 390px — the single most
+                 common phone width in the traffic — four COLUMN cards stacked and the band
+                 measured 1,227px: 1.36 viewport heights, for the band the owner had asked three
+                 times to make smaller than a section. A column card is as tall as its width plus
+                 its text; a row card's height does not depend on its width at all. Measured:
+                 254px per card -> 104px, and the band 1,227px -> ~600px.
+
+         1024px  `lg:grid-cols-4` starts here, which put four row cards in a 900px rail at 219px
+                 each. The row shape needs ~264px (96px thumbnail + 48px control + a legible name),
+                 so the name wrapped and the card grew to 181px against 122px at 1280. That minimum
+                 is why the band overrides ProductGrid's middle steps to two columns rather than
+                 copying 2 -> 3 -> 4 blindly — see the note on the grid in VentesFlashSection.
+
+       So the fix is one direction, at all widths. On a phone it is now the same shape as the cards
+       above and below it; from `sm` it stays a row while ProductCard becomes a column, and THAT is
+       what keeps this band a banner — 122px of card instead of 254px — without it being built out
+       of different parts than the rest of the page.
+
+       The frame is the house recipe: `.pt-plate`, `rounded-2xl`, `border-hairline`, `shadow-sm`,
+       `font-poppins`, `hover:shadow-lg` — character for character what ProductCard opens with. */
     /*
-      `.pt-plate`, NOT `bg-elevated`.
+      `.pt-plate` IS KEPT EVEN THOUGH THERE IS NO LONGER A DARK SCOPE TO ESCAPE.
 
-      This card is a WHITE card sitting inside VentesFlashSection's `.pt-slab` banner, and it used
-      `bg-elevated` — which paints the light background but leaves the SLAB's ink tokens inherited.
-      styles/tokens.css says what that costs, in a comment written when the scope was designed:
-      "without the `color` line the slab's inherited ink (#C6C6CC) lands on a white card at 1.70:1.
-      Verified." That is what was on the live homepage — every flash-deal title rendered pale grey
-      on white, effectively unreadable, against a WCAG AA floor of 4.5:1.
+      It was added when this card sat inside a `.pt-slab` banner and used `bg-elevated`, which
+      paints a light background but leaves the SLAB's ink inherited — every flash-deal title
+      rendered at 1.70:1 on the live homepage, against a WCAG AA floor of 4.5:1. The banner has
+      since gone light and then gone away entirely, so today this class re-points the token set at
+      values it already had: a no-op.
 
-      `.pt-plate` exists for exactly this: it re-points the consumed token set back at `--page-*`,
-      so the card renders as a normal light card in both themes with no `dark:` variant. ProductCard
-      already opens with it, which is why product cards elsewhere on the same page were fine and
-      only these were not.
-
-      The rule, stated once: a light surface nested in a dark scope must RE-ENTER page scope, never
-      merely repaint its background. Painting the background alone changes what you see and not what
-      you inherit.
+      It stays because ProductCard opens with it too, and because the rule it encodes is the one
+      that gets broken next time: a light surface nested in a dark scope must RE-ENTER page scope,
+      never merely repaint its background. Painting the background alone changes what you see and
+      not what you inherit.
     */
-    <div className="pt-plate group relative flex h-full w-full flex-col gap-2 overflow-hidden rounded-2xl border border-hairline p-3 font-poppins shadow-sm transition-[box-shadow,border-color] sm:flex-row sm:items-center sm:gap-3 [@media(hover:hover)]:hover:border-brand/50 [@media(hover:hover)]:hover:shadow-md">
+    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-3 overflow-hidden rounded-2xl border border-hairline p-3 font-poppins shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
         /* `ring-inset`, not `ring-offset-2`: the link is not the root, so an outset ring would be
            clipped by the root's `overflow-hidden`. */
-        className="flex min-w-0 flex-1 flex-col items-center gap-2 rounded-xl text-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:flex-row sm:items-center sm:gap-3 sm:text-left"
+        className="flex min-w-0 flex-1 flex-row items-center gap-3 rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
       >
         {/* THE THUMBNAIL IS A FIXED SIZE, AND IT IS THE BAND'S HEIGHT DIAL.
             80px on phones, 96px from `sm` — up from a flat 64, which measured correct but read as
@@ -210,10 +206,12 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
             a one-line change with a predictable cost: +16px of thumbnail is +16px of band.
             96 + 24px of padding = a 120px card, so the band lands ~273px — still inside the 320px
             banner ceiling the guard asserts. */}
-        {/* Stacked, the packshot IS the card's picture and gets the full column width (capped so
-            it never dominates a two-line name); from `sm` it returns to the fixed 96px thumbnail
-            that keeps the row card's height constant. */}
-        <div className="relative aspect-square w-full max-w-[112px] shrink-0 overflow-hidden rounded-xl bg-sunken sm:aspect-auto sm:h-24 sm:w-24 sm:max-w-none">
+        {/* A FIXED SQUARE, never an aspect ratio on a fluid width. That is the whole reason the
+            band's height stopped tracking its own column count: 80/96 is 80/96 whether the card
+            is 177px wide at 430px or 363px wide at 1920. The `aspect-square w-full` version this
+            replaces made every card as tall as it was wide, which is why the 390px phone band
+            measured 1,227px. */}
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sunken sm:h-24 sm:w-24">
           {image ? (
             <Image
               src={image}
@@ -259,7 +257,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
 
               `Rupture` replaces the whole row when there is no stock, rather than being a fourth
               thing next to a price the visitor cannot act on. */}
-          <div className="mt-1 flex flex-wrap items-baseline justify-center gap-x-1.5 gap-y-0.5 sm:justify-start">
+          <div className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
             {outOfStock ? (
               <span className="text-xs font-semibold text-ink-3">Rupture de stock</span>
             ) : (
@@ -305,9 +303,10 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
               ? `Stock maximum atteint pour ${name}`
               : `Ajouter ${name} au panier`
         }
-        /* Full-width bar when stacked, 48px square in the row. Both clear the 44px floor; a
-           48x48 square floating under a centred column would read as an orphan. */
-        className={`flex h-11 w-full shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated sm:h-12 sm:w-12 ${
+        /* 48px square at every width, up from a 44px-tall full-width bar below `sm`. The card is
+           a row now, so there is no column for a full-width bar to sit under — and 48 clears the
+           44px tap floor `measure-flash` asserts with room rather than exactly. */
+        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
           state === 'ok'
             ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
             : 'cursor-not-allowed bg-sunken text-ink-3'

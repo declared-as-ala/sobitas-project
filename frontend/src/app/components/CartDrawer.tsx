@@ -66,7 +66,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                immediately above it. It now carries a headline in the display face, one line
                saying what to do, and the free-delivery threshold, which is the most persuasive
                fact this shop has and the actual reason to start adding things. */
-            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
+            <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
               <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-hairline bg-sunken">
                 <ShoppingBag className="h-9 w-9 text-brand" aria-hidden="true" />
               </div>
