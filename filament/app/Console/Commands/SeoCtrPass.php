@@ -77,10 +77,24 @@ class SeoCtrPass extends Command
             'Créatine monohydrate en Tunisie : Creapure et micronisée, dosage 3-5 g/jour. 100% authentique, paiement à la livraison, livraison 24-72h.',
             'creatine tunisie — 604 impressions, 45 clicks, CTR 7.5% at position 17.4; creatine monohydrate — 657 impressions, 0 clicks at 11.8. The best-converting term on the site is still leaving clicks behind.',
         ],
-        'gainers' => [
+        /*
+         * `gainers` until 14/08/2026, which is a slug that does not exist and never did. The live
+         * taxonomy carries `mass-gainers` and `gainers-proteines` as rayons under the `prise-de-masse`
+         * category, and the miss returned FAILURE from the whole command every hour for at least
+         * three days — into storage/logs/seo-ctr-pass.log, inside a container whose logs are not a
+         * volume, so nothing that could read it survived a deploy.
+         *
+         * `mass-gainers` rather than `prise-de-masse`: the copy's entire value is the brand term
+         * "Serious Mass", and the `why` below measures the head term as barely attached to this
+         * page. The category page already reads "Prise de Masse Tunisie | Gainers & Mass Gainers",
+         * which answers the French query it already ranks for; overwriting that to chase an English
+         * one would trade a working title for a guess.
+         */
+        'mass-gainers' => [
             'Mass Gainer Tunisie | Serious Mass & Prise de Masse',
             'Mass gainer en Tunisie : Serious Mass, Hard Mass et gainers riches en calories. Paiement à la livraison, livraison 24-72h, gratuite dès 300 DT.',
             'serious mass tunisie — 631 impressions, 17 clicks, CTR 2.7% at position 10.0; mass gainer tunisie sits at position 47.2 on 155 impressions, so the head term is barely attached to this page.',
+            ['gainers-proteines', 'prise-de-masse', 'gainers'],
         ],
         'proteines' => [
             'Compléments Alimentaires Tunisie | Protéines & Whey',
@@ -103,6 +117,7 @@ class SeoCtrPass extends Command
 
         foreach (self::TARGETS as $slug => $entry) {
             [$title, $description, $why] = $entry;
+            $fallbacks = $entry[3] ?? [];
 
             /*
              * A slug can sit at either level of the taxonomy — `proteines` is a top-level Categ
@@ -110,8 +125,31 @@ class SeoCtrPass extends Command
              * `/{slug}` across both. Looking in only one table would silently skip half the targets
              * and still report success, so both are tried and a genuine miss is reported loudly.
              */
-            $entity = SousCategory::where('slug', $slug)->first()
-                ?? Categ::where('slug', $slug)->first();
+            /*
+             * Try the primary slug, then the declared alternates.
+             *
+             * A hard-coded slug is a foreign key into a table an operator edits through a form, and
+             * renaming a rayon in Filament is a normal thing to do. Before this, one rename took the
+             * whole pass down - the other five pages still updated, but the command returned
+             * FAILURE, so the scheduler logged an error hourly and the real message ("MISSING
+             * gainers") was buried in it.
+             */
+            $entity = null;
+            $matched = $slug;
+
+            foreach (array_merge([$slug], $fallbacks) as $candidate) {
+                $entity = SousCategory::where('slug', $candidate)->first()
+                    ?? Categ::where('slug', $candidate)->first();
+
+                if ($entity) {
+                    $matched = $candidate;
+                    break;
+                }
+            }
+
+            if ($entity && $matched !== $slug) {
+                $this->warn(sprintf('  ALIAS    %-22s resolved via fallback "%s" - update TARGETS', $slug, $matched));
+            }
 
             if (! $entity) {
                 $this->error(sprintf('  MISSING  %-22s no Categ or SousCategory with this slug', $slug));

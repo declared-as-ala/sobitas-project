@@ -130,6 +130,13 @@ jobs:
           # starvation, which is how "the breaker has been open for three days" becomes an email.
           guard "catalog-health"     node scripts/check-catalog-health.mjs
 
+          # ── Do the CTR targets still point at pages that exist? ──────────────────────────
+          # seo:ctr-pass addresses six category pages by hard-coded slug, and a slug is a foreign
+          # key into a table an operator edits through a form. One of them (`gainers`) did not
+          # exist, so the pass returned FAILURE every hour for at least three days into a log file
+          # that needed a shell to read and did not survive a deploy.
+          guard "ctr-targets"        node scripts/check-ctr-targets.mjs
+
           # ── Is the blog still linking to the pages that sell? ─────────────────────────────
           guard "internal-links"     node scripts/check-internal-links.mjs
 
