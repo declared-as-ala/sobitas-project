@@ -22,16 +22,40 @@
 import type { Product } from '@/types';
 import { getPriceDisplay } from './productPrice';
 import { isInStock } from './cartStock';
-import { getProductLink } from './productUrl';
+import { getProductLink, getProductPrimarySubCategory } from './productUrl';
 
 export type ComparisonRow = {
   id: number | string;
   name: string;
   url: string;
   brand: string;
+  /**
+   * The comparator's OWN subcategory, and a link to it.
+   *
+   * Owner: *"in the table of comparison there is a bug, it's not showing the other categories and
+   * prices."* Both halves were real. `/similar_products` has always sent
+   * `sous_categorie: {id, slug, designation_fr}` on every row and `row()` simply never read it, so
+   * the table could not show a category — while the caption above it named the CURRENT product's
+   * subcategory, which the rows do not necessarily share. A Googlebot fetch showed
+   * "Autres barres & snacks protéinés" printed above four whey proteins.
+   *
+   * Showing each row's real category also adds 4-6 internal links to category pages from every one
+   * of ~11,263 product pages, which is the crawl surface this table sits on.
+   */
+  category: string;
+  categoryUrl: string;
   /** As printed in the product name, e.g. "2.27 kg" or "90 gélules". Empty when the name says nothing. */
   format: string;
   price: number;
+  /**
+   * The pre-promotion price, when there is one.
+   *
+   * `getPriceDisplay` has always returned it and this builder destructured `{finalPrice, hasPromo}`
+   * and dropped it on the next line — so a discounted comparator could say the word "promo" and
+   * never say what it was reduced FROM. On a table whose entire job is comparing prices, the
+   * saving is the number the reader came for.
+   */
+  oldPrice: number | null;
   hasPromo: boolean;
   inStock: boolean;
   isCurrent: boolean;
@@ -100,14 +124,22 @@ export function buildComparison(
   limit = 6
 ): ComparisonRow[] {
   const row = (p: Product, isCurrent: boolean): ComparisonRow => {
-    const { finalPrice, hasPromo } = getPriceDisplay(p);
+    const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(p);
+    /* The row's OWN subcategory, never the current product's. That distinction is the whole bug:
+       the two are frequently different, which is exactly why the column is worth showing. */
+    const sub = getProductPrimarySubCategory(p);
     return {
       id: p.id,
       name: p.designation_fr ?? '',
       url: getProductLink(p),
       brand: p.brand?.designation_fr ?? '',
+      category: sub?.designation_fr ?? '',
+      categoryUrl: sub?.slug ? `/${sub.slug}` : '',
       format: extractFormat(p.designation_fr),
       price: finalPrice,
+      /* Only meaningful alongside `hasPromo`; a stale `prix` on a product whose promo expired must
+         not render as a phantom saving. Same guard ProductCard uses. */
+      oldPrice: hasPromo && oldPrice != null && oldPrice > finalPrice ? oldPrice : null,
       hasPromo,
       inStock: isInStock(p),
       isCurrent,

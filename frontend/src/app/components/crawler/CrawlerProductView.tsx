@@ -445,15 +445,20 @@ export function CrawlerProductView({
             <h2 className="text-lg font-semibold">Comparer avec des produits similaires</h2>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full border-collapse text-sm">
+                {/* The caption used to name the CURRENT product's subcategory and claim the rows
+                    below were "autres {that category}". They frequently are not: a live Googlebot
+                    fetch showed "Autres barres & snacks protéinés" printed above four whey
+                    proteins. It was a false statement served to a crawler on ~6,133 pages, and it
+                    was avoidable — each row's own category is now a COLUMN, so the table shows the
+                    truth per row instead of asserting a wrong one over all of them. */}
                 <caption className="pb-2 text-left text-gray-600">
-                  {subCategoryName
-                    ? `Autres ${subCategoryName.toLowerCase()} disponibles chez Protein.tn`
-                    : 'Autres produits disponibles chez Protein.tn'}
+                  Produits similaires disponibles chez Protein.tn
                 </caption>
                 <thead>
                   <tr>
                     <th scope="col" className="border-b-2 p-2 text-left">Produit</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Marque</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Catégorie</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Format</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Prix</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Disponibilité</th>
@@ -470,10 +475,21 @@ export function CrawlerProductView({
                         )}
                       </th>
                       <td className="border-b p-2">{row.brand || '—'}</td>
+                      {/* Linked: 4-6 extra internal links to category pages from every product
+                          page, on the crawler route, which is the surface that gets read. */}
+                      <td className="border-b p-2">
+                        {row.category
+                          ? row.categoryUrl
+                            ? <a className="underline" href={row.categoryUrl}>{row.category}</a>
+                            : row.category
+                          : '—'}
+                      </td>
                       <td className="border-b p-2">{row.format || '—'}</td>
                       <td className="border-b p-2">
                         {formatTnd(row.price)}
-                        {row.hasPromo ? ' (promo)' : ''}
+                        {/* "promo" alone never said promo FROM WHAT. The saving is the number the
+                            reader came to this table for. */}
+                        {row.oldPrice != null ? ` au lieu de ${formatTnd(row.oldPrice)}` : row.hasPromo ? ' (promo)' : ''}
                       </td>
                       <td className="border-b p-2">{row.inStock ? 'En stock' : 'En rupture'}</td>
                     </tr>

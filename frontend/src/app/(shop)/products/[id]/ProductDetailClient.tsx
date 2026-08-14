@@ -1758,6 +1758,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <tr className="bg-sunken">
                     <th scope="col" className="p-3 text-left font-semibold">Produit</th>
                     <th scope="col" className="p-3 text-left font-semibold">Marque</th>
+                    <th scope="col" className="p-3 text-left font-semibold">Catégorie</th>
                     <th scope="col" className="p-3 text-left font-semibold">Format</th>
                     <th scope="col" className="p-3 text-left font-semibold">Prix</th>
                     <th scope="col" className="p-3 text-left font-semibold">Disponibilité</th>
@@ -1781,10 +1782,21 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         )}
                       </th>
                       <td className="border-t border-hairline p-3">{row.brand || '—'}</td>
+                      <td className="border-t border-hairline p-3">
+                        {row.category
+                          ? row.categoryUrl
+                            ? <Link href={row.categoryUrl} className="text-ink-2 hover:text-brand hover:underline">{row.category}</Link>
+                            : row.category
+                          : '—'}
+                      </td>
                       <td className="border-t border-hairline p-3">{row.format || '—'}</td>
                       <td className="border-t border-hairline p-3">
                         {formatTnd(row.price)}
-                        {row.hasPromo && <span className="ml-1 text-green-700 dark:text-green-400">promo</span>}
+                        {row.oldPrice != null ? (
+                          <span className="ml-1 text-ink-3 line-through tabular-nums">{formatTnd(row.oldPrice)}</span>
+                        ) : row.hasPromo ? (
+                          <span className="ml-1 text-green-700 dark:text-green-400">promo</span>
+                        ) : null}
                       </td>
                       <td className="border-t border-hairline p-3">
                         {row.inStock ? 'En stock' : 'En rupture'}
