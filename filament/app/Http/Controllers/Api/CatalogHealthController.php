@@ -46,6 +46,9 @@ use Illuminate\Support\Facades\Schema;
  */
 class CatalogHealthController extends Controller
 {
+    /** Mirrors ExternalCatalogProduct::STATUS_PROMOTED without importing the constant's meaning. */
+    private const PROMOTED = 'promoted';
+
     /** Matches catalog.promotion.min_body_words — the gate that decides seo_robots_index. */
     private function minBodyWords(): int
     {
@@ -139,6 +142,21 @@ class CatalogHealthController extends Controller
             'with_gtin' => Schema::hasColumn('products', 'gtin')
                 ? (clone $published)->whereNotNull('gtin')->where('gtin', '!=', '')->count()
                 : null,
+            /*
+             * THE TRACER FOR `catalog:iherb:promote --recompose`.
+             *
+             * That command is the only writer of seo_schema_description, and it writes it ONLY when
+             * the staging row carries a real manufacturer overview. So this count is not a content
+             * metric — it is a direct answer to "has recompose ever applied anything", which no
+             * other visible number gives, and which cannot be checked any other way without a shell.
+             *
+             * Near zero beside a large `staging.promoted.with_prose` means the prose is sitting on
+             * the row and the hourly recompose is not moving it. That is one bug in one command,
+             * not a content problem, and it is worth far more than another crawl.
+             */
+            'with_schema_description' => Schema::hasColumn('products', 'seo_schema_description')
+                ? (clone $published)->whereNotNull('seo_schema_description')->where('seo_schema_description', '!=', '')->count()
+                : null,
         ];
     }
 
@@ -197,11 +215,40 @@ class CatalogHealthController extends Controller
             ];
         }
 
+        /*
+         * ── THE PROMOTED SUBSET, WHICH IS THE ONLY ONE THAT CAN AFFECT A PAGE ────────────
+         *
+         * The whole-table counters above answer "did the crawl work" and answered it well: 21,273
+         * rows carry an overview and 26,820 carry a barcode. They cannot answer the question that
+         * actually matters, and on 14/08 that gap sent the diagnosis down the wrong road twice.
+         *
+         * Only 10,359 of 47,537 rows are promoted — the rest are filtered_out or still staged, and
+         * nothing about them reaches a product. So "21,273 rows have prose" is compatible with
+         * every published product having none. What decides the storefront is how much of that
+         * lands on a PROMOTED row, and then whether promotion copied it across.
+         *
+         * `products.gtin` reads 253 against 26,820 captured. `products.avg_body_words` reads 118
+         * against a 250 gate. Both are copied by the same two code paths — promote and
+         * `--recompose` — so these three numbers together separate the two possible causes:
+         * the promoted rows genuinely lack the data, or they have it and the copy is not happening.
+         */
+        $promoted = fn () => ExternalCatalogProduct::where('status', self::PROMOTED);
+        $promotedStats = [
+            'total' => $promoted()->count(),
+            'with_prose' => ($has('source_overview_html'))
+                ? $promoted()->whereNotNull('source_overview_html')->where('source_overview_html', '!=', '')->count()
+                : null,
+            'with_gtin' => $has('source_gtin')
+                ? $promoted()->whereNotNull('source_gtin')->where('source_gtin', '!=', '')->count()
+                : null,
+        ];
+
         return [
             'available' => true,
             'total' => ExternalCatalogProduct::count(),
             'by_status' => $byStatus,
             'by_content_status' => $byContent,
+            'promoted' => $promotedStats,
             'prose' => $prose,
             'gtin' => $has('source_gtin') ? $filled('source_gtin') : null,
             'gallery' => $has('source_gallery_images')
@@ -215,8 +262,15 @@ class CatalogHealthController extends Controller
                     ->where('source_content_unmapped_sections', '!=', '[]')
                     ->count()
                 : null,
+            // max() on a datetime column returns a string here, but Eloquent casts can hand back a
+            // Carbon instance — which JSON-encodes as an object and printed as "[object Object]"
+            // in the reader. Normalise to ISO-8601 so the value is a string either way.
             'last_content_fetch' => $has('source_content_fetched_at')
-                ? optional(ExternalCatalogProduct::max('source_content_fetched_at'))
+                ? (function () {
+                    $v = ExternalCatalogProduct::max('source_content_fetched_at');
+                    if ($v === null) return null;
+                    return $v instanceof \DateTimeInterface ? $v->format(\DATE_ATOM) : (string) $v;
+                })()
                 : null,
         ];
     }
