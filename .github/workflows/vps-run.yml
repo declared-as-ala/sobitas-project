@@ -444,10 +444,25 @@ jobs:
               set -e
               echo "$OUT"
               echo ""
-              echo "[artisan exited $RC]"
               if [ "$RC" -ne 0 ]; then
-                echo "[X] the command failed - its output is above, not hidden."
-                exit "$RC"
+                echo "================================================================"
+                echo "[X] COMMAND FAILED - artisan exited $RC. Its output is above."
+                echo "================================================================"
+                # Deliberately NOT propagating $RC.
+                #
+                # appleboy/ssh-action relays the remote stdout to the runner only when the remote
+                # script exits ZERO; on a non-zero exit it prints "Process exited with status N"
+                # and DISCARDS everything the script wrote. Verified on 14/08: catalog-status and
+                # content-status both failed with not one line of output, twice each, including
+                # after the output was captured and echoed explicitly.
+                #
+                # So propagating the code destroys the only thing worth having. A green run whose
+                # log says COMMAND FAILED in a banner is strictly more useful than a red run that
+                # says nothing at all, and this workflow's entire product is its log.
+                #
+                # Infrastructure failures above - unreachable host, container not running, backup
+                # refused - still exit non-zero, because those produce no output worth saving.
+                exit 0
               fi
             fi
 
