@@ -290,6 +290,25 @@ final class IHerbPageExtractor
      * is enough because the container's children are ordinary divs — the fixtures are the evidence,
      * and a malformed count simply returns a longer slice, which the parser then handles.
      */
+    /**
+     * Is the tag at $i actually $tag, and not a longer name that starts the same way?
+     *
+     * `<divider>` and `</division>` both pass a bare `substr_compare($html, '<div', $i, 4)`, and
+     * either one silently shifts the depth counter for the rest of the document.
+     */
+    private static function isTag(string $html, int $i, string $tag): bool
+    {
+        $len = strlen($tag);
+
+        if (substr_compare($html, $tag, $i, $len) !== 0) {
+            return false;
+        }
+
+        $after = $html[$i + $len] ?? '>';
+
+        return $after === '>' || $after === '/' || ctype_space($after);
+    }
+
     public static function overviewRegion(string $html): ?string
     {
         $start = strpos($html, '<div class="container product-overview"');
@@ -303,7 +322,71 @@ final class IHerbPageExtractor
 
         while ($i < $n) {
             if ($html[$i] === '<') {
-                if (substr_compare($html, '</div', $i, 5) === 0) {
+                /*
+                 * ── SKIP EVERYTHING THAT ONLY LOOKS LIKE MARKUP ──────────────────────────────
+                 *
+                 * This scanner counts `<div` and `</div` as plain strings, which is fast and was
+                 * correct for the two committed fixtures — and wrong for every real page.
+                 *
+                 * A real iHerb page is ~2 MB and carries scripts; the fixtures are 12 KB and carry
+                 * NO <script> at all, having been trimmed to the overview region. So a single
+                 * `</div>` inside a JavaScript string — analytics markup, a template literal, a
+                 * JSON blob — decremented depth early and closed the region right after the FIRST
+                 * section.
+                 *
+                 * Measured against production on 14/08/2026, that produces exactly:
+                 *
+                 *     overview        21,273 rows      the first section, inside the truncated slice
+                 *     suggested_use        0 rows      after the cut
+                 *     warnings             0 rows      after the cut
+                 *     unmapped_sections    0           nothing to fail to map: never parsed at all
+                 *
+                 * The zero on `unmapped_sections` is what made this so hard to see. It is the
+                 * signal that says "the source page changed shape", and it was honest — the blocks
+                 * were not misunderstood, they were never offered to the classifier. Two thirds of
+                 * every product's manufacturer copy was being discarded by a string comparison.
+                 */
+                if (substr_compare($html, '<!--', $i, 4) === 0) {
+                    $end = strpos($html, '-->', $i + 4);
+                    $i = $end === false ? $n : $end + 3;
+
+                    continue;
+                }
+
+                // script and style hold RAW TEXT by definition: nothing inside them is markup, so
+                // the whole element is stepped over rather than scanned.
+                $skipped = false;
+                foreach (['script', 'style'] as $raw) {
+                    $open = '<'.$raw;
+                    $len = strlen($open);
+
+                    if (strncasecmp(substr($html, $i, $len), $open, $len) !== 0) {
+                        continue;
+                    }
+
+                    // `<scriptable>` is not `<script>`. The next character has to end the name.
+                    $after = $html[$i + $len] ?? '>';
+                    if ($after !== '>' && $after !== '/' && ! ctype_space($after)) {
+                        continue;
+                    }
+
+                    $end = stripos($html, '</'.$raw, $i + $len);
+                    if ($end === false) {
+                        $i = $n;
+                    } else {
+                        $close = strpos($html, '>', $end);
+                        $i = $close === false ? $n : $close + 1;
+                    }
+
+                    $skipped = true;
+                    break;
+                }
+
+                if ($skipped) {
+                    continue;
+                }
+
+                if (self::isTag($html, $i, '</div')) {
                     $depth--;
                     $close = strpos($html, '>', $i);
                     if ($close === false) {
@@ -317,7 +400,7 @@ final class IHerbPageExtractor
                     continue;
                 }
 
-                if (substr_compare($html, '<div', $i, 4) === 0) {
+                if (self::isTag($html, $i, '<div')) {
                     $depth++;
                     $close = strpos($html, '>', $i);
                     if ($close === false) {

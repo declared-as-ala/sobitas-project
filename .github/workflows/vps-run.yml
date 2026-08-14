@@ -76,6 +76,7 @@ on:
           # Content-side repairs. Staging only, same as the two above.
           - content-retry-failed
           - content-reset-stuck
+          - content-refetch-100
           # WRITES: these need confirm=APPLY
           - research-import-apply
           - seo-ctr-pass
@@ -260,6 +261,24 @@ jobs:
               # Staging table only - no product, page or URL changes - so WRITES=no by the same
               # standard as the two hydrate tasks below.
               ARGS="catalog:iherb:content --retry-failed"
+              WRITES=no
+              ;;
+            content-refetch-100)
+              # Re-read 100 already-transcribed pages with the CURRENT extractor.
+              #
+              # This is the probe for the suggested_use/warnings zero. Every link in that chain
+              # verifies clean by inspection - the extractor finds all three sections on a real
+              # fr.iherb.com page AND on the Arabic tn.iherb.com one, the heading map covers both,
+              # store() maps the columns correctly, and the health counters query the right columns.
+              # What cannot be checked without a shell is which IMAGE was running when those rows
+              # were written: SSH deploys were failing from 07/08 to 13/08, and the runbook records
+              # that the image built and pushed to GHCR every time while only the "pull it" step
+              # failed. A container running pre-31d8630f code explains the zeros and nothing else does.
+              #
+              # 100, not the whole 26,827: at 1.5 req/s that is ~70 seconds and it answers the
+              # question. If suggested_use moves off zero, the cure is a full --refetch and it is
+              # worth roughly a third of the body text on every product.
+              ARGS="catalog:iherb:content --refetch=100"
               WRITES=no
               ;;
             content-reset-stuck)
