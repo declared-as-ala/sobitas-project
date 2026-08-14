@@ -1300,7 +1300,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   </TabsContent>
 
-                  <TabsContent value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
+                  {/* ── `forceMount`, AND THE STYLING ALREADY ASSUMED IT ─────────────────────
+                      Radix renders `present && children`, so without this prop an INACTIVE tab is
+                      not in the DOM at all. This panel holds the transcribed Supplement Facts —
+                      18,965 rows carry one — and the questions panel below holds the FAQ.
+
+                      Two consequences, and the second is the serious one:
+                        · the richest content on the page was absent from the server-rendered HTML
+                          of the canonical human URL until a human clicked a tab
+                        · FAQPage JSON-LD is emitted UNCONDITIONALLY at
+                          app/(shop)/[slug]/[productSlug]/page.tsx:338, so the markup asserted
+                          questions and answers that were not on the page. Google's FAQPage rules
+                          require the content to be present; markup describing invisible content is
+                          the exact shape of a structured-data violation.
+
+                      The `data-[state=inactive]:hidden` classes on this element were already
+                      written for mounted-but-hidden content and could never fire without the prop —
+                      the styling anticipated the fix and the prop was missing. */}
+                  <TabsContent forceMount value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
                     {(() => {
                       const nutritionImages = Array.isArray((product as any).nutrition_images)
                         ? ((product as any).nutrition_images as string[]).filter(Boolean)
@@ -1496,7 +1513,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     })()}
                   </TabsContent>
 
-                  <TabsContent value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                  <TabsContent forceMount value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
                     <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
                     <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
                       {product.zone4 || 'Questions Fréquentes'}

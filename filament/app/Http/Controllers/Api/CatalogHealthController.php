@@ -204,6 +204,22 @@ class CatalogHealthController extends Controller
                 'suggested_use' => $filled('source_suggested_use_html'),
                 'warnings' => $filled('source_warnings_html'),
                 'other_ingredients' => $has('source_other_ingredients_html') ? $filled('source_other_ingredients_html') : null,
+                /*
+                 * The transcribed Supplement Facts panel, counted WHERE IT LIVES.
+                 *
+                 * `label_facts` used to be assigned from `products.nutrition_values`, and nothing
+                 * on any running pipeline writes that column -- `CatalogIHerbPromote` never touches
+                 * it, and the only writer, `NutritionPanelBuilder`, is not on a scheduled pass. So
+                 * the stage read 0 forever and `chain()` named it the FIRST STARVED STAGE on every
+                 * call, while 18,965 staging rows carried a panel.
+                 *
+                 * That is not a cosmetic error. health-watch runs this every six hours and emails
+                 * on failure, so a permanently-zero stage is a guard that cries wolf on a schedule
+                 * -- and this repository has already proved what happens next: `measure-flash`
+                 * failed at all twelve widths for days, was ignored because of it, and missed the
+                 * real regression it existed to catch.
+                 */
+                'supplement_facts' => $has('source_supplement_facts_html') ? $filled('source_supplement_facts_html') : null,
                 // ANY prose at all. This is the one to read: it is the difference between "the
                 // extractor understood the page" and "the fetch returned 200".
                 'any' => ExternalCatalogProduct::query()
@@ -351,7 +367,15 @@ class CatalogHealthController extends Controller
             $stages['gtin'] = $staging['gtin'];
         }
         if (($products['available'] ?? false)) {
-            $stages['label_facts'] = $products['with_nutrition'];
+            /*
+             * From STAGING, not from `products.nutrition_values`. See the note beside
+             * `supplement_facts` above for why that column can only ever read zero.
+             *
+             * `?? $products['with_nutrition']` keeps the old source as a fallback for the case
+             * where the staging column does not exist yet, so an older database reports something
+             * rather than nothing.
+             */
+            $stages['label_facts'] = $staging['prose']['supplement_facts'] ?? $products['with_nutrition'];
             $stages['faq'] = $products['with_faq'];
             $stages['official_video'] = $products['with_video'];
             $stages['body_over_gate'] = $products['body_over_gate'];

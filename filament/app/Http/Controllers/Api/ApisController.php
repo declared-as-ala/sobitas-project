@@ -1869,7 +1869,7 @@ class ApisController extends Controller
             ->where('publier', 1)
             ->where('qte', '>', 0)
             ->select(self::PRODUCT_LIST_COLUMNS)
-            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
+            ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'brand:id,designation_fr,logo', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
             ->limit(4)
             ->get();
@@ -1882,7 +1882,7 @@ class ApisController extends Controller
                 ->whereNotIn('id', $existingIds)
                 ->whereHas('sousCategorie', fn ($q) => $q->where('categorie_id', $sous_category->categorie_id))
                 ->select(self::PRODUCT_LIST_COLUMNS)
-                ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images')
+                ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'brand:id,designation_fr,logo', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
                 ->limit(4 - $products->count())
                 ->get();
