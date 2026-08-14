@@ -46,7 +46,11 @@ jobs:
           set +e
           set +x
 
-          S() { echo "$@" >> "$GITHUB_STEP_SUMMARY"; }
+          # Written to BOTH the run summary and stdout. The summary is the readable artefact, but
+          # it is not retrievable through the REST API, so a diagnosis that exists only there
+          # cannot be read by anyone helping remotely — including from a terminal with `gh`.
+          # Duplicating into the log costs nothing and makes the verdict greppable.
+          S() { echo "$@" >> "$GITHUB_STEP_SUMMARY"; echo "$@"; }
 
           # ── 0. Trim the secrets before anything reads them ──────────────────────────────
           # tr -d '[:space:]' rather than a trailing-newline strip: a value pasted from a web
