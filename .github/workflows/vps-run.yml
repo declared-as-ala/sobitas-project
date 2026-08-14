@@ -397,7 +397,23 @@ jobs:
           # artisan exit must turn the run RED, because the colour of that circle is the only
           # signal the owner gets. There is no poller behind this workflow to make a missed run
           # right later.
-          script_stop: true
+          # ── `false`, AND THIS IS THE LINE THAT KEPT THE BUG ALIVE ────────────────────
+          # `script_stop: true` is not a flag on appleboy — it INJECTS `set -e` ahead of the
+          # script. So the previous fix, which replaced the script's own `set -euo pipefail` with
+          # `set -uo pipefail`, changed nothing: `-uo` does not clear `-e`, and the injected one
+          # was still in force. The run got exactly three lines further and died again:
+          #
+          #     out: [..] connected. task mode=artisan svc=backend-v2 writes=no
+          #     out: [ok] /root/sobitas-project/docker-compose.yml present
+          #     2026/08/14 15:55:50 Process exited with status 1
+          #
+          # 0.2 s later, before the readiness loop could print its own failure. Seven rounds of
+          # this bug have all been the same shape — something turns a failure into silence, and
+          # the silence is mistaken for a different failure.
+          #
+          # Error handling belongs in the script, where the guards and the banners are, not in an
+          # action input that overrides them invisibly.
+          script_stop: false
           script: |
             # ── NO `set -e`, AND THAT IS THE WHOLE POINT ──────────────────────────────────
             # `set -e` plus `script_stop: true` plus appleboy's discard-stdout-on-non-zero is a
@@ -419,7 +435,10 @@ jobs:
             # (the backup before a writing task is the one that matters), which works the same
             # without `-e` and reads better with it gone.
             #
-            # `-u` and `pipefail` stay. They catch typos and hide nothing.
+            # `-u` and `pipefail` stay. They catch typos and hide nothing. `+e` is explicit
+            # rather than merely absent, because `script_stop` above has injected `-e` before now
+            # and this is the line that has to survive someone flipping it back.
+            set +e
             set -uo pipefail
 
             APP_DIR="/root/sobitas-project"
@@ -461,13 +480,18 @@ jobs:
             # Three attempts because the box is genuinely slow right now: /api/catalog_health takes
             # 6 s, one SSH dispatch died with `dial tcp: i/o timeout`, and the content pass is
             # dispatching 900 no-op jobs every five minutes on top of the real load.
+            # stderr is CAPTURED, not discarded. It was `2>/dev/null`, which threw away the one
+            # sentence that distinguishes "the container is still booting" from "there is no such
+            # service" from "the docker socket is not readable by this user".
             READY=no
             for attempt in 1 2 3; do
-              if docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>/dev/null; then
+              PROBE=$(docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>&1)
+              if [ $? -eq 0 ]; then
                 READY=yes
+                echo "[ok] backend-v2 ready"
                 break
               fi
-              echo "[..] backend-v2 not ready (attempt $attempt/3)"
+              echo "[..] backend-v2 not ready (attempt $attempt/3): ${PROBE:-no output}"
               sleep 10
             done
 
