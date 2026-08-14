@@ -60,6 +60,8 @@ on:
           - content-status
           - content-log
           - promote-log
+          - hydrate-log
+          - dsld-log
           - laravel-log
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
@@ -162,11 +164,26 @@ jobs:
               MODE=filelog
               WRITES=no
               ;;
+            hydrate-log)
+              # Shares PoliteFetcher's `iherb.com` bucket with the content pass, so its failures
+              # open the breaker that stops content. When content is idle, this is where the
+              # reason lives.
+              ARGS="catalog-hydrate.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            dsld-log)
+              ARGS="catalog-dsld.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
             laravel-log)
               # backend-v2 sets LOG_CHANNEL=stderr, so the web container's laravel.log is usually
               # empty and its output is in `docker compose logs backend-v2` instead. This is the
               # scheduler's copy, which is where an artisan pass's stack trace lands.
-              ARGS="laravel.log"
+              ARGS="laravel-*.log"
               SVC=backend-v2-scheduler
               MODE=filelog
               WRITES=no
@@ -384,7 +401,7 @@ jobs:
               echo "> [$SVC] tail -n 300 storage/logs/$ARGS"
               echo ""
               docker compose -f "$COMPOSE_FILE" exec -T "$SVC" \
-                sh -c "ls -la /var/www/html/storage/logs/ 2>/dev/null | head -20; echo '---'; tail -n 300 /var/www/html/storage/logs/$ARGS 2>/dev/null || echo '(no such file in this container)'"
+                sh -c 'D=/var/www/html/storage/logs; F=$(ls -t $D/'"$ARGS"' 2>/dev/null | head -1); if [ -n "$F" ]; then echo "reading $F"; echo "---"; tail -n 300 "$F"; else echo "(no file matching '"$ARGS"' in this container)"; ls -la $D 2>/dev/null | head -20; fi'
             else
               echo ""
               echo "> php artisan $ARGS"
