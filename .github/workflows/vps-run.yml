@@ -381,10 +381,10 @@ jobs:
               # has fetched nothing since 11/08. The reason exists in exactly one place, and until
               # now that place needed a shell.
               echo ""
-              echo "> tail -n 300 storage/logs/$ARGS"
+              echo "> [$SVC] tail -n 300 storage/logs/$ARGS"
               echo ""
-              docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
-                sh -c "tail -n 300 /var/www/html/storage/logs/$ARGS 2>/dev/null || echo '(file does not exist - the pass has never written to it)'"
+              docker compose -f "$COMPOSE_FILE" exec -T "$SVC" \
+                sh -c "ls -la /var/www/html/storage/logs/ 2>/dev/null | head -20; echo '---'; tail -n 300 /var/www/html/storage/logs/$ARGS 2>/dev/null || echo '(no such file in this container)'"
             else
               echo ""
               echo "> php artisan $ARGS"
