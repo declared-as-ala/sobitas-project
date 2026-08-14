@@ -4,6 +4,7 @@ import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
+import { isTaxonomySlug, bestCategoryForSlug } from '@/util/taxonomySlugs';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -99,23 +100,66 @@ async function lookupProduct(slug: string): Promise<string | null | false> {
  * and are never stripped. Only when the full slug is genuinely unknown do we retry without the
  * trailing `-N`, which lands the legacy URL on the real product in ONE hop.
  */
-async function resolveShopSlug(slug: string): Promise<string | null> {
+type ShopResolution =
+  | { kind: 'redirect'; to: string }
+  /** Definitively not a product and not a category. The caller decides 301-to-category or 410. */
+  | { kind: 'gone'; slug: string }
+  /** Could not find out — backend unhealthy. Fall through to the page and never guess. */
+  | { kind: 'unknown' };
+
+async function resolveShopSlug(slug: string): Promise<ShopResolution> {
   const direct = await lookupProduct(slug);
-  if (typeof direct === 'string') return direct;
-  if (direct === null) return null; // API error — let the page decide, never guess
+  if (typeof direct === 'string') return { kind: 'redirect', to: direct };
+  if (direct === null) return { kind: 'unknown' }; // API error — let the page decide, never guess
 
   // Genuine 404 for the full slug. If it carries a legacy numeric suffix, retry the base slug.
   const base = slug.replace(/-\d+$/, '');
   if (base && base !== slug) {
     const stripped = await lookupProduct(base);
-    if (typeof stripped === 'string') return stripped;
-    // Not a product either — the base is most likely a category/brand slug (/creatine-2 → /creatine).
-    if (stripped === false) return `/${base}`;
-    return null;
+    if (typeof stripped === 'string') return { kind: 'redirect', to: stripped };
+    if (stripped === null) return { kind: 'unknown' };
+    // Not a product either. It may still be a real category (/creatine-2 → /creatine) — but that
+    // has to be CHECKED, not assumed. See below.
+    return classifyNonProduct(base);
   }
 
-  // No numeric suffix: the slug may be a category served at /{slug} (e.g. /shop/omega-3).
-  return `/${slug}`;
+  return classifyNonProduct(slug);
+}
+
+/**
+ * A slug that is not a product: is it a category, or is it simply gone?
+ *
+ * This function is the whole fix. Both branches above used to end in `return \`/${slug}\``, which
+ * reads as "it is probably a category" and is right for `/shop/omega-3` and wrong for every
+ * discontinued product. Wrong meant 301 → 404: Google spends a hop, caches the redirect, still
+ * finds nothing, and the hop hides the real status from Search Console. Measured on 14/08/2026
+ * that was the largest shape in a 1,060-page "Not found" bucket.
+ */
+async function classifyNonProduct(slug: string): Promise<ShopResolution> {
+  const isCategory = await isTaxonomySlug(slug);
+
+  // null = the taxonomy could not be read. Unknown is not evidence of absence, and acting on it
+  // would 410 live category pages during a backend hiccup.
+  if (isCategory === null) return { kind: 'unknown' };
+  if (isCategory) return { kind: 'redirect', to: `/${slug}` };
+
+  return { kind: 'gone', slug };
+}
+
+/**
+ * What a discontinued product should answer.
+ *
+ * Google's guidance is a redirect to a RELEVANT page, and 404/410 when none exists. An irrelevant
+ * redirect is treated as a soft 404 — it spends the hop and earns nothing — so the category is used
+ * only when the slug genuinely shares a term with it, and 410 Gone otherwise. 410 is also the
+ * status that empties the Search Console bucket fastest: it says "do not come back", where 404 only
+ * says "not today".
+ */
+async function goneOrCategory(request: NextRequest, slug: string): Promise<NextResponse> {
+  const best = await bestCategoryForSlug(slug);
+  if (best) return redirectPreservingQuery(request, `/${best}`);
+
+  return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
 }
 
 export async function middleware(request: NextRequest) {
@@ -262,8 +306,9 @@ export async function middleware(request: NextRequest) {
   const shopSlug = pathname.match(/^\/shop\/([^/]+)\/?$/);
   if (shopSlug?.[1]) {
     const canonical = await resolveShopSlug(shopSlug[1]);
-    if (canonical) return redirectPreservingQuery(request, canonical);
-    // If API is unreachable, fall through to the page (it handles it too)
+    if (canonical.kind === 'redirect') return redirectPreservingQuery(request, canonical.to);
+    if (canonical.kind === 'gone') return goneOrCategory(request, canonical.slug);
+    // 'unknown' — API unreachable. Fall through to the page (it handles it too).
   }
 
   // ── WordPress nested shop paths: /shop/{cat}/{subcat}/{product}[/reviews] ──
@@ -302,7 +347,9 @@ export async function middleware(request: NextRequest) {
   const legacyReviews = pathname.match(/^\/products?\/(.+?)\/reviews\/?$/);
   if (legacyReviews?.[1]) {
     const canonical = await resolveShopSlug(legacyReviews[1]);
-    return redirectPreservingQuery(request, canonical || `/product/${legacyReviews[1]}`);
+    if (canonical.kind === 'redirect') return redirectPreservingQuery(request, canonical.to);
+    if (canonical.kind === 'gone') return goneOrCategory(request, canonical.slug);
+    return redirectPreservingQuery(request, `/product/${legacyReviews[1]}`);
   }
 
   const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
@@ -324,7 +371,9 @@ export async function middleware(request: NextRequest) {
   const legacyProducts = pathname.match(/^\/products\/([^/]+)\/?$/);
   if (legacyProducts?.[1]) {
     const canonical = await resolveShopSlug(legacyProducts[1]);
-    return redirectPreservingQuery(request, canonical || `/product/${legacyProducts[1]}`);
+    if (canonical.kind === 'redirect') return redirectPreservingQuery(request, canonical.to);
+    if (canonical.kind === 'gone') return goneOrCategory(request, canonical.slug);
+    return redirectPreservingQuery(request, `/product/${legacyProducts[1]}`);
   }
 
   // ── Feed the Crawler First ──────────────────────────────────────────────

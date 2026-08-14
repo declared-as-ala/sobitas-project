@@ -137,6 +137,12 @@ jobs:
           # that needed a shell to read and did not survive a deploy.
           guard "ctr-targets"        node scripts/check-ctr-targets.mjs
 
+          # ── Do retired product URLs answer honestly? ─────────────────────────────────────
+          # 1,060 pages sat in Search Console's "Not found" bucket because dead product slugs
+          # 301'd to /{slug}, which was also a 404. A redirect into a 404 is worse than the 404
+          # it replaced and it hides the real status from every report.
+          guard "dead-product-urls"  node scripts/check-dead-product-urls.mjs
+
           # ── Is the blog still linking to the pages that sell? ─────────────────────────────
           guard "internal-links"     node scripts/check-internal-links.mjs
 

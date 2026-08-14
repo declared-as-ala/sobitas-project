@@ -97,7 +97,22 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           `gap-3 sm:gap-4` and not more: the tiles are the content, the gutter is not. Anything
           past 16px starts competing with the band padding above and reintroduces the whitespace
           this change exists to remove. */}
-      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-2.5 lg:grid-cols-6 lg:gap-3">
+      {/* SIX ACROSS ONLY WHEN SIX ACROSS FITS (owner, 14/08/2026: "the browse by category card
+          can be bigger and use the whitespace free… more responsive so they don't have the text
+          squeezed").
+
+          `lg:grid-cols-6` put six tiles across from 1024px. On a 1280px laptop that is a ~200px
+          tile carrying a two-word uppercase label like SANTÉ & VITALITÉ — the label wrapped, hit
+          `line-clamp-2`, and the arrow crowded it. The band looked airy and the type looked
+          cramped, which is the exact complaint.
+
+          The breakpoint moves to `xl` (1280px), so 1024–1279 gets THREE tiles instead of six:
+          the tile roughly doubles and the label fits on one line. Six items divide evenly by 2,
+          3 and 6, so every step is a full row with no ragged tail.
+
+          Gaps grow with the tiles (`gap-3/4/5`) because a 2px gutter between 400px photographs
+          reads as a printing error, not as a grid. */}
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6 xl:gap-5">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -162,7 +177,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                          = 480 × 0.43 = 206.4 — unchanged, because `sm` is still the smallest
                          percentage in the string. Same candidate list, no new optimizer variants,
                          nothing re-fetched. */
-                      sizes="(min-width: 1024px) 350px, (min-width: 640px) 43vw, 50vw"
+                      sizes="(min-width: 1280px) 340px, (min-width: 640px) 44vw, 50vw"
                       quality={80}
                       /* Stays lazy on purpose: these sit just under the hero, and letting six
                          tiles compete with the preloaded hero image is how you lose LCP. */
@@ -202,12 +217,12 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     height, so a two-line category name grows the plate instead of being squeezed.
                     16px also equals the container gutter, so the label sits on the same left rail
                     as the section heading above it. */}
-                <div className="flex min-h-[48px] flex-1 items-center justify-between gap-1.5 px-2.5 py-2.5 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[52px] sm:gap-2 sm:px-3 sm:py-3">
+                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-2 px-4 py-4 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
                   {/* 15px on phones (up from 13), 14 from `sm`. That inversion is deliberate: the
                       phone tile is the widest this label ever gets relative to its column, and it
                       is the only place the label is read at arm's length. Owner asked for bigger
                       mobile text specifically. */}
-                  <span className="min-w-0 line-clamp-2 font-display font-compressed text-[13px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[14px]">
+                  <span className="min-w-0 line-clamp-2 font-display font-compressed text-[15px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[15px] xl:text-[14px]">
                     {label}
                   </span>
                   <ArrowRight
