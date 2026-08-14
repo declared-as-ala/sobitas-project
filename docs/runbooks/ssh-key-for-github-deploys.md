@@ -34,59 +34,75 @@ when the secret is unset — so this can be set up with no code change and no do
 
 ---
 
-## Step 1 — Make a key pair (on your own machine)
+## Which machine am I on? (read this first)
 
-Open PowerShell. `ed25519` rather than RSA: shorter, and OpenSSH on every current Hostinger image
-supports it.
+This is the one thing that goes wrong. There are **two different shells** involved and they take
+**different languages**:
 
-```powershell
-ssh-keygen -t ed25519 -C "github-actions@protein.tn" -f "$env:USERPROFILE\.ssh\protein_deploy" -N '""'
+| shell | prompt looks like | language | how you open it |
+|---|---|---|---|
+| your Windows PC | `PS C:\Users\kouss>` | PowerShell | Start menu → PowerShell |
+| the VPS | `root@srv596408:~#` | bash (Linux) | hPanel → VPS → Browser terminal |
+
+`$env:USERPROFILE`, `Get-Content` and `Set-Clipboard` are **PowerShell only**. Pasted into the VPS
+they do not fail usefully — bash expands `$env` to an empty string and silently writes a key with a
+broken filename, then `Get-Content: command not found`. That happened on 14/08/2026 and cost an hour.
+
+**Everything below runs in ONE place: the Hostinger browser terminal.** Your PC is not involved at
+all. That is deliberate — the key is for GitHub, not for you, so it never needs to touch your laptop.
+
+---
+
+## Step 1 — Make the key pair, on the VPS
+
+hPanel → **VPS → your server → Browser terminal**. It logs in without SSH, so it works even while
+SSH is broken. Widen the browser window before you start — you will be copying a long block of text
+out of this terminal, and a narrow window wraps it.
+
+Paste this whole block:
+
+```bash
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+ssh-keygen -t ed25519 -C "github-actions@protein.tn" -f ~/.ssh/github_actions -N ""
 ```
 
-`-N '""'` means **no passphrase**. That is correct here and only here: GitHub Actions runs
-unattended and cannot type one. The key's only power is logging into this VPS, and you can revoke it
-in one line (Step 5).
+`-N ""` means **no passphrase** — two double-quote characters with nothing between them. That is
+correct here and only here: GitHub Actions runs unattended and cannot type one. The key's only power
+is logging into this VPS, and Step 5 revokes it in one line.
+
+> In bash, `-N '""'` (quote-quote wrapped in single quotes) sets the passphrase to the literal text
+> `""` rather than to nothing, and Actions then cannot use the key. The quoting rule differs from
+> PowerShell. Use exactly `-N ""` here.
 
 Two files now exist:
 
 | file | what it is | where it goes |
 |---|---|---|
-| `protein_deploy.pub` | public key | onto the VPS |
-| `protein_deploy` | **private key** | into a GitHub secret, nowhere else |
+| `~/.ssh/github_actions.pub` | public half | stays on the VPS |
+| `~/.ssh/github_actions` | **private half** | into the GitHub secret, nowhere else |
 
-## Step 2 — Put the public key on the VPS
-
-Open Hostinger **hPanel → VPS → your server → Browser terminal**. That terminal logs in without SSH,
-so it works even though SSH is currently broken.
-
-Print the public key on your own machine first:
-
-```powershell
-Get-Content "$env:USERPROFILE\.ssh\protein_deploy.pub"
-```
-
-It is one line starting `ssh-ed25519 AAAA…`. In the browser terminal, paste it into the command
-below **between the quotes**:
+## Step 2 — Let that key log in
 
 ```bash
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-echo "ssh-ed25519 AAAA...PASTE THE WHOLE LINE HERE... github-actions@protein.tn" >> ~/.ssh/authorized_keys
+cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys
 chmod 600 ~/.ssh/authorized_keys
+tail -1 ~/.ssh/authorized_keys
 ```
 
-Check it landed as exactly one new line:
+The last command must print one line starting `ssh-ed25519 AAAA…` and ending
+`github-actions@protein.tn`.
+
+This **adds** a way in. It removes nothing, so there is no risk of locking yourself out.
+
+If you previously pasted the placeholder line from an older copy of this runbook, drop it — it is
+inert, but it is noise in a file that should be readable at a glance:
 
 ```bash
-tail -1 ~/.ssh/authorized_keys
-wc -l ~/.ssh/authorized_keys
+grep -vF 'PASTE' ~/.ssh/authorized_keys > /root/ak.tmp || true
+mv /root/ak.tmp ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys
 ```
-
-> Hostinger also has **hPanel → VPS → SSH keys**, which does the same thing through a form. Either
-> is fine. The browser terminal is written out here because it also lets you run Step 3.
 
 ## Step 3 — Confirm the server will accept a key at all
-
-Still in the browser terminal:
 
 ```bash
 grep -E "^\s*(PubkeyAuthentication|PermitRootLogin|AuthorizedKeysFile)" /etc/ssh/sshd_config
@@ -111,45 +127,62 @@ is how a VPS becomes unreachable by SSH entirely, and then only the browser term
 
 ## Step 4 — Give GitHub the private key
 
-```powershell
-Get-Content "$env:USERPROFILE\.ssh\protein_deploy" | Set-Clipboard
+Print it, still in the browser terminal:
+
+```bash
+cat ~/.ssh/github_actions
 ```
 
-GitHub → the repo → **Settings → Secrets and variables → Actions → New repository secret**
+Select from `-----BEGIN OPENSSH PRIVATE KEY-----` to `-----END OPENSSH PRIVATE KEY-----`
+**inclusive** — both banner lines are part of the key — and copy.
+
+Then: <https://github.com/declared-as-ala/sobitas-project/settings/secrets/actions>
+→ **New repository secret**
 
 | field | value |
 |---|---|
-| Name | `VPS_SSH_KEY` |
-| Secret | paste — **including** the `-----BEGIN OPENSSH PRIVATE KEY-----` and `-----END …-----` lines and the trailing newline |
+| Name | `VPS_SSH_KEY` — exact, case-sensitive, no spaces |
+| Secret | the pasted key, both banner lines included |
 
-While you are there, confirm these three exist and are right:
+That name is not a choice. It is what every workflow reads —
+`key: ${{ secrets.VPS_SSH_KEY }}` in `deploy-filament.yml`, `deploy-frontend.yml`,
+`deploy-fitness-api.yml` and `vps-run.yml`. Any other name silently changes nothing.
+
+While you are on that page, confirm these three already exist:
 
 - `VPS_HOST` — the IP or hostname
 - `VPS_USER` — `root`
 - `VPS_PORT` — `22` unless you changed it
 
-Leave `VPS_PASSWORD` in place for now. `appleboy/ssh-action` uses the key when one is supplied, so
-the password simply stops being consulted; keeping it means a broken key does not lock you out of
-your own pipeline on the same day you set it up.
+Leave `VPS_PASSWORD` in place. `appleboy/ssh-action` uses the key when one is supplied, so the
+password simply stops being consulted; keeping it means a bad paste does not lock you out of your
+own pipeline on the day you set it up. Delete it once Step 5 has been green twice.
 
 ## Step 5 — Prove it, then keep it proven
 
-Run **Actions → VPS Doctor** (`workflow_dispatch`). It is read-only and it reports the auth result
-without changing anything. Green means done.
+Run **Actions → VPS Doctor → Run workflow**. It is read-only, changes nothing, and reports whether
+the server accepted the key. Green means done.
 
-From your own machine, the same check:
+Then run a real deploy — **Actions → Deploy Filament → Run workflow** — and watch the SSH step.
 
-```powershell
-ssh -i "$env:USERPROFILE\.ssh\protein_deploy" -o IdentitiesOnly=yes root@YOUR_VPS_IP "docker compose ps"
-```
-
-To revoke this key later — if the laptop is lost, or someone leaves:
+To revoke this key later:
 
 ```bash
 sed -i '/github-actions@protein.tn/d' ~/.ssh/authorized_keys
 ```
 
-That is why the `-C` comment in Step 1 was set to something identifiable.
+That is why `-C` in Step 1 was set to something identifiable.
+
+---
+
+## About the hPanel "SSH keys" form
+
+hPanel → VPS → **SSH keys** exists and takes a **public** key through a form. It can replace Step 2.
+
+It cannot replace the rest, and this is the part that catches people out: GitHub Actions needs the
+**private** half, and a form that accepts a public key never shows you a private one. You still have
+to generate the pair somewhere and copy the private half out. The browser terminal is already open
+in Step 1, so doing all four steps there is strictly fewer moves.
 
 ---
 
