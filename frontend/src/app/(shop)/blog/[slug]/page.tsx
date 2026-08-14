@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getLatestArticles, getCategories } from '@/services/api';
+import { getLatestArticles, getAllArticles, getCategories } from '@/services/api';
+import { relatedArticles as pickRelatedArticles } from '@/util/relatedArticles';
 import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 // Request-scoped cache: generateMetadata + the page body used to issue TWO separate
 // article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
@@ -131,10 +132,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   
   try {
-    // relatedArticles and the taxonomy are both incidental — neither failure may 404 the article.
-    const [article, relatedArticles, categories] = await Promise.all([
+    /*
+     * relatedArticles, the article pool and the taxonomy are all incidental — no failure among them
+     * may 404 the article itself.
+     *
+     * getAllArticles() is the pool the related rail is chosen FROM. It is one cached call
+     * (next: { tags: ['blog'] }) and it replaces a rail that was the same three URLs on every one of
+     * 224 articles — see util/relatedArticles.ts for why that shape was worth spending a call on.
+     */
+    const [article, latestArticles, articlePool, categories] = await Promise.all([
       getArticleDetails(slug),
       getLatestArticles().catch(() => [] as Awaited<ReturnType<typeof getLatestArticles>>),
+      getAllArticles().catch(() => [] as Awaited<ReturnType<typeof getAllArticles>>),
       getCategories(undefined, { perPage: 50 }).catch(() => []),
     ]);
 
@@ -162,7 +171,17 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       'acides-amines': ['bcaa', 'acides aminés'],
     });
 
-    const filteredRelated = relatedArticles.filter(a => a.slug !== slug).slice(0, 3);
+    /*
+     * Related by SUBJECT, with the newest posts as the fallback when an article shares no
+     * significant term with any other. Six rather than three: the rail is the only inbound link
+     * most of these 224 articles have, and 184 of them are currently unindexed.
+     */
+    const pool = articlePool.length > 0 ? articlePool : latestArticles;
+    const filteredRelated = pickRelatedArticles(
+      { slug: article.slug ?? slug, designation_fr: article.designation_fr },
+      pool,
+      6
+    );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
     const articleImageUrl = article.cover ? getStorageUrl(article.cover) : undefined;
     const articleSchema = buildArticleSchema(article, baseUrl, articleImageUrl);
