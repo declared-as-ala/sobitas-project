@@ -63,10 +63,23 @@ console.log(`  with FAQ             ${n(p.with_faq)}`);
 console.log(`  with nutrition       ${n(p.with_nutrition)}`);
 console.log(`  with official video  ${n(p.with_video)}`);
 console.log(`  with GTIN            ${n(p.with_gtin)}`);
+console.log(`  with schema desc     ${n(p.with_schema_description)}   <- written ONLY by promote --recompose`);
 
 if (s.available) {
   console.log('\nACQUISITION (external_catalog_products)');
   console.log(`  rows                 ${n(s.total)}`);
+  if (s.promoted) {
+    /*
+     * The promoted subset is the only one that can affect a page. 21,273 rows carrying an overview
+     * is compatible with every published product having none, because only ~10,359 of 47,537 rows
+     * are promoted at all. Read beside products.with_gtin and products.with_schema_description,
+     * these three lines separate "the data is not there" from "the data is there and promotion is
+     * not copying it" — two different bugs with two different fixes.
+     */
+    console.log(`  PROMOTED rows        ${n(s.promoted.total)}`);
+    console.log(`    with prose         ${n(s.promoted.with_prose)}   <- vs products avg body words above`);
+    console.log(`    with gtin          ${n(s.promoted.with_gtin)}   <- vs products with GTIN above`);
+  }
   for (const [k, v] of Object.entries(s.by_status ?? {})) console.log(`    status ${pad(k, 14)} ${n(v)}`);
   for (const [k, v] of Object.entries(s.by_content_status ?? {})) console.log(`    content ${pad(k, 13)} ${n(v)}`);
   if (s.prose) {
