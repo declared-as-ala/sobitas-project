@@ -4,6 +4,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield, Mail } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
+import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import type { Product as ApiProduct } from '@/types';
 import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
 import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext';
@@ -103,6 +104,10 @@ export const ProductCard = memo(function ProductCard({
   const { addToCart } = useCartActions();
   const { toggleFavorite } = useFavoritesActions();
   const [isAdding, setIsAdding] = useState(false);
+  /* Back-order is the DEFAULT state of this catalogue (10,535 of 10,669), so this state exists
+     on almost every card. It stays `false` until the customer taps: the dialog's markup is only
+     mounted while open, so a 12-card grid does not carry 12 hidden forms. */
+  const [requestOpen, setRequestOpen] = useState(false);
   const favorite = useIsFavorite(product.id);
   // The SAME call the product detail page makes. Card and page now derive their label from one
   // function over the same four columns (qte, rupture, force_out_of_stock, low_stock_threshold),
@@ -222,6 +227,7 @@ export const ProductCard = memo(function ProductCard({
   const inStock = !stock.isOutOfStock && stockDisponible > 0;
 
   return (
+    <>
     // GPT product-card design. Poppins + #FF5A00 accent, scoped to the card (card-first rollout).
     // MUST stay geometrically in lockstep with ProductCardSkeleton or the swap shifts layout.
     /*
@@ -429,26 +435,39 @@ export const ProductCard = memo(function ProductCard({
         <div className="mt-auto pt-1">
           {stock.isBackOrder ? (
             /*
-              A REAL LINK, NOT A DEAD BUTTON.
+              IT ASKS HERE. IT DOES NOT SEND THEM AWAY TO ASK.
 
-              This was a disabled button reading "Sur commande" — a control that names an action and
-              then refuses to perform it, on 10,535 of 10,669 cards. Saying "on request" while
-              offering no way to request is the one version of this that misleads.
+              History worth keeping, because the same mistake has now been made twice in opposite
+              directions. First this was a DISABLED button reading "Sur commande" — a control that
+              names an action and then refuses to perform it. That was replaced by a link to
+              `/contact?produit=…`, which was a real improvement: it at least offered a way to ask.
 
-              Safe as an anchor here because the card is NOT wrapped in one: only the title block is
-              a LinkWithLoading, so this sits outside every anchor and nests nothing. It is styled
-              as the outline variant rather than the brand fill so it still reads as secondary to a
-              real "Ajouter au panier" elsewhere in the grid.
+              But it is on 10,535 of 10,669 cards, so it is not an edge case — it is the catalogue's
+              DEFAULT call to action, and it spent a navigation, a page load and a blank
+              general-purpose form on it. The product context that was on screen at the moment of
+              intent got thrown away, and the customer was asked to describe from memory the thing
+              they had just been looking at.
+
+              Now it opens `ProductRequestDialog` in place, pre-filled. Still styled as the outline
+              variant rather than the brand fill, so it still reads as secondary to a real
+              "Ajouter au panier" elsewhere in the grid.
+
+              A `<button>` rather than an anchor: it no longer navigates, and the two guards below
+              are what keep a tap on it from also triggering the card's own title link.
             */
-            <LinkWithLoading
-              href={`/contact?produit=${encodeURIComponent(productData.name)}`}
-              loadingMessage="Chargement"
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setRequestOpen(true);
+              }}
               className="flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl border border-brand bg-transparent px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap text-brand transition-colors duration-150 active:scale-[0.98] hover:bg-brand hover:text-on-brand"
               aria-label={`Demander ${productData.name}`}
             >
               <Mail className="size-4 shrink-0" aria-hidden="true" />
               <span className="truncate">Demander</span>
-            </LinkWithLoading>
+            </button>
           ) : (
           <Button
             size="sm"
@@ -486,5 +505,20 @@ export const ProductCard = memo(function ProductCard({
         </div>
       </div>
     </article>
+
+      {/* OUTSIDE the <article>, which is not tidiness: the card frame is `overflow-hidden`, and a
+          sheet rendered inside it would be clipped to the card. Radix portals its content to the
+          body anyway, but keeping the JSX out of the clipped subtree is what makes that obvious to
+          the next reader instead of load-bearing and invisible. */}
+      {requestOpen && (
+        <ProductRequestDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          productName={productData.name}
+          productPath={buildProductUrlPath(product as any)}
+          priceText={`${Math.round(productData.priceDisplay.finalPrice)} DT`}
+        />
+      )}
+    </>
   );
 });
