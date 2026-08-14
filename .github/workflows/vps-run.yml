@@ -54,6 +54,13 @@ on:
           - seo-ctr-pass-dry-run
           - queue-log
           - scheduler-log
+          # The three logs the scheduler redirects away from the container's stdout. Without
+          # these, a pass that runs and decides to do nothing is indistinguishable from a pass
+          # that is working.
+          - content-status
+          - content-log
+          - promote-log
+          - laravel-log
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
@@ -123,6 +130,30 @@ jobs:
             scheduler-log)
               ARGS="backend-v2-scheduler"
               MODE=logs
+              WRITES=no
+              ;;
+            content-status)
+              # What the acquisition pass thinks it has left to do. Distinct from catalog-status,
+              # which reports HYDRATION - the two stages have separate counters and the content
+              # one is the stage that has been dead since 11/08.
+              ARGS="catalog:iherb:content --status"
+              WRITES=no
+              ;;
+            content-log)
+              # The scheduler redirects this pass into its own file, so the container log shows
+              # only "DONE in 2 s" and never the reason. This is that reason.
+              ARGS="catalog-content.log"
+              MODE=filelog
+              WRITES=no
+              ;;
+            promote-log)
+              ARGS="catalog-promote.log"
+              MODE=filelog
+              WRITES=no
+              ;;
+            laravel-log)
+              ARGS="laravel.log"
+              MODE=filelog
               WRITES=no
               ;;
             catalog-promote-dry-run)
@@ -321,6 +352,22 @@ jobs:
               echo "> docker compose logs --tail=200 $ARGS"
               echo ""
               docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS"
+            elif [ "$MODE" = "filelog" ]; then
+              # A file inside the container, not a container's stdout.
+              #
+              # The scheduler redirects each pass to its own file:
+              #   catalog:iherb:content  >> storage/logs/catalog-content.log
+              #   catalog:iherb:promote  >> storage/logs/catalog-promote.log
+              # so `docker compose logs backend-v2-scheduler` shows only that the command RAN and
+              # for how long - never what it decided. On 14/08 that distinction was the whole
+              # problem: the content pass fires every five minutes, reports DONE in 2 seconds, and
+              # has fetched nothing since 11/08. The reason exists in exactly one place, and until
+              # now that place needed a shell.
+              echo ""
+              echo "> tail -n 300 storage/logs/$ARGS"
+              echo ""
+              docker compose -f "$COMPOSE_FILE" exec -T backend-v2 \
+                sh -c "tail -n 300 /var/www/html/storage/logs/$ARGS 2>/dev/null || echo '(file does not exist - the pass has never written to it)'"
             else
               echo ""
               echo "> php artisan $ARGS"
