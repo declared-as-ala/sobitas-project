@@ -226,3 +226,66 @@ crontab -l | grep vps-autodeploy
 ```
 
 Nothing printed means it is not installed, and every failed SSH step is a deploy that never arrived.
+
+---
+
+## If SSH stops answering entirely (timeout, not "permission denied")
+
+VPS Doctor step 1 says:
+
+```
+❌ Cannot open a TCP connection to port 22.
+```
+
+Read the distinction carefully, because it decides everything:
+
+| symptom | meaning |
+|---|---|
+| **Connection refused** (instant) | the port is reachable, sshd is not running |
+| **Timeout** (~10 s, no answer) | packets are being DROPPED — a firewall, or fail2ban |
+| **Permission denied** | sshd is fine; this is a credential problem, see step 4 |
+
+A timeout **while the website still serves normally** is the important case. It happened on
+14/08/2026: protein.tn answered 200 in 0.6 s and admin.protein.tn in 5.3 s, while the SSH port
+would not open at all. nginx and sshd are different processes behind different rules, so "the site
+is up" says nothing about SSH.
+
+The usual cause is **fail2ban banning the client**. GitHub Actions runners come from a very large,
+constantly-changing IP range, and a burst of workflow dispatches — sixteen in thirty minutes, on
+that day — looks exactly like what fail2ban exists to stop.
+
+Fix it from **hPanel → VPS → Browser terminal**, which does not use SSH and therefore still works:
+
+```bash
+# 1. Is fail2ban holding a ban?
+fail2ban-client status sshd
+
+# 2. Release every ban on the ssh jail
+fail2ban-client unban --all
+
+# 3. Is sshd actually listening?
+systemctl is-active sshd && ss -lntp | grep ':22'
+
+# 4. Is something else dropping the packets?
+ufw status verbose
+iptables -S INPUT | head -20
+```
+
+If step 1 lists banned IPs, that was it. To stop it recurring without weakening the jail against
+real attacks, raise the tolerance rather than disabling it — in `/etc/fail2ban/jail.local`:
+
+```ini
+[sshd]
+maxretry = 20
+findtime = 600
+bantime  = 600
+```
+
+then `systemctl restart fail2ban`.
+
+> Do not "fix" this by whitelisting GitHub's ranges. They are published, enormous, and change
+> without notice, so an `ignoreip` list built from them is stale within weeks and silently stops
+> protecting anything.
+
+The durable fix on our side is to make fewer connections: batch diagnostics into one run instead of
+dispatching a workflow per question.
