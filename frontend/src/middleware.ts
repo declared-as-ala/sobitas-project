@@ -588,14 +588,33 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Legacy /products/{slug} → resolve straight to canonical /{subcat}/{slug} in ONE hop
-  // (was /products/ → /product/ → canonical, a 2-hop chain). Falls back to /product/{slug}.
-  const legacyProducts = pathname.match(/^\/products\/([^/]+)\/?$/);
+  /* ── /product/{slug} AND /products/{slug} → the canonical URL, in ONE hop ────────────────────
+   *
+   * The singular form is new here, and it is the largest single shape in a bucket nobody had
+   * connected to it. In the Search Console export, "Crawled – currently not indexed" holds 1,000
+   * URLs; 857 of the 898 that answer 200 are legacy product URLs:
+   *
+   *     403  /product/*      346  /products/*      108  /shop/*
+   *
+   * `app/(shop)/product/[slug]/page.tsx` resolves the product and 301s to its canonical — but its
+   * fallback, taken whenever the lookup THROWS or the product carries no subcategory, is
+   * `permanentRedirect('/shop/' + slug)`, and /shop/{slug} then redirects again. That fallback is
+   * not rare: the route is `force-dynamic` with `revalidate = 0`, so every hit is a live backend
+   * call, and the backend measured 20–34 s per listing call on 15/08/2026. A slow backend turned
+   * every legacy product URL into a two-hop chain, which is precisely what the /shop/* count above
+   * is made of.
+   *
+   * Resolving here costs one cached lookup and hands Google a single hop. On the `unknown` branch
+   * this now falls THROUGH rather than redirecting to `/product/{slug}` — that redirect was safe
+   * only while this pattern excluded the singular form, and would otherwise be a loop.
+   */
+  const legacyProducts = pathname.match(/^\/products?\/([^/]+)\/?$/);
   if (legacyProducts?.[1]) {
     const canonical = await resolveShopSlug(legacyProducts[1]);
     if (canonical.kind === 'redirect') return redirectPreservingQuery(request, canonical.to);
     if (canonical.kind === 'gone') return goneOrCategory(request, canonical.slug);
-    return redirectPreservingQuery(request, `/product/${legacyProducts[1]}`);
+    // 'unknown' — the backend could not answer. Both routes exist on disk and resolve server-side;
+    // never guess, and never redirect into a path this same rule matches.
   }
 
   // ── Feed the Crawler First ──────────────────────────────────────────────
