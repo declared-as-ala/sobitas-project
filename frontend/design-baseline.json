@@ -455,13 +455,8 @@
     "DS007": 2
   },
   "src/app/components/ProductsDropdown.tsx": {
-    "DS001": 6,
-    "DS002": 10,
-    "DS003": 5,
-    "DS004": 4,
-    "DS007": 1,
-    "DS008": 1,
-    "DS011": 12
+    "DS002": 1,
+    "DS003": 1
   },
   "src/app/components/ProductsSkeleton.tsx": {
     "DS002": 1,
