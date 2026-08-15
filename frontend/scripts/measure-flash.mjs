@@ -62,7 +62,17 @@ for (const theme of THEMES) {
     const page = await browser.newPage();
     await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
     if (theme === 'dark') await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
-    await page.goto(`${BASE}/`, { waitUntil: 'networkidle2', timeout: 90000 });
+    /* `domcontentloaded` + an explicit wait for the band, NOT `networkidle2`.
+       This page loads ~40 packshots from a remote origin, so "fewer than 3 connections for 500ms"
+       is a statement about that origin's health, not about the layout being ready. Measured here:
+       the same script passed all 12 widths on one run and threw `Navigation timeout of 90000 ms`
+       on the next, against an identical build — the flake was the network, and a guard that fails
+       for reasons unrelated to what it asserts is the guard nobody runs.
+
+       Waiting for `#ventes-flash` is the real precondition and it is what the next line needs
+       anyway. Layout is settled by the 1.5s pause below, which was already here. */
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.waitForSelector('#ventes-flash', { timeout: 30000 }).catch(() => {});
     // The band is `defer`red behind an IntersectionObserver, so it must be scrolled to first.
     await page.evaluate(() => document.querySelector('#ventes-flash')?.scrollIntoView({ block: 'center' }));
     await page.evaluate(() => new Promise((r) => setTimeout(r, 1500)));
@@ -171,8 +181,31 @@ for (const theme of THEMES) {
     if (m.strays.length) fail(`@${theme} ${width}px · control(s) outside the band: ${m.strays.join(' ')}`);
     if (m.docW > m.vw) fail(`@${theme} ${width}px · page scrolls horizontally: ${m.docW} > ${m.vw}`);
     if (m.smallest && m.smallest.side < 44) fail(`@${theme} ${width}px · tap target ${Math.round(m.smallest.side)}px — "${m.smallest.text}"`);
-    if (m.edgeW !== '4px') fail(`@${theme} ${width}px · band edge is ${m.edgeW}, expected 4px (the brand rule lost to the [data-band] seam)`);
-    if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected exactly 1`);
+    /* ── THE 4px BRAND EDGE IS GONE BY DECISION, SO THE ASSERTION GOES WITH IT ────────────────
+       Owner, 15/08/2026: "for the vente flash, take off the border top."
+
+       This check existed because the band and its guard disagreed — the edge was specified, the
+       plate had replaced it, and 24 of 24 checks failed for days while nobody ran it. That was a
+       real finding and it was resolved by restoring the edge. The owner has now resolved the same
+       disagreement the other way, which is theirs to resolve.
+
+       Deleting the assertion rather than loosening it, because there is nothing left to assert: the
+       band's boundary is `[data-band]`'s 1px seam plus the `surface="sunken"` ground change, and
+       both of those are asserted for every band by measure-bands.mjs. A guard kept alive on a
+       design that no longer exists is how this file came to fail 24/24 in the first place — noise
+       that trains everyone to ignore the one run that matters.
+
+       The measurement itself is KEPT and still printed in the summary line below, so a future
+       change to the seam is visible in the output even though nothing fails on it. */
+    /* ZERO, not one (owner, 15/08/2026: "take off the button from the vente flash … even in the
+       desktop"). The band is a display now.
+
+       The assertion is kept rather than deleted, and inverted rather than loosened, because the
+       thing it was written to catch is still possible in the other direction: the desktop link and
+       the phone bar were ONE control rendered at complementary widths, so re-adding either alone
+       leaves a CTA at some widths and none at others. Counting at all twelve widths is what makes
+       "we removed it" verifiable instead of "we removed the one we could see". */
+    if (m.offersLinks !== 0) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected 0 — this band shows, it does not sell`);
     /* THE BANNER CEILING, AS A RATIO TO THE RAIL ABOVE IT.
        "Make it a banner, not a full section" is a height, so it is asserted rather than left to
        whoever looks at it next. It used to be asserted as a flat 320px, and that number was

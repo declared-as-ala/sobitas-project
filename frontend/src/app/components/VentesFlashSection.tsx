@@ -1,12 +1,11 @@
 'use client';
 
 import { memo, useMemo, useEffect, useState } from 'react';
-import Link from 'next/link';
 import { FlashDealCard } from './FlashDealCard';
 import { ProductGrid } from './ProductGrid';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { ArrowRight, Clock, Flame } from 'lucide-react';
+import { Clock, Flame } from 'lucide-react';
 
 interface FlashProduct {
   id: number;
@@ -99,9 +98,15 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
       });
     };
     update();
-    // Outside the live window the pill is a static date, so there is nothing to schedule.
-    if (expirationDate.getTime() - Date.now() > LIVE_WINDOW_MS) return;
-    const id = setInterval(update, 1000);
+    /* ONE SECOND INSIDE THE WINDOW, THIRTY OUTSIDE IT.
+       The strip now shows tiles at every distance rather than swapping to a static date, so there
+       IS something to schedule far out — the minutes tile has to move or the clock is a lie. But
+       a deadline three weeks away needs no per-second re-render, and this page has a measured
+       419ms INP: `content-visibility: auto` skips paint, not JavaScript, so an interval here runs
+       whether or not the band has ever been scrolled to. 30s is the coarsest rate at which the
+       smallest visible unit (minutes) can never be seen stale. */
+    const far = expirationDate.getTime() - Date.now() > LIVE_WINDOW_MS;
+    const id = setInterval(update, far ? 30_000 : 1000);
     return () => clearInterval(id);
   }, [expirationDate]);
 
@@ -121,25 +126,88 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
     timeZone: 'Africa/Tunis',
   });
 
-  /* The PILL ONLY. The spoken sentence is `<FlashDeadline>` below, rendered by the band outside
-     the header's `hidden … sm:flex` slot — see the note at the call site. */
+  /* ── THE CLOCK AS SEGMENTED TILES (owner, 15/08/2026: "add urgency countdown in a good
+     stylish way") ────────────────────────────────────────────────────────────────────────────
+     What was here was one inline pill printing `27J 13:08:14` as a single run of text. Two
+     problems, and the owner has now named both of them across two sessions:
+
+       IT DID NOT READ AS URGENCY. A long unbroken numeric string is a timestamp; people read
+       timestamps as information, not as pressure. Segmenting it into labelled tiles is what makes
+       a clock feel like a deadline — each unit gets its own object, and the eye lands on the
+       smallest one that is still moving.
+
+       IT WAS INVISIBLE ON A PHONE. The pill was passed to `SectionHeader`'s `trailing` slot,
+       which is `hidden … sm:flex`. Most of this site's traffic is mobile, so the urgency device
+       was hidden from the majority of the people it exists for. The tiles are rendered by the band
+       itself, at every width — see the call site.
+
+     ── WHAT STILL DOES NOT TICK, AND WHY THAT SURVIVED THE REDESIGN ──────────────────────────
+     `live` is unchanged: inside 48h the seconds tile is present and `setInterval` runs at 1s;
+     outside it there is no seconds tile and the interval runs at 30s. That rule came from the
+     owner's own earlier objection — "FIN DANS 27J 13:08:14" is a clock that says *no rush* — and
+     it is also what keeps a 1s re-render off a page with a measured 419ms INP. A deadline three
+     weeks out now shows JOURS / HEURES / MIN, which is honest and still visibly a countdown.
+
+     `aria-hidden` on the whole strip. Live digits are either a screen-reader firehose (with
+     aria-live) or an unlabelled cluster of numbers a user lands on mid-count (without it).
+     `<FlashDeadline>` carries the same information as one absolute date, announced once. */
+  const segments: Array<{ value: number; label: string }> = [];
+  if (!countdown || countdown.days > 0) segments.push({ value: countdown?.days ?? 0, label: 'Jours' });
+  segments.push({ value: countdown?.hours ?? 0, label: 'Heures' });
+  segments.push({ value: countdown?.minutes ?? 0, label: 'Min' });
+  if (live) segments.push({ value: countdown?.seconds ?? 0, label: 'Sec' });
+
   return (
-    <span
-      className="pt-slab inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
+    /* ── THE LABEL STACKS BELOW `sm`, AND THAT NUMBER WAS MEASURED ───────────────────────────
+       `measure-flash.mjs` failed the first version of this strip at 280px in both themes:
+       "1 element(s) overflow their own box". The arithmetic, at the narrowest viewport in real
+       traffic (a 320px phone at Android's largest display-size setting reports ~280 CSS px):
+
+           content box                    248px
+           "Se termine dans" + clock     ~110px
+           three 44px tiles               132px
+           two colons + four gaps         ~28px
+                                          ────
+                                          270px   → 22px over
+
+       Stacking the label onto its own line leaves the tiles 160px of a 248px box. Below `sm` the
+       whole strip is centred, which matches the two-up rail above it; from `sm` it is one row on
+       the same left rail as the heading. */
+    <div
+      className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3"
       aria-hidden="true"
     >
-      <Clock className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-        {live ? 'Fin dans' : 'Jusqu’au'}
+      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3 sm:text-[11px]">
+        <Clock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+        {live ? 'Se termine dans' : 'Jusqu’au'}
       </span>
-      <span className="font-display text-sm font-bold tabular-nums leading-none text-brand">
-        {live && countdown
-          ? `${countdown.days > 0 ? `${countdown.days}J ` : ''}${pad(countdown.hours)}:${pad(
-              countdown.minutes
-            )}:${pad(countdown.seconds)}`
-          : dateLabel}
-      </span>
-    </span>
+
+      {/* TILES AT EVERY DISTANCE, not only inside 48h. The old code swapped to a bare date string
+          three weeks out, which is why a phone screenshot of this band showed no clock at all.
+          What `live` still decides is the GRANULARITY — whether there is a seconds tile — and the
+          `title` carries the absolute date for anyone hovering. */}
+      <div className="flex items-center gap-1 sm:gap-1.5" title={`Jusqu’au ${dateLabel}`}>
+        {segments.map((seg, i) => (
+          <div key={seg.label} className="flex items-center gap-1 sm:gap-1.5">
+            {/* `min-w-[2.75rem]` so the tile does not resize when 9 becomes 10 — a countdown that
+                reflows its neighbours once a second is the jitteriest thing on a page.
+                `tabular-nums` does the same job for the digits inside it. */}
+            <div className="pt-slab flex min-w-[2.75rem] flex-col items-center rounded-lg px-2 py-1.5">
+              <span className="font-display text-base font-bold tabular-nums leading-none text-brand sm:text-lg">
+                {countdown ? pad(seg.value) : '––'}
+              </span>
+              <span className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wider text-ink-3">
+                {seg.label}
+              </span>
+            </div>
+            {/* No separator after the last tile: a trailing colon reads as a truncated value. */}
+            {i < segments.length - 1 && (
+              <span className="font-display text-sm font-bold leading-none text-ink-3">:</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 });
 
@@ -277,19 +345,21 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
          (`pt-4` against `tight`'s `pt-6`), so uniformity costs nothing here. */
       spacing="default"
       width="wide"
-      /* ── THE BRAND EDGE IS BACK, AND IT WAS FAILING ITS OWN GUARD ──────────────────
-         `measure-flash.mjs` asserts `borderTopWidth === "4px"` on this band. Measured against
-         production on 14/08/2026 it was 1px at all twelve widths in BOTH themes — 24 of 24
-         checks failing — because the plate below replaced the edge and nothing ever re-ran the
-         guard.
+      /* ── NO BRAND EDGE (owner, 15/08/2026: "for the vente flash, take off the border top") ──
+         The 4px rule was restored one session earlier because `measure-flash.mjs` asserted it and
+         had been failing 24/24 — the guard was right that the band and its guard disagreed, and
+         the disagreement was resolved in the guard's favour. The owner has now resolved it the
+         other way, which is theirs to do.
 
-         The edge is how every other boundary on this site separates two bands, so restoring it
-         is the uniform answer as well as the passing one: #D03B04 on sand is 4.51:1 light,
-         #FF8A4C on #191A1D is 7.45:1 dark, against 1.16:1 for the hairline it replaced.
+         The band does not lose its boundary: `[data-band]` in `@layer base` still paints the 1px
+         seam every other band boundary on this site uses, and this band's `surface="sunken"`
+         already changes the ground colour against the white section above it. What it loses is the
+         one decoration that made it louder than its neighbours — which is the same direction every
+         other change to this band has gone (the slab, the plate, the wash, the hatch, the CTA).
 
-         It wins over `[data-band]`'s 1px seam on LAYER, not specificity: the seam lives in
-         `@layer base` and Tailwind emits utilities later. No `!important`, no arbitrary value. */
-      className="border-t-4 border-brand"
+         `measure-flash.mjs` is updated in the same commit. Leaving a guard asserting a removed
+         design is how `measure-flash` came to fail for days while a real regression hid behind
+         the noise. */
       defer
       aria-labelledby="ventes-flash-heading"
     >
@@ -322,16 +392,45 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
            to the three rails that sell and names this band as the documented scale-2 case: it
            keeps its urgency from the brand edge and the live clock, not from type size. Uniform
            means built from the same parts, not shouting at the same volume. */
-        scale="2"
-        viewAllHref="/offres"
-        viewAllLabel="Tout voir"
-        trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
+        /* ── NO "TOUT VOIR" (owner, 15/08/2026) ────────────────────────────────────────────
+           *"take off the button from the vente flash — means that a section for show, no CTA in
+           it … even in the desktop."*
+
+           Both routes to /offres are gone: this `viewAllHref` (desktop, in the header row) and the
+           full-width bar that used to sit under the grid on phones. They were a matched pair —
+           `SectionHeader` hides its view-all below `sm`, so the bar existed only to cover the
+           width where the header link was not rendered.
+
+           The band is not orphaned by this. Every card is a link to its product, /offres is in the
+           footer and reachable from the boutique nav, and this band's job is now what its name says
+           — showing what is discounted right now. Three consecutive bands each carrying a
+           "Tout voir" is what made the page read as a list of shops rather than one shop. */
       />
 
-      {/* `hidden` is `display: none`, which removes a subtree from the ACCESSIBILITY TREE as well
-          as from the page — and the countdown pill above lives inside SectionHeader's
-          `hidden ... sm:flex` guard. The spoken deadline is therefore rendered here, outside it,
-          or every phone would silently lose the only machine-readable expiry on the band. */}
+      {/* ── THE CLOCK IS A ROW OF THE BAND NOW, NOT A SLOT IN THE HEADER ─────────────────────
+          It used to be passed as `trailing`, and `SectionHeader` renders that slot inside a
+          `hidden … sm:flex` group. `display: none` removes a subtree from the page AND from the
+          accessibility tree, so on every phone — the majority of this site's traffic — the urgency
+          device simply did not exist. The owner's screenshot of the mobile band shows a heading, a
+          kicker and four cards, and no clock anywhere.
+
+          Given its own row it is visible at every width and has room to be a real object rather
+          than a pill squeezed beside a "Tout voir" link. `justify-center` below `sm` matches the
+          centred composition the two-up rail above already uses; from `sm` it sits on the same
+          left rail as the heading.
+
+          `mt-4 sm:mt-5` and nothing more: the header already owns its own bottom margin, and the
+          grid below owns its top. Adding a third value here is how a band ends up with 60px of
+          dead space nobody chose. */}
+      {earliestExpiration && (
+        <div className="mt-4 flex justify-center sm:mt-5 sm:justify-start">
+          <CountdownDisplay expirationDate={earliestExpiration} />
+        </div>
+      )}
+
+      {/* The spoken deadline, once, as an absolute date. Separate from the strip above because
+          that strip is `aria-hidden` — live digits are either a screen-reader firehose (with
+          aria-live) or an unlabelled cluster of numbers landed on mid-count (without it). */}
       {earliestExpiration && <FlashDeadline expirationDate={earliestExpiration} />}
 
       {/* ── THE CANONICAL GRID, NOT A FOURTH COPY OF IT ─────────────────────────
@@ -382,23 +481,12 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         ))}
       </ProductGrid>
 
-      {/* THE PHONE GETS ITS OWN ROUTE TO /offres.
-          `SectionHeader` hides the view-all below `sm` — that is what makes the old clipped-CTA
-          bug impossible by construction — so without this bar there is no way to the full promo
-          list from a phone at all. `measure-flash` asserts EXACTLY ONE visible `/offres` link at
-          every width, because two controls hiding on opposite sides of one breakpoint is the
-          arrangement where a mistuned breakpoint leaves some width with neither.
-
-          `border-rule-strong` is 3:1 — a ghost button's border is its only boundary and WCAG
-          1.4.11 applies to it. It resolves in page scope now that the dark panel is gone. */}
-      <Link
-        href="/offres"
-        aria-label="Tout voir les offres flash"
-        className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-rule-strong px-5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-transparent sm:hidden [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
-      >
-        Tout voir les offres
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
-      </Link>
+      {/* THE PHONE'S "TOUT VOIR LES OFFRES" BAR IS GONE WITH ITS DESKTOP TWIN.
+          It existed only because `SectionHeader` hides its view-all below `sm`, so the two were
+          one control rendered at complementary widths. Removing one and keeping the other would
+          have left a CTA on phones and none on desktop — the opposite of uniform, and the exact
+          shape of bug `measure-flash`'s "exactly one visible /offres link" assertion was written
+          to catch. That assertion now expects ZERO; see the note beside it. */}
     </Section>
   );
 });

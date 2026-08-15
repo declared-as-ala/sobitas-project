@@ -104,22 +104,58 @@ export function ProductsDropdown({
   };
   const targetProps = opensNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
 
+  /**
+   * ── THE MEGA-MENU, REBUILT ON THE DESIGN SYSTEM (owner, 15/08/2026) ─────────────────────────
+   * *"redesign the dropdown of the button boutique in the header."*
+   *
+   * The panel predated the token layer and had never been migrated: `bg-white dark:bg-gray-900`,
+   * `text-red-600 dark:text-red-400`, `border-gray-100 dark:border-gray-800`, `text-gray-600` —
+   * eleven raw palette classes, each with a hand-written `dark:` twin, on the one surface that
+   * overlays every page of the site. That is the exact failure mode `tokens.css` exists to end:
+   * two hard-coded values per decision, drifting independently, and a dark mode that is correct
+   * only where someone remembered to type the twin.
+   *
+   * What changed, and why each is not just a repaint:
+   *
+   *   COLUMNS ARE DERIVED, NOT DECLARED. `grid-cols-3 lg:grid-cols-4 xl:grid-cols-6` was fixed at
+   *   six columns for six categories. Add a seventh in Filament and the row goes ragged; the panel
+   *   has no way to know. `grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]` fills the rail with
+   *   whatever exists, at a minimum column width chosen from the longest real subcategory label so
+   *   nothing wraps.
+   *
+   *   THE CATEGORY IS A HEADING, NOT A LINK IN RED. It was `text-red-600 uppercase` with a
+   *   decorative 32px red rule under it — brand colour spent on a label rather than on the one
+   *   thing in the panel a visitor should press. The heading is now ink, and `text-brand` is left
+   *   for hover and for the single CTA. DESIGN_SYSTEM §11: colour marks state, not category.
+   *
+   *   THE BULLETS ARE GONE. Every subcategory carried a 4px grey dot that turned red on hover —
+   *   96 decorative nodes in a menu whose job is to be scanned. The hover affordance is now the
+   *   row itself picking up `bg-sunken`, which also makes the whole 32px line clickable-looking
+   *   instead of just the text.
+   *
+   *   THE FOOTER SAYS SOMETHING. "Découvrez toute notre gamme de produits" is a sentence that
+   *   informs nobody standing in front of the gamme. It now states the count, which is the one
+   *   fact the panel can offer that the links cannot.
+   */
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      className="fixed left-0 right-0 w-full bg-white dark:bg-gray-900 shadow-lg border-t-2 border-red-600 border-b border-gray-100 dark:border-gray-800 z-[200]"
+      /* `border-t border-hairline`, not the old `border-t-2 border-red-600`. A 2px brand rule
+         directly under a header that already carries a 2px brand underline on the active item
+         read as two competing edges 4px apart. The panel is separated by its shadow and its
+         elevated surface, which is how every other overlay on this site separates itself. */
+      className="fixed left-0 right-0 z-[200] w-full border-b border-t border-hairline bg-elevated shadow-2xl"
       style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
-      <div className="max-w-7xl mx-auto px-4 lg:px-8 py-7 overflow-y-auto max-h-[calc(100vh-80px)] overscroll-contain">
-        <div className="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-x-6 gap-y-7">
+      <div className="mx-auto max-h-[calc(100vh-80px)] max-w-site overflow-y-auto overscroll-contain px-4 py-8 lg:px-8">
+        <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-8 gap-y-8">
           {categories.length === 0 ? (
             Array.from({ length: 6 }).map((_, i) => (
               <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
-                <Skeleton className="h-3 w-24 mb-3" />
-                <div className="w-8 h-px bg-gray-200 dark:bg-gray-700 mb-3" />
-                <div className="space-y-2">
+                <Skeleton className="mb-3 h-3.5 w-28" />
+                <div className="space-y-2.5">
                   {Array.from({ length: 4 }).map((_, j) => (
                     <Skeleton key={j} className="h-3 w-20" />
                   ))}
@@ -132,27 +168,34 @@ export function ProductsDropdown({
               <div key={cat.id} className="min-w-0">
                 <LinkWithLoading
                   href={`/${cat.slug}`}
-                  className="font-display text-caption tracking-wide text-red-600 dark:text-red-400 uppercase mb-3 hover:text-red-700 dark:hover:text-red-300 transition-colors block leading-snug"
+                  /* `pb-2 border-b border-hairline` replaces the floating 32px red dash. A rule
+                     that spans the column groups the list under its heading; a 32px stub under a
+                     140px word is decoration that points at nothing. */
+                  className="group mb-3 flex items-center justify-between gap-2 border-b border-hairline pb-2 font-display text-[13px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-1 transition-colors hover:text-brand"
                   loadingMessage="Chargement..."
                   onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
                   onClick={close}
                 >
-                  {cat.designation_fr}
+                  <span className="min-w-0 truncate">{cat.designation_fr}</span>
+                  <ArrowRight
+                    className="h-3.5 w-3.5 shrink-0 text-brand opacity-0 transition-opacity group-hover:opacity-100"
+                    aria-hidden="true"
+                  />
                 </LinkWithLoading>
 
-                <div className="w-8 h-px bg-red-600 dark:bg-red-400 mb-3" />
-
-                <ul className="space-y-1">
+                <ul className="space-y-0.5">
                   {subs.map((sub) => (
                     <li key={sub.id}>
                       <LinkWithLoading
                         href={`/${sub.slug}`}
-                        className="group flex items-center gap-1.5 text-[13px] text-gray-600 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 transition-colors py-0.5 leading-snug"
+                        /* `-mx-2 px-2` pulls the hover surface out to the column edge so the row
+                           highlight aligns with the heading rule above it rather than being inset
+                           by its own padding. */
+                        className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand"
                         loadingMessage="Chargement..."
                         onMouseEnter={() => router.prefetch(`/${sub.slug}`)}
                         onClick={close}
                       >
-                        <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600 group-hover:bg-red-500 transition-colors flex-shrink-0" />
                         {sub.designation_fr}
                       </LinkWithLoading>
                     </li>
@@ -163,20 +206,22 @@ export function ProductsDropdown({
           })}
         </div>
 
-        <div className="mt-6 pt-4 border-t border-gray-100 dark:border-gray-800 flex items-center justify-between">
-          <p className="text-xs text-gray-400 dark:text-gray-600">
-            Découvrez toute notre gamme de produits
+        <div className="mt-8 flex items-center justify-between gap-4 border-t border-hairline pt-5">
+          <p className="text-xs text-ink-3">
+            {categories.length > 0
+              ? `${categories.length} rayons · ${categories.reduce((n, c) => n + (c.sous_categories?.length ?? 0), 0)} catégories`
+              : 'Toute la gamme'}
           </p>
           <LinkWithLoading
             href={href}
-            className="inline-flex items-center gap-2 font-display uppercase tracking-wide text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors px-4 py-2 rounded-xl"
+            className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
             loadingMessage="Chargement de la boutique..."
             onMouseEnter={prefetchShop}
             onClick={close}
             {...targetProps}
           >
             Voir tous les produits
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="h-4 w-4" aria-hidden="true" />
           </LinkWithLoading>
         </div>
       </div>

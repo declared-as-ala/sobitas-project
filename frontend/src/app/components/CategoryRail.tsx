@@ -217,16 +217,61 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     height, so a two-line category name grows the plate instead of being squeezed.
                     16px also equals the container gutter, so the label sits on the same left rail
                     as the section heading above it. */}
-                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-2 px-4 py-4 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
-                  {/* 15px on phones (up from 13), 14 from `sm`. That inversion is deliberate: the
-                      phone tile is the widest this label ever gets relative to its column, and it
-                      is the only place the label is read at arm's length. Owner asked for bigger
-                      mobile text specifically. */}
-                  <span className="min-w-0 line-clamp-2 font-display font-compressed text-[15px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[15px] xl:text-[14px]">
+                {/* ── THE CAPTION PLATE, RE-MEASURED FOR THE PHONE (owner, 15/08/2026) ────────
+                    "the holder of the cards in the mobile the padding right and left to be 0.5em
+                     … make the text not squeezing … for their holder bottom padding make it 1em"
+
+                    `px-2` is 8px = 0.5em at the inherited 16px root; `pb-4` is 16px = 1em. The top
+                    stays at 12px rather than matching the bottom, and that asymmetry is the point:
+                    the label reads as SET ON the photograph above it, so the optical gap to the
+                    image should be smaller than the gap to the card edge. Symmetric padding makes
+                    a two-line label look like it is floating in the middle of a box.
+
+                    ── WHY THE LABEL WAS BEING CUT ────────────────────────────────────────────
+                    "PERFORMANCE" rendered as "PERFORMANC" on a 447px viewport. It is ONE WORD, so
+                    `line-clamp-2` cannot help it — there is nowhere to wrap. The arithmetic on that
+                    screen: tile = (447 − 32 gutters − 12 gap) / 2 = 201px, minus 32px of `px-4`,
+                    minus a 16px arrow and an 8px gap = 145px for the label. The word did not fit.
+
+                    Three changes give it back 28px, which is roughly three characters:
+                      px-4 → px-2   +16px   (the owner's number, and it is the largest single gain)
+                      arrow 16 → 14  +2px
+                      gap-2 → gap-1.5 +2px
+                      15px → 14px    ~+8px of glyph width on an 11-character word
+                    145 → 173px available for a word that measures ~150px at 14px compressed.
+
+                    `hyphens-auto` is the belt: a category longer than any of today's six can break
+                    across the two lines `line-clamp-2` already allows, instead of being clipped.
+                    `lang` on the span is what makes it work — the browser needs the language to
+                    know where a word may break. */}
+                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-1.5 px-2 pb-4 pt-3 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
+                  <span
+                    lang="fr"
+                    className="hyphens-auto min-w-0 line-clamp-2 font-display font-compressed text-[14px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[15px] xl:text-[14px]"
+                  >
                     {label}
                   </span>
+                  {/* ── THE ARROW STANDS DOWN BELOW 340px, AND THAT NUMBER WAS MEASURED ───────
+                      `scripts/measure-category-rail.mjs` reads `scrollWidth > clientWidth` on the
+                      label itself, which is the only way to see this: `line-clamp-2` HIDES the
+                      overflow rather than reporting it, so a clipped label changes no status code
+                      and throws nothing. With the padding at 0.5em it reported, at 280px:
+
+                          card 118px − 16px padding − 14px arrow − 6px gap = 82px for the label
+                          "PERFORMANCE" at 14px Archivo bold caps            ≈ 95px
+
+                      13px does not close a 13px gap either — the word still needs ~88px — so the
+                      choice at this width is between shrinking type and dropping a decoration.
+                      280px is a 320px phone at Android's largest display-size setting: it is used
+                      by people who have asked the system for BIGGER text, and answering that by
+                      shrinking type is the wrong way round. The arrow is `aria-hidden` and carries
+                      no information the card's own link does not, so it goes instead — 20px back,
+                      and the label has 102px for a 95px word.
+
+                      340, not `sm`: at 340px the card is 148px and the label has 112px with the
+                      arrow present, so the arrow can come back long before the layout changes. */}
                   <ArrowRight
-                    className="h-4 w-4 shrink-0 text-brand transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none"
+                    className="hidden h-3.5 w-3.5 shrink-0 text-brand transition-transform duration-200 group-hover:translate-x-1 motion-reduce:transition-none min-[340px]:block sm:h-4 sm:w-4"
                     aria-hidden="true"
                   />
                 </div>

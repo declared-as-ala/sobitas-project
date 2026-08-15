@@ -159,6 +159,14 @@ jobs:
           # regression here is invisible to every other check.
           guard "listing-pagination" node scripts/check-listing-pagination.mjs
 
+          # ── Do the six category labels still fit their cards? ─────────────────────────────
+          # "PERFORMANCE" rendered as "PERFORMANC" on the live homepage and was reported by the
+          # owner twice, a day apart, because the fix both times was arithmetic done by eye —
+          # padding and arrow size against column width. `line-clamp-2` HIDES the overflow rather
+          # than reporting it, so a clipped label changes no status code and throws nothing: no
+          # other check on this list can see it.
+          guard "category-rail"      node scripts/measure-category-rail.mjs
+
           echo ""
           if [ "$FAILED" -ne 0 ]; then
             {
