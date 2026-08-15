@@ -128,8 +128,13 @@ async function probe(rawUrl) {
   }
 
   let final = url;
+  let finalPath = url;
+  let finalQuery = '';
   try {
-    final = normalise(new URL(url).pathname);
+    const u = new URL(url);
+    finalPath = normalise(u.pathname);
+    finalQuery = u.search;
+    final = finalPath + finalQuery;
   } catch {
     /* keep the raw string */
   }
@@ -137,8 +142,40 @@ async function probe(rawUrl) {
   if (status === 410) return { status, hops, chain, verdict: 'GONE', final };
   if (status === 404) return { status, hops, chain, verdict: 'DEAD', final };
   if (status >= 500) return { status, hops, chain, verdict: 'ERROR', final };
-  if (status === 200 && hops > 0 && HUBS.has(final)) {
-    return { status, hops, chain, verdict: 'SOFT', final };
+
+  /* ── WHAT IS *NOT* A HUB DUMP ────────────────────────────────────────────────────────────────
+   * The first run of this script reported 431 SOFT and every one was real. The second reported 83,
+   * and roughly half of those were this script being wrong. Three shapes, all of which land on a
+   * hub path and none of which throws anything away:
+   *
+   *   PARAM STRIP        `/?p=123 -> /` and `/shop?filter_gout=raisin -> /shop`. The path did not
+   *                      change; a junk query was removed. Consolidating duplicates onto the
+   *                      canonical URL is the fix, not the defect.
+   *   SEARCH HANDOFF     `/produits-search/AMINO -> /shop?search=AMINO`. The term the URL carried
+   *                      is still there. This only looked like a dump because `final` was built
+   *                      from `pathname` alone, so the script threw away the very thing it was
+   *                      checking had been preserved.
+   *   RENAME             a single-segment path meaning "the shop" reaching the shop.
+   *
+   * A dump is a URL that CARRIED something — a slug, an id, a term — arriving somewhere that has
+   * none of it. That is now the test, and it is the same one check-dead-product-urls uses.
+   */
+  if (status === 200 && hops > 0 && HUBS.has(finalPath)) {
+    const src = (() => {
+      try {
+        return new URL(rawUrl);
+      } catch {
+        return null;
+      }
+    })();
+    const srcPath = src ? normalise(src.pathname) : '';
+    const pathUnchanged = srcPath === finalPath;
+    const carriedPayload = srcPath.split('/').filter(Boolean).length >= 2;
+    const destinationKeptIt = finalQuery.length > 0;
+
+    if (!pathUnchanged && carriedPayload && !destinationKeptIt) {
+      return { status, hops, chain, verdict: 'SOFT', final };
+    }
   }
   if (hops >= 3) return { status, hops, chain, verdict: 'CHAIN', final };
   return { status, hops, chain, verdict: 'OK', final };

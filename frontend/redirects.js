@@ -369,6 +369,13 @@ function buildRedirects() {
     //
     // The catch-all stays last for genuinely unknown slugs. Keep this list in slug order.
     p('/category/749-packs', '/packs'),
+    /* `/pack/packs` is a hard 404 and appears three times in the "Not found" export. There is no
+       `/pack/*` route on this app — only `/packs` (the listing, verified 200) and `/pack-builder`
+       — so the singular prefix is old-site vocabulary with nothing behind it. `:path*` rather than
+       an exact rule because the export shows the same prefix with other tails, and every one of
+       them means the packs listing. */
+    p('/pack', '/packs'),
+    p('/pack/:path*', '/packs'),
     p('/category/acides-amines', '/acides-amines'),
     p('/category/ashwagandha', '/ashwagandha'),
     p('/category/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
