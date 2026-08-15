@@ -24,7 +24,42 @@ import type { Metadata, Viewport } from "next";
  * Collapsing to a single family would mean setting body copy in a condensed display face, which is
  * a legibility regression on the paragraphs that actually get read. Two is the honest floor.
  */
-import { Inter, Archivo } from "next/font/google";
+/*
+ * ── SELF-HOSTED, BECAUSE THIS HAS NOW TAKEN THE DEPLOY DOWN TWICE ────────────────────────────
+ *
+ * The note above was written after the first time. Reducing four families to two halved the
+ * exposure and did not remove it, so on 15/08/2026 it happened again — this time to Inter, and
+ * this time it blocked a deploy carrying six commits of unrelated work:
+ *
+ *     #17 21.06 `next/font` error:
+ *     #17 21.06 Failed to fetch `Inter` from Google Fonts.
+ *     #17 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+ *
+ * Lint passed. The Next build on the RUNNER passed. Only the build inside the Docker image failed,
+ * because that is a second, separate egress to fonts.gstatic.com — so the same commit can be green
+ * and red in the same run depending on a third party's availability from one network namespace.
+ *
+ * `next/font/google` downloads at BUILD time by design, which is the right default for most sites
+ * and the wrong one for a deploy pipeline that must be reproducible. The two woff2 files are now
+ * committed (Inter 48 kB, Archivo 90 kB, `latin` subset only) and read from disk. The build has no
+ * network dependency for type at all, which also means it cannot be broken by a font URL rotating
+ * — the v20/v25 hashes in Google's CSS are not stable.
+ *
+ * LICENSING: both families are SIL Open Font License 1.1, which permits redistribution including
+ * bundling. Nothing about self-hosting them is a grey area.
+ *
+ * WHAT IS PRESERVED EXACTLY: the `--font-inter` / `--font-display` variable names, `display: swap`,
+ * Inter preloaded and Archivo not (see the note below for why that asymmetry is deliberate), and
+ * the fallback stacks. `adjustFontFallback` changes SHAPE rather than meaning — the Google loader
+ * takes a boolean, the local loader takes the fallback family to compute metric overrides from —
+ * so `true` becomes `'Arial'`, which is what the boolean resolved to for a sans-serif anyway.
+ *
+ * WEIGHT RANGES, NOT LISTS. These are the variable files, so one face covers the range: Inter
+ * `400 700` replaces `weight: ["400","500","600","700"]`, and Archivo `100 900` carries the weight
+ * axis while the file's `wdth` axis (62.5–125) keeps working through plain `font-stretch` — that
+ * axis is the whole reason Archivo was chosen over Oswald, and it survives self-hosting untouched.
+ */
+import localFont from "next/font/local";
 import { Suspense } from "react";
 
 import Script from "next/script";
@@ -45,17 +80,19 @@ import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { ReferralCapture } from "@/app/components/ReferralCapture";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
-const inter = Inter({
-  // `latin` only: every French diacritic (é è ê à ç ù û î ô, œ at U+0152-0153) is in Google's
-  // `latin` range. `latin-ext` is Eastern-European coverage this French/Arabic storefront never
-  // renders, and it was extra preloaded Inter bytes competing with the hero LCP. Same call made
-  // for Archivo.
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const inter = localFont({
+  /* The `latin` subset file, which is what `subsets: ["latin"]` selected before. Every French
+     diacritic (é è ê à ç ù û î ô, œ at U+0152-0153) is inside Google's `latin` range; `latin-ext`
+     is Eastern-European coverage this French/Arabic storefront never renders, and it was extra
+     preloaded bytes competing with the hero LCP. Same call made for Archivo. */
+  src: "./fonts/Inter-latin-variable.woff2",
+  // The variable file covers the range in one download, replacing the four static weights.
+  weight: "400 700",
+  style: "normal",
   display: "swap",
   preload: true,
   variable: "--font-inter",
-  adjustFontFallback: true,
+  adjustFontFallback: "Arial",
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
 });
 
@@ -95,13 +132,19 @@ const inter = Inter({
  * Section headings further down do re-flow slightly, but they are outside the viewport at load
  * and CLS only scores shifts that are actually on screen.
  */
-const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
+const archivo = localFont({
+  /* The two-axis file — `wdth` 62.5–125 alongside `wght`. That is 90 kB against 35 kB for the
+     weight axis alone, and it is the whole reason Archivo was chosen over Oswald: it buys two
+     typographic registers (condensed headlines at 82%, wide letterspaced kickers at 112%) from a
+     single download. `axes: ["wdth"]` used to request it; here the file simply IS that build, and
+     `font-stretch` continues to drive it with no loader involvement. */
+  src: "./fonts/Archivo-latin-variable.woff2",
+  weight: "100 900",
+  style: "normal",
   display: "swap",
   variable: "--font-display",
   preload: false,
-  adjustFontFallback: true,
+  adjustFontFallback: "Arial",
   fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
 });
 
