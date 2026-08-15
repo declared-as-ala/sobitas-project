@@ -10,7 +10,7 @@ import { getCachedArticleDetails as getArticleDetails } from '@/services/getCach
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildMetaDescription, htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
-import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { resolveArticleLanguage, buildArticleTitle, localityHint } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
@@ -75,11 +75,17 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       `/blog/${encodeURIComponent(article.slug || slug)}`
     );
     const articleLanguage = resolveArticleLanguage(article);
-    const title = articleHeadline;
-    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
+    /* Branded here rather than by the root layout's `%s | Protéine Tunisie` template. On an Arabic
+       headline that template produces a bidirectional string whose Latin run the bidi algorithm
+       moves to the visual START — an Arabic searcher sees the French brand first and the headline
+       they typed second. See buildArticleTitle for the five articles this is measured on. */
+    const title = buildArticleTitle(articleHeadline, articleLanguage);
+    const descriptionWithTunisia = localityHint(metaDescription, articleLanguage);
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
-      title,
+      // absolute: `title` already carries the brand. Without this the template appends it AGAIN,
+      // which is the defect on the French side and doubles the French one on the Arabic side.
+      title: { absolute: title },
       // truncateAtWord, not .slice(): the top Arabic article (5,834 impressions, 0.29% CTR)
       // was ending its snippet on a dangling single letter because 160 landed mid-word.
       description: truncateAtWord(descriptionWithTunisia, 160),

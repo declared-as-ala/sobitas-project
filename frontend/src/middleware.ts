@@ -282,9 +282,28 @@ export async function middleware(request: NextRequest) {
   if (/[A-Z]/.test(pathname)) {
     const [, head = '', ...rest] = pathname.split('/');
     const headLower = lowercasePreservingEscapes(head);
-    const normalised = isReservedRouteSlug(headLower)
-      ? ['', headLower, ...rest].join('/')
-      : lowercasePreservingEscapes(pathname);
+
+    /* A prefix whose own handler already folds the slug it extracts must NOT be folded here, or
+       the fix becomes a chain. Measured on production right after this shipped:
+
+           /produits-search/GLUTAMINE   301 -> /produits-search/glutamine   301 -> /glutamine
+
+       Two hops to reach a page that `retireLegacyPath` resolves in one, because that function
+       lowercases before it looks anything up. `/shop/{slug}` and `/product(s)/{slug}` are
+       deliberately NOT in this set: `resolveShopSlug` matches the slug verbatim, so folding first
+       is what makes /shop/Xtend-BCAA resolve at all. */
+    const foldedDownstream =
+      /^(?:category|categorie|categories|subcategories|sous-categories|product-category|produit|produits|musculation-products|collections|produits-search|brand|brands)$/.test(
+        headLower
+      ) && rest.length > 0;
+
+    /* Head-only in both special cases, for different reasons: a legacy prefix needs its head
+       folded so the case-sensitive patterns below can match `/Category/...` at all, and a reserved
+       route needs its head folded without touching a tail that may legitimately carry capitals. */
+    const normalised =
+      foldedDownstream || isReservedRouteSlug(headLower)
+        ? ['', headLower, ...rest].join('/')
+        : lowercasePreservingEscapes(pathname);
 
     if (normalised !== pathname) {
       return redirectPreservingQuery(request, normalised);
