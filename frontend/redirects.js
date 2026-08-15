@@ -86,10 +86,22 @@ function buildRedirects() {
     // Preserve the slug so each old /blogs/{slug} lands on its real article
     // /blog/{slug} instead of dumping everything on the blog index.
     p('/blogs/:slug*', '/blog/:slug*'),
-    p('/blog/qu-est-ce-que-la-proteine-whey', '/blog'),
-    p('/nutrition-guide', '/blog'),
-    p('/programme-dentrainement-musculation', '/blog'),
-    p('/programme-dentrainement-musculation/', '/blog'),
+    /*
+     * ── RETIRED ARTICLES GO TO THE ARTICLE THAT REPLACED THEM, NOT TO THE INDEX ──────────────
+     *
+     * Each of these named a subject and was answered with the blog homepage. Google reads a
+     * redirect to an unrelated page as a soft 404, so the hop was spent and nothing was earned —
+     * and a reader who searched "what is whey protein" got a list of ninety posts to sift.
+     *
+     * Every destination below was verified 200 on 15/08/2026 and chosen for TOPIC, not for slug
+     * similarity. /blog/whey-protein-en-tunisie is also the site's own striking-distance page —
+     * 1,269 impressions at position 11.2 — so the equity from the retired URL lands where it can
+     * still move something.
+     */
+    p('/blog/qu-est-ce-que-la-proteine-whey', '/blog/whey-protein-en-tunisie'),
+    p('/nutrition-guide', '/blog/nutrition-guide-complet-pour-une-sante-optimale'),
+    p('/programme-dentrainement-musculation', '/blog/equipez-vous-pour-la-performance-le-guide-complet-du-materiel-de-musculation-protein-tn'),
+    p('/programme-dentrainement-musculation/', '/blog/equipez-vous-pour-la-performance-le-guide-complet-du-materiel-de-musculation-protein-tn'),
 
     // ── Static info pages ─────────────────────────────────────────────────
     //
@@ -219,7 +231,9 @@ function buildRedirects() {
     p('/glutamine/', '/glutamine'),
     p('/gold-creatine-kevin-levrone-300-g', '/whey-isolate/gold-iso-2-kg-kevin-levrone'),
     p('/gold-l-carnitine-3000-500ml', '/bruleurs-de-graisse'),
-    p('/golds-gym', '/brands'),
+    /* The brand exists and is served at /gold-s-gym (verified 200); the missing apostrophe in
+       the old slug was sending it to the brand index instead. */
+    p('/golds-gym', '/gold-s-gym'),
     p('/hack-squat-jx-fitness', '/musculation/hack-squat-jx-fitness'),
     p('/hydroxycut-hardcore-elite-100-caps-muscletech', '/bruleurs-de-graisse'),
     p('/isolat-de-whey', '/whey-isolate'),
@@ -254,7 +268,7 @@ function buildRedirects() {
     p('/zinc-bisglycinate-400-comprimes-weightworld', '/zinc'),
     p('/zumub-omega-3-90-caps', '/omega-3'),
     // Old blog slug with encoded accent (é = %C3%A9)
-    p('/quand-prendre-de-la-cr%C3%A9atine-le-guide-complet-pour-optimiser-vos-resultats-2025', '/blog'),
+    p('/quand-prendre-de-la-cr%C3%A9atine-le-guide-complet-pour-optimiser-vos-resultats-2025', '/blog/creatine-guide-complet-pour-ameliorer-vos-performances-sportives'),
 
     // ── Legacy category roots (from the GSC "Not found (404)" export) ─────
     // Old WooCommerce category slugs that changed name → current category. Destinations
@@ -447,8 +461,12 @@ function buildRedirects() {
     p('/shop/citruargin-300-g', '/citrulline/citruargin-300-g-real-pharm'),
     p('/shop/citruargin-300-g/', '/citrulline/citruargin-300-g-real-pharm'),
     p('/shop/complements-alimentaires/acides-amines', '/acides-amines'),
-    p('/shop/complements-d-entrainement/pendant-l-entrainement', '/shop'),
-    p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/shop'),
+    /* Both name a real rayon and both were answered with the catalogue index. Verified 200 on
+       15/08/2026: /intra-workout is what "pendant l'entraînement" means, and /post-workout is
+       what "récupération après entraînement" means. /recuperation-apres-entrainement itself is
+       a 404, which is why the slug could not simply be stripped. */
+    p('/shop/complements-d-entrainement/pendant-l-entrainement', '/intra-workout'),
+    p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/post-workout'),
     p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/equipement-cardio-fitness', '/cardio-fitness'),

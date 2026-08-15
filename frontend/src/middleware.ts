@@ -252,6 +252,22 @@ async function retireLegacyPath(
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  /* ── Machine paths from the old Laravel deployment → 410 ─────────────────────────────────────
+   *
+   * /public/api/searchProduct/BCAA, /public/api/productsBySubCategoryId/898-accessories,
+   * /storage/products/… — the previous stack served its API and its uploads under paths that this
+   * app does not have and will never have. They are in the "Not found" export because Google found
+   * them linked from the old HTML, not because anyone wants them. 410 says do not come back.
+   *
+   * ABOVE the case fold, and that ordering is the whole reason this block moved. Below it,
+   * /public/api/searchProduct/BCAA was first 301'd to its lowercase form and only then answered
+   * 410 — a redirect into a Gone, which is a hop spent to say nothing. A terminal status should
+   * never be reached through a redirect.
+   */
+  if (/^\/(?:public|storage)(?:\/|$)/i.test(pathname)) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
   /* ── URL CASE, NORMALISED BEFORE ANYTHING ELSE RUNS ──────────────────────────────────────────
    *
    * A miscapitalised URL is not a 404 here — it is a slow 308, and that is worse. MySQL's default
@@ -548,17 +564,6 @@ export async function middleware(request: NextRequest) {
     const searchUrl = new URL('/shop', request.url);
     searchUrl.searchParams.set('search', term);
     return NextResponse.redirect(searchUrl, 301);
-  }
-
-  /* ── Machine paths from the old Laravel deployment → 410 ─────────────────────────────────────
-   *
-   * /public/api/searchProduct/BCAA, /public/api/productsBySubCategoryId/898-accessories,
-   * /storage/products/… — the previous stack served its API and its uploads under paths that this
-   * app does not have and will never have. They are in the "Not found" export because Google found
-   * them linked from the old HTML, not because anyone wants them. 410 says do not come back.
-   */
-  if (/^\/(?:public|storage)(?:\/|$)/.test(pathname)) {
-    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
   }
 
   // ── The French shop prefix ────────────────────────────────────────────────────────────────

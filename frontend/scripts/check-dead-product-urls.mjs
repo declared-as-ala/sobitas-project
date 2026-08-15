@@ -183,10 +183,18 @@ for (const { path, why } of CASES) {
 
   const tooLong = hops > MAX_HOPS;
 
-  /* Landing on a hub is a SOFT 404 and the status code cannot see it. Only counted when the URL
-     actually moved: a request that never redirected and happens to BE /shop is /shop working. */
+  /* Landing on a hub is a SOFT 404 and the status code cannot see it. Two conditions, both needed:
+     the URL actually moved (a request that never redirected and happens to BE /shop is /shop
+     working), and the SOURCE carried a payload — a slug, an id, a search term.
+
+     That second test is what separates a dump from a rename. `/boutique -> /shop` and
+     `/blogs -> /blog` are single-segment index-to-index redirects: the old URL meant "the shop"
+     and the new one is the shop, so nothing was thrown away. `/produit/psychotic-pre-workout ->
+     /shop` names a product and answers with a catalogue. Only the second is a soft 404, and an
+     assertion that cannot tell them apart is one that gets muted. */
+  const carriedPayload = path.split('?')[0].split('/').filter(Boolean).length >= 2;
   const landed = chain.length ? chain[chain.length - 1].split('?')[0].replace(/\/$/, '') || '/' : null;
-  const dumped = hops > 0 && landed !== null && HUBS.has(landed);
+  const dumped = hops > 0 && carriedPayload && landed !== null && HUBS.has(landed);
 
   const bad = status === 404 || tooLong || dumped;
   if (bad) failed++;
