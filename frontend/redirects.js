@@ -161,14 +161,26 @@ function buildRedirects() {
     // The bare `/product` and `/products` index paths (no slug) are safe to fold to /shop.
     p('/products', '/shop'),
     p('/produit', '/shop'),
-    p('/produit/:path*', '/shop'),
     p('/product', '/shop'),
-    p('/product-tag/:path*', '/shop'),
-    p('/produits-search/:path*', '/shop'),
     p('/musculation-products', '/shop'),
-    p('/musculation-products/:path*', '/shop'),
-    p('/produits/:path*', '/shop'),
-    p('/collections/:path*', '/shop'),
+    /*
+     * ── THE CATCH-ALLS THAT USED TO LIVE HERE ARE GONE, AND THE COMMENT ABOVE SAYS WHY ─────
+     *
+     * The warning fourteen lines up — "a blanket redirect to /shop destroys every legacy product
+     * URL's link equity and is the primary source of GSC's 'page with redirect' + soft-404
+     * buckets" — was exactly right, and it was written above a block that then did it eleven more
+     * times under other prefixes.
+     *
+     * `/produit/:path*`, `/produits/:path*`, `/musculation-products/:path*`, `/collections/:path*`
+     * and `/produits-search/:path*` all pointed at a bare /shop. Middleware now resolves the last
+     * segment of each to the real product or listing, and answers 410 when there is genuinely
+     * nothing — see `retireLegacyPath` in src/middleware.ts.
+     *
+     * They had to be deleted rather than merely out-ranked: next.config redirects run BEFORE
+     * middleware, so any rule left here wins and the resolver never runs. Measured by status code
+     * on production 15/08/2026 — `p()` emits 308, middleware emits 301 — every legacy prefix
+     * answered 308, i.e. every handler in middleware.ts for these paths was unreachable code.
+     */
 
     // ── Flat product slugs (old URLs without category prefix) ─────────────
     p('/accessoires-rack-jx-fitness', '/musculation/accessoires-rack-jx-fitness'),
@@ -283,7 +295,10 @@ function buildRedirects() {
     p('/brand/VICTOR-MARTINEZ', '/victor-martinez'),
     p('/brand/WILLIAM-BONAC', '/william-bonac'),
     p('/brand/YAVA-LABS', '/yava-labs'),
-    { source: '/brand/:path+', destination: '/brands', permanent: true },
+    /* `/brand/:path+` -> `/brands` sent all 105 legacy brand URLs to the brand INDEX, including
+       the ones whose brand is still on the site: /brand/JX FITNESS/52, /brand/BIOTECH USA/6,
+       /brand/OSTROVIT/9. Middleware slugifies the name, CHECKS it against the live brand list
+       (util/taxonomySlugs.ts `isBrandSlug`) and 301s to the real brand page. */
 
     // ── /brands/:slug  (specific first → catch-all to /brands) ───────────
     p('/brands/big-ramy-labs', '/big-ramy-labs'),
@@ -296,7 +311,6 @@ function buildRedirects() {
     p('/brands/real-pharm', '/real-pharm'),
     p('/brands/scenit-nutrition', '/scenit-nutrition'),
     p('/brands/scivation', '/scivation'),
-    { source: '/brands/:path+', destination: '/brands', permanent: true },
 
     // ── /categorie/:path* ─────────────────────────────────────────────────
     p('/categorie/acides-amines', '/acides-amines'),
@@ -308,15 +322,19 @@ function buildRedirects() {
     p('/categorie/perte-de-poids', '/bruleurs-de-graisse'),
     p('/categorie/prise-de-masse', '/prise-de-masse'),
     p('/categorie/equipements-et-accessoires-sportifs', '/materiel-de-musculation'),
-    p('/categorie/pre-intra-and-post-workout', '/shop'),
     p('/categorie/proteines', '/proteines'),
     p('/categorie/vetements-et-accessoires', '/vetements'),
-    p('/categorie/:path*', '/proteines'),
+    /* The catch-all here sent every unlisted /categorie/{x} to /proteines — not a hub but a
+       SPECIFIC and usually wrong category, which is worse: a visitor asking for pre-workout got a
+       page about protein powder, and Google got a redirect it reads as a soft 404. Resolved in
+       middleware now; `pre-intra-and-post-workout` finds /pre-workout on a real token overlap
+       instead of being hand-listed onto /shop. */
 
     // ── /categories/:path* ────────────────────────────────────────────────
     p('/categories/complements-d-entrainement', '/performance'),
-    p('/categories/equipements-et-accessoires-sportifs', '/shop'),
-    p('/categories/:path*', '/shop'),
+    /* /categories/equipements-et-accessoires-sportifs went to /shop while the IDENTICAL slug two
+       blocks up (/categorie/equipements-et-accessoires-sportifs) went to /materiel-de-musculation.
+       One of the two was wrong on its face. Both resolve through middleware now. */
 
     // ── /category/:slug ───────────────────────────────────────────────────
     //
@@ -379,7 +397,6 @@ function buildRedirects() {
     p('/category/whey-hydrolysee', '/whey-hydrolysee'),
     p('/category/zinc', '/zinc'),
     p('/category/zma', '/zma'),
-    p('/category/:path*', '/shop'),
 
     // ── /subcategories/:slug ──────────────────────────────────────────────
     p('/subcategories/acides-amines', '/acides-amines'),
@@ -390,8 +407,6 @@ function buildRedirects() {
     p('/subcategories/fat-burner', '/bruleurs-de-graisse'),
     p('/subcategories/materiel-de-musculation', '/materiel-de-musculation'),
     p('/subcategories/proteine-whey', '/whey-isolate'),
-    p('/subcategories/recuperation-apres-entrainement', '/shop'),
-    p('/subcategories/:path*', '/shop'),
 
     // ── /product-category/  (WordPress legacy) ────────────────────────────
     //
@@ -406,8 +421,6 @@ function buildRedirects() {
     p('/product-category/proteines', '/proteines'),
     p('/product-category/perte-de-poids/cla', '/cla'),
     p('/product-category/vetements-et-accessoires-de-musculation/ceinture-de-musculation-abdominal', '/materiel-de-musculation'),
-    p('/product-category/acides-amines/stimulants-hormonaux', '/shop'),
-    p('/product-category/acides-amines/stimulants-hormonaux/', '/shop'),
     p('/product-category/acides-amines/vitamines', '/vitamines'),
     p('/product-category/acides-amines/vitamines/', '/vitamines'),
     p('/product-category/perte-de-poids/fat-burner', '/bruleurs-de-graisse'),
@@ -420,45 +433,34 @@ function buildRedirects() {
     p('/product-category/proteines/proteine-de-boeuf/', '/proteine-de-boeuf'),
     p('/product-category/proteines/whey-isolate', '/whey-isolate'),
     p('/product-category/proteines/whey-isolate/', '/whey-isolate'),
-    p('/product-category/:path*', '/shop'),
 
     // ── /shop/:path  specific broken sub-paths (no catch-all — /shop is valid) ──
-    p('/shop/aakg-plus-120caps', '/shop'),
-    p('/shop/boogieman-300-g-trec-nutrition', '/shop'),
-    p('/shop/bulk-muscle-xl-68-kg', '/shop'),
-    p('/shop/bulk-muscle-xl-68-kg/', '/shop'),
-    p('/shop/cell-tech-creactor-120-servings-muscletech', '/shop'),
+    /*
+     * The two-segment `/shop/{slug}` -> `/shop` rules that were here are gone.
+     *
+     * middleware.ts already owns this exact shape: `resolveShopSlug` tries the full slug, retries
+     * without a legacy `-N` suffix, checks the live taxonomy, and ends at `goneOrCategory` — a 301
+     * to a category that shares a real token, or 410 Gone. Every rule here pre-empted that with a
+     * redirect to the catalogue index, which is the soft-404 shape, and did it for products that
+     * `bestCategoryForSlug` can place: `fish-oil-100-softgels` belongs on /omega-3, not on /shop.
+     */
     p('/shop/citruargin-300-g', '/citrulline/citruargin-300-g-real-pharm'),
     p('/shop/citruargin-300-g/', '/citrulline/citruargin-300-g-real-pharm'),
     p('/shop/complements-alimentaires/acides-amines', '/acides-amines'),
     p('/shop/complements-d-entrainement/pendant-l-entrainement', '/shop'),
     p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/shop'),
-    p('/shop/crea-core-250g-procell', '/shop'),
     p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/equipement-cardio-fitness', '/cardio-fitness'),
     p('/shop/equipements-et-accessoires-sportifs/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
     p('/shop/equipements-et-accessoires-sportifs/materiel-de-musculation', '/materiel-de-musculation'),
-    p('/shop/fish-oil-100-softgels', '/shop'),
-    p('/shop/fish-oil-100-softgels/', '/shop'),
-    p('/shop/hard', '/shop'),
-    p('/shop/mutant-amino-300-tab-mutant', '/shop'),
-    p('/shop/mutant-amino-300-tab-mutant/', '/shop'),
-    p('/shop/pack-3', '/shop'),
-    p('/shop/pack-3/', '/shop'),
-    p('/shop/pack-4', '/shop'),
-    p('/shop/pack-4/', '/shop'),
     p('/shop/perte-de-poids/fat-burner', '/bruleurs-de-graisse'),
-    p('/shop/platinum-fish-oil-100-caps', '/shop'),
-    p('/shop/platinum-fish-oil-100-caps/', '/shop'),
     p('/shop/proteines/isolat-de-whey', '/whey-isolate'),
     p('/shop/proteines/proteine-whey', '/whey-isolate'),
     // NOTE: /shop/{cat}/{subcat}/{product} is handled by the nested-shop resolver in
     // src/middleware.ts, which resolves the LAST segment to the real product (one 301) or
     // returns 410. Do NOT re-add 4-segment /shop rules here — next.config redirects run BEFORE
     // middleware, so they shadow the resolver and dump the URL on /shop instead.
-    p('/shop/the-shadow-270g', '/shop'),
-    p('/shop/the-shadow-270g/', '/shop'),
     p('/shop/xtend-bcaa-420g', '/bcaa/xtend-bcaa-420g'),
     p('/shop/xtend-bcaa-420g/', '/bcaa/xtend-bcaa-420g'),
     p('/shop/zma-pro-90-caps', '/zma/zma-pro-90-caps'),

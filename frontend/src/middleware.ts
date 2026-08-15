@@ -4,7 +4,7 @@ import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
-import { isTaxonomySlug, bestCategoryForSlug } from '@/util/taxonomySlugs';
+import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug } from '@/util/taxonomySlugs';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -162,8 +162,134 @@ async function goneOrCategory(request: NextRequest, slug: string): Promise<NextR
   return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
 }
 
+/**
+ * Lowercase a path WITHOUT touching percent-escapes.
+ *
+ * `/blog/%D9%85%D8%A7` is a real, ranking Arabic article (1,969 impressions). Lowercasing the whole
+ * string turns it into `%d9%85%d8%a7` — still legal, since RFC 3986 makes hex case-insensitive, but
+ * it rewrites a URL that was fine and invites a second variant of every Arabic article into the
+ * index. So the escapes are stepped over and only real ASCII letters are folded.
+ */
+function lowercasePreservingEscapes(path: string): string {
+  return path.replace(/%[0-9A-Fa-f]{2}|[A-Z]+/g, (m) => (m.startsWith('%') ? m : m.toLowerCase()));
+}
+
+/**
+ * WHAT A LEGACY PREFIX SHOULD ANSWER, IN ONE PLACE.
+ *
+ * Thirteen prefixes from the WordPress and old-Laravel eras all carry the same payload — a product
+ * or listing slug in their last segment — and every one of them was answered in redirects.js by a
+ * catch-all onto a HUB:
+ *
+ *     /produit/:path*            -> /shop
+ *     /musculation-products/:*   -> /shop
+ *     /category/:path*           -> /shop
+ *     /categorie/:path*          -> /proteines      (not even a hub: the WRONG category)
+ *     /brand/:path+              -> /brands
+ *
+ * Those rules look like fixes and are not. Google documents a redirect to an irrelevant page as a
+ * SOFT 404: the hop is spent, the target is not relevant, the URL is neither dropped nor indexed —
+ * it simply moves from "Not found (404)" to "Page with redirect". That is exactly the pair of
+ * numbers on this property (1,060 and 817), and it is why the buckets never drain no matter how
+ * many redirects get added.
+ *
+ * ── AND THE RULES WERE UNREACHABLE-CODE GENERATORS TOO ────────────────────────────────────────
+ * `next.config.js` redirects run BEFORE middleware. Measured on production 15/08/2026 by status
+ * code, since `p()` emits 308 and this file emits 301:
+ *
+ *     /brand/ZZZ-FAKE-BRAND   308 -> /brands     (redirects.js)
+ *     /shop/serious-mass-2-7-kg   301 -> /mass-gainers/serious-mass-2-7-kg   (this file)
+ *
+ * So `legacyCategory`, `legacyBrand` and `legacyProducts` below — each written to resolve the real
+ * destination — had never fired for any URL a catch-all also matched. Deleting the catch-alls is
+ * what makes them reachable, and this function is what they should have shared all along.
+ *
+ * The order of the three attempts is the whole design:
+ *   1. taxonomy   — a live category/subcategory slug, the cheapest and most common answer
+ *   2. product    — a live product, resolved to its canonical /{subcat}/{slug} in ONE hop
+ *   3. relevance  — `bestCategoryForSlug`, which demands a shared significant token, or 410
+ *
+ * `preferProduct` flips 1 and 2 for prefixes that named products (/produit, /products): it only
+ * changes which lookup runs first, never what counts as an answer.
+ */
+async function retireLegacyPath(
+  request: NextRequest,
+  rawSlug: string,
+  preferProduct: boolean
+): Promise<NextResponse | null> {
+  let slug = rawSlug;
+  try { slug = decodeURIComponent(rawSlug); } catch { /* keep raw */ }
+  slug = slug.trim().toLowerCase().replace(/\s+/g, '-');
+  if (!slug) return null;
+
+  const asTaxonomy = async (): Promise<NextResponse | null> => {
+    const known = await isTaxonomySlug(slug);
+    // null is "the taxonomy could not be read". Unknown is not evidence of absence.
+    if (known === null) return NextResponse.next();
+    return known ? redirectPreservingQuery(request, `/${slug}`) : null;
+  };
+
+  const asProduct = async (): Promise<NextResponse | null> => {
+    const found = await lookupProduct(slug);
+    if (typeof found === 'string') return redirectPreservingQuery(request, found);
+    if (found === null) return NextResponse.next(); // backend unhealthy — never guess
+    return null;
+  };
+
+  const first = preferProduct ? asProduct : asTaxonomy;
+  const second = preferProduct ? asTaxonomy : asProduct;
+
+  const a = await first();
+  if (a) return a;
+  const b = await second();
+  if (b) return b;
+
+  // Neither. `goneOrCategory` redirects only on a real token overlap, and 410s otherwise — the
+  // status that empties the bucket fastest, and the honest one.
+  return goneOrCategory(request, slug);
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
+
+  /* ── URL CASE, NORMALISED BEFORE ANYTHING ELSE RUNS ──────────────────────────────────────────
+   *
+   * A miscapitalised URL is not a 404 here — it is a slow 308, and that is worse. MySQL's default
+   * collation is case-insensitive, so `productsBySubCategoryId/Creatine` MATCHES the row whose slug
+   * is `creatine`; `(shop)/[slug]` therefore resolves the category, renders `CategoryPage`, and only
+   * THEN discovers in the page body that `getCanonicalSlug()` disagrees with the requested slug and
+   * issues `permanentRedirect`. The redirect is decided after the full category walk. Measured on
+   * production 15/08/2026, before this rule:
+   *
+   *     /Creatine    308 -> /creatine    5.9 s
+   *     /Proteines   308 -> /proteines   16.8 s
+   *     /WHEY-ISOLATE   no response inside 45 s (cold)
+   *
+   * Seventeen seconds for a redirect, and cold requests that outlive any crawler's patience. Google
+   * responds to timeouts by crawling the whole HOST less, so one bad inbound link with a capital
+   * letter taxes every other URL on the site.
+   *
+   * Doing it here costs zero backend calls and answers in single-digit milliseconds. It also
+   * collapses a duplicate-content class that `getCanonicalSlug` could only paper over: /whey-proteine,
+   * /Whey-Proteine and /WHEY-PROTEINE each used to return 200.
+   *
+   * RESERVED FIRST SEGMENTS KEEP THEIR TAIL. Blog slugs on this site contain spaces, apostrophes and
+   * capitals — `/blog/Le%20magn%C3%A9sium%20:%20la%20condition%20cach%C3%A9e…` is a live URL in
+   * sitemaps/blog.xml. Folding that tail would 404 a published article, so when the first segment is
+   * a known route (/blog, /shop, /account…) only the SEGMENT is normalised and the rest is left
+   * exactly as sent.
+   */
+  if (/[A-Z]/.test(pathname)) {
+    const [, head = '', ...rest] = pathname.split('/');
+    const headLower = lowercasePreservingEscapes(head);
+    const normalised = isReservedRouteSlug(headLower)
+      ? ['', headLower, ...rest].join('/')
+      : lowercasePreservingEscapes(pathname);
+
+    if (normalised !== pathname) {
+      return redirectPreservingQuery(request, normalised);
+    }
+  }
 
   // ── Machine endpoint crawled as a page → 410 (Gone) ─────────────────────
   // /api-proxy is not, and never was, a page: next.config.js rewrites `/api-proxy/:path*` to the
@@ -352,9 +478,68 @@ export async function middleware(request: NextRequest) {
     return redirectPreservingQuery(request, `/product/${legacyReviews[1]}`);
   }
 
-  const legacyCategory = pathname.match(/^\/category\/([^/]+)\/?$/);
-  if (legacyCategory?.[1]) {
-    return redirectPreservingQuery(request, `/${legacyCategory[1]}`);
+  /* ── THE LEGACY PREFIXES, ALL RESOLVED THROUGH ONE PATH ─────────────────────────────────────
+   *
+   * Every prefix below used to be a catch-all onto /shop, /brands or /proteines in redirects.js.
+   * See the docblock on `retireLegacyPath` for why those were not fixes, and for the measurement
+   * showing they also made this file's own handlers unreachable.
+   *
+   * The LAST segment is the payload in all of them, which is what lets one rule serve WooCommerce's
+   * nested taxonomy (/product-category/acides-amines/stimulants-hormonaux) and the flat old-Laravel
+   * shapes (/produit/psychotic-pre-workout) with the same code.
+   *
+   * `/category/{x}` is in this list rather than keeping its old one-line prefix-strip because the
+   * strip was a 301 into a 404 for anything that was not a category: `/category/whey-pro-warriors-2kg`
+   * is a PRODUCT slug, and it went to `/whey-pro-warriors-2kg`, which does not exist.
+   */
+  const legacyTaxonomy = pathname.match(
+    /^\/(?:category|categorie|categories|subcategories|sous-categories|product-category)\/(?:.*\/)?([^/]+)\/?$/
+  );
+  if (legacyTaxonomy?.[1]) {
+    const answer = await retireLegacyPath(request, legacyTaxonomy[1], false);
+    if (answer) return answer;
+  }
+
+  const legacyProductPrefix = pathname.match(
+    /^\/(?:produit|produits|musculation-products|collections)\/(?:.*\/)?([^/]+)\/?$/
+  );
+  if (legacyProductPrefix?.[1]) {
+    const answer = await retireLegacyPath(request, legacyProductPrefix[1], true);
+    if (answer) return answer;
+  }
+
+  /* ── The old site's search URLs ──────────────────────────────────────────────────────────────
+   *
+   * /produits-search/ACIDES AMINES, /produits-search/GLUTAMINE, /produits-search/WHEY ISOLATE …
+   * Sixteen of them in the export, and every one was sent to a bare /shop, which discards the only
+   * thing the URL contained. Most of these terms ARE categories on this site — `bcaa`, `glutamine`,
+   * `whey-isolate` — so `retireLegacyPath` lands them on the real listing; the ones that are not
+   * fall through to the shop's own search, which at least answers the question that was asked.
+   */
+  const legacySearch = pathname.match(/^\/produits-search\/(.+?)\/?$/);
+  if (legacySearch?.[1]) {
+    const answer = await retireLegacyPath(request, legacySearch[1], false);
+    // Only a REDIRECT counts here. `retireLegacyPath` ends in 410 when nothing is relevant and in
+    // `next()` when the backend could not be read — but a search term with no matching category is
+    // still a real question, and this URL is the only place it is written down. Both of those
+    // outcomes therefore fall through to the listing that can actually answer it.
+    if (answer && answer.status >= 300 && answer.status < 400) return answer;
+    let term = legacySearch[1];
+    try { term = decodeURIComponent(term); } catch { /* keep raw */ }
+    const searchUrl = new URL('/shop', request.url);
+    searchUrl.searchParams.set('search', term);
+    return NextResponse.redirect(searchUrl, 301);
+  }
+
+  /* ── Machine paths from the old Laravel deployment → 410 ─────────────────────────────────────
+   *
+   * /public/api/searchProduct/BCAA, /public/api/productsBySubCategoryId/898-accessories,
+   * /storage/products/… — the previous stack served its API and its uploads under paths that this
+   * app does not have and will never have. They are in the "Not found" export because Google found
+   * them linked from the old HTML, not because anyone wants them. 410 says do not come back.
+   */
+  if (/^\/(?:public|storage)(?:\/|$)/.test(pathname)) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
   }
 
   // ── The French shop prefix ────────────────────────────────────────────────────────────────
@@ -385,10 +570,22 @@ export async function middleware(request: NextRequest) {
   // Legacy brand URLs: /brand/{NAME} or /brand/{NAME}/{id}. The NAME must be slugified
   // (e.g. "BIOTECH USA" → "biotech-usa") — the old code redirected to the RAW name, which
   // 404'd for every multi-word/uppercase brand. Lands on /{brand-slug}, which resolves.
-  const legacyBrand = pathname.match(/^\/brand\/(.+?)(?:\/\d+)?\/?$/);
+  const legacyBrand = pathname.match(/^\/brands?\/(.+?)(?:\/\d+)?\/?$/);
   if (legacyBrand?.[1]) {
     const slug = slugifyName(legacyBrand[1]);
-    if (slug) return redirectPreservingQuery(request, `/${slug}`);
+    if (slug) {
+      /* CHECKED, not assumed. Slugifying "JX FITNESS" to `jx-fitness` is the easy half; the half
+         that matters is knowing whether that brand still exists, because 301ing to a brand page
+         that does not is the same 301-into-a-404 this file exists to end. `null` = the brand list
+         could not be read, and during a backend hiccup the old behaviour (redirect and hope) is
+         still better than a 410 on a live brand. */
+      const known = await isBrandSlug(slug);
+      if (known !== false) return redirectPreservingQuery(request, `/${slug}`);
+      // A brand that is genuinely gone. Its products may not be: try the taxonomy and the
+      // relevance match before giving up, exactly as a retired product does.
+      const answer = await retireLegacyPath(request, slug, false);
+      if (answer) return answer;
+    }
   }
 
   // Legacy /products/{slug} → resolve straight to canonical /{subcat}/{slug} in ONE hop

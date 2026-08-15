@@ -251,3 +251,101 @@ export async function bestCategoryForSlug(slug: string): Promise<string | null> 
 
   return bestScore >= 1 ? bestSlug : null;
 }
+
+/* ── BRANDS ───────────────────────────────────────────────────────────────────────────────────
+ *
+ * Brand landing pages are served at `/{slug}` by the same `(shop)/[slug]` route as categories, so
+ * middleware needs the same yes/no/unknown answer about them — and for the same reason.
+ *
+ * The Search Console export carries 105 legacy brand URLs in two shapes the old site emitted:
+ *
+ *     /brand/JX FITNESS/52          name with a space, and a trailing numeric id
+ *     /brands/soul-project          already slugified
+ *
+ * Both were answered by `{ source: '/brand/:path+', destination: '/brands', permanent: true }` in
+ * redirects.js — every one of them landing on the brand INDEX. Google documents a redirect to an
+ * irrelevant page as a soft 404: the hop is spent, the URL is not dropped and not indexed, it just
+ * moves from the "Not found" bucket to "Page with redirect". That is the shape that makes a
+ * coverage report stop improving, and it is why this set has to exist: slugifying the name is easy,
+ * but 301ing to `/jx-fitness` without knowing whether that brand exists just re-creates the
+ * 301-into-a-404 this whole file was written to end.
+ *
+ * Same three-valued contract as `isTaxonomySlug`, and it matters more here than anywhere: `null`
+ * means the brand list could not be read, and acting on it would 410 live brand pages during a
+ * backend hiccup.
+ */
+
+const BRAND_TTL_MS = 10 * 60 * 1000;
+
+let brandCache: Set<string> | null = null;
+let brandCacheAt = 0;
+let brandInflight: Promise<void> | null = null;
+
+/** Mirrors `rawBrandSlug` in util/brandSlug.ts. Duplicated rather than imported: this module is
+ *  reached from middleware, where the import graph is the bundle, and brandSlug.ts is shipped to
+ *  the client. The two are checked against each other by scripts/check-gsc-coverage.mjs. */
+function slugifyBrandName(name: string): string {
+  return String(name ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .trim();
+}
+
+async function refreshBrands(): Promise<void> {
+  try {
+    const next = new Set<string>();
+
+    /* Paginated on purpose. `/all_brands` returns `data` with no total a caller can see, which is
+       exactly how 124 blog articles once stayed out of the sitemap: half a list returned as if it
+       were whole. 128 brands over 100-row pages is two requests; the cap is a loop guard. */
+    for (let page = 1; page <= 5; page++) {
+      const res = await fetch(`${apiBase()}/all_brands?per_page=100&page=${page}`, {
+        signal: AbortSignal.timeout(4000),
+        headers: { accept: 'application/json' },
+      });
+      if (!res.ok) return;
+
+      const body: unknown = await res.json();
+      const rows: unknown = Array.isArray(body) ? body : (body as { data?: unknown })?.data;
+      if (!Array.isArray(rows) || rows.length === 0) break;
+
+      for (const row of rows as Array<{ designation_fr?: string; slug?: string }>) {
+        const slug = slugifyBrandName(row?.slug || row?.designation_fr || '');
+        if (slug) next.add(slug);
+      }
+      if (rows.length < 100) break;
+    }
+
+    // Parsed but empty is a backend problem, not a site with no brands. Keep the previous cache.
+    if (next.size === 0) return;
+
+    brandCache = next;
+    brandCacheAt = Date.now();
+  } catch {
+    // Fail open. See the docblock at the top of this file.
+  }
+}
+
+/**
+ * Is `slug` a real brand served at `/{slug}`?
+ *
+ * `null` means "could not find out" — never spendable as evidence of absence.
+ */
+export async function isBrandSlug(slug: string): Promise<boolean | null> {
+  const fresh = brandCache !== null && Date.now() - brandCacheAt < BRAND_TTL_MS;
+  if (!fresh) {
+    if (!brandInflight) {
+      brandInflight = refreshBrands().finally(() => {
+        brandInflight = null;
+      });
+    }
+    // Stale-while-revalidate once warm; block only on the very first call after boot.
+    if (brandCache === null) await brandInflight;
+  }
+
+  if (brandCache === null) return null;
+  return brandCache.has(slug);
+}
