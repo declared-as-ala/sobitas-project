@@ -179,7 +179,17 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
     >
       <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3 sm:text-[11px]">
         <Clock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
-        {live ? 'Se termine dans' : 'Jusqu’au'}
+        {/* ALWAYS THE DURATION PHRASING, because the tiles are always a duration now.
+            This read `live ? 'Se termine dans' : 'Jusqu’au'`, which was correct while the far
+            branch printed a DATE. It no longer does, so production rendered
+
+                JUSQU’AU  19 JOURS : 04 HEURES : 46 MIN
+
+            — "until the 19 days", a preposition pointing at an interval. Caught by reading the
+            deployed strip rather than the code: the label and the tiles are two branches that
+            were changed at different times, and only the rendered string shows them disagreeing.
+            The absolute date is still available on the `title` below. */}
+        Se termine dans
       </span>
 
       {/* TILES AT EVERY DISTANCE, not only inside 48h. The old code swapped to a bare date string
