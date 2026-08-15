@@ -1396,16 +1396,67 @@ class ApisController extends Controller
             'url' => $frontendBase.'/'.rawurlencode((string) $sous_category->slug),
         ];
 
-        // Get ALL products for this subcategory using many-to-many relationship
-        // Checks both legacy sous_categorie_id AND new pivot table
+        /*
+         * ── THE TWENTY-SECOND QUERY ──────────────────────────────────────────────────────────
+         *
+         * This used to read:
+         *
+         *     ->where(function ($query) use ($sous_category) {
+         *         $query->where('sous_categorie_id', $sous_category->id)
+         *             ->orWhereHas('sousCategories', fn ($q) => $q->where('sous_categories.id', ...));
+         *     })
+         *
+         * `orWhereHas` compiles to `... OR EXISTS (SELECT * FROM sous_categories INNER JOIN
+         * product_sous_category ON ... WHERE products.id = product_sous_category.product_id AND
+         * sous_categories.id = ?)`. The OR makes the index on `products.sous_categorie_id`
+         * unusable, so MySQL scans `products` and evaluates that correlated subquery ONCE PER ROW.
+         *
+         * The cost is therefore a function of the TABLE, not of the answer. Measured against the
+         * live API on 15/08/2026, which is what makes that not a theory:
+         *
+         *     productsBySubCategoryId/zma            (≈5 products)    20.8 s
+         *     productsBySubCategoryId/whey-isolate                    23.1 s
+         *     productsBySubCategoryId/vitamines                       33.9 s
+         *     productsByCategoryId/proteines  (paginated, 100 rows)    3.9 s
+         *     all_products?per_page=24                                 3.6 s
+         *     searchProduct/BCAA   (three LIKE '%x%' + limit 50)        2.5 s
+         *
+         * A subcategory with five products cost twenty seconds while an unindexed triple-wildcard
+         * LIKE over the same table cost two and a half. The table is fine; the shape was not.
+         *
+         * ── WHY THIS IS THE MOST EXPENSIVE BUG ON THE PROPERTY ───────────────────────────────
+         * EVERY category and subcategory page calls this, through
+         * `fetchCategoryOrSubCategory` in the storefront, and those pages currently answer
+         * `Cache-Control: private, no-cache, no-store` with `cf-cache-status: DYNAMIC` — so the
+         * call is not absorbed by a CDN. A cold /vitamines did not respond inside 120 seconds.
+         *
+         * Googlebot does not wait, and it does not punish only the URL that timed out: repeated
+         * timeouts make it crawl the whole HOST less. "Crawled – currently not indexed" is 867
+         * pages on this property, and a listing that cannot be fetched cannot be indexed no matter
+         * how good its content is.
+         *
+         * ── THE REPLACEMENT ─────────────────────────────────────────────────────────────────
+         * Read the pivot directly — one indexed lookup on `product_sous_category.sous_category_id`,
+         * which the create migration indexes both on its own and as half of the composite unique —
+         * and hand the ids to `whereIn`, which lands on the PRIMARY KEY. Two indexed reads instead
+         * of one scan. Identical rows in identical order: the OR is preserved exactly, the legacy
+         * column is still honoured, and nothing about the response shape changes.
+         */
+        $pivotProductIds = DB::table('product_sous_category')
+            ->where('sous_category_id', $sous_category->id)
+            ->pluck('product_id')
+            ->all();
+
         $products = Product::where('publier', 1)
-            ->where(function ($query) use ($sous_category) {
-                // Legacy single subcategory
-                $query->where('sous_categorie_id', $sous_category->id)
-                    // New many-to-many relationship
-                    ->orWhereHas('sousCategories', function ($q) use ($sous_category) {
-                        $q->where('sous_categories.id', $sous_category->id);
-                    });
+            ->where(function ($query) use ($sous_category, $pivotProductIds) {
+                // Legacy single subcategory — still authoritative for rows never back-filled.
+                $query->where('sous_categorie_id', $sous_category->id);
+
+                // Guarded: `whereIn` with an empty list compiles to `0 = 1`, which is harmless
+                // beside an OR but pointless, and it reads as though it could exclude something.
+                if ($pivotProductIds !== []) {
+                    $query->orWhereIn('id', $pivotProductIds);
+                }
             })
             ->select(self::PRODUCT_FULL_LIST_COLUMNS)
             ->with(['aromes:id,designation_fr', 'tags:id,designation_fr', 'sousCategories:id,slug,designation_fr,categorie_id', 'sousCategorie:id,slug,designation_fr,categorie_id', 'externalCatalogSource:id,product_id,source_gallery_images'])
