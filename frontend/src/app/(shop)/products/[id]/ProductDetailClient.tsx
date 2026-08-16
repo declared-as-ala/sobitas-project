@@ -235,9 +235,34 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   }, [product]);
 
   const imageAltBase = (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim();
+  /*
+   * ── THE IMPORTED PHOTOGRAPHY, WHICH THIS PAGE HELD AND NEVER SHOWED ─────────────────────────
+   *
+   * Owner, 16/08/2026: *"I accept to publish all the photos."*
+   *
+   * 6,437 products carry 23,293 photographs between them, and this page was rendering ONE. The
+   * reason is visible in the line this replaces: the array was built from `product.cover` plus
+   * `product.images` — a legacy column that is `null` on every imported product — so the source
+   * gallery was simply never read. Measured on the live API for
+   * `rainbow-light-gummy-vitamin-c-slices…`: `images: null`, and
+   * `source_facts.content.gallery: 3 images`. Two of the three were being discarded.
+   *
+   * NOTHING ELSE HERE HAD TO CHANGE, and that is the point. The thumbnail strip, the swipe
+   * handlers, the selected-index clamp and the keyboard controls below were all written for a
+   * multi-image gallery and have been running against an array of length 1 since they shipped.
+   * `galleryImages.length > 1` guards the strip, so it has never once rendered.
+   *
+   * COVER FIRST, ALWAYS. It is the photograph the shop chose, and on an imported product it is
+   * also `gallery[0]` — which is exactly why the `Set` is load-bearing rather than defensive:
+   * without it the primary image would appear twice in the strip.
+   *
+   * The crawler route (`CrawlerProductView`) has rendered this same gallery all along, so until
+   * now Googlebot could see every photograph and a customer could not.
+   */
   const galleryImagePaths = useMemo(() => {
     const extra = Array.isArray((product as any).images) ? (product as any).images : [];
-    const paths = [product.cover, ...extra]
+    const sourceGallery = productSourceGallery(product as Parameters<typeof productSourceGallery>[0]);
+    const paths = [product.cover, ...extra, ...sourceGallery]
       .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
       .map((value) => value.trim());
     return [...new Set(paths)];
@@ -1233,7 +1258,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     */}
                     {(() => {
                       const sections = productSourceSections(product);
-                      const gallery = productSourceGallery(product);
                       const attribution = productSourceAttribution(product);
                       /*
                        * hasProductSourceContent(), not a hand-written test of two of the four
@@ -1266,30 +1290,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             );
                           })}
 
-                          {gallery.length > 0 && (
-                            <section>
-                              <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-3 text-ink-1">
-                                Photos du produit
-                              </h3>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                {gallery.map((url, i) => (
-                                  <div
-                                    key={url}
-                                    className="relative aspect-square rounded-xl overflow-hidden border border-hairline bg-white dark:bg-gray-800"
-                                  >
-                                    <Image
-                                      src={url}
-                                      alt={`${product.designation_fr || 'Produit'} — photo ${i + 1}/${gallery.length}`}
-                                      fill
-                                      sizes="(max-width: 640px) 50vw, 33vw"
-                                      className="object-contain p-1"
-                                      quality={85}
-                                    />
-                                  </div>
-                                ))}
-                              </div>
-                            </section>
-                          )}
+                          {/* ── THE "PHOTOS DU PRODUIT" GRID MOVED UP INTO THE MAIN GALLERY ─────
+                              These same photographs are now the page's gallery — thumbnails,
+                              swipe and all — instead of a static grid buried three tabs down.
+
+                              Keeping both would print the identical eight images twice on one
+                              page. That is not merely untidy: `next/image` would fetch and
+                              optimise each of them a second time at a different `sizes`, and a
+                              product page is already the heaviest route on the site.
+
+                              The grid was the right home while the gallery above could only ever
+                              show the cover. It cannot be the right home once the gallery works. */}
 
                           {attribution && (
                             <p className="text-xs text-ink-3">{attribution}</p>

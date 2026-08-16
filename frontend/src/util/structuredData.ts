@@ -10,6 +10,7 @@ import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock, getProductStockStatus } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import { productSourceGallery } from '@/util/productSourceFacts';
 import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
@@ -409,8 +410,32 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
 }
 
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
+  /*
+   * ── EVERY PHOTOGRAPH WE HOLD, NOT JUST THE COVER (owner, 16/08/2026) ────────────────────────
+   *
+   * 6,437 products carry 23,293 photographs between them and this schema was declaring ONE.
+   *
+   * `image` is a REQUIRED field for Product rich results, and Google's own guidance asks for
+   * several images per product — different angles, the label, the packaging — because that is what
+   * lets a result qualify for the image-rich treatments in Search and in Google Images. Sending one
+   * URL when eight exist is the difference between an eligible listing and a minimal one, on
+   * roughly ten thousand pages.
+   *
+   * ORDER MATTERS AND THE COVER STAYS FIRST. Google treats the first entry as the primary image,
+   * and the cover is the photograph the shop chose. The gallery follows it, deduplicated — on an
+   * imported product the cover IS gallery[0], so without the Set the primary image would be
+   * declared twice.
+   *
+   * WHERE THESE URLS POINT, STATED PLAINLY: the imported photography is referenced on the source
+   * CDN rather than mirrored, so these entries leave our domain. That is a real dependency and the
+   * owner has taken it knowingly. It is not a new one — `cover` on those same products already
+   * points at the same host, so this widens an existing exposure rather than opening one. The host
+   * is in `next.config.js images.remotePatterns` and in `config/catalog.php media.external_hosts`;
+   * both are required, and dropping either breaks the images site-wide.
+   */
+  const galleryImages = productSourceGallery(product as Parameters<typeof productSourceGallery>[0]);
   // Main product cover first so Google uses it as primary image in Product rich results.
-  const rawImages = [product.schema?.image, product.seo?.image, product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
+  const rawImages = [product.schema?.image, product.seo?.image, product.cover, ...galleryImages, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
   const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
   if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
   const imageArray = imagePaths
@@ -550,7 +575,27 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const source = deepStripRatingNodes(raw) as Record<string, unknown>;
   delete source['@graph'];
   const canonical = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
-  const normalizedImages = normalizeJsonLdImages(source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover);
+  /*
+   * ── THE GALLERY BELONGS HERE TOO, AND THIS IS THE BUILDER THAT ACTUALLY RUNS ────────────────
+   *
+   * `app/(shop)/[slug]/[productSlug]/page.tsx` prefers this function whenever the backend sends a
+   * `schema` blob, falling back to `buildProductJsonLd` only when it does not. Every imported
+   * product HAS that blob, so adding the gallery to the other builder alone changed nothing for
+   * the ~10,000 pages it was meant for. Verified on a local production build before this line
+   * existed: `Product JSON-LD image entries: 1` on a product whose API response carries three.
+   *
+   * The backend's own `schema.image` is a single string — the cover — so it stays FIRST and keeps
+   * its meaning as the primary image. The gallery is appended and the whole list deduplicated,
+   * because on an imported product the cover is also `gallery[0]`.
+   */
+  const normalizedImages = [
+    ...new Set(
+      normalizeJsonLdImages([
+        source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover,
+        ...productSourceGallery(product as Parameters<typeof productSourceGallery>[0]),
+      ].flat())
+    ),
+  ];
   const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
   const availability =
     (typeof product.schema?.availability === 'string' && product.schema.availability) ||
