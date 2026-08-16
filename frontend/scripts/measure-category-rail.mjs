@@ -69,7 +69,24 @@ for (const width of WIDTHS) {
   await page.evaluate(() =>
     document.querySelector('#category-rail-heading')?.scrollIntoView({ block: 'center' })
   );
-  await page.evaluate(() => new Promise((r) => setTimeout(r, 900)));
+
+  /* ── WAIT FOR THE REAL FACE, NOT THE FALLBACK ────────────────────────────────────────────────
+   * The label is set in Archivo via `font-display: swap`, so until that file arrives the browser
+   * paints a metric-adjusted Arial — a WIDER face. Measuring during that window reports a clipped
+   * label on a card where the real font fits, and the result depends on whether the font happened
+   * to be in Chrome's cache. That is exactly how this check first failed on production a run after
+   * passing on the same build.
+   *
+   * `document.fonts.ready` resolves once every font used in the document has loaded (or failed),
+   * which makes the measurement a property of the CSS rather than of the network. The 400ms after
+   * it is for layout to settle following the swap.
+   *
+   * The flash itself is real and is NOT what this asserts — a visitor on a cold cache does briefly
+   * see the fallback. `swap` is the correct trade for a display face (better a wrong face than no
+   * text), and the fonts are now self-hosted and preloaded, so the window is short.
+   */
+  await page.evaluate(() => document.fonts.ready);
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 400)));
 
   const m = await page.evaluate(() => {
     const heading = document.querySelector('#category-rail-heading');

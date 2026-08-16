@@ -75,6 +75,13 @@ for (const theme of THEMES) {
     await page.waitForSelector('#ventes-flash', { timeout: 30000 }).catch(() => {});
     // The band is `defer`red behind an IntersectionObserver, so it must be scrolled to first.
     await page.evaluate(() => document.querySelector('#ventes-flash')?.scrollIntoView({ block: 'center' }));
+    /* Every width here is a TYPE measurement in disguise — band height, card height, and whether
+       anything overflows its box all move with the face the text is set in. Archivo loads with
+       `font-display: swap` and is deliberately not preloaded, so until it arrives the browser
+       paints a wider metric-adjusted Arial. Measuring in that window makes the result depend on
+       Chrome's cache rather than on the CSS, which is precisely how measure-category-rail failed
+       on production one run after passing on the same build. */
+    await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => new Promise((r) => setTimeout(r, 1500)));
 
     const m = await page.evaluate(() => {
