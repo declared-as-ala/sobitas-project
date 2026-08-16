@@ -80,7 +80,26 @@ export function InstallAppBanner() {
 
     // Show banner after 2 s regardless — don't wait for beforeinstallprompt
     setReady(true);
-    const t = setTimeout(() => setShow(true), 2000);
+    const t = setTimeout(() => {
+      /*
+       * ── NEVER OVER A PAGE'S OWN BOTTOM CTA ──────────────────────────────────────────────
+       * This banner is `fixed bottom-tabbar … z-sticky-cta`, and so is the product page's buy
+       * bar. Measured on live production at 390px: the banner sat at 707-788 and the CTA at
+       * 711-788 — identical band, identical z-index — so "Installer l'application" was painted
+       * over "Ajouter au panier" on every product page, on the 81% of traffic that is mobile.
+       *
+       * An install is worth something. It is not worth a sale, and it is certainly not worth
+       * being the thing that hides the button the visitor came to press. A page that owns the
+       * bottom of the viewport says so with `data-has-sticky-cta` on <body>; this reads it at the
+       * moment it would appear, which is 2s after mount and therefore long after any page-level
+       * effect has run.
+       *
+       * Checked here rather than on mount on purpose: it is a question about the CURRENT route,
+       * and this component lives in the root layout and survives navigation.
+       */
+      if (document.body.hasAttribute('data-has-sticky-cta')) return;
+      setShow(true);
+    }, 2000);
 
     return () => {
       clearTimeout(t);

@@ -174,10 +174,43 @@ for (const { w, h, label } of WIDTHS) {
       priceText: priceEl?.textContent?.trim() || null,
       identifiers: qa('main dl').filter((d) => /Réf\.|Code-barres/.test(d.textContent)).length,
       ctas: qa('main button, main a').filter((el) => /Ajouter au panier|Commander maintenant|Demander ce produit/.test(el.textContent || '')).length,
+      /* By `data-sticky-cta`, not by the `z-sticky-cta` CLASS — the PWA install banner carries
+         that class too, so a class-based lookup could measure the wrong element and report the
+         bar as present while it was in fact covered by the banner. */
       stickyBar: (() => {
-        const bar = [...document.querySelectorAll('div')].find((d) => d.className.includes?.('z-sticky-cta'));
+        const bar = document.querySelector('[data-sticky-cta]');
         if (!bar) return 'absent';
         return bar.getBoundingClientRect().top < window.innerHeight ? 'visible' : 'hidden';
+      })(),
+
+      /*
+       * ── NOTHING MAY COVER THE PRIMARY CTA ─────────────────────────────────────────────────
+       * The check that did not exist, and the defect it now catches was live in production: the
+       * PWA install banner and this bar were both `fixed bottom-tabbar z-sticky-cta`, occupying
+       * 707-788 and 711-788 on a 390px screen. Identical band, identical z-index — so the button
+       * a visitor came to press was hidden behind a prompt to install an app.
+       *
+       * Geometry, not a class list: any future fixed element lands here regardless of how it is
+       * styled or which component added it.
+       */
+      cover: (() => {
+        const bar = document.querySelector('[data-sticky-cta]');
+        if (!bar) return [];
+        const b = bar.getBoundingClientRect();
+        if (b.top >= window.innerHeight) return [];
+        return [...document.querySelectorAll('body *')]
+          .filter((el) => {
+            if (el === bar || bar.contains(el) || el.contains(bar)) return false;
+            const style = getComputedStyle(el);
+            if (style.position !== 'fixed' && style.position !== 'sticky') return false;
+            if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') return false;
+            const r = el.getBoundingClientRect();
+            if (r.width < 40 || r.height < 20) return false;
+            // Genuine overlap of the bar's band, by more than a hairline.
+            return r.top < b.bottom - 4 && r.bottom > b.top + 4 && r.left < b.right && r.right > b.left;
+          })
+          .map((el) => `${(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 34)} [${Math.round(el.getBoundingClientRect().top)}-${Math.round(el.getBoundingClientRect().bottom)} z=${getComputedStyle(el).zIndex}]`)
+          .slice(0, 3);
       })(),
       sections: qa('main details > summary').map((s) => s.textContent.trim().split('\n')[0].trim()),
       comparisonCols: (() => {
@@ -217,6 +250,13 @@ for (const { w, h, label } of WIDTHS) {
   check(w, 'identifiers rendered once', m.identifiers === 1, `${m.identifiers} block(s)`);
   check(w, 'benefits panel present', m.highlightItems >= 3, `${m.highlightItems} bullets`);
   check(w, 'CTA in the buy box', m.ctas >= 1, `${m.ctas} CTA element(s)`);
+  /* Assert the bar EXISTS before asserting nothing covers it. Without this the cover check
+     passes vacuously the moment the selector stops matching — which is exactly what happened the
+     first time it was run against a production build that predated the attribute. */
+  if (!desktop) {
+    check(w, 'sticky CTA bar is present', m.stickyBar !== 'absent', m.stickyBar);
+  }
+  check(w, 'nothing covers the sticky CTA', m.cover.length === 0, m.cover.join(' | ') || 'ok');
   if (product.inStock) {
     check(w, 'bundle renders when in stock', m.bundle, m.bundle ? 'ok' : 'missing');
   } else {

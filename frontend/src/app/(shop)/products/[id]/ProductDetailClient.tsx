@@ -211,6 +211,32 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const buyBoxRef = useRef<HTMLDivElement | null>(null);
   const [stickyBarVisible, setStickyBarVisible] = useState(true);
 
+  /*
+   * ── THIS PAGE OWNS THE BOTTOM OF A PHONE SCREEN ────────────────────────────────────────────
+   * Measured on live production at 390px, the day the redesign shipped: the PWA install banner
+   * occupied 707-788 and the sticky CTA occupied 711-788. Same band, same z-index (both
+   * `z-sticky-cta`, both anchored `bottom-tabbar`), so which one a customer saw came down to DOM
+   * order — and on a product page the answer was "Installer l'application" painted over "Ajouter
+   * au panier".
+   *
+   * That is the single highest-intent control on the site, on 81% of its traffic, covered by a
+   * prompt to install an app.
+   *
+   * The flag is one-way and mirrors what InstallAppBanner ALREADY does with `data-install-banner`
+   * so the WhatsApp button can lift out of its way. No shared state, no import between the two,
+   * and any future page with a bottom-anchored CTA gets the same protection by setting the same
+   * attribute.
+   *
+   * `data-has-sticky-cta` on <body> and `data-sticky-cta` on the bar are deliberately DIFFERENT
+   * names. They were the same for one revision, and `querySelector('[data-sticky-cta]')` then
+   * matched <body> first and measured a 5,989px-tall "CTA bar". Two different questions — "does
+   * this page have one" and "which element is it" — need two different attributes.
+   */
+  useEffect(() => {
+    document.body.setAttribute('data-has-sticky-cta', '');
+    return () => document.body.removeAttribute('data-has-sticky-cta');
+  }, []);
+
   useEffect(() => {
     const node = buyBoxRef.current;
     if (!node || typeof IntersectionObserver === 'undefined') return;
@@ -1651,6 +1677,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           // a tab stop that goes nowhere, and screen readers would announce two "Ajouter au panier".
           stickyBarVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full'
         )}
+        data-sticky-cta=""
         aria-hidden={!stickyBarVisible}
         // Was z-50 — above the tab bar — so this bar painted over the raised Boutique tile on
         // every product page. Now below it, with `--tabbar-raise` of bottom padding so the tile
