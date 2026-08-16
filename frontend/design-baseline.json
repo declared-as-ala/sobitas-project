@@ -266,8 +266,8 @@
     "DS008": 2
   },
   "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
-    "DS001": 30,
-    "DS002": 66,
+    "DS001": 28,
+    "DS002": 65,
     "DS003": 20,
     "DS004": 30,
     "DS005": 1,

@@ -9,7 +9,8 @@ import { useCart } from '@/app/contexts/CartContext';
 import { ProductCard } from '@/app/components/ProductCard';
 import { Button } from '@/app/components/ui/button';
 import { Badge } from '@/app/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
+import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
+import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
@@ -820,6 +821,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     {oldPrice && (
                       <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
                     )}
+                    {/* Reference + barcode. Shared with the desktop tree below — see the note in
+                        ProductIdentifiers for why this is a component rather than six inline lines. */}
+                    <ProductIdentifiers product={product} className="mt-2" />
                   </div>
                   <div className="flex flex-col items-end gap-1.5 shrink-0">
                     <ProductBadges
@@ -1002,6 +1006,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       {oldPrice && (
                         <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
                       )}
+                      {/* The desktop tree has its own copy of the whole price block, so it needs its
+                          own call. Same component, so the two can never say different things. */}
+                      <ProductIdentifiers product={product} className="mt-2" />
                     </div>
                     <div className="flex flex-col items-end gap-1.5 shrink-0">
                       <ProductBadges
@@ -1172,27 +1179,34 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq;
 
               return (
-                <Tabs defaultValue="description" className="w-full flex flex-col gap-4 sm:gap-5">
-                  {/* On mobile: horizontal scroll with spacing so tabs never touch on very small screens; on sm+: equal-width tabs */}
-                  <TabsList className="flex w-full shrink-0 bg-gray-100 dark:bg-gray-900 rounded-lg sm:rounded-xl p-2 sm:p-1.5 gap-3 min-[400px]:gap-2 sm:gap-1.5 min-h-[44px] overflow-x-auto overflow-y-hidden flex-nowrap scrollbar-hide sm:overflow-visible">
-                    <TabsTrigger value="description" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone1 || 'Description'}>
-                      {product.zone1 || 'Description'}
-                    </TabsTrigger>
-                    <TabsTrigger value="nutrition" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone3 || 'Valeurs nutritionnelles'}>
-                      {product.zone3 || 'Valeurs nutritionnelles'}
-                    </TabsTrigger>
-                    {hasQuestionsTab && (
-                      <TabsTrigger value="questions" className="rounded-md sm:rounded-lg text-xs sm:text-sm py-2.5 sm:py-2 min-h-[40px] sm:min-h-0 flex-shrink-0 sm:flex-1 min-w-0 px-4 min-[400px]:px-3 sm:px-2 whitespace-nowrap sm:truncate mr-0" title={product.zone4 || 'Questions'}>
-                        {product.zone4 || 'Questions'}
-                      </TabsTrigger>
-                    )}
-                  </TabsList>
+                /*
+                 * ── SEVEN NAMED SECTIONS, NOT TWO TABS ────────────────────────────────────
+                 *
+                 * Owner, 16/08/2026, holding a reference storefront beside this page: *"a lot of
+                 * informations in description that being showed wrong … user can see ingredients
+                 * clearly, description clearly and any labels clearly."*
+                 *
+                 * There were TWO tabs. "Description" carried the marketing overview, the packaging
+                 * specs, the directions, the other-ingredients list and the warnings — five
+                 * different kinds of information stacked in one scrolling column with <h3>s as the
+                 * only separation. A customer asking "how do I take this" read a marketing
+                 * paragraph first; a customer checking an allergen hunted for a list below both.
+                 *
+                 * The data was always structured — `productSourceSections` returns keyed blocks
+                 * (overview, suggested_use, other_ingredients, warnings) and has since the import
+                 * shipped. Only the presentation flattened them back into prose. Each block is now
+                 * its own labelled, collapsible section, in the order the reference uses.
+                 *
+                 * TABS ARE GONE RATHER THAN RESTYLED, and that is a correctness change as much as
+                 * a design one: an inactive Radix tab is ABSENT from the DOM. That cost this page a
+                 * live structured-data violation one day ago — FAQPage markup emitted for questions
+                 * that were not in the HTML. `ProductInfoSection` is a native <details>, so its
+                 * content is in the document whether it is open or shut.
+                 */
+                <div className="w-full divide-y divide-hairline rounded-2xl border border-hairline bg-elevated px-4 shadow-sm sm:px-6">
 
-                  <TabsContent value="description" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
-                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
-                      {product.zone1 || 'Description du produit'}
-                    </h2>
+                  <ProductInfoSection id="pdp-description" title={product.zone1 || 'Description'} defaultOpen>
+                    <div>
                     {/*
                       Transcribed specifications — the format printed on the packaging and the
                       flavour variant, for products imported from the external catalogue.
@@ -1256,60 +1270,51 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       returns null rather than a wrapper with nothing in it: their description tab
                       renders exactly what it rendered before.
                     */}
-                    {(() => {
-                      const sections = productSourceSections(product);
-                      const attribution = productSourceAttribution(product);
-                      /*
-                       * hasProductSourceContent(), not a hand-written test of two of the four
-                       * things this block can render.
-                       *
-                       * The inline `sections.length === 0 && gallery.length === 0` this replaces
-                       * dropped the provenance sentence for any product whose transcribed content is
-                       * a Supplement Facts panel and/or specification rows and nothing else — while
-                       * /x-crawler/product/[slug] printed it, because that route gates it on nothing
-                       * but the sentence existing. Same page, two routes, different facts, which is
-                       * the one outcome this pipeline is built to prevent.
-                       */
-                      if (!hasProductSourceContent(product)) return null;
-
-                      return (
-                        <div className="mt-8 space-y-6 border-t border-hairline pt-6">
-                          {sections.map((section) => {
-                            const html = sanitizeRichHtml(section.html);
-                            if (!html) return null;
-                            return (
-                              <section key={section.key}>
-                                <h3 className="font-display uppercase tracking-tight text-lg font-bold mb-2 text-ink-1">
-                                  {section.heading}
-                                </h3>
-                                <div
-                                  className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                                  dangerouslySetInnerHTML={{ __html: html }}
-                                />
-                              </section>
-                            );
-                          })}
-
-                          {/* ── THE "PHOTOS DU PRODUIT" GRID MOVED UP INTO THE MAIN GALLERY ─────
-                              These same photographs are now the page's gallery — thumbnails,
-                              swipe and all — instead of a static grid buried three tabs down.
-
-                              Keeping both would print the identical eight images twice on one
-                              page. That is not merely untidy: `next/image` would fetch and
-                              optimise each of them a second time at a different `sizes`, and a
-                              product page is already the heaviest route on the site.
-
-                              The grid was the right home while the gallery above could only ever
-                              show the cover. It cannot be the right home once the gallery works. */}
-
-                          {attribution && (
-                            <p className="text-xs text-ink-3">{attribution}</p>
-                          )}
-                        </div>
-                      );
-                    })()}
+                    {/*
+                      The provenance sentence stays with the description, because it is a statement
+                      about where THESE words came from. The blocks it used to introduce are now
+                      siblings of this section rather than children of it — see below.
+                    */}
+                    {hasProductSourceContent(product) && productSourceAttribution(product) && (
+                      <p className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
+                        {productSourceAttribution(product)}
+                      </p>
+                    )}
                     </div>
-                  </TabsContent>
+                  </ProductInfoSection>
+
+                  {/*
+                    ── EACH TRANSCRIBED BLOCK IS ITS OWN SECTION NOW ─────────────────────────────
+                    `productSourceSections` has always returned KEYED blocks — suggested_use,
+                    other_ingredients, warnings — and this page flattened them back into one column
+                    of <h3>s inside Description. That is the "informations showed wrong" the owner
+                    pointed at: five kinds of information behind one label.
+
+                    ORDER IS DELIBERATE and matches both the reference storefront and
+                    /x-crawler/product/[slug]: directions, then ingredients, then warnings. Parity
+                    with the crawler route is not cosmetic — a block shown here and missing there is
+                    invisible to Google, and a block there and missing here is cloaking. The order
+                    staying identical is what keeps that checkable by reading the two files.
+
+                    `productSourceSections` returns [] for all 309 hand-made products, so nothing
+                    renders for them: no empty section, no bare heading.
+                  */}
+                  {productSourceSections(product).map((section) => {
+                    const html = sanitizeRichHtml(section.html);
+                    if (!html) return null;
+                    return (
+                      <ProductInfoSection
+                        key={section.key}
+                        id={`pdp-${section.key}`}
+                        title={section.heading}
+                      >
+                        <div
+                          className="prose prose-neutral prose-base max-w-none text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                          dangerouslySetInnerHTML={{ __html: html }}
+                        />
+                      </ProductInfoSection>
+                    );
+                  })}
 
                   {/* ── `forceMount`, AND THE STYLING ALREADY ASSUMED IT ─────────────────────
                       Radix renders `present && children`, so without this prop an INACTIVE tab is
@@ -1328,7 +1333,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       The `data-[state=inactive]:hidden` classes on this element were already
                       written for mounted-but-hidden content and could never fire without the prop —
                       the styling anticipated the fix and the prop was missing. */}
-                  <TabsContent forceMount value="nutrition" className="mt-0 pt-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden data-[state=inactive]:absolute data-[state=inactive]:pointer-events-none">
+                  {/* `forceMount` is no longer needed and no longer possible: <details> keeps its
+                      content in the DOM by construction, which is the property that fix was buying. */}
+                  <ProductInfoSection id="pdp-nutrition" title={product.zone3 || 'Valeurs nutritionnelles'}>
                     {(() => {
                       const nutritionImages = Array.isArray((product as any).nutrition_images)
                         ? ((product as any).nutrition_images as string[]).filter(Boolean)
@@ -1522,9 +1529,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         </div>
                       );
                     })()}
-                  </TabsContent>
+                  </ProductInfoSection>
 
-                  <TabsContent forceMount value="questions" className="mt-0 pt-0 flex-1 min-h-0 rounded-xl shadow-sm border border-hairline bg-elevated overflow-hidden focus-visible:outline-none data-[state=inactive]:hidden">
+                  <ProductInfoSection id="pdp-questions" title={product.zone4 || 'Questions fréquentes'}>
                     <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
                     <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
                       {product.zone4 || 'Questions Fréquentes'}
@@ -1553,8 +1560,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       />
                     ) : null}
                     </div>
-                </TabsContent>
-              </Tabs>
+                </ProductInfoSection>
+              </div>
                 );
               })()}
             </div>
