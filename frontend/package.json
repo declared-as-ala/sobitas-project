@@ -17,6 +17,7 @@
     "verify": "npm run lint && npm run typecheck && npm run lint:design && npm run build",
     "typecheck": "node scripts/ensure-next-types.mjs && tsc --noEmit",
     "audit:pdp": "node scripts/audit-pdp-content.mjs",
+  "measure:pdp": "node scripts/measure-pdp.mjs",
     "audit:pdp:update": "node scripts/audit-pdp-content.mjs --update",
     "audit:contrast": "node scripts/audit-contrast.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",

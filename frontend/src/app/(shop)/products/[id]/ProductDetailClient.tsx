@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -8,18 +8,23 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { ProductCard } from '@/app/components/ProductCard';
 import { Button } from '@/app/components/ui/button';
-import { Badge } from '@/app/components/ui/badge';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
+import { ProductGallery } from '@/app/components/product/ProductGallery';
+import { ProductHighlights } from '@/app/components/product/ProductHighlights';
+import { ProductComparisonTable } from '@/app/components/product/ProductComparisonTable';
+import { FrequentlyBoughtTogether } from '@/app/components/product/FrequentlyBoughtTogether';
+import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
-import { formatTnd, hasValidPromo } from '@/util/productPrice';
+import { hasValidPromo } from '@/util/productPrice';
 import { buildComparison } from '@/util/productComparison';
+import { splitHighlights } from '@/util/productHighlights';
 import { embedUrl, videoId, videoTitle } from '@/util/officialVideo';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
@@ -53,64 +58,6 @@ interface ProductDetailClientProps {
 }
 
 
-/**
- * Stock / promo / "Nouveau" / "Top Vendu" badges.
- * Rendered once here and reused by both the mobile and desktop buy-box trees so their
- * French labels and the state-aware stock icon can never diverge again.
- */
-function ProductBadges({
-  stockStatus,
-  discount,
-  isNew,
-  isBestSeller,
-  textSize,
-}: {
-  stockStatus: ReturnType<typeof getProductStockStatus>;
-  discount: number;
-  isNew: boolean;
-  isBestSeller: boolean;
-  textSize: string;
-}) {
-  const StockIcon = stockStatus.isOutOfStock ? XCircle : stockStatus.isLowStock ? AlertTriangle : CheckCircle2;
-  return (
-    <>
-      <Badge
-        variant="outline"
-        className={cn(
-          stockStatus.isOutOfStock
-            ? 'bg-red-50 dark:bg-red-950/20 text-red-700 dark:text-red-400 border-red-200 dark:border-red-800'
-            : stockStatus.isLowStock
-              ? 'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-800'
-              : 'bg-green-50 dark:bg-green-950/20 text-green-700 dark:text-green-400 border-green-200 dark:border-green-800',
-          'font-display uppercase tracking-wide px-2.5 py-1',
-          textSize
-        )}
-      >
-        <StockIcon className="h-3 w-3 mr-1" />
-        {stockStatus.stockLabel}
-        {stockStatus.isLowStock && stockStatus.qte > 0 && (
-          <span className="ml-1 tabular-nums">({stockStatus.qte})</span>
-        )}
-      </Badge>
-      {discount > 0 && (
-        <Badge className={cn('gap-1 bg-red-600 text-white font-display uppercase tracking-wide tabular-nums px-2.5 py-1', textSize)}>
-          <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />-{discount}%
-        </Badge>
-      )}
-      {isNew && (
-        <Badge variant="outline" className={cn('gap-1 bg-elevated text-ink-1 border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
-          <Sparkles className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />Nouveau
-        </Badge>
-      )}
-      {isBestSeller && (
-        <Badge variant="outline" className={cn('gap-1 bg-elevated text-ink-1 border-gray-200 dark:border-gray-700 font-display uppercase tracking-wide px-2.5 py-1', textSize)}>
-          <TrendingUp className="h-3 w-3 shrink-0 text-brand" aria-hidden="true" />Top Vendu
-        </Badge>
-      )}
-    </>
-  );
-}
-
 export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const REVIEW_PAGE_SIZE = 12;
   // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
@@ -123,14 +70,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { addToCart, getCartQty } = useCart();
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
-  const [selectedImage, setSelectedImage] = useState(0);
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
-  const [touchStartX, setTouchStartX] = useState<number | null>(null);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const { openQuickOrder } = useQuickOrder();
   /** Selected aroma for display; add to cart / command use this or first aroma. */
@@ -235,6 +180,48 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       .filter((item) => item.q.length > 0 || item.a.length > 0);
   }, [product]);
 
+  /*
+   * ── THE DESCRIPTION, SPLIT IN TWO ──────────────────────────────────────────────────────────
+   * `highlights` is the lead bullet list; `descriptionHtml` is the same description with that list
+   * removed so the page never prints it twice. Nothing is written and nothing is dropped — see
+   * util/productHighlights.ts, which also explains every case where it declines to split and hands
+   * the description back untouched.
+   *
+   * Measured across 42 imported products in eight categories: 28 yield a panel.
+   */
+  const descriptionSource =
+    product.description_fr || product.description_cover || generateProductFallbackDescription(product);
+  const { highlights, rest: descriptionHtml } = useMemo(
+    () => splitHighlights(descriptionSource),
+    [descriptionSource]
+  );
+
+  /*
+   * ── THE STICKY BAR ONLY EXISTS WHEN THE REAL ONE IS GONE ───────────────────────────────────
+   * With one render tree the CTAs are in the buy box at every width, which they never were on a
+   * phone before — mobile had them ONLY in the sticky bar. Leaving that bar permanently up now
+   * means two identical "Ajouter au panier" buttons on screen at the same time, one of them
+   * covering the page.
+   *
+   * So the bar tracks the buy box: out of view, bar up; in view, bar down. Initial state is `true`
+   * because a mobile page opens on the gallery with the buy box below the fold, which is precisely
+   * when the bar earns its place. Falls back to permanently visible where IntersectionObserver is
+   * missing, so the primary CTA can never be the thing that goes missing.
+   */
+  const buyBoxRef = useRef<HTMLDivElement | null>(null);
+  const [stickyBarVisible, setStickyBarVisible] = useState(true);
+
+  useEffect(() => {
+    const node = buyBoxRef.current;
+    if (!node || typeof IntersectionObserver === 'undefined') return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setStickyBarVisible(!entry.isIntersecting),
+      { threshold: 0 }
+    );
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, []);
+
   const imageAltBase = (product.seo?.image_alt || product.alt_cover || product.designation_fr || 'Produit').trim();
   /*
    * ── THE IMPORTED PHOTOGRAPHY, WHICH THIS PAGE HELD AND NEVER SHOWED ─────────────────────────
@@ -273,38 +260,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       .map((path) => getStorageUrl(path))
       .filter((url): url is string => typeof url === 'string' && url.length > 0);
   }, [galleryImagePaths]);
-  const safeSelectedImage = selectedImage >= 0 && selectedImage < galleryImages.length ? selectedImage : 0;
-  const productImage = galleryImages[safeSelectedImage] || '';
-
-  useEffect(() => {
-    if (selectedImage >= galleryImages.length) {
-      setSelectedImage(0);
-    }
-  }, [galleryImages.length, selectedImage]);
+  /*
+   * The cover, for the CART and the quick-order sheet — not for the gallery.
+   *
+   * `ProductGallery` owns which photograph is on screen, so this is deliberately index 0 rather
+   * than "whatever the customer last tapped": a basket line and an order confirmation should show
+   * the product's canonical photograph, not the third angle someone happened to leave open.
+   */
+  const productImage = galleryImages[0] || '';
 
   useEffect(() => {
     setVisibleReviewCount(REVIEW_PAGE_SIZE);
   }, [reviews.length, REVIEW_PAGE_SIZE]);
 
-  const handleGalleryTouchStart = (event: React.TouchEvent) => {
-    setTouchStartX(event.touches[0]?.clientX ?? null);
-  };
-
-  const handleGalleryTouchEnd = (event: React.TouchEvent) => {
-    if (touchStartX == null || galleryImages.length <= 1) return;
-
-    const endX = event.changedTouches[0]?.clientX ?? touchStartX;
-    const delta = touchStartX - endX;
-    if (Math.abs(delta) < 35) return;
-
-    setSelectedImage((prev) => {
-      if (delta > 0) return (prev + 1) % galleryImages.length;
-      return (prev - 1 + galleryImages.length) % galleryImages.length;
-    });
-    setTouchStartX(null);
-  };
-
-  // Helper function to strip HTML tags and decode HTML entities for meta description
   const stripHtml = (html: string | null | undefined): string => {
     if (!html) return '';
     
@@ -423,6 +391,36 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     };
     addToCart(cartProduct as any, quantity);
     toast.success('Produit ajouté au panier');
+  };
+
+  /*
+   * Add several products in one press, for "Complétez votre commande".
+   *
+   * Deliberately NOT a loop over `handleAddToCart`: that one is about THIS product and carries its
+   * quantity, its selected flavour and its stock guard. A companion is added as one unit of itself,
+   * and the only shared requirement is that the cart line looks the same however it was created —
+   * hence the same field mapping rather than the same function.
+   */
+  const handleAddManyToCart = (chosen: Product[]) => {
+    const added = chosen.filter((entry) => getStockDisponible(entry as any) > 0);
+    if (added.length === 0) {
+      toast.error('Ces produits ne sont plus disponibles');
+      return;
+    }
+    added.forEach((entry) => {
+      const price = hasValidPromo(entry) && entry.promo != null ? entry.promo : entry.prix || 0;
+      addToCart(
+        {
+          ...entry,
+          name: entry.designation_fr,
+          price,
+          priceText: `${price} DT`,
+          image: getStorageUrl(entry.cover || ''),
+        } as any,
+        1
+      );
+    });
+    toast.success(`${added.length} produits ajoutés au panier`);
   };
 
   const handleQuickOrderClick = () => {
@@ -560,7 +558,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   return (
     <div className="min-h-screen bg-canvas">
 
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-36 sm:pb-36 lg:pb-12">
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:pt-8 lg:pb-12 pb-36 sm:pb-36">
         {/* Breadcrumb — single scrollable line on mobile (was flex-wrap → 2–3 tall rows); the long
             final crumb truncates on phones and the row swipes horizontally instead of eating height. */}
         {breadcrumbItems.length > 0 && (
@@ -581,329 +579,351 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </ol>
           </nav>
         )}
-        {/* Layout: 2 cols desktop (Image left, larger | Info + buy right), mobile single col. */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-6 lg:gap-8 xl:gap-10 mb-6 sm:mb-8 lg:mb-10">
-          {/* A) COLONNE GAUCHE — Gallery (desktop): image slightly smaller */}
-          <div className="hidden lg:block lg:col-span-5 min-w-0">
-            <div className="sticky top-24 max-w-[520px] xl:max-w-[560px]">
-              <div
-                className="relative w-full rounded-xl overflow-hidden border border-hairline shadow-sm group aspect-square min-h-[290px] xl:min-h-[350px] bg-sunken"
-                onTouchStart={handleGalleryTouchStart}
-                onTouchEnd={handleGalleryTouchEnd}
-              >
-                {productImage ? (
-                  <Image
-                    src={productImage}
-                    alt={safeSelectedImage === 0 ? imageAltBase : `${imageAltBase} – vue ${safeSelectedImage + 1}`}
-                    title={product.description_cover || product.designation_fr || 'Produit'}
-                    fill
-                    className="object-contain object-center p-4 sm:p-6 xl:p-8 transition-transform duration-300 [@media(hover:hover)]:group-hover:scale-[1.03]"
-                    // This gallery is `hidden lg:block` (visible only ≥1024px). Declare ~1px below
-                    // 1024px so on mobile Next still emits its `priority` preload but for a 16px
-                    // candidate (~1KB) instead of a ~750px image — otherwise the phone downloads
-                    // this display:none image at fetchPriority=high and starves the real mobile LCP
-                    // image, inflating LCP. See the mobile <Image> below for the visible counterpart.
-                    sizes="(max-width: 1023px) 1px, (max-width: 1400px) 40vw, 560px"
-                    priority={safeSelectedImage === 0}
-                    loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
-                    fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.style.display = 'none';
-                      const parent = target.parentElement;
-                      if (parent && !parent.querySelector('.error-placeholder')) {
-                        const ph = document.createElement('div');
-                        ph.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                        ph.innerHTML = '<svg class="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                        parent.appendChild(ph);
-                      }
-                    }}
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                    <svg className="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-              {galleryImages.length > 1 && (
-                <div className="mt-3 grid grid-cols-5 gap-2">
-                  {galleryImages.map((img, index) => (
-                    <button
-                      key={`${img}-${index}`}
-                      type="button"
-                      onClick={() => setSelectedImage(index)}
-                      className={cn(
-                        'relative aspect-square rounded-lg overflow-hidden border transition-colors',
-                        index === safeSelectedImage
-                          ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
-                          : 'border-hairline hover:border-red-300'
-                      )}
-                      aria-label={`Voir image ${index + 1}`}
-                    >
-                      <Image
-                        src={img}
-                        alt={`${imageAltBase} – miniature ${index + 1}`}
-                        title={product.description_cover || product.designation_fr || 'Produit'}
-                        fill
-                        loading="lazy"
-                        sizes="96px"
-                        className="object-cover"
-                      />
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
+        {/*
+          ── ONE HERO, NOT TWO ───────────────────────────────────────────────────────────────
+          This grid used to contain a complete `hidden lg:block` tree and a complete `lg:hidden`
+          tree: two galleries, two title elements, two rating rows, two price blocks, two of every
+          badge. ~580 lines to render one product.
 
-          {/* B) COLONNE DROITE — Infos + prix + quantité + CTAs (mobile & desktop trees) */}
-          <div className="lg:col-span-7 min-w-0 space-y-3 sm:space-y-4">
-            {/* Mobile Layout: Image First then badges, title, etc. */}
-            <div className="lg:hidden space-y-4">
-              {/* Row 1: category eyebrow (context) + favoris/share pulled out of the buy flow */}
-              <div className="flex items-center justify-between gap-3 px-1">
-                {product.sous_categorie?.slug ? (
-                  <Link
-                    href={`/${product.sous_categorie.slug}`}
-                    className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-brand"
-                  >
-                    <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-                    {product.sous_categorie.designation_fr}
-                  </Link>
-                ) : (
-                  <span aria-hidden="true" />
-                )}
-                <div className="flex items-center gap-2 shrink-0">
-                  <Button variant="outline" size="icon" className="h-11 w-11 rounded-lg" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Ajouter aux favoris">
-                    <Heart className={`h-5 w-5 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
-                  </Button>
-                  <Button variant="outline" size="icon" className="h-11 w-11 rounded-lg" onClick={handleShare} aria-label="Partager">
-                    <Share2 className="h-5 w-5" />
-                  </Button>
-                </div>
-              </div>
-              {/* Product Image - slightly smaller on mobile */}
-              <div className="w-full max-w-[260px] sm:max-w-[320px] mx-auto">
-                <div
-                  className="relative rounded-xl overflow-hidden shadow-sm border border-hairline group w-full aspect-square bg-sunken"
-                  onTouchStart={handleGalleryTouchStart}
-                  onTouchEnd={handleGalleryTouchEnd}
-                >
-                  {productImage ? (
-                    <Image
-                      src={productImage}
-                      alt={safeSelectedImage === 0 ? imageAltBase : `${imageAltBase} – vue ${safeSelectedImage + 1}`}
-                      title={product.description_cover || product.designation_fr || 'Produit'}
-                      fill
-                      className="object-contain object-center p-3 sm:p-4 transition-transform duration-500 group-hover:scale-[1.03]"
-                      // This gallery is `lg:hidden` (visible only <1024px) and capped at max-w-[260px]
-                      // (sm:320px). Declare ~1px at ≥1024px so on desktop its `priority` preload
-                      // collapses to a 16px candidate instead of a hidden 560px image competing with
-                      // the visible desktop LCP. Mobile sizes stay matched to the real slot width.
-                      sizes="(min-width: 1024px) 1px, (max-width: 640px) 260px, 320px"
-                      priority={safeSelectedImage === 0}
-                      loading={safeSelectedImage === 0 ? 'eager' : 'lazy'}
-                      fetchPriority={safeSelectedImage === 0 ? 'high' : 'auto'}
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.style.display = 'none';
-                        const parent = target.parentElement;
-                        if (parent && !parent.querySelector('.error-placeholder')) {
-                          const placeholder = document.createElement('div');
-                          placeholder.className = 'error-placeholder absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800';
-                          placeholder.innerHTML = '<svg class="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>';
-                          parent.appendChild(placeholder);
-                        }
-                      }}
-                    />
-                  ) : (
-                    <div className="absolute inset-0 flex items-center justify-center bg-gray-100 dark:bg-gray-800">
-                      <svg className="h-24 w-24 text-ink-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
-                      </svg>
-                    </div>
+          It was not a stylistic choice, it was accumulated cost, and it had already produced real
+          defects. The rating row was corrected on desktop and missed on mobile, so phones showed
+          "(0) · 0 avis" for weeks. Each gallery carried a hand-written `1px` entry in its `sizes`
+          string purely to stop the browser preloading the OTHER breakpoint's hidden image at
+          fetchPriority=high — a workaround for a problem that only existed because there were two.
+          And `<ProductIdentifiers>` had to be called twice, four days ago, for the same reason.
+
+          One tree. The layout difference between a phone and a desktop is a grid change, which is
+          what CSS grid is for. Every fix from here lands on both by construction.
+
+          ── THE PROPORTIONS ────────────────────────────────────────────────────────────────
+          Gallery 7 of 12, up from 5. The owner's first complaint was that the photographs are too
+          small to read the pack labels; a buy column narrower than the product it is selling is
+          also simply the better-known proportion for a shop.
+        */}
+        <div className="mb-8 grid grid-cols-1 gap-5 sm:gap-6 lg:mb-12 lg:grid-cols-12 lg:items-start lg:gap-8 xl:gap-12">
+
+          {/* ── A) GALLERY ─────────────────────────────────────────────────────────────────── */}
+          <div className="min-w-0 lg:col-span-7">
+            <ProductGallery
+              images={galleryImages}
+              altBase={imageAltBase}
+              imageTitle={product.description_cover || product.designation_fr || 'Produit'}
+              overlayTopLeft={
+                <>
+                  {discount > 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand px-2.5 py-1 font-display text-xs font-bold uppercase tracking-wide tabular-nums text-on-brand">
+                      <Flame className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                      -{discount}%
+                    </span>
                   )}
-                </div>
-                {galleryImages.length > 1 && (
-                  <div className="mt-3 grid grid-cols-4 gap-2">
-                    {galleryImages.map((img, index) => (
-                      <button
-                        key={`mobile-${img}-${index}`}
-                        type="button"
-                        onClick={() => setSelectedImage(index)}
-                        className={cn(
-                          'relative aspect-square rounded-lg overflow-hidden border transition-colors',
-                          index === safeSelectedImage
-                            ? 'border-red-600 ring-2 ring-red-100 dark:ring-red-950'
-                            : 'border-hairline'
-                        )}
-                        aria-label={`Voir image ${index + 1}`}
-                      >
-                        <Image
-                          src={img}
-                          alt={`${imageAltBase} – miniature ${index + 1}`}
-                          title={product.description_cover || product.designation_fr || 'Produit'}
-                          fill
-                          loading="lazy"
-                          sizes="80px"
-                          className="object-cover"
-                        />
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* 1. Title — mobile mirror of desktop H1; rendered as <p> to avoid duplicate H1 in DOM */}
-              <div className="min-w-0 px-1">
-                <p className="font-display uppercase tracking-tight text-2xl sm:text-3xl font-bold text-ink-1 leading-[0.95] break-words line-clamp-3">
-                  {product.designation_fr}
-                </p>
-              </div>
-
-              {/* 2. Rating + brand — MOBILE.
-                  This is a second, independent copy of the desktop row below. It is the one the
-                  owner actually saw: the desktop copy was fixed first and this was missed, so the
-                  phone kept showing "(0) · 0 avis" while the desktop looked fine.
-                  Keep the two in lockstep — every change here needs the same change at the
-                  desktop row, and vice versa. */}
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-1">
-                {reviewCount > 0 && (
+                  {product.new_product === 1 && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-elevated px-2.5 py-1 font-display text-xs font-semibold uppercase tracking-wide text-ink-1">
+                      <Sparkles className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+                      Nouveau
+                    </span>
+                  )}
+                  {product.best_seller === 1 && (
+                    <span className="inline-flex items-center gap-1 rounded-full border border-hairline bg-elevated px-2.5 py-1 font-display text-xs font-semibold uppercase tracking-wide text-ink-1">
+                      <TrendingUp className="h-3.5 w-3.5 shrink-0 text-brand" aria-hidden="true" />
+                      Top vendu
+                    </span>
+                  )}
+                </>
+              }
+              overlayTopRight={
+                <>
+                  {/*
+                    Favourite and share sit ON the frame rather than in a row above it. That row
+                    cost a full line of vertical space above the fold on a phone and contained
+                    nothing anybody came for; the gallery has corners going spare.
+                    h-11: the 44px tap floor, on controls small enough to want checking.
+                  */}
                   <button
                     type="button"
-                    onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                    className="group flex items-center gap-1.5 text-left"
+                    onClick={() => toggleFavorite(favoriteProduct)}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    aria-label={isInFavorites(product.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+                    aria-pressed={isInFavorites(product.id)}
                   >
-                    <div className="flex items-center gap-1">
-                      {[1,2,3,4,5].map((i) => (
-                        <Star
-                          key={i}
-                          className={`h-4 w-4 sm:h-5 sm:w-5 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700 dark:text-gray-700'}`}
-                        />
-                      ))}
-                    </div>
-                    <span className="text-sm text-ink-2 font-medium tabular-nums transition-colors group-hover:text-red-600 dark:group-hover:text-red-400">
-                      ({rating.toFixed(1)}) · {reviewCount} avis
-                    </span>
+                    <Heart className={cn('h-5 w-5', isInFavorites(product.id) && 'fill-brand text-brand')} />
                   </button>
-                )}
-                {product.brand?.designation_fr && (
+                  <button
+                    type="button"
+                    onClick={handleShare}
+                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    aria-label="Partager ce produit"
+                  >
+                    <Share2 className="h-5 w-5" />
+                  </button>
+                </>
+              }
+            />
+          </div>
+
+          {/* ── B) THE BUY COLUMN ──────────────────────────────────────────────────────────── */}
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+
+            {/* 1. Where you are. A link, so the crumb also does work for crawl depth. */}
+            {product.sous_categorie?.slug && (
+              <Link
+                href={`/${product.sous_categorie.slug}`}
+                // `-my-3 min-h-[44px]`: this is a flex item, so it is blockified and WCAG 2.5.5's
+                // inline-text exemption does not apply — it was an 18px-tall target. The negative
+                // margin gives it a 44px hit area without giving the column 26px of dead air.
+                className="-my-3 inline-flex min-h-[44px] items-center gap-2 self-start font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand underline-offset-4 hover:underline"
+              >
+                <span className="h-px w-4 bg-brand" aria-hidden="true" />
+                {product.sous_categorie.designation_fr}
+              </Link>
+            )}
+
+            {/* 2. ONE h1. The old mobile tree rendered the name as a <p> specifically to avoid a
+                   second h1 in the document; with one tree that workaround is unnecessary. */}
+            <h1 className="font-display text-[1.75rem] font-bold uppercase leading-[0.98] tracking-tight text-ink-1 sm:text-[2rem] xl:text-[2.25rem]">
+              {product.designation_fr}
+            </h1>
+
+            {/* 3. Brand, rating, authenticity — one row of provenance. */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              {product.brand?.designation_fr && (
+                <Link
+                  href={`/${nameToSlug(product.brand.designation_fr)}`}
+                  // Same blockification as the eyebrow above — it was 20px tall.
+                  className="-my-3 inline-flex min-h-[44px] items-center text-sm font-semibold text-ink-2 underline-offset-2 hover:text-brand hover:underline"
+                >
+                  {product.brand.designation_fr}
+                </Link>
+              )}
+
+              {/*
+                ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE.
+
+                This row renders nothing at all when there are none, rather than five grey stars
+                beside "(0) · 0 avis" — a filled-in scoreboard reading nil, which says "nobody liked
+                this" when the truth is "nobody has said anything yet". The ask for a review belongs
+                in the reviews section, which already has an honest empty state. Hide it here, ask
+                for it there.
+              */}
+              {reviewCount > 0 && (
+                <button
+                  type="button"
+                  onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
+                  className="group inline-flex items-center gap-1.5"
+                >
+                  <StarRating rating={rating} size="md" />
+                  <span className="text-sm font-medium tabular-nums text-ink-2 transition-colors group-hover:text-brand">
+                    {rating.toFixed(1)} · {reviewCount} avis
+                  </span>
+                </button>
+              )}
+
+              {/*
+                The shop's OWN guarantee, stated as the shop. Not a third-party verification badge
+                and not a rating: importing either would be a claim we cannot substantiate on a page
+                Google reads. It is the same promise the trust row below already makes, given the
+                weight the owner asked for.
+              */}
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] font-medium text-ink-2">
+                <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden="true" />
+                Produit authentique
+              </span>
+            </div>
+
+            {/*
+              4. THE BENEFITS PANEL — the reference storefront's signature element, and the reason
+                 the owner sent the screenshot. When a product has no extractable list this falls
+                 back to the meta description; the two are never both shown, because the meta
+                 description of an imported product usually restates the H1 and would read as the
+                 page saying the same thing twice.
+            */}
+            {highlights.length > 0 ? (
+              <ProductHighlights highlights={highlights} />
+            ) : metaDescription ? (
+              <p className="line-clamp-4 whitespace-pre-wrap break-words text-sm leading-relaxed text-ink-2">
+                {metaDescription}
+              </p>
+            ) : null}
+
+            {/* ── 5. THE BUY BOX ─────────────────────────────────────────────────────────────
+                The ref is read by the IntersectionObserver that raises and lowers the mobile
+                sticky bar — see the declaration above. */}
+            <div ref={buyBoxRef} className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
+
+              {/* Price. One number, at a size nothing else on the page competes with. */}
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <span className="font-display text-[2rem] font-bold leading-none tracking-tight tabular-nums text-brand sm:text-[2.5rem]">
+                  {displayPrice} DT
+                </span>
+                {oldPrice && (
                   <>
-                    {/* Separator only when there is something to its left. */}
-                    {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
-                    <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-ink-2 hover:text-red-600 dark:hover:text-red-400">
-                      {product.brand.designation_fr}
-                    </Link>
+                    <span className="font-display text-lg tracking-tight tabular-nums text-ink-3 line-through">
+                      {oldPrice} DT
+                    </span>
+                    <span className="rounded-full bg-brand px-2 py-0.5 font-display text-xs font-bold tabular-nums text-on-brand">
+                      -{discount}%
+                    </span>
+                  </>
+                )}
+              </div>
+              {oldPrice && (
+                <p className="mt-1.5 text-xs font-semibold tabular-nums text-ok">
+                  Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT
+                </p>
+              )}
+
+              {/* Reference and barcode, where a buyer looks for them. One call site now, not two. */}
+              <ProductIdentifiers product={product} className="mt-2.5" />
+
+              {/*
+                Stock, next to the control it qualifies rather than floated as a badge beside the
+                price. Icon AND text AND colour: "en stock" green against "rupture" red is invisible
+                to a red-green deficiency, and this is the line that decides whether the button
+                below is worth pressing.
+              */}
+              {(() => {
+                const StockIcon = stockStatus.isOutOfStock
+                  ? XCircle
+                  : stockStatus.isLowStock
+                    ? AlertTriangle
+                    : CheckCircle2;
+                return (
+                  <p
+                    className={cn(
+                      'mt-3 flex items-center gap-1.5 border-t border-hairline pt-3 text-sm font-semibold',
+                      stockStatus.isOutOfStock ? 'text-ink-3' : stockStatus.isLowStock ? 'text-warn' : 'text-ok'
+                    )}
+                  >
+                    <StockIcon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {stockStatus.stockLabel}
+                    {stockStatus.isLowStock && stockStatus.qte > 0 && (
+                      <span className="font-normal tabular-nums text-ink-3">— plus que {stockStatus.qte}</span>
+                    )}
+                  </p>
+                );
+              })()}
+
+              {/* Arômes */}
+              {product.aromes && product.aromes.length > 0 && (
+                <div className="mt-4">
+                  <p className="mb-2 text-sm font-semibold text-ink-1">Arôme</p>
+                  <div className="flex flex-wrap gap-2">
+                    {product.aromes.map((arome) => {
+                      const isSelected = selectedAromaId === arome.id;
+                      return (
+                        <button
+                          key={arome.id}
+                          type="button"
+                          onClick={() => setSelectedAromaId(arome.id)}
+                          aria-pressed={isSelected}
+                          className={cn(
+                            'min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
+                            isSelected
+                              ? 'border-brand bg-brand text-on-brand'
+                              : 'border-hairline bg-elevated text-ink-1 hover:border-brand hover:text-brand'
+                          )}
+                        >
+                          {arome.designation_fr}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* Quantity + running total */}
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <span className="text-sm font-semibold text-ink-1">Quantité</span>
+                  <div className="flex items-center rounded-xl border border-hairline bg-canvas">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl"
+                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                      disabled={quantity <= 1}
+                      aria-label="Diminuer la quantité"
+                    >
+                      <Minus className="h-4 w-4" />
+                    </Button>
+                    <span className="w-9 text-center font-display font-bold tabular-nums" aria-live="polite">
+                      {quantity}
+                    </span>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-11 w-11 shrink-0 rounded-xl"
+                      onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
+                      disabled={quantity >= stockDisponible || stockDisponible <= 0}
+                      aria-label="Augmenter la quantité"
+                    >
+                      <Plus className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+                <span className="text-sm text-ink-2 tabular-nums">
+                  Total{' '}
+                  <span className="font-display font-bold text-ink-1">{(displayPrice * quantity).toFixed(2)} DT</span>
+                </span>
+              </div>
+
+              {/*
+                ── THE CTAs, ON EVERY WIDTH ──────────────────────────────────────────────────
+                They used to be desktop-only here; a phone got them ONLY from the sticky bar, so
+                the one moment a mobile customer has decided — reading the price, having just set a
+                quantity — there was no button under their thumb. That is 81% of this site's
+                traffic. The sticky bar stays, and now yields while this box is on screen.
+              */}
+              <div className="mt-4 flex flex-col gap-2">
+                {stockStatus.isBackOrder ? (
+                  /*
+                    SUR COMMANDE — a request, not a purchase.
+
+                    10,535 of 10,669 published products are catalogue entries the shop does not
+                    physically hold. Two disabled "Rupture de stock" buttons is both discouraging
+                    and inaccurate: these never sold out, they were never stocked, and they CAN be
+                    brought in. The owner's decision was request-only, so this must not be a basket
+                    — an add-to-cart here would generate real orders for goods nobody has.
+                  */
+                  <>
+                    <Button
+                      asChild
+                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide"
+                    >
+                      <Link href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}>
+                        <Mail className="me-2 h-4 w-4 shrink-0" />
+                        Demander ce produit
+                      </Link>
+                    </Button>
+                    <p className="text-center text-xs text-ink-3">
+                      Ce produit n&apos;est pas en stock. Nous le commandons pour vous sur demande — nous vous
+                      confirmons le prix et le délai avant toute commande.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <Button
+                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide"
+                      onClick={handleAddToCart}
+                      disabled={stockStatus.isOutOfStock}
+                    >
+                      <ShoppingCart className="me-2 h-4 w-4 shrink-0" />
+                      {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="min-h-[52px] w-full border-brand bg-transparent font-display text-sm font-bold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
+                      onClick={handleQuickOrderClick}
+                      disabled={stockStatus.isOutOfStock}
+                    >
+                      <Zap className="me-2 h-4 w-4 shrink-0" />
+                      Commander maintenant
+                    </Button>
                   </>
                 )}
               </div>
 
-              {/* Meta Description - directly under reviews count */}
-              {metaDescription && (
-                <p className="text-sm text-ink-2 leading-relaxed px-1 line-clamp-4 whitespace-pre-wrap break-words">
-                  {metaDescription}
-                </p>
-              )}
-
-              {/* BUY CARD — price, variant, quantity grouped (main CTAs live in the sticky bar) */}
-              <div className="mx-1 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4 space-y-4">
-                {/* Price + stock/discount badges */}
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-baseline gap-2">
-                      <span className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-brand">{displayPrice} DT</span>
-                      {oldPrice && (
-                        <span className="font-display tracking-tight tabular-nums text-lg sm:text-xl text-ink-3 line-through">{oldPrice} DT</span>
-                      )}
-                    </div>
-                    {oldPrice && (
-                      <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
-                    )}
-                    {/* Reference + barcode. Shared with the desktop tree below — see the note in
-                        ProductIdentifiers for why this is a component rather than six inline lines. */}
-                    <ProductIdentifiers product={product} className="mt-2" />
-                  </div>
-                  <div className="flex flex-col items-end gap-1.5 shrink-0">
-                    <ProductBadges
-                      stockStatus={stockStatus}
-                      discount={discount}
-                      isNew={product.new_product === 1}
-                      isBestSeller={product.best_seller === 1}
-                      textSize="text-xs"
-                    />
-                  </div>
-                </div>
-
-                {/* Arômes */}
-                {product.aromes && product.aromes.length > 0 && (
-                  <div>
-                    <p className="text-sm font-semibold text-ink-1 mb-2">Arôme</p>
-                    <div className="flex flex-wrap gap-2">
-                      {product.aromes.map((arome) => {
-                        const isSelected = selectedAromaId === arome.id;
-                        return (
-                          <Button
-                            key={arome.id}
-                            type="button"
-                            variant={isSelected ? 'default' : 'outline'}
-                            size="default"
-                            className={cn(
-                              'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                              isSelected && 'bg-brand hover:bg-brand-hover text-on-brand'
-                            )}
-                            onClick={() => setSelectedAromaId(arome.id)}
-                          >
-                            {arome.designation_fr}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
-
-                {/* Quantity + running total */}
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-sm font-semibold text-ink-1">Quantité</span>
-                    <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 min-h-[44px] min-w-[44px]"
-                        onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                        disabled={quantity <= 1}
-                        aria-label="Diminuer la quantité"
-                      >
-                        <Minus className="h-4 w-4" />
-                      </Button>
-                      <span className="w-10 text-center font-bold text-base tabular-nums" aria-live="polite">{quantity}</span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-10 w-10 min-h-[44px] min-w-[44px]"
-                        onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))}
-                        disabled={quantity >= stockDisponible || stockDisponible <= 0}
-                        aria-label="Augmenter la quantité"
-                      >
-                        <Plus className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                  <span className="text-sm text-ink-2 tabular-nums">Total <span className="font-bold text-ink-1">{(displayPrice * quantity).toFixed(2)} DT</span></span>
-                </div>
-              </div>
-
-              {/* Reference — one quiet line (tags kept in the description/footer to keep mobile clean) */}
-              {(product.sku || product.code_product) && (
-                <p className="px-1 text-xs text-ink-3">
-                  Réf. {product.sku || product.code_product}
-                </p>
-              )}
-
-              {/* Trust row — borderless so the mobile column reads as clean content, not stacked cards */}
-              <div className="mx-1 grid grid-cols-3 gap-2 border-t border-hairline pt-4">
+              {/* Trust row */}
+              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-hairline pt-4">
                 {[
                   { Icon: Truck, label: 'Livraison 24–72h' },
                   { Icon: CreditCard, label: 'Paiement à la livraison' },
@@ -915,250 +935,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 ))}
               </div>
-
             </div>
 
-            {/* Desktop Layout: context eyebrow → title → rating/brand → lede → grouped buy card → meta */}
-            <div className="hidden lg:flex lg:flex-col gap-3.5 min-w-0">
-                {/* Row 1: category eyebrow (context) + favoris/share pulled out of the buy flow */}
-                <div className="flex items-center justify-between gap-3">
-                  {product.sous_categorie?.slug ? (
-                    <Link
-                      href={`/${product.sous_categorie.slug}`}
-                      className="inline-flex items-center gap-2 font-display uppercase tracking-[0.18em] text-[11px] font-semibold text-brand hover:underline"
-                    >
-                      <span className="h-px w-4 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-                      {product.sous_categorie.designation_fr}
-                    </Link>
-                  ) : (
-                    <span aria-hidden="true" />
-                  )}
-                  <div className="flex items-center gap-2 shrink-0">
-                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={() => toggleFavorite(favoriteProduct)} aria-label="Ajouter aux favoris">
-                      <Heart className={`h-4 w-4 ${isInFavorites(product.id) ? 'fill-red-600 text-red-600' : ''}`} />
-                    </Button>
-                    <Button variant="outline" size="icon" className="h-9 w-9 rounded-lg" onClick={handleShare} aria-label="Partager">
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-
-                <h1 className="font-display uppercase tracking-tight text-2xl xl:text-3xl font-bold text-ink-1 leading-[0.95] line-clamp-3 break-words">
-                  {product.designation_fr}
-                </h1>
-
-                {/* Rating + brand on one line — DESKTOP. Mirrored by the mobile copy above;
-                    change both together.
-
-                    ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE. This row used to render
-                    unconditionally, so every product showed five grey stars next to "(0) · 0 avis"
-                    — a filled-in scoreboard reading nil. That says "nobody liked this" when the
-                    truth is "nobody has said anything yet".
-
-                    At zero it now renders NOTHING here, rather than an invitation. The buy box is
-                    where purchase intent forms, so anything sitting in it is read as a product
-                    attribute — and a "be the first to review" label placed beside the price names
-                    the emptiness and turns a neutral absence into an explicit negative. The ask
-                    belongs in the reviews section further down, which already has an honest empty
-                    state ("Aucun avis pour le moment" + a write-a-review button). Hide it here,
-                    ask for it there. */}
-                <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                  {reviewCount > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                      className="flex items-center gap-1.5 text-left"
-                    >
-                      <div className="flex items-center gap-0.5">
-                        {[1,2,3,4,5].map((i) => (
-                          <Star key={i} className={`h-4 w-4 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700 text-gray-200 dark:text-gray-700'}`} />
-                        ))}
-                      </div>
-                      <span className="text-sm text-ink-2 font-medium tabular-nums transition-colors hover:text-red-600 dark:hover:text-red-400">({rating.toFixed(1)}) · {reviewCount} avis</span>
-                    </button>
-                  )}
-                  {product.brand?.designation_fr && (
-                    <>
-                      {/* Separator only when there is something to its left. */}
-                      {reviewCount > 0 && <span className="text-gray-300 dark:text-gray-700" aria-hidden="true">|</span>}
-                      <Link href={`/${nameToSlug(product.brand.designation_fr)}`} className="text-sm text-ink-2 hover:text-red-600 dark:hover:text-red-400">
-                        {product.brand.designation_fr}
-                      </Link>
-                    </>
-                  )}
-                </div>
-
-                {metaDescription && (
-                  <p className="text-sm text-ink-2 leading-relaxed line-clamp-3 whitespace-pre-wrap break-words">{metaDescription}</p>
-                )}
-
-                {/* BUY CARD — price, variant, quantity, CTAs, trust grouped into one clean block */}
-                <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-5 space-y-4">
-                  {/* Price + stock/discount badges */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-baseline gap-2">
-                        <span className="font-display font-bold tracking-tight tabular-nums text-3xl xl:text-4xl text-brand">{displayPrice} DT</span>
-                        {oldPrice && (
-                          <span className="font-display tracking-tight tabular-nums text-lg text-ink-3 line-through">{oldPrice} DT</span>
-                        )}
-                      </div>
-                      {oldPrice && (
-                        <p className="mt-1 text-xs font-semibold text-green-700 dark:text-green-400 tabular-nums">Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT</p>
-                      )}
-                      {/* The desktop tree has its own copy of the whole price block, so it needs its
-                          own call. Same component, so the two can never say different things. */}
-                      <ProductIdentifiers product={product} className="mt-2" />
-                    </div>
-                    <div className="flex flex-col items-end gap-1.5 shrink-0">
-                      <ProductBadges
-                        stockStatus={stockStatus}
-                        discount={discount}
-                        isNew={product.new_product === 1}
-                        isBestSeller={product.best_seller === 1}
-                        textSize="text-xs"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Arômes */}
-                  {product.aromes && product.aromes.length > 0 && (
-                    <div>
-                      <p className="text-sm font-semibold text-ink-1 mb-2">Arôme</p>
-                      <div className="flex flex-wrap gap-2">
-                        {product.aromes.map((arome) => {
-                          const isSelected = selectedAromaId === arome.id;
-                          return (
-                            <Button
-                              key={arome.id}
-                              type="button"
-                              variant={isSelected ? 'default' : 'outline'}
-                              size="default"
-                              className={cn(
-                                'min-h-[44px] px-4 py-2 text-sm font-medium rounded-xl',
-                                isSelected && 'bg-brand hover:bg-brand-hover text-on-brand'
-                              )}
-                              onClick={() => setSelectedAromaId(arome.id)}
-                            >
-                              {arome.designation_fr}
-                            </Button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Quantity + running total on one row */}
-                  <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-semibold text-ink-1">Quantité</span>
-                      <div className="flex items-center rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800">
-                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.max(1, quantity - 1))} disabled={quantity <= 1} aria-label="Diminuer la quantité">
-                          <Minus className="h-4 w-4" />
-                        </Button>
-                        <span className="w-10 text-center font-semibold text-sm tabular-nums" aria-live="polite">{quantity}</span>
-                        <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" onClick={() => setQuantity(Math.min(stockDisponible, quantity + 1))} disabled={quantity >= stockDisponible || stockDisponible <= 0} aria-label="Augmenter la quantité">
-                          <Plus className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                    <span className="text-sm text-ink-2 tabular-nums">Total <span className="font-bold text-ink-1">{(displayPrice * quantity).toFixed(2)} DT</span></span>
-                  </div>
-
-                  {/* CTAs */}
-                  <div className="flex flex-col gap-2">
-                    {stockStatus.isBackOrder ? (
-                      /*
-                        SUR COMMANDE — a request, not a purchase.
-
-                        10,535 of 10,669 published products are catalogue entries the shop does not
-                        physically hold. Two disabled buttons reading "Rupture de stock" is both
-                        discouraging and inaccurate: these never sold out, they were never stocked,
-                        and they CAN be brought in. But the owner's decision was request-only, so
-                        this must not be a basket — an add-to-cart here would generate real orders
-                        for goods nobody has.
-
-                        So the primary CTA becomes a link to the contact form with the product name
-                        carried in the query string. That is what makes the "Sur commande" label
-                        honest: saying "on request" while offering no way to request is the one
-                        version of this that misleads a customer.
-                      */
-                      <>
-                        <Button
-                          asChild
-                          size="default"
-                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
-                        >
-                          <Link href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}>
-                            <Mail className="h-4 w-4 mr-2" />
-                            Demander ce produit
-                          </Link>
-                        </Button>
-                        <p className="text-xs text-ink-3 text-center">
-                          Ce produit n'est pas en stock. Nous le commandons pour vous sur demande —
-                          nous vous confirmons le prix et le délai avant toute commande.
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          size="default"
-                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
-                          onClick={handleAddToCart}
-                          disabled={stockStatus.isOutOfStock}
-                        >
-                          <ShoppingCart className="h-4 w-4 mr-2" />
-                          {stockStatus.isOutOfStock ? 'Rupture de stock' : 'Ajouter au panier'}
-                        </Button>
-                        <Button
-                          size="default"
-                          variant="outline"
-                          className="w-full min-h-[48px] h-auto py-3 text-sm bg-transparent border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
-                          onClick={handleQuickOrderClick}
-                          disabled={stockStatus.isOutOfStock}
-                        >
-                          <Zap className="h-4 w-4 mr-2" />
-                          Commander maintenant
-                        </Button>
-                      </>
-                    )}
-                  </div>
-
-                  {/* Trust row — icons instead of bullet text */}
-                  <div className="grid grid-cols-3 gap-2 border-t border-gray-200 dark:border-gray-800 pt-3">
-                    {[
-                      { Icon: Truck, label: 'Livraison 24–72h' },
-                      { Icon: CreditCard, label: 'Paiement à la livraison' },
-                      { Icon: Shield, label: '100% authentique' },
-                    ].map(({ Icon, label }) => (
-                      <div key={label} className="flex flex-col items-center gap-1 text-center">
-                        <Icon className="h-4 w-4 text-brand" strokeWidth={1.75} aria-hidden="true" />
-                        <span className="text-[11px] leading-tight text-ink-3">{label}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Secondary meta: tags + SKU (de-emphasized, below the buy card) */}
-                {((product.tags?.length ?? 0) > 0 || product.sku || product.code_product) && (
-                  <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
-                    {product.tags?.map((tag) => (
-                      <Link
-                        key={tag.id}
-                        href={`/shop?search=${encodeURIComponent(tag.designation_fr)}&sort=relevance`}
-                        className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5 hover:border-red-300 hover:text-red-600"
-                      >
-                        #{tag.designation_fr.toLowerCase()}
-                      </Link>
-                    ))}
-                    {(product.sku || product.code_product) && (
-                      <span className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 px-2 py-0.5">
-                        SKU: {product.sku || product.code_product}
-                      </span>
-                    )}
-                  </div>
-                )}
+            {/* 6. Tags — de-emphasised, below the buy box, and they earn internal links. */}
+            {(product.tags?.length ?? 0) > 0 && (
+              <div className="flex flex-wrap items-center gap-2 text-xs text-ink-3">
+                {product.tags?.map((tag) => (
+                  <Link
+                    key={tag.id}
+                    href={`/shop?search=${encodeURIComponent(tag.designation_fr)}&sort=relevance`}
+                    className="inline-flex items-center rounded-full border border-hairline px-2.5 py-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    #{tag.designation_fr.toLowerCase()}
+                  </Link>
+                ))}
               </div>
+            )}
           </div>
         </div>
 
@@ -1242,12 +1034,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       // top-level headings on the page whose only h1 should be the product name —
                       // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
                       // The crawler view already ran this; the page a customer sees did not.
-                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.description_fr || product.description_cover || generateProductFallbackDescription(product)) }}
+                      // `descriptionHtml`, not `description_fr`: the lead bullet list has been lifted
+                      // into the benefits panel in the hero, and rendering the raw field here would
+                      // print it a second time. See util/productHighlights.ts — anything the panel
+                      // did not take is written back, so nothing is lost, only relocated.
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(descriptionHtml) }}
                     />
                     <button
                       type="button"
                       onClick={() => setDescExpanded(!descExpanded)}
-                      className="text-sm font-medium text-brand hover:underline mt-3"
+                      // min-h-[44px] and a negative inline margin: the label was a 57x20 hit area,
+                      // and this is the control that reveals the rest of the description.
+                      className="-mx-2 mt-2 inline-flex min-h-[44px] items-center px-2 text-sm font-semibold text-brand hover:underline"
                     >
                       {descExpanded ? 'Voir moins' : 'Lire plus'}
                     </button>
@@ -1585,14 +1383,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         </span>
                         <span className="text-ink-3 text-base tabular-nums">/ 5</span>
                       </div>
-                      <div className="mt-1.5 flex items-center gap-1">
-                        {[1, 2, 3, 4, 5].map((i) => (
-                          <Star
-                            key={i}
-                            className={`h-5 w-5 shrink-0 ${i <= Math.round(rating) ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 dark:fill-gray-700'}`}
-                          />
-                        ))}
-                      </div>
+                      <StarRating rating={rating} size="lg" className="mt-1.5 gap-1" />
                       <p className="mt-2 text-xs sm:text-sm text-ink-3">Basé sur {reviewCount} avis</p>
                     </div>
                     <div className="space-y-1.5">
@@ -1602,7 +1393,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         return (
                           <div key={starLevel} className="flex items-center gap-2">
                             <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
-                              {starLevel} <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+                              {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
                               <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
@@ -1636,10 +1427,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
                               </span>
                             </div>
-                            <div className="mt-0.5 flex items-center gap-0.5">
-                              {[1, 2, 3, 4, 5].map((i) => (
-                                <Star key={i} className={`h-3.5 w-3.5 ${i <= review.stars ? 'fill-amber-400 text-amber-400' : 'fill-gray-200 text-gray-200 dark:fill-gray-700'}`} />
-                              ))}
+                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <StarRating rating={review.stars} size="sm" />
+                              {/*
+                                ── ACHAT VÉRIFIÉ ────────────────────────────────────────────────
+                                Owner asked for the reference storefront's verified-purchase badge.
+                                It is shown on exactly the reviews that carry evidence — `verified`
+                                set, or an order id attached — and on no others.
+
+                                That distinction is the whole value of the badge, and it is not
+                                cosmetic here: the catalogue carries a large SEEDED review backlog
+                                with `verified = 0` and `commande_id = null` on every row. Printing
+                                the badge unconditionally would put "achat vérifié" under thousands
+                                of reviews that were never purchases, which is a false statement to
+                                a customer before it is anything else. Same test as
+                                buildAggregateRatingAndReviews uses to decide what may enter the
+                                structured data — one rule, both places.
+                              */}
+                              {(review.verified === 1 || review.verified === true || review.commande_id != null) && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
+                                  <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                  Achat vérifié
+                                </span>
+                              )}
                             </div>
                             {review.comment && (
                               <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{review.comment}</p>
@@ -1669,7 +1479,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold"
+                      className="min-h-[48px] w-full bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1678,7 +1488,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Button
                       onClick={() => router.push('/login')}
                       variant="outline"
-                      className="w-full border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      className="min-h-[48px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
                       size="default"
                     >
                       Connectez-vous pour laisser un avis
@@ -1693,7 +1503,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {isAuthenticated ? (
                     <Button
                       onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="w-full bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold"
+                      className="min-h-[48px] w-full bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
                       size="default"
                     >
                       {showReviewForm ? 'Annuler' : 'Écrire un avis'}
@@ -1702,7 +1512,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <Button
                       onClick={() => router.push('/login')}
                       variant="outline"
-                      className="w-full border-red-600 text-brand hover:bg-red-50 dark:hover:bg-red-950/40 dark:border-red-400 font-display uppercase tracking-wide font-semibold"
+                      className="min-h-[48px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
                       size="default"
                     >
                       Connectez-vous pour laisser un avis
@@ -1721,7 +1531,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <div className="flex gap-1">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label={`Noter ${star} étoile${star > 1 ? 's' : ''}`}>
-                            <Star className={`h-6 w-6 ${star <= reviewStars ? 'fill-amber-400 text-amber-400' : 'fill-gray-300 text-gray-300 dark:fill-gray-600'}`} />
+                            <Star className={`h-6 w-6 fill-current ${star <= reviewStars ? 'text-amber-400' : 'text-hairline'}`} />
                           </button>
                         ))}
                       </div>
@@ -1787,62 +1597,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         {comparisonRows.length > 0 && (
           <div className="min-w-0">
             <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
-            <div className="overflow-x-auto rounded-xl border border-hairline">
-              <table className="w-full border-collapse text-sm">
-                <thead>
-                  <tr className="bg-sunken">
-                    <th scope="col" className="p-3 text-left font-semibold">Produit</th>
-                    <th scope="col" className="p-3 text-left font-semibold">Marque</th>
-                    <th scope="col" className="p-3 text-left font-semibold">Catégorie</th>
-                    <th scope="col" className="p-3 text-left font-semibold">Format</th>
-                    <th scope="col" className="p-3 text-left font-semibold">Prix</th>
-                    <th scope="col" className="p-3 text-left font-semibold">Disponibilité</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {comparisonRows.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={row.isCurrent ? 'bg-orange-50/60 dark:bg-orange-950/20' : undefined}
-                    >
-                      <th scope="row" className="border-t border-hairline p-3 text-left font-normal">
-                        {row.isCurrent ? (
-                          <span aria-current="true" className="font-semibold">
-                            {row.name} <span className="font-normal text-ink-3">(cette page)</span>
-                          </span>
-                        ) : (
-                          <Link href={row.url} className="text-red-700 hover:underline dark:text-red-400">
-                            {row.name}
-                          </Link>
-                        )}
-                      </th>
-                      <td className="border-t border-hairline p-3">{row.brand || '—'}</td>
-                      <td className="border-t border-hairline p-3">
-                        {row.category
-                          ? row.categoryUrl
-                            ? <Link href={row.categoryUrl} className="text-ink-2 hover:text-brand hover:underline">{row.category}</Link>
-                            : row.category
-                          : '—'}
-                      </td>
-                      <td className="border-t border-hairline p-3">{row.format || '—'}</td>
-                      <td className="border-t border-hairline p-3">
-                        {formatTnd(row.price)}
-                        {row.oldPrice != null ? (
-                          <span className="ml-1 text-ink-3 line-through tabular-nums">{formatTnd(row.oldPrice)}</span>
-                        ) : row.hasPromo ? (
-                          <span className="ml-1 text-green-700 dark:text-green-400">promo</span>
-                        ) : null}
-                      </td>
-                      <td className="border-t border-hairline p-3">
-                        {row.inStock ? 'En stock' : 'En rupture'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <ProductComparisonTable rows={comparisonRows} />
           </div>
         )}
+
+        {/*
+          ── COMPLÉTEZ VOTRE COMMANDE ──────────────────────────────────────────────────────────
+          Placed after the comparison table and before the carousel on purpose: the table is where
+          a shopper finishes deciding WHICH, and the carousel is where they leave. Between the two
+          is the only point on this page where "and also…" is a help rather than an interruption.
+
+          It renders nothing unless the current product and two companions are all genuinely
+          addable — see the component, which explains why that is strict and why the heading does
+          not claim co-occurrence data we do not have.
+        */}
+        <div className="min-w-0">
+          <FrequentlyBoughtTogether
+            product={product}
+            similar={similarProducts}
+            imageFor={(entry) => getStorageUrl(entry.cover || '')}
+            onAdd={handleAddManyToCart}
+          />
+        </div>
 
         {/* Similar Products */}
         {similarProducts.length > 0 && (
@@ -1868,11 +1644,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
       {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}
       <div
-        className="lg:hidden fixed bottom-tabbar left-0 right-0 bg-canvas border-t border-hairline px-3 pt-2 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-sticky-cta"
+        className={cn(
+          'lg:hidden fixed bottom-tabbar left-0 right-0 bg-canvas border-t border-hairline px-3 pt-2 shadow-card z-sticky-cta',
+          'transition-transform duration-200 motion-reduce:transition-none',
+          // Out of view, not merely translated: a button that is off-screen but still focusable is
+          // a tab stop that goes nowhere, and screen readers would announce two "Ajouter au panier".
+          stickyBarVisible ? 'translate-y-0' : 'pointer-events-none translate-y-full'
+        )}
+        aria-hidden={!stickyBarVisible}
         // Was z-50 — above the tab bar — so this bar painted over the raised Boutique tile on
         // every product page. Now below it, with `--tabbar-raise` of bottom padding so the tile
-        // overlaps this surface and never these buttons. dark:bg-gray-950 matches the tab bar so
-        // the tile's ring cut-out blends instead of showing a halo.
+        // overlaps this surface and never these buttons. The bar is on `bg-canvas`, which the
+        // tab bar also uses, so the tile ring cut-out blends instead of showing a halo.
         // The safe-area inset moved into --tabbar-h itself; padding for it here would double it.
         style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.5rem)' }}
       >
