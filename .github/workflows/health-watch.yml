@@ -65,6 +65,31 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ── WHY THIS STEP EXISTS ────────────────────────────────────────────────────────────
+      # It did not, and that is why every scheduled run since 15/08 has been red.
+      #
+      # Sixteen of the seventeen guards here are dependency-free by design: they read public
+      # HTTPS with the global `fetch` and parse with `node:` builtins, so `node scripts/x.mjs`
+      # works on a bare checkout. `measure-category-rail.mjs` is the exception — a clipped label
+      # changes no status code and throws nothing, so the only way to see it is to lay the page
+      # out in a real engine. That one imports puppeteer, and puppeteer is in node_modules.
+      #
+      # The failure was ERR_MODULE_NOT_FOUND on every run, twice per run because the guard
+      # helper retries. The monitor was reporting a broken monitor, six-hourly, which is exactly
+      # the "looks like coverage while providing none" failure this workflow's own header warns
+      # about.
+      #
+      # PUPPETEER_SKIP_DOWNLOAD: ubuntu-latest already ships Chrome at /usr/bin/google-chrome and
+      # both measurement scripts resolve that path themselves. Downloading a second ~170MB copy
+      # on every scheduled run buys nothing.
+      - name: Install dependencies for the browser-based guards
+        working-directory: frontend
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
 
       - name: Run every read-only guard against production
         working-directory: frontend
@@ -166,6 +191,22 @@ jobs:
           # than reporting it, so a clipped label changes no status code and throws nothing: no
           # other check on this list can see it.
           guard "category-rail"      node scripts/measure-category-rail.mjs
+
+          # ── Is the product page still laid out, at every width? ───────────────────────────
+          # The 16/08 redesign collapsed two parallel render trees into one and moved the
+          # gallery, the CTAs and the benefits list. This asserts the geometry a status code
+          # cannot see: nothing overflowing, every control clearing the 44px tap floor, exactly
+          # one product-image preload, and the buy box actually containing a buy button.
+          #
+          # It runs TWO products because half the page is conditional on stock — 10,535 of
+          # 10,669 published products are "sur commande" and their CTA is a request form, so a
+          # run against only those would report the bundle and the basket button as absent and
+          # call it a pass.
+          #
+          # It found four defects on the day it was written that the screenshots did not: 38px
+          # gallery arrows, a 16px checkbox, a 16px-tall product link, and thumbnails served at
+          # 140px into a 275px box.
+          guard "pdp-layout"         node scripts/measure-pdp.mjs
 
           echo ""
           if [ "$FAILED" -ne 0 ]; then

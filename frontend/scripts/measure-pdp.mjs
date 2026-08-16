@@ -33,7 +33,12 @@ const CHROME = [
   '/usr/bin/google-chrome',
 ].find((p) => p && existsSync(p));
 
-const BASE = process.argv[2] || 'http://localhost:3141';
+/*
+ * Defaults to PRODUCTION, not to a dev server. This runs six-hourly in health-watch, and a guard
+ * whose default target is a laptop that is usually switched off reports nothing about the site.
+ * Pass a base URL to point it at a local server: `node scripts/measure-pdp.mjs http://localhost:3141`.
+ */
+const BASE = process.argv[2] || 'https://protein.tn';
 
 /*
  * TWO products, because half this page is conditional on stock.
