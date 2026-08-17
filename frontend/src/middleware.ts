@@ -672,10 +672,33 @@ export async function middleware(request: NextRequest) {
       return NextResponse.rewrite(new URL('/x-crawler/shop', request.url));
     }
 
+    /*
+     * BOTH SEGMENTS ARE FORWARDED, AND THE SECOND ONE IS THE POINT.
+     *
+     * This used to rewrite to `/x-crawler/product/{productSlug}` and drop the category. The
+     * crawler route therefore could not see which category the URL claimed, so it could not do
+     * what app/(shop)/[slug]/[productSlug] has always done — 301 to the canonical when the claimed
+     * category is not the product's own. The two answered the same URL differently. Measured on
+     * production 17/08/2026:
+     *
+     *     /isolat-de-whey/iso-whey-2-27kg-muscletech      Chrome 308 -> canonical   Googlebot 200
+     *     /gainers-haute-energie/mass-gainer-zero-7kg-…   Chrome 308 -> canonical   Googlebot 200
+     *
+     * Both first segments are RETIRED taxonomy slugs, and serving 200 for them left a live copy of
+     * the product at every address anyone had ever linked — the first segment was never checked, so
+     * any string resolved. The canonical tag was the only thing arguing for consolidation.
+     *
+     * The crawler route is a catch-all (`[...slug]`) so these arrive as params rather than a query
+     * string: reading searchParams would be a dynamic API, and a route that uses one cannot also
+     * export generateStaticParams — which is what registers it for ISR at all.
+     */
     const productPath = pathname.match(/^\/([^/]+)\/([^/]+)\/?$/);
     if (productPath && !isReservedRouteSlug(productPath[1])) {
       return NextResponse.rewrite(
-        new URL(`/x-crawler/product/${encodeURIComponent(productPath[2])}`, request.url)
+        new URL(
+          `/x-crawler/product/${encodeURIComponent(productPath[1])}/${encodeURIComponent(productPath[2])}`,
+          request.url
+        )
       );
     }
     // Single-segment listings — category / subcategory / brand — live at /{slug} (served by

@@ -41,12 +41,45 @@ import type { Product } from '@/types';
 
 export const revalidate = 300;
 
-type PageProps = { params: Promise<{ slug: string }> };
+/**
+ * CATCH-ALL, SO THE CATEGORY SEGMENT SURVIVES THE REWRITE.
+ *
+ * Bots reach a product through middleware's rewrite of `/{category}/{productSlug}`. That rewrite
+ * used to forward only the product slug, which meant this route could not see — and therefore
+ * could not check — the category the URL claimed. The human route has always checked it and 301s
+ * when it disagrees, so the two answered differently for the same URL. Measured 17/08/2026:
+ *
+ *     /isolat-de-whey/iso-whey-2-27kg-muscletech      Chrome 308 -> canonical   Googlebot 200
+ *     /gainers-haute-energie/mass-gainer-zero-7kg-…   Chrome 308 -> canonical   Googlebot 200
+ *
+ * `isolat-de-whey` and `gainers-haute-energie` are retired taxonomy slugs, so those are old URLs
+ * that should consolidate onto the live one. Serving 200 for them publishes the same product at
+ * an unbounded number of addresses — any first segment at all resolved — and only the canonical
+ * tag argued otherwise. A 301 states it in the status code, which is the stronger signal.
+ *
+ * A CATCH-ALL rather than a `?cat=` query or a header, and that is the whole reason for the
+ * awkward array: reading searchParams or headers() is a dynamic API, and a route that uses one
+ * may not also export generateStaticParams — which is what registers this route for ISR. See the
+ * note on generateStaticParams at the foot of this file. Params stay static-safe, so `revalidate`
+ * keeps working and the crawler surface keeps its cache.
+ */
+type PageProps = { params: Promise<{ slug: string[] }> };
+
+/** `['whey-isolate','iso-100']` -> the product slug and the category the URL claimed (if any). */
+function readSegments(slug: string[] | undefined): { product: string; claimedCategory: string | null } {
+  const parts = (slug ?? []).filter(Boolean).map((s) => s.trim()).filter(Boolean);
+  if (parts.length === 0) return { product: '', claimedCategory: null };
+  return {
+    product: parts[parts.length - 1],
+    claimedCategory: parts.length >= 2 ? parts[parts.length - 2] : null,
+  };
+}
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const { slug } = await params;
+  const { slug: segments } = await params;
+  const { product: slug } = readSegments(segments);
   try {
     const product = await getCachedProductDetails(slug);
     if (!product?.id) return { robots: { index: false, follow: true } };
@@ -98,8 +131,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CrawlerProductPage({ params }: PageProps) {
-  const { slug } = await params;
-  const cleanSlug = slug?.trim();
+  const { slug: segments } = await params;
+  const { product: cleanSlug, claimedCategory } = readSegments(segments);
   if (!cleanSlug) notFound();
 
   let product: Product | null = null;
@@ -133,7 +166,26 @@ export default async function CrawlerProductPage({ params }: PageProps) {
     throw e;
   }
   if (!product?.id) notFound();
-  if (!getProductPrimarySubCategory(product)?.slug) {
+
+  /**
+   * THE URL CLAIMED A CATEGORY. IT HAS TO BE THE PRODUCT'S OWN.
+   *
+   * app/(shop)/[slug]/[productSlug] has always done this — `subCategory.slug !== cleanSubCatSlug`
+   * -> permanentRedirect(canonical). This route could not, because the rewrite discarded the
+   * segment; it now arrives via the catch-all, so bot and browser finally answer the same URL the
+   * same way. Without it, every retired taxonomy slug kept a live 200 copy of the product:
+   * /isolat-de-whey/... and /gainers-haute-energie/... both served the page instead of
+   * consolidating onto /whey-isolate/... and /mass-gainers/....
+   *
+   * Compared BEFORE the subcategory-less branch below, because a product with no subcategory
+   * belongs at /shop/{slug} and never under a category at all.
+   */
+  const ownCategory = getProductPrimarySubCategory(product)?.slug;
+  if (claimedCategory && ownCategory && claimedCategory !== ownCategory) {
+    permanentRedirect(buildProductCanonicalUrl(product));
+  }
+
+  if (!ownCategory) {
     /**
      * A LIVE PRODUCT WITH NO SUBCATEGORY IS NOT A 404 — IT HAS A DIFFERENT URL.
      *
@@ -190,6 +242,6 @@ export default async function CrawlerProductPage({ params }: PageProps) {
  * Deliberately NOT enumerating the catalogue — `next build` runs in CI where Cloudflare 403s the
  * runner, so a fetched list would come back empty or partial and bake bad pages.
  */
-export function generateStaticParams(): { slug: string }[] {
+export function generateStaticParams(): { slug: string[] }[] {
   return [];
 }

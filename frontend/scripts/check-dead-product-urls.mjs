@@ -121,6 +121,19 @@ const CASES = [
      128 brands. There are 589. Everything from `Sunlipid` to `ZUMUB` read as NOT A BRAND, so a
      legacy /brand/ URL for one was answered 410 while its landing page returned 200. */
   { path: '/brand/Universal Nutrition/25', why: 'brand past the old 500-row cap -> /universal-nutrition' },
+
+  /* ── A RETIRED CATEGORY IN FRONT OF A LIVE PRODUCT ────────────────────────────────────────
+   *
+   * The product is fine; the CATEGORY segment is an old taxonomy slug. app/(shop)/[slug]/
+   * [productSlug] has always 301'd these onto the canonical, but middleware forwarded only the
+   * product slug to the crawler view, so it could not see the segment and answered 200 — the same
+   * product published at every address anyone had ever linked. Measured 17/08/2026:
+   *
+   *     /isolat-de-whey/iso-whey-2-27kg-muscletech   Chrome 308 -> canonical   Googlebot 200
+   *
+   * Only the two-agent loop above can catch this: under one UA it passes either way. */
+  { path: '/isolat-de-whey/iso-whey-2-27kg-muscletech', why: 'retired category slug -> /whey-isolate/...' },
+  { path: '/gainers-haute-energie/mass-gainer-zero-7kg-eric-favre', why: 'retired category slug -> /mass-gainers/...' },
   // The French shop prefix. /boutique/{x} already worked; the bare path and the 3-segment form
   // were hard 404s until the /boutique rule in middleware.ts.
   { path: '/boutique', why: 'the old French path for the shop' },
