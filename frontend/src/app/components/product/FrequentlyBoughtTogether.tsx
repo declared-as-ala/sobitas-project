@@ -1,22 +1,35 @@
 'use client';
 
 /**
- * "Fréquemment achetés ensemble" — this product plus two others, one button.
+ * "Complétez votre commande" — this product plus two or three others, one button.
  *
  * ── WHAT IT CLAIMS, AND WHAT IT DOES NOT ────────────────────────────────────────────────────
- * The heading is a claim about behaviour, and we do not have order-line co-occurrence data to back
- * one: 1,082 orders exist but none has ever been marked `livree`, so there is no settled basket
- * history to mine. Inventing "customers also bought" from a category join would be a fabricated
- * social proof of exactly the kind already deleted from the reviews block on this page.
+ * The reference storefront calls this "Frequently bought together", which is a claim about
+ * behaviour, and we do not have order-line co-occurrence data to back one: 1,082 orders exist but
+ * none has ever been marked `livree`, so there is no settled basket history to mine. Inventing
+ * "customers also bought" from a category join would be fabricated social proof of exactly the
+ * kind already deleted from the reviews block on this page.
  *
- * So it says "Complétez votre commande" and it is honest about being a suggestion: same category,
- * in stock, cheapest first, from `similar_products` — the same list the carousel at the foot of the
- * page already renders. The commercial value is real without the claim, because the mechanic is the
- * value: three products, one running total, one tap.
+ * So the heading is honest about being a suggestion — same category, in stock, cheapest first,
+ * from `similar_products`. The commercial value is real without the claim, because the mechanic is
+ * the value: three or four products, one running total, one tap.
  *
  * When the co-occurrence data exists — Phase 5.3 of the roadmap starts review and delivery
  * collection — the ranking can change and the heading can become true. Until then the heading
  * matches the data.
+ *
+ * ── WHY A LIST AND NOT A ROW OF PACKSHOTS ───────────────────────────────────────────────────
+ * The first version drew the three products side by side with plus signs between them, the way
+ * the pattern is usually drawn. The reference storefront stacks them as ROWS instead, and having
+ * built both, the row is plainly the better one for this catalogue:
+ *
+ *   - A packshot column 1/3 of the card wide leaves the NAME about 90px, which on this catalogue
+ *     ("TANTOR WHEY PROTEIN 2267 G - SCENIT NUTRITION") is two clamped lines of nothing. A row
+ *     gives the name the full width of the card and the price its own column.
+ *   - Adding a fourth product to a row of packshots costs a quarter of every tile; adding a fourth
+ *     ROW costs 72px of page and nothing else. That is why the reference can show five.
+ *   - The checkbox, the thing that actually drives the total, sits at the start of a 72px-tall row
+ *     instead of under a tile. It is the easiest target in the block rather than the smallest.
  *
  * ── WHEN IT REFUSES TO RENDER ───────────────────────────────────────────────────────────────
  * 10,535 of 10,669 published products are catalogue entries the shop does not physically hold, and
@@ -27,7 +40,7 @@
 import { useMemo, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Plus, ShoppingCart } from 'lucide-react';
+import { ShoppingCart } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import type { Product } from '@/types';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -35,28 +48,9 @@ import { isInStock } from '@/util/cartStock';
 import { getProductLink } from '@/util/productUrl';
 import { cn } from '@/app/components/ui/utils';
 
-const COMPANIONS = 2;
-
-function Thumb({ product, image }: { product: Product; image: string }) {
-  return (
-    <div className="relative aspect-square w-full overflow-hidden rounded-xl border border-hairline bg-elevated">
-      {image ? (
-        <Image
-          src={image}
-          alt={product.designation_fr || 'Produit'}
-          fill
-          loading="lazy"
-          /* MEASURED, not guessed: the tile renders 275px wide at 1440 and ~105px at 390. The first
-             value here was 140px, which made next/image serve a 140px candidate into a 275px box —
-             a 2x upscale, on the one block whose whole job is to make three products recognisable
-             at a glance. */
-          sizes="(min-width: 1024px) 300px, 30vw"
-          className="object-contain p-1.5"
-        />
-      ) : null}
-    </div>
-  );
-}
+/** Two is the floor for the block to exist at all; the third is taken when it is available. */
+const MIN_COMPANIONS = 2;
+const MAX_COMPANIONS = 3;
 
 export function FrequentlyBoughtTogether({
   product,
@@ -75,7 +69,7 @@ export function FrequentlyBoughtTogether({
       similar
         .filter((candidate) => candidate?.id && candidate.id !== product.id && isInStock(candidate))
         .sort((a, b) => getPriceDisplay(a).finalPrice - getPriceDisplay(b).finalPrice)
-        .slice(0, COMPANIONS),
+        .slice(0, MAX_COMPANIONS),
     [similar, product.id]
   );
 
@@ -85,7 +79,7 @@ export function FrequentlyBoughtTogether({
      bundle that excludes it is just a different product's bundle. */
   const [selected, setSelected] = useState<Set<number | string>>(() => new Set(items.map((p) => p.id)));
 
-  if (!isInStock(product) || companions.length < COMPANIONS) return null;
+  if (!isInStock(product) || companions.length < MIN_COMPANIONS) return null;
 
   const chosen = items.filter((item) => selected.has(item.id));
   const total = chosen.reduce((sum, item) => sum + getPriceDisplay(item).finalPrice, 0);
@@ -107,96 +101,148 @@ export function FrequentlyBoughtTogether({
 
   return (
     <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
-      <div className="grid gap-5 p-4 sm:p-5 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-8 lg:p-6">
-        {/*
-          The row of packshots with plus signs between them. This is the entire idea of the section
-          expressed as a picture, and it survives being the only thing a visitor looks at.
-        */}
-        <ul className="flex items-start gap-2 sm:gap-3">
-          {items.map((item, i) => {
-            const isCurrent = item.id === product.id;
-            const ticked = selected.has(item.id);
-            const { finalPrice } = getPriceDisplay(item);
+      {/*
+        Centred heading and one line of explanation, matching the reference. The explanation is
+        doing real work: without it the block reads as an advert, and with it the reader knows the
+        checkboxes are theirs to change before anything is added.
+      */}
+      <div className="border-b border-hairline px-4 py-5 text-center sm:px-6">
+        <h2 className="font-display text-xl font-bold uppercase leading-tight tracking-tight text-ink-1 sm:text-2xl">
+          Complétez votre commande
+        </h2>
+        <p className="mt-1.5 text-sm text-ink-2">
+          Décochez ce dont vous n&apos;avez pas besoin — le total se met à jour.
+        </p>
+      </div>
 
-            return (
-              <li key={item.id} className="contents">
-                {i > 0 && (
-                  <span className="mt-8 shrink-0 text-ink-3 sm:mt-10" aria-hidden="true">
-                    <Plus className="h-4 w-4" />
+      <ul className="divide-y divide-hairline px-4 sm:px-6">
+        {items.map((item) => {
+          const isCurrent = item.id === product.id;
+          const ticked = selected.has(item.id);
+          const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(item);
+          const image = imageFor(item);
+
+          return (
+            <li key={item.id} className={cn('flex items-center gap-2 py-3 sm:gap-3', !ticked && 'opacity-55')}>
+              {/*
+                The <label> wraps ONLY the checkbox, never the row. A label containing the product
+                link makes a tap near the name ambiguous between "follow" and "toggle", and browsers
+                and screen readers do not resolve that ambiguity the same way.
+
+                It exists because the input itself renders 20x20 — measured, by the page guard, at
+                all five widths — and 20px is well under the 44px floor. The box stays 20px because
+                that is the size a checkbox should look; the LABEL is the target.
+              */}
+              <label
+                className={cn(
+                  'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center',
+                  isCurrent ? 'cursor-default' : 'cursor-pointer'
+                )}
+              >
+                <input
+                  type="checkbox"
+                  checked={ticked}
+                  disabled={isCurrent}
+                  onChange={() => toggle(item.id)}
+                  className="h-5 w-5 accent-brand"
+                  aria-label={
+                    isCurrent
+                      ? `${item.designation_fr} — cet article est toujours inclus`
+                      : `Inclure ${item.designation_fr}`
+                  }
+                />
+              </label>
+
+              {/* THE PACKSHOT IS THE LINK, and it is over 56px on every width. It was the product
+                  NAME at `text-xs`, which measured 16px tall on a laptop — a navigation target
+                  thinner than a finger. */}
+              {isCurrent ? (
+                <Thumb image={image} />
+              ) : (
+                <Link
+                  href={getProductLink(item)}
+                  className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  aria-label={item.designation_fr || 'Voir le produit'}
+                >
+                  <Thumb image={image} />
+                </Link>
+              )}
+
+              <div className="min-w-0 flex-1">
+                {isCurrent && (
+                  <span className="mb-0.5 block text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                    Cet article
                   </span>
                 )}
-                <div className={cn('min-w-0 flex-1', !ticked && 'opacity-50')}>
-                  {/*
-                    THE PACKSHOT IS THE LINK. It was the product NAME, set at `text-xs` with a
-                    two-line clamp, which measured 16px tall on a laptop — a navigation target
-                    thinner than a finger. The thumbnail is over 100px on every width, and it was
-                    already the thing people aim at.
-
-                    It is also no longer inside the <label>: an <a> nested in a label makes a tap
-                    near it ambiguous between "follow" and "toggle", and neither browsers nor
-                    screen readers resolve that the same way.
-                  */}
-                  {isCurrent ? (
-                    <Thumb product={item} image={imageFor(item)} />
-                  ) : (
-                    <Link
-                      href={getProductLink(item)}
-                      className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                      aria-label={item.designation_fr || 'Voir le produit'}
-                    >
-                      <Thumb product={item} image={imageFor(item)} />
-                    </Link>
-                  )}
-                  {/* The whole row is the checkbox's target, and it clears 44px. */}
-                  <label
-                    className={cn(
-                      'mt-1.5 flex min-h-[44px] items-center gap-2 rounded-lg',
-                      isCurrent ? 'cursor-default' : 'cursor-pointer'
-                    )}
+                {isCurrent ? (
+                  <span className="line-clamp-2 text-sm font-semibold text-ink-1">{item.designation_fr}</span>
+                ) : (
+                  /*
+                    `-my-3 py-3`: the name renders on ONE line on a desktop row, which is a 20px-tall
+                    navigation target — measured. The padding takes its box to 44px and the negative
+                    margin gives that back to the layout, so the row keeps its height and the link
+                    keeps its floor. Same trick, and the same reason, as the brand link in the buy
+                    column.
+                  */
+                  <Link
+                    href={getProductLink(item)}
+                    className="-my-3 line-clamp-2 py-3 text-sm font-semibold text-ink-1 underline-offset-2 hover:text-brand hover:underline"
                   >
-                    <input
-                      type="checkbox"
-                      checked={ticked}
-                      disabled={isCurrent}
-                      onChange={() => toggle(item.id)}
-                      className="h-5 w-5 shrink-0 accent-brand"
-                      aria-label={`Inclure ${item.designation_fr}`}
-                    />
-                    <span className="min-w-0">
-                      <span className="line-clamp-2 text-xs font-medium text-ink-2">
-                        {isCurrent ? 'Cet article' : item.designation_fr}
-                      </span>
-                      <span className="mt-0.5 block font-display text-xs font-bold tabular-nums text-ink-1">
-                        {finalPrice.toFixed(2)} DT
-                      </span>
-                    </span>
-                  </label>
-                </div>
-              </li>
-            );
-          })}
-        </ul>
+                    {item.designation_fr}
+                  </Link>
+                )}
+                {item.brand?.designation_fr && (
+                  <span className="mt-0.5 block truncate text-xs text-ink-3">{item.brand.designation_fr}</span>
+                )}
+              </div>
 
-        <div className="flex flex-col gap-2 border-t border-hairline pt-4 lg:w-56 lg:border-s lg:border-t-0 lg:ps-8 lg:pt-0">
-          <span className="text-xs text-ink-3">
-            Total pour {chosen.length} article{chosen.length > 1 ? 's' : ''}
-          </span>
-          <span className="font-display text-2xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span>
-          {saving > 0 && (
-            <span className="text-xs font-semibold tabular-nums text-ok">
-              Vous économisez {saving.toFixed(2)} DT
-            </span>
-          )}
-          <Button
-            className="mt-1 min-h-[48px] w-full font-display font-bold uppercase tracking-wide"
-            disabled={chosen.length === 0}
-            onClick={() => onAdd(chosen)}
-          >
-            <ShoppingCart className="me-2 h-4 w-4 shrink-0" aria-hidden="true" />
-            Tout ajouter
-          </Button>
-        </div>
+              <div className="shrink-0 text-end">
+                <span className="block font-display text-sm font-bold tabular-nums text-ink-1">
+                  {finalPrice.toFixed(2)} DT
+                </span>
+                {hasPromo && oldPrice != null && oldPrice > finalPrice && (
+                  <span className="block text-xs tabular-nums text-ink-3 line-through">{oldPrice.toFixed(2)} DT</span>
+                )}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+
+      <div className="flex flex-col items-center gap-3 border-t border-hairline px-4 py-5 sm:px-6">
+        <p className="text-sm text-ink-2">
+          Total pour {chosen.length} article{chosen.length > 1 ? 's' : ''} :{' '}
+          <span className="font-display text-xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span>
+        </p>
+        {saving > 0 && (
+          <p className="-mt-1.5 text-xs font-semibold tabular-nums text-ok">
+            Vous économisez {saving.toFixed(2)} DT sur cette sélection
+          </p>
+        )}
+        <Button
+          className="min-h-[48px] w-full max-w-sm font-display font-bold uppercase tracking-wide"
+          disabled={chosen.length === 0}
+          onClick={() => onAdd(chosen)}
+        >
+          <ShoppingCart className="me-2 h-4 w-4 shrink-0" aria-hidden="true" />
+          Ajouter la sélection
+        </Button>
       </div>
+    </div>
+  );
+}
+
+/**
+ * `alt=""` deliberately. The product name is set in text immediately to the right of this
+ * thumbnail, and the link around it already carries an aria-label; a third announcement of the
+ * same string is noise, so the image is marked decorative and the text carries the meaning.
+ */
+function Thumb({ image }: { image: string }) {
+  return (
+    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated sm:h-16 sm:w-16">
+      {image ? (
+        <Image src={image} alt="" fill loading="lazy" sizes="64px" className="object-contain p-1" />
+      ) : null}
     </div>
   );
 }

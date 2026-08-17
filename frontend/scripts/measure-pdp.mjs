@@ -210,6 +210,32 @@ for (const { w, h, label } of WIDTHS) {
       highlightItems: qa('main ul.border-s-2 > li').length,
       priceFontPx: priceEl ? Math.round(parseFloat(getComputedStyle(priceEl).fontSize)) : 0,
       priceText: priceEl?.textContent?.trim() || null,
+
+      /*
+       * ── THE PRICE COMES BEFORE THE PROSE. AT EVERY WIDTH. ────────────────────────────────
+       * The information sections belong under the GALLERY on a desktop — they start ~700px higher
+       * there and read at ~75 characters a line instead of ~150. The obvious way to get that is to
+       * nest them inside the gallery column, and that is what shipped.
+       *
+       * A phone has one column, and DOM order is the only order it has. Nesting put the whole
+       * accordion stack between the photograph and the H1: measured at 390px, the product NAME
+       * landed 1,850px down the page and the PRICE at 2,560px, behind four collapsed sections —
+       * the two facts a shopper came for, below the fold four times over, on the 81% of this
+       * site's traffic that is mobile. Nothing else on the page looked wrong, which is exactly why
+       * this needs a number watching it.
+       *
+       * The fix was explicit grid placement, so the DOM order is the phone's order and `row-start`
+       * restores the desktop one. This asserts the OUTCOME rather than the mechanism: whatever
+       * anyone builds here later, the price is above the first accordion.
+       */
+      priceBeforeProse: (() => {
+        const y = (el) => (el ? el.getBoundingClientRect().top + window.scrollY : null);
+        const price = y(priceEl);
+        const h1 = y(document.querySelector('main h1'));
+        const prose = y(document.querySelector('#pdp-description'));
+        if (price == null || h1 == null || prose == null) return null;
+        return { price: Math.round(price), h1: Math.round(h1), prose: Math.round(prose) };
+      })(),
       identifiers: qa('main dl').filter((d) => /Réf\.|Code-barres/.test(d.textContent)).length,
       ctas: qa('main button, main a').filter((el) => /Ajouter au panier|Commander maintenant|Demander ce produit/.test(el.textContent || '')).length,
       /* By `data-sticky-cta`, not by the `z-sticky-cta` CLASS — the PWA install banner carries
@@ -362,7 +388,121 @@ for (const { w, h, label } of WIDTHS) {
         const table = head?.closest('table');
         return table ? table.querySelectorAll('tbody tr').length : 0;
       })(),
-      bundle: !!qa('main button').find((b) => /Tout ajouter/.test(b.textContent || '')),
+      /* By the HEADING and the presence of a submit, not by the button's exact wording. The
+         first version matched the string "Tout ajouter", so renaming that button to "Ajouter la
+         sélection" reported the whole block as missing at all five widths — a guard failing on a
+         copy change is a guard that gets muted. */
+      bundle: (() => {
+        const heading = qa('main h2').find((h) => /Complétez votre commande/i.test(h.textContent || ''));
+        if (!heading) return false;
+        /* Walk UP to the first ancestor that holds the controls. `closest('div')` was the heading's
+           own header bar, which contains neither — so this reported "missing" on a block that was
+           on screen. */
+        for (let el = heading.parentElement; el && el.tagName !== 'MAIN'; el = el.parentElement) {
+          if (el.querySelector('input[type=checkbox]') && el.querySelector('button')) return true;
+        }
+        return false;
+      })(),
+
+      /*
+       * ── THE PAGE'S ORDER, AS AN ORDER ─────────────────────────────────────────────────────
+       * Five bands live below the hero and the sequence is a decision, not an accident: photos of
+       * the label, then the bundle (while the intent to buy is still live), then the comparison
+       * (decision support), then the reviews, then the carousel that lets you leave. Reviews were
+       * FIRST once, which put the emptiest block on the site — no product has a published review —
+       * in front of every reader before they had been offered anything to do.
+       *
+       * Reported as the names actually present, in the order they are painted. Only the bands that
+       * exist on a given product are returned, so a product with no label shots and no bundle still
+       * produces a valid, checkable sequence.
+       */
+      bandOrder: (() => {
+        const y = (el) => (el ? Math.round(el.getBoundingClientRect().top + window.scrollY) : null);
+        /* Matched against the WHOLE trimmed heading, anchored. The first version used a loose
+           /Produits similaires/i, and the comparison band is headed "Comparer avec des produits
+           similaires" — so `related` kept reporting the comparison table's position and the order
+           check failed on a page that was in the right order. */
+        const byHeading = (re) => {
+          const h = qa('main h2').find((el) => re.test((el.textContent || '').replace(/\s+/g, ' ').trim()));
+          return h ? y(h) : null;
+        };
+        const bands = [
+          ['photos', y(document.querySelector('#pdp-label-photos'))],
+          ['bundle', byHeading(/^Complétez votre commande$/i)],
+          ['comparison', byHeading(/^Comparer avec/i)],
+          ['reviews', y(document.querySelector('#reviews'))],
+          ['related', byHeading(/^Produits similaires$/i)],
+        ];
+        return bands.filter(([, top]) => top != null).sort((a, b) => a[1] - b[1]).map(([name]) => name);
+      })(),
+
+      /*
+       * ── THE LABEL GRID IS A BAND, NOT A DRAWER ────────────────────────────────────────────
+       * It shipped inside the accordion stack, which lives in the gallery column, so the tiles drew
+       * at 146px — photographs of printed text, at a size where none of the text resolves. Full
+       * width they are 289px or 392px depending on the count. This asserts the WIDTH, because that
+       * is the property the reader actually gets, and a future refactor that quietly puts the grid
+       * back in a column would restore the defect while keeping every other check green.
+       */
+      labelBand: (() => {
+        const band = document.querySelector('#pdp-label-photos');
+        if (!band) return null;
+        const tile = band.querySelector('[aria-label^="Agrandir la photo"]');
+        const main = document.querySelector('main');
+        return {
+          bandW: Math.round(band.getBoundingClientRect().width),
+          contentW: Math.round(main.getBoundingClientRect().width - 2 * parseFloat(getComputedStyle(main).paddingLeft)),
+          tileW: tile ? Math.round(tile.getBoundingClientRect().width) : 0,
+          emptyCells: (() => {
+            const ul = band.querySelector('ul');
+            if (!ul) return 0;
+            const cols = getComputedStyle(ul).gridTemplateColumns.split(' ').filter(Boolean).length;
+            const n = ul.children.length;
+            const rem = n % cols;
+            return rem === 0 ? 0 : cols - rem;
+          })(),
+        };
+      })(),
+
+      /*
+       * ── THE THUMBNAIL RAIL CHANGES AXIS, IT IS NOT WRITTEN TWICE ──────────────────────────
+       * Beside the frame from `lg`, underneath it below. One list either way — the whole point of
+       * the component — so this checks the GEOMETRY rather than counting elements, which is what
+       * would still pass if somebody re-introduced a second `hidden lg:flex` copy.
+       */
+      rail: (() => {
+        const rail = document.querySelector('main [aria-label="Miniatures du produit"]');
+        const frame = document.querySelector('main [aria-label="Agrandir la photo du produit"]');
+        if (!rail || !frame) return null;
+        const r = rail.getBoundingClientRect();
+        const f = frame.getBoundingClientRect();
+        return {
+          beside: r.bottom > f.top + 8 && r.top < f.bottom - 8,
+          below: r.top >= f.bottom - 8,
+          railW: Math.round(r.width),
+          frameW: Math.round(f.width),
+        };
+      })(),
+
+      /*
+       * ── THE `sizes` STRING AGAINST THE BOX IT LANDS IN ────────────────────────────────────
+       * This one is here because I got it wrong twice in a row on the same element. `sizes` decides
+       * which candidate the browser downloads for the LCP image, it is invisible in every
+       * screenshot, and it silently went stale the moment the rail made the frame 96px narrower.
+       *
+       * next/image encodes the chosen candidate in the URL as `&w=`, so the served width and the
+       * painted width can be compared directly. Under 1.0 means an upscaled hero; far over it means
+       * bytes bought and thrown away on the one image that decides LCP. Measured at
+       * deviceScaleFactor 1, so the ratio is the `sizes` string and nothing else.
+       */
+      lcpFit: (() => {
+        const img = document.querySelector('main [aria-label="Agrandir la photo du produit"] img');
+        if (!img || !img.currentSrc) return null;
+        const served = Number(new URL(img.currentSrc, location.href).searchParams.get('w'));
+        const painted = Math.round(img.getBoundingClientRect().width);
+        if (!served || !painted) return null;
+        return { served, painted, ratio: Number((served / painted).toFixed(2)) };
+      })(),
       /*
        * The site logo in the header is also preloaded, on every route, and it is not this page's
        * to count. What matters is that the PRODUCT image is preloaded exactly once: before this
@@ -391,6 +531,15 @@ for (const { w, h, label } of WIDTHS) {
   check(w, 'exactly one h1', m.h1Count === 1, `h1 count = ${m.h1Count}`);
   check(w, 'exactly one product-image preload', m.productPreloads === 1, `${m.productPreloads} preload(s)`);
   check(w, 'price is the largest number', m.priceFontPx >= 30, `${m.priceText} @ ${m.priceFontPx}px`);
+  if (m.priceBeforeProse) {
+    const { price, h1, prose } = m.priceBeforeProse;
+    check(
+      w,
+      'name and price come before the accordions',
+      h1 < prose && price < prose,
+      `h1 ${h1}px · price ${price}px · first section ${prose}px`
+    );
+  }
   check(w, 'identifiers rendered once', m.identifiers === 1, `${m.identifiers} block(s)`);
   check(w, 'benefits panel present', m.highlightItems >= 3, `${m.highlightItems} bullets`);
   check(w, 'CTA in the buy box', m.ctas >= 1, `${m.ctas} CTA element(s)`);
@@ -415,6 +564,58 @@ for (const { w, h, label } of WIDTHS) {
     m.duplicated.length === 0,
     m.duplicated.join(', ') || 'ok'
   );
+
+  /* A subsequence check, not an equality check: which bands exist depends on the product, but the
+     order they appear in must never depend on it. */
+  {
+    const EXPECTED = ['photos', 'bundle', 'comparison', 'reviews', 'related'];
+    let cursor = -1;
+    const inOrder = m.bandOrder.every((name) => {
+      const at = EXPECTED.indexOf(name);
+      if (at <= cursor) return false;
+      cursor = at;
+      return true;
+    });
+    check(w, 'bands are in the decided order', inOrder, m.bandOrder.join(' → ') || 'none');
+  }
+
+  if (m.rail) {
+    const wide = w >= 1024;
+    check(
+      w,
+      wide ? 'thumbnail rail sits beside the frame' : 'thumbnail rail sits under the frame',
+      wide ? m.rail.beside : m.rail.below,
+      `rail ${m.rail.railW}px, frame ${m.rail.frameW}px`
+    );
+  }
+
+  if (m.lcpFit) {
+    check(
+      w,
+      'gallery sizes matches the box it renders in',
+      m.lcpFit.ratio >= 0.95 && m.lcpFit.ratio <= 1.8,
+      `serves ${m.lcpFit.served}px into ${m.lcpFit.painted}px (x${m.lcpFit.ratio})`
+    );
+  }
+
+  if (m.labelBand) {
+    /* Within 1px of the content rail — i.e. full width, not the gallery column. */
+    check(
+      w,
+      'label photos span the content width',
+      Math.abs(m.labelBand.bandW - m.labelBand.contentW) <= 1,
+      `${m.labelBand.bandW}px of ${m.labelBand.contentW}px`
+    );
+    if (w >= 1024) {
+      check(w, 'label tiles are legible', m.labelBand.tileW >= 250, `${m.labelBand.tileW}px tiles`);
+      check(
+        w,
+        'label grid leaves at most one empty cell',
+        m.labelBand.emptyCells <= 1,
+        `${m.labelBand.emptyCells} empty`
+      );
+    }
+  }
   /* Two packshots and a grid, not eight thumbnails. Only asserted on the product that has label
      shots — the others legitimately have two photographs and no grid. */
   if (/transcription/.test(product.name)) {
@@ -453,8 +654,12 @@ for (const { w, h, label } of WIDTHS) {
   console.log(`\n── ${label} ──`);
   console.log(`   gallery ${m.galleryW}x${m.galleryH}, packshot ${m.packshotW}px, ${m.thumbs} thumbs`);
   console.log(`   price ${m.priceText} @ ${m.priceFontPx}px · ${m.highlightItems} benefits · sticky bar ${m.stickyBar}`);
+  if (m.priceBeforeProse) console.log(`   h1 at ${m.priceBeforeProse.h1}px, price at ${m.priceBeforeProse.price}px, first section at ${m.priceBeforeProse.prose}px`);
   console.log(`   comparison ${m.comparisonCols.length} cols x ${m.comparisonRows} rows [${m.comparisonCols.join(', ')}]`);
   console.log(`   bundle ${m.bundle ? 'rendered' : 'not rendered'} · ${m.productPreloads} product-image preload(s)`);
+  console.log(`   bands: ${m.bandOrder.join(' → ') || 'none'}`);
+  if (m.lcpFit) console.log(`   hero image serves ${m.lcpFit.served}px into ${m.lcpFit.painted}px (x${m.lcpFit.ratio})`);
+  if (m.labelBand) console.log(`   label band ${m.labelBand.bandW}px, tiles ${m.labelBand.tileW}px, ${m.labelBand.emptyCells} empty cell(s)`);
   console.log(`   sections: ${m.sections.join(' · ')}`);
 
   await page.close();

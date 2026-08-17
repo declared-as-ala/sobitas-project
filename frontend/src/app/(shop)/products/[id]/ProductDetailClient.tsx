@@ -6,7 +6,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
-import { ProductCard } from '@/app/components/ProductCard';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
@@ -15,9 +14,10 @@ import { ProductLabelGrid } from '@/app/components/product/ProductLabelGrid';
 import { ProductHighlights } from '@/app/components/product/ProductHighlights';
 import { ProductComparisonTable } from '@/app/components/product/ProductComparisonTable';
 import { FrequentlyBoughtTogether } from '@/app/components/product/FrequentlyBoughtTogether';
+import { RelatedProductsRail } from '@/app/components/product/RelatedProductsRail';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -51,6 +51,9 @@ import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 export type BreadcrumbItem = { name: string; url: string };
 
+/** The three orders worth offering. See `sortedReviews` for why there is no "most helpful". */
+type ReviewSort = 'recent' | 'best' | 'worst';
+
 interface ProductDetailClientProps {
   product: Product;
   similarProducts: Product[];
@@ -80,6 +83,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
+  const [reviewSort, setReviewSort] = useState<ReviewSort>('recent');
   const { openQuickOrder } = useQuickOrder();
   /** Selected aroma for display; add to cart / command use this or first aroma. */
   const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
@@ -161,12 +165,32 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     : 0);
   const reviewCount = reviews.length;
 
-  // Reviews rendered newest-first directly on the product page (no separate reviews page/controls)
-  const sortedReviews = [...reviews].sort((a, b) => {
-    const da = a.created_at ? new Date(a.created_at).getTime() : 0;
-    const db = b.created_at ? new Date(b.created_at).getTime() : 0;
-    return db - da;
-  });
+  /*
+    -- THE SORT ------------------------------------------------------------------------------
+    Newest-first remains the default, because on a page with a handful of reviews recency is the
+    only ordering a reader can verify for themselves.
+
+    "Meilleures notes" and "Notes les plus basses" are both offered, and offering the SECOND one is
+    the point. A control that only sorts a page's reviews downward from five stars is a marketing
+    device; the reader who wants the worst review first is the reader deciding whether to spend
+    150 DT, and hiding that from them is how a shop earns a reputation for hiding things. Both
+    orders fall back to date, so a tie never shuffles between renders.
+
+    There is no "most helpful": nothing records helpfulness. The reference storefront prints
+    "Helpful (0)" under every review, which after a while reads as "nobody found any of this
+    useful" - a control with no data behind it is worse than an absent one.
+  */
+  const sortedReviews = useMemo(() => {
+    const byDate = (a: Review, b: Review) => {
+      const da = a.created_at ? new Date(a.created_at).getTime() : 0;
+      const db = b.created_at ? new Date(b.created_at).getTime() : 0;
+      return db - da;
+    };
+    const list = [...reviews];
+    if (reviewSort === 'best') return list.sort((a, b) => b.stars - a.stars || byDate(a, b));
+    if (reviewSort === 'worst') return list.sort((a, b) => a.stars - b.stars || byDate(a, b));
+    return list.sort(byDate);
+  }, [reviews, reviewSort]);
   const reviewsToShowOnPage = sortedReviews.slice(0, visibleReviewCount);
 
   /** Filament stores product FAQ as JSON array `{ q, a }[]` on `faq`; exposed as-is from `GET /product_details/{slug}`. */
@@ -711,7 +735,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         <div className="mb-8 grid grid-cols-1 gap-5 sm:gap-6 lg:mb-12 lg:grid-cols-12 lg:items-start lg:gap-8 xl:gap-12">
 
           {/* ── A) GALLERY ─────────────────────────────────────────────────────────────────── */}
-          <div className="min-w-0 lg:col-span-7">
+          <div className="min-w-0 lg:col-span-7 lg:row-start-1">
             <ProductGallery
               images={packshots}
               altBase={imageAltBase}
@@ -738,527 +762,44 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   )}
                 </>
               }
-              overlayTopRight={
-                <>
-                  {/*
-                    Favourite and share sit ON the frame rather than in a row above it. That row
-                    cost a full line of vertical space above the fold on a phone and contained
-                    nothing anybody came for; the gallery has corners going spare.
-                    h-11: the 44px tap floor, on controls small enough to want checking.
-                  */}
-                  <button
-                    type="button"
-                    onClick={() => toggleFavorite(favoriteProduct)}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    aria-label={isInFavorites(product.id) ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-                    aria-pressed={isInFavorites(product.id)}
+              /*
+                -- THE "+N PHOTOS" TILE ----------------------------------------------------
+                The last tile in the thumbnail rail, on the products that have label close-ups.
+
+                Those photographs are NOT in the carousel - `splitPackshotsFromLabels` keeps the
+                front and back of the pack there and routes the rest to a grid further down the
+                page, because a customer swiping for the product does not want to swipe through six
+                shots of the Supplement Facts panel to reach the back of the tub.
+
+                The cost of that split is discoverability: nothing at the top of the page said the
+                other six existed. This tile says it, and it is an ordinary anchor into the
+                full-width band below — no script, no scroll handler, and it still works with
+                JavaScript off, which is the state Googlebot renders a first pass in.
+              */
+              railTrailing={
+                labelImages.length > 0 ? (
+                  <a
+                    href="#pdp-label-photos"
+                    className="flex aspect-square w-16 shrink-0 snap-start flex-col items-center justify-center rounded-xl border border-dashed border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-[4.5rem] lg:w-full"
                   >
-                    <Heart className={cn('h-5 w-5', isInFavorites(product.id) && 'fill-brand text-brand')} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShare}
-                    className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    aria-label="Partager ce produit"
-                  >
-                    <Share2 className="h-5 w-5" />
-                  </button>
-                </>
+                    <span className="font-display text-sm font-bold leading-none tabular-nums">
+                      +{labelImages.length}
+                    </span>
+                    <span className="mt-1 text-[9px] font-semibold uppercase leading-none tracking-wide">
+                      photos
+                    </span>
+                  </a>
+                ) : null
               }
             />
 
-            {/*
-              ── THE INFORMATION SECTIONS LIVE HERE NOW, NOT FULL-WIDTH BELOW ────────────────
-              This is the reference storefront's structure and it is better for a reason that is
-              easy to measure: the buy column is roughly 700px tall and the page is several
-              thousand. Putting the accordions full-width under BOTH columns left a column-width
-              of empty canvas beside the buy box on every desktop screen, and pushed the first
-              line of product information below the fold on a laptop.
-
-              Under the gallery they start about 700px higher, they are the width of the gallery
-              rather than the width of the page — so a line of body text is ~75 characters instead
-              of ~150, which is the difference between prose and a spreadsheet — and the buy box
-              stays beside them while they are read.
-
-              Below `lg` the grid collapses to one column and this is simply the next thing after
-              the gallery, which is where it already was.
-            */}
-            <div className="mt-8 lg:mt-10">
-            {(() => {
-              const hasNutritionContent = product.nutrition_values != null &&
-                String(product.nutrition_values).trim() !== '' &&
-                String(product.nutrition_values).trim() !== '<p></p>' &&
-                String(product.nutrition_values).trim() !== '<p><br></p>';
-              const hasLegacyQuestionsHtml =
-                product.questions != null &&
-                String(product.questions).trim() !== '' &&
-                String(product.questions).trim() !== '<p></p>' &&
-                String(product.questions).trim() !== '<p><br></p>';
-              const hasProductFaq = productFaqItems.length > 0;
-              const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq;
-
-              return (
-                /*
-                 * ── SEVEN NAMED SECTIONS, NOT TWO TABS ────────────────────────────────────
-                 *
-                 * Owner, 16/08/2026, holding a reference storefront beside this page: *"a lot of
-                 * informations in description that being showed wrong … user can see ingredients
-                 * clearly, description clearly and any labels clearly."*
-                 *
-                 * There were TWO tabs. "Description" carried the marketing overview, the packaging
-                 * specs, the directions, the other-ingredients list and the warnings — five
-                 * different kinds of information stacked in one scrolling column with <h3>s as the
-                 * only separation. A customer asking "how do I take this" read a marketing
-                 * paragraph first; a customer checking an allergen hunted for a list below both.
-                 *
-                 * The data was always structured — `productSourceSections` returns keyed blocks
-                 * (overview, suggested_use, other_ingredients, warnings) and has since the import
-                 * shipped. Only the presentation flattened them back into prose. Each block is now
-                 * its own labelled, collapsible section, in the order the reference uses.
-                 *
-                 * TABS ARE GONE RATHER THAN RESTYLED, and that is a correctness change as much as
-                 * a design one: an inactive Radix tab is ABSENT from the DOM. That cost this page a
-                 * live structured-data violation one day ago — FAQPage markup emitted for questions
-                 * that were not in the HTML. `ProductInfoSection` is a native <details>, so its
-                 * content is in the document whether it is open or shut.
-                 */
-                <div className="w-full divide-y divide-hairline rounded-2xl border border-hairline bg-elevated px-4 shadow-sm sm:px-6">
-
-                  <ProductInfoSection id="pdp-description" title={product.zone1 || 'Description'} defaultOpen>
-                    <div>
-                    {/*
-                      Transcribed specifications — the format printed on the packaging and the
-                      flavour variant, for products imported from the external catalogue.
-
-                      Rendered from the SAME function as /x-crawler/product/[slug], which is the
-                      only view Googlebot is served: a fact shown here and missing there is
-                      invisible to Google, and a fact shown there and missing here is cloaking.
-                      Placed above the description because it is above the description on that route
-                      too — parity is about the content, and keeping the order the same is what
-                      makes it checkable by reading the two files.
-
-                      It renders NOTHING when product.source_facts is null, which is the permanent
-                      state of all 309 hand-made products: no wrapper, no heading, no empty row, so
-                      their description tab is byte-identical to what it was.
-                    */}
-                    {(() => {
-                      const sourceFacts = productSourceFactRows(product);
-                      if (sourceFacts.length === 0) return null;
-                      return (
-                        <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
-                          {sourceFacts.map((row) => (
-                            <div key={row.key} className="contents">
-                              <dt className="font-medium text-ink-1">{row.label}</dt>
-                              <dd className="text-ink-2">{row.value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      );
-                    })()}
-                    <div
-                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
-                      // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
-                      // top-level headings on the page whose only h1 should be the product name —
-                      // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
-                      // The crawler view already ran this; the page a customer sees did not.
-                      // `merged.body`, not `description_fr`. Two things have been taken out of it and
-                      // put somewhere better rather than removed: the lead bullet list is the
-                      // benefits panel in the hero (util/productHighlights.ts), and every block with
-                      // a named slot is its own section below (util/productDescriptionSections.ts).
-                      // What is left is what "Description" should have meant all along — what the
-                      // product is, what is in the pack, what it weighs.
-                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.body) }}
-                    />
-                    {descriptionIsLong && (
-                    <button
-                      type="button"
-                      onClick={() => setDescExpanded(!descExpanded)}
-                      // min-h-[44px] and a negative inline margin: the label was a 57x20 hit area,
-                      // and this is the control that reveals the rest of the description.
-                      className="-mx-2 mt-2 inline-flex min-h-[44px] items-center px-2 text-sm font-semibold text-brand hover:underline"
-                    >
-                      {descExpanded ? 'Voir moins' : 'Lire plus'}
-                    </button>
-                    )}
-                    {/*
-                      The transcribed source page — the manufacturer's suggested use, ingredient list
-                      and warnings, then the photographs the source page listed, then one sentence
-                      about where all of it came from.
-
-                      Same blocks, same headings, same order as /x-crawler/product/[slug], from the
-                      same functions. That route is the only one Googlebot is served: a block here
-                      and not there is invisible to Google, and a block there and not here is
-                      cloaking. Keeping the order identical is what makes the parity checkable by
-                      reading the two files side by side.
-
-                      The manufacturer's OVERVIEW is deliberately not among them — promotion folded
-                      it into `description_fr`, which is the block rendered immediately above.
-
-                      Every one of these is empty for all 309 hand-made products (no staging row, so
-                      `source_facts.content` is null), which is why the whole thing is an IIFE that
-                      returns null rather than a wrapper with nothing in it: their description tab
-                      renders exactly what it rendered before.
-                    */}
-                    {/*
-                      The provenance sentence stays with the description, because it is a statement
-                      about where THESE words came from. The blocks it used to introduce are now
-                      siblings of this section rather than children of it — see below.
-                    */}
-                    {/*
-                      The source site's accuracy notice. It arrives as a 2,510-character block under
-                      its own heading, which put a legal disclaimer at the same visual weight as the
-                      ingredient list — and, because it was the LAST heading on the page, the three
-                      nutrition tables ended up inside it.
-
-                      It is kept rather than dropped: it is the sentence that tells a customer the
-                      printed label governs if it disagrees with this page, which on an imported
-                      catalogue is the one piece of legal text that actually matters. It is just no
-                      longer shouted.
-                    */}
-                    {merged.disclaimer && (
-                      <details className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
-                        <summary className="cursor-pointer list-none font-medium hover:text-brand">
-                          Clause de non-responsabilité
-                        </summary>
-                        <div
-                          className="prose prose-neutral mt-2 max-w-none text-xs leading-relaxed text-ink-3 prose-p:text-ink-3"
-                          dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.disclaimer) }}
-                        />
-                      </details>
-                    )}
-                    {hasProductSourceContent(product) && productSourceAttribution(product) && (
-                      <p className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
-                        {productSourceAttribution(product)}
-                      </p>
-                    )}
-                    </div>
-                  </ProductInfoSection>
-
-                  {/*
-                    ── EACH TRANSCRIBED BLOCK IS ITS OWN SECTION NOW ─────────────────────────────
-                    `productSourceSections` has always returned KEYED blocks — suggested_use,
-                    other_ingredients, warnings — and this page flattened them back into one column
-                    of <h3>s inside Description. That is the "informations showed wrong" the owner
-                    pointed at: five kinds of information behind one label.
-
-                    ORDER IS DELIBERATE and matches both the reference storefront and
-                    /x-crawler/product/[slug]: directions, then ingredients, then warnings. Parity
-                    with the crawler route is not cosmetic — a block shown here and missing there is
-                    invisible to Google, and a block there and missing here is cloaking. The order
-                    staying identical is what keeps that checkable by reading the two files.
-
-                    SOURCE OF EACH BLOCK: `source_facts.content.sections` when the backend
-                    transcribed it, otherwise the matching heading inside `description_fr`. Never
-                    both — see mergeProductContent. That is what stopped this product printing its
-                    ingredient list and its warnings twice.
-
-                    Nothing renders for a product with neither, which is the permanent state of all
-                    309 hand-made ones: no empty section, no bare heading.
-                  */}
-                  {merged.sections.map((section) => {
-                    const html = sanitizeRichHtml(section.html);
-                    if (!html) return null;
-                    return (
-                      <ProductInfoSection
-                        key={section.key}
-                        id={`pdp-${section.key}`}
-                        title={section.heading}
-                      >
-                        <div
-                          className="prose prose-neutral prose-base max-w-none text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                          dangerouslySetInnerHTML={{ __html: html }}
-                        />
-                      </ProductInfoSection>
-                    );
-                  })}
-
-                  {/* ── `forceMount`, AND THE STYLING ALREADY ASSUMED IT ─────────────────────
-                      Radix renders `present && children`, so without this prop an INACTIVE tab is
-                      not in the DOM at all. This panel holds the transcribed Supplement Facts —
-                      18,965 rows carry one — and the questions panel below holds the FAQ.
-
-                      Two consequences, and the second is the serious one:
-                        · the richest content on the page was absent from the server-rendered HTML
-                          of the canonical human URL until a human clicked a tab
-                        · FAQPage JSON-LD is emitted UNCONDITIONALLY at
-                          app/(shop)/[slug]/[productSlug]/page.tsx:338, so the markup asserted
-                          questions and answers that were not on the page. Google's FAQPage rules
-                          require the content to be present; markup describing invisible content is
-                          the exact shape of a structured-data violation.
-
-                      The `data-[state=inactive]:hidden` classes on this element were already
-                      written for mounted-but-hidden content and could never fire without the prop —
-                      the styling anticipated the fix and the prop was missing. */}
-                  {/* `forceMount` is no longer needed and no longer possible: <details> keeps its
-                      content in the DOM by construction, which is the property that fix was buying. */}
-                  <ProductInfoSection id="pdp-nutrition" title={product.zone3 || 'Valeurs nutritionnelles'}>
-                    {(() => {
-                      const nutritionImages = Array.isArray((product as any).nutrition_images)
-                        ? ((product as any).nutrition_images as string[]).filter(Boolean)
-                        : [];
-                      const hasNutritionImages = nutritionImages.length > 0;
-                      /*
-                       * The transcribed Supplement Facts panel.
-                       *
-                       * Sanitised here rather than at the point of use so the empty-state test below
-                       * asks about the string that will actually render: a panel that sanitises down
-                       * to nothing must count as no panel, or the tab would suppress its "not
-                       * available" message and then render nothing at all.
-                       *
-                       * Null for every product with no staging row — all 309 legacy products — so
-                       * this whole tab is unchanged for them. The provenance sentence is rendered
-                       * once per page, by the description tab, and is deliberately not read here.
-                       */
-                      /*
-                       * `|| merged.nutritionFallback` is the last resort, and it can only ever fire
-                       * when there IS no canonical panel — mergeProductContent returns an empty
-                       * string otherwise, precisely so this can never become a second copy of the
-                       * panel above.
-                       *
-                       * It matters because the tables trail the last heading of a transcribed page,
-                       * so on a product with no `nutrition_html` they were sitting inside whatever
-                       * block happened to be last. On the screenshotted product that was the legal
-                       * disclaimer.
-                       */
-                      const sourceNutritionHtml = sanitizeRichHtml(
-                        productSourceNutritionHtml(product) || merged.nutritionFallback || ''
-                      );
-                      return (
-                        <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-hairline">
-                          <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-ink-1">
-                            {product.zone3 || 'Valeurs Nutritionnelles'}
-                          </h2>
-
-                          {/* Nutrition Images Gallery */}
-                          {hasNutritionImages && (
-                            <div className="mb-6">
-                              {nutritionImages.length === 1 ? (
-                                <button
-                                  type="button"
-                                  onClick={() => setNutritionLightbox(0)}
-                                  className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-hairline shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
-                                  aria-label="Agrandir l'image nutritionnelle"
-                                >
-                                  <Image
-                                    src={getStorageUrl(nutritionImages[0])}
-                                    alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles`}
-                                    width={600}
-                                    height={400}
-                                    className="w-full h-auto object-contain"
-                                    quality={90}
-                                  />
-                                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                                    <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={32} />
-                                  </div>
-                                </button>
-                              ) : (
-                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  {nutritionImages.map((imgPath, idx) => (
-                                    <button
-                                      key={idx}
-                                      type="button"
-                                      onClick={() => setNutritionLightbox(idx)}
-                                      className="relative group aspect-square rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in bg-gray-50 dark:bg-gray-800"
-                                      aria-label={`Image nutritionnelle ${idx + 1}`}
-                                    >
-                                      <Image
-                                        src={getStorageUrl(imgPath)}
-                                        alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${idx + 1}`}
-                                        fill
-                                        sizes="(max-width: 640px) 50vw, 33vw"
-                                        className="object-contain p-1"
-                                        quality={90}
-                                      />
-                                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                                        <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={20} />
-                                      </div>
-                                    </button>
-                                  ))}
-                                </div>
-                              )}
-                            </div>
-                          )}
-
-                          {/* Nutrition Text Content */}
-                          {hasNutritionContent ? (
-                            <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                              <div
-                                className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
-                                dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
-                              />
-                            </div>
-                          ) : null}
-
-                          {/*
-                            The Supplement Facts panel transcribed from the source product page.
-
-                            Rendered AFTER `nutrition_values`, which is the column an admin fills in
-                            by hand from the physical label of the lot we hold: a panel read off that
-                            label is evidence about the product in our warehouse, and this one is a
-                            transcription of a retailer's rendering of the manufacturer's panel. In
-                            practice they never both exist — promotion writes no `nutrition_values`,
-                            and no legacy product has a staging row.
-
-                            Same panel, same position relative to `nutrition_values`, as
-                            /x-crawler/product/[slug]. Null for all 309 legacy products, so their
-                            nutrition tab is unchanged.
-                          */}
-                          {sourceNutritionHtml && (
-                            <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
-                              <div
-                                className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
-                                dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
-                              />
-                              {/*
-                                The provenance sentence is NOT repeated here.
-
-                                It used to render in both places, so the ordinary supplement — prose
-                                sections AND a Supplement Facts panel, which is what the fixtures
-                                produce — printed "Informations transcrites de la fiche d'origine du
-                                fabricant…" twice on one page while /x-crawler/product/[slug] printed
-                                it once. One page, one sentence, wherever the transcribed content
-                                starts: the description tab block above renders it, and it opens
-                                whenever this row publishes anything at all.
-                              */}
-                            </div>
-                          )}
-
-                          {/*
-                            "Not available" now has to account for the transcribed panel as well —
-                            otherwise a product that ships a full Supplement Facts table would print
-                            a sentence, directly above it, saying it has none.
-                          */}
-                          {!hasNutritionContent && !hasNutritionImages && !sourceNutritionHtml && (
-                            <div className="text-center py-6 sm:py-8">
-                              <p className="text-ink-3 text-sm sm:text-base">
-                                Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
-                              </p>
-                            </div>
-                          )}
-
-                          {/* Lightbox */}
-                          {nutritionLightbox >= 0 && (
-                            <div
-                              className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
-                              onClick={() => setNutritionLightbox(-1)}
-                              role="dialog"
-                              aria-modal="true"
-                              aria-label="Visionneuse d'image nutritionnelle"
-                            >
-                              <button
-                                type="button"
-                                onClick={() => setNutritionLightbox(-1)}
-                                className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
-                                aria-label="Fermer"
-                              >
-                                <X size={22} />
-                              </button>
-
-                              {nutritionImages.length > 1 && (
-                                <>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox - 1 + nutritionImages.length) % nutritionImages.length); }}
-                                    className="absolute left-3 sm:left-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
-                                    aria-label="Image précédente"
-                                  >
-                                    <ChevronLeft size={26} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox + 1) % nutritionImages.length); }}
-                                    className="absolute right-3 sm:right-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
-                                    aria-label="Image suivante"
-                                  >
-                                    <ChevronRight size={26} />
-                                  </button>
-                                </>
-                              )}
-
-                              <div
-                                className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                <Image
-                                  src={getStorageUrl(nutritionImages[nutritionLightbox] ?? '')}
-                                  alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${nutritionLightbox + 1}`}
-                                  width={900}
-                                  height={700}
-                                  className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
-                                  quality={90}
-                                />
-                                {nutritionImages.length > 1 && (
-                                  <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/40 px-2 py-0.5 rounded-full">
-                                    {nutritionLightbox + 1} / {nutritionImages.length}
-                                  </span>
-                                )}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })()}
-                  </ProductInfoSection>
-
-                  <ProductInfoSection id="pdp-questions" title={product.zone4 || 'Questions fréquentes'}>
-                    <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
-                    <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
-                      {product.zone4 || 'Questions Fréquentes'}
-                    </h2>
-                    {hasProductFaq ? (
-                      <div className="space-y-5">
-                        {productFaqItems.map((item) => (
-                          <div
-                            key={item.id}
-                            className="border-b border-hairline pb-5 last:border-0 last:pb-0"
-                          >
-                            <h4 className="font-semibold text-ink-1 mb-2 flex items-start gap-2">
-                              <span className="text-brand shrink-0">Q.</span>
-                              <span>{item.q || '—'}</span>
-                            </h4>
-                            <div className="pl-6 text-sm sm:text-base text-ink-2 leading-relaxed whitespace-pre-wrap">
-                              {item.a}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    ) : hasLegacyQuestionsHtml ? (
-                      <div
-                        className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
-                      />
-                    ) : null}
-                    </div>
-                </ProductInfoSection>
-
-                  {/*
-                    ── THE LABEL, PHOTOGRAPHED ─────────────────────────────────────────────────
-                    Everything after the front and the back of the tub: the Supplement Facts panel,
-                    the directions, the warnings, shot close enough to read. `defaultOpen` because
-                    a photograph of the printed label is evidence, and evidence that needs a click
-                    is evidence most people never see.
-
-                    Renders nothing at all for a product with two photographs or fewer, which is
-                    most of them — no heading, no empty grid.
-                  */}
-                  {labelImages.length > 0 && (
-                    <ProductInfoSection
-                      id="pdp-label-photos"
-                      title="Photos du produit"
-                      eyebrow={`${labelImages.length} photo${labelImages.length > 1 ? 's' : ''}`}
-                      defaultOpen
-                    >
-                      <ProductLabelGrid images={labelImages} altBase={imageAltBase} />
-                    </ProductInfoSection>
-                  )}
-              </div>
-                );
-              })()}
-            </div>
           </div>
 
           {/* ── B) THE BUY COLUMN ──────────────────────────────────────────────────────────── */}
-          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5">
+          {/* `lg:row-span-2` is what lets the sections sit under the gallery while this stays
+              beside them. `items-start` on the grid keeps it at its natural height inside that
+              two-row area rather than stretching the buy box down the page. */}
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1">
 
             {/* 1. Where you are. A link, so the crumb also does work for crawl depth. */}
             {product.sous_categorie?.slug && (
@@ -1519,18 +1060,90 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 )}
               </div>
 
-              {/* Trust row */}
-              <div className="mt-4 grid grid-cols-3 gap-2 border-t border-hairline pt-4">
+              {/*
+                -- FAVOURITE AND SHARE, WITH THEIR NAMES ON THEM -------------------------------
+                These were two unlabelled circles floating on the top-right corner of the
+                photograph. That placement is a common one and it is measurably the weaker one
+                here: an icon-only control with no text is only as discoverable as the icon is
+                obvious, and a heart painted over a product shot competes with the product shot -
+                which is the element the owner specifically asked to make bigger.
+
+                The reference storefront puts both under the buy buttons, as labelled pills, and
+                that is where a shopper who has decided NOT to buy today actually looks. They are
+                written once, here; the copies on the frame are deleted rather than kept in sync.
+              */}
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(favoriteProduct)}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  aria-pressed={isInFavorites(product.id)}
+                >
+                  <Heart
+                    className={cn('h-4 w-4 shrink-0', isInFavorites(product.id) && 'fill-brand text-brand')}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">
+                    {isInFavorites(product.id) ? 'Dans vos favoris' : 'Ajouter aux favoris'}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={handleShare}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  Partager
+                </button>
+              </div>
+
+              {/*
+                -- THE TRUST ROW: FOUR, AND THE FOURTH IS PRESSABLE ----------------------------
+                Three static icons became four, in the reference's two-line shape - but the change
+                that matters is that "Conseil" is a `tel:` link and not a picture of a promise.
+
+                81% of this site's traffic is mobile and 10,535 of 10,669 products are sur commande,
+                which means the single most common thing a visitor here needs is to ASK someone
+                whether a product can be got and when. A phone number they can press is the highest
+                intent element on the page after the CTA itself, and it was on the page precisely
+                nowhere between the header strip and the footer.
+
+                Each claim is one the shop can keep: the delivery window and cash-on-delivery are
+                the shop's stated terms, authenticity is its own guarantee (stated as its own, not
+                as a third-party verification), and the number is the number.
+              */}
+              <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-hairline pt-4 sm:grid-cols-4">
                 {[
-                  { Icon: Truck, label: 'Livraison 24–72h' },
-                  { Icon: CreditCard, label: 'Paiement à la livraison' },
-                  { Icon: Shield, label: '100% authentique' },
-                ].map(({ Icon, label }) => (
-                  <div key={label} className="flex flex-col items-center gap-1 text-center">
-                    <Icon className="h-5 w-5 text-brand" strokeWidth={1.75} aria-hidden="true" />
-                    <span className="text-[11px] leading-tight text-ink-3">{label}</span>
-                  </div>
-                ))}
+                  { Icon: Truck, label: 'Livraison', sub: '24–72h' },
+                  { Icon: CreditCard, label: 'Paiement', sub: 'À la livraison' },
+                  { Icon: Shield, label: 'Authenticité', sub: '100% garantie' },
+                  { Icon: Phone, label: 'Conseil', sub: '27 612 500', href: 'tel:+21627612500' },
+                ].map(({ Icon, label, sub, href }) => {
+                  const body = (
+                    <>
+                      <Icon className="h-5 w-5 text-brand" strokeWidth={1.75} aria-hidden="true" />
+                      <span className="text-[11px] font-semibold leading-tight text-ink-1">{label}</span>
+                      <span className="text-[10px] leading-tight text-ink-3">{sub}</span>
+                    </>
+                  );
+                  const shell = 'flex flex-col items-center gap-0.5 text-center';
+                  return href ? (
+                    <a
+                      key={label}
+                      href={href}
+                      className={cn(
+                        shell,
+                        'min-h-[44px] justify-center rounded-lg transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus'
+                      )}
+                    >
+                      {body}
+                    </a>
+                  ) : (
+                    <div key={label} className={shell}>
+                      {body}
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -1549,15 +1162,626 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </div>
             )}
           </div>
+
+          {/* ── C) THE INFORMATION SECTIONS ──────────────────────────────────────────────────
+            Under the gallery on a desktop, under the BUY BOX on a phone — and it is a third grid
+            item with explicit placement rather than a child of the gallery column, which is the
+            only way to have both.
+
+            ── WHY IT MOVED, AND WHAT IT COST ─────────────────────────────────────────────
+            These sections were nested inside the gallery column, because on a desktop that is
+            exactly where they belong: they start ~700px higher than a full-width block would,
+            they are the width of the gallery rather than the width of the page (so a line of
+            body text is ~75 characters instead of ~150), and the buy box stays beside them
+            while they are read.
+
+            But a phone has one column, and DOM order is the only order it has. Nesting put the
+            whole accordion stack BETWEEN the photograph and the H1. MEASURED at 390px, on the two
+            products the page guard drives: the product NAME sat 1,169px down the page on a short
+            product and 1,621px on a fully transcribed one, and the PRICE at 1,643px and 1,937px,
+            behind four to seven collapsed sections. Those are the two facts a shopper came for, on
+            the 81% of this site's traffic that is mobile. They now sit at 555/635px and
+            1,029/951px — the price arrives 614px earlier on the short product, 986px on the long
+            one, and the page is the same height either way.
+
+            Explicit grid placement gives both. The DOM says gallery → buy box → sections, which
+            is the phone's order and the right one. From `lg`, `row-start` and `col-start` put the
+            sections back under the gallery and give the buy column both rows, so the desktop
+            layout is pixel-identical to what it was — verified by the page guard, which measures
+            the gallery, the price size and the band order at 1280 and 1440.
+          */}
+          <div className="mt-8 min-w-0 lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:mt-2">
+          {(() => {
+            const hasNutritionContent = product.nutrition_values != null &&
+              String(product.nutrition_values).trim() !== '' &&
+              String(product.nutrition_values).trim() !== '<p></p>' &&
+              String(product.nutrition_values).trim() !== '<p><br></p>';
+            const hasLegacyQuestionsHtml =
+              product.questions != null &&
+              String(product.questions).trim() !== '' &&
+              String(product.questions).trim() !== '<p></p>' &&
+              String(product.questions).trim() !== '<p><br></p>';
+            const hasProductFaq = productFaqItems.length > 0;
+            const hasQuestionsTab = hasLegacyQuestionsHtml || hasProductFaq;
+
+            return (
+              /*
+               * ── SEVEN NAMED SECTIONS, NOT TWO TABS ────────────────────────────────────
+               *
+               * Owner, 16/08/2026, holding a reference storefront beside this page: *"a lot of
+               * informations in description that being showed wrong … user can see ingredients
+               * clearly, description clearly and any labels clearly."*
+               *
+               * There were TWO tabs. "Description" carried the marketing overview, the packaging
+               * specs, the directions, the other-ingredients list and the warnings — five
+               * different kinds of information stacked in one scrolling column with <h3>s as the
+               * only separation. A customer asking "how do I take this" read a marketing
+               * paragraph first; a customer checking an allergen hunted for a list below both.
+               *
+               * The data was always structured — `productSourceSections` returns keyed blocks
+               * (overview, suggested_use, other_ingredients, warnings) and has since the import
+               * shipped. Only the presentation flattened them back into prose. Each block is now
+               * its own labelled, collapsible section, in the order the reference uses.
+               *
+               * TABS ARE GONE RATHER THAN RESTYLED, and that is a correctness change as much as
+               * a design one: an inactive Radix tab is ABSENT from the DOM. That cost this page a
+               * live structured-data violation one day ago — FAQPage markup emitted for questions
+               * that were not in the HTML. `ProductInfoSection` is a native <details>, so its
+               * content is in the document whether it is open or shut.
+               */
+              <div className="w-full divide-y divide-hairline rounded-2xl border border-hairline bg-elevated px-4 shadow-sm sm:px-6">
+
+                <ProductInfoSection id="pdp-description" title={product.zone1 || 'Description'} defaultOpen>
+                  <div>
+                  {/*
+                    Transcribed specifications — the format printed on the packaging and the
+                    flavour variant, for products imported from the external catalogue.
+
+                    Rendered from the SAME function as /x-crawler/product/[slug], which is the
+                    only view Googlebot is served: a fact shown here and missing there is
+                    invisible to Google, and a fact shown there and missing here is cloaking.
+                    Placed above the description because it is above the description on that route
+                    too — parity is about the content, and keeping the order the same is what
+                    makes it checkable by reading the two files.
+
+                    It renders NOTHING when product.source_facts is null, which is the permanent
+                    state of all 309 hand-made products: no wrapper, no heading, no empty row, so
+                    their description tab is byte-identical to what it was.
+                  */}
+                  {(() => {
+                    const sourceFacts = productSourceFactRows(product);
+                    if (sourceFacts.length === 0) return null;
+                    return (
+                      <dl className="mb-4 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1.5 text-sm">
+                        {sourceFacts.map((row) => (
+                          <div key={row.key} className="contents">
+                            <dt className="font-medium text-ink-1">{row.label}</dt>
+                            <dd className="text-ink-2">{row.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    );
+                  })()}
+                  <div
+                    className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                    // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
+                    // top-level headings on the page whose only h1 should be the product name —
+                    // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
+                    // The crawler view already ran this; the page a customer sees did not.
+                    // `merged.body`, not `description_fr`. Two things have been taken out of it and
+                    // put somewhere better rather than removed: the lead bullet list is the
+                    // benefits panel in the hero (util/productHighlights.ts), and every block with
+                    // a named slot is its own section below (util/productDescriptionSections.ts).
+                    // What is left is what "Description" should have meant all along — what the
+                    // product is, what is in the pack, what it weighs.
+                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.body) }}
+                  />
+                  {descriptionIsLong && (
+                  <button
+                    type="button"
+                    onClick={() => setDescExpanded(!descExpanded)}
+                    // min-h-[44px] and a negative inline margin: the label was a 57x20 hit area,
+                    // and this is the control that reveals the rest of the description.
+                    className="-mx-2 mt-2 inline-flex min-h-[44px] items-center px-2 text-sm font-semibold text-brand hover:underline"
+                  >
+                    {descExpanded ? 'Voir moins' : 'Lire plus'}
+                  </button>
+                  )}
+                  {/*
+                    The transcribed source page — the manufacturer's suggested use, ingredient list
+                    and warnings, then the photographs the source page listed, then one sentence
+                    about where all of it came from.
+
+                    Same blocks, same headings, same order as /x-crawler/product/[slug], from the
+                    same functions. That route is the only one Googlebot is served: a block here
+                    and not there is invisible to Google, and a block there and not here is
+                    cloaking. Keeping the order identical is what makes the parity checkable by
+                    reading the two files side by side.
+
+                    The manufacturer's OVERVIEW is deliberately not among them — promotion folded
+                    it into `description_fr`, which is the block rendered immediately above.
+
+                    Every one of these is empty for all 309 hand-made products (no staging row, so
+                    `source_facts.content` is null), which is why the whole thing is an IIFE that
+                    returns null rather than a wrapper with nothing in it: their description tab
+                    renders exactly what it rendered before.
+                  */}
+                  {/*
+                    The provenance sentence stays with the description, because it is a statement
+                    about where THESE words came from. The blocks it used to introduce are now
+                    siblings of this section rather than children of it — see below.
+                  */}
+                  {/*
+                    The source site's accuracy notice. It arrives as a 2,510-character block under
+                    its own heading, which put a legal disclaimer at the same visual weight as the
+                    ingredient list — and, because it was the LAST heading on the page, the three
+                    nutrition tables ended up inside it.
+
+                    It is kept rather than dropped: it is the sentence that tells a customer the
+                    printed label governs if it disagrees with this page, which on an imported
+                    catalogue is the one piece of legal text that actually matters. It is just no
+                    longer shouted.
+                  */}
+                  {merged.disclaimer && (
+                    <details className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
+                      <summary className="cursor-pointer list-none font-medium hover:text-brand">
+                        Clause de non-responsabilité
+                      </summary>
+                      <div
+                        className="prose prose-neutral mt-2 max-w-none text-xs leading-relaxed text-ink-3 prose-p:text-ink-3"
+                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.disclaimer) }}
+                      />
+                    </details>
+                  )}
+                  {hasProductSourceContent(product) && productSourceAttribution(product) && (
+                    <p className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
+                      {productSourceAttribution(product)}
+                    </p>
+                  )}
+                  </div>
+                </ProductInfoSection>
+
+                {/*
+                  ── EACH TRANSCRIBED BLOCK IS ITS OWN SECTION NOW ─────────────────────────────
+                  `productSourceSections` has always returned KEYED blocks — suggested_use,
+                  other_ingredients, warnings — and this page flattened them back into one column
+                  of <h3>s inside Description. That is the "informations showed wrong" the owner
+                  pointed at: five kinds of information behind one label.
+
+                  ORDER IS DELIBERATE and matches both the reference storefront and
+                  /x-crawler/product/[slug]: directions, then ingredients, then warnings. Parity
+                  with the crawler route is not cosmetic — a block shown here and missing there is
+                  invisible to Google, and a block there and missing here is cloaking. The order
+                  staying identical is what keeps that checkable by reading the two files.
+
+                  SOURCE OF EACH BLOCK: `source_facts.content.sections` when the backend
+                  transcribed it, otherwise the matching heading inside `description_fr`. Never
+                  both — see mergeProductContent. That is what stopped this product printing its
+                  ingredient list and its warnings twice.
+
+                  Nothing renders for a product with neither, which is the permanent state of all
+                  309 hand-made ones: no empty section, no bare heading.
+                */}
+                {merged.sections.map((section) => {
+                  const html = sanitizeRichHtml(section.html);
+                  if (!html) return null;
+                  return (
+                    <ProductInfoSection
+                      key={section.key}
+                      id={`pdp-${section.key}`}
+                      title={section.heading}
+                    >
+                      <div
+                        className="prose prose-neutral prose-base max-w-none text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        dangerouslySetInnerHTML={{ __html: html }}
+                      />
+                    </ProductInfoSection>
+                  );
+                })}
+
+                {/* ── `forceMount`, AND THE STYLING ALREADY ASSUMED IT ─────────────────────
+                    Radix renders `present && children`, so without this prop an INACTIVE tab is
+                    not in the DOM at all. This panel holds the transcribed Supplement Facts —
+                    18,965 rows carry one — and the questions panel below holds the FAQ.
+
+                    Two consequences, and the second is the serious one:
+                      · the richest content on the page was absent from the server-rendered HTML
+                        of the canonical human URL until a human clicked a tab
+                      · FAQPage JSON-LD is emitted UNCONDITIONALLY at
+                        app/(shop)/[slug]/[productSlug]/page.tsx:338, so the markup asserted
+                        questions and answers that were not on the page. Google's FAQPage rules
+                        require the content to be present; markup describing invisible content is
+                        the exact shape of a structured-data violation.
+
+                    The `data-[state=inactive]:hidden` classes on this element were already
+                    written for mounted-but-hidden content and could never fire without the prop —
+                    the styling anticipated the fix and the prop was missing. */}
+                {/* `forceMount` is no longer needed and no longer possible: <details> keeps its
+                    content in the DOM by construction, which is the property that fix was buying. */}
+                <ProductInfoSection id="pdp-nutrition" title={product.zone3 || 'Valeurs nutritionnelles'}>
+                  {(() => {
+                    const nutritionImages = Array.isArray((product as any).nutrition_images)
+                      ? ((product as any).nutrition_images as string[]).filter(Boolean)
+                      : [];
+                    const hasNutritionImages = nutritionImages.length > 0;
+                    /*
+                     * The transcribed Supplement Facts panel.
+                     *
+                     * Sanitised here rather than at the point of use so the empty-state test below
+                     * asks about the string that will actually render: a panel that sanitises down
+                     * to nothing must count as no panel, or the tab would suppress its "not
+                     * available" message and then render nothing at all.
+                     *
+                     * Null for every product with no staging row — all 309 legacy products — so
+                     * this whole tab is unchanged for them. The provenance sentence is rendered
+                     * once per page, by the description tab, and is deliberately not read here.
+                     */
+                    /*
+                     * `|| merged.nutritionFallback` is the last resort, and it can only ever fire
+                     * when there IS no canonical panel — mergeProductContent returns an empty
+                     * string otherwise, precisely so this can never become a second copy of the
+                     * panel above.
+                     *
+                     * It matters because the tables trail the last heading of a transcribed page,
+                     * so on a product with no `nutrition_html` they were sitting inside whatever
+                     * block happened to be last. On the screenshotted product that was the legal
+                     * disclaimer.
+                     */
+                    const sourceNutritionHtml = sanitizeRichHtml(
+                      productSourceNutritionHtml(product) || merged.nutritionFallback || ''
+                    );
+                    return (
+                      <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-hairline">
+                        <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-ink-1">
+                          {product.zone3 || 'Valeurs Nutritionnelles'}
+                        </h2>
+
+                        {/* Nutrition Images Gallery */}
+                        {hasNutritionImages && (
+                          <div className="mb-6">
+                            {nutritionImages.length === 1 ? (
+                              <button
+                                type="button"
+                                onClick={() => setNutritionLightbox(0)}
+                                className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-hairline shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
+                                aria-label="Agrandir l'image nutritionnelle"
+                              >
+                                <Image
+                                  src={getStorageUrl(nutritionImages[0])}
+                                  alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles`}
+                                  width={600}
+                                  height={400}
+                                  className="w-full h-auto object-contain"
+                                  quality={90}
+                                />
+                                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                                  <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={32} />
+                                </div>
+                              </button>
+                            ) : (
+                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                {nutritionImages.map((imgPath, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => setNutritionLightbox(idx)}
+                                    className="relative group aspect-square rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in bg-gray-50 dark:bg-gray-800"
+                                    aria-label={`Image nutritionnelle ${idx + 1}`}
+                                  >
+                                    <Image
+                                      src={getStorageUrl(imgPath)}
+                                      alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${idx + 1}`}
+                                      fill
+                                      sizes="(max-width: 640px) 50vw, 33vw"
+                                      className="object-contain p-1"
+                                      quality={90}
+                                    />
+                                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
+                                      <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={20} />
+                                    </div>
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Nutrition Text Content */}
+                        {hasNutritionContent ? (
+                          <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                            <div
+                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
+                            />
+                          </div>
+                        ) : null}
+
+                        {/*
+                          The Supplement Facts panel transcribed from the source product page.
+
+                          Rendered AFTER `nutrition_values`, which is the column an admin fills in
+                          by hand from the physical label of the lot we hold: a panel read off that
+                          label is evidence about the product in our warehouse, and this one is a
+                          transcription of a retailer's rendering of the manufacturer's panel. In
+                          practice they never both exist — promotion writes no `nutrition_values`,
+                          and no legacy product has a staging row.
+
+                          Same panel, same position relative to `nutrition_values`, as
+                          /x-crawler/product/[slug]. Null for all 309 legacy products, so their
+                          nutrition tab is unchanged.
+                        */}
+                        {sourceNutritionHtml && (
+                          <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+                            <div
+                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
+                            />
+                            {/*
+                              The provenance sentence is NOT repeated here.
+
+                              It used to render in both places, so the ordinary supplement — prose
+                              sections AND a Supplement Facts panel, which is what the fixtures
+                              produce — printed "Informations transcrites de la fiche d'origine du
+                              fabricant…" twice on one page while /x-crawler/product/[slug] printed
+                              it once. One page, one sentence, wherever the transcribed content
+                              starts: the description tab block above renders it, and it opens
+                              whenever this row publishes anything at all.
+                            */}
+                          </div>
+                        )}
+
+                        {/*
+                          "Not available" now has to account for the transcribed panel as well —
+                          otherwise a product that ships a full Supplement Facts table would print
+                          a sentence, directly above it, saying it has none.
+                        */}
+                        {!hasNutritionContent && !hasNutritionImages && !sourceNutritionHtml && (
+                          <div className="text-center py-6 sm:py-8">
+                            <p className="text-ink-3 text-sm sm:text-base">
+                              Les valeurs nutritionnelles ne sont pas disponibles pour ce produit.
+                            </p>
+                          </div>
+                        )}
+
+                        {/* Lightbox */}
+                        {nutritionLightbox >= 0 && (
+                          <div
+                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+                            onClick={() => setNutritionLightbox(-1)}
+                            role="dialog"
+                            aria-modal="true"
+                            aria-label="Visionneuse d'image nutritionnelle"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => setNutritionLightbox(-1)}
+                              className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                              aria-label="Fermer"
+                            >
+                              <X size={22} />
+                            </button>
+
+                            {nutritionImages.length > 1 && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox - 1 + nutritionImages.length) % nutritionImages.length); }}
+                                  className="absolute left-3 sm:left-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                  aria-label="Image précédente"
+                                >
+                                  <ChevronLeft size={26} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox + 1) % nutritionImages.length); }}
+                                  className="absolute right-3 sm:right-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                  aria-label="Image suivante"
+                                >
+                                  <ChevronRight size={26} />
+                                </button>
+                              </>
+                            )}
+
+                            <div
+                              className="relative max-w-[90vw] max-h-[90vh] flex items-center justify-center"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Image
+                                src={getStorageUrl(nutritionImages[nutritionLightbox] ?? '')}
+                                alt={`${product.designation_fr || 'Produit'} — valeurs nutritionnelles ${nutritionLightbox + 1}`}
+                                width={900}
+                                height={700}
+                                className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
+                                quality={90}
+                              />
+                              {nutritionImages.length > 1 && (
+                                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/40 px-2 py-0.5 rounded-full">
+                                  {nutritionLightbox + 1} / {nutritionImages.length}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
+                </ProductInfoSection>
+
+                <ProductInfoSection id="pdp-questions" title={product.zone4 || 'Questions fréquentes'}>
+                  <div className="p-4 sm:p-5 lg:p-6 pt-5 sm:pt-6 border-t border-hairline">
+                  <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold mb-3 text-ink-1">
+                    {product.zone4 || 'Questions Fréquentes'}
+                  </h2>
+                  {hasProductFaq ? (
+                    <div className="space-y-5">
+                      {productFaqItems.map((item) => (
+                        <div
+                          key={item.id}
+                          className="border-b border-hairline pb-5 last:border-0 last:pb-0"
+                        >
+                          <h4 className="font-semibold text-ink-1 mb-2 flex items-start gap-2">
+                            <span className="text-brand shrink-0">Q.</span>
+                            <span>{item.q || '—'}</span>
+                          </h4>
+                          <div className="pl-6 text-sm sm:text-base text-ink-2 leading-relaxed whitespace-pre-wrap">
+                            {item.a}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : hasLegacyQuestionsHtml ? (
+                    <div
+                      className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
+                    />
+                  ) : null}
+                  </div>
+              </ProductInfoSection>
+
+            </div>
+              );
+            })()}
+          </div>
         </div>
 
-        {/* Avis, comparatif, suggestions — full width, below both columns. */}
-        <section className="mx-auto w-full" aria-label="Avis et comparatif">
-            {/* Avis clients — below tabs (no longer sidebar) */}
-            <div
-              id="reviews"
-              className="min-w-0 pt-8 sm:pt-10 border-t border-hairline mt-8 sm:mt-10"
-            >
+        {/*
+          -- THE ORDER OF THE PAGE BELOW THE HERO ---------------------------------------------
+          It ran: reviews, video, comparison, bundle, carousel. The reference storefront runs
+          bundle, reviews, carousel, and its order is better for a reason that survives being
+          argued with - it follows the decision, not the CMS.
+
+          A reader who reaches the bottom of the specifications has decided WHAT. So:
+
+            1. the video, because it is the last piece of information ABOUT this product and
+               belongs against the sections it explains;
+            2. the bundle, which is the only "and also…" that is a help rather than an
+               interruption, and it is placed while the intent to buy is still live;
+            3. the comparison, for the reader whose answer is "this one, but bigger" - decision
+               support, so it sits with the bundle and before the social proof;
+            4. the reviews, which is where a hesitant reader goes to be convinced or put off;
+            5. the carousel, which is the exit.
+
+          Reviews were FIRST, immediately under the specifications, which put the page's emptiest
+          block (no product has a published review) directly in the path of every reader before
+          they were offered a single thing to do.
+
+          `space-y-*` on the wrapper is the other half of this: the blocks used to butt straight
+          into one another with no rule and no air, so the comparison table read as a continuation
+          of the accordion above it. One rhythm, set once.
+        */}
+        <div className="space-y-10 sm:space-y-12 lg:space-y-16">
+
+        {/*
+          -- PHOTOS DU PRODUIT: A BAND, NOT A DRAWER ------------------------------------------
+          Owner, 17/08/2026: *"there is some products that have more than 2 [images], always the
+          first 2 are the front and the back of the product and the rest are instructions. I want
+          the instructions to be shown in the page as a grid of images, well designed and
+          INTEGRATED WITH THE PAGE."*
+
+          The first attempt put the grid inside the accordion stack, and it satisfied the letter of
+          that and not the point of it. Measured at 1440: the stack sits in the gallery column, so
+          the column is 591px wide, so a three-across grid drew each label photograph at 146px.
+          These are photographs of PRINTED TEXT - a Supplement Facts panel, a directions paragraph,
+          an allergen line. At 146px none of it is legible, which makes the grid a picture of
+          information rather than the information.
+
+          Full width, four across, the same tiles render at 292px. That is exactly 2x, it is the
+          difference between "there is a label" and "I can read the label", and it is the reason
+          this is the FIRST thing below the hero rather than the seventh thing inside a drawer.
+
+          The id is unchanged, so the "+N photos" tile in the gallery rail still lands here.
+        */}
+        {labelImages.length > 0 && (
+          <section
+            id="pdp-label-photos"
+            className="min-w-0 scroll-mt-24 lg:scroll-mt-36"
+            aria-label="Photos du produit"
+          >
+            <SectionHeader
+              kicker="En détail"
+              title="Photos du produit"
+              subtitle="Les photographies de l'emballage — étiquette, mode d'emploi et informations imprimées. Cliquez pour agrandir."
+            />
+            <ProductLabelGrid images={labelImages} altBase={imageAltBase} />
+          </section>
+        )}
+        {/*
+          Official brand video.
+
+          `loading="lazy"` and youtube-nocookie are both deliberate: the iframe is below the fold on
+          every layout, and nocookie sets no tracking cookie until the visitor actually presses play.
+          The id is re-validated by videoId() before it reaches this src — the value arrives from a
+          JSON column, and the set of things that can write to a JSON column only grows over a
+          project's life.
+        */}
+        {officialVideoId && (
+          <div className="min-w-0">
+            <SectionHeader kicker="En vidéo" title="Vidéo officielle" />
+            <div className="overflow-hidden rounded-xl border border-hairline">
+              <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
+                <iframe
+                  src={embedUrl(officialVideoId)}
+                  title={videoTitle(initialProduct.official_video, initialProduct.designation_fr ?? '')}
+                  loading="lazy"
+                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  className="absolute inset-0 h-full w-full border-0"
+                />
+              </div>
+            </div>
+            {initialProduct.official_video?.channel && (
+              <p className="mt-2 text-sm text-ink-2">
+                Vidéo publiée par {initialProduct.official_video.channel}.
+              </p>
+            )}
+          </div>
+        )}
+
+        {/*
+          ── COMPLÉTEZ VOTRE COMMANDE ──────────────────────────────────────────────────────────
+          Placed after the comparison table and before the carousel on purpose: the table is where
+          a shopper finishes deciding WHICH, and the carousel is where they leave. Between the two
+          is the only point on this page where "and also…" is a help rather than an interruption.
+
+          It renders nothing unless the current product and two companions are all genuinely
+          addable — see the component, which explains why that is strict and why the heading does
+          not claim co-occurrence data we do not have.
+        */}
+        <div className="min-w-0">
+          <FrequentlyBoughtTogether
+            product={product}
+            similar={similarProducts}
+            imageFor={(entry) => getStorageUrl(entry.cover || '')}
+            onAdd={handleAddManyToCart}
+          />
+        </div>
+
+        {/*
+          Comparison table — content parity with the crawler view.
+
+          The carousel below sells; this answers "which of these, and why". Same data, same helper,
+          same columns as CrawlerProductView, so Googlebot and a customer see the same facts. No
+          price-per-kilo column here either — see util/productComparison.ts.
+        */}
+        {comparisonRows.length > 0 && (
+          <div className="min-w-0">
+            <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
+            <ProductComparisonTable rows={comparisonRows} />
+          </div>
+        )}
+
+        {/*
+          `scroll-mt-24 lg:scroll-mt-36`: the rating in the hero links here, and the site header is
+          sticky at z-50. MEASURED rather than guessed - that header is 122px tall at 1024, 1280 and
+          1440 while scrolled, so the 112px this first shipped with still parked the heading three
+          pixels UNDER it. 144px clears it with air; 96px is the mobile header plus the same air.
+
+          `id` moved from the inner div to the <section> so the anchor and the landmark are the
+          same element - two ids for one destination is how they drift apart.
+        */}
+        <section id="reviews" className="mx-auto w-full scroll-mt-24 lg:scroll-mt-36" aria-label="Avis clients">
+            <div className="min-w-0">
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               {/*
                 ── THE ASK SITS IN THE HEADER, AND THERE IS ONE OF IT ─────────────────────────
@@ -1642,6 +1866,30 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       "Points forts des avis" badges. They rendered identical, invented review
                       sentiment on EVERY product regardless of real reviews — a trust liability and
                       a Google review-content policy risk. The real, per-product reviews render below. */}
+
+                  {/* The order is the reader's choice from two reviews up - below that there is
+                      nothing to sort and the control would be furniture. */}
+                  {reviewCount > 1 && (
+                    <div className="flex items-center justify-end gap-2">
+                      <label
+                        htmlFor="review-sort"
+                        className="inline-flex shrink-0 items-center gap-1.5 text-xs font-medium text-ink-3"
+                      >
+                        <ArrowUpDown className="h-3.5 w-3.5" aria-hidden="true" />
+                        Trier par
+                      </label>
+                      <select
+                        id="review-sort"
+                        value={reviewSort}
+                        onChange={(event) => setReviewSort(event.target.value as ReviewSort)}
+                        className="min-h-[44px] rounded-xl border border-hairline bg-elevated px-3 text-sm font-medium text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      >
+                        <option value="recent">Plus récents</option>
+                        <option value="best">Meilleures notes</option>
+                        <option value="worst">Notes les plus basses</option>
+                      </select>
+                    </div>
+                  )}
 
                   {/* Review list — clean divided list with initial avatars (no stacked boxes) */}
                   <ul className="divide-y divide-gray-100 dark:divide-gray-800">
@@ -1761,91 +2009,30 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         </section>
 
         {/*
-          Official brand video.
+          -- PRODUITS SIMILAIRES: ONE RAIL, NOT A CAROUSEL AND A GRID --------------------------
+          This was `flex md:grid … md:grid-cols-4`: a swipeable carousel on phones that became a
+          static grid from `md`. One rail now, at every width, with the reference storefront's
+          chevrons — see the component for the measurement that says those chevrons do not appear
+          on today's data, and why it is still the right shape.
 
-          `loading="lazy"` and youtube-nocookie are both deliberate: the iframe is below the fold on
-          every layout, and nocookie sets no tracking cookie until the visitor actually presses play.
-          The id is re-validated by videoId() before it reaches this src — the value arrives from a
-          JSON column, and the set of things that can write to a JSON column only grows over a
-          project's life.
+          `viewAllHref` is the part that does work immediately: the API returns four suggestions and
+          only four, so the reader whose answer is none of them had nowhere to go from here. Now
+          they have the sub-category, which is also an internal link from 11,263 product pages into
+          the category pages this site is trying to rank.
         */}
-        {officialVideoId && (
-          <div className="min-w-0">
-            <SectionHeader kicker="En vidéo" title="Vidéo officielle" />
-            <div className="overflow-hidden rounded-xl border border-hairline">
-              <div className="relative w-full" style={{ aspectRatio: '16 / 9' }}>
-                <iframe
-                  src={embedUrl(officialVideoId)}
-                  title={videoTitle(initialProduct.official_video, initialProduct.designation_fr ?? '')}
-                  loading="lazy"
-                  allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  referrerPolicy="strict-origin-when-cross-origin"
-                  allowFullScreen
-                  className="absolute inset-0 h-full w-full border-0"
-                />
-              </div>
-            </div>
-            {initialProduct.official_video?.channel && (
-              <p className="mt-2 text-sm text-ink-2">
-                Vidéo publiée par {initialProduct.official_video.channel}.
-              </p>
-            )}
-          </div>
-        )}
-
-        {/*
-          Comparison table — content parity with the crawler view.
-
-          The carousel below sells; this answers "which of these, and why". Same data, same helper,
-          same columns as CrawlerProductView, so Googlebot and a customer see the same facts. No
-          price-per-kilo column here either — see util/productComparison.ts.
-        */}
-        {comparisonRows.length > 0 && (
-          <div className="min-w-0">
-            <SectionHeader kicker="Comparatif" title="Comparer avec des produits similaires" />
-            <ProductComparisonTable rows={comparisonRows} />
-          </div>
-        )}
-
-        {/*
-          ── COMPLÉTEZ VOTRE COMMANDE ──────────────────────────────────────────────────────────
-          Placed after the comparison table and before the carousel on purpose: the table is where
-          a shopper finishes deciding WHICH, and the carousel is where they leave. Between the two
-          is the only point on this page where "and also…" is a help rather than an interruption.
-
-          It renders nothing unless the current product and two companions are all genuinely
-          addable — see the component, which explains why that is strict and why the heading does
-          not claim co-occurrence data we do not have.
-        */}
-        <div className="min-w-0">
-          <FrequentlyBoughtTogether
-            product={product}
-            similar={similarProducts}
-            imageFor={(entry) => getStorageUrl(entry.cover || '')}
-            onAdd={handleAddManyToCart}
-          />
-        </div>
-
-        {/* Similar Products */}
         {similarProducts.length > 0 && (
           <div className="min-w-0">
-            <SectionHeader kicker="Vous aimerez aussi" title="Produits similaires" />
-            {/* Mobile: horizontal carousel with snap; Desktop: grid 4 cols */}
-            <div
-              className="flex md:grid overflow-x-auto md:overflow-visible gap-3 sm:gap-4 lg:gap-6 pb-2 md:pb-0 snap-x snap-mandatory md:snap-none md:grid-cols-4 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0"
-              style={{ WebkitOverflowScrolling: 'touch' }}
-            >
-              {similarProducts.map((similarProduct, index) => (
-                <div key={similarProduct.id || `similar-${index}`} className="shrink-0 w-[min(180px,42vw)] sm:w-[min(200px,45vw)] md:w-auto md:min-w-0 snap-center">
-                  <ProductCard
-                    product={similarProduct}
-                    variant="compact"
-                  />
-                </div>
-              ))}
-            </div>
+            <SectionHeader
+              kicker="Vous aimerez aussi"
+              title="Produits similaires"
+              viewAllHref={product.sous_categorie?.slug ? `/${product.sous_categorie.slug}` : '/shop'}
+              viewAllLabel="Voir tout"
+            />
+            <RelatedProductsRail products={similarProducts} />
           </div>
         )}
+        </div>
+
       </main>
 
       {/* Sticky CTAs (Mobile): compact — Total inline with primary CTA, secondary below */}

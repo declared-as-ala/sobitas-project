@@ -58,7 +58,7 @@ export function ProductGallery({
   altBase,
   imageTitle,
   overlayTopLeft,
-  overlayTopRight,
+  railTrailing,
 }: {
   images: string[];
   /** Base alt text; views after the first get " – vue N" appended. */
@@ -66,8 +66,11 @@ export function ProductGallery({
   imageTitle?: string;
   /** Stock / promo badges, painted over the top-left corner of the frame. */
   overlayTopLeft?: ReactNode;
-  /** Favourite and share, painted over the top-right corner. */
-  overlayTopRight?: ReactNode;
+  /**
+   * A last tile in the thumbnail rail, same size as a thumbnail. The page uses it for the
+   * "+N photos" jump to the label grid — see the note on the rail below.
+   */
+  railTrailing?: ReactNode;
 }) {
   const [index, setIndex] = useState(0);
   const [zoomed, setZoomed] = useState(false);
@@ -113,8 +116,63 @@ export function ProductGallery({
 
   const altFor = (i: number) => (i === 0 ? altBase : `${altBase} – vue ${i + 1}`);
 
+  const showRail = count > 1 || Boolean(railTrailing);
+
   return (
-    <div className="min-w-0">
+    /*
+      ── THE RAIL MOVES, IT IS NOT WRITTEN TWICE ───────────────────────────────────────────────
+      The reference storefront stacks its thumbnails VERTICALLY to the left of the main photograph;
+      this page had them in a horizontal strip underneath. Both are right for their width — a
+      column of 80px tiles beside a 590px frame is free (the frame is square, the column is not,
+      so the rail costs no page height at all), and on a 390px phone that same column would eat
+      a fifth of the only axis that matters.
+
+      The obvious implementation is `hidden lg:flex` beside `lg:hidden`, and that is precisely the
+      mistake this component was created to undo — this file's header records what two parallel
+      trees cost the hero. So there is ONE list, in ONE place in the DOM, and the CHANGE OF AXIS
+      is the whole implementation: `flex-col` → `lg:flex-row` on the wrapper, plus `order` to move
+      the rail from below the frame to before it. Same nodes, same state, same keyboard order.
+    */
+    <div className="flex min-w-0 flex-col gap-3 lg:flex-row lg:items-start lg:gap-3 xl:gap-4">
+      {showRail && (
+        /*
+          `order-2 lg:order-1`: under the frame on a phone, to its left on a desktop.
+          `max-h` + `overflow-y-auto` because the count is genuinely variable — 23,293 photographs
+          across 6,437 products — and a rail longer than the frame it navigates would set the
+          height of the hero.
+        */
+        <div
+          className="scrollbar-hide order-2 -mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:gap-2.5 lg:order-1 lg:mx-0 lg:max-h-[36rem] lg:w-[4.5rem] lg:shrink-0 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:px-0 lg:pb-0 xl:w-20"
+          role="group"
+          aria-label="Miniatures du produit"
+        >
+          {images.map((image, i) => (
+            <button
+              key={`${image}-${i}`}
+              type="button"
+              onClick={() => setIndex(i)}
+              className={cn(
+                'relative aspect-square w-16 shrink-0 snap-start overflow-hidden rounded-xl border bg-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-[4.5rem] lg:w-full',
+                i === safeIndex ? 'border-brand ring-1 ring-brand' : 'border-hairline hover:border-brand'
+              )}
+              aria-label={`Voir la photo ${i + 1}`}
+              aria-current={i === safeIndex}
+            >
+              <Image
+                src={image}
+                alt={`${altBase} – miniature ${i + 1}`}
+                fill
+                loading="lazy"
+                sizes="80px"
+                className="object-contain p-1"
+              />
+            </button>
+          ))}
+          {railTrailing}
+        </div>
+      )}
+
+      <div className="order-1 min-w-0 lg:order-2 lg:flex-1">
       {/*
         `bg-elevated`, not `bg-sunken`. Supplement packshots are cut out on white, so a grey plate
         behind them prints a visible rectangle around every product on the site.
@@ -143,10 +201,26 @@ export function ProductGallery({
                */
               className="object-contain object-center p-2 transition-transform duration-300 sm:p-4 lg:p-6 [@media(hover:hover)]:group-hover:scale-[1.04]"
               /*
-               * ONE image, so ONE honest `sizes`. The desktop slot is 7 of 12 columns inside a
-               * 1216px rail (~680px at xl); below `lg` the gallery is the full content width.
+               * ONE image, so ONE honest `sizes` — and it depends on whether the rail is there,
+               * because the rail is what decides how wide this frame is.
+               *
+               * MEASURED, both branches, at 1280 and 1440: with a rail the frame renders 591px,
+               * without one it renders 687px. 7 of 12 columns inside the 1216px content rail is
+               * 689px at xl; subtract an 80px rail and a 16px gap for the first case. Below `lg`
+               * the gallery is the full content width either way, because the rail is underneath
+               * it there rather than beside it.
+               *
+               * A single string for both would be wrong in one direction or the other on every
+               * product page on the site: 600px against a 687px box is a 15% upscale of the LCP
+               * image, and 690px against a 591px box is a candidate 36% larger in area than the
+               * box it lands in. Neither is visible in a screenshot and both are paid for on
+               * every load.
                */
-              sizes="(min-width: 1280px) 680px, (min-width: 1024px) 55vw, 100vw"
+              sizes={
+                showRail
+                  ? '(min-width: 1280px) 600px, (min-width: 1024px) 46vw, 100vw'
+                  : '(min-width: 1280px) 690px, (min-width: 1024px) 54vw, 100vw'
+              }
               priority={safeIndex === 0}
               loading={safeIndex === 0 ? 'eager' : 'lazy'}
               fetchPriority={safeIndex === 0 ? 'high' : 'auto'}
@@ -162,10 +236,6 @@ export function ProductGallery({
             {overlayTopLeft}
           </div>
         )}
-        {overlayTopRight && (
-          <div className="absolute right-3 top-3 z-10 flex items-center gap-2">{overlayTopRight}</div>
-        )}
-
         {/* Arrows are desktop-only: on a phone the frame is swipeable, and an arrow there would sit
             on top of the packshot, which is the thing this rewrite exists to make bigger. */}
         {count > 1 && (
@@ -204,39 +274,7 @@ export function ProductGallery({
         )}
       </div>
 
-      {/*
-        A SCROLLING STRIP, not a fixed grid.
-
-        23,293 photographs across 6,437 products means the count per product is genuinely variable —
-        some have two, some have ten. A fixed grid either clips the tail or changes the page height
-        product by product. A strip is the same 88px tall for all of them.
-      */}
-      {count > 1 && (
-        <div className="scrollbar-hide -mx-1 mt-3 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1 sm:gap-2.5">
-          {images.map((image, i) => (
-            <button
-              key={`${image}-${i}`}
-              type="button"
-              onClick={() => setIndex(i)}
-              className={cn(
-                'relative aspect-square w-16 shrink-0 snap-start overflow-hidden rounded-xl border bg-elevated transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-[4.5rem] lg:w-20',
-                i === safeIndex ? 'border-brand ring-1 ring-brand' : 'border-hairline hover:border-brand'
-              )}
-              aria-label={`Voir la photo ${i + 1}`}
-              aria-current={i === safeIndex}
-            >
-              <Image
-                src={image}
-                alt={`${altBase} – miniature ${i + 1}`}
-                fill
-                loading="lazy"
-                sizes="80px"
-                className="object-contain p-1"
-              />
-            </button>
-          ))}
-        </div>
-      )}
+      </div>
 
       {/*
         ── THE VIEWER ────────────────────────────────────────────────────────────────────────

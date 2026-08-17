@@ -38,6 +38,12 @@ import { useCallback, useEffect, useState } from 'react';
 import Image from 'next/image';
 import { ChevronLeft, ChevronRight, X, ZoomIn } from 'lucide-react';
 
+/** Cells a row of `cols` would leave empty for `count` items — 0 when the last row is full. */
+function emptyCells(count: number, cols: number): number {
+  const remainder = count % cols;
+  return remainder === 0 ? 0 : cols - remainder;
+}
+
 export function ProductLabelGrid({ images, altBase }: { images: string[]; altBase: string }) {
   const [open, setOpen] = useState(-1);
   const count = images.length;
@@ -62,7 +68,32 @@ export function ProductLabelGrid({ images, altBase }: { images: string[]; altBas
 
   return (
     <>
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4">
+      {/*
+        ── THREE OR FOUR ACROSS, DECIDED BY THE COUNT ──────────────────────────────────────
+        This grid is a full-width band now rather than a drawer in the 591px gallery column, so
+        `lg` has room for either. Fixing it at four left six photographs — the single most common
+        count on this catalogue, because a product with eight images has two packshots and six
+        labels — drawn as a row of four and a row of two, with half the second row empty.
+
+        So the column count is chosen to leave the FEWEST empty cells, preferring three on a tie
+        because three is also the larger tile (392px against 289px) and these are photographs of
+        printed text: a Supplement Facts panel, a directions paragraph, an allergen line. Bigger is
+        not decoration here, it is whether the words resolve.
+
+          3 photos → 3 across   ·   4 → 4   ·   5 → 3 (one gap, not three)
+          6        → 3          ·   7 → 4   ·   8 → 4
+
+        Both class strings are written out in full rather than composed, because Tailwind's scanner
+        reads SOURCE TEXT: a class name assembled at runtime from a variable is a class that exists
+        in the DOM and in no stylesheet.
+      */}
+      <ul
+        className={
+          emptyCells(count, 3) <= emptyCells(count, 4)
+            ? 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-3 lg:gap-5'
+            : 'grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4 lg:gap-5'
+        }
+      >
         {images.map((image, i) => (
           <li key={`${image}-${i}`}>
             <button
@@ -76,7 +107,7 @@ export function ProductLabelGrid({ images, altBase }: { images: string[]; altBas
                 alt={`${altBase} – étiquette ${i + 1}`}
                 fill
                 loading="lazy"
-                sizes="(min-width: 1024px) 240px, (min-width: 640px) 30vw, 45vw"
+                sizes="(min-width: 1024px) 400px, (min-width: 640px) 30vw, 45vw"
                 className="object-contain p-1.5"
               />
               <span className="pointer-events-none absolute bottom-2 right-2 grid h-7 w-7 place-items-center rounded-full border border-hairline bg-elevated text-ink-2 opacity-0 transition-opacity group-hover:opacity-100">
