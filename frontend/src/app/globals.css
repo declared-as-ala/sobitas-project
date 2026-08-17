@@ -478,8 +478,12 @@ html[dir="rtl"] [data-i18n-ltr] {
  * exact moment a reader is deepest in the page and most likely to want it. Every control now
  * survives the collapse; what changes is only how much air sits around it.
  *
- *   desktop   bar     72 -> 58   nav row  48 -> 40   logo  40 -> 30     header 122 -> 100
+ *   desktop   bar     64 -> 52   nav row  48 -> 40   logo  40 -> 30     header 112 ->  92
  *   mobile    bar     64 -> 54                       logo  44 -> 36     header  65 ->  55
+ *
+ * The desktop bar was 72 -> 58 until 17/08/2026, when the two `flex-col` icon-and-label controls
+ * in the right-hand cluster (Compte, Panier) became plain 40px icon squares like the other three.
+ * The label was what the 72 was sized around.
  *
  * 22px on desktop and 10px on mobile, with the mobile utility strip's own 36px already scrolling
  * away under its own weight. Less than the 64px the fold bought, and worth it: a nav that
@@ -508,7 +512,7 @@ html[dir="rtl"] [data-i18n-ltr] {
 }
 
 [data-compact] .pt-hdr-bar-desktop {
-  height: 58px;
+  height: 52px;
 }
 [data-compact] .pt-hdr-bar-desktop .pt-hdr-logo {
   height: 30px;

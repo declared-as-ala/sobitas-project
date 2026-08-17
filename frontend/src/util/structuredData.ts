@@ -11,6 +11,7 @@ import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { isInStock, getProductStockStatus } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { productSourceGallery } from '@/util/productSourceFacts';
+import { cleanSourceText } from '@/util/sourceBoilerplate';
 import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
@@ -726,6 +727,30 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
+  /*
+   * -- THE SOURCE RETAILER'S NAME MUST NOT BE IN OUR STRUCTURED DATA ------------------------
+   * `json_ld_product.description` arrives from the backend carrying the source site's own
+   * accuracy-and-translation notice, and that notice names the source retailer four times.
+   * Measured on one product; it is the same transcribed block on every imported one, which is
+   * 21,273 pages with a competitor's brand inside the `description` field of our Product schema —
+   * the field Google is most likely to quote back in a rich result.
+   *
+   * `cleanSourceText` cuts the notice (the shop states the same two facts in its own words on the
+   * page) and redacts anything that survives. Applied HERE because this is the choke point: all
+   * three routes that emit a Product schema from the backend blob go through this function.
+   */
+  if (typeof sanitized.description === 'string') {
+    const cleaned = cleanSourceText(sanitized.description).trim();
+    /*
+     * FALL BACK, never delete. `description` is required for a Product rich result and an absent
+     * one is a "Missing field description" error in Search Console — so the cut must not be able
+     * to create one. It can: a product whose description_fr is nothing but the transcribed notice
+     * would clean down to an empty string. `factualProductDescription` is the same never-empty
+     * generator the other builder ends its chain with.
+     */
+    sanitized.description = cleaned.length >= 40 ? cleaned : factualProductDescription(product);
+  }
+
   // The return policy is emitted (validly) on the Offer above. Remove any PRODUCT-level
   // hasMerchantReturnPolicy that leaked in via `...source` — the backend's copy can carry a
   // stale/invalid returnPolicyCategory, which is what triggers Google's "Invalid enum value

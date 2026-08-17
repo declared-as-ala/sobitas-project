@@ -15,9 +15,11 @@ import { ProductHighlights } from '@/app/components/product/ProductHighlights';
 import { ProductComparisonTable } from '@/app/components/product/ProductComparisonTable';
 import { FrequentlyBoughtTogether } from '@/app/components/product/FrequentlyBoughtTogether';
 import { RelatedProductsRail } from '@/app/components/product/RelatedProductsRail';
+import { ProductQualityPanel } from '@/app/components/product/ProductQualityPanel';
+import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -164,6 +166,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     ? reviews.reduce((s, r) => s + r.stars, 0) / reviews.length
     : 0);
   const reviewCount = reviews.length;
+
+  /* The WhatsApp message names the product, its reference and its URL — see the CTA for why that
+     matters more than the button existing. `useMemo` because the href is a string built from four
+     fields and this component re-renders on every quantity tap. */
+  const whatsappHref = useMemo(() => {
+    const ref = (product.sku || product.schema?.sku || '').toString().trim();
+    const url = typeof window === 'undefined' ? '' : window.location.href;
+    return buildWhatsAppHref(
+      [
+        `Bonjour, je suis intéressé(e) par : ${product.designation_fr || 'ce produit'}`,
+        ref ? `Référence : ${ref}` : '',
+        url ? url : '',
+        'Est-il disponible ?',
+      ]
+        .filter(Boolean)
+        .join('\n')
+    );
+  }, [product.designation_fr, product.sku, product.schema?.sku]);
 
   /*
     -- THE SORT ------------------------------------------------------------------------------
@@ -690,12 +710,63 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   return (
     <div className="min-h-screen bg-canvas">
 
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:pt-8 lg:pb-12 pb-36 sm:pb-36">
-        {/* Breadcrumb — single scrollable line on mobile (was flex-wrap → 2–3 tall rows); the long
-            final crumb truncates on phones and the row swipes horizontally instead of eating height. */}
+      {/*
+        ── `max-w-site`, NOT `max-w-7xl` ─────────────────────────────────────────────────────
+        Owner, 17/08/2026, with the reference storefront beside our page: *"why using not the full
+        width and getting benefits of it like impact do"*.
+
+        This was not a taste difference, it was this page disagreeing with the rest of the site.
+        `max-w-site` is 1600px and tailwind.config.ts states the rule in as many words — *"every
+        full-width band on the site — header, hero, category rail, every product section, footer —
+        must use `max-w-site`, because if two of them disagree their edges visibly step in and out
+        down the page"*. The header above and the footer below are both on it. The product page,
+        the single most-visited template on the site, was on `max-w-7xl`: 1280.
+
+        So on the owner's own 1920 screen the header ran to 1600 and the product it framed stopped
+        at 1280 — a 160px step in on each side, which is exactly the defect that comment was written
+        about. Measured: the gallery goes 687 -> 880px and the buy column 496 -> 620px.
+      */}
+      <main className="mx-auto w-full max-w-site px-4 py-3 pb-36 sm:px-6 sm:py-6 sm:pb-36 lg:px-8 lg:pb-12 lg:pt-8">
+        {/*
+          ── THE TRAIL, AND A WAY BACK ────────────────────────────────────────────────────────
+          Owner, 17/08/2026: *"for the url track make it to the left and in a good designed way"*.
+
+          It was a bare grey line of 12px text floating above the content with nothing under it —
+          left-aligned already, so the note is really about it having no design at all. Two things
+          changed and both are structural rather than decorative:
+
+          A RULE UNDER IT, bled to the rail edges. That single hairline is what turns a stray line
+          of small text into the page's top bar: it gives the trail a field of its own and it gives
+          the gallery below a starting edge. Nothing else on this page needed to move for it.
+
+          A WAY BACK, first, in brand colour. The reference storefront leads with "← Back to
+          Products", and it is the more useful control: a shopper who has decided this is not the
+          product wants the LIST, and every crumb before it points at a different level of the
+          taxonomy. It targets the parent crumb — the sub-category this product sits in — so it is
+          always the page they actually came from.
+
+          The trail keeps its single scrollable line on phones: flex-wrap gave two or three stacked
+          rows on a long product name, which cost more vertical space above the fold than the whole
+          control is worth.
+        */}
         {breadcrumbItems.length > 0 && (
-          <nav aria-label="Fil d'Ariane" className="mb-3 sm:mb-4 text-xs sm:text-sm text-ink-3">
+          <nav
+            aria-label="Fil d'Ariane"
+            className="-mx-4 mb-4 border-b border-hairline px-4 pb-3 text-xs text-ink-3 sm:-mx-6 sm:mb-5 sm:px-6 sm:text-sm lg:-mx-8 lg:px-8"
+          >
             <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
+              {breadcrumbItems.length > 1 && (
+                <li className="flex shrink-0 items-center gap-x-1.5">
+                  <Link
+                    href={breadcrumbItems[breadcrumbItems.length - 2].url}
+                    className="-my-2 inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap py-2 font-semibold text-brand underline-offset-4 hover:underline"
+                  >
+                    <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
+                    Retour
+                  </Link>
+                  <span className="h-4 w-px shrink-0 bg-hairline" aria-hidden />
+                </li>
+              )}
               {breadcrumbItems.map((item, i) => (
                 <li key={i} className="flex shrink-0 items-center gap-x-1.5">
                   {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-ink-3 shrink-0" aria-hidden />}
@@ -821,32 +892,64 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {product.designation_fr}
             </h1>
 
-            {/* 3. Brand, rating, authenticity — one row of provenance. */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            {/*
+              ── 3. THE MAKER, AND THE GUARANTEE ─────────────────────────────────────────────
+              Owner, 17/08/2026: *"the produit authentique tag, make it more good and clean and
+              visible, and the link to the official producer make it visible also"*.
+
+              Both were there and neither read as anything. The brand was `text-sm text-ink-2` with
+              a hover underline — indistinguishable from a caption until the pointer was already on
+              it, and invisible entirely on a touch screen, which is 81% of this traffic. The
+              guarantee was an 11px pill in the third ink.
+
+              They are two chips of equal weight now, because they are two halves of the same
+              statement: WHO MADE THIS and WHAT WE PROMISE ABOUT IT. The maker's chip is a real
+              affordance — a labelled field, the name at the weight of a name, and an arrow that
+              says it goes somewhere — and it earns an internal link from every product page into
+              the brand pages, which are pages this site is trying to rank.
+            */}
+            <div className="flex flex-wrap items-center gap-2">
               {product.brand?.designation_fr && (
                 <Link
                   href={`/${nameToSlug(product.brand.designation_fr)}`}
-                  // Same blockification as the eyebrow above — it was 20px tall.
-                  className="-my-3 inline-flex min-h-[44px] items-center text-sm font-semibold text-ink-2 underline-offset-2 hover:text-brand hover:underline"
+                  className="group inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-elevated px-3 py-1.5 transition-colors hover:border-brand"
                 >
-                  {product.brand.designation_fr}
+                  <span className="text-[10px] font-semibold uppercase leading-none tracking-wider text-ink-3">
+                    Marque
+                  </span>
+                  <span className="text-sm font-bold leading-none text-ink-1 transition-colors group-hover:text-brand">
+                    {product.brand.designation_fr}
+                  </span>
+                  <ArrowUpRight
+                    className="h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand"
+                    aria-hidden="true"
+                  />
                 </Link>
               )}
 
               {/*
+                The shop's OWN guarantee, stated as the shop. Not a third-party verification badge
+                and not a rating: importing either would be a claim we cannot substantiate on a page
+                Google reads.
+              */}
+              <span className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-sunken px-3 py-1.5">
+                <ShieldCheck className="h-[18px] w-[18px] shrink-0 text-ok" strokeWidth={2} aria-hidden="true" />
+                <span className="text-sm font-semibold leading-none text-ink-1">100% authentique</span>
+              </span>
+
+              {/*
                 ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE.
 
-                This row renders nothing at all when there are none, rather than five grey stars
-                beside "(0) · 0 avis" — a filled-in scoreboard reading nil, which says "nobody liked
-                this" when the truth is "nobody has said anything yet". The ask for a review belongs
-                in the reviews section, which already has an honest empty state. Hide it here, ask
-                for it there.
+                This renders nothing at all when there are none, rather than five grey stars beside
+                "(0) · 0 avis" — a filled-in scoreboard reading nil, which says "nobody liked this"
+                when the truth is "nobody has said anything yet". The ask for a review belongs in
+                the reviews section, which has an honest empty state. Hide it here, ask for it there.
               */}
               {reviewCount > 0 && (
                 <button
                   type="button"
                   onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="group inline-flex items-center gap-1.5"
+                  className="group inline-flex min-h-[44px] items-center gap-1.5"
                 >
                   <StarRating rating={rating} size="md" />
                   <span className="text-sm font-medium tabular-nums text-ink-2 transition-colors group-hover:text-brand">
@@ -854,17 +957,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </span>
                 </button>
               )}
-
-              {/*
-                The shop's OWN guarantee, stated as the shop. Not a third-party verification badge
-                and not a rating: importing either would be a claim we cannot substantiate on a page
-                Google reads. It is the same promise the trust row below already makes, given the
-                weight the owner asked for.
-              */}
-              <span className="inline-flex items-center gap-1.5 rounded-full border border-hairline px-2.5 py-1 text-[11px] font-medium text-ink-2">
-                <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden="true" />
-                Produit authentique
-              </span>
             </div>
 
             {/*
@@ -1032,6 +1124,37 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         Demander ce produit
                       </Link>
                     </Button>
+                {/*
+                  ── ORDER ON WHATSAPP ─────────────────────────────────────────────────────
+                  Owner, 17/08/2026: *"like impact did for us, make the add to cart and buy now,
+                  and make another button buy from whatsapp"*.
+
+                  This is not a third CTA for the sake of symmetry with the reference. WhatsApp is
+                  the dominant ordering and trust channel for Tunisian cash-on-delivery shoppers —
+                  it is already in the header strip and as a floating bubble — and it is the ONLY
+                  route that works for the 10,535 of 10,669 products the shop does not physically
+                  hold, where the honest answer to "can I have this" is a conversation.
+
+                  The message is PRE-FILLED WITH THE PRODUCT, its reference and its URL. A message
+                  that says only "Bonjour" starts the conversation with the shop asking which of
+                  11,263 products this is about, and that round trip is where these orders die.
+
+                  Green as an ICON against ink-coloured text, never as a fill under white type:
+                  #25D366 measures 3.06:1 on the light sheet, which is legal for a glyph and not
+                  for a label. See util/whatsapp.ts, which owns the number, the message and the
+                  colour so the three surfaces cannot drift.
+                */}
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-elevated font-display text-sm font-bold uppercase tracking-wide text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill={WHATSAPP_GREEN} aria-hidden="true">
+                    <path d={WHATSAPP_ICON_PATH} />
+                  </svg>
+                  Commander sur WhatsApp
+                </a>
                     <p className="text-center text-xs text-ink-3">
                       Ce produit n&apos;est pas en stock. Nous le commandons pour vous sur demande — nous vous
                       confirmons le prix et le délai avant toute commande.
@@ -1056,6 +1179,37 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Zap className="me-2 h-4 w-4 shrink-0" />
                       Commander maintenant
                     </Button>
+                {/*
+                  ── ORDER ON WHATSAPP ─────────────────────────────────────────────────────
+                  Owner, 17/08/2026: *"like impact did for us, make the add to cart and buy now,
+                  and make another button buy from whatsapp"*.
+
+                  This is not a third CTA for the sake of symmetry with the reference. WhatsApp is
+                  the dominant ordering and trust channel for Tunisian cash-on-delivery shoppers —
+                  it is already in the header strip and as a floating bubble — and it is the ONLY
+                  route that works for the 10,535 of 10,669 products the shop does not physically
+                  hold, where the honest answer to "can I have this" is a conversation.
+
+                  The message is PRE-FILLED WITH THE PRODUCT, its reference and its URL. A message
+                  that says only "Bonjour" starts the conversation with the shop asking which of
+                  11,263 products this is about, and that round trip is where these orders die.
+
+                  Green as an ICON against ink-coloured text, never as a fill under white type:
+                  #25D366 measures 3.06:1 on the light sheet, which is legal for a glyph and not
+                  for a label. See util/whatsapp.ts, which owns the number, the message and the
+                  colour so the three surfaces cannot drift.
+                */}
+                <a
+                  href={whatsappHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-elevated font-display text-sm font-bold uppercase tracking-wide text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                >
+                  <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill={WHATSAPP_GREEN} aria-hidden="true">
+                    <path d={WHATSAPP_ICON_PATH} />
+                  </svg>
+                  Commander sur WhatsApp
+                </a>
                   </>
                 )}
               </div>
@@ -1312,27 +1466,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     siblings of this section rather than children of it — see below.
                   */}
                   {/*
-                    The source site's accuracy notice. It arrives as a 2,510-character block under
-                    its own heading, which put a legal disclaimer at the same visual weight as the
-                    ingredient list — and, because it was the LAST heading on the page, the three
-                    nutrition tables ended up inside it.
+                    -- THE SOURCE'S OWN DISCLAIMER IS NO LONGER RENDERED --------------------
+                    It used to be printed here, collapsed, under the heading "Clause de
+                    non-responsabilité". It is gone for two reasons and the second is the real one.
 
-                    It is kept rather than dropped: it is the sentence that tells a customer the
-                    printed label governs if it disagrees with this page, which on an imported
-                    catalogue is the one piece of legal text that actually matters. It is just no
-                    longer shouted.
+                    It NAMES THE SOURCE RETAILER, four times, in French, on our page. Owner,
+                    17/08/2026: *"for the texts in the products take off any iherb word"*.
+
+                    And it is redundant. The notice says two things — the printed label governs if
+                    it disagrees with this page, and the French is machine-translated — and the
+                    attribution line immediately below says both, in the shop's own voice. Keeping
+                    both meant 2,510 characters of a competitor's legal boilerplate, duplicated
+                    across 21,273 product pages, saying what our own sentence already said.
+
+                    `merged.disclaimer` is still COMPUTED, and that matters: the router uses that
+                    block to lift the three nutrition tables out of it. On a transcribed product
+                    the tables trail the last heading of the source page, which is this one. Route
+                    it, mine it, do not print it. See util/sourceBoilerplate.ts.
                   */}
-                  {merged.disclaimer && (
-                    <details className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
-                      <summary className="cursor-pointer list-none font-medium hover:text-brand">
-                        Clause de non-responsabilité
-                      </summary>
-                      <div
-                        className="prose prose-neutral mt-2 max-w-none text-xs leading-relaxed text-ink-3 prose-p:text-ink-3"
-                        dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.disclaimer) }}
-                      />
-                    </details>
-                  )}
                   {hasProductSourceContent(product) && productSourceAttribution(product) && (
                     <p className="mt-4 border-t border-hairline pt-3 text-xs text-ink-3">
                       {productSourceAttribution(product)}
@@ -1641,6 +1792,36 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             </div>
               );
             })()}
+
+            {/*
+              -- CONTROLE & TRACABILITE ------------------------------------------------------
+              Owner, 17/08/2026: *"for us add also the quality controle!"*, pointing at the
+              reference storefront's laboratory panel.
+
+              This is deliberately NOT that panel. The reference publishes an accredited lab's
+              report — MULTILAB, a TUNAC accreditation number, per-assay verdicts, a measured
+              protein content against the declared one. We hold no such record for this product or
+              for any of the other 10,668, and drawing that panel with invented content would be a
+              fabricated safety certificate: a lie to a customer, disprovable by a competitor in
+              one click, and the class of thing that costs a site its rankings outright rather
+              than a position or two.
+
+              So it states only what the shop can stand behind and the reader can check for
+              themselves — the EAN-13, the manufacturer, the photographs of the printed label, and
+              where the nutrition figures came from. The component carries the extension point for
+              real analyses if the owner commissions them.
+
+              Directly under the specification sections, which is where the reference puts it: it
+              is the last thing read before the decision moves back to the buy box.
+            */}
+            <ProductQualityPanel
+              className="mt-6"
+              gtin={product.gtin || product.schema?.gtin || null}
+              brandName={product.brand?.designation_fr || null}
+              brandHref={product.brand?.designation_fr ? `/${nameToSlug(product.brand.designation_fr)}` : null}
+              labelPhotoCount={labelImages.length}
+              hasTranscribedNutrition={productSourceNutritionHtml(product) != null}
+            />
           </div>
         </div>
 
@@ -1831,9 +2012,21 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {reviewCount > 0 ? (
                 <>
-                  {/* Summary — big rating + distribution together in one clean card (stacks on phones) */}
-                  <div className="grid gap-5 rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-50/60 dark:bg-gray-900/40 p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6">
-                    <div className="flex flex-col items-center sm:items-start sm:border-r sm:border-gray-200 sm:pr-8 dark:sm:border-gray-800">
+                  {/*
+                    The score and its distribution.
+
+                    Written in TOKENS now — it carried `bg-gray-50/60 dark:bg-gray-900/40`,
+                    `border-gray-200 dark:border-gray-800` and `dark:sm:border-gray-800`, which is
+                    five hand-maintained colour pairs on one card. `bg-sunken` and `border-hairline`
+                    resolve correctly in both themes with no `dark:` variant at all, and the design
+                    lint has been counting those pairs against this file since the day it shipped.
+
+                    The reference storefront prints only "4.3 out of 5". The distribution stays:
+                    five bars tell a reader whether a 4.3 is everyone agreeing or two people
+                    fighting, and that is the question somebody scrolling to reviews is asking.
+                  */}
+                  <div className="grid gap-5 rounded-2xl border border-hairline bg-sunken p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6">
+                    <div className="flex flex-col items-center sm:items-start sm:border-e sm:border-hairline sm:pe-8">
                       <div className="flex items-baseline gap-1.5">
                         <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-ink-1">
                           {rating > 0 ? rating.toFixed(1) : '–'}
@@ -1852,7 +2045,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
                               {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200 dark:bg-gray-700">
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule-strong">
                               <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
                             </div>
                             <span className="w-7 shrink-0 text-right text-xs text-ink-3 tabular-nums">{count}</span>
@@ -1891,30 +2084,38 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   )}
 
-                  {/* Review list — clean divided list with initial avatars (no stacked boxes) */}
-                  <ul className="divide-y divide-gray-100 dark:divide-gray-800">
+                  {/*
+                    ── THE REVIEW ROW ──────────────────────────────────────────────────────────
+                    Owner, 17/08/2026: *"the costumer reviews should be like impact — beautiful
+                    design"*.
+
+                    Three changes, and the first is a deletion. The row opened with a 36px circle
+                    holding the reviewer's initial on a red tint. It looked like an avatar and it is
+                    not one — there is no photograph behind it, so every review by anyone called
+                    Mohamed rendered the same red M, and a column of near-identical coloured discs
+                    is visual noise that carries no information. The reference has none. Gone, along
+                    with the `bg-red-100 dark:bg-red-950/40` pair it needed.
+
+                    THE DATE MOVED TO THE END OF THE ROW. It sat immediately after the name, so the
+                    eye had to step over a date to get from one reviewer to the next; against the
+                    trailing edge it forms its own column and the names line up.
+
+                    THE STARS GET THEIR OWN LINE, under the name, which is the reference's order and
+                    the right one: the name and the badge answer "who is this", the stars answer
+                    "what did they think", and stacking them lets a reader scan either column alone.
+                  */}
+                  <ul className="divide-y divide-hairline">
                     {reviewsToShowOnPage.map((review) => {
                       const reviewerName = review.user?.name?.trim() || 'Client';
-                      const initial = reviewerName.slice(0, 1).toUpperCase();
                       return (
-                        <li key={review.id} className="flex gap-3 py-4">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-red-100 font-display text-sm font-bold text-brand dark:bg-red-950/40">
-                            {initial}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-semibold text-ink-1">{reviewerName}</span>
-                              <span className="shrink-0 text-xs text-ink-3">
-                                {review.created_at ? new Date(review.created_at).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' }) : ''}
-                              </span>
-                            </div>
-                            <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                              <StarRating rating={review.stars} size="sm" />
+                        <li key={review.id} className="py-4 sm:py-5">
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+                              <span className="truncate text-sm font-bold text-ink-1">{reviewerName}</span>
                               {/*
-                                ── ACHAT VÉRIFIÉ ────────────────────────────────────────────────
-                                Owner asked for the reference storefront's verified-purchase badge.
-                                It is shown on exactly the reviews that carry evidence — `verified`
-                                set, or an order id attached — and on no others.
+                                ── ACHAT VÉRIFIÉ ──────────────────────────────────────────────
+                                Shown on exactly the reviews that carry evidence — `verified` set,
+                                or an order id attached — and on no others.
 
                                 That distinction is the whole value of the badge, and it is not
                                 cosmetic here: the catalogue carries a large SEEDED review backlog
@@ -1926,16 +2127,28 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 structured data — one rule, both places.
                               */}
                               {(review.verified === 1 || review.verified === true || review.commande_id != null) && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
                                   <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden="true" />
                                   Achat vérifié
                                 </span>
                               )}
                             </div>
-                            {review.comment && (
-                              <p className="mt-1.5 text-sm leading-relaxed text-gray-700 dark:text-gray-300">{review.comment}</p>
-                            )}
+                            <span className="shrink-0 text-xs tabular-nums text-ink-3">
+                              {review.created_at
+                                ? new Date(review.created_at).toLocaleDateString('fr-FR', {
+                                    day: '2-digit',
+                                    month: '2-digit',
+                                    year: 'numeric',
+                                  })
+                                : ''}
+                            </span>
                           </div>
+
+                          <StarRating rating={review.stars} size="sm" className="mt-1.5" />
+
+                          {review.comment && (
+                            <p className="mt-2 text-sm leading-relaxed text-ink-2">{review.comment}</p>
+                          )}
                         </li>
                       );
                     })}
@@ -1944,7 +2157,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {visibleReviewCount < sortedReviews.length ? (
                     <Button
                       variant="outline"
-                      className="w-full min-h-[44px] py-2.5 leading-snug text-xs sm:text-sm whitespace-normal border-gray-300 dark:border-gray-600"
+                      className="min-h-[44px] w-full whitespace-normal border-hairline py-2.5 text-xs leading-snug sm:text-sm"
                       size="default"
                       onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
                     >
@@ -1975,9 +2188,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
-              {/* Review Form */}
+              {/* Review form. Tokens, not a `bg-gray-50 dark:bg-gray-800/50` + `border-red-200
+                  dark:border-red-900/50` quartet. The brand edge survives as a single
+                  `border-brand` — it marks the one part of this section the reader can act on. */}
               {showReviewForm && isAuthenticated && (
-                <div className="p-3 sm:p-4 lg:p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border-2 border-red-200 dark:border-red-900/50 min-w-0">
+                <div className="min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
                   <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
                   <div className="space-y-2 sm:space-y-3">
                     <div>
@@ -1992,7 +2207,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                     <div>
                       <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">Commentaire (optionnel)</label>
-                      <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 p-3 border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 text-ink-1 text-sm" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
+                      <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
                       <p className="text-xs mt-0.5 text-ink-3">{reviewComment.length}/500</p>
                     </div>
                     <div className="flex gap-2">
@@ -2064,7 +2279,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         // The safe-area inset moved into --tabbar-h itself; padding for it here would double it.
         style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.5rem)' }}
       >
-        <div className="mx-auto flex w-full max-w-7xl flex-col gap-2 lg:flex-row lg:items-center lg:gap-4 lg:py-1.5">
+        <div className="mx-auto flex w-full max-w-site flex-col gap-2 lg:flex-row lg:items-center lg:gap-4 lg:py-1.5">
           {/*
             WHICH product, on desktop only. A bar that says "Total 535 DT / Ajouter au panier" is
             unambiguous on a phone, where it is the only thing on screen. On a desktop it floats

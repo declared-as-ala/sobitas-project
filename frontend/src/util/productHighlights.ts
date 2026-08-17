@@ -141,9 +141,31 @@ export function splitHighlights(html: string | null | undefined): HighlightSplit
       // An item that opens bold reads as "claim — explanation", which is exactly the two-tone
       // treatment the panel wants. Anything else is one plain line, and that is fine too.
       const leadMatch = raw.match(/^\s*<(strong|b)\b[^>]*>([\s\S]*?)<\/\1>/i);
-      const lead = leadMatch ? toText(leadMatch[2]) : '';
-      const text = toText(leadMatch ? raw.slice(leadMatch[0].length) : raw);
-      return { lead, text };
+      if (leadMatch) {
+        return { lead: toText(leadMatch[2]), text: toText(raw.slice(leadMatch[0].length)) };
+      }
+
+      /*
+       * -- A COLON IS A LEAD TOO ------------------------------------------------------------
+       * Only `<strong>` counted at first, and most imported lists do not carry one -- they write
+       * the emphasis as punctuation instead: "Digestion maximale : naturellement sans lactose...".
+       * That is the same two-tone shape the panel is built for, and the panel was rendering it as
+       * one flat line, which is a large part of why the block read as an undifferentiated list
+       * rather than as copy somebody wrote.
+       *
+       * Bounded deliberately. The head must be SHORT (a label, not a sentence), must not already
+       * contain sentence punctuation, and there must be a remainder -- otherwise a line like
+       * "Attention : ne pas depasser la dose journaliere recommandee" would be split at a colon
+       * that is grammar rather than emphasis.
+       */
+      const plain = toText(raw);
+      const colon = plain.search(/\s*[:：]\s+/);
+      if (colon > 0 && colon <= 42) {
+        const head = plain.slice(0, colon).trim();
+        const rest = plain.slice(colon).replace(/^\s*[:：]\s*/, '').trim();
+        if (rest.length > 2 && !/[.!?;]/.test(head)) return { lead: head, text: rest };
+      }
+      return { lead: '', text: plain };
     })
     .filter((item) => item.lead !== '' || item.text !== '');
 

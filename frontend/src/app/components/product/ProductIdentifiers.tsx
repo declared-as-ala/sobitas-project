@@ -1,13 +1,6 @@
 /**
  * The shop reference and the barcode, printed where a buyer looks for them.
  *
- * ── WHY THIS IS A COMPONENT AND NOT TWO COPIES OF SIX LINES ─────────────────────────────────
- * `ProductDetailClient` carries TWO complete render trees — one `lg:hidden`, one `hidden lg:flex`
- * — and each has its own price block. Writing this inline meant writing it twice, which is exactly
- * the mechanism by which those trees drifted apart in the first place: every "small" addition made
- * inline is a future difference between what a phone shows and what a desktop shows. One component,
- * two call sites, no way for them to disagree.
- *
  * ── WHY SHOW THEM AT ALL ────────────────────────────────────────────────────────────────────
  * Owner, 16/08/2026, against a reference storefront that prints both directly under the price:
  * *"the sku or barcode"*. This page printed neither.
@@ -20,7 +13,21 @@
  * Both values ALREADY go to Google inside the Product JSON-LD (`sku`, `gtin`). Showing the same
  * numbers to the person reading the page is what makes that markup honest rather than a claim only
  * a crawler can verify.
+ *
+ * ── AND WHY THEY ARE NOW LEGIBLE ────────────────────────────────────────────────────────────
+ * Owner, 17/08/2026: *"the barcode, make them visible"*.
+ *
+ * They shipped at `text-[11px]` in `text-ink-3` — the page's quietest size in its quietest ink,
+ * which is the treatment reserved for things nobody needs. A 13-digit number read digit by digit,
+ * against a pack held in the other hand, is the opposite of that. It is now 13px, the value sits
+ * in `text-ink-1` on a `bg-sunken` chip so the digits have their own field, and the LABEL stays
+ * small and quiet — the label is the part you can skip, not the number.
+ *
+ * `select-all` on the value: the realistic action here is copy-and-paste into a search box, and a
+ * single click selecting the whole code saves a drag across 13 characters on a phone.
  */
+import { Barcode, Hash } from 'lucide-react';
+
 type Identifiable = {
   sku?: string | null;
   gtin?: string | null;
@@ -33,22 +40,30 @@ export function ProductIdentifiers({ product, className = '' }: { product: Ident
 
   if (!sku && !gtin) return null;
 
+  const rows: Array<{ Icon: typeof Hash; label: string; value: string }> = [];
+  if (sku) rows.push({ Icon: Hash, label: 'Référence', value: sku });
+  if (gtin) rows.push({ Icon: Barcode, label: 'Code-barres (EAN)', value: gtin });
+
   return (
-    <dl className={`flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] text-ink-3 ${className}`}>
-      {sku && (
-        <div className="flex items-center gap-1.5">
-          <dt className="font-semibold uppercase tracking-wide">Réf.</dt>
+    /* `data-product-identifiers` is a test seam, and a deliberate one. The page guard used to
+       find this block by matching "Réf." in the text of any <dl> in <main>, which broke the moment
+       the label was reworded and again when the traceability panel introduced a second <dl> that
+       legitimately prints a barcode. A marker costs one attribute and cannot be wrong. */
+    <dl data-product-identifiers="" className={`flex flex-wrap gap-2 ${className}`}>
+      {rows.map(({ Icon, label, value }) => (
+        <div
+          key={label}
+          className="inline-flex items-center gap-2 rounded-lg border border-hairline bg-sunken px-2.5 py-1.5"
+        >
+          <Icon className="h-4 w-4 shrink-0 text-ink-3" strokeWidth={1.75} aria-hidden="true" />
+          <dt className="text-[10px] font-semibold uppercase leading-none tracking-wide text-ink-3">{label}</dt>
           {/* `font-mono` + `tabular-nums`: a reference and a 13-digit barcode are read digit by
               digit, and a proportional face makes that measurably harder. */}
-          <dd className="font-mono tabular-nums text-ink-2">{sku}</dd>
+          <dd className="select-all font-mono text-[13px] font-semibold leading-none tabular-nums text-ink-1">
+            {value}
+          </dd>
         </div>
-      )}
-      {gtin && (
-        <div className="flex items-center gap-1.5">
-          <dt className="font-semibold uppercase tracking-wide">Code-barres</dt>
-          <dd className="font-mono tabular-nums text-ink-2">{gtin}</dd>
-        </div>
-      )}
+      ))}
     </dl>
   );
 }

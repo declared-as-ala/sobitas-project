@@ -204,11 +204,12 @@ export function ProductGallery({
                * ONE image, so ONE honest `sizes` — and it depends on whether the rail is there,
                * because the rail is what decides how wide this frame is.
                *
-               * MEASURED, both branches, at 1280 and 1440: with a rail the frame renders 591px,
-               * without one it renders 687px. 7 of 12 columns inside the 1216px content rail is
-               * 689px at xl; subtract an 80px rail and a 16px gap for the first case. Below `lg`
-               * the gallery is the full content width either way, because the rail is underneath
-               * it there rather than beside it.
+               * MEASURED at 1280, 1440 and 1920, and RE-MEASURED after the page moved from the
+               * 1280 rail to the site's 1600 one — which is the whole point of the guard that
+               * watches this, because the string had gone stale within the hour and nothing about
+               * the page looked wrong. With the rail the frame renders 593 / 685 / 780px; without
+               * it, 689 / 783 / 876. Below `lg` the gallery is the full content width either way,
+               * because the rail is underneath it there rather than beside it.
                *
                * A single string for both would be wrong in one direction or the other on every
                * product page on the site: 600px against a 687px box is a 15% upscale of the LCP
@@ -218,8 +219,8 @@ export function ProductGallery({
                */
               sizes={
                 showRail
-                  ? '(min-width: 1280px) 600px, (min-width: 1024px) 46vw, 100vw'
-                  : '(min-width: 1280px) 690px, (min-width: 1024px) 54vw, 100vw'
+                  ? '(min-width: 1600px) 780px, (min-width: 1024px) 48vw, 100vw'
+                  : '(min-width: 1600px) 880px, (min-width: 1024px) 55vw, 100vw'
               }
               priority={safeIndex === 0}
               loading={safeIndex === 0 ? 'eager' : 'lazy'}

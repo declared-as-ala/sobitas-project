@@ -236,7 +236,19 @@ for (const { w, h, label } of WIDTHS) {
         if (price == null || h1 == null || prose == null) return null;
         return { price: Math.round(price), h1: Math.round(h1), prose: Math.round(prose) };
       })(),
-      identifiers: qa('main dl').filter((d) => /Réf\.|Code-barres/.test(d.textContent)).length,
+      /*
+       * By an explicit attribute, not by matching "Réf." or "Code-barres" in the text of any <dl>
+       * on the page. That text match broke twice in one afternoon and neither break was a defect:
+       * once when the label was reworded "Réf." -> "Référence", and once when the new traceability
+       * panel — a different component, correctly rendering the barcode for a different reason —
+       * introduced a second <dl> containing the words "Code-barres EAN-13".
+       *
+       * A guard that fires on a rewording, or on an unrelated component saying the same true thing,
+       * is a guard that gets muted. The invariant being watched is "the identifiers component is
+       * not rendered twice" — which was real, and dated from the two parallel render trees — so it
+       * is asserted against the component's own marker.
+       */
+      identifiers: qa('main [data-product-identifiers]').length,
       ctas: qa('main button, main a').filter((el) => /Ajouter au panier|Commander maintenant|Demander ce produit/.test(el.textContent || '')).length,
       /* By `data-sticky-cta`, not by the `z-sticky-cta` CLASS — the PWA install banner carries
          that class too, so a class-based lookup could measure the wrong element and report the
@@ -540,7 +552,9 @@ for (const { w, h, label } of WIDTHS) {
       `h1 ${h1}px · price ${price}px · first section ${prose}px`
     );
   }
-  check(w, 'identifiers rendered once', m.identifiers === 1, `${m.identifiers} block(s)`);
+  /* AT MOST once, not exactly once: 5,625 of 10,669 products carry neither a SKU nor a GTIN and
+     the component correctly renders nothing for them. The defect this watches is duplication. */
+  check(w, 'identifiers never duplicated', m.identifiers <= 1, `${m.identifiers} block(s)`);
   check(w, 'benefits panel present', m.highlightItems >= 3, `${m.highlightItems} bullets`);
   check(w, 'CTA in the buy box', m.ctas >= 1, `${m.ctas} CTA element(s)`);
   /* Assert the bar EXISTS before asserting nothing covers it. Without this the cover check

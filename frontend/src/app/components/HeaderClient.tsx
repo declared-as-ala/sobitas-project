@@ -580,7 +580,23 @@ export function HeaderClient() {
         {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
         <div className="hidden md:block">
           <div className="max-w-site mx-auto px-4 lg:px-8">
-            <div className="pt-hdr-bar pt-hdr-bar-desktop flex items-center gap-6 h-[72px]">
+            {/*
+              ── ONE ROW OF ICONS, AND A SHORTER BAR ────────────────────────────────────────
+              Owner, 17/08/2026: *"for the header why Compte and Panier have names under them,
+              take them off — make them like a row once like the impact so we can make the height
+              of header more little"*.
+
+              Two of the five controls in this cluster were `flex-col` — icon over an 11px French
+              label — and three were plain 40px icon squares. So the row was a mix of two shapes
+              and its height was set by the taller one. The labels also said the least: a cart
+              glyph and a person glyph are the two most universally understood icons in commerce,
+              and both already carry an `aria-label` for the readers who need words.
+
+              All five are the same 40px square now, and the bar comes down 72 -> 64px resting and
+              58 -> 52 compact. With the nav row that is the whole header at 148 -> 132px resting,
+              on every page of the site.
+            */}
+            <div className="pt-hdr-bar pt-hdr-bar-desktop flex h-16 items-center gap-6">
               <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
@@ -603,7 +619,7 @@ export function HeaderClient() {
                 <SearchBar variant="desktop" className="w-full" />
               </div>
 
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex flex-shrink-0 items-center gap-0.5">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
 
                 {/* Compte — icon + french label. Keeps the auth dropdown when signed in. */}
@@ -612,11 +628,10 @@ export function HeaderClient() {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
                         aria-label="Mon compte"
                       >
                         <User className="h-5 w-5" aria-hidden />
-                        <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -650,11 +665,10 @@ export function HeaderClient() {
                 ) : (
                   <Link
                     href="/login"
-                    className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
                     aria-label="Connexion"
                   >
                     <User className="h-5 w-5" aria-hidden />
-                    <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                   </Link>
                 )}
 
@@ -685,19 +699,18 @@ export function HeaderClient() {
                 {/* Panier — icon + french label + count badge. */}
                 <button
                   type="button"
-                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
+                  className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
                   onClick={() => setCartDrawerOpen(true)}
                   aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
                 >
-                  <span className="relative">
-                    <ShoppingCart className="h-5 w-5" aria-hidden />
-                    {cartItemsCount > 0 && (
-                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-brand text-on-brand text-[10px] font-bold leading-none rounded-full ring-2 ring-canvas">
-                        {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[11px] font-medium leading-none tracking-wide">Panier</span>
+                  <ShoppingCart className="h-5 w-5" aria-hidden />
+                  {/* Same corner as the favourites badge beside it — they were 6px apart before,
+                      because one was positioned against the icon and the other against the box. */}
+                  {cartItemsCount > 0 && (
+                    <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
+                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
+                    </span>
+                  )}
                 </button>
               </div>
             </div>

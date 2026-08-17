@@ -95,12 +95,30 @@ export function RelatedProductsRail({ products }: { products: Product[] }) {
           <div
             key={product.id || `similar-${index}`}
             /*
-              `calc((100% - 4.5rem) / 4)` at `lg` is four cards and three 24px gaps, EXACTLY — so
-              with the four products the API returns, this row is indistinguishable from the grid it
-              replaces and there is nothing to scroll. That is deliberate: the change is meant to be
-              invisible today and correct tomorrow.
+              -- THE PHONE WIDTH IS SET BY THE CARD, NOT BY HOW MANY FIT ------------------------
+              Owner, 17/08/2026: *"related products cards should be responsive on mobile"*. They
+              were not responsive, they were BROKEN, and the screenshot shows it: packshot on the
+              left, a clipped "25", a clipped "300", half a discount pill, no product name at all.
+
+              The cause is a real mismatch and worth writing down, because it will catch the next
+              rail too. `ProductCard` is `flex-row sm:flex-col` — on a phone it is deliberately a
+              HORIZONTAL card, a 124px thumbnail beside its text, because the owner's earlier note
+              was "the card height is so long" and a vertical card one-per-row is ~500px tall while
+              a horizontal one is ~180px. That decision is right and it is not being revisited here.
+
+              This rail was handing that card a `min(180px, 42vw)` box: 164px on a 390px phone, of
+              which the thumbnail alone takes 124. Forty pixels for a name, a price, a struck price,
+              a discount pill, a stock chip and an add button.
+
+              So the phone width now matches the layout the card actually uses — 85vw, one card and
+              a peek of the next, which is also what makes it read as swipeable. From `sm` the card
+              is a column again and the widths go back to counting how many fit.
+
+              `calc((100% - 4.5rem) / 4)` at `lg` is four cards and three 24px gaps EXACTLY, so with
+              the four products the API returns this row is indistinguishable from the grid it
+              replaces and there is nothing to scroll. Invisible today, correct tomorrow.
             */
-            className="w-[min(180px,42vw)] shrink-0 snap-start sm:w-[200px] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-4.5rem)/4)]"
+            className="w-[85vw] max-w-[340px] shrink-0 snap-start sm:w-[200px] sm:max-w-none md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-4.5rem)/4)]"
           >
             <ProductCard product={product} variant="compact" />
           </div>

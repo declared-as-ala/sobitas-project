@@ -3,8 +3,8 @@
  *
  * ── WHAT THE OWNER ASKED FOR ────────────────────────────────────────────────────────────────
  * 16/08/2026, holding a reference storefront beside our page. The reference's most distinctive
- * element is a small highlighted box of five or six bullets sitting between the product name and
- * the price — the first thing the eye lands on and the reason the layout reads as a product page
+ * element is a small block of five or six benefit lines sitting between the product name and the
+ * price — the first thing the eye lands on and the reason the layout reads as a product page
  * rather than a catalogue row.
  *
  * We had the identical sentences. "24 g de protéines", "1 g de sucre", "100 % des protéines sont
@@ -13,16 +13,35 @@
  * behind a "Lire plus" button, roughly 1,400 pixels down a phone screen. Nothing needed writing;
  * something needed MOVING. See util/productHighlights.ts for the extraction and its guards.
  *
- * ── WHY IT IS NOT A CARD ────────────────────────────────────────────────────────────────────
- * A bordered card here would be the fourth stacked rectangle in the buy column (gallery, panel,
- * price box, trust row) and the column stops reading as one thought. It is a tinted plate with a
- * brand rule down its leading edge instead: enough weight to be the first thing scanned, not enough
- * to compete with the price directly below it.
+ * ── WHY THE TICKS ARE GONE ──────────────────────────────────────────────────────────────────
+ * Owner, 17/08/2026, on the first version: *"change the design of [the benefits] — looks so bad,
+ * looks AI generated. Look at impact, how beautiful, looks like a human designed it."*
+ *
+ * That is a fair reading and it is worth being precise about WHY, because the fix is not more
+ * styling. The first version was five short fragments, each preceded by a red tick, in a tinted
+ * plate. A tick is a claim of verification, and repeating it five times against phrases like
+ * "Douce pour l'estomac" spends that claim on marketing copy — which is exactly the texture of
+ * generated content: uniform, decorated, and saying less than it appears to.
+ *
+ * The reference does none of that. It sets a **bold lead phrase**, a colon, then a sentence of
+ * substance, with no glyph in front of it. The hierarchy is TYPOGRAPHIC — weight and colour carry
+ * the structure, and the reader's eye lands on the lead words rather than on five identical marks.
+ * That is what makes it read as written by someone.
+ *
+ * So: no icons, no tint. A hairline-divided list where the lead (when the source gives one) is
+ * bold and dark and the remainder is body colour. Lines with no lead are set in the darker ink
+ * rather than being left as an undecorated fragment, so a list of short specs still reads as a
+ * spec list and not as leftovers.
+ *
+ * ── WHY IT STILL HAS AN EDGE ────────────────────────────────────────────────────────────────
+ * `border-s-2 border-brand` survived the redesign. Without any container this block dissolves into
+ * the column — it sits between an H1 and a price, both of which are louder than it, and it is the
+ * only part of the hero that explains what the product DOES. One rule down its leading edge is the
+ * least furniture that still marks it as a block.
  *
  * `border-s-2` rather than `border-l-2` — the rule follows the writing direction, which matters
  * because this site serves Arabic product pages under the same components.
  */
-import { Check } from 'lucide-react';
 import type { ProductHighlight } from '@/util/productHighlights';
 
 export function ProductHighlights({
@@ -35,20 +54,20 @@ export function ProductHighlights({
   if (highlights.length === 0) return null;
 
   return (
-    <ul className={`space-y-1.5 rounded-xl border-s-2 border-brand bg-sunken px-4 py-3 ${className}`}>
+    <ul className={`divide-y divide-hairline border-s-2 border-brand ps-4 ${className}`}>
       {highlights.map((item, i) => (
-        <li key={i} className="flex gap-2.5 text-[13.5px] leading-snug text-ink-2 sm:text-sm">
-          {/*
-            `mt-[3px]` optically centres a 14px glyph against a 13.5px cap height — without it the
-            tick sits visibly high against the first line of a two-line benefit. Five of these stack,
-            so the drift is not subtle.
-          */}
-          <Check className="mt-[3px] h-3.5 w-3.5 shrink-0 text-brand" strokeWidth={3} aria-hidden="true" />
-          <span className="min-w-0">
-            {item.lead && <strong className="font-semibold text-ink-1">{item.lead}</strong>}
-            {item.lead && item.text ? ' ' : ''}
-            {item.text}
-          </span>
+        <li key={i} className="py-2 text-[13.5px] leading-relaxed sm:text-sm">
+          {item.lead ? (
+            <>
+              <strong className="font-semibold text-ink-1">{item.lead}</strong>
+              {item.text ? <span className="text-ink-2"> {item.text}</span> : null}
+            </>
+          ) : (
+            /* No lead in the source. Set in `text-ink-1` at medium weight rather than the body
+               colour: on this catalogue a lead-less line is almost always a specification
+               ("Sans OGM", "Végan", "90 comprimés"), and a spec deserves the weight of a fact. */
+            <span className="font-medium text-ink-1">{item.text}</span>
+          )}
         </li>
       ))}
     </ul>

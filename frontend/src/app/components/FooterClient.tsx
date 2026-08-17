@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { Facebook, Instagram, Linkedin, Mail, Phone, MapPin, Loader2, Youtube } from 'lucide-react';
+import { ArrowUp, Facebook, Instagram, Linkedin, Loader2, Mail, MapPin, Phone, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
@@ -110,393 +110,278 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
     }
   };
 
+  /*
+   * ── ONE FOOTER ──────────────────────────────────────────────────────────────────────────────
+   * Owner, 17/08/2026: *"the footer, redesign it, make it polished and clean, handmade, like a
+   * human designed it"*.
+   *
+   * It was TWO complete trees — a `md:hidden` stack and a `hidden md:grid` four-up — and that is
+   * the whole reason it read as assembled rather than designed. The same six navigation links, the
+   * same seven categories, the same five social buttons, the same newsletter form and the same
+   * three contact rows, each written twice, ~330 lines, with two sets of spacing decisions that had
+   * already drifted apart: the phone stack put Services above Navigation and the desktop grid put
+   * Contact first; the phone links were `space-y-1.5` with `min-h-11` rows and the desktop ones
+   * `space-y-3` with no minimum at all. Nobody chose either rhythm.
+   *
+   * This is the same defect, and the same fix, as the product hero four days ago: ONE tree, and the
+   * difference between a phone and a desktop is a grid change, which is what CSS grid is for.
+   *
+   * ── AND IT IS ON THE DESIGN SYSTEM'S OWN DARK SCOPE ─────────────────────────────────────────
+   * `bg-gray-950 text-gray-300 border-gray-800`, `bg-gray-800/60` separators, `bg-gray-800`
+   * social buttons, `hover:bg-red-600`, `text-red-500`, `bg-gray-800 border-gray-700` inputs — 93
+   * violations by the design lint's count, on a component that renders on every page of the site.
+   *
+   * `.pt-slab` is the system's dark band: it re-points every token underneath it, so everything in
+   * here is written exactly as it would be on a white card — `text-ink-1`, `border-hairline`,
+   * `bg-elevated`, `text-brand` — with no `dark:` variant and no hardcoded grey anywhere. Those
+   * values were contrast-checked when the scope was built; the ones I would have picked by eye
+   * were not. DESIGN_SYSTEM.md names this footer as the one screen that SHOULD be dark, and this
+   * is what being dark is supposed to mean here.
+   *
+   * ── THE ORDER ───────────────────────────────────────────────────────────────────────────────
+   * Brand and the newsletter first, because the newsletter is the only thing in a footer that can
+   * still earn something; then four equal columns of links; then where to find the shop; then one
+   * quiet legal line. A footer's job is to be scannable and to prove the shop is real, and the
+   * second half of that is why the address, the phone and the map are here and not folded away.
+   */
+  const year = new Date().getFullYear();
+
+  const NAVIGATION: Array<[string, string]> = [
+    ['/', 'Accueil'],
+    ['/shop', 'Nos produits'],
+    ['/packs', 'Packs'],
+    ['/blog', 'Blog'],
+    ['/contact', 'Contact'],
+    ['/proteine-sousse', 'Protéine à Sousse'],
+  ];
+
+  const CATEGORIES: Array<[string, string]> = [
+    ['/whey-proteine', 'Whey protéine'],
+    ['/creatine', 'Créatine'],
+    ['/gainers-proteines', 'Gainers'],
+    ['/prise-de-masse', 'Prise de masse'],
+    ['/perte-de-poids', 'Perte de poids'],
+    ['/pre-workout', 'Pre-workout'],
+    ['/brands', 'Toutes les marques'],
+  ];
+
+  const SOCIALS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
+    { href: 'https://facebook.com/proteinetunisie', label: 'Facebook', icon: <Facebook className="h-[18px] w-[18px]" /> },
+    { href: 'https://www.instagram.com/sobitas.proteine.tunisie/', label: 'Instagram', icon: <Instagram className="h-[18px] w-[18px]" /> },
+    { href: 'https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/', label: 'LinkedIn', icon: <Linkedin className="h-[18px] w-[18px]" /> },
+    {
+      href: 'https://www.tiktok.com/@sobitas.proteine.tunisie',
+      label: 'TikTok',
+      icon: (
+        <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+        </svg>
+      ),
+    },
+    { href: 'https://www.youtube.com/@proteine-tunisie', label: 'YouTube', icon: <Youtube className="h-[18px] w-[18px]" /> },
+  ];
+
   return (
-    <footer id="contact" className="bg-gray-950 text-gray-300 border-t border-gray-800">
-      <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-16">
-        {/* Mobile: Premium single-column stacked layout (Nike/Gymshark style) */}
-        <div className="md:hidden flex flex-col gap-8 pb-6 w-full max-w-full overflow-hidden">
-          {/* 1. Logo + tagline - scaled down, premium, no crop */}
-          <div className="space-y-4 w-full">
-            <div className="flex justify-start">
-              <Link href="/" className="block max-w-[220px] opacity-90 hover:opacity-100 transition-opacity duration-300">
-                <Image
-                  src={footerLogoUrl}
-                  alt="Proteine Tunisie"
-                  width={220}
-                  height={71}
-                  className="w-full h-auto object-contain object-left"
-                  sizes="(max-width: 480px) 130px, (max-width: 768px) 150px, 170px"
-                  loading="lazy"
-                />
-              </Link>
-            </div>
-          </div>
+    <footer id="contact" className="pt-slab border-t border-hairline">
+      <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
 
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 2. Suivez-nous */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-display text-white text-sm uppercase tracking-wide">Suivez-nous</h3>
-            <div className="flex flex-wrap gap-2 sm:gap-3">
-              <a href="https://facebook.com/proteinetunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Facebook">
-                <Facebook className="h-5 w-5" />
-              </a>
-              <a href="https://www.instagram.com/sobitas.proteine.tunisie/" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="Instagram">
-                <Instagram className="h-5 w-5" />
-              </a>
-              <a href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="LinkedIn">
-                <Linkedin className="h-5 w-5" />
-              </a>
-              <a href="https://www.tiktok.com/@sobitas.proteine.tunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="TikTok">
-                <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                </svg>
-              </a>
-              <a href="https://www.youtube.com/@proteine-tunisie" target="_blank" rel="noopener noreferrer" className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors shrink-0" aria-label="YouTube">
-                <Youtube className="h-5 w-5" />
-              </a>
-            </div>
-          </div>
-
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 3. Abonnez-vous */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-display text-white text-sm uppercase tracking-wide">Abonnez-vous</h3>
-            <p className="text-sm text-gray-400">
-              {NEWSLETTER_SUBTITLE}
-            </p>
-            <form onSubmit={handleNewsletterSubmit} className="space-y-3 w-full">
-              <div className="flex flex-col sm:flex-row gap-2 w-full">
-                <Input
-                  type="email"
-                  placeholder="Entrez votre email..."
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  className="flex-1 min-w-0 bg-gray-800/90 border-gray-700 text-white placeholder:text-gray-500 h-11 sm:h-12 rounded-xl text-sm sm:text-base"
-                  required
-                />
-                <Button
-                  type="submit"
-                  className="h-11 sm:h-12 px-6 font-display uppercase tracking-wide font-semibold rounded-xl bg-red-600 hover:bg-red-700 text-white shadow-sm shrink-0"
-                  disabled={isSubscribing}
-                >
-                  {isSubscribing ? (<><Loader2 className="h-4 w-4 mr-2 animate-spin" /> ...</>) : "S'abonner"}
-                </Button>
-              </div>
-              <p className="text-xs text-gray-400">En vous abonnant, vous acceptez de recevoir nos offres par email.</p>
-            </form>
-          </div>
-
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 4. Contact */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-display text-white text-sm uppercase tracking-wide">Contact</h3>
-            <div className="space-y-2 text-sm text-gray-400">
-              <a href={contactPhoneHref} className="flex min-h-11 items-center gap-3 py-2 hover:text-red-500 min-w-0" aria-label="Appeler">
-                <Phone className="h-5 w-5 text-red-500 shrink-0" />
-                <span className="break-words">{contactPhones}</span>
-              </a>
-              <a href={`mailto:${contactEmail}`} className="flex min-h-11 items-center gap-3 py-2 hover:text-red-500 min-w-0">
-                <Mail className="h-5 w-5 text-red-500 shrink-0" />
-                <span>{contactEmail}</span>
-              </a>
-              {contactAddress ? (
-                <div className="flex items-start gap-3 py-2 min-w-0">
-                  <MapPin className="h-5 w-5 text-red-500 shrink-0 mt-0.5" />
-                  <span className="break-words">{contactAddress}</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 5. Services & Ventes (from API) */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-display text-white text-sm uppercase tracking-wide">Services & Ventes</h3>
-            <ul className="space-y-1.5">
-              {footerPages.length > 0 ? footerPages.map((p) => (
-                <li key={p.id}>
-                  {p.slug ? (
-                    <Link href={`/${p.slug}`} className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{p.title}</Link>
-                  ) : (
-                    <span className="flex min-h-11 items-center py-2 text-sm text-gray-500">{p.title}</span>
-                  )}
-                </li>
-              )) : null}
-            </ul>
-          </div>
-
-          <div className="h-px bg-gray-800/60 w-full" aria-hidden="true" role="separator" />
-
-          {/* 6. Navigation */}
-          <div className="space-y-3 w-full">
-            <h3 className="font-display text-white text-sm uppercase tracking-wide">Navigation</h3>
-            <ul className="space-y-1.5">
-              <li><Link href="/" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Accueil</Link></li>
-              <li><Link href="/shop" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Nos produits</Link></li>
-              <li><Link href="/packs" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Packs</Link></li>
-              <li><Link href="/blog" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Blog</Link></li>
-              <li><Link href="/contact" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Contact</Link></li>
-              <li><Link href="/proteine-sousse" className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">Protéine à Sousse</Link></li>
-            </ul>
-            <h3 className="font-display text-white text-sm uppercase tracking-wide mt-5">Catégories</h3>
-            <ul className="space-y-1.5">
-              {[
-                ['/whey-proteine', 'Whey protéine'],
-                ['/creatine', 'Créatine'],
-                ['/gainers-proteines', 'Gainers'],
-                ['/prise-de-masse', 'Prise de masse'],
-                ['/perte-de-poids', 'Perte de poids'],
-                ['/pre-workout', 'Pre-workout'],
-                ['/brands', 'Toutes les marques'],
-              ].map(([href, label]) => (
-                <li key={href}><Link href={href} className="flex min-h-11 items-center py-2 text-sm text-gray-400 hover:text-red-500 active:text-red-500">{label}</Link></li>
-              ))}
-            </ul>
-          </div>
-        </div>
-
-        {/* Desktop: 4-column layout */}
-        <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
-          {/* Contact Info & Social */}
-          <div className="space-y-6">
-            <div className="relative h-16 w-auto mb-6 shrink-0 flex items-center">
+        {/* ── BRAND + NEWSLETTER ─────────────────────────────────────────────────────────── */}
+        <div className="grid gap-8 border-b border-hairline py-10 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-12">
+          <div className="min-w-0">
+            <Link href="/" className="inline-block transition-opacity hover:opacity-80">
               <Image
                 src={footerLogoUrl}
                 alt="Proteine Tunisie"
                 width={230}
                 height={75}
-                className="h-16 w-auto object-contain"
-                style={{ width: 'auto', height: 'auto' }}
+                className="h-11 w-auto object-contain sm:h-14"
+                sizes="230px"
                 loading="lazy"
               />
-            </div>
-
-            {/* Contact Details */}
-            <div className="space-y-3">
-              <a href={contactPhoneHref} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors" aria-label="Appeler">
-                <Phone className="h-5 w-5 text-red-500" aria-hidden="true" />
-                <span>{contactPhones}</span>
-              </a>
-              <a href={`mailto:${contactEmail}`} className="flex items-center gap-3 text-sm hover:text-red-500 transition-colors">
-                <Mail className="h-5 w-5 text-red-500" />
-                <span>{contactEmail}</span>
-              </a>
-              {contactAddress ? (
-                <div className="flex items-start gap-3 text-sm">
-                  <MapPin className="h-5 w-5 text-red-500 flex-shrink-0 mt-0.5" />
-                  <span>{contactAddress}</span>
-                </div>
-              ) : null}
-            </div>
-
-            {/* Social Media */}
-            <div>
-              <h3 className="font-display uppercase tracking-wide text-white mb-4">Suivez-nous</h3>
-              <div className="flex flex-wrap gap-3">
-                <a
-                  href="https://facebook.com/proteinetunisie"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
-                  aria-label="Facebook"
-                >
-                  <Facebook className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.instagram.com/sobitas.proteine.tunisie/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
-                  aria-label="Instagram"
-                >
-                  <Instagram className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
-                  aria-label="LinkedIn"
-                >
-                  <Linkedin className="h-5 w-5" />
-                </a>
-                <a
-                  href="https://www.tiktok.com/@sobitas.proteine.tunisie"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
-                  aria-label="TikTok"
-                >
-                  <svg className="h-5 w-5 text-white" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-                  </svg>
-                </a>
-                <a
-                  href="https://www.youtube.com/@proteine-tunisie"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="h-11 w-11 rounded-full bg-gray-800 hover:bg-red-600 flex items-center justify-center transition-colors"
-                  aria-label="YouTube"
-                >
-                  <Youtube className="h-5 w-5" />
-                </a>
-              </div>
-            </div>
+            </Link>
+            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-2">
+              Compléments alimentaires authentiques, sélectionnés et livrés partout en Tunisie.
+              Paiement à la livraison, expédition sous 24–72h.
+            </p>
           </div>
 
-          {/* Navigation */}
-          <div>
-            <h3 className="font-display uppercase tracking-wide text-white mb-6">Navigation</h3>
-            <ul className="space-y-3">
-              <li>
-                <Link href="/" className="text-sm hover:text-red-500 transition-colors">
-                  Accueil
-                </Link>
-              </li>
-              <li>
-                <Link href="/shop" className="text-sm hover:text-red-500 transition-colors">
-                  Nos produits
-                </Link>
-              </li>
-              <li>
-                <Link href="/packs" className="text-sm hover:text-red-500 transition-colors">
-                  Packs
-                </Link>
-              </li>
-              <li>
-                <Link href="/blog" className="text-sm hover:text-red-500 transition-colors">
-                  Blog
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-sm hover:text-red-500 transition-colors">
-                  Contact
-                </Link>
-              </li>
-              <li>
-                <Link href="/proteine-sousse" className="text-sm hover:text-red-500 transition-colors">
-                  Protéine à Sousse
-                </Link>
-              </li>
-            </ul>
-            {/* Catégories — real SSR links on every page so category/subcategory landing pages
-                receive sitewide internal links (equity distribution + crawl depth). */}
-            <h3 className="font-display uppercase tracking-wide text-white mt-8 mb-6">Catégories</h3>
-            <ul className="space-y-3">
-              {[
-                ['/whey-proteine', 'Whey protéine'],
-                ['/creatine', 'Créatine'],
-                ['/gainers-proteines', 'Gainers'],
-                ['/prise-de-masse', 'Prise de masse'],
-                ['/perte-de-poids', 'Perte de poids'],
-                ['/pre-workout', 'Pre-workout'],
-                ['/brands', 'Toutes les marques'],
-              ].map(([href, label]) => (
-                <li key={href}>
-                  <Link href={href} className="text-sm hover:text-red-500 transition-colors">{label}</Link>
-                </li>
-              ))}
-            </ul>
-          </div>
+          {/* The newsletter is the only element in a footer that can still earn something, so it
+              gets half the band rather than a quarter of a column. */}
+          <form onSubmit={handleNewsletterSubmit} className="min-w-0 lg:justify-self-end lg:max-w-md">
+            <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
+              Abonnez-vous
+            </h2>
+            <p className="mt-1.5 text-sm text-ink-2">{NEWSLETTER_SUBTITLE}</p>
+            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+              <Input
+                type="email"
+                placeholder="Votre adresse email…"
+                value={newsletterEmail}
+                onChange={(e) => setNewsletterEmail(e.target.value)}
+                className="h-12 min-w-0 flex-1 rounded-xl border-hairline bg-elevated text-ink-1 placeholder:text-ink-3"
+                aria-label="Votre adresse email"
+                required
+              />
+              <Button
+                type="submit"
+                className="h-12 shrink-0 rounded-xl px-6 font-display font-semibold uppercase tracking-wide"
+                disabled={isSubscribing}
+              >
+                {isSubscribing ? (
+                  <>
+                    <Loader2 className="me-2 h-4 w-4 animate-spin" /> Inscription…
+                  </>
+                ) : (
+                  "S'abonner"
+                )}
+              </Button>
+            </div>
+            <p className="mt-2.5 text-xs text-ink-3">
+              En vous abonnant, vous acceptez de recevoir nos offres par email.
+            </p>
+          </form>
+        </div>
 
-          {/* Services & Ventes (from API) */}
-          <div>
-            <h3 className="font-display uppercase tracking-wide text-white mb-6">Services & Ventes</h3>
-            <ul className="space-y-3">
+        {/* ── FOUR COLUMNS ───────────────────────────────────────────────────────────────── */}
+        <div className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10 lg:py-12">
+          <FooterLinkColumn title="Navigation" links={NAVIGATION} />
+          <FooterLinkColumn title="Catégories" links={CATEGORIES} />
+
+          <div className="min-w-0">
+            <FooterHeading>Services &amp; ventes</FooterHeading>
+            <ul className="mt-4 space-y-0.5">
               {footerPages.map((p) => (
                 <li key={p.id}>
                   {p.slug ? (
-                    <Link href={`/${p.slug}`} className="text-sm hover:text-red-500 transition-colors">
+                    <Link href={`/${p.slug}`} className={FOOTER_LINK}>
                       {p.title}
                     </Link>
                   ) : (
-                    <span className="text-sm text-gray-500">{p.title}</span>
+                    <span className="flex min-h-[44px] items-center text-sm text-ink-3 sm:min-h-[36px]">
+                      {p.title}
+                    </span>
                   )}
                 </li>
               ))}
             </ul>
           </div>
 
-          {/* Newsletter */}
-          <div className="space-y-6">
-            <div>
-              <div className="flex items-center gap-2 mb-4">
-                <h3 className="font-display uppercase tracking-wide text-white text-lg">Abonnez-vous</h3>
-              </div>
-              <p className="text-sm text-gray-400 mb-4">
-                {NEWSLETTER_SUBTITLE}
-              </p>
-              <form onSubmit={handleNewsletterSubmit} className="space-y-3">
-                <Input
-                  type="email"
-                  placeholder="Votre email..."
-                  value={newsletterEmail}
-                  onChange={(e) => setNewsletterEmail(e.target.value)}
-                  className="bg-gray-800 border-gray-700 text-white placeholder:text-gray-500 h-12 rounded-xl"
-                  required
-                />
-                <Button
-                  type="submit"
-                  className="w-full bg-red-600 hover:bg-red-700 text-white h-12 font-display uppercase tracking-wide font-semibold rounded-xl shadow-sm"
-                  disabled={isSubscribing}
+          <div className="min-w-0">
+            <FooterHeading>Nous contacter</FooterHeading>
+            <ul className="mt-4 space-y-0.5">
+              <li>
+                <a href={contactPhoneHref} className={FOOTER_LINK} aria-label="Appeler la boutique">
+                  <Phone className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{contactPhones}</span>
+                </a>
+              </li>
+              <li>
+                <a href={`mailto:${contactEmail}`} className={FOOTER_LINK}>
+                  <Mail className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{contactEmail}</span>
+                </a>
+              </li>
+              {contactAddress && (
+                <li className="flex min-h-[44px] items-start py-2 text-sm text-ink-2 sm:min-h-[36px]">
+                  <MapPin className="me-2.5 mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                  <span className="min-w-0 break-words">{contactAddress}</span>
+                </li>
+              )}
+            </ul>
+
+            {/* Social buttons are `bg-elevated` on the slab — a fill that already resolves against
+                this band — rather than a hand-picked `bg-gray-800`. Hover goes to the brand, which
+                on the slab is the lighter #FF8A4C, not the page's #D53B04. That is the scope doing
+                its job: the same class, the correct colour for the surface it lands on. */}
+            <div className="mt-5 flex flex-wrap gap-2">
+              {SOCIALS.map(({ href, label, icon }) => (
+                <a
+                  key={label}
+                  href={href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  aria-label={label}
                 >
-                  {isSubscribing ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Inscription...
-                    </>
-                  ) : (
-                    'S\'abonner'
-                  )}
-                </Button>
-                <p className="text-xs text-gray-400 mt-4">
-                  En vous abonnant, vous acceptez de recevoir nos offres par email
-                </p>
-              </form>
+                  {icon}
+                </a>
+              ))}
             </div>
           </div>
         </div>
 
-        {/* Map Section - Deferred loading, reduced height on mobile */}
-        {mapEmbedHtml ? (
-        <div className="mt-8 md:mt-12" ref={mapRef}>
-          <h3 className="font-display uppercase tracking-wide text-white text-base md:text-inherit mb-3 md:mb-4">Géolocalisation</h3>
-          <div className="rounded-2xl md:rounded-xl overflow-hidden h-48 md:h-64 bg-gray-800 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0">
-            {shouldLoadMap ? (
-              <div
-                className="h-full w-full"
-                dangerouslySetInnerHTML={{ __html: mapEmbedHtml }}
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                <MapPin className="h-12 w-12" aria-hidden="true" />
-                <span className="sr-only">Carte de localisation</span>
-              </div>
-            )}
+        {/* ── WHERE THE SHOP IS ──────────────────────────────────────────────────────────── */}
+        {mapEmbedHtml && (
+          <div className="border-t border-hairline py-8 lg:py-10" ref={mapRef}>
+            <FooterHeading>Nous trouver</FooterHeading>
+            {/* Deferred: the iframe is only mounted once the footer is near the viewport, so a
+                third-party map frame never competes with the page's own LCP. */}
+            <div className="mt-4 h-44 overflow-hidden rounded-2xl border border-hairline bg-elevated sm:h-56 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0">
+              {shouldLoadMap ? (
+                <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: mapEmbedHtml }} />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center text-ink-3">
+                  <MapPin className="h-10 w-10" aria-hidden="true" />
+                  <span className="sr-only">Carte de localisation</span>
+                </div>
+              )}
             </div>
           </div>
-        ) : null}
+        )}
       </div>
 
-      {/* Bottom Bar - Compact on mobile */}
-      <div className="border-t border-gray-800/50 bg-black/50">
-        <div className="max-w-site mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <button
-              type="button"
-              aria-label="Remonter en haut"
-              className="text-center md:text-left text-sm text-gray-400 hover:text-red-500 transition-colors"
-              onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
-            >
-              © {new Date().getFullYear()} <span className="text-red-500 font-display uppercase tracking-wide">PROTEINE TUNISIE</span>. Tous droits réservés.
-            </button>
-          </div>
+      {/* ── LEGAL LINE ───────────────────────────────────────────────────────────────────── */}
+      <div className="border-t border-hairline">
+        <div className="mx-auto flex w-full max-w-site flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-ink-3 sm:flex-row sm:px-6 lg:px-8">
+          <p>
+            © {year}{' '}
+            <span className="font-display font-semibold uppercase tracking-wide text-brand">
+              Proteine Tunisie
+            </span>
+            . Tous droits réservés.
+          </p>
+          <button
+            type="button"
+            onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
+            className="-my-2 inline-flex min-h-[44px] items-center gap-1.5 py-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            Haut de page
+            <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
+          </button>
         </div>
       </div>
     </footer>
+  );
+}
+
+/**
+ * One class string for every link in the footer, so the four columns cannot drift the way the two
+ * trees did. `min-h-[44px]` on a phone is the tap floor; `sm:min-h-[36px]` keeps a seven-item
+ * column from being 308px tall on a desktop where the pointer is a mouse — still well clear of the
+ * 24px minimum target size, which is the criterion that actually applies to a list of text links.
+ */
+const FOOTER_LINK =
+  'flex min-h-[44px] items-center py-2 text-sm text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[36px]';
+
+function FooterHeading({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="font-display text-sm font-bold uppercase tracking-wide text-ink-1">{children}</h2>
+  );
+}
+
+function FooterLinkColumn({ title, links }: { title: string; links: Array<[string, string]> }) {
+  return (
+    <div className="min-w-0">
+      <FooterHeading>{title}</FooterHeading>
+      <ul className="mt-4 space-y-0.5">
+        {links.map(([href, label]) => (
+          <li key={href}>
+            <Link href={href} className={FOOTER_LINK}>
+              {label}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
