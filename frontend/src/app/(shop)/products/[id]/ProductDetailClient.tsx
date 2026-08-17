@@ -234,6 +234,25 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   );
 
   /*
+   * Is there actually anything behind the fold of the Description panel?
+   *
+   * The `max-h-60` clamp and the "Lire plus" button were written when this panel held the entire
+   * source page. Now that the blocks are routed out, most descriptions are shorter than the clamp —
+   * so the button revealed nothing, which teaches a reader that the control is decorative, and that
+   * lesson carries to the pages where it IS hiding something.
+   *
+   * ONE flag drives both the clamp and the button, deliberately: they cannot disagree, so there is
+   * no state in which content is clipped with no way to open it.
+   *
+   * 600 characters is a shade more than fills the 240px clamp at the narrowest column this renders
+   * in, so the button appears only when at least a line is genuinely hidden.
+   */
+  const descriptionIsLong = useMemo(
+    () => merged.body.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().length > 600,
+    [merged]
+  );
+
+  /*
    * ── THE STICKY BAR ONLY EXISTS WHEN THE REAL ONE IS GONE ───────────────────────────────────
    * With one render tree the CTAs are in the buy box at every width, which they never were on a
    * phone before — mobile had them ONLY in the sticky bar. Leaving that bar permanently up now
@@ -837,7 +856,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       );
                     })()}
                     <div
-                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                      className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                       // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
                       // top-level headings on the page whose only h1 should be the product name —
                       // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
@@ -850,6 +869,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       // product is, what is in the pack, what it weighs.
                       dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.body) }}
                     />
+                    {descriptionIsLong && (
                     <button
                       type="button"
                       onClick={() => setDescExpanded(!descExpanded)}
@@ -859,6 +879,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     >
                       {descExpanded ? 'Voir moins' : 'Lire plus'}
                     </button>
+                    )}
                     {/*
                       The transcribed source page — the manufacturer's suggested use, ingredient list
                       and warnings, then the photographs the source page listed, then one sentence

@@ -104,8 +104,30 @@ for (const { w, h, label } of WIDTHS) {
       { timeout: 30000 }
     )
     .catch(() => {});
-  // One frame, so the IntersectionObserver that drives the sticky bar has reported.
-  await new Promise((resolve) => setTimeout(resolve, 400));
+  /*
+   * ── WAIT FOR THE BAR TO STOP MOVING, DO NOT GUESS HOW LONG THAT TAKES ─────────────────────
+   * The sticky bar slides 200ms under an IntersectionObserver's control. A fixed delay measured it
+   * mid-transform and reported the mobile tab bar as covering "Demander ce produit" by 44px — on
+   * one product, at one width, intermittently. At rest the button sits 720-764 and the tab bar
+   * 787-844, so they never touch; the guard was reporting the animation.
+   *
+   * This is the same shape as the webfont race that made two other guards flap, and it takes the
+   * same answer: wait for the thing to settle rather than for a number of milliseconds. Two
+   * consecutive identical positions 120ms apart means the transition has finished.
+   */
+  await page
+    .waitForFunction(
+      () => {
+        const bar = document.querySelector('[data-sticky-cta]');
+        if (!bar) return true;
+        const now = Math.round(bar.getBoundingClientRect().top);
+        const settled = window.__barTop === now;
+        window.__barTop = now;
+        return settled;
+      },
+      { polling: 120, timeout: 8000 }
+    )
+    .catch(() => {});
 
   const m = await page.evaluate(() => {
     const q = (sel) => document.querySelector(sel);
@@ -204,21 +226,54 @@ for (const { w, h, label } of WIDTHS) {
       cover: (() => {
         const bar = document.querySelector('[data-sticky-cta]');
         if (!bar) return [];
-        const b = bar.getBoundingClientRect();
-        if (b.top >= window.innerHeight) return [];
-        return [...document.querySelectorAll('body *')]
-          .filter((el) => {
-            if (el === bar || bar.contains(el) || el.contains(bar)) return false;
-            const style = getComputedStyle(el);
-            if (style.position !== 'fixed' && style.position !== 'sticky') return false;
-            if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') return false;
-            const r = el.getBoundingClientRect();
-            if (r.width < 40 || r.height < 20) return false;
-            // Genuine overlap of the bar's band, by more than a hairline.
-            return r.top < b.bottom - 4 && r.bottom > b.top + 4 && r.left < b.right && r.right > b.left;
-          })
-          .map((el) => `${(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 34)} [${Math.round(el.getBoundingClientRect().top)}-${Math.round(el.getBoundingClientRect().bottom)} z=${getComputedStyle(el).zIndex}]`)
-          .slice(0, 3);
+
+        /*
+         * Measured against the CTA's BUTTONS, not against the bar's box.
+         *
+         * The first version compared the whole bar and started failing the moment a third product
+         * was added — reporting the mobile tab bar as a cover. That is wrong, and the tailwind
+         * config says why: the tab bar is persistent APP chrome and deliberately outranks page
+         * chrome (z 40 over 30), so that "the tile overlaps their surface, never their controls".
+         * The sticky bar is anchored `bottom-tabbar` precisely so it sits ABOVE the tab bar, and
+         * the one-pixel meeting of their edges — plus the 200ms slide-in, during which the bar
+         * passes behind the tab bar on purpose — is the design working.
+         *
+         * The defect worth catching was never "something touches the bar". It was "a customer
+         * cannot press Ajouter au panier", which is a statement about the button.
+         */
+        const targets = [...bar.querySelectorAll('a, button')].filter((el) => {
+          const r = el.getBoundingClientRect();
+          return r.width > 40 && r.height > 20 && r.top < window.innerHeight;
+        });
+        if (targets.length === 0) return [];
+
+        const hits = [];
+        for (const el of document.querySelectorAll('body *')) {
+          if (el === bar || bar.contains(el) || el.contains(bar)) continue;
+          const style = getComputedStyle(el);
+          if (style.position !== 'fixed' && style.position !== 'sticky') continue;
+          if (style.visibility === 'hidden' || style.display === 'none' || style.opacity === '0') continue;
+          const r = el.getBoundingClientRect();
+          if (r.width < 40 || r.height < 20) continue;
+          /* Only things painted ABOVE the bar can hide it. Below it in the stack is harmless. */
+          const barZ = Number(getComputedStyle(bar).zIndex) || 0;
+          const z = Number(style.zIndex) || 0;
+          if (z < barZ) continue;
+
+          for (const target of targets) {
+            const t = target.getBoundingClientRect();
+            const overlapX = Math.min(r.right, t.right) - Math.max(r.left, t.left);
+            const overlapY = Math.min(r.bottom, t.bottom) - Math.max(r.top, t.top);
+            if (overlapX > 8 && overlapY > 8) {
+              hits.push(
+                `${(el.textContent || '').trim().replace(/\s+/g, ' ').slice(0, 30)} covers "${(target.textContent || '').trim().slice(0, 22)}" by ${Math.round(overlapY)}px`
+              );
+              break;
+            }
+          }
+          if (hits.length >= 3) break;
+        }
+        return hits;
       })(),
       sections: qa('main details > summary').map((s) => s.textContent.trim().split('\n')[0].trim()),
 
@@ -247,6 +302,31 @@ for (const { w, h, label } of WIDTHS) {
             return probe.length >= 60 && body.includes(probe) ? el.id : null;
           })
           .filter(Boolean);
+      })(),
+
+      /*
+       * ── "LIRE PLUS" MUST REVEAL SOMETHING, AND CLIPPED TEXT MUST HAVE A "LIRE PLUS" ────────
+       * Two failures, one invariant. The clamp and the button used to be independent: the clamp
+       * was unconditional and the button was unconditional, which was fine while the Description
+       * panel held the entire source page. Once the blocks were routed into named sections most
+       * descriptions became shorter than the 240px clamp, so the button revealed nothing — and a
+       * control that does nothing teaches a reader to ignore it on the pages where it matters.
+       *
+       * The opposite failure is worse and is what this really guards: text clipped with no way to
+       * open it. Asserting the BIRECTIONAL match means neither can be introduced, whatever future
+       * threshold anyone picks.
+       */
+      descriptionClamp: (() => {
+        const panel = document.querySelector('#pdp-description');
+        const body = panel?.querySelector('.prose');
+        if (!panel || !body) return null;
+        const button = [...panel.querySelectorAll('button')].find((b) =>
+          /Lire plus|Voir moins/.test(b.textContent || '')
+        );
+        return {
+          clipped: body.scrollHeight > body.clientHeight + 2,
+          hasButton: Boolean(button),
+        };
       })(),
 
       /* Packshots stay in the carousel; label close-ups become a grid. */
@@ -306,6 +386,14 @@ for (const { w, h, label } of WIDTHS) {
     check(w, 'sticky CTA bar is present', m.stickyBar !== 'absent', m.stickyBar);
   }
   check(w, 'nothing covers the sticky CTA', m.cover.length === 0, m.cover.join(' | ') || 'ok');
+  if (m.descriptionClamp) {
+    check(
+      w,
+      'clipped description has a reveal, and vice versa',
+      m.descriptionClamp.clipped === m.descriptionClamp.hasButton,
+      `clipped=${m.descriptionClamp.clipped} button=${m.descriptionClamp.hasButton}`
+    );
+  }
   check(
     w,
     'no section repeats the description',
