@@ -300,8 +300,26 @@ async function refreshBrands(): Promise<void> {
 
     /* Paginated on purpose. `/all_brands` returns `data` with no total a caller can see, which is
        exactly how 124 blog articles once stayed out of the sitemap: half a list returned as if it
-       were whole. 128 brands over 100-row pages is two requests; the cap is a loop guard. */
-    for (let page = 1; page <= 5; page++) {
+       were whole.
+
+       ── AND THE CAP DID IT ANYWAY ────────────────────────────────────────────────────────────
+       The guard was `page <= 5` under the note "128 brands over 100-row pages is two requests".
+       That was true when it was written and stopped being true when the imported catalogue landed.
+       Counted against production on 17/08/2026: 589 brands over six pages, so the loop read 500 and
+       silently dropped page six — every brand from `Sunlipid` to `ZUMUB`, 89 of them, reported to
+       middleware as NOT A BRAND.
+
+       That is not a cosmetic truncation. `isBrandSlug` is what stops a legacy /brand/{name} URL
+       being 410'd, so the tail of the alphabet was answered Gone while its landing page returned
+       200 to anyone who typed the URL:
+
+           /brand/Universal%20Nutrition/25   410        /universal-nutrition   200
+           /brand/MUTANT/15                  301 → /mutant                     (page 4, fine)
+
+       30 pages rather than 6 so the guard is a runaway-loop backstop again rather than a live
+       ceiling — the loop already stops on the first short or empty page, which is what actually
+       ends it. A cap sized to today's row count is a cap that expires. */
+    for (let page = 1; page <= 30; page++) {
       const res = await fetch(`${apiBase()}/all_brands?per_page=100&page=${page}`, {
         signal: AbortSignal.timeout(4000),
         headers: { accept: 'application/json' },

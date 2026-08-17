@@ -490,6 +490,63 @@ function buildRedirects() {
     p('/shop/xtend-bcaa-420g/', '/bcaa/xtend-bcaa-420g'),
     p('/shop/zma-pro-90-caps', '/zma/zma-pro-90-caps'),
     p('/shop/zma-pro-90-caps/', '/zma/zma-pro-90-caps'),
+
+    /*
+     * ── THE PRODUCT IS STILL SOLD; ONLY ITS SLUG MOVED ──────────────────────────────────────
+     *
+     * Every path below answered 410 on 17/08/2026 while the product it names was live, because
+     * `bestCategoryForSlug` scores SHARED TOKENS and these slugs share none with any category
+     * name: "opti-men-90-caps-optimum-nutrition" has no token in common with "Vitamines", so the
+     * honest-gone branch fired for a product on the shelf.
+     *
+     * That relevance rule is right and is deliberately not being loosened — it is what stops
+     * "monster-energy-drink" being dumped on a rayon it has nothing to do with. The cases it
+     * cannot see are the ones where the SLUG was rewritten (caps→tabs, a missing hyphen, a
+     * "-tunisie" suffix, a brand name dropped), and those are a finite hand-checked list rather
+     * than a pattern. Each destination below was searched in the catalogue and verified 200 as
+     * Googlebot before being written here.
+     *
+     * 410 is still the right answer for a product that is genuinely gone, and the ones that are
+     * (monster-energy-drink, c4-energy-drink, show-time-v3-0-360g) are deliberately NOT listed.
+     */
+    p('/shop/king-real-preworkout-500gr-real-pharm', '/pre-workout/king-real-preworkout-500gr-real-pharm-tunisie'),
+    p('/shop/opti-men-90-caps-optimum-nutrition', '/vitamines/opti-men-90tabs'),
+    p('/shop/platinum-multivitamin-90-caps-muscletech', '/vitamines/platinum-multivitamin-90-tabs'),
+    // "zam" is a typo for ZMA that the old site published and Google still crawls.
+    p('/shop/zam-120-caps', '/zma/zma-120-caps'),
+    // The hyphen went missing in the old slug: collagenvitamin-c → collagen-vitamin-c-400g.
+    p('/shop/collagenvitamin-c', '/collagene/collagen-vitamin-c-400g'),
+    p('/shop/animal-pak-30-packs-universal-nutrition', '/vitamines/animal-pak-30-packs'),
+    p('/shop/animal-pak-44-packs-universal-nutrition', '/vitamines/animal-pak-44-packs'),
+    p('/product/animal-pak/reviews', '/vitamines/animal-pak-30-packs'),
+    p('/category/big-ramy-labs-iso-big-2kg', '/whey-isolate/iso-big-2-1kg-big-ramy-labs'),
+
+    /*
+     * ── THE PRODUCT IS GONE, BUT ITS RAYON IS A REAL ANSWER ─────────────────────────────────
+     *
+     * Not a hub dump: each destination is the specific rayon the dead product belonged to, which
+     * is Google's documented guidance for a discontinued item. They are listed by hand for the
+     * same reason as the block above — the token overlap that would find them automatically does
+     * not exist ("ceinture-abdominale" shares nothing with "Matériel de Musculation"), and the
+     * alternative is leaving a 410 on a URL that has an obvious home.
+     *
+     * "The Shadow" and "The Pump" are pre-workouts; "smart-shaker" is a shaker and shakers are in
+     * Accessoires; "crea-core" is creatine; "tst-gh" is a testosterone booster; "iso-gro" is an
+     * isolate. All six destinations verified 200 as Googlebot.
+     */
+    p('/shop/ceinture-abdominale', '/materiel-de-musculation'),
+    p('/shop/the-pump-261gr-challenger-nutrition', '/pre-workout'),
+    p('/products/the-shadow-270g/reviews', '/pre-workout'),
+    p('/product/smart-shaker/reviews', '/accessoires'),
+    p('/category/crea-core-250g-procell', '/creatine'),
+    p('/category/vita-core-60-caps', '/vitamines'),
+    p('/category/tst-gh-300-g-biotech-usa', '/boosters-hormonaux'),
+    p('/category/iso-gro-usn-2kg', '/whey-isolate'),
+    /* "Galvanize Aqua" is a discontinued line; the BRAND is live at /galvanize-chrome (verified
+       200), which is the nearest page that still means something. The trailing hyphen is in the
+       crawled URL itself — the old site truncated the slug — so both spellings are listed. */
+    p('/shop/galvanize-aqua-', '/galvanize-chrome'),
+    p('/product/galvanize-aqua-', '/galvanize-chrome'),
   ];
 }
 

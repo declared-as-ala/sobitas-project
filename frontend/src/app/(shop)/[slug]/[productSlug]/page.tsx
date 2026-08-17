@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
-import { isTaxonomySlug, bestCategoryForSlug } from '@/util/taxonomySlugs';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -220,17 +220,6 @@ export default async function NewProductPage({ params }: PageProps) {
        * Only reached AFTER the full slug has already 404'd, so real slugs that merely end in a
        * number (omega-3, iso-whey-zero-2-27-kg) resolve normally and never hit this path.
        */
-      const baseSlug = cleanProductSlug.replace(/-\d+$/, '');
-      if (baseSlug && baseSlug !== cleanProductSlug) {
-        let fallback: Product | null = null;
-        try {
-          fallback = await getCachedProductDetails(baseSlug);
-        } catch (retryError) {
-          unstable_rethrow(retryError);
-          fallback = null;
-        }
-        if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
-      }
       /**
        * DEAD END, not a detour. We are here only because the API gave a DEFINITIVE 404 for the
        * full slug (and, for a legacy -N slug, for the base slug too). The old fallback redirected
@@ -267,16 +256,16 @@ export default async function NewProductPage({ params }: PageProps) {
        * a redirect into one. For a confirmed-deleted product worth a 410, add the path to
        * Filament → Redirections with code 410 — middleware checks that map FIRST, so it never
        * reaches this route.
+       *
+       * ── THE FOUR STEPS ABOVE NOW LIVE IN ONE FILE ──────────────────────────────────────
+       * They were written here and copied, in half, into x-crawler/product/[slug] — which is the
+       * route Googlebot actually gets, since middleware rewrites bot UAs to it. The copy carried
+       * the `-N` retry and neither the taxonomy check nor the relevance match, so the same URL
+       * answered 200 to Chrome and 404 to Googlebot, and Search Console reports the latter.
+       * Sharing `retiredSlugDestination` is what stops that divergence recurring.
        */
-      const rootSlug = baseSlug && baseSlug !== cleanProductSlug ? baseSlug : cleanProductSlug;
-      const rootIsTaxonomy = await isTaxonomySlug(rootSlug);
-      if (rootIsTaxonomy !== false) {
-        permanentRedirect(`/${encodeURIComponent(rootSlug)}`);
-      }
-      const relatedCategory = await bestCategoryForSlug(rootSlug);
-      if (relatedCategory) {
-        permanentRedirect(`/${encodeURIComponent(relatedCategory)}`);
-      }
+      const destination = await retiredSlugDestination(cleanProductSlug, { product: true });
+      if (destination) permanentRedirect(destination);
       notFound();
     }
     // Transient failure (429/5xx/timeout): rethrow. This ISR route (revalidate 300) would

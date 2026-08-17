@@ -35,11 +35,40 @@
  */
 const BASE = (process.env.BASE_URL || 'https://protein.tn').replace(/\/$/, '');
 
-// Cloudflare caches per UA-variant and middleware.ts rewrites bots to /x-crawler/*. Measuring with
-// a default agent reads whichever variant happened to be cached, which is how two runs of the same
-// check disagreed about the same URL earlier in this project.
-const UA =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36';
+/**
+ * BOTH AGENTS, EVERY CASE — AND THE REASON IS THE LAST BUG THIS FILE MISSED.
+ *
+ * The note that used to sit here was right about the mechanism and wrong about the conclusion. It
+ * said Cloudflare caches per UA-variant and middleware rewrites bots to /x-crawler/*, and then
+ * pinned a single Chrome UA so two runs could not disagree. Pinning one agent does not remove the
+ * divergence, it just picks which half of it you are blind to — and it picked the half that does
+ * not appear in Search Console.
+ *
+ * Measured on production 17/08/2026, with this file green:
+ *
+ *     /creatine/gold-creatine-300g                 Chrome 200   Googlebot 404
+ *     /gainers/serious-mass-5-45kg                 Chrome 200   Googlebot 404
+ *     /eaa/beef-aminos-200-tabs                    Chrome 200   Googlebot 404   (a LIVE product)
+ *
+ * `gold-creatine-300g` is a case in the list below, described in its own comment as "the LAST
+ * failure in this file after the middleware fix shipped". It was still failing — for the only
+ * visitor whose result is reported — and this guard could not see it, because the recovery lived
+ * in app/(shop)/[slug]/[productSlug] and Googlebot is rewritten to x-crawler/product before it
+ * gets there. Two routes, one of them unmeasured, is how they drifted.
+ *
+ * A case must now hold under BOTH agents. The bot variant is the one that matters for the report
+ * this guard exists to drain, and asserting only the human variant is asserting the wrong thing.
+ */
+const AGENTS = [
+  {
+    name: 'browser',
+    ua: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126 Safari/537.36',
+  },
+  {
+    name: 'Googlebot',
+    ua: 'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)',
+  },
+];
 
 const MAX_HOPS = 3;
 
@@ -70,6 +99,28 @@ const CASES = [
   // it "returns a clean hard 404 when it is not" a category. There is no clean 404 behind a 301.
   { path: '/creatine/gold-creatine-300g', why: 'nested legacy path, product gone; stems to creatine' },
   { path: '/musculation/presse-cuisse-35', why: 'nested legacy path, live product' },
+
+  /* ── THE SHAPES ONLY GOOGLEBOT EVER FAILED ────────────────────────────────────────────────
+   *
+   * All four were 200 to a browser and 404 to Googlebot on 17/08/2026, because the recovery lived
+   * in app/(shop)/** and middleware rewrites bots to x-crawler/** before they reach it. They are
+   * here as much for the AGENTS loop above as for themselves: run these under one UA and they pass
+   * while Search Console keeps reporting them.
+   */
+  { path: '/eaa/beef-aminos-200-tabs', why: 'LIVE product (id=122) with no subcategory — /shop/{slug}, never 404' },
+  { path: '/gainers/serious-mass-5-45kg', why: 'gone; shares "mass" with Mass Gainers' },
+  { path: '/vitamines/vegan-vitamin-d3-k2-240-tablets-weightworld', why: 'gone; stems to Vitamines' },
+
+  /* A ROOT-LEVEL product slug — the old site's flat URL shape. `(shop)/[slug]` probes category,
+     brand and CMS page and never asked whether the slug was a PRODUCT, so this 404'd to BOTH
+     agents while the product was live (API id=409). 17 rules in Filament → Redirections exist to
+     paper over this class one URL at a time; it resolves now. */
+  { path: '/citrulline-malate-210g-ostrovit', why: 'live product -> /citrulline/citrulline-malate-210g-ostrovit' },
+
+  /* The brand list is read from a paginated endpoint, and the page cap was written when there were
+     128 brands. There are 589. Everything from `Sunlipid` to `ZUMUB` read as NOT A BRAND, so a
+     legacy /brand/ URL for one was answered 410 while its landing page returned 200. */
+  { path: '/brand/Universal Nutrition/25', why: 'brand past the old 500-row cap -> /universal-nutrition' },
   // The French shop prefix. /boutique/{x} already worked; the bare path and the 3-segment form
   // were hard 404s until the /boutique rule in middleware.ts.
   { path: '/boutique', why: 'the old French path for the shop' },
@@ -130,11 +181,16 @@ const CASES = [
 const HUBS = new Set(['/', '/shop', '/blog', '/brands', '/marques', '/categories']);
 
 console.log(`DEAD PRODUCT URLS — ${BASE}`);
-console.log(`${CASES.length} sampled from the Search Console "Not found" export\n`);
+console.log(
+  `${CASES.length} sampled from the Search Console "Not found" export, ` +
+    `each under ${AGENTS.map((a) => a.name).join(' + ')}\n`
+);
 
 let failed = 0;
 
 for (const { path, why } of CASES) {
+  for (const agent of AGENTS) {
+  const UA = agent.ua;
   let url = `${BASE}${path}`;
   let hops = 0;
   let status = 0;
@@ -176,7 +232,7 @@ for (const { path, why } of CASES) {
       break;
     }
   } catch (err) {
-    console.log(`  ERROR     ${path}\n            ${err.message}`);
+    console.log(`  ERROR     ${path}  [${agent.name}]\n            ${err.message}`);
     failed++;
     continue;
   }
@@ -208,15 +264,21 @@ for (const { path, why } of CASES) {
         : status === 410
           ? 'gone(410)'
           : `ok(${status})`;
-  console.log(`  ${label.padEnd(10)}${path}`);
+  console.log(`  ${label.padEnd(10)}${path}  [${agent.name}]`);
   console.log(`            ${hops} hop(s)${chain.length ? ' → ' + chain.join(' → ') : ''}`);
   if (bad) console.log(`            EXPECTED: ${why}`);
+  }
 }
 
 console.log('');
 
 if (failed > 0) {
-  console.log(`${failed} of ${CASES.length} sampled URL(s) do not end anywhere useful.`);
+  console.log(`${failed} of ${CASES.length * AGENTS.length} sampled probe(s) do not end anywhere useful.`);
+  console.log('');
+  console.log('A row failing under Googlebot but not under browser means the two routes have');
+  console.log('drifted: bots are REWRITTEN to x-crawler/{product,category} by middleware.ts, so a');
+  console.log('recovery written only in app/(shop)/** never runs for them. Both pairs share');
+  console.log('util/retiredSlug.ts — check that the failing route still calls it.');
   console.log('');
   console.log('DEAD END — a redirect is guessing again. See classifyNonProduct() in');
   console.log('src/middleware.ts and bestCategoryForSlug() in src/util/taxonomySlugs.ts.');
@@ -227,4 +289,7 @@ if (failed > 0) {
   process.exit(1);
 }
 
-console.log(`All ${CASES.length} resolve or are honestly gone, in ${MAX_HOPS} hops or fewer.`);
+console.log(
+  `All ${CASES.length} resolve or are honestly gone under ${AGENTS.map((a) => a.name).join(' and ')}, ` +
+    `in ${MAX_HOPS} hops or fewer.`
+);

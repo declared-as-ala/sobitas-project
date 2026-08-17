@@ -35,6 +35,7 @@ import {
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
 import { getErrorStatus } from '@/util/errorStatus';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
@@ -349,17 +350,29 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   }
 
   /**
-   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5 …).
-   * Recovered HERE as well as in app/(shop)/[slug]/page.tsx because middleware rewrites bot
-   * traffic for /{slug} to this crawler view — so the (shop) recovery never runs for Googlebot,
-   * which is precisely the visitor these Search Console 404s come from.
+   * THE DEAD END, RESOLVED HERE TOO — because this is the route Googlebot reaches.
    *
-   * Runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so a
-   * real slug ending in a number is served above and never redirected.
+   * Middleware rewrites bot traffic for /{slug} to this crawler view, so the recovery in
+   * app/(shop)/[slug]/page.tsx never runs for the one visitor whose result appears in Search
+   * Console. That was already the reason the legacy `-N` strip was duplicated into this file; both
+   * halves now come from the shared resolver instead, so the two can no longer drift apart —
+   * which they had, in the direction that mattered.
+   *
+   * See util/retiredSlug.ts for the order. Two things changed with it: a root-level PRODUCT slug
+   * is resolved to the product rather than 404'd, and the `-N` base is verified before the hop is
+   * spent (it used to fire unconditionally, so `/zzz-fake-thing-2` 308'd into a 404).
    */
-  const baseSlug = cleanSlug.replace(/-\d+$/, '');
-  if (baseSlug && baseSlug !== cleanSlug) {
-    permanentRedirect(`/${baseSlug}`);
+  const retired = await retiredSlugDestination(cleanSlug, {
+    product: true,
+    // This route's own resolvers, for the same reason as the (shop) twin: middleware's taxonomy
+    // set knows categories but not brands or CMS pages, and /optimum-nutrition-2 strips to a BRAND.
+    listing: async (candidate) =>
+      (await hasCategoryOrSubCategory(candidate)) ||
+      (await findBrandBySlug(candidate)) !== null ||
+      (await findPageBySlug(candidate)) !== null,
+  });
+  if (retired) {
+    permanentRedirect(retired);
   }
 
   notFound();

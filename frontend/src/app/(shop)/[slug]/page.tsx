@@ -16,6 +16,7 @@ import {
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
@@ -252,18 +253,40 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
   }
 
   /**
-   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5, …).
-   * The old site paginated/duplicated category, subcategory and brand URLs by appending an index.
-   * Every one of them is a hard 404 today (56 of them in the current Search Console export).
+   * THE DEAD END: A ROOT-LEVEL SLUG THAT IS NEITHER CATEGORY, BRAND NOR CMS PAGE.
    *
-   * This runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so
-   * a real slug that happens to end in a number (omega-3, whey-80-2kg) is resolved above and never
-   * reaches here. Sending the dead URL to its base listing in one 301 recovers the link equity
-   * instead of dropping it.
+   * Two shapes arrive here, and until now only one of them was answered.
+   *
+   * LEGACY NUMERIC SUFFIX (/creatine-2, /vitamines-2, /whey-isolate-5) — the old site duplicated
+   * listing URLs by appending an index. These were handled, but UNCONDITIONALLY: the code below
+   * used to be `permanentRedirect('/' + baseSlug)` with nothing checking that the base resolved.
+   * Measured on production 17/08/2026, `/zzz-fake-thing-2` answered 308 → `/zzz-fake-thing` → 404
+   * — a cacheable redirect into a 404, which is the exact shape the rest of this codebase was
+   * rewritten to stop producing. The base is now verified before the hop is spent.
+   *
+   * ROOT-LEVEL PRODUCT SLUG (/citrulline-malate-210g-ostrovit) — the old site's flat product URL,
+   * and this route never asked whether a slug was a PRODUCT. It probes category, then brand, then
+   * CMS page, and 404s. That product is live: API id=409, served at
+   * /citrulline/citrulline-malate-210g-ostrovit. The gap has been filled by hand ever since —
+   * 17 rules in Filament → Redirections plus ~50 in redirects.js, one URL at a time, and most of
+   * them aimed at a CATEGORY because that is what a person can look up quickly. Resolved here they
+   * reach the product itself.
+   *
+   * Both are safe at this point precisely because everything else has already failed: a real slug
+   * that happens to end in a number (omega-3, whey-80-2kg) was served above and never reaches here.
    */
-  const baseSlug = cleanSlug.replace(/-\d+$/, '');
-  if (baseSlug && baseSlug !== cleanSlug) {
-    permanentRedirect(`/${baseSlug}`);
+  const retired = await retiredSlugDestination(cleanSlug, {
+    product: true,
+    // This route's own resolvers are authoritative for "is it a listing" — the taxonomy set that
+    // middleware uses knows categories but not brands or CMS pages, and /optimum-nutrition-2
+    // strips to a BRAND.
+    listing: async (candidate) =>
+      (await hasCategoryOrSubCategory(candidate)) ||
+      (await findBrandBySlug(candidate)) !== null ||
+      (await findPageBySlug(candidate)) !== null,
+  });
+  if (retired) {
+    permanentRedirect(retired);
   }
 
   notFound();

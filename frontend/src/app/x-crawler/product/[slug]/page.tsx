@@ -34,6 +34,7 @@ import {
 } from '@/util/structuredData';
 import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import { htmlToText } from '@/util/sanitizeProductHtml';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
@@ -110,35 +111,42 @@ export default async function CrawlerProductPage({ params }: PageProps) {
     // caches a wrong 404 for a healthy product (Googlebot seeing 404s deindexes pages!).
     if (getErrorStatus(e) === 404) {
       /**
-       * LEGACY NUMERIC SUFFIX — recovered HERE because this is the route Googlebot actually
-       * reaches: middleware REWRITES /{subcat}/{slug} to this crawler view for bot UAs, so the
-       * equivalent recovery in app/(shop)/[slug]/[productSlug]/page.tsx never runs for a crawler.
-       * The old site emitted product URLs with a list index appended
-       * (/creatine/creatine-real-pharm-300g-11); retrying without the trailing -N sends the bot
-       * to the live product in ONE 301 instead of serving it a 404.
+       * THE DEAD END, RESOLVED THE SAME WAY THE HUMAN ROUTE RESOLVES IT.
        *
-       * Only reached after the FULL slug already 404'd, so real slugs ending in a number are
-       * resolved normally above and never rewritten.
+       * This is the route Googlebot actually reaches: middleware REWRITES /{subcat}/{slug} to this
+       * crawler view for bot UAs, so the recovery in app/(shop)/[slug]/[productSlug]/page.tsx never
+       * runs for a crawler. Until now this branch carried only the legacy `-N` half of it, and the
+       * gap was measurable — the same Search Console URLs, probed on 17/08/2026:
+       *
+       *     /creatine/gold-creatine-300g                 Chrome 200   Googlebot 404
+       *     /gainers/serious-mass-5-45kg                 Chrome 200   Googlebot 404
+       *     /vitamines/vegan-vitamin-d3-k2-240-tablets…  Chrome 200   Googlebot 404
+       *
+       * Search Console reports what Googlebot got, so those stayed in the "Not found (404)" bucket
+       * while every check run from a desktop said they were fixed. `retiredSlugDestination` is the
+       * shared resolver both routes now use; see util/retiredSlug.ts for the order and why.
        */
-      const baseSlug = cleanSlug.replace(/-\d+$/, '');
-      if (baseSlug && baseSlug !== cleanSlug) {
-        let fallback: Product | null = null;
-        try {
-          fallback = await getCachedProductDetails(baseSlug);
-        } catch (retryError) {
-          unstable_rethrow(retryError);
-          fallback = null;
-        }
-        if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
-      }
+      const destination = await retiredSlugDestination(cleanSlug, { product: true });
+      if (destination) permanentRedirect(destination);
       notFound();
     }
     throw e;
   }
-  if (!product?.id || !getProductPrimarySubCategory(product)?.slug) {
-    // Not a resolvable canonical product — let the bot fall through to a 404 rather
-    // than serve a half-empty page.
-    notFound();
+  if (!product?.id) notFound();
+  if (!getProductPrimarySubCategory(product)?.slug) {
+    /**
+     * A LIVE PRODUCT WITH NO SUBCATEGORY IS NOT A 404 — IT HAS A DIFFERENT URL.
+     *
+     * This condition used to fall into `notFound()` beside the missing-product case, on the
+     * reasoning that a product with no subcategory is "not a resolvable canonical product". It is:
+     * `buildProductUrlPath` serves it at /shop/{slug}, and app/(shop)/[slug]/[productSlug] has
+     * always redirected there. Only the crawler view treated it as fatal.
+     *
+     * Measured 17/08/2026: /eaa/beef-aminos-200-tabs answered 200 to Chrome and 404 to Googlebot.
+     * The product is API id=122 with `publier: true` — on sale, in the catalogue, and 404 to the
+     * only agent whose opinion shows up in Search Console.
+     */
+    permanentRedirect(`/shop/${product.slug ?? cleanSlug}`);
   }
 
   const similarProducts = product.sous_categorie_id
