@@ -267,8 +267,8 @@
   },
   "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
     "DS001": 2,
-    "DS002": 9,
-    "DS003": 8,
+    "DS002": 6,
+    "DS003": 5,
     "DS011": 2
   },
   "src/app/(shop)/products/[id]/reviews/ProductReviewsPageClient.tsx": {

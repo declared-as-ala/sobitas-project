@@ -138,9 +138,23 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
    *
    * `.pt-slab` is the system's dark band: it re-points every token underneath it, so everything in
    * here is written exactly as it would be on a white card — `text-ink-1`, `border-hairline`,
-   * `bg-elevated`, `text-brand` — with no `dark:` variant and no hardcoded grey anywhere. Those
+   * `bg-sunken`, `text-brand` — with no `dark:` variant and no hardcoded grey anywhere. Those
    * values were contrast-checked when the scope was built; the ones I would have picked by eye
-   * were not. DESIGN_SYSTEM.md names this footer as the one screen that SHOULD be dark, and this
+   * were not.
+   *
+   * ── ONE THING TO GET RIGHT ON THIS BAND: `bg-elevated` IS WHITE HERE ──────────────────────
+   * `--slab-elevated` is `255 255 255` in light theme — "cards on a slab are WHITE PLATES, the
+   * punch-out moment", says tokens.css — while `--slab-ink-1` stays `245 244 242`. So
+   * `bg-elevated text-ink-1` inside this footer is white type on a white card at about 1.04:1,
+   * and it is invisible ONLY in light theme, because in dark `--slab-elevated` flips to `20 20 22`
+   * and the same classes are correct. That is the failure mode tokens.css warns about twice, and
+   * the footer rewrite walked straight into it on three elements: the newsletter input (typed text
+   * would have been unreadable), the five social buttons, and the map card.
+   *
+   * A form field or a control on a slab is a WELL, not a plate: `bg-sunken` is `32 32 39` here and
+   * is documented for exactly this ("wells: the header search field"). A genuine white card would
+   * need `.pt-plate`, which re-points the inks back to page scope so they flip to dark — not a
+   * fill class on its own. DESIGN_SYSTEM.md names this footer as the one screen that SHOULD be dark, and this
    * is what being dark is supposed to mean here.
    *
    * ── THE ORDER ───────────────────────────────────────────────────────────────────────────────
@@ -223,7 +237,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 placeholder="Votre adresse email…"
                 value={newsletterEmail}
                 onChange={(e) => setNewsletterEmail(e.target.value)}
-                className="h-12 min-w-0 flex-1 rounded-xl border-hairline bg-elevated text-ink-1 placeholder:text-ink-3"
+                className="h-12 min-w-0 flex-1 rounded-xl border-hairline bg-sunken text-ink-1 placeholder:text-ink-3"
                 aria-label="Votre adresse email"
                 required
               />
@@ -248,7 +262,24 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         </div>
 
         {/* ── FOUR COLUMNS ───────────────────────────────────────────────────────────────── */}
-        <div className="grid gap-8 py-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-10 lg:py-12">
+        {/*
+          ── TWO UP ON A PHONE, NOT FOUR STACKED ────────────────────────────────────────────
+          Owner, 17/08/2026: *"get benefit of the full screen of the mobile, no need for extra
+          whitespaces"*.
+
+          MEASURED at 390px before changing it: the footer was 2,238px — 29% of the entire product
+          page — and 1,388px of that was these four columns, stacked one under the other, each a
+          list of 44px rows. A phone screen is 390px wide and a footer link is about 120px of text,
+          so a single column spent two thirds of every row on nothing.
+
+          Two columns from the smallest phone. The longer service labels wrap to a second line at
+          171px, which costs a little back, and the measured saving is still ~600px of scroll on
+          every page of the site.
+
+          `gap-x-6` rather than the `gap-8` the vertical rhythm uses: 32px between two 171px
+          columns is 8% of the screen spent on a gutter.
+        */}
+        <div className="grid grid-cols-2 gap-x-6 gap-y-8 py-10 lg:grid-cols-4 lg:gap-10 lg:py-12">
           <FooterLinkColumn title="Navigation" links={NAVIGATION} />
           <FooterLinkColumn title="Catégories" links={CATEGORIES} />
 
@@ -294,10 +325,12 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               )}
             </ul>
 
-            {/* Social buttons are `bg-elevated` on the slab — a fill that already resolves against
-                this band — rather than a hand-picked `bg-gray-800`. Hover goes to the brand, which
-                on the slab is the lighter #FF8A4C, not the page's #D53B04. That is the scope doing
-                its job: the same class, the correct colour for the surface it lands on. */}
+            {/* `bg-sunken`, not `bg-elevated`: on this band the latter is a WHITE plate and these
+                carry slab-light glyphs, which shipped as five near-invisible white-on-white circles
+                in light theme. `bg-sunken` is the slab's well (#202027), which is what the
+                `bg-gray-800` these replaced was approximating by hand. Hover goes to the brand,
+                which on the slab is the lighter #FF8A4C rather than the page's #D53B04 — the scope
+                doing its job: same class, correct colour for the surface it lands on. */}
             <div className="mt-5 flex flex-wrap gap-2">
               {SOCIALS.map(({ href, label, icon }) => (
                 <a
@@ -305,7 +338,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                   href={href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-elevated text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   aria-label={label}
                 >
                   {icon}
@@ -319,7 +352,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         {mapEmbedHtml && (
           <div className="border-t border-hairline py-8 lg:py-10" ref={mapRef}>
             <FooterHeading>Nous trouver</FooterHeading>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-elevated">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-sunken">
               {shouldLoadMap ? (
                 <div
                   className="h-56 w-full sm:h-72 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
@@ -363,7 +396,8 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
       {/* ── LEGAL LINE ───────────────────────────────────────────────────────────────────── */}
       <div className="border-t border-hairline">
-        <div className="mx-auto flex w-full max-w-site flex-col items-center justify-between gap-3 px-4 py-5 text-xs text-ink-3 sm:flex-row sm:px-6 lg:px-8">
+        {/* One row at every width. Two short strings stacked cost 53px of nothing on a phone. */}
+        <div className="mx-auto flex w-full max-w-site flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4 text-xs text-ink-3 sm:px-6 lg:px-8">
           <p>
             © {year}{' '}
             <span className="font-display font-semibold uppercase tracking-wide text-brand">

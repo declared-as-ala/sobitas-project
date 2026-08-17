@@ -104,7 +104,10 @@ export function ProductQualityPanel({
 
   return (
     <section
-      className={`overflow-hidden rounded-2xl border border-hairline bg-elevated ${className}`}
+      /* Full bleed on a phone for the same reason as the accordion card beside it: at 390px a
+         card inside a padded page starts its text 33px from the screen edge. The radius and the
+         side borders return at `sm`. */
+      className={`-mx-4 overflow-hidden border-y border-hairline bg-elevated sm:mx-0 sm:rounded-2xl sm:border ${className}`}
       aria-label="Contrôle et traçabilité"
     >
       <div className="flex items-center gap-2.5 border-b border-hairline bg-sunken px-4 py-3">

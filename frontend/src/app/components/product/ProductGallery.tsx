@@ -210,7 +210,24 @@ export function ProductGallery({
         owner asked to make bigger.
       */}
       <div
-        className="group relative mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card lg:max-w-[calc(100vh-17rem)]"
+        /*
+          ── FULL BLEED ON A PHONE ───────────────────────────────────────────────────────────
+          Owner, 17/08/2026: *"get benefit of the full screen of the mobile"*.
+
+          The page carries a 16px gutter, so on a 390px phone this frame was 358px and the packshot
+          inside it 342 after its own padding. `-mx-4` spends the gutter on the one element that has
+          asked for it twice: the photograph is now 390px, 9% wider on the side and 19% larger in
+          area, at no cost to anything else on the page.
+
+          The radius and the side borders go with the margin. A rounded card pinned to both screen
+          edges looks like a layout error; a full-bleed photograph is what every catalogue app does
+          on a phone, and it is the reason this reads as an app rather than a scaled-down desktop.
+          Both return at `sm`.
+
+          `sizes` needs no change and is in fact now more honest: the mobile branch already said
+          `100vw`, which was 9% optimistic when the frame was 358 of 390 and is exact at full bleed.
+        */
+        className="group relative -mx-4 aspect-square w-[calc(100%+2rem)] overflow-hidden border-y border-hairline bg-elevated shadow-card sm:mx-auto sm:w-full sm:rounded-2xl sm:border lg:max-w-[calc(100vh-17rem)]"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >

@@ -1027,7 +1027,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               bar. That still works: the box now leaves the viewport when the whole information
               column has passed, which is exactly when a bar is worth showing.
             */}
-            <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+            {/*
+              `lg:flex-1` is not decoration, it is what makes the panel BELOW this block safe.
+
+              A sticky element travels inside its containing block and overlaps whatever follows it
+              in flow, so putting the traceability panel after the buy box in the same parent would
+              have the price card slide over it on the way down. Wrapping the sticky box in its own
+              `flex-1` region ends its travel exactly where that region ends: it still crosses the
+              ~1,000px the information column occupies, and it stops before the panel.
+            */}
+            <div className="lg:flex-1">
+              <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
             <div ref={buyBoxRef} data-buy-box="" className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
 
               {/* Price. One number, at a size nothing else on the page competes with. */}
@@ -1366,7 +1376,38 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 ))}
               </div>
             )}
+              </div>
             </div>
+
+            {/*
+              -- CONTROLE & TRACABILITE ------------------------------------------------------
+              Owner, 17/08/2026: *"for us add also the quality controle!"*, pointing at the
+              reference storefront's laboratory panel.
+
+              This is deliberately NOT that panel. The reference publishes an accredited lab's
+              report — MULTILAB, a TUNAC accreditation number, per-assay verdicts, a measured
+              protein content against the declared one. We hold no such record for this product or
+              for any of the other 10,668, and drawing that panel with invented content would be a
+              fabricated safety certificate: a lie to a customer, disprovable by a competitor in
+              one click, and the class of thing that costs a site its rankings outright rather
+              than a position or two.
+
+              So it states only what the shop can stand behind and the reader can check for
+              themselves — the EAN-13, the manufacturer, the photographs of the printed label, and
+              where the nutrition figures came from. The component carries the extension point for
+              real analyses if the owner commissions them.
+
+              Directly under the specification sections, which is where the reference puts it: it
+              is the last thing read before the decision moves back to the buy box.
+            */}
+            <ProductQualityPanel
+              className="mt-6"
+              gtin={product.gtin || product.schema?.gtin || null}
+              brandName={product.brand?.designation_fr || null}
+              brandHref={product.brand?.designation_fr ? `/${nameToSlug(product.brand.designation_fr)}` : null}
+              labelPhotoCount={labelImages.length}
+              hasTranscribedNutrition={productSourceNutritionHtml(product) != null}
+            />
           </div>
 
           {/* ── C) THE INFORMATION SECTIONS ──────────────────────────────────────────────────
@@ -1435,7 +1476,23 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                * that were not in the HTML. `ProductInfoSection` is a native <details>, so its
                * content is in the document whether it is open or shut.
                */
-              <div className="w-full divide-y divide-hairline rounded-2xl border border-hairline bg-elevated px-4 shadow-sm sm:px-6">
+              /*
+                ── FULL BLEED ON A PHONE ────────────────────────────────────────────────────
+                Owner, 17/08/2026: *"get benefit of the full screen of the mobile, no need for
+                extra whitespaces"*.
+
+                MEASURED at 390px: the first character of body text started 33px from the left
+                edge — 16px of the page's own gutter plus 17px of this card's padding, and the
+                same again on the right. 66px of a 390px screen, 17%, spent on a double inset that
+                exists only because a card is sitting inside a padded page.
+
+                `-mx-4` cancels the page gutter and the card keeps its own, so text starts at 16px
+                and the reading measure grows by 32px per line. The radius and the side borders go
+                with it: a rounded card pinned to both screen edges reads as a mistake, while a
+                full-bleed band separated by hairlines is the standard phone pattern. Both come
+                back at `sm`, where the page is wide enough for a card to look like one.
+              */
+              <div className="-mx-4 divide-y divide-hairline border-y border-hairline bg-elevated px-4 shadow-sm sm:mx-0 sm:w-full sm:rounded-2xl sm:border sm:px-6">
 
                 <ProductInfoSection id="pdp-description" title={product.zone1 || 'Description'} defaultOpen>
                   <div>
@@ -1469,7 +1526,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     );
                   })()}
                   <div
-                    className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-gray-900 prose-strong:dark:text-white prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                    className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-ink-1 prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
                     // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
                     // top-level headings on the page whose only h1 should be the product name —
                     // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
@@ -1575,7 +1632,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       title={section.heading}
                     >
                       <div
-                        className="prose prose-neutral prose-base max-w-none text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                        className="prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-ink-1"
                         dangerouslySetInnerHTML={{ __html: html }}
                       />
                     </ProductInfoSection>
@@ -1693,7 +1750,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {hasNutritionContent ? (
                           <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                             <div
-                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-strong:text-ink-1 prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
                               dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
                             />
                           </div>
@@ -1716,7 +1773,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {sourceNutritionHtml && (
                           <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                             <div
-                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-strong:text-ink-1 prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
                               dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
                             />
                             {/*
@@ -1834,7 +1891,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   ) : hasLegacyQuestionsHtml ? (
                     <div
-                      className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-gray-900 prose-strong:dark:text-white"
+                      className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-ink-1"
                       dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
                     />
                   ) : null}
@@ -1845,35 +1902,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               );
             })()}
 
-            {/*
-              -- CONTROLE & TRACABILITE ------------------------------------------------------
-              Owner, 17/08/2026: *"for us add also the quality controle!"*, pointing at the
-              reference storefront's laboratory panel.
-
-              This is deliberately NOT that panel. The reference publishes an accredited lab's
-              report — MULTILAB, a TUNAC accreditation number, per-assay verdicts, a measured
-              protein content against the declared one. We hold no such record for this product or
-              for any of the other 10,668, and drawing that panel with invented content would be a
-              fabricated safety certificate: a lie to a customer, disprovable by a competitor in
-              one click, and the class of thing that costs a site its rankings outright rather
-              than a position or two.
-
-              So it states only what the shop can stand behind and the reader can check for
-              themselves — the EAN-13, the manufacturer, the photographs of the printed label, and
-              where the nutrition figures came from. The component carries the extension point for
-              real analyses if the owner commissions them.
-
-              Directly under the specification sections, which is where the reference puts it: it
-              is the last thing read before the decision moves back to the buy box.
-            */}
-            <ProductQualityPanel
-              className="mt-6"
-              gtin={product.gtin || product.schema?.gtin || null}
-              brandName={product.brand?.designation_fr || null}
-              brandHref={product.brand?.designation_fr ? `/${nameToSlug(product.brand.designation_fr)}` : null}
-              labelPhotoCount={labelImages.length}
-              hasTranscribedNutrition={productSourceNutritionHtml(product) != null}
-            />
           </div>
         </div>
 
