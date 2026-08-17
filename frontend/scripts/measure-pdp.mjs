@@ -61,13 +61,27 @@ const PRODUCTS = [
   { url: `${BASE}/whey-isolate/now-foods-sports-whey-protein-isolate-creamy-vanilla-816-g`, inStock: false, name: 'full transcription' },
 ];
 
-/** 320 is the narrowest phone still in the field; 1440 is the most common desktop. */
+/*
+ * 320 is the narrowest phone still in the field; 1440 is the most common desktop.
+ *
+ * THE HEIGHTS ARE LOAD-BEARING NOW, which they were not when this list was written. The gallery is
+ * capped against `100vh` so the whole packshot clears the fold, and a sticky buy box has to fit in
+ * what is left — both of those are assertions about the viewport's HEIGHT, and both were broken at
+ * 900 while looking perfect at 1080.
+ *
+ * 1366x768 is here because it is the laptop the fold assertion fails on first: it is the shortest
+ * viewport in common use and the one where a 642px square packshot ran 114px past the bottom of the
+ * screen. 1920x900 is here because a 1920 MONITOR gives a browser about 900px of viewport once its
+ * own chrome is subtracted — testing 1920x1080 alone tests a window almost nobody actually has.
+ */
 const WIDTHS = [
   { w: 320, h: 800, label: '320 (smallest phone)' },
   { w: 390, h: 844, label: '390 (iPhone 14)' },
   { w: 768, h: 1024, label: '768 (tablet)' },
   { w: 1280, h: 900, label: '1280 (laptop)' },
+  { w: 1366, h: 768, label: '1366x768 (shortest common laptop)' },
   { w: 1440, h: 900, label: '1440 (desktop)' },
+  { w: 1920, h: 900, label: '1920x900 (monitor, real viewport)' },
 ];
 
 const results = [];
@@ -199,6 +213,9 @@ for (const { w, h, label } of WIDTHS) {
     const priceEl = qa('main span').find((el) => /^\d[\d\s.,]*\s*DT$/.test(el.textContent.trim()) && parseFloat(getComputedStyle(el).fontSize) > 24);
 
     return {
+      /* The viewport this run was measured at. The fold and sticky-fit assertions are
+         statements about the HEIGHT of the screen, so the checker needs it. */
+      viewportH: window.innerHeight,
       docWidth,
       h1Text: h1?.textContent?.trim().slice(0, 60) || null,
       h1Count: qa('h1').length,
@@ -249,6 +266,57 @@ for (const { w, h, label } of WIDTHS) {
        * is asserted against the component's own marker.
        */
       identifiers: qa('main [data-product-identifiers]').length,
+
+      /*
+       * ── THE WHOLE PACKSHOT, ABOVE THE FOLD ────────────────────────────────────────────────
+       * Owner: *"make the product image visible in the screen, not need to scroll to see the whole
+       * image"*. It was 25 to 118px below the fold at every viewport height in common use, because
+       * the frame is square and as wide as its column — so its HEIGHT was decided by the page's
+       * width and never looked at the screen at all. This is measured at scroll 0, which is the
+       * only position where "without scrolling" means anything.
+       */
+      galleryFold: (() => {
+        const frame = document.querySelector('main [aria-label="Agrandir la photo du produit"]');
+        if (!frame) return null;
+        return Math.round(frame.getBoundingClientRect().bottom - window.innerHeight);
+      })(),
+
+      /*
+       * ── THE STICKY BUY BOX MUST FIT ───────────────────────────────────────────────────────
+       * A sticky element taller than the viewport pins its top and its bottom becomes permanently
+       * unreachable — so a buy box that outgrows the screen hides its own CTA forever, on a page
+       * whose only job is that CTA. It is the one failure mode of this pattern, it is silent, and
+       * it depends on product data (a flavour selector adds a row), so it is asserted rather than
+       * assumed.
+       */
+      buyBox: (() => {
+        const box = document.querySelector('[data-buy-box]');
+        if (!box) return null;
+        const wrap = box.parentElement;
+        const cs = wrap ? getComputedStyle(wrap) : null;
+        return {
+          h: Math.round(box.getBoundingClientRect().height),
+          wrapH: wrap ? Math.round(wrap.getBoundingClientRect().height) : 0,
+          sticky: cs ? cs.position === 'sticky' : false,
+          top: cs ? parseFloat(cs.top) || 0 : 0,
+        };
+      })(),
+
+      /* The product template unsticks the site header — see globals.css. */
+      headerPosition: (() => {
+        const header = document.querySelector('header.pt-site-header');
+        return header ? getComputedStyle(header).position : null;
+      })(),
+
+      /* Similar products stack on a phone and become a rail from `sm`. */
+      relatedDisplay: (() => {
+        const heading = qa('main h2').find((h) =>
+          /^Produits similaires$/i.test((h.textContent || '').replace(/\s+/g, ' ').trim())
+        );
+        if (!heading) return null;
+        const rail = heading.closest('div')?.parentElement?.querySelector('.snap-x, .grid-cols-1');
+        return rail ? getComputedStyle(rail).display : null;
+      })(),
       ctas: qa('main button, main a').filter((el) => /Ajouter au panier|Commander maintenant|Demander ce produit/.test(el.textContent || '')).length,
       /* By `data-sticky-cta`, not by the `z-sticky-cta` CLASS — the PWA install banner carries
          that class too, so a class-based lookup could measure the wrong element and report the
@@ -612,6 +680,43 @@ for (const { w, h, label } of WIDTHS) {
     );
   }
 
+  if (m.galleryFold != null) {
+    check(
+      w,
+      'the whole packshot is above the fold',
+      m.galleryFold <= 0,
+      m.galleryFold <= 0 ? `${-m.galleryFold}px to spare` : `${m.galleryFold}px below it`
+    );
+  }
+
+  if (desktop && m.buyBox) {
+    check(w, 'buy box is sticky on desktop', m.buyBox.sticky, m.buyBox.sticky ? 'ok' : 'static');
+    /* The WRAPPER is what sticks, so the wrapper is what has to fit. */
+    check(
+      w,
+      'the sticky buy box fits the viewport',
+      m.buyBox.wrapH + m.buyBox.top <= m.viewportH,
+      `${m.buyBox.wrapH}px + ${m.buyBox.top}px offset in ${m.viewportH}px`
+    );
+  }
+
+  check(
+    w,
+    'the site header is not sticky on a product page',
+    m.headerPosition === 'relative',
+    String(m.headerPosition)
+  );
+
+  if (m.relatedDisplay) {
+    const stacked = w < 640;
+    check(
+      w,
+      stacked ? 'similar products stack on a phone' : 'similar products are a rail',
+      stacked ? m.relatedDisplay === 'grid' : m.relatedDisplay === 'flex',
+      m.relatedDisplay
+    );
+  }
+
   if (m.labelBand) {
     /* Within 1px of the content rail — i.e. full width, not the gallery column. */
     check(
@@ -673,6 +778,8 @@ for (const { w, h, label } of WIDTHS) {
   console.log(`   bundle ${m.bundle ? 'rendered' : 'not rendered'} · ${m.productPreloads} product-image preload(s)`);
   console.log(`   bands: ${m.bandOrder.join(' → ') || 'none'}`);
   if (m.lcpFit) console.log(`   hero image serves ${m.lcpFit.served}px into ${m.lcpFit.painted}px (x${m.lcpFit.ratio})`);
+  if (m.galleryFold != null) console.log(`   packshot ends ${m.galleryFold <= 0 ? `${-m.galleryFold}px above` : `${m.galleryFold}px below`} the fold · header ${m.headerPosition}`);
+  if (m.buyBox) console.log(`   buy box ${m.buyBox.h}px (wrapper ${m.buyBox.wrapH}px, ${m.buyBox.sticky ? `sticky @${m.buyBox.top}` : 'static'})`);
   if (m.labelBand) console.log(`   label band ${m.labelBand.bandW}px, tiles ${m.labelBand.tileW}px, ${m.labelBand.emptyCells} empty cell(s)`);
   console.log(`   sections: ${m.sections.join(' · ')}`);
 

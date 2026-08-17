@@ -53,10 +53,35 @@ export function ProductHighlights({
 }) {
   if (highlights.length === 0) return null;
 
+  /*
+   * ── ONE COLUMN OR TWO, DECIDED BY THE COPY ────────────────────────────────────────────────
+   * The buy column is 744px wide at 1920 since the hero moved to 6/6, and on this catalogue a
+   * benefit line is very often three words: "Soutien osseux", "Sans gluten", "Produit végétarien".
+   * Five of those in a single column draw a 744px hairline under 90px of text, five times over,
+   * which reads as a block that could not fill itself — the exact "empty white space" the owner
+   * pointed at.
+   *
+   * When every line is SHORT the list goes two-up from `sm` and the rules become half as wide as
+   * the lines are long. When any line is a real sentence — the reference storefront's shape,
+   * "Digestion maximale : naturellement sans lactose, sans soja…" — two columns would set it at
+   * roughly 35 characters a line, so it stays one column.
+   *
+   * 46 characters is the threshold and it is not arbitrary: at the 13.5px body size, half of the
+   * narrowest buy column that still shows two columns (`sm`, 640px viewport) holds about 46.
+   */
+  const isCompact = highlights.every((item) => `${item.lead} ${item.text}`.trim().length <= 46);
+
   return (
-    <ul className={`divide-y divide-hairline border-s-2 border-brand ps-4 ${className}`}>
+    <ul
+      className={`border-s-2 border-brand ps-4 ${
+        isCompact ? 'grid gap-x-8 sm:grid-cols-2' : ''
+      } ${className}`}
+    >
       {highlights.map((item, i) => (
-        <li key={i} className="py-2 text-[13.5px] leading-relaxed sm:text-sm">
+        <li
+          key={i}
+          className="border-b border-hairline py-2 text-[13.5px] leading-relaxed last:border-b-0 sm:text-sm"
+        >
           {item.lead ? (
             <>
               <strong className="font-semibold text-ink-1">{item.lead}</strong>

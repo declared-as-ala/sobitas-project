@@ -527,6 +527,37 @@ html[dir="rtl"] [data-i18n-ltr] {
   height: 36px;
 }
 
+/* ==============================================================================================
+ * THE PRODUCT PAGE DOES NOT GET A STICKY HEADER.
+ *
+ * Owner, 17/08/2026: *"for the header in the product page don't make it sticky, make it relative"*.
+ *
+ * It is a reasonable ask and the reason is measurable. The header is 114px tall and it is the
+ * FIRST of three things competing for the top of a product page: the site header, the sticky
+ * add-to-cart bar that appears the moment the buy box scrolls away, and — on a phone — the bottom
+ * tab bar. Three persistent strips is a viewport with less product in it than chrome. On the one
+ * template where the visitor has already arrived at what they came for, the navigation is the
+ * least useful of the three, and the CTA bar is the one that has to stay.
+ *
+ * It also gives the photograph its height back: the gallery is capped against `100vh` minus the
+ * space above it, so 114px of header that scrolls away is 114px the packshot can use on the way
+ * down the page.
+ *
+ * Driven by an attribute the product page sets on <body> rather than by a route test in the
+ * header. The header would have to know that `/whey-proteine/tantor-…` is a product while
+ * `/whey-proteine` is a category and `/blog/…` is an article — a list it has no business holding
+ * and would get wrong the first time a route was added. The page that IS the product page is the
+ * one that knows.
+ *
+ * SPECIFICITY, deliberately: `body[data-page='product'] header.pt-site-header` is (0,3,2) against
+ * Tailwind's `.sticky` at (0,1,0), so it wins on the cascade with no `!important`. The attribute
+ * is set in an effect, so the server-rendered header is sticky for one frame — invisible, because
+ * at scroll 0 a sticky element and a relative one occupy exactly the same box.
+ * ============================================================================================ */
+body[data-page='product'] header.pt-site-header {
+  position: relative;
+}
+
 /* WCAG 2.3.3. The collapse still HAPPENS — it is a layout state, not decoration, and removing it
    would leave a reduced-motion user with a header that never gives space back. Only the tween is
    dropped, so the change is instant instead of animated. */

@@ -84,41 +84,48 @@ export function RelatedProductsRail({ products }: { products: Product[] }) {
       <div
         ref={scroller}
         /*
-          The negative margins let the rail bleed to the screen edge on phones — a card clipped by
-          the viewport edge is the affordance that says "this scrolls" — while staying inside the
-          content rail from `lg`, where the arrows do that job instead.
+          ── A LIST ON A PHONE, A RAIL FROM `sm` ─────────────────────────────────────────────
+          Owner, 17/08/2026: *"on the mobile the similar products, put them one under one, no need
+          for scroll left and right — or if you want to keep it scroll, change the design of the
+          card"*.
+
+          Stacked, and for a reason beyond preference. `ProductCard` is `flex-row` on a phone — a
+          124px thumbnail beside its text — so ONE card already fills the width of the screen. A
+          horizontal scroller of full-width horizontal cards is a carousel whose viewport holds
+          exactly one item: every product after the first is invisible until swiped, on the block
+          whose entire job is to show a reader what else there is. Four stacked rows are 180px
+          each; all four are on the page, and the reader scrolls the way they were already
+          scrolling.
+
+          From `sm` the card is a column again, four fit across, and the rail with its chevrons is
+          the right shape. ONE element either way — a `grid` that becomes a `flex` — because two
+          elements is how the two hero trees started.
+
+          The negative margins let the rail bleed to the screen edge from `sm`, where a card clipped
+          by the viewport edge is the affordance that says "this scrolls"; inside the content rail
+          from `lg`, where the arrows do that job instead.
         */
-        className="scrollbar-hide -mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:-mx-6 sm:gap-4 sm:px-6 lg:mx-0 lg:gap-6 lg:px-0"
+        className="scrollbar-hide grid grid-cols-1 gap-3 sm:-mx-6 sm:flex sm:snap-x sm:snap-mandatory sm:gap-4 sm:overflow-x-auto sm:px-6 sm:pb-2 lg:mx-0 lg:gap-6 lg:px-0"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         {products.map((product, index) => (
           <div
             key={product.id || `similar-${index}`}
             /*
-              -- THE PHONE WIDTH IS SET BY THE CARD, NOT BY HOW MANY FIT ------------------------
-              Owner, 17/08/2026: *"related products cards should be responsive on mobile"*. They
-              were not responsive, they were BROKEN, and the screenshot shows it: packshot on the
-              left, a clipped "25", a clipped "300", half a discount pill, no product name at all.
-
-              The cause is a real mismatch and worth writing down, because it will catch the next
-              rail too. `ProductCard` is `flex-row sm:flex-col` — on a phone it is deliberately a
-              HORIZONTAL card, a 124px thumbnail beside its text, because the owner's earlier note
-              was "the card height is so long" and a vertical card one-per-row is ~500px tall while
-              a horizontal one is ~180px. That decision is right and it is not being revisited here.
-
-              This rail was handing that card a `min(180px, 42vw)` box: 164px on a 390px phone, of
-              which the thumbnail alone takes 124. Forty pixels for a name, a price, a struck price,
-              a discount pill, a stock chip and an add button.
-
-              So the phone width now matches the layout the card actually uses — 85vw, one card and
-              a peek of the next, which is also what makes it read as swipeable. From `sm` the card
-              is a column again and the widths go back to counting how many fit.
+              -- THE WIDTH IS SET BY THE CARD, NOT BY HOW MANY FIT ------------------------------
+              `ProductCard` is `flex-row sm:flex-col`: on a phone it is deliberately a HORIZONTAL
+              card, a 124px thumbnail beside its text, because a vertical card one-per-row is ~500px
+              tall and a horizontal one is ~180px. This rail once handed that card a
+              `min(180px, 42vw)` box — 164px on a 390px phone, of which the thumbnail alone takes
+              124 — and the result was not an unresponsive card but a BROKEN one: packshot left, a
+              clipped "25", half a discount pill, and no product name at all. `w-full` inside the
+              phone grid is what the card was always built for.
 
               `calc((100% - 4.5rem) / 4)` at `lg` is four cards and three 24px gaps EXACTLY, so with
               the four products the API returns this row is indistinguishable from the grid it
               replaces and there is nothing to scroll. Invisible today, correct tomorrow.
             */
-            className="w-[85vw] max-w-[340px] shrink-0 snap-start sm:w-[200px] sm:max-w-none md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-4.5rem)/4)]"
+            className="w-full shrink-0 snap-start sm:w-[200px] md:w-[calc((100%-2rem)/3)] lg:w-[calc((100%-4.5rem)/4)]"
           >
             <ProductCard product={product} variant="compact" />
           </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUp, Facebook, Instagram, Linkedin, Loader2, Mail, MapPin, Phone, Youtube } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Facebook, Instagram, Linkedin, Loader2, Mail, MapPin, Phone, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
@@ -49,6 +49,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const contactEmail = coord?.email || 'contact@protein.tn';
   const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
   const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
+  /* Opens the address in whatever maps app the visitor has, with no iframe involved. `?api=1` is
+     Google's documented, key-free URL form. */
+  const mapsLinkHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+    contactAddress ? `PROTEIN.TN ${contactAddress}` : 'PROTEIN.TN PROTEINE TUNISIE Sousse'
+  )}`;
 
   // Fetch CMS pages only as a fallback: props > server (SiteChromeProvider) > client fetch.
   useEffect(() => {
@@ -70,22 +75,22 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   // Lazy load Google Maps only when footer is visible (Intersection Observer).
   // Depend on mapEmbedHtml so the observer attaches once the map element is
   // actually rendered — coord loads async, so on first mount the ref is null.
-  useEffect(() => {
-    if (!mapEmbedHtml || shouldLoadMap || !mapRef.current) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          setShouldLoadMap(true);
-          observer.disconnect();
-        }
-      },
-      { rootMargin: '200px' } // Start loading 200px before footer is visible
-    );
-
-    observer.observe(mapRef.current);
-    return () => observer.disconnect();
-  }, [mapEmbedHtml, shouldLoadMap]);
+/*
+   * ── THE MAP LOADS WHEN SOMEBODY ASKS FOR IT ────────────────────────────────────────────────
+   * Owner, 17/08/2026: *"the footer also polish it, make renders fast"*.
+   *
+   * This used to mount the Google Maps embed as soon as an IntersectionObserver saw the footer
+   * approach the viewport. That is the standard "lazy" pattern and on this site it was close to no
+   * saving at all: the footer is at the bottom of every page, so "near the viewport" means "the
+   * reader scrolled down", which is most sessions. A Maps embed is a third-party iframe that pulls
+   * several hundred kilobytes of script and a dozen tile requests and runs its own main thread —
+   * spent, on every page, to render a picture of a street almost nobody was looking for.
+   *
+   * It is now a poster with the address on it and a button. The reader who wants the map presses
+   * once; everyone else pays nothing. The "Ouvrir dans Google Maps" link beside it needs no iframe
+   * at all and is the better answer for a phone anyway, because it hands the address to the
+   * navigation app the visitor actually uses.
+   */
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -314,15 +319,41 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         {mapEmbedHtml && (
           <div className="border-t border-hairline py-8 lg:py-10" ref={mapRef}>
             <FooterHeading>Nous trouver</FooterHeading>
-            {/* Deferred: the iframe is only mounted once the footer is near the viewport, so a
-                third-party map frame never competes with the page's own LCP. */}
-            <div className="mt-4 h-44 overflow-hidden rounded-2xl border border-hairline bg-elevated sm:h-56 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0">
+            <div className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-elevated">
               {shouldLoadMap ? (
-                <div className="h-full w-full" dangerouslySetInnerHTML={{ __html: mapEmbedHtml }} />
+                <div
+                  className="h-56 w-full sm:h-72 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
+                  dangerouslySetInnerHTML={{ __html: mapEmbedHtml }}
+                />
               ) : (
-                <div className="flex h-full w-full items-center justify-center text-ink-3">
-                  <MapPin className="h-10 w-10" aria-hidden="true" />
-                  <span className="sr-only">Carte de localisation</span>
+                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                  <div className="flex min-w-0 items-start gap-3">
+                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-ink-1">PROTEIN.TN — Protéine Tunisie</p>
+                      {contactAddress && (
+                        <p className="mt-0.5 break-words text-sm text-ink-2">{contactAddress}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setShouldLoadMap(true)}
+                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      Afficher la carte
+                    </button>
+                    <a
+                      href={mapsLinkHref}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      Itinéraire
+                      <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    </a>
+                  </div>
                 </div>
               )}
             </div>

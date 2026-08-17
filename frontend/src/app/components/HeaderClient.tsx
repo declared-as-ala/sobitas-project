@@ -515,7 +515,7 @@ export function HeaderClient() {
           most recognisable "purchased theme" tell, and the rule does the same job at 1px. */}
       <header
         ref={headerRef}
-        className="bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule"
+        className="pt-site-header bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule"
       >
         {/* MOBILE main bar — logo LEFT, then SEARCH + BURGER only (owner request). Compte and
             Panier used to live here too; they were removed because MobileTabBar already carries

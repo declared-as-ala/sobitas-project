@@ -339,7 +339,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
    */
   useEffect(() => {
     document.body.setAttribute('data-has-sticky-cta', '');
-    return () => document.body.removeAttribute('data-has-sticky-cta');
+    /* `data-page` drives the ONE rule in globals.css that unsticks the site header on this
+       template — see the block there for why the header does not decide this for itself. */
+    document.body.setAttribute('data-page', 'product');
+    return () => {
+      document.body.removeAttribute('data-has-sticky-cta');
+      document.body.removeAttribute('data-page');
+    };
   }, []);
 
   useEffect(() => {
@@ -798,15 +804,26 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           One tree. The layout difference between a phone and a desktop is a grid change, which is
           what CSS grid is for. Every fix from here lands on both by construction.
 
-          ── THE PROPORTIONS ────────────────────────────────────────────────────────────────
-          Gallery 7 of 12, up from 5. The owner's first complaint was that the photographs are too
-          small to read the pack labels; a buy column narrower than the product it is selling is
-          also simply the better-known proportion for a shop.
+          ── THE PROPORTIONS: 6 AND 6, MEASURED AGAINST THE REFERENCE ───────────────────────
+          The gallery went 5 -> 7 of 12 when the owner said the photographs were too small to read
+          the pack labels. That was the right direction and it overshot.
+
+          Measured on the reference storefront at 1920: its gallery column (thumbnail rail plus
+          photograph) is 830px of an 1867px content rail — 44% — and its buy column is 900px, 48%.
+          Ours was 876 / 612: 57% and 40%. That single number explains most of what the owner means
+          by *"impact's page [is] more structured, more clean, feels easy to read"*. A buy column
+          150px narrower than the reference's has to wrap where theirs does not, and a gallery
+          column 46px wider than its own photograph needs pushes everything below it down the page.
+
+          Six and six. The gallery loses 132px it was not using and the buy column gains 132px it
+          was wrapping for. The photograph does NOT shrink to match, because it is capped against
+          the viewport height instead — see ProductGallery, which explains why that is the change
+          that actually made it bigger for most readers rather than smaller.
         */}
         <div className="mb-8 grid grid-cols-1 gap-5 sm:gap-6 lg:mb-12 lg:grid-cols-12 lg:items-start lg:gap-8 xl:gap-12">
 
           {/* ── A) GALLERY ─────────────────────────────────────────────────────────────────── */}
-          <div className="min-w-0 lg:col-span-7 lg:row-start-1">
+          <div className="min-w-0 lg:col-span-6 lg:row-start-1">
             <ProductGallery
               images={packshots}
               altBase={imageAltBase}
@@ -870,7 +887,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           {/* `lg:row-span-2` is what lets the sections sit under the gallery while this stays
               beside them. `items-start` on the grid keeps it at its natural height inside that
               two-row area rather than stretching the buy box down the page. */}
-          <div className="flex min-w-0 flex-col gap-4 lg:col-span-5 lg:col-start-8 lg:row-span-2 lg:row-start-1">
+          <div className="flex min-w-0 flex-col gap-4 lg:col-span-6 lg:col-start-7 lg:row-span-2 lg:row-start-1 lg:self-stretch">
 
             {/* 1. Where you are. A link, so the crumb also does work for crawl depth. */}
             {product.sous_categorie?.slug && (
@@ -974,10 +991,44 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               </p>
             ) : null}
 
-            {/* ── 5. THE BUY BOX ─────────────────────────────────────────────────────────────
-                The ref is read by the IntersectionObserver that raises and lowers the mobile
-                sticky bar — see the declaration above. */}
-            <div ref={buyBoxRef} className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
+            {/*
+              ── 5. THE BUY BOX, WHICH FOLLOWS YOU DOWN THE PAGE ────────────────────────────
+              Owner, 17/08/2026: *"get benefits of the white spaces"*.
+
+              MEASURED at 1920x900 before changing anything: the buy column ends 810px down and the
+              information column beside it runs to 2,057px. That is a THOUSAND pixels of empty
+              canvas in the right half of the page, on the template that matters most, while the
+              reader is scrolling through specifications with no price and no button anywhere on
+              screen.
+
+              `lg:sticky` spends it. The price, the stock line, the quantity and the CTAs travel
+              beside the description, the ingredients, the warnings and the traceability panel —
+              which is the whole stretch of the page where somebody is deciding.
+
+              ── WHY IT IS SAFE HERE AND WAS NOT BEFORE ──────────────────────────────────────
+              This was considered and rejected a session ago, for a real reason: a sticky element
+              TALLER than the viewport pins its top and its bottom becomes permanently unreachable,
+              so the CTA would be off-screen forever on a short laptop. Two things changed.
+
+              The header is no longer sticky on this template, so the offset is 16px rather than
+              130. And the whole column is not what sticks — only the buy box and the tags below it,
+              measured at 536px and 579px on the two products the page guard drives, against 752px
+              of usable height on a 1366x768 laptop.
+
+              `lg:max-h` + `overflow-y-auto` is the backstop for the product this was not measured
+              on: a buy box with six flavour chips that outgrows a short viewport scrolls inside
+              itself instead of hiding its own button. It costs nothing when it does not fire.
+
+              `lg:self-stretch` on the column above is what gives this room to travel — with the
+              grid's `items-start` the column is only as tall as its content and sticky has nothing
+              to stick within.
+
+              The ref is read by the IntersectionObserver that raises and lowers the phone's sticky
+              bar. That still works: the box now leaves the viewport when the whole information
+              column has passed, which is exactly when a bar is worth showing.
+            */}
+            <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+            <div ref={buyBoxRef} data-buy-box="" className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
 
               {/* Price. One number, at a size nothing else on the page competes with. */}
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -1315,6 +1366,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 ))}
               </div>
             )}
+            </div>
           </div>
 
           {/* ── C) THE INFORMATION SECTIONS ──────────────────────────────────────────────────
@@ -1344,7 +1396,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             layout is pixel-identical to what it was — verified by the page guard, which measures
             the gallery, the price size and the band order at 1280 and 1440.
           */}
-          <div className="mt-8 min-w-0 lg:col-span-7 lg:col-start-1 lg:row-start-2 lg:mt-2">
+          <div className="mt-8 min-w-0 lg:col-span-6 lg:col-start-1 lg:row-start-2 lg:mt-2">
           {(() => {
             const hasNutritionContent = product.nutrition_values != null &&
               String(product.nutrition_values).trim() !== '' &&

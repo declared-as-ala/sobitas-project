@@ -176,9 +176,41 @@ export function ProductGallery({
       {/*
         `bg-elevated`, not `bg-sunken`. Supplement packshots are cut out on white, so a grey plate
         behind them prints a visible rectangle around every product on the site.
+
+        ── THE WHOLE PHOTOGRAPH, WITHOUT SCROLLING ─────────────────────────────────────────────
+        Owner, 17/08/2026: *"make the product image visible in the screen, not need to scroll to
+        see the whole image"*.
+
+        MEASURED before changing anything, on a real product at five desktop sizes. The frame is
+        square and as wide as its column, so its height is set by the page's WIDTH and never looks
+        at the viewport's height:
+
+            1920x1080   778px   ends  62px above the fold
+            1920x900    778px   ends 118px BELOW it
+            1600x900    778px   ends 118px below
+            1440x900    685px   ends  25px below
+            1366x768    642px   ends 114px below
+
+        A 1920 monitor gives a browser roughly 900px of viewport once its own chrome is subtracted,
+        so the only row in that table where the packshot fitted is one almost nobody has. Every
+        other reader had to scroll a product page to see the bottom of the product.
+
+        `lg:max-w-[calc(100vh-17rem)]` caps the SIDE of the square, not its height, which is what
+        keeps it square: 272px is the frame's own offset from the top of the document (240px of
+        header, breadcrumb and padding) plus 32px of air beneath it. So the box is the smaller of
+        "as wide as the column" and "as tall as what is left of the screen", and it fits at every
+        size in that table — 628px at 900, 496px at 768, and untouched at 1080 where it already did.
+
+        Still LARGER than before this redesign began, which matters because the owner's first
+        complaint about this page was that the packshots were too small to read: 628px at 1440x900
+        against 496px then.
+
+        `lg:` only. Below that the gallery is the full width of a phone and the page scrolls
+        normally; capping it against the viewport height there would shrink the one element the
+        owner asked to make bigger.
       */}
       <div
-        className="group relative aspect-square w-full overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card"
+        className="group relative mx-auto aspect-square w-full overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card lg:max-w-[calc(100vh-17rem)]"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
@@ -204,12 +236,24 @@ export function ProductGallery({
                * ONE image, so ONE honest `sizes` — and it depends on whether the rail is there,
                * because the rail is what decides how wide this frame is.
                *
-               * MEASURED at 1280, 1440 and 1920, and RE-MEASURED after the page moved from the
-               * 1280 rail to the site's 1600 one — which is the whole point of the guard that
-               * watches this, because the string had gone stale within the hour and nothing about
-               * the page looked wrong. With the rail the frame renders 593 / 685 / 780px; without
-               * it, 689 / 783 / 876. Below `lg` the gallery is the full content width either way,
-               * because the rail is underneath it there rather than beside it.
+               * RE-MEASURED three times now — after the page moved to the 1600 rail, after the
+               * columns went 7/5 to 6/6, and after the frame was capped against the viewport
+               * height — which is the whole point of the guard that watches this: the string went
+               * stale within the hour each time and nothing about the page looked wrong.
+               *
+               * Measured painted widths with the rail: 286 at 320, 356 at 390, 718 at 768, then
+               * 486 / 494 / 566 / 626 at 1280 / 1366 / 1440 / 1920x900. `38vw` covers the desktop
+               * spread; the frame is also capped by `100vh` and `sizes` cannot ask about the
+               * viewport's height, so the fraction is deliberately generous rather than exact.
+               *
+               * A FLAT `640px` was tried for the desktop branch and reverted, because of something
+               * worth writing down: next/image builds the srcset from the `vw` NUMBERS in this
+               * string. It scans for `\d+vw`, takes the smallest, and keeps only candidates at or
+               * above `deviceSizes[0] * ratio` — so a string whose only fraction is `100vw` has a
+               * FLOOR of 640px and the small candidates disappear. Measured: the 320px phone went
+               * from a 384px image to a 480px one (x1.34 to x1.68) while a 1920 desktop improved
+               * from x1.20 to x1.02. Trading the smallest, slowest phones for one step on the
+               * largest desktops is the wrong way round.
                *
                * A single string for both would be wrong in one direction or the other on every
                * product page on the site: 600px against a 687px box is a 15% upscale of the LCP
@@ -219,8 +263,8 @@ export function ProductGallery({
                */
               sizes={
                 showRail
-                  ? '(min-width: 1600px) 780px, (min-width: 1024px) 48vw, 100vw'
-                  : '(min-width: 1600px) 880px, (min-width: 1024px) 55vw, 100vw'
+                  ? '(min-width: 1024px) 38vw, 100vw'
+                  : '(min-width: 1024px) 46vw, 100vw'
               }
               priority={safeIndex === 0}
               loading={safeIndex === 0 ? 'eager' : 'lazy'}
