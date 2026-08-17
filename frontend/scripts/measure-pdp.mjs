@@ -120,8 +120,16 @@ for (const { w, h, label } of WIDTHS) {
       () => {
         const bar = document.querySelector('[data-sticky-cta]');
         if (!bar) return true;
+        /*
+         * The transform must be at REST, not merely repeating. A bar parked in its hidden position
+         * repeats its own position happily while the IntersectionObserver has yet to report — so a
+         * position-only wait can succeed, the observer can then fire, and the measurement lands
+         * mid-slide. That is the third distinct way this one check has been wrong.
+         */
+        const cs = getComputedStyle(bar);
+        const atRest = cs.transform === 'none' || /matrix\(1, 0, 0, 1, 0, 0\)/.test(cs.transform);
         const now = Math.round(bar.getBoundingClientRect().top);
-        const settled = window.__barTop === now;
+        const settled = atRest && window.__barTop === now;
         window.__barTop = now;
         return settled;
       },
@@ -226,6 +234,13 @@ for (const { w, h, label } of WIDTHS) {
       cover: (() => {
         const bar = document.querySelector('[data-sticky-cta]');
         if (!bar) return [];
+        /*
+         * A bar that is deliberately hidden cannot be "covered". While parked off-screen its
+         * buttons sit exactly behind the tab bar — measured at 390px, a 44px overlap — and reading
+         * that as a defect is how this check produced a production failure for a page that was
+         * working correctly.
+         */
+        if (bar.getAttribute('aria-hidden') === 'true') return [];
 
         /*
          * Measured against the CTA's BUTTONS, not against the bar's box.
