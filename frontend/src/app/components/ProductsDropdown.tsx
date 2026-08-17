@@ -2,14 +2,17 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ChevronDown, ArrowRight } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
 import { Skeleton } from '@/app/components/ui/skeleton';
-import { getCategories } from '@/services/api';
+import { getCategories, getNewProducts, getStorageUrl } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
-import { Category } from '@/types';
+import { getPriceDisplay } from '@/util/productPrice';
+import { getProductLink } from '@/util/productUrl';
+import { Category, Product } from '@/types';
 
 type ProductsDropdownProps = {
   label?: string;
@@ -20,6 +23,29 @@ type ProductsDropdownProps = {
 function canPrefetch(href: string): boolean {
   return href.startsWith('/') && !href.startsWith('//');
 }
+
+/**
+ * How many sub-categories a column lists before it stops and points at the rayon instead.
+ *
+ * ── WHY THERE IS A CAP AT ALL ───────────────────────────────────────────────────────────────
+ * The taxonomy is wildly uneven: SANTÉ & VITALITÉ has 21 sub-categories and PERTE DE POIDS has 3.
+ * Uncapped, the first column sets the height of the whole panel, so the menu opened 900px tall
+ * with 700px of empty space beside a three-item column — and the "Voir tous les produits" link at
+ * the bottom of it was BELOW THE FOLD on a 900px viewport, reachable only by scrolling inside a
+ * panel that closes when the pointer leaves it. That is the state the owner was looking at.
+ *
+ * Eight is the number that makes every column the same height as the tallest SHORT one, which is
+ * PERFORMANCE at ten; it takes the panel from ~980px to ~470px and puts the whole thing, including
+ * the way out and the promoted product, on one screen.
+ *
+ * ── WHAT IS LOST, AND WHY IT IS ACCEPTABLE ──────────────────────────────────────────────────
+ * Twenty-one of the fifty-five sub-category links leave this menu, and this menu is on every page,
+ * so those are sitewide internal links. They are NOT deleted from the site: each column's overflow
+ * becomes a link to the rayon, whose own page lists every sub-category it holds, so every one of
+ * them stays reachable one hop deeper and stays in the sitemap. Boilerplate navigation links are
+ * also the kind Google discounts most. A menu that fits the screen is worth one hop.
+ */
+const MAX_SUBS_PER_COLUMN = 8;
 
 export function ProductsDropdown({
   label = 'NOS PRODUITS',
@@ -38,6 +64,21 @@ export function ProductsDropdown({
   // without a client API call; fetch-on-mount remains only as fallback when SSR data is empty.
   const { categories: ssrCategories } = useSiteChrome();
   const [categories, setCategories] = useState<Category[]>(ssrCategories);
+
+  /*
+    ── THE FEATURE CARD'S PRODUCT, FETCHED ON FIRST HOVER AND NEVER BEFORE ────────────────────
+    `/new_product` is 8 KB and returns eight products, all of them in stock. It is small, but it is
+    still a request that every single page of this site would otherwise pay for at mount, to
+    populate a panel most visitors never open. `featureLoaded` makes it a cost that only a reader
+    who hovers BOUTIQUE incurs, and only once per page.
+
+    A failure is silent and total: `feature` stays null, the card is not rendered, the divider
+    beside it is not rendered, and the categories take the full width. A menu must not degrade
+    into a hole where a card should be.
+  */
+  const [feature, setFeature] = useState<Product | null>(null);
+  const [featureFailed, setFeatureFailed] = useState(false);
+  const featureLoaded = useRef(false);
 
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -70,6 +111,19 @@ export function ProductsDropdown({
       setDropdownTop(triggerRef.current.getBoundingClientRect().bottom);
     }
     setIsOpen(true);
+    if (!featureLoaded.current) {
+      featureLoaded.current = true;
+      getNewProducts()
+        .then((list) => {
+          const first = Array.isArray(list) ? list.find((p) => p?.id && p.cover) : null;
+          if (first) setFeature(first);
+          return first;
+        })
+        .then((first) => {
+          if (!first) setFeatureFailed(true);
+        })
+        .catch(() => setFeatureFailed(true));
+    }
   }, [cancelClose]);
 
   const close = useCallback(() => {
@@ -140,90 +194,245 @@ export function ProductsDropdown({
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
-      /* `border-t border-hairline`, not the old `border-t-2 border-red-600`. A 2px brand rule
-         directly under a header that already carries a 2px brand underline on the active item
-         read as two competing edges 4px apart. The panel is separated by its shadow and its
-         elevated surface, which is how every other overlay on this site separates itself. */
-      className="fixed left-0 right-0 z-[200] w-full border-b border-t border-hairline bg-elevated shadow-2xl"
+      /*
+        ── A DARK CURTAIN, WHICH IS THE WHOLE POINT ──────────────────────────────────────────
+        Owner, 18/08/2026, with the reference storefront's SHOP menu open beside ours: *"in the
+        header i want you to redesign the shop popup, make it something like this"*.
+
+        `.pt-slab` rather than `bg-elevated`. The panel used to be the same near-white as the
+        header it dropped out of, separated only by a shadow, so at a glance it read as the page
+        having grown taller rather than as something laid OVER the page. The reference drops a dark
+        charcoal curtain, and that is the difference: a surface unmistakably not the page underneath
+        needs no shadow to explain itself.
+
+        The scope also re-points every token, so the contents use `text-ink-1` / `border-hairline`
+        with no `dark:` variant and stay correct in both themes — the panel is dark in BOTH, the
+        way the footer and the header's own contact strip already are.
+
+        ── THE TRAP THIS SURFACE CARRIES ─────────────────────────────────────────────────────
+        `--slab-elevated` is 255 255 255 — cards on a slab are WHITE PLATES, "the punch-out
+        moment". So `bg-elevated text-ink-1` inside here is white type on a white card at 1.04:1,
+        invisible in LIGHT theme ONLY, which is exactly the bug this same scope produced in the
+        footer two days ago. A control on a slab is a WELL: `bg-sunken`. The feature card obeys it.
+
+        No `border-t`: a hairline in slab scope is #3A3A42, a dark line drawn at the top of a dark
+        panel — invisible, and unnecessary, because a near-black band under a near-white bar is
+        already an edge.
+      */
+      className="pt-slab fixed left-0 right-0 z-[200] w-full border-b border-hairline shadow-2xl"
       style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
-      <div className="mx-auto max-h-[calc(100vh-80px)] max-w-site overflow-y-auto overscroll-contain px-4 py-8 lg:px-8">
-        <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-x-8 gap-y-8">
-          {categories.length === 0 ? (
-            Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
-                <Skeleton className="mb-3 h-3.5 w-28" />
-                <div className="space-y-2.5">
-                  {Array.from({ length: 4 }).map((_, j) => (
-                    <Skeleton key={j} className="h-3 w-20" />
-                  ))}
-                </div>
-              </div>
-            ))
-          ) : categories.map((cat) => {
-            const subs = (cat.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
-            return (
-              <div key={cat.id} className="min-w-0">
-                <LinkWithLoading
-                  href={`/${cat.slug}`}
-                  /* `pb-2 border-b border-hairline` replaces the floating 32px red dash. A rule
-                     that spans the column groups the list under its heading; a 32px stub under a
-                     140px word is decoration that points at nothing. */
-                  className="group mb-3 flex items-center justify-between gap-2 border-b border-hairline pb-2 font-display text-[13px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-1 transition-colors hover:text-brand"
-                  loadingMessage="Chargement..."
-                  onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
-                  onClick={close}
-                >
-                  <span className="min-w-0 truncate">{cat.designation_fr}</span>
-                  <ArrowRight
-                    className="h-3.5 w-3.5 shrink-0 text-brand opacity-0 transition-opacity group-hover:opacity-100"
-                    aria-hidden="true"
-                  />
-                </LinkWithLoading>
+      <div className="mx-auto flex max-h-[calc(100vh-80px)] max-w-site gap-10 overflow-y-auto overscroll-contain px-4 py-8 lg:px-8">
 
-                <ul className="space-y-0.5">
-                  {subs.map((sub) => (
-                    <li key={sub.id}>
-                      <LinkWithLoading
-                        href={`/${sub.slug}`}
-                        /* `-mx-2 px-2` pulls the hover surface out to the column edge so the row
-                           highlight aligns with the heading rule above it rather than being inset
-                           by its own padding. */
-                        className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand"
-                        loadingMessage="Chargement..."
-                        onMouseEnter={() => router.prefetch(`/${sub.slug}`)}
-                        onClick={close}
-                      >
-                        {sub.designation_fr}
-                      </LinkWithLoading>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            );
-          })}
-        </div>
+        {/*
+          ── THE LINKS, AND WHY THERE ARE STILL FIFTY-FIVE OF THEM ───────────────────────────
+          The reference's panel is a contained ~900px box listing seven items, because seven is its
+          whole taxonomy. Ours is six rayons and fifty-five sub-categories, and they are not
+          decoration: this menu is on every page of the site, so those are fifty-five sitewide
+          internal links into the exact category pages the SEO plan is trying to rank. Shrinking the
+          panel to match the reference's width would mean deleting most of them to fit a shape.
 
-        <div className="mt-8 flex items-center justify-between gap-4 border-t border-hairline pt-5">
-          <p className="text-xs text-ink-3">
-            {categories.length > 0
-              ? `${categories.length} rayons · ${categories.reduce((n, c) => n + (c.sous_categories?.length ?? 0), 0)} catégories`
-              : 'Toute la gamme'}
+          So the SHAPE is the reference's — a kicker, a calm multi-column list, a plain text link
+          out, and a promoted card behind a rule on the right — and the CONTENT stays ours.
+        */}
+        <div className="min-w-0 flex-1">
+          <p className="mb-5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-ink-3">
+            Catégories
           </p>
-          <LinkWithLoading
-            href={href}
-            className="inline-flex items-center gap-2 rounded-full bg-brand px-5 py-2.5 font-display text-[12px] font-semibold uppercase tracking-[0.1em] text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
-            loadingMessage="Chargement de la boutique..."
-            onMouseEnter={prefetchShop}
-            onClick={close}
-            {...targetProps}
-          >
-            Voir tous les produits
-            <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </LinkWithLoading>
+
+          <div className="grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-x-8 gap-y-7">
+            {categories.length === 0 ? (
+              Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
+                  <Skeleton className="mb-3 h-3.5 w-28" />
+                  <div className="space-y-2.5">
+                    {Array.from({ length: 4 }).map((_, j) => (
+                      <Skeleton key={j} className="h-3 w-20" />
+                    ))}
+                  </div>
+                </div>
+              ))
+            ) : categories.map((cat) => {
+              const subs = (cat.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
+              return (
+                <div key={cat.id} className="min-w-0">
+                  <LinkWithLoading
+                    href={`/${cat.slug}`}
+                    className="group mb-3 flex items-center justify-between gap-2 border-b border-hairline pb-2 font-display text-[13px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-1 transition-colors hover:text-brand"
+                    loadingMessage="Chargement..."
+                    onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
+                    onClick={close}
+                  >
+                    <span className="min-w-0 truncate">{cat.designation_fr}</span>
+                    <ArrowRight
+                      className="h-3.5 w-3.5 shrink-0 text-brand opacity-0 transition-opacity group-hover:opacity-100"
+                      aria-hidden="true"
+                    />
+                  </LinkWithLoading>
+
+                  <ul className="space-y-0.5">
+                    {subs.slice(0, MAX_SUBS_PER_COLUMN).map((sub) => (
+                      <li key={sub.id}>
+                        <LinkWithLoading
+                          href={`/${sub.slug}`}
+                          /* `-mx-2 px-2` pulls the hover surface out to the column edge so the row
+                             highlight aligns with the heading rule above it rather than being
+                             inset by its own padding. */
+                          className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand"
+                          loadingMessage="Chargement..."
+                          onMouseEnter={() => router.prefetch(`/${sub.slug}`)}
+                          onClick={close}
+                        >
+                          {sub.designation_fr}
+                        </LinkWithLoading>
+                      </li>
+                    ))}
+                    {subs.length > MAX_SUBS_PER_COLUMN && (
+                      <li>
+                        {/* The overflow, as a link to the rayon rather than as a truncation notice.
+                            "+13 autres" states the count so the reader knows the list is not the
+                            whole shelf, and pressing it lands on the page that lists all of them. */}
+                        <LinkWithLoading
+                          href={`/${cat.slug}`}
+                          className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] font-semibold leading-snug text-ink-3 transition-colors hover:bg-sunken hover:text-brand"
+                          loadingMessage="Chargement..."
+                          onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
+                          onClick={close}
+                        >
+                          +{subs.length - MAX_SUBS_PER_COLUMN} autres
+                        </LinkWithLoading>
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              );
+            })}
+          </div>
+
+          {/*
+            A TEXT LINK, not the filled pill it was. That pill was the only button in the panel and
+            it sat at the far end of a list of fifty-five links, competing with nothing — while the
+            reference puts a quiet "View All Products →" under its list and spends its one filled
+            button on the promoted product. That is the better allocation and it is the one used
+            here: the way out is a link, and the card's "Acheter" is the button.
+          */}
+          <div className="mt-7 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-4">
+            <LinkWithLoading
+              href={href}
+              className="-mx-2 inline-flex min-h-[44px] items-center gap-2 px-2 text-[14px] font-semibold text-brand transition-colors hover:text-brand-hover"
+              loadingMessage="Chargement de la boutique..."
+              onMouseEnter={prefetchShop}
+              onClick={close}
+              {...targetProps}
+            >
+              Voir tous les produits
+              <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </LinkWithLoading>
+            <p className="text-xs text-ink-3">
+              {categories.length > 0
+                ? `${categories.length} rayons · ${categories.reduce((n, c) => n + (c.sous_categories?.length ?? 0), 0)} catégories`
+                : 'Toute la gamme'}
+            </p>
+          </div>
         </div>
+
+        {/*
+          ── THE PROMOTED PRODUCT ────────────────────────────────────────────────────────────
+          `xl` and up only. Below 1280 the six category columns are already at their 10.5rem floor,
+          and taking 264px more would push them into a second row — a menu that reflows into two
+          bands to make room for a promotion is worse than a menu with no promotion.
+
+          ── THE COLUMN IS MOUNTED BEFORE ITS CONTENTS EXIST, ON PURPOSE ─────────────────────
+          The first version rendered this whole <aside> only once the product had arrived, which
+          looked correct and was not: the category grid is `flex-1`, so the aside appearing ~400ms
+          after the panel opened narrowed all six columns AT THE MOMENT the reader's pointer was
+          travelling towards one of them. A menu that moves its own links out from under the cursor
+          is worse than a menu with a placeholder in it.
+
+          So the 264px and the divider are reserved from the first frame and only the CARD waits.
+          The one case that still collapses the column is a failed fetch, which is the right
+          trade: reflowing once on an exception beats reflowing once on every first open.
+        */}
+        {!featureFailed && (
+          <aside className="hidden w-[264px] shrink-0 border-s border-hairline ps-10 xl:block">
+            <p className="mb-5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-ink-3">
+              Nouveauté
+            </p>
+
+            {!feature ? (
+              <div className="flex flex-col gap-3" role="status" aria-label="Chargement de la nouveauté">
+                <Skeleton className="aspect-square w-full rounded-xl" />
+                <Skeleton className="h-4 w-4/5" />
+                <Skeleton className="h-6 w-24" />
+                <Skeleton className="h-11 w-full rounded-lg" />
+              </div>
+            ) : (() => {
+              const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(feature);
+              const link = getProductLink(feature);
+              return (
+                <div className="flex flex-col gap-3">
+                  {/*
+                    `bg-elevated` here and NOWHERE else in this panel, and the distinction is the
+                    one the trap in the docblock above is about. `--slab-elevated` is white — a
+                    PLATE, the punch-out moment — and that is exactly right for a packshot frame,
+                    which carries no text and whose photographs are shot on white anyway. It would
+                    be wrong for anything a reader has to read, which is why the name, the price
+                    and the button below sit on the slab itself.
+                  */}
+                  <LinkWithLoading
+                    href={link}
+                    className="relative block aspect-square w-full overflow-hidden rounded-xl border border-hairline bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    loadingMessage="Chargement..."
+                    onClick={close}
+                    aria-label={feature.designation_fr || 'Voir le produit'}
+                  >
+                    <Image
+                      src={getStorageUrl(feature.cover || '')}
+                      alt=""
+                      fill
+                      sizes="264px"
+                      className="object-contain p-3"
+                    />
+                  </LinkWithLoading>
+
+                  <LinkWithLoading
+                    href={link}
+                    className="line-clamp-2 text-[14px] font-semibold leading-snug text-ink-1 transition-colors hover:text-brand"
+                    loadingMessage="Chargement..."
+                    onClick={close}
+                  >
+                    {feature.designation_fr}
+                  </LinkWithLoading>
+
+                  <p className="flex items-baseline gap-2">
+                    <span className="font-display text-xl font-bold tabular-nums text-brand">
+                      {finalPrice.toFixed(2)} DT
+                    </span>
+                    {hasPromo && oldPrice != null && oldPrice > finalPrice && (
+                      <span className="text-[13px] tabular-nums text-ink-3 line-through">
+                        {oldPrice.toFixed(2)} DT
+                      </span>
+                    )}
+                  </p>
+
+                  {/* The one filled button in the panel. `text-on-brand` on a slab is near-black on
+                      #FF8A4C — 8.47:1. White on that same orange is 3.55:1 and FAILS, which is why
+                      this is a token and not a literal. */}
+                  <LinkWithLoading
+                    href={link}
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand px-4 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    loadingMessage="Chargement..."
+                    onClick={close}
+                  >
+                    Acheter
+                  </LinkWithLoading>
+                </div>
+              );
+            })()}
+          </aside>
+        )}
       </div>
     </div>
   ) : null;

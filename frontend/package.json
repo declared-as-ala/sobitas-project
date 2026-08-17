@@ -21,6 +21,7 @@
     "check:seams": "node scripts/check-seams.mjs",
     "audit:pdp:update": "node scripts/audit-pdp-content.mjs --update",
     "audit:contrast": "node scripts/audit-contrast.mjs",
+    "check:menu-contrast": "node scripts/check-menu-contrast.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",
     "audit:console": "node scripts/check-console.mjs",
     "snap": "node scripts/visual-snap.mjs",
