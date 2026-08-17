@@ -173,3 +173,30 @@ export function hasProductSourceContent(product: SourceFacts): boolean {
     productSourceAttribution(product) !== null
   );
 }
+
+/**
+ * Split a product's photographs into the packshots and the label shots.
+ *
+ * ── THE CONVENTION, AND WHOSE IT IS ─────────────────────────────────────────────────────────
+ * Owner, 17/08/2026: *"there is some products that have more than 2, always the first 2 are the
+ * front and the back of the products and the rest are instructions."*
+ *
+ * That is a fact about how the source catalogue photographs its products, not a guess. The first
+ * two frames are the tub from the front and from the back; everything after is the printed label —
+ * the Supplement Facts panel, the directions, the warnings, shot close enough to read.
+ *
+ * Those belong in different places on the page. A carousel is for choosing (which flavour, which
+ * angle) and a grid is for reading, and putting eight thumbnails under the main image meant the
+ * label photographs were filed as if they were alternate views of the tub — six extra swipes past
+ * the thing a customer actually wanted to look at.
+ *
+ * ── WHY THE RULE ONLY APPLIES ABOVE TWO ─────────────────────────────────────────────────────
+ * At one or two images there is nothing to split: those are the packshots, full stop. Applying the
+ * slice unconditionally would be the same rule with an extra branch that can only ever produce an
+ * empty array, and the guard makes the intent readable — the split exists for products with MORE
+ * than a front and a back.
+ */
+export function splitPackshotsFromLabels(images: string[]): { packshots: string[]; labels: string[] } {
+  if (images.length <= 2) return { packshots: images, labels: [] };
+  return { packshots: images.slice(0, 2), labels: images.slice(2) };
+}

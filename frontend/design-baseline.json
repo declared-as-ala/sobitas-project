@@ -267,11 +267,11 @@
   },
   "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
     "DS001": 12,
-    "DS002": 23,
+    "DS002": 22,
     "DS003": 10,
     "DS004": 12,
     "DS007": 2,
-    "DS011": 10
+    "DS011": 6
   },
   "src/app/(shop)/products/[id]/reviews/ProductReviewsPageClient.tsx": {
     "DS001": 20,

@@ -51,6 +51,14 @@ const BASE = process.argv[2] || 'https://protein.tn';
 const PRODUCTS = [
   { url: `${BASE}/caseine/optimum-nutrition-gold-standard-100-casein-chocolate-supreme-18-kg`, inStock: false, name: 'sur commande' },
   { url: `${BASE}/whey-proteine/tantor-whey-protein-2267-g-scenit-nutrition`, inStock: true, name: 'en stock' },
+  /*
+   * The shape that carried the bugs of 17/08. Its `description_fr` is 13,746 characters — the whole
+   * source product page transcribed, with its own headings — and it has eight photographs, two of
+   * them packshots and six of them label close-ups. Every other product in this list has a short
+   * description and two images, so neither the section routing nor the label grid would be
+   * exercised at all without it.
+   */
+  { url: `${BASE}/whey-isolate/now-foods-sports-whey-protein-isolate-creamy-vanilla-816-g`, inStock: false, name: 'full transcription' },
 ];
 
 /** 320 is the narrowest phone still in the field; 1440 is the most common desktop. */
@@ -213,11 +221,52 @@ for (const { w, h, label } of WIDTHS) {
           .slice(0, 3);
       })(),
       sections: qa('main details > summary').map((s) => s.textContent.trim().split('\n')[0].trim()),
+
+      /*
+       * ── NOTHING MAY BE ON THE PAGE TWICE ──────────────────────────────────────────────────
+       * The defect this catches was live: `description_fr` on a transcribed product contains its
+       * own "Autres ingrédients" and "Avertissements" blocks, and `source_facts.content.sections`
+       * carries the same two separately — so the page rendered each of them, verbatim, in the
+       * Description accordion AND again as its own section. All three nutrition tables likewise.
+       * Roughly 4,500 characters of exact repetition on one page.
+       *
+       * Compares the first 60 characters of each named section against the Description body. That
+       * is long enough that a shared stock phrase cannot trip it and short enough that a single
+       * reworded sentence cannot hide a repeat.
+       */
+      duplicated: (() => {
+        const description = document.querySelector('#pdp-description');
+        if (!description) return [];
+        const flat = (el) => (el.textContent || '').replace(/\s+/g, ' ').trim();
+        const body = flat(description);
+        return qa('main details[id^="pdp-"]')
+          .filter((el) => el.id !== 'pdp-description' && el.id !== 'pdp-label-photos')
+          .map((el) => {
+            const panel = el.querySelector('summary')?.nextElementSibling;
+            const probe = panel ? flat(panel).slice(0, 60) : '';
+            return probe.length >= 60 && body.includes(probe) ? el.id : null;
+          })
+          .filter(Boolean);
+      })(),
+
+      /* Packshots stay in the carousel; label close-ups become a grid. */
+      labelTiles: qa('main #pdp-label-photos [aria-label^="Agrandir la photo"]').length,
+      galleryThumbs: qa('main [aria-label^="Voir la photo"]').length,
+      /* The description body, in characters of rendered text. The routing is what keeps this from
+         being the entire source page. */
+      descriptionChars: (document.querySelector('#pdp-description')?.textContent || '').replace(/\s+/g, ' ').trim().length,
       comparisonCols: (() => {
         const head = qa('main thead th').filter((th) => getComputedStyle(th).display !== 'none');
         return head.map((th) => th.textContent.trim());
       })(),
-      comparisonRows: qa('main tbody tr').length,
+      /* Scoped to the comparison table's own thead. `main tbody tr` counted every row of the three
+         Supplement Facts tables as well and reported 48 comparison rows for a table that is capped
+         at 7 by buildComparison. */
+      comparisonRows: (() => {
+        const head = qa('main thead th').find((th) => /Produit/i.test(th.textContent || ''));
+        const table = head?.closest('table');
+        return table ? table.querySelectorAll('tbody tr').length : 0;
+      })(),
       bundle: !!qa('main button').find((b) => /Tout ajouter/.test(b.textContent || '')),
       /*
        * The site logo in the header is also preloaded, on every route, and it is not this page's
@@ -257,6 +306,19 @@ for (const { w, h, label } of WIDTHS) {
     check(w, 'sticky CTA bar is present', m.stickyBar !== 'absent', m.stickyBar);
   }
   check(w, 'nothing covers the sticky CTA', m.cover.length === 0, m.cover.join(' | ') || 'ok');
+  check(
+    w,
+    'no section repeats the description',
+    m.duplicated.length === 0,
+    m.duplicated.join(', ') || 'ok'
+  );
+  /* Two packshots and a grid, not eight thumbnails. Only asserted on the product that has label
+     shots — the others legitimately have two photographs and no grid. */
+  if (/transcription/.test(product.name)) {
+    check(w, 'label shots are a grid, not thumbnails', m.labelTiles >= 4, `${m.labelTiles} tiles`);
+    check(w, 'carousel keeps only the packshots', m.galleryThumbs === 2, `${m.galleryThumbs} thumbs`);
+    check(w, 'description is routed, not dumped', m.descriptionChars < 6000, `${m.descriptionChars} chars`);
+  }
   if (product.inStock) {
     check(w, 'bundle renders when in stock', m.bundle, m.bundle ? 'ok' : 'missing');
   } else {
