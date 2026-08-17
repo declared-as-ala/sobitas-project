@@ -10,13 +10,27 @@
  * "customers also bought" from a category join would be fabricated social proof of exactly the
  * kind already deleted from the reviews block on this page.
  *
- * So the heading is honest about being a suggestion — same category, in stock, cheapest first,
- * from `similar_products`. The commercial value is real without the claim, because the mechanic is
- * the value: three or four products, one running total, one tap.
+ * So the heading is honest about being a suggestion. The commercial value is real without the
+ * claim, because the mechanic is the value: three or four products, one running total, one tap.
  *
  * When the co-occurrence data exists — Phase 5.3 of the roadmap starts review and delivery
  * collection — the ranking can change and the heading can become true. Until then the heading
  * matches the data.
+ *
+ * ── THE COMPANIONS COME FROM ANOTHER SHELF NOW ──────────────────────────────────────────────
+ * Owner, 17/08/2026: *"why putting all of them as protéine!!!! put real things that they usually
+ * bought together like mass gainer with protéine with créatine etc! shaker etc"*.
+ *
+ * This block used to be handed `similarProducts`, which is `getSimilarProducts(sous_categorie_id)`
+ * — the same sub-category by definition. A whey page therefore offered to complete your order with
+ * three more wheys, 400px above the rail that shows similar products on purpose. It was a bundle
+ * builder that could not build a bundle.
+ *
+ * It now takes `complements`, resolved shelf-by-shelf: creatine, then a shaker, then aminos for a
+ * protein; collagen and omega-3 for a joint supplement. util/productComplements.ts holds the map
+ * and the reasoning, services/productComplements.ts the fetch. There is no fallback to
+ * `similarProducts` when that comes back empty — the block simply does not render, because three
+ * wheys was the bug and quietly restoring it under load would hide the fix.
  *
  * ── WHY A LIST AND NOT A ROW OF PACKSHOTS ───────────────────────────────────────────────────
  * The first version drew the three products side by side with plus signs between them, the way
@@ -54,23 +68,28 @@ const MAX_COMPANIONS = 3;
 
 export function FrequentlyBoughtTogether({
   product,
-  similar,
+  complements,
   imageFor,
   onAdd,
 }: {
   product: Product;
-  similar: Product[];
+  /**
+   * One product per complementary shelf, best first, already stock-filtered server-side.
+   * The order is meaningful — it is the shelf order from util/productComplements.ts — so it is
+   * NOT re-sorted here. Sorting by price is what used to surface the 39 DT unknown creatine over
+   * the Optimum Nutrition the shelf is ranked by.
+   */
+  complements: Product[];
   /** Resolves a product to a renderable image URL — the page already owns that logic. */
   imageFor: (product: Product) => string;
   onAdd: (products: Product[]) => void;
 }) {
   const companions = useMemo(
     () =>
-      similar
+      complements
         .filter((candidate) => candidate?.id && candidate.id !== product.id && isInStock(candidate))
-        .sort((a, b) => getPriceDisplay(a).finalPrice - getPriceDisplay(b).finalPrice)
         .slice(0, MAX_COMPANIONS),
-    [similar, product.id]
+    [complements, product.id]
   );
 
   const items = useMemo(() => [product, ...companions], [product, companions]);
@@ -191,8 +210,17 @@ export function FrequentlyBoughtTogether({
                     {item.designation_fr}
                   </Link>
                 )}
-                {item.brand?.designation_fr && (
-                  <span className="mt-0.5 block truncate text-xs text-ink-3">{item.brand.designation_fr}</span>
+                {/*
+                  THE SHELF, NOT THE BRAND. A row reading "OSTROVIT" under a product name tells a
+                  reader nothing about why it is in this list; "Créatine", "Accessoires",
+                  "Oméga 3" tells them the three rows are three different things — which is the
+                  whole argument for the block existing. The brand is one tap away on the product
+                  itself, and `light=1` does not send the brand object anyway.
+                */}
+                {(item.sous_categorie?.designation_fr || item.brand?.designation_fr) && (
+                  <span className="mt-0.5 block truncate text-xs text-ink-3">
+                    {item.sous_categorie?.designation_fr || item.brand?.designation_fr}
+                  </span>
                 )}
               </div>
 

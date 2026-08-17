@@ -477,11 +477,22 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
   // Desktop: inline input with popover dropdown (the header bar is white now, not red)
   return (
     <div className={cn('relative flex-1', className)}>
+      {/*
+        ── ONE MAGNIFIER, AND IT IS THE BUTTON ────────────────────────────────────────────────
+        Owner, 17/08/2026: make the header *"more minimalistic but same functionality, like the
+        design of the header of impact"*.
+
+        This field carried TWO magnifying glasses 700px apart: a decorative one pinned inside the
+        left edge, and a second one inside a filled orange square on the right that actually
+        submitted. The left one was pure decoration on a field whose placeholder already reads
+        "Rechercher un produit, une marque…", and having the same glyph appear twice in one control
+        is what made a 700px-wide input look busy.
+
+        The decoration is gone and the submit keeps the glyph, which is also the reference's
+        arrangement. Nothing about the behaviour changed: Enter submitted before and submits now,
+        and the button is still a real <button type="submit">.
+      */}
       <form onSubmit={handleSubmit} className="relative">
-        <Search
-          className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-ink-3 pointer-events-none z-10"
-          aria-hidden
-        />
         <Input
           ref={inputRef}
           type="text"
@@ -510,13 +521,20 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           /* Tokens, so the field follows whatever surface the bar is given later without a single
              `dark:` pair. `bg-sunken` inside a `bg-canvas` bar is the well; the hairline is what
              actually draws it (see above — fill contrast alone has broken this field twice). */
-          className="w-full pl-11 pr-24 h-12 rounded-xl border border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-rule focus:border-brand focus:bg-canvas focus:ring-4 focus:ring-focus/10 focus-visible:border-brand focus-visible:bg-canvas focus-visible:ring-4 focus-visible:ring-focus/10"
+          className="w-full pl-4 pr-20 h-11 rounded-xl border border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 shadow-[inset_0_1px_2px_rgba(17,24,39,0.04)] transition-[background-color,border-color,box-shadow] duration-200 hover:border-rule focus:border-brand focus:bg-canvas focus:ring-4 focus:ring-focus/10 focus-visible:border-brand focus-visible:bg-canvas focus-visible:ring-4 focus-visible:ring-focus/10"
           aria-label="Rechercher un produit"
         />
-        {/* Orange search button (GPT header). */}
+        {/*
+          GHOST, NOT FILLED. A saturated orange square inside the search field is the second
+          brand-coloured button in a 64px-tall bar — the first being COMPOSEZ VOTRE PACK, which is
+          the one action in this chrome worth spending the accent on. Two of them competing is the
+          same mistake the WhatsApp pill made in the nav row a day ago, and it was fixed there for
+          the same reason. `text-ink-2` resting, brand on hover: the control is exactly as
+          discoverable and stops shouting.
+        */}
         <button
           type="submit"
-          className="absolute right-1.5 top-1/2 flex h-9 w-11 -translate-y-1/2 items-center justify-center rounded-lg bg-brand text-on-brand shadow-sm transition-colors duration-150 hover:bg-brand-hover active:scale-95"
+          className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-lg text-ink-2 transition-colors duration-150 hover:bg-ink-1/[0.05] hover:text-brand active:scale-95"
           aria-label="Rechercher"
         >
           <Search className="h-[18px] w-[18px]" aria-hidden />
@@ -526,7 +544,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-14 top-1/2 -translate-y-1/2 h-7 w-7"
+            className="absolute right-11 top-1/2 -translate-y-1/2 h-7 w-7"
             onClick={handleClear}
             aria-label="Effacer la recherche"
           >

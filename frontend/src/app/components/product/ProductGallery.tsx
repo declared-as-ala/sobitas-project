@@ -227,7 +227,7 @@ export function ProductGallery({
           `sizes` needs no change and is in fact now more honest: the mobile branch already said
           `100vw`, which was 9% optimistic when the frame was 358 of 390 and is exact at full bleed.
         */
-        className="group relative -mx-4 aspect-square w-[calc(100%+2rem)] overflow-hidden border-y border-hairline bg-elevated shadow-card sm:mx-auto sm:w-full sm:rounded-2xl sm:border lg:max-w-[calc(100vh-17rem)]"
+        className="group relative -mx-4 aspect-square w-[calc(100%+2rem)] overflow-hidden border-b border-hairline bg-elevated shadow-card sm:mx-auto sm:w-full sm:rounded-2xl sm:border lg:max-w-[calc(100vh-17rem)]"
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >

@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronDown, ArrowRight, ShoppingBag } from 'lucide-react';
+import { ChevronDown, ArrowRight } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCategories } from '@/services/api';
@@ -237,14 +237,17 @@ export function ProductsDropdown({
     >
       <LinkWithLoading
         href={href}
-        /* In lockstep with the sibling nav links in HeaderClient.tsx (icon + label, 14px, ink
-           #111827, orange #FF5A00 hover/active + 2px underline) — this is the one nav item that
-           renders through a different component, so it has to mirror their styling by hand. */
+        /* In lockstep with the sibling nav links in HeaderClient.tsx (label at 13.5px, ink,
+           brand hover/active + 2px underline) — this is the one nav item that renders through a
+           different component, so it has to mirror their styling BY HAND, which is exactly how it
+           kept its shopping-bag glyph for one commit after the other six lost theirs. Anything
+           changed on the nav-link className in HeaderClient must be changed here in the same
+           breath; there is no shared constant to forget. */
         className={cn(
           // Mirrors the sibling nav links' shared underline vocabulary (HeaderClient.tsx): a 2px
           // accent bar that wipes in on hover and stays pinned when active. Desktop-only row, so the
           // 300ms after: transition is never hit by the mobile 0.2s clamp.
-          'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
+          'group relative inline-flex items-center gap-1 h-full text-[13.5px] font-semibold tracking-[0.02em] whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
           active ? 'text-brand after:scale-x-100' : 'text-ink-1 dark:text-gray-200 hover:text-brand'
         )}
         loadingMessage="Chargement de la boutique..."
@@ -252,9 +255,11 @@ export function ProductsDropdown({
         {...(active ? { 'aria-current': 'page' as const } : {})}
         {...targetProps}
       >
-        <ShoppingBag className="h-4 w-4" aria-hidden />
+        {/* The bag glyph went with the other six — see the note on the nav links in
+            HeaderClient.tsx. The chevron STAYS: it is not decoration, it is the only thing telling
+            a reader this item opens a panel rather than navigating. */}
         <span>{label}</span>
-        <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
       </LinkWithLoading>
 
       {mounted && typeof window !== 'undefined' && dropdownContent &&

@@ -18,6 +18,7 @@ import {
 import { buildVideoObjectSchema } from '@/util/officialVideo';
 import type { Product } from '@/types';
 import { buildMetaDescription } from '@/util/sanitizeProductHtml';
+import { getComplementProducts } from '@/services/productComplements';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <div className="min-h-screen animate-pulse bg-gray-50" />,
@@ -212,7 +213,11 @@ export default async function ShopProductPage({ params }: PageProps) {
     ? getSimilarProducts(safeProduct.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
     : Promise.resolve([] as Product[]);
 
-  const similarProducts = await similarPromise;
+  /* Overlapped, not sequential — see the note on the canonical route. */
+  const [similarProducts, complementProducts] = await Promise.all([
+    similarPromise,
+    getComplementProducts(safeProduct).catch(() => [] as Product[]),
+  ]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   
@@ -273,7 +278,7 @@ export default async function ShopProductPage({ params }: PageProps) {
       {videoSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
       )}
-      <ProductDetailClient product={safeProduct} similarProducts={similarProducts} slugOverride={cleanSlug} breadcrumbItems={breadcrumbItems} />
+      <ProductDetailClient product={safeProduct} similarProducts={similarProducts} complementProducts={complementProducts} slugOverride={cleanSlug} breadcrumbItems={breadcrumbItems} />
     </>
   );
 }

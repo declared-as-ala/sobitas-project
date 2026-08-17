@@ -59,6 +59,12 @@ type ReviewSort = 'recent' | 'best' | 'worst';
 interface ProductDetailClientProps {
   product: Product;
   similarProducts: Product[];
+  /**
+   * One product per COMPLEMENTARY shelf — a creatine and a shaker for a whey, not three wheys.
+   * Fetched server-side (services/productComplements.ts) and optional: the routes that cannot do
+   * a server fetch simply do not send it, and "Complétez votre commande" does not render.
+   */
+  complementProducts?: Product[];
   /** When rendering under /shop/[slug], pass slug so refetch/links work */
   slugOverride?: string;
   /** Breadcrumb path (Accueil > Category > Product). BreadcrumbList schema is output by the server. */
@@ -66,7 +72,7 @@ interface ProductDetailClientProps {
 }
 
 
-export function ProductDetailClient({ product: initialProduct, similarProducts, slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
+export function ProductDetailClient({ product: initialProduct, similarProducts, complementProducts = [], slugOverride, breadcrumbItems = [] }: ProductDetailClientProps) {
   const REVIEW_PAGE_SIZE = 12;
   // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
   // middleware sends Googlebot to that view and a table only one of them can see is a discrepancy.
@@ -755,10 +761,27 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           rows on a long product name, which cost more vertical space above the fold than the whole
           control is worth.
         */}
+        {/*
+          ── THE BAR HAD PADDING ON ONE SIDE ONLY ─────────────────────────────────────────────
+          Owner, 17/08/2026, arrow drawn at the trail: *"not centred … make it center on desktop
+          and on mobile"*.
+
+          Read as a horizontal note it makes no sense — the trail is left-aligned because the owner
+          asked for it left-aligned a day earlier. It is a VERTICAL note, and it was exactly right.
+          This band had `pb-3` and no top padding of its own, so its only top spacing was whatever
+          `main` happened to have: 12px on a phone, 32px on a desktop. The text therefore sat 32px
+          below the header rule and 12px above its own — pushed hard against the bottom of a band
+          two and a half times taller than it looked.
+
+          `-mt-*` cancels main's top padding and `py-*` puts it back symmetrically, so the band is
+          its own object: equal air above and below the text at every width, and its top edge flush
+          against the header's bottom rule instead of floating 32px under it. The desktop page also
+          loses 20px it was spending on half of an accidental gap.
+        */}
         {breadcrumbItems.length > 0 && (
           <nav
             aria-label="Fil d'Ariane"
-            className="-mx-4 mb-4 border-b border-hairline px-4 pb-3 text-xs text-ink-3 sm:-mx-6 sm:mb-5 sm:px-6 sm:text-sm lg:-mx-8 lg:px-8"
+            className="-mx-4 -mt-3 mb-0 border-b border-hairline px-4 py-2.5 text-xs text-ink-3 sm:-mx-6 sm:-mt-6 sm:mb-5 sm:px-6 sm:py-3 sm:text-sm lg:-mx-8 lg:-mt-8 lg:px-8"
           >
             <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
               {breadcrumbItems.length > 1 && (
@@ -1492,7 +1515,21 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 full-bleed band separated by hairlines is the standard phone pattern. Both come
                 back at `sm`, where the page is wide enough for a card to look like one.
               */
-              <div className="-mx-4 divide-y divide-hairline border-y border-hairline bg-elevated px-4 shadow-sm sm:mx-0 sm:w-full sm:rounded-2xl sm:border sm:px-6">
+              /*
+          ── ONE RULE BETWEEN TWO BANDS, NOT TWO ──────────────────────────────────────────────
+          Owner, 17/08/2026: *"on mobile why double separators between the sections! read the
+          separators and don't do double separators that make a big white space that no needed"*.
+
+          Below `sm` this page is a stack of full-bleed bands — the trail, the packshot, the
+          traceability panel, the specification accordion — and every one of them was drawn with
+          `border-y`. Two adjacent bands therefore put TWO hairlines on the screen with the layout
+          gap trapped between them, which reads as a thick empty seam rather than as a division.
+
+          The rule below `sm` is now: a band draws its BOTTOM edge only, and the band above it
+          supplies the top. `sm:border` puts all four sides back the moment these become cards with
+          margins, where a full outline is what a card is.
+        */
+              <div className="-mx-4 divide-y divide-hairline border-b border-hairline bg-elevated px-4 shadow-sm sm:mx-0 sm:w-full sm:rounded-2xl sm:border sm:px-6">
 
                 <ProductInfoSection id="pdp-description" title={product.zone1 || 'Description'} defaultOpen>
                   <div>
@@ -1526,7 +1563,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     );
                   })()}
                   <div
-                    className={`text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-strong:text-ink-1 prose-img:rounded-lg prose-img:shadow-md overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'max-h-60'}`}
+                    className={`pdp-prose overflow-hidden transition-[max-height] duration-300 ${!descriptionIsLong || descExpanded ? 'max-h-[5000px]' : 'pdp-clamped max-h-60'}`}
                     // Sanitised, not raw. These CMS fields carry their own <h1> tags, which rendered as extra
                     // top-level headings on the page whose only h1 should be the product name —
                     // up to thirteen on one product. sanitizeProductHtml demotes them to <h2>.
@@ -1632,7 +1669,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       title={section.heading}
                     >
                       <div
-                        className="prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 text-base leading-relaxed text-ink-2 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-strong:text-ink-1"
+                        className="pdp-prose"
                         dangerouslySetInnerHTML={{ __html: html }}
                       />
                     </ProductInfoSection>
@@ -1750,7 +1787,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {hasNutritionContent ? (
                           <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                             <div
-                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-strong:text-ink-1 prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-img:rounded-lg prose-img:shadow-md prose-img:max-w-full prose-img:h-auto prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              className="nutrition-content pdp-prose min-w-[280px]"
                               dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
                             />
                           </div>
@@ -1773,7 +1810,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {sourceNutritionHtml && (
                           <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                             <div
-                              className="nutrition-content text-sm sm:text-base text-ink-2 leading-relaxed prose prose-neutral prose-sm sm:prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-strong:text-ink-1 prose-p:leading-relaxed prose-p:my-1 sm:prose-p:my-2 prose-table:text-left prose-th:py-2 prose-th:px-2 sm:prose-th:px-3 prose-td:py-2 prose-td:px-2 sm:prose-td:px-3 prose-table:w-full min-w-[280px]"
+                              className="nutrition-content pdp-prose min-w-[280px]"
                               dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
                             />
                             {/*
@@ -1891,7 +1928,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </div>
                   ) : hasLegacyQuestionsHtml ? (
                     <div
-                      className="text-base text-ink-2 leading-relaxed prose prose-neutral prose-base max-w-none prose-th:text-ink-1 prose-td:text-ink-2 prose-headings:font-semibold prose-headings:text-gray-900 prose-headings:dark:text-white prose-headings:mb-2 prose-headings:mt-4 prose-p:text-gray-600 prose-p:dark:text-ink-3 prose-p:leading-relaxed prose-p:my-2 prose-strong:text-ink-1"
+                      className="pdp-prose"
                       dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
                     />
                   ) : null}
@@ -2012,7 +2049,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         <div className="min-w-0">
           <FrequentlyBoughtTogether
             product={product}
-            similar={similarProducts}
+            complements={complementProducts}
             imageFor={(entry) => getStorageUrl(entry.cover || '')}
             onAdd={handleAddManyToCart}
           />

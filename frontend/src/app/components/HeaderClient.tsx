@@ -760,13 +760,31 @@ export function HeaderClient() {
                         // Shared underline vocabulary: a 2px accent bar that wipes in from the left on
                         // hover and stays pinned open when active. `after:` on this desktop-only row
                         // (hidden md:block) so its 300ms is never hit by the mobile 0.2s clamp.
-                        'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
+                        'group relative inline-flex items-center h-full text-[13.5px] font-semibold tracking-[0.02em] whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
                         active
                           ? 'text-brand after:scale-x-100'
                           : 'text-ink-1 dark:text-gray-200 hover:text-brand'
                       )}
                     >
-                      <NavigationIcon name={link.icon} className="h-4 w-4" />
+                      {/*
+                        ── NO ICON ────────────────────────────────────────────────────────
+                        Owner, 17/08/2026, with the reference storefront's header beside ours:
+                        *"polish it and fix it and make the design of it good and more
+                        minimalistic but same functionality, like the design of the header of
+                        impact"*.
+
+                        Six glyphs sat in this row — a house, a box, a shop, a book, an envelope
+                        and an info circle — one per nav item. None of them was doing any work:
+                        the labels beside them already read ACCUEIL, BOUTIQUE, PACKS, MARQUES,
+                        BLOG, CONTACT, and no reader has ever needed a house to understand the
+                        word "accueil". What they DID do was add roughly 22px per item, which is
+                        why the row was crowded enough to need a horizontal scroller on a small
+                        laptop. The reference has none, and that is most of why its chrome reads
+                        as calmer than ours did.
+
+                        `NavigationIcon` stays — the mobile menu and the products dropdown both
+                        use it, and there an icon in a vertical list IS a scanning aid.
+                      */}
                       <span>{translateLegacy(link.label)}</span>
                     </NavigationLink>
                   );
@@ -797,11 +815,18 @@ export function HeaderClient() {
                   to one page's heading where it competed with that page's own first action.
                   Outlined against the filled pack CTA, so the nav row still has exactly one button
                   that sells and this one reads as a door rather than a shout. */}
+              {/*
+                A LINK, not an outlined box. It was a bordered pill 12px from the filled orange
+                pack CTA — two button SHAPES side by side, which makes the reader weigh them
+                against each other before reading either. Stripping the outline leaves exactly one
+                object in this row that looks pressable, and the one that looks pressable is the
+                one that sells. The 44px target is kept by padding rather than by a border.
+              */}
               <Link
                 href="/partenaires"
-                className="shrink-0 inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-hairline px-3 py-2 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                className="shrink-0 inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-2 text-[13.5px] font-semibold text-ink-2 transition-colors hover:text-brand"
               >
-                <BadgeCheck className="h-4 w-4 text-brand" aria-hidden />
+                <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
                 <span>Accès Pro</span>
               </Link>
 

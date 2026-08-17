@@ -19,6 +19,7 @@ import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, i
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 import { buildMetaDescription } from '@/util/sanitizeProductHtml';
+import { getComplementProducts } from '@/services/productComplements';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -292,9 +293,23 @@ export default async function NewProductPage({ params }: PageProps) {
     permanentRedirect(`/shop/${cleanProductSlug}`);
   }
 
-  const similarProducts = await (product.sous_categorie_id
-    ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
-    : Promise.resolve([] as Product[]));
+  /*
+    Two independent lists, fetched TOGETHER rather than one after the other.
+
+    `similarProducts` is the same sub-category — the rail at the bottom of the page and the
+    comparison table. `complementProducts` is the other shelves — a creatine and a shaker for a
+    whey — and it is what "Complétez votre commande" builds a basket from. Awaiting them in
+    sequence would add the second round trip to TTFB for no reason; `Promise.all` overlaps them.
+
+    The complement fetch is four 3 KB queries and returns [] immediately for a product that is not
+    itself addable, which is 10,535 of 10,669 of them. See services/productComplements.ts.
+  */
+  const [similarProducts, complementProducts] = await Promise.all([
+    product.sous_categorie_id
+      ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
+      : Promise.resolve([] as Product[]),
+    getComplementProducts(product).catch(() => [] as Product[]),
+  ]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   // Always compute from subcategory — never trust legacy seo.canonical_url (C3 fix)
@@ -345,6 +360,7 @@ export default async function NewProductPage({ params }: PageProps) {
       <ProductDetailClient 
         product={product} 
         similarProducts={similarProducts} 
+        complementProducts={complementProducts}
         slugOverride={cleanProductSlug} 
         breadcrumbItems={breadcrumbItems}
       />
