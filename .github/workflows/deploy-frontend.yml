@@ -85,6 +85,7 @@ jobs:
           NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
 
       - name: Log in to GHCR
+        id: ghcr_login
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -95,6 +96,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Docker Image
+        id: image_push
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
@@ -241,19 +243,45 @@ jobs:
       - name: Report what actually happened
         if: always()
         run: |
+          # ── THIS SUMMARY USED TO LIE ────────────────────────────────────────────────────
+          # It opened with "### Image built and published to GHCR" unconditionally, and then, if
+          # the VPS step had not succeeded, reassured the reader: "This does not mean the deploy
+          # failed. The image is in the registry and the server pulls it itself."
+          #
+          # On 17/08/2026 the GHCR LOGIN failed with a dropped connection, so the build-and-push
+          # step was skipped and no image ever reached the registry. The summary said it had, and
+          # told whoever read it to wait for a poller to collect an image that did not exist.
+          #
+          # A deploy report is read exactly once, by someone deciding whether to act. It now states
+          # what the push step actually did before it says anything else.
           {
-            echo "### Image built and published to GHCR"
+            if [ "${{ steps.image_push.outcome }}" = "success" ]; then
+              echo "### Image built and published to GHCR"
+            else
+              echo "### NO IMAGE WAS PUBLISHED"
+              echo ""
+              echo "\`Build and Push Docker Image\` outcome: \`${{ steps.image_push.outcome }}\`"
+              echo "(GHCR login: \`${{ steps.ghcr_login.outcome }}\`)."
+              echo ""
+              echo "**Production is still serving the previous release.** Nothing to poll for and"
+              echo "nothing to roll back - re-run the job. Both failures seen so far were transient"
+              echo "network errors reaching ghcr.io or the VPS, not credentials."
+            fi
             echo ""
             if [ "${{ steps.smoke.outcome }}" = "failure" ]; then
               echo "**LIVE SMOKE TESTS FAILED.** The release is already serving. See the"
               echo "\"Smoke test the live site\" step for which check broke."
               echo ""
             fi
-            if [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
+            if [ "${{ steps.image_push.outcome }}" != "success" ]; then
+              :
+            elif [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
               echo "The VPS was asked to pull it immediately, and did."
             else
               echo "Could not reach the VPS over SSH (outcome: ${{ steps.push_to_vps.outcome }})."
               echo ""
+              # Reachable only when the image DID publish - the branch above returns early
+              # otherwise, which is the whole point of this rewrite.
               echo "**This does not mean the deploy failed.** The image is in the registry and the"
               echo "server pulls it itself on its next poll - see scripts/vps-autodeploy.sh."
               echo "If the site has not changed after a few minutes, the poller is not installed:"
