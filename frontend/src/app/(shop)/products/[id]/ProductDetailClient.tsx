@@ -1559,7 +1559,51 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               className="min-w-0 pt-8 sm:pt-10 border-t border-hairline mt-8 sm:mt-10"
             >
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
-              <h2 className="font-display uppercase tracking-tight leading-[0.95] text-2xl sm:text-3xl font-bold text-ink-1 border-b border-hairline pb-3 sm:pb-4">Avis clients</h2>
+              {/*
+                ── THE ASK SITS IN THE HEADER, AND THERE IS ONE OF IT ─────────────────────────
+                It was written TWICE — the same eighteen lines in the has-reviews branch and again
+                in the empty state, both at the FOOT of the section. That is the same duplication
+                that let this page's two hero trees drift, at a smaller scale, and it put the one
+                control that grows this section behind however many reviews already exist.
+
+                The reference storefront puts "write a review" top-right of the heading, which is
+                also where it is useful: a visitor who has just read the rating is deciding whether
+                to contribute, and a visitor who scrolled past twelve reviews has stopped reading.
+              */}
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-hairline pb-3 sm:pb-4">
+                <div className="min-w-0">
+                  <h2 className="font-display text-2xl font-bold uppercase leading-[0.95] tracking-tight text-ink-1 sm:text-3xl">
+                    Avis clients
+                  </h2>
+                  {reviewCount > 0 && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <StarRating rating={rating} size="md" />
+                      <span className="text-sm text-ink-2 tabular-nums">
+                        {rating.toFixed(1)} sur 5 · {reviewCount} avis
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {isAuthenticated ? (
+                  <Button
+                    onClick={() => setShowReviewForm(!showReviewForm)}
+                    className="min-h-[44px] w-full font-display font-semibold uppercase tracking-wide sm:w-auto"
+                    size="default"
+                  >
+                    {showReviewForm ? 'Annuler' : 'Écrire un avis'}
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => router.push('/login')}
+                    variant="outline"
+                    className="min-h-[44px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand sm:w-auto"
+                    size="default"
+                  >
+                    Connectez-vous pour laisser un avis
+                  </Button>
+                )}
+              </div>
 
               {reviewCount > 0 ? (
                 <>
@@ -1664,49 +1708,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </p>
                   )}
 
-                  {/* Add Review Button (logged-in) / login prompt (logged-out) */}
-                  {isAuthenticated ? (
-                    <Button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="min-h-[48px] w-full bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
-                      size="default"
-                    >
-                      {showReviewForm ? 'Annuler' : 'Écrire un avis'}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => router.push('/login')}
-                      variant="outline"
-                      className="min-h-[48px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
-                      size="default"
-                    >
-                      Connectez-vous pour laisser un avis
-                    </Button>
-                  )}
                 </>
               ) : (
-                <div className="p-4 sm:p-5 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-200 dark:border-gray-700">
-                  <p className="text-sm text-ink-2 text-center mb-4">
-                    Aucun avis pour le moment
+                /*
+                  The empty state says one true thing and asks for nothing — the ask is in the
+                  header above, where it is now the only copy of itself.
+
+                  It stays deliberately quiet. Every product on this catalogue is in this state
+                  today: 1,082 orders exist and none is marked `livree`, so the review-request
+                  pipeline has never fired and not one product has a published review. A loud
+                  empty state repeated across 11,263 pages would read as a site with no customers.
+                */
+                <div className="rounded-xl border border-hairline bg-sunken px-4 py-6 text-center">
+                  <p className="text-sm text-ink-2">Aucun avis pour le moment</p>
+                  <p className="mt-1 text-xs text-ink-3">
+                    Soyez le premier à donner votre avis sur ce produit.
                   </p>
-                  {isAuthenticated ? (
-                    <Button
-                      onClick={() => setShowReviewForm(!showReviewForm)}
-                      className="min-h-[48px] w-full bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
-                      size="default"
-                    >
-                      {showReviewForm ? 'Annuler' : 'Écrire un avis'}
-                    </Button>
-                  ) : (
-                    <Button
-                      onClick={() => router.push('/login')}
-                      variant="outline"
-                      className="min-h-[48px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
-                      size="default"
-                    >
-                      Connectez-vous pour laisser un avis
-                    </Button>
-                  )}
                 </div>
               )}
 
