@@ -796,6 +796,71 @@ body[data-page='product'] header.pt-site-header {
    what keeps being wrong on this page — the bands are the layout, and animating the layout while
    the user is reading it is the problem, not the implementation. */
 
+/* ==========================================================================
+   THE BRAND MARQUEE
+   ==========================================================================
+   Owner, 18/08/2026: *"redesign this section… show the partner marks in a good way, you can add a
+   micro animation loop"*.
+
+   TRANSFORM ONLY, so it composites and never touches layout or paint on the main thread — the
+   same reason the (now removed) section reveal was written this way. The track holds the list
+   TWICE and travels exactly -50%, which is why the seam is invisible: at -50% the second copy sits
+   pixel-for-pixel where the first started, and the animation restarts from a frame identical to
+   the one it just drew.
+
+   `data-motion` IS LOAD-BEARING. The mobile block above clamps every animation-duration to 0.2s
+   with `!important` below 768px; without the attribute this 60s loop becomes a 0.2s one and the
+   logos strobe. That rule is documented as opt-out-per-component and this is the second component
+   to need it.
+
+   PAUSE ON HOVER AND ON FOCUS-WITHIN — the latter is not decoration: every tile is a link, and a
+   keyboard user tabbing into a moving strip cannot read what they have landed on.
+
+   REDUCED MOTION gets a real fallback rather than a frozen strip: the animation stops AND the
+   container becomes a normal horizontal scroller, so all the brands remain reachable by swipe or
+   scrollbar. A stopped marquee with `overflow: hidden` would hide two thirds of them.
+   ========================================================================== */
+@keyframes pt-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    /* ── -50% IS SIX PIXELS SHORT, AND THAT IS ARITHMETIC, NOT TASTE ──────────────────────
+       Measured before fixing: the first copy repeats every 4,128px while half the track is
+       4,122 — a 6px jump on every wrap, once a minute, exactly the kind of glitch that reads as
+       "cheap" without anyone being able to say why.
+
+       With n tiles per copy, tile width w and gap g, the track is 2n tiles and 2n-1 gaps:
+
+           W     = 2n·w + (2n-1)g
+           W/2   = n·w + n·g - g/2
+           period= n·w + n·g            (a tile plus its gap, n times)
+
+       so half the track is always HALF A GAP short of the repeat. `gap-3` is 0.75rem, hence
+       0.375rem. Change the gap on the track and this number changes with it. */
+    transform: translate3d(calc(-50% - 0.375rem), 0, 0);
+  }
+}
+
+.pt-marquee {
+  animation: pt-marquee 60s linear infinite;
+  will-change: transform;
+}
+
+.pt-marquee-viewport:hover .pt-marquee,
+.pt-marquee-viewport:focus-within .pt-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-marquee {
+    animation: none;
+  }
+  .pt-marquee-viewport {
+    overflow-x: auto;
+  }
+}
+
 /* Toast: top-center so it doesn't cover cart; compact on mobile */
 .sonner-toaster {
   --width: 22rem;
