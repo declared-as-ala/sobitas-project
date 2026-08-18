@@ -270,12 +270,45 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
         : toMetaTitle(merged.h1, apiTitle, canonicalSlug);
-    // Ensure brand suffix — API-sourced titles may omit it
-    // Skip when title already includes the domain brand (Protein.tn) to avoid double suffix
+    /**
+     * THE BRAND SUFFIX MUST NOT COST MORE THAN IT ADDS.
+     *
+     * ` | Protéine Tunisie` carries two signals: the brand, and the country. The old rule appended
+     * it whenever the title did not literally contain "protéine"/"protein.tn", and made room by
+     * trimming the title. On a catalogue whose titles are all ALREADY geo-qualified, that traded
+     * real words for a word the title had said once already. Measured across 30 live category
+     * pages on 17/08/2026, 13 were damaged by it:
+     *
+     *     Mass Gainer Tunisie | Serious Mass & Prise de | Protéine Tunisie
+     *                                                ^^ "Masse" trimmed to fit a duplicate
+     *     Collagène en Tunisie | Protéine Tunisie          ZMA en Tunisie | Protéine Tunisie
+     *
+     * The CMS title for the first is `Mass Gainer Tunisie | Serious Mass & Prise de Masse` — 51
+     * characters, comfortably inside the 65 limit, and correct. It was cut to 45 to bolt on a
+     * suffix that repeated "Tunisie" and left the title ending on a preposition.
+     *
+     * So the suffix is now chosen by what the title is MISSING:
+     *   names the brand already        -> add nothing
+     *   names the country but not us   -> add the short brand mark, and only if it fits as-is
+     *   names neither                  -> the old behaviour, trimming to make room, which is
+     *                                     the one case where the trade is worth making
+     *
+     * Titles ending `— Protein.tn` were always fine; that is the house style this converges on.
+     */
     const brand = ' | Protéine Tunisie';
-    const hasBrand =
-      /protéine|proteine|protein\.tn/i.test(metaTitle);
-    if (!hasBrand) {
+    const shortBrand = ' — Protein.tn';
+    const namesBrand = /protéine|proteine|protein\.tn/i.test(metaTitle);
+    const namesCountry = /tunisie|tunisia/i.test(metaTitle);
+
+    if (namesBrand) {
+      // Nothing to add. Fall through to the length clamp below.
+    } else if (namesCountry) {
+      // Never trim a valid title for this one — if it does not fit, the geo signal is already
+      // there and the brand mark is the part worth dropping.
+      if (metaTitle.length + shortBrand.length <= META_TITLE_MAX_LEN) {
+        metaTitle = metaTitle + shortBrand;
+      }
+    } else {
       // Trim the BASE title on a word boundary BEFORE appending the full brand suffix,
       // so the brand (and "Tunisie") is never chopped mid-word. Previously
       // `(metaTitle + brand).slice(0, MAX)` could mangle the suffix to "…Protéine Tuni".
@@ -286,7 +319,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         metaTitle = (lastSpace > 30 ? cut.slice(0, lastSpace) : cut).trim();
       }
       metaTitle = metaTitle + brand;
-    } else if (metaTitle.length > META_TITLE_MAX_LEN) {
+    }
+    if (metaTitle.length > META_TITLE_MAX_LEN) {
       const cut = metaTitle.slice(0, META_TITLE_MAX_LEN - 1);
       const lastSpace = cut.lastIndexOf(' ');
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
