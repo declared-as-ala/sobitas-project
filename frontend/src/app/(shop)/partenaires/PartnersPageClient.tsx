@@ -201,7 +201,7 @@ export function PartnersPageClient() {
             action={
               <Link
                 href="#candidature"
-                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-white transition-colors [@media(hover:hover)]:hover:bg-brand-hover"
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-on-brand transition-colors [@media(hover:hover)]:hover:bg-brand-hover"
               >
                 Candidater
                 <ArrowRight className="h-4 w-4" aria-hidden />
@@ -230,7 +230,7 @@ export function PartnersPageClient() {
                   <span className="mb-2 flex items-center gap-2.5">
                     <span
                       className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-                        active ? 'bg-brand text-white' : 'bg-sunken text-ink-3'
+                        active ? 'bg-brand text-on-brand' : 'bg-sunken text-ink-3'
                       }`}
                     >
                       <Icon className="h-4.5 w-4.5" aria-hidden />

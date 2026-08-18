@@ -12,10 +12,11 @@ import {
   DrawerTitle,
 } from '@/app/components/ui/drawer';
 import { Button } from '@/app/components/ui/button';
-import { Minus, Plus, Trash2, ShoppingBag, Truck } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Truck, X, Tag } from 'lucide-react';
 import Link from 'next/link';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
+import { getPriceDisplay } from '@/util/productPrice';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedName } from '@/i18n/content';
@@ -36,6 +37,26 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
   } = useCart();
 
   const totalPrice = getTotalPrice();
+
+  /*
+    ── WHAT THE BASKET SAVED, WHICH THE DRAWER NEVER SAID ────────────────────────────────────
+    Owner, 18/08/2026: *"redesign the panier, make it more pro — check the panier of Impact"*.
+
+    The clearest thing that cart does and this one did not is state the DISCOUNT. Every row there
+    reads `185 TND  148 TND` with a `20% OFF applied` tag under it, and the panel totals the reward
+    it is earning. Ours knew every one of those numbers — `getPriceDisplay` returns `oldPrice` and
+    `hasPromo` and is what the cards, the product page and the bundle builder all print — and threw
+    them away at the one screen where a shopper is deciding whether to go through with it.
+
+    So: the struck original and a −N% chip per line, and one line in the footer for the total. No
+    invented urgency, no fake anchor; these are the same two numbers already printed on the card
+    the item was added from, carried through to the basket.
+  */
+  const savings = items.reduce((sum, item) => {
+    const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(item.product as never);
+    if (!hasPromo || oldPrice == null || oldPrice <= finalPrice) return sum;
+    return sum + (oldPrice - finalPrice) * item.quantity;
+  }, 0);
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
@@ -73,9 +94,31 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
       */}
       <DrawerContent className="flex h-full !w-[min(28rem,calc(100vw-2.5rem))] flex-col border-0 bg-elevated">
         <DrawerHeader className="shrink-0 border-b border-hairline bg-elevated px-5 pb-4 pt-5">
-          <DrawerTitle className="font-display font-compressed text-2xl font-extrabold uppercase tracking-tight text-ink-1">
-            Panier
-          </DrawerTitle>
+          {/*
+            ── A COUNT, AND A WAY OUT ──────────────────────────────────────────────────────────
+            The reference cart puts a bag, a title and a count badge on one line and an X on the
+            other end. Ours had the title alone, and NO CLOSE CONTROL AT ALL: the only ways out
+            were tapping the backdrop or pressing Escape, neither of which is discoverable, and on
+            a phone the backdrop is a 40px strip down one edge. That is a usability defect rather
+            than a styling one, which is why it leads.
+          */}
+          <div className="flex items-center justify-between gap-3">
+            <DrawerTitle className="flex items-center gap-2.5 font-display font-compressed text-2xl font-extrabold uppercase tracking-tight text-ink-1">
+              <ShoppingBag className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
+              Panier
+              {items.length > 0 && (
+                <span className="rounded-full bg-brand px-2 py-0.5 font-sans text-[11px] font-bold leading-normal tabular-nums text-on-brand">
+                  {items.length}
+                </span>
+              )}
+            </DrawerTitle>
+            <DrawerClose
+              className="-me-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              aria-label="Fermer le panier"
+            >
+              <X className="h-5 w-5" aria-hidden="true" />
+            </DrawerClose>
+          </div>
           {/* "Votre panier est vide" was printed TWICE on an empty cart — once here and once in
               the empty state a few lines below, one directly under the other, in a drawer that
               had nothing else in it. The empty state is the better home for it: it has the icon,
@@ -117,7 +160,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
               <DrawerClose asChild>
                 <Button
                   onClick={() => onOpenChange(false)}
-                  className="mt-6 h-12 w-full max-w-xs rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-white hover:bg-brand-hover"
+                  className="mt-6 h-12 w-full max-w-xs rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
                 >
                   Continuer les achats
                 </Button>
@@ -127,6 +170,9 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             <div className="space-y-2.5 py-4">
               {items.map(item => {
                 const displayPrice = getEffectivePrice(item.product);
+                const { oldPrice, hasPromo } = getPriceDisplay(item.product as never);
+                const struck = hasPromo && oldPrice != null && oldPrice > displayPrice ? oldPrice : null;
+                const percent = struck ? Math.round(((struck - displayPrice) / struck) * 100) : 0;
                 const stockDisponible = getStockDisponible(item.product as any);
                 const maxQty = Math.max(1, stockDisponible);
 
@@ -184,8 +230,26 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           <Trash2 className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="mt-0.5 font-display text-sm font-bold tabular-nums tracking-tight text-brand">
-                        {formatCurrency(displayPrice)}
+                      {/* THE UNIT PRICE, ITS ORIGINAL, AND THE SAVING — one line, in that reading
+                          order, which is the order the reference uses and the order the same three
+                          numbers already appear in on the product card this item came from. */}
+                      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                        <span className="font-display text-sm font-bold tabular-nums tracking-tight text-brand">
+                          {formatCurrency(displayPrice)}
+                        </span>
+                        {struck != null && (
+                          <>
+                            <span className="text-xs tabular-nums text-ink-3 line-through">
+                              {formatCurrency(struck)}
+                            </span>
+                            {percent > 0 && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-1.5 py-px text-[11px] font-semibold tabular-nums text-ok">
+                                <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
+                                −{percent}%
+                              </span>
+                            )}
+                          </>
+                        )}
                       </p>
                       <div className="flex items-center justify-between gap-2 mt-2">
                         {/* The stepper is the WELL now that the row is a plate — the same swap as
@@ -203,7 +267,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           >
                             <Minus className="h-4 w-4" />
                           </button>
-                          <span className="w-9 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+                          <span className="w-8 text-center text-sm font-semibold tabular-nums text-ink-1" aria-live="polite">
                             {item.quantity}
                           </span>
                           <button
@@ -259,16 +323,30 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             {/* One rule above the total, because the total is the only line in this panel that
                 summarises the ones above it. Without it the footer is three unrelated blocks of
                 the same weight and the eye has to hunt for the number it came for. */}
-            <div className="mb-4 flex items-center justify-between border-t border-hairline pt-4">
-              <span className="font-display text-base font-semibold uppercase tracking-wide text-ink-1">Total</span>
-              <span className="font-display text-2xl font-extrabold tabular-nums tracking-tight text-brand">
-                {formatCurrency(totalPrice)}
-              </span>
+            <div className="mb-4 border-t border-hairline pt-4">
+              {savings > 0 && (
+                /* The reference totals its reward points here; this totals the thing this shop
+                   actually gives, which is the discount already in the prices above. It renders
+                   only when there IS one — a permanent "vous économisez 0 DT" is noise. */
+                <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                  <span className="flex items-center gap-1.5 text-ink-2">
+                    <Tag className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden="true" />
+                    Vous économisez
+                  </span>
+                  <span className="font-semibold tabular-nums text-ok">{formatCurrency(savings)}</span>
+                </div>
+              )}
+              <div className="flex items-center justify-between">
+                <span className="font-display text-base font-semibold uppercase tracking-wide text-ink-1">Total</span>
+                <span className="font-display text-2xl font-extrabold tabular-nums tracking-tight text-brand">
+                  {formatCurrency(totalPrice)}
+                </span>
+              </div>
             </div>
             <div className="flex flex-col gap-1">
               <DrawerClose asChild>
                 <Link href="/checkout" className="block">
-                  <Button className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-hover">
+                  <Button className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover">
                     Passer commande
                   </Button>
                 </Link>

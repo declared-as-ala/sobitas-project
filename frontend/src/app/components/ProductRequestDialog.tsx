@@ -150,7 +150,7 @@ export function ProductRequestDialog({
             </p>
             <Button
               onClick={() => onOpenChange(false)}
-              className="mt-6 h-12 w-full max-w-xs rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-white hover:bg-brand-hover"
+              className="mt-6 h-12 w-full max-w-xs rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
             >
               Continuer les achats
             </Button>
@@ -216,7 +216,7 @@ export function ProductRequestDialog({
             <Button
               type="submit"
               disabled={sending}
-              className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-white transition-colors hover:bg-brand-hover disabled:opacity-60"
+              className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover disabled:opacity-60"
             >
               {sending ? (
                 <>

@@ -232,7 +232,7 @@ export default function ContactPageClient({
 
               <Button
                 type="submit"
-                className="w-full bg-brand hover:bg-brand-hover text-white font-display uppercase tracking-wide"
+                className="w-full bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide"
                 size="lg"
                 disabled={isSubmitting}
               >

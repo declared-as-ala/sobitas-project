@@ -235,13 +235,30 @@ export function ProductsDropdown({
         reflows into two rows on the most common desktop configuration in the country is the
         "full screen" they are describing.
 
-        A fixed three-column panel cannot do that. 960px wide, anchored under the nav item rather
-        than spanning the viewport, `rounded-2xl` with its own hairline and shadow so it reads as
-        an object laid on the page — which is what a dropdown is — instead of a section of it.
-        `left-4` and `max-w-[calc(100vw-2rem)]` keep it on screen at any width without a
-        measurement or a resize listener.
+        A panel with a FIXED column count cannot do that, so the columns are declared rather than
+        negotiated, and it is anchored under the nav item with its own hairline, radius and shadow
+        so it reads as an object laid on the page — which is what a dropdown is — instead of as a
+        section of it.
+
+        ── WIDTH IS WHAT BUYS HEIGHT (owner, 18/08/2026, second pass) ─────────────────────────
+        *"it hides under the height of the screen, so make it go more in the width"*.
+
+        Exactly the right diagnosis. At 960px the six rayons had to stack 3x2, and two rows of
+        links plus the promoted product came to ~660px — which, starting 348px down a browser
+        whose inner height is ~860, put the "Voir tous les produits" link and the rayon counts
+        BELOW the bottom of the screen. A hover panel that closes when the pointer leaves it must
+        never require a scroll to reach its own footer.
+
+        1,344px is the width at which the six rayons fit in ONE row on the owner's 1536 viewport,
+        and one row is ~340px tall instead of ~660: the panel now ends roughly 170px above the
+        fold on the screen where it used to run 150px past it. It is still not full-bleed — 1,344
+        of 1,536 leaves the page visible down both sides, which was the point of the first pass.
+
+        `min(84rem, 100vw - 2rem)` and `left-4 lg:left-8` keep it on screen at every width with no
+        measurement and no resize listener; below `xl` it falls back to three columns and two rows,
+        where the viewport is short of horizontal room but has the vertical room to spare.
       */
-      className="pt-slab fixed left-4 z-[200] w-[min(60rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-hairline shadow-2xl lg:left-8"
+      className="pt-slab fixed left-4 z-[200] w-[min(84rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-hairline shadow-2xl lg:left-8"
       style={{ top: `${dropdownTop + 8}px`, maxHeight: 'calc(100vh - 96px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
@@ -255,18 +272,22 @@ export function ProductsDropdown({
           page, so those are sitewide internal links into the exact category pages the SEO plan is
           trying to rank.
 
-          THREE FIXED COLUMNS, not `auto-fit`. The auto-fit version silently changed its own column
+FIXED COLUMN COUNTS, not `auto-fit`. The auto-fit version silently changed its own
           count with the width it was handed — six at 1920, five at 1536 — which is how it came to
-          wrap onto a second row on the owner's screen and nowhere in the guard's screenshots. Six
-          rayons over three columns is two rows at EVERY width, which is a layout somebody chose
-          rather than one the container negotiated.
+          wrap onto a second row on the owner's screen and nowhere in the guard's screenshots.
+
+          Six across from `xl` and three below it, and both are exact: at 1,344px the left region
+          is ~1,067px, so six columns with a 16px gap are 164px each, which holds the longest label
+          in the taxonomy ("Barres & Snacks Protéinés", ~145px at 12.5px) without truncating. Below
+          `xl` the panel is clamped by the viewport instead, and three columns of ~200px is the
+          same trade made the other way round.
         */}
         <div className="min-w-0 flex-1">
           <p className="mb-4 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
             Catégories
           </p>
 
-          <div className="grid grid-cols-3 gap-x-6 gap-y-6">
+          <div className="grid grid-cols-3 gap-x-4 gap-y-6 xl:grid-cols-6">
             {categories.length === 0 ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
@@ -364,9 +385,8 @@ export function ProductsDropdown({
 
         {/*
           ── THE PROMOTED PRODUCT ────────────────────────────────────────────────────────────
-          `lg` and up. The panel is 960px and the three category columns need ~600 of it, so the
-          card fits from the width where the panel itself stops being clamped by the viewport.
-          Below that it stands down rather than squeezing the links it sits beside.
+          `lg` and up. Below that the panel is clamped by the viewport and every pixel the card
+          takes comes off the links beside it, so it stands down rather than squeezing them.
 
           ── THE COLUMN IS MOUNTED BEFORE ITS CONTENTS EXIST, ON PURPOSE ─────────────────────
           The first version rendered this whole <aside> only once the product had arrived, which

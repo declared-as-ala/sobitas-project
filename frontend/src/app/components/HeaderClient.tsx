@@ -1020,7 +1020,7 @@ export function HeaderClient() {
                           router.push(`/shop?search=${encodeURIComponent(q)}`);
                           closeMobileMenu();
                         }}
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
+                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
                       >
                         <span>Voir tous les résultats ({sidebarResults.length})</span>
                         <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
@@ -1238,7 +1238,7 @@ export function HeaderClient() {
                   <NavigationLink
                     item={packBuilderLink}
                     onClick={closeMobileMenu}
-                    className="flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
+                    className="flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
                   >
                     <span className="flex items-center gap-2">
                       <Gift className="h-5 w-5 shrink-0" aria-hidden />
@@ -1315,7 +1315,7 @@ export function HeaderClient() {
                   <ShoppingCart className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
                   <span className="flex-1 text-left">Panier</span>
                   {cartItemsCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white">
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
                       {cartItemsCount > 99 ? '99+' : cartItemsCount}
                     </span>
                   )}
@@ -1332,7 +1332,7 @@ export function HeaderClient() {
                   />
                   <span className="flex-1">Favoris</span>
                   {favoritesCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white">
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
                       {favoritesCount > 99 ? '99+' : favoritesCount}
                     </span>
                   )}

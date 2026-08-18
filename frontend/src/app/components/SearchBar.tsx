@@ -461,7 +461,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
               <div className="shrink-0 border-t border-hairline bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-950">
                 <Button
                   onClick={handleSubmit}
-                  className="h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
+                  className="h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
                 >
                   <Search className="mr-2 h-5 w-5" aria-hidden />
                   Voir tous les résultats
