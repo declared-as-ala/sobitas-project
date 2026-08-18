@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import dynamic from 'next/dynamic';
@@ -20,21 +20,11 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
-  Home,
-  ShoppingBag,
-  Store,
-  Newspaper,
-  Mail,
-  Info,
-  Star,
-  Tag,
   Gift,
-  Search,
   Shield,
   Lock,
   X,
   BadgeCheck,
-  type LucideIcon,
 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
@@ -51,15 +41,11 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
-import { Skeleton } from '@/app/components/ui/skeleton';
 import { cn } from '@/app/components/ui/utils';
-import { getNavigationItems, getCategories, searchProducts, getStorageUrl } from '@/services/api';
-import { useDebounce } from '@/util/debounce';
-import { getPriceDisplay } from '@/util/productPrice';
-import { buildProductUrlPath } from '@/util/productUrl';
+import { getNavigationItems, getCategories } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
-import type { SiteNavigationItem, Product } from '@/types';
+import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
@@ -98,20 +84,17 @@ function withPackBuilder(links: HeaderNavLink[]): HeaderNavLink[] {
   return links.some((link) => link.href === '/pack-builder') ? links : [...links, PACK_BUILDER_LINK];
 }
 
-const NAV_ICON_MAP: Record<string, LucideIcon> = {
-  home: Home,
-  'shopping-bag': ShoppingBag,
-  package: Package,
-  store: Store,
-  newspaper: Newspaper,
-  mail: Mail,
-  phone: Phone,
-  info: Info,
-  star: Star,
-  heart: Heart,
-  tag: Tag,
-  gift: Gift,
-};
+/*
+  NAV_ICON_MAP and its <NavigationIcon> wrapper are DELETED, not left for later.
+
+  They existed to draw a 20px glyph beside every mobile nav row, keyed off a free-text `icon`
+  column in the navigation table. Anything the admin typed that was not one of these twelve keys
+  rendered NOTHING — the component returned null — so the column was ragged by construction, and
+  the rows that did resolve mostly resolved to the same two or three generic marks. The redesigned
+  drawer (owner, 18/08/2026) is uppercase type with no icons, which is what the reference does and
+  what a list of destinations wants; with the last call site gone, keeping a dead icon registry
+  around is how the next person re-adds the column by accident.
+*/
 
 /**
  * The backend nav occasionally ships English labels (e.g. "BRANDS") even though the site default is
@@ -150,11 +133,6 @@ function isExternalHref(href: string): boolean {
 
 function isProductsNavLink(link: HeaderNavLink): boolean {
   return link.href === '/shop' || link.label.toLocaleUpperCase('fr-FR').includes('PRODUIT');
-}
-
-function NavigationIcon({ name, className }: { name?: string | null; className: string }) {
-  const Icon = name ? NAV_ICON_MAP[name] : undefined;
-  return Icon ? <Icon className={className} aria-hidden /> : null;
 }
 
 function NavigationLink({
@@ -197,12 +175,21 @@ export function HeaderClient() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
-  const [sidebarQuery, setSidebarQuery] = useState('');
+  /*
+    ── THE SIDEBAR NO LONGER SEARCHES (owner, 18/08/2026) ────────────────────────────────────
+    *"in the sidebar take off the search, since we have the search icon in the header"*.
+
+    It was a second, complete search implementation — its own query state, its own debounce, its
+    own `searchProducts` call, its own results list, its own skeletons, its own empty state and its
+    own "voir tous les résultats" button — sitting 40px below a header that already has a search
+    control. Two pipelines for one feature is two places to fix every bug, and the sidebar's copy
+    had already drifted (it used raw `.toFixed(2)` rather than the shop's `formatCurrency`).
+
+    Deleted here rather than hidden: ~120 lines of JSX and five pieces of state.
+  */
   /** Second level of the sidebar accordion: which category has its sub-categories open (one at a
    *  time, so the list never becomes an unreadable wall on a phone). */
   const [openCategoryId, setOpenCategoryId] = useState<number | null>(null);
-  const [sidebarResults, setSidebarResults] = useState<Product[]>([]);
-  const [sidebarSearching, setSidebarSearching] = useState(false);
   const { theme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
@@ -255,47 +242,10 @@ export function HeaderClient() {
 
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
-    // Reset the drawer to its resting state so the next open starts from the nav, not from a stale
-    // search result list or a half-expanded accordion.
-    setSidebarQuery('');
-    setSidebarResults([]);
+    // Reset the drawer to its resting state so the next open starts from the nav rather than
+    // from a half-expanded accordion.
     setOpenCategoryId(null);
   };
-
-  const handleSidebarSearch = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const q = sidebarQuery.trim();
-    if (!q) return;
-    router.push(`/shop?search=${encodeURIComponent(q)}`);
-    closeMobileMenu();
-  };
-
-  // Live sidebar search — same pipeline as the desktop bar (debounce → searchProducts), so results
-  // appear as you type instead of only on submit. Only runs while the drawer is actually open.
-  const debouncedSidebarQuery = useDebounce(sidebarQuery, 300);
-  useEffect(() => {
-    const q = debouncedSidebarQuery.trim();
-    if (!mobileMenuOpen || !q) {
-      setSidebarResults([]);
-      setSidebarSearching(false);
-      return;
-    }
-    let active = true;
-    setSidebarSearching(true);
-    searchProducts(q)
-      .then(({ products }) => {
-        if (active) setSidebarResults(Array.isArray(products) ? products : []);
-      })
-      .catch(() => {
-        if (active) setSidebarResults([]);
-      })
-      .finally(() => {
-        if (active) setSidebarSearching(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [debouncedSidebarQuery, mobileMenuOpen]);
 
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
   const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
@@ -415,12 +365,6 @@ export function HeaderClient() {
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  // While the shopper is typing, the drawer's scrollable middle shows results instead of the nav.
-  const showSidebarSearch = sidebarQuery.trim().length > 0;
-  // True between a keystroke and the debounce firing — keeps the skeleton up so results never flash
-  // stale matches for the previous query.
-  const sidebarSearchPending = sidebarQuery.trim() !== debouncedSidebarQuery.trim();
 
   return (
     // A FRAGMENT, not a wrapper <div>. `position: sticky` only holds while the element's PARENT box
@@ -892,150 +836,85 @@ export function HeaderClient() {
               </SheetClose>
             </div>
 
-            {/* 2 — SEARCH */}
-            <form onSubmit={handleSidebarSearch} role="search" className="shrink-0 px-4 pt-4 pb-2">
-              <div className="relative flex items-center">
-                <Search className="pointer-events-none absolute left-3 h-4 w-4 text-ink-3" aria-hidden />
-                <input
-                  type="text"
-                  inputMode="search"
-                  autoComplete="off"
-                  value={sidebarQuery}
-                  onChange={(e) => setSidebarQuery(e.target.value)}
-                  placeholder="Rechercher un produit..."
-                  aria-label="Rechercher un produit"
-                  className="w-full min-h-[44px] rounded-xl border border-hairline bg-sunken pl-9 pr-11 text-[14px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-focus/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
-                />
-                {showSidebarSearch ? (
+            {/*
+              ── 2 — WHO YOU ARE, THEN THE ONE THING TO DO ─────────────────────────────────
+              Owner, 18/08/2026, with a screenshot of Impact's drawer: *"in the top have login,
+              signup, and instead of 'install app' we put composer the pack generator"*.
+
+              That reference opens with identity and one coloured CTA, and it is the right shape
+              for a phone: the two questions a returning shopper has at the top of a menu are "am I
+              signed in" and "where do I start", and both are answered above the fold instead of
+              after eleven nav rows. Ours answered the first one at the BOTTOM of a scroll, under
+              WhatsApp and Favoris.
+
+              `S'inscrire` is the filled half and `Connexion` the outline: this shop's account
+              conversion problem is registration, not sign-in. Signed in, the pair becomes the
+              account link and a sign-out, so the row never disappears and never lies.
+            */}
+            <div className="shrink-0 px-4 pt-4">
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/account"
+                    onClick={closeMobileMenu}
+                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    <User className="h-4 w-4 shrink-0" aria-hidden />
+                    Mon compte
+                  </Link>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSidebarQuery('');
-                      setSidebarResults([]);
-                    }}
-                    aria-label="Effacer la recherche"
-                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
+                    onClick={() => { logout(); closeMobileMenu(); }}
+                    className="flex h-11 shrink-0 items-center justify-center rounded-xl px-4 text-[14px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
                   >
-                    <X className="h-4 w-4" aria-hidden />
+                    Déconnexion
                   </button>
-                ) : (
-                  <button
-                    type="submit"
-                    aria-label="Rechercher"
-                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
-                  >
-                    <Search className="h-4 w-4" aria-hidden />
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {/* SCROLLABLE MIDDLE — live search results while typing, otherwise the nav list. Both
-                scroll above the pinned trust chips. */}
-            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {showSidebarSearch ? (
-                <div className="px-4 pt-2 pb-4">
-                  {sidebarSearching || sidebarSearchPending ? (
-                    <div className="space-y-1" role="status" aria-label="Recherche en cours">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3 rounded-xl p-2">
-                          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <Skeleton className="h-3.5 w-2/3" />
-                            <Skeleton className="h-3 w-1/3" />
-                          </div>
-                        </div>
-                      ))}
-                      <span className="sr-only">Recherche en cours…</span>
-                    </div>
-                  ) : sidebarResults.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <Search className="mx-auto h-8 w-8 text-ink-3 dark:text-gray-600" aria-hidden />
-                      <p className="mt-3 text-[14px] font-semibold text-ink-1 dark:text-gray-100">
-                        Aucun produit trouvé
-                      </p>
-                      <p className="mt-1 px-4 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
-                        Rien ne correspond à «&nbsp;{sidebarQuery.trim()}&nbsp;». Essayez d&apos;autres termes.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
-                        {sidebarResults.length} résultat{sidebarResults.length > 1 ? 's' : ''}
-                      </p>
-                      <ul className="space-y-0.5">
-                        {sidebarResults.map((product) => {
-                          const pd = getPriceDisplay(product);
-                          return (
-                            <li key={product.id}>
-                              <Link
-                                href={buildProductUrlPath(product)}
-                                onClick={closeMobileMenu}
-                                className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sunken dark:hover:bg-gray-800"
-                              >
-                                <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sunken dark:bg-gray-800">
-                                  {product.cover ? (
-                                    <Image
-                                      src={getStorageUrl(product.cover)}
-                                      alt=""
-                                      fill
-                                      className="object-contain"
-                                      sizes="48px"
-                                      unoptimized
-                                    />
-                                  ) : null}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-[14px] font-medium text-ink-1 dark:text-gray-100">
-                                    {product.designation_fr}
-                                  </span>
-                                  <span className="mt-0.5 block text-[13px]">
-                                    {pd.hasPromo && pd.oldPrice != null ? (
-                                      <>
-                                        <span className="text-ink-3 line-through dark:text-gray-500">
-                                          {pd.oldPrice.toFixed(2)} DT
-                                        </span>
-                                        <span className="ml-1.5 font-semibold text-brand">
-                                          {pd.finalPrice.toFixed(2)} DT
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="font-semibold text-ink-1 dark:text-gray-200">
-                                        {pd.finalPrice.toFixed(2)} DT
-                                      </span>
-                                    )}
-                                  </span>
-                                </span>
-                                <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const q = sidebarQuery.trim();
-                          if (!q) return;
-                          router.push(`/shop?search=${encodeURIComponent(q)}`);
-                          closeMobileMenu();
-                        }}
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
-                      >
-                        <span>Voir tous les résultats ({sidebarResults.length})</span>
-                        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                    </>
-                  )}
                 </div>
               ) : (
-              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <Link
+                    href="/login"
+                    onClick={closeMobileMenu}
+                    className="flex h-11 items-center justify-center rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    Connexion
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={closeMobileMenu}
+                    className="flex h-11 items-center justify-center rounded-xl bg-brand text-[14px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
+                  >
+                    S&apos;inscrire
+                  </Link>
+                </div>
+              )}
+
+              {/* The reference's "Installer l'application" slot. This shop has no app; what it has
+                  is the pack builder, which is the highest-intent path on the site and was
+                  previously buried between two dividers halfway down the scroll. */}
+              {packBuilderLink && (
+                <NavigationLink
+                  item={packBuilderLink}
+                  onClick={closeMobileMenu}
+                  className="mt-2 flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
+                >
+                  <span className="flex items-center gap-2">
+                    <Gift className="h-5 w-5 shrink-0" aria-hidden />
+                    <span>{translateLegacy(packBuilderLink.label)}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+                </NavigationLink>
+              )}
+            </div>
+
+            {/* SCROLLABLE MIDDLE — the nav list, above the pinned trust chips. */}
+            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {/* 3 + 4 — NAVIGATION */}
-              <div className="px-4 pt-2 pb-2">
-                <h3 className="px-1 mb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
-                  Navigation
-                </h3>
-                <nav className="space-y-1">
+              {/* No "NAVIGATION" kicker. It labelled the only list on the screen, in the one
+                  colour this drawer should spend on its CTA — the reference has no such label and
+                  does not need one. */}
+              <div className="px-4 pb-2 pt-3">
+                <nav className="space-y-0.5">
                   {sidebarLinks.map((link) => {
                     if (link.href === '/pack-builder') return null;
 
@@ -1058,17 +937,24 @@ export function HeaderClient() {
                               if (productsOpen) setOpenCategoryId(null);
                               setProductsOpen((v) => !v);
                             }}
+                            /* ── THE REFERENCE'S ROW (owner, 18/08/2026) ──────────────────
+                               Impact's drawer is a column of uppercase display type with a chevron
+                               where a row expands and nothing where it does not — no icons, no
+                               tinted active pill, no rounded hover plate. It reads as a list of
+                               destinations rather than as a toolbar, which is what a menu is.
+
+                               Ours had a 20px icon on every row, and the icons came from a
+                               free-text `icon` column in the DB: half of them fell back to the same
+                               generic glyph, so the column was six identical marks pretending to be
+                               information. The active row keeps its brand colour and loses its
+                               `bg-brand/10` plate — colour is enough on a list this short. */
                             className={cn(
-                              'flex w-full items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
+                              'flex w-full items-center gap-3 min-h-[52px] rounded-lg px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em] transition-colors',
                               shopActive
-                                ? 'bg-brand/10 text-brand'
+                                ? 'text-brand'
                                 : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
                             )}
                           >
-                            <NavigationIcon
-                              name={link.icon}
-                              className={cn('h-5 w-5 shrink-0', shopActive ? 'text-brand' : 'text-ink-3')}
-                            />
                             <span className="flex-1 text-left">{translateLegacy(link.label)}</span>
                             {!hasCategories ? (
                               <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
@@ -1212,16 +1098,12 @@ export function HeaderClient() {
                         onClick={closeMobileMenu}
                         ariaCurrent={active ? 'page' : undefined}
                         className={cn(
-                          'flex items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
+                          'flex items-center gap-3 min-h-[52px] rounded-lg px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em] transition-colors',
                           active
-                            ? 'bg-brand/10 text-brand'
+                            ? 'text-brand'
                             : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
                         )}
                       >
-                        <NavigationIcon
-                          name={link.icon}
-                          className={cn('h-5 w-5 shrink-0', active ? 'text-brand' : 'text-ink-3')}
-                        />
                         <span>{translateLegacy(link.label)}</span>
                       </NavigationLink>
                     );
@@ -1229,27 +1111,8 @@ export function HeaderClient() {
                 </nav>
               </div>
 
-              {/* 5 — divider */}
-              <div className="mx-4 border-t border-hairline dark:border-gray-800" />
-
-              {/* 6 — PACK CTA */}
-              {packBuilderLink && (
-                <div className="px-4 py-3">
-                  <NavigationLink
-                    item={packBuilderLink}
-                    onClick={closeMobileMenu}
-                    className="flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Gift className="h-5 w-5 shrink-0" aria-hidden />
-                      <span>{translateLegacy(packBuilderLink.label)}</span>
-                    </span>
-                    <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
-                  </NavigationLink>
-                </div>
-              )}
-
-              {/* 7 — divider */}
+              {/* divider — the pack CTA that used to sit between two of these now leads the
+                  drawer, above the nav. One rule, not two around an empty slot. */}
               <div className="mx-4 border-t border-hairline dark:border-gray-800" />
 
               {/* 8 — UTILITY ITEMS */}
@@ -1338,37 +1201,11 @@ export function HeaderClient() {
                   )}
                 </Link>
 
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      href="/account"
-                      onClick={closeMobileMenu}
-                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <User className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                      <span>Mon compte</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => { logout(); closeMobileMenu(); }}
-                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[14px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 dark:hover:bg-gray-800 dark:hover:text-white"
-                    >
-                      <span className="pl-8">Déconnexion</span>
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    href="/login"
-                    onClick={closeMobileMenu}
-                    className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <User className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                    <span>Connexion</span>
-                  </Link>
-                )}
+                {/* Connexion / Mon compte / Déconnexion used to live here, at the BOTTOM of a
+                    scroll, under WhatsApp and Favoris. They are the first thing in the drawer now
+                    — see the account row above — and repeating them here would be the same two
+                    links twice in one panel. */}
               </div>
-              </>
-              )}
             </div>
 
             {/* 9 — TRUST CHIPS (pinned to bottom, always visible) */}

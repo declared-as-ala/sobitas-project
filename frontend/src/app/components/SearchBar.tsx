@@ -1,14 +1,15 @@
 'use client';
 
 import { useState, useCallback, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useRouter } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
-import { Search, X, ArrowRight, ArrowLeft, ChevronRight, TrendingUp } from 'lucide-react';
+import { Search, X, ArrowRight, ChevronRight, TrendingUp } from 'lucide-react';
 import { Input } from '@/app/components/ui/input';
 import { Button } from '@/app/components/ui/button';
 import { Skeleton } from '@/app/components/ui/skeleton';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
+
 import { useDebounce } from '@/util/debounce';
 import { searchProducts, getStorageUrl } from '@/services/api';
 import { getPriceDisplay } from '@/util/productPrice';
@@ -258,45 +259,42 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  // Mobile: track visualViewport height so when the keyboard opens, the sheet shrinks and results stay visible/scrollable above the keyboard
-  const [mobileSheetHeight, setMobileSheetHeight] = useState<number | null>(null);
+  /*
+    ── THE PANEL IS ANCHORED UNDER THE HEADER, SO IT NEEDS THE HEADER'S BOTTOM ───────────────
+    Measured on open (and on resize), not hard-coded: the mobile bar is 64px today, the utility
+    strip above it scrolls away, and `[data-compact]` shrinks the whole thing on scroll. A constant
+    would be wrong in three different ways within one scroll.
+  */
+  const [panelTop, setPanelTop] = useState(0);
   useEffect(() => {
-    if (variant !== 'mobile' || !mounted || !isOpen) {
-      setMobileSheetHeight(null);
-      return;
-    }
-    const viewport = window.visualViewport;
-    if (!viewport) return;
+    if (variant !== 'mobile' || !isOpen) return;
+    const measure = () => {
+      const header = document.querySelector('header');
+      setPanelTop(header ? Math.round(header.getBoundingClientRect().bottom) : 64);
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [variant, isOpen]);
 
-    // `resize` only. This used to also listen to `scroll`, which on visualViewport fires on EVERY
-    // frame while the page moves — each one calling setState, and the resulting height flows into
-    // an inline style, so React re-rendered and the browser re-laid-out the sheet per frame. That
-    // is a measurable share of the 549ms presentation delay profiled on the search interaction.
-    // The keyboard opening/closing is a RESIZE of the visual viewport, which is the actual signal
-    // this effect wants; scroll never carried information it needed.
-    //
-    // rAF-coalesced because resize can still burst during the keyboard animation, and rounded
-    // because sub-pixel viewport heights would defeat React's bail-out on an unchanged value and
-    // re-render for a difference nobody can see.
-    let frame = 0;
-    const updateHeight = () => {
-      if (frame) return;
-      frame = requestAnimationFrame(() => {
-        frame = 0;
-        setMobileSheetHeight((prev) => {
-          const next = Math.round(viewport.height);
-          return prev === next ? prev : next;
-        });
-      });
+  /* Escape closes it, the way the dialog it replaced did for free. */
+  useEffect(() => {
+    if (variant !== 'mobile' || !isOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsOpen(false);
     };
-    updateHeight();
-    viewport.addEventListener('resize', updateHeight);
-    return () => {
-      if (frame) cancelAnimationFrame(frame);
-      viewport.removeEventListener('resize', updateHeight);
-      setMobileSheetHeight(null);
-    };
-  }, [variant, mounted, isOpen]);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [variant, isOpen]);
+
+  /* Autofocus once the panel exists. `autoFocus` on the input would fight React's remounting and
+     scroll the page on some Android builds; focusing the ref after paint does not. */
+  useEffect(() => {
+    if (variant !== 'mobile' || !isOpen) return;
+    const id = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => cancelAnimationFrame(id);
+  }, [variant, isOpen]);
+
 
   const mobileSearchButton = (
     <Button
@@ -315,162 +313,173 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
   if (variant === 'mobile') {
     if (!mounted) return mobileSearchButton;
+
+    /*
+      ── A BAR UNDER THE HEADER, NOT A NEW PAGE (owner, 18/08/2026) ─────────────────────────
+      *"don't open a full page when I click on the search icon on mobile in the header — do like
+      Impact does it, just add a search input under the header"*, and separately *"when I open it
+      on mobile it zooms in so bad, I don't want that zoom"*.
+
+      What was here: a `Sheet side="top"` at `h-[100dvh]`, i.e. a full-screen takeover with its own
+      back arrow, its own footer CTA and a `visualViewport` listener to survive the keyboard. Three
+      things wrong with it on a phone:
+
+        1. it REPLACED the page, so tapping the magnifier felt like navigation and closing it felt
+           like going back — for an action that is meant to be a glance;
+        2. the resting state had to fill 800px with something, so it filled it with a heading, a
+           wall of chips and a paragraph of advice;
+        3. the field was 14px, and iOS Safari ZOOMS THE VIEWPORT on focusing any input under 16px.
+           That is the entire "it zooms in so bad": not a bug in our CSS, a documented behaviour
+           with one fix — `text-[16px]`, which is what the field now is. (Not `text-base`: the
+           value is load-bearing and a rename of that utility must not silently re-arm the zoom.)
+
+      What replaces it: a panel anchored to the header's own bottom edge, the width of the screen,
+      as tall as its content. The page stays where it was, dimmed. Results cap at 55vh and scroll
+      inside themselves — never the page.
+    */
+    const close = () => {
+      setIsOpen(false);
+      setQuery('');
+      setProducts([]);
+    };
+
     return (
-      <Sheet open={isOpen} onOpenChange={setIsOpen}>
-        <SheetTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            /* 48px box / 26px glyph, matching the burger beside it (owner asked for a bigger
-               search icon on mobile). Tokens rather than `hover:bg-gray-100 dark:hover:bg-gray-800`
-               — the header is `bg-canvas` now, and a hardcoded gray-100 hover is a light-mode
-               literal that shows as a pale block on the dark canvas. */
-            className={cn(
-              'h-12 w-12 min-h-12 min-w-12',
-              'hover:bg-ink-1/[0.04] rounded-xl active:scale-95 transition-transform',
-              className
-            )}
-            aria-label="Rechercher un produit"
-          >
-            <Search className="h-[26px] w-[26px]" />
-          </Button>
-        </SheetTrigger>
-        {/* `font-poppins` and the #111827 / #6B7280 / #E5E7EB / #F5F6F8 / #FF5A00 palette below are
-            not new values — they are the header's vocabulary, lifted verbatim from the burger
-            drawer in HeaderClient. The two panels are now the only things the mobile top bar can
-            open, so they read as one surface: same hairline, same 44px rounded-xl field, same
-            orange kicker, same result row. */}
-        <SheetContent
-          side="top"
-          className="font-poppins h-[100dvh] overflow-hidden flex flex-col rounded-none bg-white dark:bg-gray-950 border-none p-0 [&>button]:hidden"
-          style={mobileSheetHeight != null ? { height: `${mobileSheetHeight}px`, maxHeight: `${mobileSheetHeight}px` } : undefined}
+      <>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => (isOpen ? close() : setIsOpen(true))}
+          aria-expanded={isOpen}
+          aria-label={isOpen ? 'Fermer la recherche' : 'Rechercher un produit'}
+          className={cn(
+            'h-12 w-12 min-h-12 min-w-12',
+            'hover:bg-ink-1/[0.04] rounded-xl active:scale-95 transition-transform',
+            isOpen && 'bg-sunken text-brand',
+            className
+          )}
         >
-          <SheetHeader className="sr-only">
-            <SheetTitle>Recherche produits</SheetTitle>
-          </SheetHeader>
+          {isOpen ? <X className="h-[26px] w-[26px]" /> : <Search className="h-[26px] w-[26px]" />}
+        </Button>
 
-          <div className="flex flex-col h-full min-h-0 overflow-hidden">
-            {/* HEADER — back + field, on a hairline. Mirrors the drawer's own header row. */}
-            <div className="flex shrink-0 items-center gap-2 border-b border-hairline bg-white px-3 py-3 dark:border-gray-800 dark:bg-gray-950">
-              <button
-                type="button"
-                onClick={() => setIsOpen(false)}
-                aria-label="Fermer la recherche"
-                className="flex h-11 w-11 min-h-11 min-w-11 shrink-0 items-center justify-center rounded-xl text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white"
+        {isOpen &&
+          createPortal(
+            <>
+              {/* The scrim closes on tap and dims the page WITHOUT hiding it — the point of not
+                  being a full-screen sheet is that you can still see where you are. */}
+              <div
+                className="fixed inset-0 z-[190] bg-black/40"
+                style={{ top: `${panelTop}px` }}
+                onClick={close}
+                aria-hidden="true"
+              />
+              <div
+                role="dialog"
+                aria-label="Recherche produits"
+                className="fixed inset-x-0 z-[200] border-b border-hairline bg-elevated shadow-lg"
+                style={{ top: `${panelTop}px` }}
               >
-                {/* A real ArrowLeft. This was `ArrowRight` + `rotate-180` — same pixels, but the
-                    transform is dead weight and the JSX lied about what it drew. */}
-                <ArrowLeft className="h-5 w-5" aria-hidden />
-              </button>
+                <form onSubmit={handleSubmit} role="search" className="px-3 py-2.5">
+                  <div className="relative flex items-center">
+                    <Search className="pointer-events-none absolute left-3.5 h-[18px] w-[18px] text-ink-3" aria-hidden />
+                    <input
+                      ref={inputRef}
+                      type="text" /* not `search`: kills the browser-native X across every OS */
+                      inputMode="search"
+                      placeholder="Rechercher un produit..."
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      autoComplete="off"
+                      aria-label="Rechercher un produit"
+                      /* 16px EXACTLY — see the note above. Below it, iOS zooms on focus. */
+                      className="h-12 w-full rounded-xl border border-hairline bg-sunken pl-11 pr-11 text-[16px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:bg-elevated focus:outline-none focus:ring-2 focus:ring-focus/20"
+                    />
+                    {query ? (
+                      <button
+                        type="button"
+                        onClick={handleClear}
+                        aria-label="Effacer la recherche"
+                        className="absolute right-2 flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-elevated hover:text-brand"
+                      >
+                        <X className="h-4 w-4" aria-hidden />
+                      </button>
+                    ) : (
+                      <button
+                        type="submit"
+                        aria-label="Rechercher"
+                        className="absolute right-2 flex h-9 w-9 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-elevated hover:text-brand"
+                      >
+                        <ArrowRight className="h-4 w-4" aria-hidden />
+                      </button>
+                    )}
+                  </div>
+                </form>
 
-              <form onSubmit={handleSubmit} role="search" className="min-w-0 flex-1">
-                <div className="relative flex items-center">
-                  <Search className="pointer-events-none absolute left-3 h-4 w-4 text-ink-3" aria-hidden />
-                  {/* A raw <input>, not the shadcn <Input>. That primitive's base classes are
-                      `border-input bg-background … focus-visible:ring-offset-2`, and the first two
-                      are silent no-ops (DESIGN_SYSTEM §11) while the offset ring fought the focus
-                      ring below. Identical markup to the drawer's field. */}
-                  <input
-                    ref={inputRef}
-                    type="text" // not `search`: kills the browser-native X across every OS
-                    inputMode="search" // still asks mobile keyboards for the search layout
-                    placeholder="Que recherchez-vous ?"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    autoComplete="off"
-                    autoFocus
-                    aria-label="Rechercher un produit"
-                    /* pl-10, not the drawer's pl-9: this field is ~90px wider, and at that width
-                       the caret rendered flush against the magnifier. */
-                    className="w-full min-h-[44px] rounded-xl border border-hairline bg-sunken pl-10 pr-11 text-[14px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-focus/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
-                  />
-                  {query ? (
-                    <button
-                      type="button"
-                      onClick={handleClear}
-                      aria-label="Effacer la recherche"
-                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
-                    >
-                      <X className="h-4 w-4" aria-hidden />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      aria-label="Rechercher"
-                      className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
-                    >
-                      <Search className="h-4 w-4" aria-hidden />
-                    </button>
-                  )}
-                </div>
-              </form>
-            </div>
+                {query.trim() ? (
+                  <>
+                    {/* 55vh, and the scroll is INSIDE this box. A results list that grows the panel
+                        past the fold would put the page's scroll and the list's scroll in the same
+                        gesture, which is the one thing a dropdown must never do. */}
+                    <div className="max-h-[55vh] overflow-y-auto overscroll-contain border-t border-hairline px-3 py-2">
+                      <SearchResults
+                        query={query}
+                        debouncedQuery={debouncedQuery}
+                        products={products}
+                        isLoading={isLoading}
+                        onProductClick={handleProductClick}
+                        showAllScrollable
+                      />
+                    </div>
+                    <div className="border-t border-hairline px-3 py-2.5">
+                      <Button
+                        onClick={handleViewAll}
+                        className="h-11 w-full rounded-xl bg-brand text-[14px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
+                      >
+                        Voir tous les résultats
+                        <ChevronRight className="ml-1 h-4 w-4" aria-hidden />
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  /* ── POPULAR SEARCHES, ON ONE LINE ────────────────────────────────────────
+                     Owner: *"find an innovative way to show popular searches without fully filling
+                     the page and looking miserable"*.
 
-            {/* BODY — the single scroll container. min-h-0 so it shrinks when the keyboard opens
-                and the results stay reachable above it. */}
-            <div
-              className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain bg-white px-4 py-3 dark:bg-gray-950"
-              style={{ WebkitOverflowScrolling: 'touch' } as React.CSSProperties}
-            >
-              {query.trim() ? (
-                <SearchResults
-                  query={query}
-                  debouncedQuery={debouncedQuery}
-                  products={products}
-                  isLoading={isLoading}
-                  onProductClick={handleProductClick}
-                  showAllScrollable
-                />
-              ) : (
-                /* RESTING STATE. The screen used to be one line of grey text under an empty field —
-                   a dead end that asked the shopper to already know what they wanted. These chips
-                   make it a starting point, and each one is a real query typed into the same
-                   field, so there is no second code path to keep in sync. */
-                <div className="pt-2">
-                  <h3 className="px-1 text-[12px] font-semibold uppercase tracking-wide text-brand">
-                    Recherches populaires
-                  </h3>
-                  <ul className="mt-3 flex flex-wrap gap-2">
+                     They were a wrapped grid of six 44px chips under a heading and above a
+                     paragraph — ~180px of a screen whose job is to accept a keystroke. Here they
+                     are ONE horizontally-scrollable row, 36px tall, with the label inline at the
+                     start of it: the whole resting state is 56px, the panel stays close to the
+                     header, and the page behind it is still visible. Scrolling sideways for more
+                     is a gesture a phone user already has; scrolling a full page of chips is not
+                     one they should need.
+
+                     `-mx-3 px-3` lets the row bleed to both edges so the last chip is visibly cut
+                     rather than ending in a suspiciously neat gap — the affordance that says
+                     "there is more this way". */
+                  <div className="flex items-center gap-2 overflow-x-auto border-t border-hairline px-3 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <span className="flex shrink-0 items-center gap-1 pr-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
+                      <TrendingUp className="h-3.5 w-3.5" aria-hidden />
+                      Populaire
+                    </span>
                     {POPULAR_SEARCHES.map((term) => (
-                      <li key={term}>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setQuery(term);
-                            inputRef.current?.focus();
-                          }}
-                          className="flex min-h-11 items-center gap-1.5 rounded-xl border border-hairline bg-sunken px-3.5 text-[13px] font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:hover:border-brand"
-                        >
-                          <TrendingUp className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
-                          {term}
-                        </button>
-                      </li>
+                      <button
+                        key={term}
+                        type="button"
+                        onClick={() => {
+                          setQuery(term);
+                          inputRef.current?.focus();
+                        }}
+                        className="flex h-9 shrink-0 items-center rounded-full border border-hairline bg-sunken px-3.5 text-[13px] font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                      >
+                        {term}
+                      </button>
                     ))}
-                  </ul>
-                  <p className="mt-6 px-1 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
-                    Cherchez un produit, une marque ou un objectif — protéines, gainers, compléments.
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {/* FOOTER CTA — only once there is something to see all of. pb composes the safe-area
-                inset into the padding; the old `safe-area-pb` class is not defined anywhere in the
-                codebase, so on a notched phone this button sat under the home indicator. */}
-            {query.trim() && (
-              <div className="shrink-0 border-t border-hairline bg-white px-4 pt-3 pb-[calc(0.75rem+env(safe-area-inset-bottom))] dark:border-gray-800 dark:bg-gray-950">
-                <Button
-                  onClick={handleSubmit}
-                  className="h-12 w-full rounded-xl bg-brand text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
-                >
-                  <Search className="mr-2 h-5 w-5" aria-hidden />
-                  Voir tous les résultats
-                </Button>
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-        </SheetContent>
-      </Sheet>
+            </>,
+            document.body
+          )}
+      </>
     );
   }
 

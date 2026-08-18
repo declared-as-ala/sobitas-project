@@ -185,8 +185,20 @@ export function HeroSliderControls({
    * No `backdrop-blur` (DESIGN_SYSTEM §9): each instance forces its own compositing layer, and
    * these sit directly over the LCP image on every page load.
    */
+  /*
+    ── SMALLER ON A PHONE (owner, 18/08/2026) ──────────────────────────────────────────────
+    *"for the slider on the mobile make the buttons and the indicators smaller"*.
+
+    They were one size at every width: 44px arrows and a 44px dot rail, sized for a 1536px stage
+    and then dropped onto a 390px one where the same controls cover a much larger share of the
+    artwork — and the artwork is, in the owner's words, the slider's entire job.
+
+    36px on a phone, back to 44 from `sm`. 36 is still well clear of WCAG 2.5.8's 24px floor;
+    what it is not is the 44px iOS guideline, and that is the deliberate trade — these are
+    SECONDARY controls on a surface whose primary interaction is the swipe.
+  */
   const arrow =
-    'pt-scrim pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 ' +
+    'pt-scrim pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full border border-hairline text-ink-1 sm:h-11 sm:w-11 ' +
     'transition-colors duration-200 hover:border-brand focus-visible:outline-none focus-visible:ring-2 ' +
     'focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-transparent motion-reduce:transition-none';
 
@@ -211,7 +223,7 @@ export function HeroSliderControls({
         aria-label="Diapositive précédente"
         className={cn(arrow, 'absolute left-2 top-1/2 -translate-y-1/2 sm:left-4')}
       >
-        <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+        <ChevronLeft className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
       </button>
       <button
         type="button"
@@ -219,7 +231,7 @@ export function HeroSliderControls({
         aria-label="Diapositive suivante"
         className={cn(arrow, 'absolute right-2 top-1/2 -translate-y-1/2 sm:right-4')}
       >
-        <ChevronRight className="h-5 w-5" aria-hidden="true" />
+        <ChevronRight className="h-4 w-4 sm:h-5 sm:w-5" aria-hidden="true" />
       </button>
 
       {/* Bottom rail: counter + progress on the left, dots on the right.
@@ -229,14 +241,14 @@ export function HeroSliderControls({
           the kind of "looks fine on the banner I tested" fix that fails silently on the next
           upload. On a white banner the counter measured 1.08:1 and the inactive dots were
           invisible. A pill is 8px of extra chrome and makes both provable. */}
-      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-4 px-5 pb-5 sm:px-8 sm:pb-6 lg:px-12 xl:px-14">
-        <div className="pt-scrim pointer-events-none flex items-center gap-3 rounded-full px-4 py-2">
-          <span className="font-display text-sm font-bold tabular-nums text-ink-1 sm:text-base">
+      <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-3 pb-3 sm:gap-4 sm:px-8 sm:pb-6 lg:px-12 xl:px-14">
+        <div className="pt-scrim pointer-events-none flex items-center gap-2 rounded-full px-2.5 py-1 sm:gap-3 sm:px-4 sm:py-2">
+          <span className="font-display text-xs font-bold tabular-nums text-ink-1 sm:text-base">
             {pad(active + 1)}
           </span>
           {/* The rule doubles as the autoplay progress bar, so the dwell is visible rather than a
               surprise. Fixed width keeps the counter from shifting as the index changes. */}
-          <span className="relative block h-[2px] w-12 overflow-hidden rounded-full bg-rule sm:w-16">
+          <span className="relative block h-[2px] w-8 overflow-hidden rounded-full bg-rule sm:w-16">
             <span
               ref={progressRef}
               data-motion
@@ -244,12 +256,12 @@ export function HeroSliderControls({
               style={{ width: '0%' }}
             />
           </span>
-          <span className="font-display text-sm font-bold tabular-nums text-ink-3 sm:text-base">
+          <span className="font-display text-xs font-bold tabular-nums text-ink-3 sm:text-base">
             {pad(count)}
           </span>
         </div>
 
-        <div className="pt-scrim flex items-center gap-1 rounded-full px-2">
+        <div className="pt-scrim flex items-center gap-1 rounded-full px-1.5 sm:px-2">
           {Array.from({ length: count }).map((_, i) => {
             const isActive = i === active;
             return (
@@ -266,14 +278,19 @@ export function HeroSliderControls({
                    and with `gap-1` between dots the 20px box came to exactly 24 — passing on the
                    boundary, on a control at the top of every page. 24 + 4 clears it. The dot
                    itself is unchanged; only its hit box grew. */
-                className="pointer-events-auto group flex h-11 w-6 items-center justify-center outline-none"
+                /* The HEIGHT comes down with everything else (44 -> 36) but the WIDTH does not:
+                   `w-6` plus `gap-1` is what puts this control at 28px horizontally, and SC 2.5.8
+                   measures the target INCLUDING its spacing. At `w-5` it would be exactly 24 —
+                   passing on the boundary, on a control at the top of every page. The visible dot
+                   is what shrinks. */
+                className="pointer-events-auto group flex h-9 w-6 items-center justify-center outline-none sm:h-11"
               >
                 <span
                   data-motion
                   className={cn(
-                    'block h-[6px] rounded-full transition-[width,background-color] duration-300 ease-out',
+                    'block h-[5px] rounded-full transition-[width,background-color] duration-300 ease-out sm:h-[6px]',
                     'group-focus-visible:ring-2 group-focus-visible:ring-focus group-focus-visible:ring-offset-2 group-focus-visible:ring-offset-transparent',
-                    isActive ? 'w-5 bg-brand' : 'w-[6px] bg-ink-3 group-hover:bg-ink-1',
+                    isActive ? 'w-4 bg-brand sm:w-5' : 'w-[5px] bg-ink-3 group-hover:bg-ink-1 sm:w-[6px]',
                   )}
                 />
               </button>

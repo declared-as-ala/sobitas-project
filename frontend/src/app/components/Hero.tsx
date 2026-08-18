@@ -257,9 +257,12 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
          between the hero and the first row of cards, at every desktop width, and a value that
          steps at `lg` would make that gap step with it.
 
-         Mobile 0.3em is 4.8px and `pb-1` is 4. The 8px lattice this codebase keeps everywhere
-         else has no 5, and the difference is under a rounded pixel on a 2x screen. */
-      className="w-full bg-canvas pb-1 pt-0 sm:pb-6 sm:pt-4"
+         Mobile was 0.3em (4px) for one revision and is now 0.5em = `pb-2` = 8px, the owner
+         having seen 4px on a real phone: the category rail below has also given up its top
+         padding since, so this is the ONLY space between the slider and the first row of cards
+         and 4px read as a collision rather than as a join. 8px is also the mobile bottom every
+         other band on the page carries, so the boundary is now the site's normal one. */
+      className="w-full bg-canvas pb-2 pt-0 sm:pb-6 sm:pt-4"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,

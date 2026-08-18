@@ -259,14 +259,20 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
                  a seam. It is now white, seamless and 8px deep, so 16px on top of it read as a
                  hole rather than as a boundary. `pt-2` is the owner's 0.5em; `sm:py-6` in the
                  scale still wins from 640px up, so desktop is untouched. */
-              /* `border-t-0 pt-0` BELOW `sm` ONLY (owner, 18/08/2026, second pass). The rail
-                 above is now white, seamless and 8px deep, so on a phone this band's own seam was
-                 the only line on the screen and it was drawing a boundary between two things that
-                 are meant to read as one scroll. `sm:border-t` puts the rule back from 640px up,
-                 where the desktop layout still wants the two bands distinguished — the width is
-                 set by the utility and the colour still comes from the `[data-band]` rule in
-                 globals.css, so the seam stays theme-aware. */
-              className="border-t-0 pt-0 sm:border-t"
+              /* `border-t-0 pt-0` AT EVERY WIDTH (owner, 18/08/2026, third pass — first the
+                 phone, now "on the desktop for the section that holds les plus vente make the
+                 border top none and the padding top 0").
+
+                 The same argument as the rail above it, one band further down: the rail stopped
+                 presenting itself as a band, so the seam under it was drawing a boundary across
+                 a continuous white area, and this band's own top padding was measured against a
+                 sand section that no longer exists. The gap is the rail's bottom padding alone —
+                 24px at `lg`, 8 on a phone.
+
+                 `sm:pt-0 lg:pt-0` and not just `pt-0`: the scale sets `sm:py-6 lg:py-8`, and a
+                 breakpoint utility beats a base one regardless of authoring order. Every step the
+                 scale sets has to be answered. Measured, twice now. */
+              className="border-t-0 pt-0 sm:pt-0 lg:pt-0"
               defer
             />
           </div>

@@ -377,10 +377,10 @@
     "DS011": 2
   },
   "src/app/components/HeaderClient.tsx": {
-    "DS001": 35,
-    "DS002": 44,
-    "DS003": 39,
-    "DS004": 5,
+    "DS001": 23,
+    "DS002": 31,
+    "DS003": 28,
+    "DS004": 3,
     "DS005": 2,
     "DS006": 1,
     "DS011": 4
@@ -464,10 +464,10 @@
     "DS011": 2
   },
   "src/app/components/SearchBar.tsx": {
-    "DS001": 23,
-    "DS002": 23,
-    "DS003": 13,
-    "DS004": 5,
+    "DS001": 6,
+    "DS002": 9,
+    "DS003": 8,
+    "DS004": 1,
     "DS005": 1
   },
   "src/app/components/ShopBreadcrumbs.tsx": {

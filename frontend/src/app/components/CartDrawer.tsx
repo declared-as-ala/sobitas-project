@@ -12,11 +12,12 @@ import {
   DrawerTitle,
 } from '@/app/components/ui/drawer';
 import { Button } from '@/app/components/ui/button';
-import { Minus, Plus, Trash2, ShoppingBag, Truck, X, Tag } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, Truck, X, Tag, ArrowRight, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { getPriceDisplay } from '@/util/productPrice';
+import { useScrollLock } from '@/util/useScrollLock';
 import { toast } from 'sonner';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedName } from '@/i18n/content';
@@ -35,6 +36,11 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
     getTotalPrice,
     getEffectivePrice,
   } = useCart();
+
+  /* The page behind this panel must not move. Vaul locks `body`; this page's scroller is the
+     root element, so the lock had no effect on desktop — measured, 0 -> 580px with the cart open.
+     See useScrollLock. */
+  useScrollLock(open);
 
   const totalPrice = getTotalPrice();
 
@@ -88,9 +94,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         ("NITROTECH WHEY PROTEI…"). `!w-[min(28rem,…)]` is the same escape hatch the mobile menu
         Sheet already uses for the same reason, three files over.
 
-        `min(28rem, 100vw - 2.5rem)`: 350px on a 390px phone, which is +58px of name and keeps 40px
-        of backdrop so the drawer still reads as an overlay you can tap out of rather than a new
-        page.
+        ── AND ON A PHONE IT IS THE WHOLE SCREEN (owner, 18/08/2026) ─────────────────────────
+        *"on the mobile make it go full width"*.
+
+        It was `min(28rem, 100vw - 2.5rem)` = 350 of 390, keeping 40px of backdrop so the panel
+        read as an overlay you could tap out of. That reasoning was sound and the owner has
+        overruled it, correctly: the cart on a phone is not a peek at something behind it, it is
+        the checkout step, and 40px of dimmed homepage costs a tenth of the row width for a
+        dismissal gesture that the X in the header already provides — plus swipe-to-close, which
+        vaul gives this drawer for free.
+
+        `100vw` below `sm`, 28rem from there up.
 
         ── AND IT WAS STILL NEVER 448 ON A DESKTOP (measured, second pass) ───────────────────
         That `!w-` was written to make the panel 448px wide, and `measure-cart.mjs` says it rendered
@@ -106,7 +120,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         the one edge of this panel that touches the page. Two raw palette values where the token
         layer already has the answer, and the dark half was a guess.
       */}
-      <DrawerContent className="flex h-full !w-[min(28rem,calc(100vw-2.5rem))] !max-w-[28rem] flex-col !border-l-hairline bg-elevated">
+      <DrawerContent className="flex h-full !w-full !max-w-none flex-col !border-l-hairline bg-elevated sm:!w-[28rem] sm:!max-w-[28rem]">
         <DrawerHeader className="shrink-0 gap-0 border-b border-hairline bg-elevated px-5 pb-3 pt-4">
           {/*
             ── A COUNT, AND A WAY OUT ──────────────────────────────────────────────────────────
@@ -241,7 +255,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                   */
                   <div
                     key={item.product.id}
-                    className="flex items-center gap-2 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors hover:border-rule sm:gap-3"
+                    className="flex flex-wrap items-center gap-x-2 gap-y-2.5 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors hover:border-rule sm:flex-nowrap sm:gap-3"
                   >
                     {/* `bg-elevated` row on a `bg-elevated` panel, separated by its hairline —
                         and the THUMBNAIL is the well. It was the other way round: a `bg-sunken`
@@ -282,6 +296,22 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       )}
                     </div>
 
+                    {/*
+                      ── THE CONTROLS DROP TO THEIR OWN LINE ON A PHONE (owner, 18/08/2026) ────
+                      *"the cards of the products inside the panier should look more responsive —
+                      maybe put the counter adder under the card in a single row"*.
+
+                      Four columns in a 350px drawer was already the tight case (see the note in
+                      the git log for the previous pass); at full width it is 390 and the drawer's
+                      own padding takes it back to 370. Rather than keep shaving the packshot and
+                      the labels, the row WRAPS below `sm`: image + text on line one, and the
+                      stepper and the bin on line two, spread across the full width.
+
+                      `basis-full` on the control line is what forces the wrap — everything before
+                      it fits on one line, and a full-basis flex item cannot join them. From `sm`
+                      the row is `flex-nowrap` and the controls sit back on the right, exactly as
+                      the reference has them, because there the width is there to hold them.
+                    */}
                     <div className="min-w-0 flex-1">
                       {/* THE BRAND, which is how people actually name what they bought - "the Big
                           Ramy whey", not "BIG WHEY 2KG - BIG RAMY LABS". Printed only when the
@@ -349,16 +379,24 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     </div>
 
                     {/* The stepper is the WELL now that the row is a plate — a control that gets
-                        pressed reads as recessed. 30px buttons on a phone and 32 on a desktop:
-                        28px buttons on a phone, 32 on a desktop - smaller than the 36 they were,
-                        because they have moved into a column that must also hold the bin, and
-                        still over the 24px SC 2.5.8 floor for a control that is not the primary
-                        action on the screen. Their 36px HEIGHT is untouched, which is the axis a
-                        thumb actually misses on. */}
-                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-hairline bg-sunken">
+                        pressed reads as recessed.
+
+                        On a phone it is on its own line, so the buttons go back UP to 36px square
+                        (they had been squeezed to 28 to share a line with the bin) and the whole
+                        stepper is `flex-1` — a full-width quantity control is the easiest thing in
+                        this drawer to hit and the one most often used. From `sm` it shrinks back
+                        to its content and returns to the right-hand column. */}
+                    {/* ONE LINE-BOX, which `display: contents` dissolves at `sm`. The first cut
+                        put `basis-full` on the stepper alone, and the bin — the next flex item —
+                        wrapped again onto a THIRD line: measured rows went 123px -> 217. Wrapping
+                        the pair means the phone gets exactly two lines, and `sm:contents` makes
+                        the wrapper vanish from the box tree above 640px so the stepper and the bin
+                        are direct row items again, as the reference has them. */}
+                    <div className="flex w-full items-center gap-2 sm:contents">
+                    <div className="flex flex-1 items-center justify-between overflow-hidden rounded-lg border border-hairline bg-sunken sm:flex-none sm:justify-start">
                       <button
                         type="button"
-                        className="flex h-9 w-7 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
+                        className="flex h-9 w-11 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
                         onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
                         disabled={item.quantity <= 1}
                         aria-label="Diminuer la quantité"
@@ -366,14 +404,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         <Minus className="h-3.5 w-3.5" />
                       </button>
                       <span
-                        className="w-5 text-center text-[13px] font-semibold tabular-nums text-ink-1 sm:w-6"
+                        className="flex-1 text-center text-[13px] font-semibold tabular-nums text-ink-1 sm:w-6 sm:flex-none"
                         aria-live="polite"
                       >
                         {item.quantity}
                       </span>
                       <button
                         type="button"
-                        className="flex h-9 w-7 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
+                        className="flex h-9 w-11 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
                         onClick={handleIncrease}
                         disabled={item.quantity >= maxQty}
                         aria-label="Augmenter la quantité"
@@ -385,12 +423,13 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-9 w-7 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-destructive sm:w-8"
+                      className="h-9 w-9 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-destructive sm:w-8"
                       onClick={() => removeFromCart(item.product.id)}
                       aria-label="Retirer du panier"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
+                    </div>
                   </div>
                 );
               })}
@@ -476,21 +515,36 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
               </div>
             </div>
 
+            {/*
+              ── TWO BUTTONS, ONE HIERARCHY (owner, 18/08/2026) ──────────────────────────────
+              *"add an icon for the passer commande and make the button voir panier look better,
+              like a real button"*.
+
+              It was a filled bar and, under it, a bare centred text link — which reads as a
+              footnote rather than as the other thing you can do here, and gave the panel a
+              trailing-off bottom edge. Now they are the same shape and the same height, and the
+              HIERARCHY is carried by fill versus outline, which is the pair this design system
+              already uses everywhere else for primary/secondary.
+
+              The primary keeps its icon on the RIGHT: it moves you forward, and an arrow that
+              points the way you are going is the one piece of decoration on this panel that says
+              something. The secondary's icon is on the left, where an identifying icon belongs.
+            */}
             <DrawerClose asChild>
-              <Link href="/checkout" className="mt-3 block">
-                <Button className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover">
-                  Passer commande
-                </Button>
+              <Link
+                href="/checkout"
+                className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
+              >
+                Passer commande
+                <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
               </Link>
             </DrawerClose>
             <DrawerClose asChild>
-              {/* 34px tall, down from 40. Still well clear of the 24px minimum SC 2.5.8 asks of a
-                  target that is not the primary action, and it is directly under a 48px button
-                  that does the same job better - this link is the escape hatch, not the path. */}
               <Link
                 href="/cart"
-                className="mt-1 block rounded-lg py-2 text-center text-[13px] font-medium text-ink-2 transition-colors hover:text-brand"
+                className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-rule bg-elevated text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
               >
+                <ShoppingCart className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Voir le panier
               </Link>
             </DrawerClose>
