@@ -328,49 +328,48 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-ink-1">
                         {productName}
                       </h3>
-                      {/* ORIGINAL then CURRENT, in that order — the reference's order and the one
-                          the eye reads as a fall. Ours had it reversed. */}
-                      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                      {/*
+                        ── THREE LINES BECOME ONE (owner, 18/08/2026) ────────────────────────
+                        *"the cards inside the panier — make them more responsive and polished"*.
+
+                        Price, struck original, discount chip and line total were four facts on
+                        three separate lines, and that stacking was written when the stepper still
+                        shared the row and left the text column ~150px wide. It does not any more:
+                        the stepper dropped to its own line in the previous pass, so this column is
+                        the full width of the card — 310px on a 390px phone. Four short facts on
+                        one baseline fit there with room, and the row comes down 171 -> ~135px.
+
+                        ORIGINAL then CURRENT, which is the order the eye reads as a fall. The
+                        line total sits right-aligned at the end, where a total belongs, and only
+                        when quantity > 1 — at 1 it is the same number twice on one small card.
+
+                        `text-ok` rather than a raw green: the token is 5.02:1 on canvas in light
+                        and 8.45:1 on the slab in dark, measured.
+                      */}
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                         {struck != null && (
-                          <span className="text-xs tabular-nums text-ink-3 line-through">
+                          <span className="text-[11.5px] tabular-nums text-ink-3 line-through">
                             {formatCurrency(struck)}
                           </span>
                         )}
                         <span className="font-display text-sm font-bold tabular-nums tracking-tight text-brand">
                           {formatCurrency(displayPrice)}
                         </span>
+                        {percent > 0 && (
+                          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold tabular-nums text-ok">
+                            <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
+                            −{percent}%
+                          </span>
+                        )}
+                        {item.quantity > 1 && (
+                          <span className="ms-auto text-[11.5px] tabular-nums text-ink-3">
+                            {item.quantity} ×{' '}
+                            <span className="font-semibold text-ink-1">
+                              {formatCurrency(displayPrice * item.quantity)}
+                            </span>
+                          </span>
+                        )}
                       </p>
-                      {/* "20% OFF applied" gets its own line in the reference, and that is the
-                          right call at this width: as a chip on the price line it wrapped on a
-                          350px phone. `text-ok` rather than the reference's raw green — the token
-                          is 5.02:1 on canvas in light and 8.45:1 on the slab in dark, measured. */}
-                      {percent > 0 && (
-                        <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold tabular-nums text-ok">
-                          <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
-                          −{percent}%
-                          {/* The word is what makes it a sentence rather than a chip, and it is
-                              also what wrapped it onto a second line at 350px. The number carries
-                              the meaning on its own. */}
-                          <span className="hidden sm:inline">appliqué</span>
-                        </p>
-                      )}
-                      {/* The LINE total, only when it DIFFERS from the unit price above it. At
-                          quantity 1 it was the same number twice on one small card: the reader
-                          checks whether the two disagree, finds they never do, and learns to skip
-                          both. Above 1 it is the number that matters, shown with the
-                          multiplication that produced it. */}
-                      {item.quantity > 1 && (
-                        <p className="mt-1 text-[11px] leading-tight tabular-nums text-ink-3">
-                          {/* The multiplication is the reassurance; the product is the fact. A
-                              phone gets the fact. */}
-                          <span className="hidden sm:inline">
-                            {item.quantity} × {formatCurrency(displayPrice)} ={' '}
-                          </span>
-                          <span className="font-semibold text-ink-1">
-                            {formatCurrency(displayPrice * item.quantity)}
-                          </span>
-                        </p>
-                      )}
                       {lowStock && (
                         <p className="mt-1 text-[11px] font-medium leading-tight tabular-nums text-warn">
                           Plus que {stockDisponible} en stock
@@ -438,7 +437,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         </div>
 
         {items.length > 0 && (
-          <DrawerFooter className="shrink-0 gap-0 border-t border-hairline bg-elevated px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3.5">
+          <DrawerFooter className="shrink-0 gap-0 border-t border-hairline bg-elevated px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-2.5 sm:px-5">
             {/*
               -- WHY THE FOOTER WAS EATING A THIRD OF THE PANEL ---------------------------------
               Owner, 18/08/2026: *"the bottom of it - why eating all of that height!"*.
@@ -461,9 +460,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
               whole extra item visible without scrolling, on the panel where scrolling past your own
               items is how a basket gets abandoned.
             */}
+            {/* ── SMALLER AGAIN (owner, 18/08/2026, second pass) ─────────────────────────
+                *"make the footer of the panier smaller and polished and clean"*. It was 239px of
+                an 844px phone — 28% of the panel for four facts and two buttons.
+
+                Every seam in here loses a step (12 -> 8, 12 -> 10), the delivery line goes 13 ->
+                12px, the savings merges INTO the total row as a chip beside the label rather than
+                a line of its own, and the secondary button comes down to 40px. ~239 -> ~190px,
+                and the rows above get all of it. */}
             {totalPrice < 300 ? (
-              <div className="mb-3">
-                <p className="mb-1.5 flex items-center gap-2 text-[13px] leading-tight text-ink-2">
+              <div className="mb-2">
+                <p className="mb-1.5 flex items-center gap-2 text-[12px] leading-tight text-ink-2">
                   <Truck className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                   <span>
                     Plus que{' '}
@@ -483,8 +490,8 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             ) : (
               /* `text-ok`, not `green-700` with a hand-written `dark:` twin beside it. `--c-ok` is
                  5.02:1 on canvas in light and 8.45:1 on the slab in dark, measured, in one class. */
-              <p className="mb-3 flex items-center gap-2 text-[13px] font-medium leading-tight text-ok">
-                <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
+              <p className="mb-2 flex items-center gap-1.5 text-[12px] font-medium leading-tight text-ok">
+                <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
                 Livraison gratuite incluse
               </p>
             )}
@@ -492,24 +499,24 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             {/* One rule above the money, because the total is the only line in this panel that
                 summarises the ones above it. Without it the footer is three unrelated blocks of
                 the same weight and the eye has to hunt for the number it came for. */}
-            <div className="border-t border-hairline pt-3">
-              {savings > 0 && (
-                /* The reference cart totals its reward points here; this totals the thing this
-                   shop actually gives, which is the discount already inside the prices above. It
-                   renders only when there IS one - a permanent "vous economisez 0 DT" is noise. */
-                <div className="mb-1.5 flex items-center justify-between gap-3 text-[13px]">
-                  <span className="flex items-center gap-1.5 text-ink-2">
-                    <Tag className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden="true" />
-                    Vous économisez
-                  </span>
-                  <span className="font-semibold tabular-nums text-ok">{formatCurrency(savings)}</span>
-                </div>
-              )}
+            <div className="border-t border-hairline pt-2.5">
+              {/* THE SAVING RIDES WITH THE TOTAL, not on a line of its own. It is a qualifier on
+                  the number beside it — "this is the total, and it is N less than it would have
+                  been" — so a separate row was giving a footnote the same weight as the figure it
+                  annotates, and 24px of height for the privilege. */}
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display text-[15px] font-semibold uppercase tracking-wide text-ink-1">
-                  Total
+                <span className="flex items-baseline gap-2">
+                  <span className="font-display text-[15px] font-semibold uppercase tracking-wide text-ink-1">
+                    Total
+                  </span>
+                  {savings > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold tabular-nums text-ok">
+                      <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
+                      −{formatCurrency(savings)}
+                    </span>
+                  )}
                 </span>
-                <span className="font-display text-2xl font-extrabold leading-none tabular-nums tracking-tight text-brand">
+                <span className="font-display text-[22px] font-extrabold leading-none tabular-nums tracking-tight text-brand">
                   {formatCurrency(totalPrice)}
                 </span>
               </div>
@@ -533,7 +540,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             <DrawerClose asChild>
               <Link
                 href="/checkout"
-                className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
+                className="mt-2.5 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
               >
                 Passer commande
                 <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -542,7 +549,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
             <DrawerClose asChild>
               <Link
                 href="/cart"
-                className="mt-2 flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-rule bg-elevated text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
+                className="mt-1.5 flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-rule bg-elevated text-[13px] font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated"
               >
                 <ShoppingCart className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Voir le panier

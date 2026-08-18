@@ -851,13 +851,24 @@ export function HeaderClient() {
               conversion problem is registration, not sign-in. Signed in, the pair becomes the
               account link and a sign-out, so the row never disappears and never lies.
             */}
-            <div className="shrink-0 px-4 pt-4">
+            {/* THE SCROLLER — everything below the logo bar scrolls, including the account
+                buttons and the pack CTA. */}
+            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* NOT `shrink-0` any more, and no longer a sibling of the scroller — it is the
+                first thing INSIDE it (owner, 18/08/2026: *"the buttons at the top, don't make them
+                stick; make them relative — when I scroll they don't keep on the top"*).
+
+                Pinned, they held ~120px of a 660px drawer permanently, and on a phone in landscape
+                that was a third of it. They are the first thing you see when the drawer opens,
+                which is what matters; once you are eleven rows down the nav you are not looking
+                for a sign-in button. */}
+            <div className="px-4 pt-4">
               {isAuthenticated ? (
                 <div className="flex items-center gap-2">
                   <Link
                     href="/account"
                     onClick={closeMobileMenu}
-                    className="flex h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                    className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-ink-1 font-display text-[14px] font-bold uppercase tracking-[0.02em] text-ink-1 transition-colors hover:border-brand hover:text-brand"
                   >
                     <User className="h-4 w-4 shrink-0" aria-hidden />
                     Mon compte
@@ -865,24 +876,29 @@ export function HeaderClient() {
                   <button
                     type="button"
                     onClick={() => { logout(); closeMobileMenu(); }}
-                    className="flex h-11 shrink-0 items-center justify-center rounded-xl px-4 text-[14px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
+                    className="flex h-12 shrink-0 items-center justify-center rounded-xl px-4 text-[13px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
                   >
                     Déconnexion
                   </button>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 gap-2">
+                /* The reference's pair, in this site's voice: 48px, the display face in caps,
+                   and the outline half drawn in `border-ink-1` rather than the hairline — at
+                   `border-rule` on white the button read as a disabled field rather than as the
+                   equal-weight alternative it is. The two now carry the same visual weight and
+                   differ only in fill, which is the whole point of an outline/filled pair. */
+                <div className="grid grid-cols-2 gap-2.5">
                   <Link
                     href="/login"
                     onClick={closeMobileMenu}
-                    className="flex h-11 items-center justify-center rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                    className="flex h-12 items-center justify-center rounded-xl border-2 border-ink-1 font-display text-[14px] font-bold uppercase tracking-[0.02em] text-ink-1 transition-colors hover:border-brand hover:text-brand"
                   >
                     Connexion
                   </Link>
                   <Link
                     href="/register"
                     onClick={closeMobileMenu}
-                    className="flex h-11 items-center justify-center rounded-xl bg-brand text-[14px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
+                    className="flex h-12 items-center justify-center rounded-xl bg-brand font-display text-[14px] font-bold uppercase tracking-[0.02em] text-on-brand transition-colors hover:bg-brand-hover"
                   >
                     S&apos;inscrire
                   </Link>
@@ -907,8 +923,6 @@ export function HeaderClient() {
               )}
             </div>
 
-            {/* SCROLLABLE MIDDLE — the nav list, above the pinned trust chips. */}
-            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {/* 3 + 4 — NAVIGATION */}
               {/* No "NAVIGATION" kicker. It labelled the only list on the screen, in the one
                   colour this drawer should spend on its CTA — the reference has no such label and
@@ -1208,33 +1222,37 @@ export function HeaderClient() {
               </div>
             </div>
 
-            {/* 9 — TRUST CHIPS (pinned to bottom, always visible) */}
-            <div className="mt-auto shrink-0 border-t border-hairline dark:border-gray-800 px-4 pt-3 pb-4">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Truck className="h-4 w-4 shrink-0 text-ok" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Livraison rapide
-                    <br />
-                    24–48h
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Shield className="h-4 w-4 shrink-0 text-ink-1 dark:text-gray-200" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Paiement à
-                    <br />
-                    la livraison
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Lock className="h-4 w-4 shrink-0 text-ink-1 dark:text-gray-200" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Paiement
-                    <br />
-                    100% sécurisé
-                  </span>
-                </div>
+            {/*
+              ── 9 — THE TRUST STRIP, AT A THIRD OF THE HEIGHT (owner, 18/08/2026) ───────────
+              *"the footer tags of the livraison etc are taking a lot of height, while that's our
+              power on mobile — polish it"*.
+
+              Both halves of that are right, which is why this shrinks rather than disappears. For
+              a Tunisian cash-on-delivery shopper, "paiement à la livraison" IS the objection
+              handler — it belongs in the drawer. But it was three filled cards, each with a 16px
+              icon above two wrapped lines of 11px text, pinned to the bottom: ~92px of a 660px
+              panel, permanently, to say three things nobody needs to read twice.
+
+              One row, one line each, icon beside text instead of above it, no fills and no card
+              radii — the three facts read as a footnote, which is what they are once the shopper
+              is inside the menu. 92 -> ~34px, and the nav above it gets those 58px back.
+
+              `<br>` gone too: the text wrapped by hand at a width that no longer exists.
+            */}
+            <div className="mt-auto shrink-0 border-t border-hairline px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2 text-[11px] leading-none text-ink-2">
+                <span className="flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden />
+                  Livraison 24–48h
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
+                  Paiement livraison
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
+                  100% sécurisé
+                </span>
               </div>
             </div>
           </div>

@@ -775,30 +775,26 @@ body[data-page='product'] header.pt-site-header {
    intended" — invisible to a user, and impossible to mistake for a broken page.
    ========================================================================== */
 
-@keyframes pt-rise {
-  from {
-    transform: translate3d(0, 28px, 0);
-  }
-  to {
-    transform: translate3d(0, 0, 0);
-  }
-}
+/* ── THE SECTION REVEAL IS GONE (owner, 18/08/2026) ─────────────────────────────────────────
+   *"I noticed when I scroll, the sections get close to each other — I think there's an animation
+   on scroll, take it off"*.
 
-/* The hero scroll "takeover" (a pinned frame that grew from a contained card to full-bleed) was
-   removed when the hero became full-bleed + full-height from the start — there is nothing left to
-   grow into, and the pin/track machinery was the source of the earlier scroll lag. Only the
-   section-reveal below survives on the scroll-driven layer. */
-@supports (animation-timeline: view()) {
-  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-    /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
-       page never feels like it is waiting for content to catch up with the scroll. */
-    .pt-reveal[data-motion] {
-      animation: pt-rise linear both;
-      animation-timeline: view();
-      animation-range: entry 8% cover 32%;
-    }
-  }
-}
+   That is an exact description of what it did. `pt-rise` translated each band up 28px across
+   `entry 8% → cover 32%`, so while you scrolled, the band below was still rising into place: the
+   gap between two bands was visibly SMALLER than its measured value and closed as you moved. Every
+   spacing decision on this page was made against `measure-bands.mjs` numbers that the animation
+   then contradicted for the duration of the scroll — which is the worst kind of motion, the kind
+   that makes a correct layout look wrong.
+
+   The whole scroll-driven layer goes with it: `@keyframes pt-rise`, the `@supports` gate and the
+   `.pt-reveal[data-motion]` rule. The `.pt-reveal` wrappers are removed from HomePageClient in the
+   same commit; the class keeps its `animation-timeline: none !important` reset in the mobile block
+   above, which is now simply a no-op for anything that still carries it.
+
+   Note for whoever adds motion here next: the hero "takeover" was removed earlier for causing
+   scroll lag, and this was the last survivor of that layer. Scroll-driven animation on BANDS is
+   what keeps being wrong on this page — the bands are the layout, and animating the layout while
+   the user is reading it is the problem, not the implementation. */
 
 /* Toast: top-center so it doesn't cover cart; compact on mobile */
 .sonner-toaster {

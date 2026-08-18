@@ -56,14 +56,14 @@ function SearchResults({
 
   if (isLoading || isPending) {
     return (
-      <div className="space-y-1" role="status" aria-label="Recherche en cours">
+      /* The skeleton has to be the same height as the row it stands in for, or the panel jumps
+         when results land — the one thing a skeleton exists to prevent. 40px thumb, one line. */
+      <div role="status" aria-label="Recherche en cours">
         {Array.from({ length: showAllScrollable ? 5 : 4 }).map((_, i) => (
-          <div key={i} className="flex items-center gap-3 rounded-xl p-2">
-            <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
-            <div className="min-w-0 flex-1 space-y-2">
-              <Skeleton className="h-3.5 w-2/3" />
-              <Skeleton className="h-3 w-1/3" />
-            </div>
+          <div key={i} className="flex items-center gap-2.5 px-2 py-1.5">
+            <Skeleton className="h-10 w-10 shrink-0 rounded-md" />
+            <Skeleton className="h-3.5 flex-1" />
+            <Skeleton className="h-3.5 w-12 shrink-0" />
           </div>
         ))}
         <span className="sr-only">Recherche en cours…</span>
@@ -73,7 +73,7 @@ function SearchResults({
 
   if (!query.trim()) {
     return (
-      <p className="px-1 py-6 text-center text-[13px] leading-snug text-ink-3 dark:text-gray-400">
+      <p className="px-1 py-4 text-center text-[13px] leading-snug text-ink-3">
         Tapez pour rechercher des protéines, gainers, compléments…
       </p>
     );
@@ -81,12 +81,10 @@ function SearchResults({
 
   if (products.length === 0) {
     return (
-      <div className="py-10 text-center">
-        <Search className="mx-auto h-8 w-8 text-ink-3 dark:text-gray-600" aria-hidden />
-        <p className="mt-3 text-[14px] font-semibold text-ink-1 dark:text-gray-100">
-          Aucun produit trouvé
-        </p>
-        <p className="mt-1 px-6 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
+      <div className="py-6 text-center">
+        <Search className="mx-auto h-6 w-6 text-ink-3" aria-hidden />
+        <p className="mt-2 text-[14px] font-semibold text-ink-1">Aucun produit trouvé</p>
+        <p className="mt-1 px-6 text-[13px] leading-snug text-ink-3">
           Rien ne correspond à «&nbsp;{query.trim()}&nbsp;». Essayez d&apos;autres termes.
         </p>
       </div>
@@ -95,60 +93,64 @@ function SearchResults({
 
   const listProducts = showAllScrollable ? products : products.slice(0, MAX_SUGGESTIONS);
 
+  /*
+    ── THE ROW IS 56px, NOT 76 (owner, 18/08/2026) ──────────────────────────────────────────
+    *"on mobile the search result is so high and big, make it smaller like Impact made"*, and for
+    the desktop dropdown *"redesign and polish the results shower of the search bar"*. One row
+    serves both surfaces, so it is one change.
+
+    What made it tall: a 48px thumbnail, `p-2` around it, and the PRICE ON ITS OWN LINE under the
+    name. Six of those is 456px of dropdown for six product names — the reference fits eight in the
+    same space by putting the name and the price on ONE line, which they can be, because a price is
+    four characters and a name truncates anyway.
+
+    40px thumbnail, `py-1.5`, name and price on one baseline with the price hugging the right edge
+    where the eye already goes for it. 76 -> 56px a row: the same six results now cost 336px, and
+    the whole panel fits above the fold on a 390px phone.
+
+    The chevron goes. It pointed right on a row that is entirely a link, and at 16px it was the
+    third thing competing for the row's right edge with the price.
+  */
   const resultList = (
-    <div className="space-y-0.5">
-      {listProducts.map((product) => (
-        <LinkWithLoading
-          key={product.id}
-          href={buildProductUrlPath(product)}
-          onClick={onProductClick}
-          className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sunken focus:bg-sunken focus:outline-none dark:hover:bg-gray-800 dark:focus:bg-gray-800"
-          loadingMessage="Chargement"
-        >
-          {/* object-CONTAIN, not cover. Supplement covers are studio shots of a tub on white with
-              its own margin; cover crops the lid and the label off a 48px square. */}
-          <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sunken dark:bg-gray-800">
-            {product.cover ? (
-              <Image
-                src={getStorageUrl(product.cover)}
-                alt=""
-                fill
-                className="object-contain"
-                sizes="48px"
-                unoptimized
-              />
-            ) : null}
-          </span>
-          <span className="min-w-0 flex-1">
-            <span className="block truncate text-[14px] font-medium text-ink-1 dark:text-gray-100">
+    <div>
+      {listProducts.map((product) => {
+        const pd = getPriceDisplay(product);
+        return (
+          <LinkWithLoading
+            key={product.id}
+            href={buildProductUrlPath(product)}
+            onClick={onProductClick}
+            className="flex items-center gap-2.5 rounded-lg px-2 py-1.5 transition-colors hover:bg-sunken focus:bg-sunken focus:outline-none"
+            loadingMessage="Chargement"
+          >
+            {/* object-CONTAIN, not cover. Supplement covers are studio shots of a tub on white with
+                its own margin; cover crops the lid and the label off a small square. */}
+            <span className="relative block h-10 w-10 shrink-0 overflow-hidden rounded-md bg-sunken">
+              {product.cover ? (
+                <Image
+                  src={getStorageUrl(product.cover)}
+                  alt=""
+                  fill
+                  className="object-contain p-0.5"
+                  sizes="40px"
+                  unoptimized
+                />
+              ) : null}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-[13.5px] font-medium leading-snug text-ink-1">
               {product.designation_fr}
             </span>
-            <span className="mt-0.5 block text-[13px]">
-              {(() => {
-                const pd = getPriceDisplay(product);
-                if (pd.hasPromo && pd.oldPrice != null) {
-                  return (
-                    <>
-                      <span className="text-ink-3 line-through dark:text-gray-500">
-                        {pd.oldPrice.toFixed(2)} DT
-                      </span>
-                      <span className="ml-1.5 font-semibold text-brand">
-                        {pd.finalPrice.toFixed(2)} DT
-                      </span>
-                    </>
-                  );
-                }
-                return (
-                  <span className="font-semibold text-ink-1 dark:text-gray-200">
-                    {pd.finalPrice.toFixed(2)} DT
-                  </span>
-                );
-              })()}
+            <span className="flex shrink-0 items-baseline gap-1.5 text-[13px] tabular-nums">
+              {pd.hasPromo && pd.oldPrice != null && (
+                <span className="text-[11.5px] text-ink-3 line-through">{Math.round(pd.oldPrice)} DT</span>
+              )}
+              <span className={pd.hasPromo ? 'font-semibold text-brand' : 'font-semibold text-ink-1'}>
+                {Math.round(pd.finalPrice)} DT
+              </span>
             </span>
-          </span>
-          <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-        </LinkWithLoading>
-      ))}
+          </LinkWithLoading>
+        );
+      })}
     </div>
   );
 
@@ -158,7 +160,7 @@ function SearchResults({
   if (showAllScrollable) {
     return (
       <>
-        <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
+        <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
           {products.length} résultat{products.length !== 1 ? 's' : ''}
         </p>
         {resultList}
@@ -171,7 +173,7 @@ function SearchResults({
       {resultList}
       <Button
         variant="ghost"
-        className="mt-2 w-full justify-center gap-2 border-t border-hairline pt-3 text-[13px] font-semibold text-brand hover:bg-sunken hover:text-brand-hover dark:border-gray-800 dark:hover:bg-gray-800"
+        className="mt-1.5 h-10 w-full justify-center gap-2 border-t border-hairline text-[13px] font-semibold text-brand hover:bg-sunken hover:text-brand-hover"
         onClick={onViewAll}
         asChild
       >
@@ -419,7 +421,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                     {/* 55vh, and the scroll is INSIDE this box. A results list that grows the panel
                         past the fold would put the page's scroll and the list's scroll in the same
                         gesture, which is the one thing a dropdown must never do. */}
-                    <div className="max-h-[55vh] overflow-y-auto overscroll-contain border-t border-hairline px-3 py-2">
+                    <div className="max-h-[45vh] overflow-y-auto overscroll-contain border-t border-hairline px-2 py-1.5">
                       <SearchResults
                         query={query}
                         debouncedQuery={debouncedQuery}
@@ -564,7 +566,18 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
 
       {isPopoverOpen && showResults && (
         <div
-          className="absolute left-0 right-0 top-full mt-2 z-50 rounded-xl border border-hairline bg-elevated shadow-lg p-3 max-h-[400px] overflow-y-auto"
+          /* ── THE DROPDOWN STOPS BEING AS WIDE AS THE FIELD ──────────────────────────────
+             The search field is ~1,130px on a 1536 screen because it fills the header bar, and
+             the dropdown inherited that width with `right-0`. A 1,130px row holding a 300px
+             product name and a 60px price put roughly 700px of nothing between the two things a
+             reader is comparing — the eye has to travel the width of the screen to pair a name
+             with its price.
+
+             `max-w-[42rem]` (672px) anchors it to the field's LEFT edge, which is where the caret
+             is and where every name starts. The rows are the same rows; they just stop being
+             stretched. `max-h` comes down with the row height: 400px held five of the old 76px
+             rows and holds seven of the new 52px ones. */
+          className="absolute left-0 top-full z-50 mt-2 max-h-[380px] w-full max-w-[42rem] overflow-y-auto overscroll-contain rounded-xl border border-hairline bg-elevated p-2 shadow-lg"
           onMouseDown={(e) => e.preventDefault()}
         >
           <SearchResults

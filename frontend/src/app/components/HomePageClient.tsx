@@ -229,8 +229,12 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           `pt-defer` is a PROP on the Section, never on a wrapper: `content-visibility: auto`
           skips a subtree's paint but NOT the element's own box decoration, so a surface class on
           a CHILD of a deferred wrapper renders as a bare rectangle until it scrolls in.
-          `pt-reveal` stays on the outer div because it drives a `view()` timeline that must not
-          sit inside a skipped subtree.
+
+          The `div.pt-reveal` wrappers that used to sit around four of these bands are GONE
+          (owner, 18/08/2026: the scroll reveal made the sections "get close to each other" as you
+          scrolled — see the note where the keyframes used to be in globals.css). They were doing
+          nothing except driving that animation, so they are fragments now: four fewer boxes in the
+          tree, and the Sections are direct children of the page again.
         */}
 
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
@@ -244,7 +248,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         {/* Les plus vendus — CANVAS. The highest-intent rail on the site, so it carries the
             page's largest heading (scale="1"). */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               id="products"
               kicker="Best-sellers"
@@ -275,19 +279,19 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               className="border-t-0 pt-0 sm:pt-0 lg:pt-0"
               defer
             />
-          </div>
+          </>
         )}
 
         {/* Ventes flash moved ABOVE Nouveaux produits: the discount moment should land before the
             newest, least-discounted rail. SLAB — white product plates punched out of black. */}
         {flashSales.length > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <VentesFlashSection products={flashSales as any} />
-          </div>
+          </>
         )}
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               kicker="Nouveautés"
               title="Nouveaux produits"
@@ -295,7 +299,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               showBadge={false}
               defer
             />
-          </div>
+          </>
         )}
 
         {/* CategoryGrid used to sit here. It is gone because CategoryRail above renders the SAME
@@ -315,7 +319,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             what actually marks it as an offer. `feature` is now reserved to Ventes flash alone —
             two dominant bands is zero dominant bands. */}
         {(safeAccueil.packs?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               id="packs"
               kicker="Économisez"
@@ -327,7 +331,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               surface="sunken"
               defer
             />
-          </div>
+          </>
         )}
 
         {/* Below the fold - idle-loaded client islands */}
