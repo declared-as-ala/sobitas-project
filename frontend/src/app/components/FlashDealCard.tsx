@@ -206,7 +206,15 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
       one radius, and the hover feedback is on the boundary the card already had. That is the whole
       change, and it is also two fewer composited layers on a band that lazy-loads four packshots.
     */
-    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-3 overflow-hidden rounded-xl border border-hairline p-3 font-poppins transition-colors duration-200 ease-out [@media(hover:hover)]:hover:border-rule">
+    /* ── TIGHTER, AND THE HOVER SAYS "FLASH" (owner, 18/08/2026) ─────────────────────────
+       `p-3 gap-3` around an 88px thumbnail made the card 119px tall at desktop for two lines of
+       text and a 44px button — the row card's content needs 96 of that and the rest was frame.
+       `p-2.5 gap-2.5` takes it to ~108 without touching a single type size.
+
+       The hover edge goes from `border-rule` (a neutral grey) to the brand at 40%: this band's
+       cards are the only ones on the page whose subject is a discount, and the one colour they
+       are allowed to react in is the one already printed on every badge inside them. */
+    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-2.5 overflow-hidden rounded-xl border border-hairline p-2.5 font-poppins transition-colors duration-200 ease-out [@media(hover:hover)]:hover:border-brand/40">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
@@ -226,7 +234,10 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
             is 177px wide at 430px or 363px wide at 1920. The `aspect-square w-full` version this
             replaces made every card as tall as it was wide, which is why the 390px phone band
             measured 1,227px. */}
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-sunken sm:h-[5.5rem] sm:w-[5.5rem]">
+        {/* 80px at every width, down from 88 at `sm`. The packshot is an identifier here, not
+            the sell — the price and the badge are — and a 4-across row card cannot afford 88px of
+            it plus a 44px control plus two lines of name inside 286px. */}
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-sunken">
           {image ? (
             <Image
               src={image}

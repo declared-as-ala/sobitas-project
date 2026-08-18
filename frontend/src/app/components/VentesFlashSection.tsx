@@ -203,9 +203,21 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
        Stacking the label onto its own line leaves the tiles 160px of a 248px box. Below `sm` the
        whole strip is centred, which matches the two-up rail above it; from `sm` it is one row on
        the same left rail as the heading. */
+    /* ── ONE ROW, AND ALIGNED WITH THE HEADING (owner, 18/08/2026: "redesign and polish the
+       ventes flash section") ─────────────────────────────────────────────────────────────────
+       Two changes here, both about where this strip SITS rather than what it says.
+
+       It is `items-start` below `sm`, not `items-center`. The strip now renders inside the
+       heading block (see the call site), directly under a left-aligned kicker and a left-aligned
+       H2; centring it there put three left edges and one centred object in a 40px stack.
+
+       And the label no longer needs its own line: at 11px "Se termine dans" is ~92px and four
+       36px tiles with their separators are ~168px, which is 260 of a 358px content box at 390.
+       `flex-wrap` keeps the 280px case honest — it wraps rather than overflowing, which is what
+       `measure-flash` asserts at that width. */
     <div
       ref={stripRef}
-      className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3"
+      className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:gap-x-3"
       aria-hidden="true"
     >
       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
@@ -243,8 +255,18 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
 
                 `min-w`, not `w`: the tile must not resize when 9 becomes 10, or the clock reflows
                 its own neighbours once a second. `tabular-nums` does the same job for the digits. */}
-            <div className="pt-slab flex min-w-[2.75rem] flex-col items-center rounded-lg px-1.5 py-1.5">
-              <span className="font-display text-base font-bold tabular-nums leading-none text-brand sm:text-lg">
+            {/* ── 36px, DOWN FROM 44 (owner, 18/08/2026) ──────────────────────────────
+                Four 44x48 black tiles are the heaviest object in a band that has been asked three
+                separate times to be quieter, and at the top of a section whose content is four
+                white cards on sand they read as the subject rather than as the qualifier. 36px
+                wide, 8px shorter, `rounded-md`, and the whole cluster now sits on the heading row
+                beside the title instead of on a row of its own — which is where the height comes
+                from: the header block goes 150px -> ~96px at `lg`.
+
+                Still `min-w`, not `w`: the tile must not resize when 9 becomes 10, or the clock
+                reflows its own neighbours once a second. */}
+            <div className="pt-slab flex min-w-[2.25rem] flex-col items-center rounded-md px-1 py-1">
+              <span className="font-display text-[15px] font-bold tabular-nums leading-none text-brand sm:text-base">
                 {countdown ? pad(seg.value) : '––'}
               </span>
               {/* 9px, and it is the ONE place on the site left under 11px after the 18/08 sweep.
@@ -445,6 +467,18 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
         icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
         title="Ventes flash"
+        /* ── THE CLOCK RETURNS TO THE HEADING ROW, WITHOUT THE BUG THAT MOVED IT OFF ──────
+           It was pulled out of `trailing` because that slot is `hidden … sm:flex`, so on a phone
+           — most of this site's traffic — the urgency device did not exist at all. It went to a
+           row of its own below the header, which fixed the visibility and cost ~54px of vertical
+           space at every width, on the band that has been asked repeatedly to read as a banner
+           rather than a section.
+
+           `trailingAllWidths` fixes the original bug at its source instead: ONE node, rendered
+           beside the title from `sm` and under it below that. Not two copies — this node owns an
+           IntersectionObserver and a 1s interval, and `display: none` stops neither. */
+        trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
+        trailingAllWidths
         /* `scale="2"` IS DELIBERATE AND HAD TO SURVIVE THIS PASS. SectionHeader reserves scale 1
            to the three rails that sell and names this band as the documented scale-2 case: it
            keeps its urgency from the brand edge and the live clock, not from type size. Uniform
@@ -463,27 +497,6 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
            — showing what is discounted right now. Three consecutive bands each carrying a
            "Tout voir" is what made the page read as a list of shops rather than one shop. */
       />
-
-      {/* ── THE CLOCK IS A ROW OF THE BAND NOW, NOT A SLOT IN THE HEADER ─────────────────────
-          It used to be passed as `trailing`, and `SectionHeader` renders that slot inside a
-          `hidden … sm:flex` group. `display: none` removes a subtree from the page AND from the
-          accessibility tree, so on every phone — the majority of this site's traffic — the urgency
-          device simply did not exist. The owner's screenshot of the mobile band shows a heading, a
-          kicker and four cards, and no clock anywhere.
-
-          Given its own row it is visible at every width and has room to be a real object rather
-          than a pill squeezed beside a "Tout voir" link. `justify-center` below `sm` matches the
-          centred composition the two-up rail above already uses; from `sm` it sits on the same
-          left rail as the heading.
-
-          `mt-4 sm:mt-5` and nothing more: the header already owns its own bottom margin, and the
-          grid below owns its top. Adding a third value here is how a band ends up with 60px of
-          dead space nobody chose. */}
-      {earliestExpiration && (
-        <div className="mt-4 flex justify-center sm:mt-5 sm:justify-start">
-          <CountdownDisplay expirationDate={earliestExpiration} />
-        </div>
-      )}
 
       {/* The spoken deadline, once, as an absolute date. Separate from the strip above because
           that strip is `aria-hidden` — live digits are either a screen-reader firehose (with
