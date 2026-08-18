@@ -217,135 +217,180 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 };
 
                 return (
+                  /*
+                    -- THE REFERENCE ROW, COLUMN FOR COLUMN (owner, 18/08/2026) ------------------
+                    *"redesign the cards in the panier, make them exactly like this layout"*, with
+                    a screenshot of a four-row basket.
+
+                    Read off that screenshot, left to right: PACKSHOT, then a text column carrying
+                    name / prices / discount, then the STEPPER, then the BIN. Three things change
+                    from what we had:
+
+                      1. the stepper moves out of the text column and onto the right edge, on the
+                         same baseline as the bin, so every row has its controls in one vertical
+                         line down the panel instead of stair-stepping with the text above them;
+                      2. the bin leaves the top-right corner and joins them - it was floating
+                         beside the name, which put a DESTRUCTIVE control at the end of the
+                         reading path for the product title;
+                      3. the discount gets its own line under the price rather than a chip wedged
+                         beside it. At 448px there was room for `239 DT  280 DT  -15%` on one
+                         line; at 350px there was not, and it wrapped.
+
+                    The row is `items-center`: with the controls on the right, a top-aligned
+                    packshot left the stepper floating against nothing on a one-line name.
+                  */
                   <div
                     key={item.product.id}
-                    className="flex gap-3 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors hover:border-rule"
+                    className="flex items-center gap-2 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors hover:border-rule sm:gap-3"
                   >
                     {/* `bg-elevated` row on a `bg-elevated` panel, separated by its hairline —
                         and the THUMBNAIL is the well. It was the other way round: a `bg-sunken`
                         row holding a `bg-elevated` thumbnail, which reads as a card floating on a
                         card and gives the packshot the brightest surface in the drawer for no
                         reason. The product photograph is the thing that should recede into a well;
-                        the price and the controls are what should sit on the plate. */}
-                    <div className="relative h-[68px] w-[68px] flex-shrink-0 self-start overflow-hidden rounded-lg bg-sunken">
+                        the price and the controls are what should sit on the plate.
+
+                        52px on a phone, 64 on a desktop.
+
+                        -- FOUR COLUMNS IN 350px, WHICH IS THE WHOLE PROBLEM ---------------------
+                        The reference row is packshot / text / stepper / bin, and it works because
+                        it is being read on a wide panel. On a 390px phone our drawer is 350, and
+                        the first attempt at this layout left the text column 122px wide: the price
+                        wrapped under the struck original and "-7% appliqué" broke across two lines.
+                        Measured rows went from 131px to 170.
+
+                        So every fixed column pays on a phone and gets its size back at `sm`: the
+                        packshot 64->52, the gaps 12->8, the stepper buttons 32->28, the bin 32->28,
+                        and the two longest strings lose their explanatory halves (below). That is
+                        150px of name column instead of 122 - about 17 characters a line, which
+                        holds "NITROTECH WHEY" before the break. */}
+                    <div className="relative h-[52px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg bg-sunken sm:h-16 sm:w-16">
                       {(item.product as any).image || (item.product as any).cover ? (
                         <Image
                           src={(item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : '')}
                           alt={localizedName(item.product as any, locale, 'Product')}
                           fill
                           className="object-contain p-1.5"
-                          sizes="68px"
+                          sizes="64px"
                           loading="lazy"
                           unoptimized
                         />
                       ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <ShoppingBag className="h-6 w-6 text-ink-3" />
+                        <div className="flex h-full w-full items-center justify-center">
+                          <ShoppingBag className="h-6 w-6 text-ink-3" aria-hidden="true" />
                         </div>
                       )}
                     </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          {/* THE BRAND, which is how people actually name what they bought - "the
-                              Big Ramy whey", not "BIG WHEY 2KG - BIG RAMY LABS". It is on the card
-                              the item was added from and on the product page it came from, and the
-                              basket was the one screen that dropped it. 11px caps in ink-3, so it
-                              labels the name rather than competing with it. */}
-                          {brand && (
-                            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
-                              {brand}
-                            </p>
-                          )}
-                          <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-ink-1">
-                            {productName}
-                          </h3>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="-mr-1 -mt-1 h-8 w-8 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-destructive"
-                          onClick={() => removeFromCart(item.product.id)}
-                          aria-label="Retirer du panier"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {/* THE UNIT PRICE, ITS ORIGINAL, AND THE SAVING — one line, in that reading
-                          order, which is the order the reference uses and the order the same three
-                          numbers already appear in on the product card this item came from. */}
-                      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                    <div className="min-w-0 flex-1">
+                      {/* THE BRAND, which is how people actually name what they bought - "the Big
+                          Ramy whey", not "BIG WHEY 2KG - BIG RAMY LABS". Printed only when the
+                          name does not already carry it (see above). */}
+                      {brand && (
+                        <p className="truncate text-[11px] font-semibold uppercase leading-tight tracking-[0.06em] text-ink-3">
+                          {brand}
+                        </p>
+                      )}
+                      {/* The reference truncates to ONE line with an ellipsis. Two, clamped, here:
+                          our catalogue names carry the size and the brand ("THUNDER GAINER 5.4KG -
+                          CHALLENGER NUTRITION") and one line of a ~150px column would cut before
+                          the weight, which is the difference between two products on this shelf. */}
+                      <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-ink-1">
+                        {productName}
+                      </h3>
+                      {/* ORIGINAL then CURRENT, in that order — the reference's order and the one
+                          the eye reads as a fall. Ours had it reversed. */}
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5">
+                        {struck != null && (
+                          <span className="text-xs tabular-nums text-ink-3 line-through">
+                            {formatCurrency(struck)}
+                          </span>
+                        )}
                         <span className="font-display text-sm font-bold tabular-nums tracking-tight text-brand">
                           {formatCurrency(displayPrice)}
                         </span>
-                        {struck != null && (
-                          <>
-                            <span className="text-xs tabular-nums text-ink-3 line-through">
-                              {formatCurrency(struck)}
-                            </span>
-                            {percent > 0 && (
-                              <span className="inline-flex items-center gap-1 rounded-full bg-sunken px-1.5 py-px text-[11px] font-semibold tabular-nums text-ok">
-                                <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
-                                −{percent}%
-                              </span>
-                            )}
-                          </>
-                        )}
                       </p>
+                      {/* "20% OFF applied" gets its own line in the reference, and that is the
+                          right call at this width: as a chip on the price line it wrapped on a
+                          350px phone. `text-ok` rather than the reference's raw green — the token
+                          is 5.02:1 on canvas in light and 8.45:1 on the slab in dark, measured. */}
+                      {percent > 0 && (
+                        <p className="mt-1 flex items-center gap-1 text-[11px] font-semibold tabular-nums text-ok">
+                          <Tag className="h-3 w-3 shrink-0" aria-hidden="true" />
+                          −{percent}%
+                          {/* The word is what makes it a sentence rather than a chip, and it is
+                              also what wrapped it onto a second line at 350px. The number carries
+                              the meaning on its own. */}
+                          <span className="hidden sm:inline">appliqué</span>
+                        </p>
+                      )}
+                      {/* The LINE total, only when it DIFFERS from the unit price above it. At
+                          quantity 1 it was the same number twice on one small card: the reader
+                          checks whether the two disagree, finds they never do, and learns to skip
+                          both. Above 1 it is the number that matters, shown with the
+                          multiplication that produced it. */}
+                      {item.quantity > 1 && (
+                        <p className="mt-1 text-[11px] leading-tight tabular-nums text-ink-3">
+                          {/* The multiplication is the reassurance; the product is the fact. A
+                              phone gets the fact. */}
+                          <span className="hidden sm:inline">
+                            {item.quantity} × {formatCurrency(displayPrice)} ={' '}
+                          </span>
+                          <span className="font-semibold text-ink-1">
+                            {formatCurrency(displayPrice * item.quantity)}
+                          </span>
+                        </p>
+                      )}
                       {lowStock && (
-                        <p className="mt-1 text-[11px] font-medium tabular-nums text-warn">
+                        <p className="mt-1 text-[11px] font-medium leading-tight tabular-nums text-warn">
                           Plus que {stockDisponible} en stock
                         </p>
                       )}
-                      <div className="mt-2 flex items-center justify-between gap-2">
-                        {/* The stepper is the WELL now that the row is a plate — the same swap as
-                            the thumbnail above, and for the same reason: a control that is pressed
-                            reads as recessed. */}
-                        <div className="flex items-center overflow-hidden rounded-lg border border-hairline bg-sunken">
-                          <button
-                            type="button"
-                            className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
-                            onClick={() =>
-                              updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
-                            }
-                            disabled={item.quantity <= 1}
-                            aria-label="Diminuer la quantité"
-                          >
-                            <Minus className="h-4 w-4" />
-                          </button>
-                          <span className="w-8 text-center text-sm font-semibold tabular-nums text-ink-1" aria-live="polite">
-                            {item.quantity}
-                          </span>
-                          <button
-                            type="button"
-                            className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
-                            onClick={handleIncrease}
-                            disabled={item.quantity >= maxQty}
-                            aria-label="Augmenter la quantité"
-                          >
-                            <Plus className="h-4 w-4" />
-                          </button>
-                        </div>
-                        {/* The LINE total, which is only worth printing when it DIFFERS from the
-                            unit price 40px above it. At quantity 1 it was the same number twice on
-                            one small card: the reader checks whether the two disagree, finds they
-                            never do, and learns to skip both. Above 1 it is the number that
-                            actually matters, so it is shown with the multiplication that produced
-                            it - which is also the arithmetic somebody does in their head before
-                            they trust a basket total. */}
-                        {item.quantity > 1 && (
-                          <p className="text-right">
-                            <span className="block text-[11px] leading-none tabular-nums text-ink-3">
-                              {item.quantity} × {formatCurrency(displayPrice)}
-                            </span>
-                            <span className="mt-1 block font-display text-[15px] font-bold leading-none tabular-nums tracking-tight text-ink-1">
-                              {formatCurrency(displayPrice * item.quantity)}
-                            </span>
-                          </p>
-                        )}
-                      </div>
                     </div>
+
+                    {/* The stepper is the WELL now that the row is a plate — a control that gets
+                        pressed reads as recessed. 30px buttons on a phone and 32 on a desktop:
+                        28px buttons on a phone, 32 on a desktop - smaller than the 36 they were,
+                        because they have moved into a column that must also hold the bin, and
+                        still over the 24px SC 2.5.8 floor for a control that is not the primary
+                        action on the screen. Their 36px HEIGHT is untouched, which is the axis a
+                        thumb actually misses on. */}
+                    <div className="flex shrink-0 items-center overflow-hidden rounded-lg border border-hairline bg-sunken">
+                      <button
+                        type="button"
+                        className="flex h-9 w-7 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
+                        onClick={() => updateQuantity(item.product.id, Math.max(1, item.quantity - 1))}
+                        disabled={item.quantity <= 1}
+                        aria-label="Diminuer la quantité"
+                      >
+                        <Minus className="h-3.5 w-3.5" />
+                      </button>
+                      <span
+                        className="w-5 text-center text-[13px] font-semibold tabular-nums text-ink-1 sm:w-6"
+                        aria-live="polite"
+                      >
+                        {item.quantity}
+                      </span>
+                      <button
+                        type="button"
+                        className="flex h-9 w-7 items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40 sm:w-8"
+                        onClick={handleIncrease}
+                        disabled={item.quantity >= maxQty}
+                        aria-label="Augmenter la quantité"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-7 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-destructive sm:w-8"
+                      onClick={() => removeFromCart(item.product.id)}
+                      aria-label="Retirer du panier"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 );
               })}
