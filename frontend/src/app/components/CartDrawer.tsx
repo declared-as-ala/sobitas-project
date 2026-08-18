@@ -88,12 +88,26 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         ("NITROTECH WHEY PROTEI…"). `!w-[min(28rem,…)]` is the same escape hatch the mobile menu
         Sheet already uses for the same reason, three files over.
 
-        `min(28rem, 100vw - 2.5rem)`: 448px on a desktop, exactly as before; 350px on a 390px
-        phone, which is +58px of name and keeps 40px of backdrop so the drawer still reads as an
-        overlay you can tap out of rather than a new page.
+        `min(28rem, 100vw - 2.5rem)`: 350px on a 390px phone, which is +58px of name and keeps 40px
+        of backdrop so the drawer still reads as an overlay you can tap out of rather than a new
+        page.
+
+        ── AND IT WAS STILL NEVER 448 ON A DESKTOP (measured, second pass) ───────────────────
+        That `!w-` was written to make the panel 448px wide, and `measure-cart.mjs` says it rendered
+        at 384. The primitive also ships
+        `data-[vaul-drawer-direction=right]:sm:max-w-sm` — a 384px CEILING, on an attribute-scoped
+        selector, in a different property from the one that was overridden. Width and max-width do
+        not collapse in tailwind-merge either, so the `!w-` won its own fight and lost the war.
+
+        `!max-w-[28rem]` lifts the ceiling to the same 448. On a 1536 screen that is a basket wide
+        enough for a two-line product name beside a 68px packshot without either wrapping.
+
+        `!border-l-hairline` replaces the primitive's `border-gray-200 / dark:border-gray-700` on
+        the one edge of this panel that touches the page. Two raw palette values where the token
+        layer already has the answer, and the dark half was a guess.
       */}
-      <DrawerContent className="flex h-full !w-[min(28rem,calc(100vw-2.5rem))] flex-col border-0 bg-elevated">
-        <DrawerHeader className="shrink-0 border-b border-hairline bg-elevated px-5 pb-4 pt-5">
+      <DrawerContent className="flex h-full !w-[min(28rem,calc(100vw-2.5rem))] !max-w-[28rem] flex-col !border-l-hairline bg-elevated">
+        <DrawerHeader className="shrink-0 gap-0 border-b border-hairline bg-elevated px-5 pb-3 pt-4">
           {/*
             ── A COUNT, AND A WAY OUT ──────────────────────────────────────────────────────────
             The reference cart puts a bag, a title and a count badge on one line and an X on the
@@ -122,12 +136,15 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
           {/* "Votre panier est vide" was printed TWICE on an empty cart — once here and once in
               the empty state a few lines below, one directly under the other, in a drawer that
               had nothing else in it. The empty state is the better home for it: it has the icon,
-              the explanation and the way out.
+              the explanation and the way out. Then "2 articles dans votre panier" was printed
+              under a header that ALREADY carries a `2` badge two inches to the left - 24px of
+              subtitle restating a number the eye has just read, on the one panel the owner is
+              asking to stop eating height.
 
-              The element stays for screen readers. Radix warns when a titled dialog has no
-              description, and more importantly a blind user needs the count announced on open.
-              Sighted users see it only when it says something the rest of the drawer does not. */}
-          <DrawerDescription className={items.length === 0 ? 'sr-only' : 'text-sm text-ink-3'}>
+              So it is sr-only in both states. Radix warns when a titled dialog has no
+              description, and a screen-reader user genuinely does need the count announced on
+              open because they cannot see the badge. Sighted users lose nothing. */}
+          <DrawerDescription className="sr-only">
             {items.length === 0
               ? 'Votre panier est vide'
               : `${items.length} article${items.length > 1 ? 's' : ''} dans votre panier`}
@@ -175,6 +192,19 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 const percent = struck ? Math.round(((struck - displayPrice) / struck) * 100) : 0;
                 const stockDisponible = getStockDisponible(item.product as any);
                 const maxQty = Math.max(1, stockDisponible);
+                /* THE BRAND, BUT ONLY WHEN THE NAME DOES NOT ALREADY CARRY IT. Half this catalogue
+                   is named "BIG WHEY 2KG - BIG RAMY LABS", and a brand line above that is the same
+                   words twice in a 44px stack — the exact noise this pass is removing elsewhere.
+                   Normalised on both sides because the DB has "BIG RAMY" against "Big Ramy Labs". */
+                const rawBrand = (item.product as any).brand?.designation_fr as string | undefined;
+                const norm = (v: string) => v.toLowerCase().replace(/[^a-z0-9]+/g, '');
+                const productName = localizedName(item.product as any, locale);
+                const brand =
+                  rawBrand && !norm(productName).includes(norm(rawBrand)) ? rawBrand : undefined;
+                /* Only when it is genuinely scarce. A permanent "en stock" badge on every line is
+                   decoration; "plus que 2" is the one stock fact that changes what somebody does,
+                   and it is the same limit the stepper is about to enforce silently anyway. */
+                const lowStock = stockDisponible > 0 && stockDisponible <= 5;
 
                 const handleIncrease = () => {
                   const next = item.quantity + 1;
@@ -197,14 +227,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         card and gives the packshot the brightest surface in the drawer for no
                         reason. The product photograph is the thing that should recede into a well;
                         the price and the controls are what should sit on the plate. */}
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-sunken">
+                    <div className="relative h-[68px] w-[68px] flex-shrink-0 self-start overflow-hidden rounded-lg bg-sunken">
                       {(item.product as any).image || (item.product as any).cover ? (
                         <Image
                           src={(item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : '')}
                           alt={localizedName(item.product as any, locale, 'Product')}
                           fill
                           className="object-contain p-1.5"
-                          sizes="64px"
+                          sizes="68px"
                           loading="lazy"
                           unoptimized
                         />
@@ -217,9 +247,21 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                        <h3 className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1">
-                          {localizedName(item.product as any, locale)}
-                        </h3>
+                        <div className="min-w-0">
+                          {/* THE BRAND, which is how people actually name what they bought - "the
+                              Big Ramy whey", not "BIG WHEY 2KG - BIG RAMY LABS". It is on the card
+                              the item was added from and on the product page it came from, and the
+                              basket was the one screen that dropped it. 11px caps in ink-3, so it
+                              labels the name rather than competing with it. */}
+                          {brand && (
+                            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.06em] text-ink-3">
+                              {brand}
+                            </p>
+                          )}
+                          <h3 className="line-clamp-2 text-[13.5px] font-semibold leading-snug text-ink-1">
+                            {productName}
+                          </h3>
+                        </div>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -233,7 +275,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                       {/* THE UNIT PRICE, ITS ORIGINAL, AND THE SAVING — one line, in that reading
                           order, which is the order the reference uses and the order the same three
                           numbers already appear in on the product card this item came from. */}
-                      <p className="mt-0.5 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+                      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
                         <span className="font-display text-sm font-bold tabular-nums tracking-tight text-brand">
                           {formatCurrency(displayPrice)}
                         </span>
@@ -251,14 +293,19 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           </>
                         )}
                       </p>
-                      <div className="flex items-center justify-between gap-2 mt-2">
+                      {lowStock && (
+                        <p className="mt-1 text-[11px] font-medium tabular-nums text-warn">
+                          Plus que {stockDisponible} en stock
+                        </p>
+                      )}
+                      <div className="mt-2 flex items-center justify-between gap-2">
                         {/* The stepper is the WELL now that the row is a plate — the same swap as
                             the thumbnail above, and for the same reason: a control that is pressed
                             reads as recessed. */}
                         <div className="flex items-center overflow-hidden rounded-lg border border-hairline bg-sunken">
                           <button
                             type="button"
-                            className="flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+                            className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                             onClick={() =>
                               updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
                             }
@@ -272,7 +319,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           </span>
                           <button
                             type="button"
-                            className="flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
+                            className="flex h-9 w-9 min-h-[36px] min-w-[36px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                             onClick={handleIncrease}
                             disabled={item.quantity >= maxQty}
                             aria-label="Augmenter la quantité"
@@ -280,9 +327,23 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                             <Plus className="h-4 w-4" />
                           </button>
                         </div>
-                        <p className="font-display text-sm font-bold tabular-nums tracking-tight text-ink-1 sm:text-base">
-                          {formatCurrency(displayPrice * item.quantity)}
-                        </p>
+                        {/* The LINE total, which is only worth printing when it DIFFERS from the
+                            unit price 40px above it. At quantity 1 it was the same number twice on
+                            one small card: the reader checks whether the two disagree, finds they
+                            never do, and learns to skip both. Above 1 it is the number that
+                            actually matters, so it is shown with the multiplication that produced
+                            it - which is also the arithmetic somebody does in their head before
+                            they trust a basket total. */}
+                        {item.quantity > 1 && (
+                          <p className="text-right">
+                            <span className="block text-[11px] leading-none tabular-nums text-ink-3">
+                              {item.quantity} × {formatCurrency(displayPrice)}
+                            </span>
+                            <span className="mt-1 block font-display text-[15px] font-bold leading-none tabular-nums tracking-tight text-ink-1">
+                              {formatCurrency(displayPrice * item.quantity)}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -293,12 +354,32 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
         </div>
 
         {items.length > 0 && (
-          <DrawerFooter className="shrink-0 border-t border-hairline bg-elevated p-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-            {/* Free-shipping nudge — surfaces the 300 DT threshold at the highest-intent moment
-                (right after add-to-cart) to lift average order value. */}
+          <DrawerFooter className="shrink-0 gap-0 border-t border-hairline bg-elevated px-5 pb-[max(1rem,env(safe-area-inset-bottom))] pt-3.5">
+            {/*
+              -- WHY THE FOOTER WAS EATING A THIRD OF THE PANEL ---------------------------------
+              Owner, 18/08/2026: *"the bottom of it - why eating all of that height!"*.
+
+              Measured on the screenshot: ~330px of a ~900px drawer, for four facts and two links.
+              None of it was one large thing; it was six small ones compounding.
+
+                - `DrawerFooter` ships `gap-2`, and every block ALSO carried its own `mb-4`. Every
+                  seam in here was therefore 24px, not 16 - the two spacing systems added up
+                  instead of one overriding the other. `gap-0` makes the margins the only authority.
+                - The delivery notice was a bordered, filled, `p-3` CARD. A card is what you draw
+                  around something a reader must be able to find later; this is a single sentence
+                  that is read once, and boxing it cost 26px of chrome around 20px of text.
+                - `p-5` all round, plus a 20px bottom that then had `env(safe-area-inset-bottom)`
+                  added on top of it on a phone.
+                - "Voir le panier" sat in its own centring wrapper with `py-2.5`.
+
+              Now: one 20px line for delivery, a hairline, the money, the button, the link. ~215px
+              on the same content, which is ~115px given back to the product rows - close to one
+              whole extra item visible without scrolling, on the panel where scrolling past your own
+              items is how a basket gets abandoned.
+            */}
             {totalPrice < 300 ? (
-              <div className="mb-4 rounded-xl border border-hairline bg-sunken p-3">
-                <p className="mb-2 flex items-center gap-2 text-sm text-ink-2">
+              <div className="mb-3">
+                <p className="mb-1.5 flex items-center gap-2 text-[13px] leading-tight text-ink-2">
                   <Truck className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                   <span>
                     Plus que{' '}
@@ -306,29 +387,33 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     {' '}pour la <span className="font-semibold text-brand">livraison gratuite</span>
                   </span>
                 </p>
-                <div className="h-1.5 w-full overflow-hidden rounded-full bg-hairline">
-                  <div className="h-full rounded-full bg-brand transition-all duration-300" style={{ width: `${Math.min(100, (totalPrice / 300) * 100)}%` }} />
+                {/* The bar stays - it is the one element here that says something the sentence
+                    does not, which is HOW CLOSE you are. 4px instead of 6. */}
+                <div className="h-1 w-full overflow-hidden rounded-full bg-hairline">
+                  <div
+                    className="h-full rounded-full bg-brand transition-all duration-300"
+                    style={{ width: `${Math.min(100, (totalPrice / 300) * 100)}%` }}
+                  />
                 </div>
               </div>
             ) : (
-              /* `text-ok` + a tinted well, not `green-50/green-700` with a hand-written `dark:`
-                 twin for each. Six raw palette classes on the one panel that closes a sale, and
-                 the dark halves were guesses — `--c-ok` is 5.02:1 on canvas in light and 8.45:1
-                 on the slab in dark, measured, in one class. */
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-hairline bg-sunken p-3 text-sm font-medium text-ok">
+              /* `text-ok`, not `green-700` with a hand-written `dark:` twin beside it. `--c-ok` is
+                 5.02:1 on canvas in light and 8.45:1 on the slab in dark, measured, in one class. */
+              <p className="mb-3 flex items-center gap-2 text-[13px] font-medium leading-tight text-ok">
                 <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
-                Vous bénéficiez de la livraison gratuite !
-              </div>
+                Livraison gratuite incluse
+              </p>
             )}
-            {/* One rule above the total, because the total is the only line in this panel that
+
+            {/* One rule above the money, because the total is the only line in this panel that
                 summarises the ones above it. Without it the footer is three unrelated blocks of
                 the same weight and the eye has to hunt for the number it came for. */}
-            <div className="mb-4 border-t border-hairline pt-4">
+            <div className="border-t border-hairline pt-3">
               {savings > 0 && (
-                /* The reference totals its reward points here; this totals the thing this shop
-                   actually gives, which is the discount already in the prices above. It renders
-                   only when there IS one — a permanent "vous économisez 0 DT" is noise. */
-                <div className="mb-2 flex items-center justify-between gap-3 text-sm">
+                /* The reference cart totals its reward points here; this totals the thing this
+                   shop actually gives, which is the discount already inside the prices above. It
+                   renders only when there IS one - a permanent "vous economisez 0 DT" is noise. */
+                <div className="mb-1.5 flex items-center justify-between gap-3 text-[13px]">
                   <span className="flex items-center gap-1.5 text-ink-2">
                     <Tag className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden="true" />
                     Vous économisez
@@ -336,32 +421,34 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                   <span className="font-semibold tabular-nums text-ok">{formatCurrency(savings)}</span>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <span className="font-display text-base font-semibold uppercase tracking-wide text-ink-1">Total</span>
-                <span className="font-display text-2xl font-extrabold tabular-nums tracking-tight text-brand">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-display text-[15px] font-semibold uppercase tracking-wide text-ink-1">
+                  Total
+                </span>
+                <span className="font-display text-2xl font-extrabold leading-none tabular-nums tracking-tight text-brand">
                   {formatCurrency(totalPrice)}
                 </span>
               </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <DrawerClose asChild>
-                <Link href="/checkout" className="block">
-                  <Button className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover">
-                    Passer commande
-                  </Button>
-                </Link>
-              </DrawerClose>
-              <div className="text-center">
-                <DrawerClose asChild>
-                  <Link
-                    href="/cart"
-                    className="inline-block py-2.5 text-sm font-medium text-ink-2 transition-colors hover:text-brand"
-                  >
-                    Voir le panier
-                  </Link>
-                </DrawerClose>
-              </div>
-            </div>
+
+            <DrawerClose asChild>
+              <Link href="/checkout" className="mt-3 block">
+                <Button className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover">
+                  Passer commande
+                </Button>
+              </Link>
+            </DrawerClose>
+            <DrawerClose asChild>
+              {/* 34px tall, down from 40. Still well clear of the 24px minimum SC 2.5.8 asks of a
+                  target that is not the primary action, and it is directly under a 48px button
+                  that does the same job better - this link is the escape hatch, not the path. */}
+              <Link
+                href="/cart"
+                className="mt-1 block rounded-lg py-2 text-center text-[13px] font-medium text-ink-2 transition-colors hover:text-brand"
+              >
+                Voir le panier
+              </Link>
+            </DrawerClose>
           </DrawerFooter>
         )}
       </DrawerContent>
