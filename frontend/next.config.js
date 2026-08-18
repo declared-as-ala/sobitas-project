@@ -95,6 +95,27 @@ const nextConfig = {
 
     return [
       ...facetedShopNoindex,
+      /*
+       * MACHINE ENDPOINTS: noindex AS WELL AS robots.txt-disallowed, because the two fail in
+       * opposite directions. robots.txt stops a crawl but cannot remove a URL Google already
+       * indexed from a link — that is the "Indexed, though blocked by robots.txt" bucket, which is
+       * unfixable by robots.txt alone precisely because the crawler is forbidden to fetch the page
+       * and see the noindex. The header removes it; the Disallow keeps the budget.
+       *
+       * Measured 18/08/2026: /api-proxy/blog_tags and /api-proxy/all_articles both answered 200
+       * JSON with no X-Robots-Tag whatsoever, and robots.txt disallowed only `/api/`.
+       *
+       * DELIBERATELY NOT /x-crawler. That prefix is the middleware REWRITE target, and whether a
+       * next.config header matches the original path or the rewritten one is not something to be
+       * confident about from the docs — and being wrong means `noindex, nofollow` on every
+       * category and product page Googlebot is served, i.e. deindexing the whole site. Direct
+       * access to /x-crawler is refused in middleware instead, where "am I rewriting, or is
+       * someone asking for the internal path" is known rather than inferred.
+       */
+      {
+        source: '/api-proxy/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
       {
         source: '/:path*',
         headers: [

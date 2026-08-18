@@ -123,6 +123,21 @@ export function isReservedRouteSlug(slug: string): boolean {
     'pack-builder',
     // Caught by that same check on its first build — which is the point of having it.
     'partenaires',
+    /*
+     * /avis/{token} — the per-order review page. Same defect as /pack-builder, and it survived
+     * check-reserved-routes.mjs because that check only looks at top-level segments that hold a
+     * page.tsx DIRECTLY. `avis/` holds no page of its own, only `avis/[token]/page.tsx`, so the
+     * segment was invisible to it while being very much a real route.
+     *
+     * Verified on production 18/08/2026, /avis/zz-test-123:
+     *   human → 200
+     *   bot   → 404   (rewritten to /x-crawler/product/avis/{token}, which is not a product)
+     *
+     * Found by rule L2 of scripts/check-indexability-live.mjs — "browser and Googlebot agree" —
+     * which is the rule that exists because a status that differs by user-agent is invisible to
+     * every check run from a browser.
+     */
+    'avis',
     'api',
     'admin',
     '_next',

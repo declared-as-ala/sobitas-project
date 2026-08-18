@@ -63,7 +63,15 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       },
     };
   } catch {
-    return { title: 'Tag blog' };
+    /*
+     * NOINDEX, EXPLICITLY. Returning just a title let the ROOT LAYOUT's defaults apply —
+     * "index, follow" with no rel=canonical — so whether this URL was indexable depended on
+     * whether one backend call happened to succeed. Measured 18/08/2026: three consecutive
+     * fetches of /blog/tag/whey returned noindex, noindex, then "index, follow".
+     *
+     * A page whose data failed to load has nothing to index, so say so rather than inheriting.
+     */
+    return { title: 'Tag blog', robots: { index: false, follow: true } };
   }
 }
 

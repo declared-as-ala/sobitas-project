@@ -79,7 +79,17 @@ function buildRedirects() {
 
     // ── Legacy alias ──────────────────────────────────────────────────────
     p('/about', '/qui-sommes-nous'),
-    p('/xmlrpc.php', '/'),
+    /*
+     * /xmlrpc.php USED TO 308 HERE TO "/". That is the anti-pattern this whole file warns about
+     * further down: Google documents a redirect to an irrelevant page as a SOFT 404, so the hop
+     * was spent, the URL was never retired, and it simply moved from "Not found" to "Page with
+     * redirect". The homepage is the most irrelevant possible destination for a WordPress XML-RPC
+     * endpoint.
+     *
+     * It is now answered 410 by the `.php` rule in middleware.ts, alongside every other *.php path
+     * on this origin — all of which were returning HTTP 500. Removing the rule here is what lets
+     * middleware see it at all: next.config redirects run BEFORE middleware.
+     */
 
     // ── Blog ──────────────────────────────────────────────────────────────
     p('/blogs', '/blog'),

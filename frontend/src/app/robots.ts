@@ -20,6 +20,12 @@ export default function robots(): MetadataRoute.Robots {
     '/forgot-password',
     '/reset-password',
     '/api/',
+    // The Laravel API as this origin serves it: next.config.js rewrites /api-proxy/:path* to the
+    // backend. Only `/api/` was listed, so every /api-proxy/** endpoint was fully crawlable —
+    // measured 18/08/2026, /api-proxy/blog_tags and /api-proxy/all_articles both answered 200 JSON
+    // with no X-Robots-Tag at all. JSON in the index is "Crawled - currently not indexed" bloat at
+    // best, and it publishes the shape of every endpoint at worst.
+    '/api-proxy/',
     '/admin',
     '/admin/',
     '/order-confirmation/',

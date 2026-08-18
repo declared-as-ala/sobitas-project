@@ -5,6 +5,7 @@ import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
 import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug } from '@/util/taxonomySlugs';
+import { isArticleSlug } from '@/util/blogSlugs';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -412,6 +413,95 @@ export async function middleware(request: NextRequest) {
     return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
   }
 
+  /*
+   * ── WHY /x-crawler IS **NOT** REFUSED HERE, THOUGH IT LOOKS LIKE IT SHOULD BE ───────────────
+   *
+   * /x-crawler/** is the internal target middleware rewrites crawler user-agents to. Reached
+   * DIRECTLY it answers 200 with `robots: index, follow` — so robots.ts's claim that the Disallow
+   * is "belt-and-suspenders alongside the route's own noindex" is not true, and a linked copy is
+   * how a URL lands in "Indexed, though blocked by robots.txt" (1 page in the 14/08/2026 report).
+   *
+   * A three-line `if (pathname.startsWith('/x-crawler/')) return 404` was written here, built, and
+   * MEASURED — and it took the whole site down for Googlebot:
+   *
+   *     GET /whey-proteine                            browser 200   Googlebot 404
+   *     GET /shop                                     browser 200   Googlebot 404
+   *     GET /whey-proteine/100-whey-gold-standard…    browser 200   Googlebot 404
+   *
+   * The rewrite is supposed to be internal and not re-enter middleware. In this app, on a cold
+   * cache, it does. So the guard cannot distinguish "someone asked for the internal path" from
+   * "we sent them there ourselves", and getting it wrong 404s every indexable page on the site to
+   * the only visitor that matters.
+   *
+   * ONE indexed URL is not worth that trade. The robots.txt Disallow stays and is the whole
+   * defence. If this is ever revisited: rule L2 of scripts/check-indexability-live.mjs
+   * ("browser and Googlebot agree on status") is what caught it, and it must be run against a
+   * real build with a COLD cache before believing any version of this works.
+   */
+
+  // ── Server-side script paths → 410, because today they are HTTP 500 ─────────
+  // Measured on production AND on a local production build, 18/08/2026:
+  //     /foo.php  /index.php  /config.php  /admin.php  /whey-proteine.php   500
+  //     /.env  /.env.local                                                  500
+  //     /foo.bar  /foo.html  /foo.jpg  /foo.aspx                            404  (correct)
+  // So it is `.php` and `.env` specifically, and it is this app — not nginx, not Cloudflare.
+  // These paths reach (shop)/[slug] as a slug containing a dot and something throws downstream.
+  //
+  // A 500 is the WORST answer for a URL that should be retired: Google treats it as temporary and
+  // keeps retrying, which is why "Server error (5xx)" sits in the coverage report at all. This app
+  // has never had a PHP entry point — the Laravel admin is a different origin — so every one of
+  // these is either WordPress-era residue or a vulnerability scanner. 410 retires them for good
+  // and costs one middleware string compare.
+  //
+  // Extension test, not a substring test: `/creatine-500g-php-blend` must not match.
+  if (/\.php\d?$/i.test(pathname) || /(^|\/)\.env(\.[a-z0-9-]+)?$/i.test(pathname)) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // ── Blog taxonomy: a feature with no data, serving an unbounded 200 space ───
+  // /blog_categories and /blog_tags BOTH return `[]` from the API — measured through the
+  // production proxy, 18/08/2026. There is not one tag and not one category in the CMS, and the
+  // per-slug endpoints answer 404 ("Tag blog introuvable") for every input.
+  //
+  // The routes answered HTTP 200 anyway, with no rel=canonical and a `robots` value that CHANGED
+  // BETWEEN TWO FETCHES OF THE SAME URL (the metadata catch fell through to the layout default of
+  // "index, follow" whenever the API call failed, and to the real noindex when it succeeded). An
+  // unbounded family of canonical-less near-duplicate pages whose indexability is a coin flip.
+  //
+  // 410 rather than 404: both retire the URL, 410 drains the Search Console bucket faster, and
+  // there is no ambiguity to preserve here — these cannot become valid without a code change,
+  // because the routes are being retired, not waiting for content. If blog taxonomy is ever
+  // populated in Filament, delete this block and the two routes come back.
+  //
+  // Runs BEFORE the crawler rewrite so Googlebot and a browser get the same status.
+  if (/^\/blog\/(tag|category)(\/|$)/.test(pathname)) {
+    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  }
+
+  // ── /blog/{slug} that is not an article → 410 ───────────────────────────────
+  // The route already does the right thing and cannot make it stick. Its own log line, on a local
+  // production build with the (shop)/not-found.tsx boundary in place:
+  //
+  //     Error fetching article: Error [ApiError]: Article not found  { status: 404 }
+  //     → HTTP 200,  Cache-Control: s-maxage=600, stale-while-revalidate=31535400
+  //
+  // notFound() is reached and the status is 200 anyway, cached for a year, over a slug space
+  // anyone can invent. Middleware is the layer whose status codes have proven reliable here —
+  // the same reason /shop/:slug, /brand/:slug and /product/:slug are resolved here and not in
+  // their routes.
+  //
+  // isArticleSlug is three-valued and this only acts on a definitive `false`; `null` (backend
+  // unreachable, timeout, empty payload) falls through to the page exactly as before. See
+  // util/blogSlugs.ts for why a cache miss forces one refresh before it is believed.
+  const blogArticle = pathname.match(/^\/blog\/([^/]+)\/?$/);
+  if (blogArticle?.[1]) {
+    let articleSlug = blogArticle[1];
+    try { articleSlug = decodeURIComponent(articleSlug); } catch { /* keep raw */ }
+    if ((await isArticleSlug(articleSlug)) === false) {
+      return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    }
+  }
+
   // WordPress query-string artifacts on the homepage. Today they all render the homepage with
   // HTTP 200 (?p=123, ?author=1, ?s=whey, ?m=202301, ?page_id=2, ?product_cat=…), so Google sees
   // an unbounded set of duplicate-of-home URLs. Consolidate them. Only WP-specific param names
@@ -470,6 +560,59 @@ export async function middleware(request: NextRequest) {
     if (canonical.kind === 'redirect') return redirectPreservingQuery(request, canonical.to);
     if (canonical.kind === 'gone') return goneOrCategory(request, canonical.slug);
     // 'unknown' — API unreachable. Fall through to the page (it handles it too).
+  }
+
+  // ── THREE-SEGMENT /shop PATHS, WHICH HAVE NEVER ACTUALLY REDIRECTED ─────────
+  //
+  // app/(shop)/shop/[slug]/[subcategory]/page.tsx and .../reviews/page.tsx are both written as
+  // pure `permanentRedirect(...)` routes. They do not redirect. Measured on production AND on a
+  // local production build, 18/08/2026, for VALID and invalid inputs alike:
+  //
+  //     GET /shop/whey-proteine/whey-isolate        HTTP 200
+  //     <meta id="__next-page-redirect" http-equiv="refresh" content="0;url=/whey-isolate"/>
+  //
+  // A `permanentRedirect()` raised from a page body in this app degrades to a meta-refresh at
+  // HTTP 200 — the exact failure the `/shop/:slug` rule 30 lines above was moved into middleware
+  // to fix ("This fires before the page renders, eliminating the __next-page-redirect meta-refresh
+  // tag"). The 3-segment routes were never given the same treatment.
+  //
+  // The cost of leaving it: `/shop/{anything}/{anything}` answers 200 with `robots: index, follow`,
+  // NO rel=canonical, and the HOMEPAGE <title> — because the page function returns nothing, so
+  // metadata falls through to the root layout default. That is an unbounded, indexable,
+  // canonical-less duplicate space, which is what "Duplicate without user-selected canonical"
+  // and "Crawled - currently not indexed" are made of.
+  //
+  // Placed AFTER the 2-segment /shop/:slug rule and BEFORE the 4-segment WordPress rule, matching
+  // the order the app router itself resolves them in.
+  const shopThree = pathname.match(/^\/shop\/([^/]+)\/([^/]+)\/?$/);
+  if (shopThree) {
+    const decode = (s: string) => { try { return decodeURIComponent(s); } catch { return s; } };
+    const first = decode(shopThree[1]!);
+    const second = decode(shopThree[2]!);
+
+    if (second.toLowerCase() === 'reviews') {
+      // /shop/{product}/reviews → the product's canonical URL, anchored at its reviews block.
+      const found = await lookupProduct(first);
+      if (typeof found === 'string') return redirectPreservingQuery(request, `${found}#reviews`);
+      if (found === false) {
+        return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+      }
+      // null — backend unreachable. Fall through rather than guess while it is unhealthy.
+    } else {
+      // /shop/{cat}/{subcat} → the subcategory is served at /{subcat}, whatever its parent.
+      const known = await isTaxonomySlug(second);
+      if (known === true) return redirectPreservingQuery(request, `/${encodeURIComponent(second)}`);
+      if (known === false) {
+        // Not taxonomy. It may still be a product sitting under a category segment, which is the
+        // one live shape this path can legitimately carry.
+        const asProduct = await lookupProduct(second);
+        if (typeof asProduct === 'string') return redirectPreservingQuery(request, asProduct);
+        if (asProduct === false) {
+          return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+        }
+      }
+      // null from either lookup — fall through, never act on "could not find out".
+    }
   }
 
   // ── WordPress nested shop paths: /shop/{cat}/{subcat}/{product}[/reviews] ──

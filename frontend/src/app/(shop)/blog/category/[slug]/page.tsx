@@ -62,7 +62,10 @@ export async function generateMetadata({ params, searchParams }: Props): Promise
       },
     };
   } catch {
-    return { title: 'Catégorie blog' };
+    // Explicit noindex, for the reason spelled out in blog/tag/[slug]/page.tsx: a bare title lets
+    // the root layout's "index, follow" apply to a page whose data failed to load, which made
+    // indexability a coin flip between two fetches of the same URL.
+    return { title: 'Catégorie blog', robots: { index: false, follow: true } };
   }
 }
 
