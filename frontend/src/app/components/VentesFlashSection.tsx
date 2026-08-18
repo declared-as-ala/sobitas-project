@@ -1,6 +1,6 @@
 'use client';
 
-import { memo, useMemo, useEffect, useState } from 'react';
+import { memo, useMemo, useEffect, useRef, useState } from 'react';
 import { FlashDealCard } from './FlashDealCard';
 import { ProductGrid } from './ProductGrid';
 import { Section } from '@/app/components/layout/Section';
@@ -34,25 +34,26 @@ interface CountdownState {
 }
 
 /**
- * Below this, the pill counts down. Above it, the pill states a date and nothing ticks.
+ * How far outside the viewport the strip starts ticking.
  *
- * ── WHY A THRESHOLD AT ALL ─────────────────────────────────────────────────────────────────
- * Owner, looking at the live band: the clock read **"FIN DANS 27J 13:08:14"**. A seconds-precision
- * countdown to a deadline four weeks out is not urgency, it is a clock that says "no rush" — it
- * spends the band's one scarce signal on a number nobody can act on. Worse, it was ALSO the widest
- * element in the row that overflowed on a phone (174px of a 321px run), so the credibility problem
- * and the layout problem were the same problem.
+ * ── WHAT THIS REPLACED, AND WHY THE REPLACEMENT IS THE BETTER SHAPE ────────────────────────
+ * There used to be a 48-HOUR threshold here: inside it the clock ticked once a second, outside it
+ * the seconds tile disappeared and the interval dropped to 30s. It was doing two jobs at once — a
+ * design judgement (a seconds counter on a four-week deadline is a clock that says *no rush*) and
+ * a performance one (this band is ~1,500px down a page with a measured 419ms INP, and
+ * `content-visibility: auto` skips PAINT, not JavaScript, so the old `setInterval` ran on every
+ * visitor from first paint whether or not they ever scrolled here).
  *
- * 48h is the point where a person can still act differently because of the clock. Above it the
- * honest statement is a date; below it, seconds genuinely matter.
+ * The owner has overruled the design half — *"for the ventes flash add seconds"* — and once the
+ * seconds tile is permanent, a 30s tick is simply a wrong clock, so the threshold has nothing left
+ * to decide. The performance half is real regardless of the deadline, and an IntersectionObserver
+ * answers it directly rather than by proxy: nothing is scheduled until the strip is near the
+ * screen, and the interval is torn down again when it leaves.
  *
- * The second win is that above the threshold NOTHING IS SCHEDULED. The old code ran
- * `setInterval(…, 1000)` forever, on every visitor, re-rendering a text node once a second to
- * animate a digit that `globals.css` only animates at >=1024px anyway — on a page with a measured
- * 419ms INP. `content-visibility: auto` skips paint, not JavaScript, so it ran before the band was
- * ever scrolled to.
+ * 200px of margin so the first visible tick is already correct rather than arriving a beat after
+ * the band appears.
  */
-const LIVE_WINDOW_MS = 48 * 60 * 60 * 1000;
+const TICK_ROOT_MARGIN = '200px';
 
 /**
  * The clock, as ONE inline pill — a live countdown inside 48h, a plain date outside it.
@@ -82,6 +83,27 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
      hydration risk either. */
   const [countdown, setCountdown] = useState<CountdownState | null>(null);
 
+  /* `ticking` gates the interval, NOT the first computation — see the two effects below. */
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [ticking, setTicking] = useState(false);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    /* No observer (very old browser, or a test environment): tick rather than freeze. A clock that
+       never moves is a worse failure than one that costs a re-render a second. */
+    if (typeof IntersectionObserver === 'undefined') {
+      setTicking(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => setTicking(entries.some((e) => e.isIntersecting)),
+      { rootMargin: TICK_ROOT_MARGIN }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   useEffect(() => {
     const update = () => {
       const diff = Math.max(0, expirationDate.getTime() - Date.now());
@@ -97,25 +119,20 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
         isExpired: false,
       });
     };
+    /* ALWAYS compute once, even off screen. Without this the tiles would render `––` until the
+       band scrolled into view, and on a phone that is a visible flash of placeholder digits inside
+       the element whose entire job is to look live. */
     update();
-    /* ONE SECOND INSIDE THE WINDOW, THIRTY OUTSIDE IT.
-       The strip now shows tiles at every distance rather than swapping to a static date, so there
-       IS something to schedule far out — the minutes tile has to move or the clock is a lie. But
-       a deadline three weeks away needs no per-second re-render, and this page has a measured
-       419ms INP: `content-visibility: auto` skips paint, not JavaScript, so an interval here runs
-       whether or not the band has ever been scrolled to. 30s is the coarsest rate at which the
-       smallest visible unit (minutes) can never be seen stale. */
-    const far = expirationDate.getTime() - Date.now() > LIVE_WINDOW_MS;
-    const id = setInterval(update, far ? 30_000 : 1000);
+    if (!ticking) return;
+    const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, [expirationDate]);
+  }, [expirationDate, ticking]);
 
   /* An expired promo used to return null — the pill vanished from the accessibility tree while
      discounted cards carried on rendering underneath it. A sentence is the honest end state. */
   if (countdown?.isExpired) return <span className="sr-only">Cette offre est terminée.</span>;
 
   const pad = (n: number) => String(n).padStart(2, '0');
-  const live = countdown != null && countdown.days < 2;
 
   /* `timeZone` is PINNED on both formats. Without it the server formats in the container's UTC and
      the browser in the visitor's zone, so any promo expiring near midnight renders a different date
@@ -151,11 +168,24 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
      `aria-hidden` on the whole strip. Live digits are either a screen-reader firehose (with
      aria-live) or an unlabelled cluster of numbers a user lands on mid-count (without it).
      `<FlashDeadline>` carries the same information as one absolute date, announced once. */
+  /* ── SECONDS AT EVERY DISTANCE (owner, 18/08/2026: "for the ventes flash add seconds") ──
+     This tile used to appear only inside 48h, and the reasoning above still stands as a design
+     argument: a seconds counter on a deadline four weeks out is a clock that says *no rush*. The
+     owner has weighed that and asked for the seconds anyway, which is theirs to decide — a moving
+     digit is what makes a countdown read as live at a glance, and that is worth more to them than
+     the precision argument.
+
+     What does NOT come back is the old cost. The 1s interval that used to run on every visitor
+     from first paint now runs only while the strip is actually on screen (see the observer in the
+     effect above): a band 1,500px down a page with a measured 419ms INP should not be scheduling
+     a re-render a second for a reader who never scrolls to it. `live` is therefore no longer about
+     the seconds tile at all — it only chooses the tick RATE, and the far branch keeps a 1s tick
+     now because a seconds tile that updates every 30s would simply be wrong. */
   const segments: Array<{ value: number; label: string }> = [];
   if (!countdown || countdown.days > 0) segments.push({ value: countdown?.days ?? 0, label: 'Jours' });
   segments.push({ value: countdown?.hours ?? 0, label: 'Heures' });
   segments.push({ value: countdown?.minutes ?? 0, label: 'Min' });
-  if (live) segments.push({ value: countdown?.seconds ?? 0, label: 'Sec' });
+  segments.push({ value: countdown?.seconds ?? 0, label: 'Sec' });
 
   return (
     /* ── THE LABEL STACKS BELOW `sm`, AND THAT NUMBER WAS MEASURED ───────────────────────────
@@ -174,10 +204,11 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
        whole strip is centred, which matches the two-up rail above it; from `sm` it is one row on
        the same left rail as the heading. */
     <div
+      ref={stripRef}
       className="flex flex-col items-center gap-2 sm:flex-row sm:items-center sm:gap-3"
       aria-hidden="true"
     >
-      <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-3 sm:text-[11px]">
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
         <Clock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
         {/* ALWAYS THE DURATION PHRASING, because the tiles are always a duration now.
             This read `live ? 'Se termine dans' : 'Jusqu’au'`, which was correct while the far
@@ -192,20 +223,36 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
         Se termine dans
       </span>
 
-      {/* TILES AT EVERY DISTANCE, not only inside 48h. The old code swapped to a bare date string
-          three weeks out, which is why a phone screenshot of this band showed no clock at all.
-          What `live` still decides is the GRANULARITY — whether there is a seconds tile — and the
-          `title` carries the absolute date for anyone hovering. */}
+      {/* TILES AT EVERY DISTANCE, seconds included. The old code swapped to a bare date string
+          three weeks out, which is why a phone screenshot of this band showed no clock at all, and
+          then showed JOURS/HEURES/MIN with no moving digit. The `title` carries the absolute date
+          for anyone hovering, and <FlashDeadline> announces it once for anyone listening. */}
       <div className="flex items-center gap-1 sm:gap-1.5" title={`Jusqu’au ${dateLabel}`}>
         {segments.map((seg, i) => (
           <div key={seg.label} className="flex items-center gap-1 sm:gap-1.5">
             {/* `min-w-[2.75rem]` so the tile does not resize when 9 becomes 10 — a countdown that
                 reflows its neighbours once a second is the jitteriest thing on a page.
                 `tabular-nums` does the same job for the digits inside it. */}
-            <div className="pt-slab flex min-w-[2.75rem] flex-col items-center rounded-lg px-2 py-1.5">
+            {/* ── 44px TILES, AND THE FOURTH ONE FITS ────────────────────────────────────
+                A seconds tile joined this row on 18/08. Re-measured rather than assumed, because
+                the previous note in this file got the budget wrong and shrank the tiles for no
+                reason: four 44px tiles, three 5px separators and the gaps between them come to
+                ~215px, against a 288px content box at 320px — the narrowest viewport in real
+                traffic. The row was never tight; the label stacks onto its own line below `sm`,
+                which is what actually bought the space (see the wrapper).
+
+                `min-w`, not `w`: the tile must not resize when 9 becomes 10, or the clock reflows
+                its own neighbours once a second. `tabular-nums` does the same job for the digits. */}
+            <div className="pt-slab flex min-w-[2.75rem] flex-col items-center rounded-lg px-1.5 py-1.5">
               <span className="font-display text-base font-bold tabular-nums leading-none text-brand sm:text-lg">
                 {countdown ? pad(seg.value) : '––'}
               </span>
+              {/* 9px, and it is the ONE place on the site left under 11px after the 18/08 sweep.
+                  It is a deliberate exception rather than a straggler: this is a unit label under a
+                  numeral, the whole strip is `aria-hidden`, and the same information is announced
+                  once as a full sentence by <FlashDeadline>. Raising it to 11px needs a 52px tile
+                  to fit "HEURES", which is a 60px-wider clock to make a caption legible that
+                  nobody reads as text. */}
               <span className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wider text-ink-3">
                 {seg.label}
               </span>

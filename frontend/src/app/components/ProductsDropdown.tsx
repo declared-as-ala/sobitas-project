@@ -34,9 +34,10 @@ function canPrefetch(href: string): boolean {
  * the bottom of it was BELOW THE FOLD on a 900px viewport, reachable only by scrolling inside a
  * panel that closes when the pointer leaves it. That is the state the owner was looking at.
  *
- * Eight is the number that makes every column the same height as the tallest SHORT one, which is
- * PERFORMANCE at ten; it takes the panel from ~980px to ~470px and puts the whole thing, including
- * the way out and the promoted product, on one screen.
+ * Five, since 18/08. Eight was chosen while the panel was a full-width band six columns across;
+ * in a contained panel three columns wide, six rayons make TWO rows, and eight rows of links in
+ * each would put the panel back over the fold it was shortened to clear. Five sub-categories plus
+ * a "+N autres" is what makes two rows of rayons fit in ~430px.
  *
  * ── WHAT IS LOST, AND WHY IT IS ACCEPTABLE ──────────────────────────────────────────────────
  * Twenty-one of the fifty-five sub-category links leave this menu, and this menu is on every page,
@@ -45,7 +46,7 @@ function canPrefetch(href: string): boolean {
  * them stays reachable one hop deeper and stays in the sitemap. Boilerplate navigation links are
  * also the kind Google discounts most. A menu that fits the screen is worth one hop.
  */
-const MAX_SUBS_PER_COLUMN = 8;
+const MAX_SUBS_PER_COLUMN = 5;
 
 export function ProductsDropdown({
   label = 'NOS PRODUITS',
@@ -219,30 +220,53 @@ export function ProductsDropdown({
         panel — invisible, and unnecessary, because a near-black band under a near-white bar is
         already an edge.
       */
-      className="pt-slab fixed left-0 right-0 z-[200] w-full border-b border-hairline shadow-2xl"
-      style={{ top: `${dropdownTop}px`, maxHeight: 'calc(100vh - 80px)' }}
+      /*
+        ── CONTAINED, NOT A CURTAIN ACROSS THE WHOLE SCREEN ──────────────────────────────────
+        Owner, 18/08/2026, looking at the first version: *"polish the design of the popup of the
+        shop in header, make it smaller, clean and more beautiful, better colors — no need to be
+        full screen like that!"*
+
+        And they were looking at a genuinely worse version than the one that was measured. The
+        grid is `auto-fit` at `minmax(10.5rem, 1fr)`, so its column count depends on the width it
+        is given: at a true 1920 it made six columns and everything sat in one row, which is what
+        the guard screenshots showed. The owner's screen is 1920 at 125% Windows scaling — a CSS
+        viewport of 1536 — where the same grid gets ~1128px, cannot fit six 168px columns, drops
+        to FIVE, and wraps ÉQUIPEMENT onto a second row 300px further down. A full-bleed band that
+        reflows into two rows on the most common desktop configuration in the country is the
+        "full screen" they are describing.
+
+        A fixed three-column panel cannot do that. 960px wide, anchored under the nav item rather
+        than spanning the viewport, `rounded-2xl` with its own hairline and shadow so it reads as
+        an object laid on the page — which is what a dropdown is — instead of a section of it.
+        `left-4` and `max-w-[calc(100vw-2rem)]` keep it on screen at any width without a
+        measurement or a resize listener.
+      */
+      className="pt-slab fixed left-4 z-[200] w-[min(60rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-hairline shadow-2xl lg:left-8"
+      style={{ top: `${dropdownTop + 8}px`, maxHeight: 'calc(100vh - 96px)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
-      <div className="mx-auto flex max-h-[calc(100vh-80px)] max-w-site gap-10 overflow-y-auto overscroll-contain px-4 py-8 lg:px-8">
+      <div className="flex max-h-[calc(100vh-96px)] gap-8 overflow-y-auto overscroll-contain p-6">
 
         {/*
           ── THE LINKS, AND WHY THERE ARE STILL FIFTY-FIVE OF THEM ───────────────────────────
-          The reference's panel is a contained ~900px box listing seven items, because seven is its
-          whole taxonomy. Ours is six rayons and fifty-five sub-categories, and they are not
-          decoration: this menu is on every page of the site, so those are fifty-five sitewide
-          internal links into the exact category pages the SEO plan is trying to rank. Shrinking the
-          panel to match the reference's width would mean deleting most of them to fit a shape.
+          The reference's panel lists seven items because seven is its whole taxonomy. Ours is six
+          rayons and fifty-five sub-categories, and they are not decoration: this menu is on every
+          page, so those are sitewide internal links into the exact category pages the SEO plan is
+          trying to rank.
 
-          So the SHAPE is the reference's — a kicker, a calm multi-column list, a plain text link
-          out, and a promoted card behind a rule on the right — and the CONTENT stays ours.
+          THREE FIXED COLUMNS, not `auto-fit`. The auto-fit version silently changed its own column
+          count with the width it was handed — six at 1920, five at 1536 — which is how it came to
+          wrap onto a second row on the owner's screen and nowhere in the guard's screenshots. Six
+          rayons over three columns is two rows at EVERY width, which is a layout somebody chose
+          rather than one the container negotiated.
         */}
         <div className="min-w-0 flex-1">
-          <p className="mb-5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-ink-3">
+          <p className="mb-4 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
             Catégories
           </p>
 
-          <div className="grid grid-cols-[repeat(auto-fit,minmax(10.5rem,1fr))] gap-x-8 gap-y-7">
+          <div className="grid grid-cols-3 gap-x-6 gap-y-6">
             {categories.length === 0 ? (
               Array.from({ length: 6 }).map((_, i) => (
                 <div key={i} className="min-w-0" role="status" aria-label="Chargement des catégories">
@@ -260,7 +284,7 @@ export function ProductsDropdown({
                 <div key={cat.id} className="min-w-0">
                   <LinkWithLoading
                     href={`/${cat.slug}`}
-                    className="group mb-3 flex items-center justify-between gap-2 border-b border-hairline pb-2 font-display text-[13px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-1 transition-colors hover:text-brand"
+                    className="group mb-2.5 flex items-center justify-between gap-2 border-b border-hairline pb-2 font-display text-[12px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-1 transition-colors hover:text-brand"
                     loadingMessage="Chargement..."
                     onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
                     onClick={close}
@@ -280,7 +304,7 @@ export function ProductsDropdown({
                           /* `-mx-2 px-2` pulls the hover surface out to the column edge so the row
                              highlight aligns with the heading rule above it rather than being
                              inset by its own padding. */
-                          className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand"
+                          className="-mx-2 block truncate rounded-md px-2 py-1 text-[12.5px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand"
                           loadingMessage="Chargement..."
                           onMouseEnter={() => router.prefetch(`/${sub.slug}`)}
                           onClick={close}
@@ -296,7 +320,7 @@ export function ProductsDropdown({
                             whole shelf, and pressing it lands on the page that lists all of them. */}
                         <LinkWithLoading
                           href={`/${cat.slug}`}
-                          className="-mx-2 block truncate rounded-md px-2 py-1.5 text-[13px] font-semibold leading-snug text-ink-3 transition-colors hover:bg-sunken hover:text-brand"
+                          className="-mx-2 block truncate rounded-md px-2 py-1 text-[12.5px] font-semibold leading-snug text-ink-3 transition-colors hover:bg-sunken hover:text-brand"
                           loadingMessage="Chargement..."
                           onMouseEnter={() => router.prefetch(`/${cat.slug}`)}
                           onClick={close}
@@ -318,7 +342,7 @@ export function ProductsDropdown({
             button on the promoted product. That is the better allocation and it is the one used
             here: the way out is a link, and the card's "Acheter" is the button.
           */}
-          <div className="mt-7 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-4">
+          <div className="mt-6 flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-4">
             <LinkWithLoading
               href={href}
               className="-mx-2 inline-flex min-h-[44px] items-center gap-2 px-2 text-[14px] font-semibold text-brand transition-colors hover:text-brand-hover"
@@ -340,9 +364,9 @@ export function ProductsDropdown({
 
         {/*
           ── THE PROMOTED PRODUCT ────────────────────────────────────────────────────────────
-          `xl` and up only. Below 1280 the six category columns are already at their 10.5rem floor,
-          and taking 264px more would push them into a second row — a menu that reflows into two
-          bands to make room for a promotion is worse than a menu with no promotion.
+          `lg` and up. The panel is 960px and the three category columns need ~600 of it, so the
+          card fits from the width where the panel itself stops being clamped by the viewport.
+          Below that it stands down rather than squeezing the links it sits beside.
 
           ── THE COLUMN IS MOUNTED BEFORE ITS CONTENTS EXIST, ON PURPOSE ─────────────────────
           The first version rendered this whole <aside> only once the product had arrived, which
@@ -356,8 +380,8 @@ export function ProductsDropdown({
           trade: reflowing once on an exception beats reflowing once on every first open.
         */}
         {!featureFailed && (
-          <aside className="hidden w-[264px] shrink-0 border-s border-hairline ps-10 xl:block">
-            <p className="mb-5 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-ink-3">
+          <aside className="hidden w-[196px] shrink-0 border-s border-hairline ps-8 lg:block">
+            <p className="mb-4 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
               Nouveauté
             </p>
 
@@ -392,7 +416,7 @@ export function ProductsDropdown({
                       src={getStorageUrl(feature.cover || '')}
                       alt=""
                       fill
-                      sizes="264px"
+                      sizes="196px"
                       className="object-contain p-3"
                     />
                   </LinkWithLoading>
@@ -407,7 +431,7 @@ export function ProductsDropdown({
                   </LinkWithLoading>
 
                   <p className="flex items-baseline gap-2">
-                    <span className="font-display text-xl font-bold tabular-nums text-brand">
+                    <span className="font-display text-lg font-bold tabular-nums text-brand">
                       {finalPrice.toFixed(2)} DT
                     </span>
                     {hasPromo && oldPrice != null && oldPrice > finalPrice && (

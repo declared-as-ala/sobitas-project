@@ -37,8 +37,10 @@ const LEGAL = {
   /* Below `sm` a band's BOTTOM padding is 0 and the gap is the lower band's `pt` alone — see the
      scale note in Section.tsx. So 0 is legal at 390 on its own merits, not as a stage/hero
      special case, and the mobile column will show `pb 0` on every band but the last. */
-  390: { strip: 12, tight: 24, default: 16, feature: 24, stage: 0, zero: 0 },
-  1440: { strip: 16, tight: 32, default: 40, feature: 48, stage: 0 },
+  390: { strip: 12, tight: 20, default: 16, feature: 24, stage: 0, zero: 0 },
+  /* Updated 18/08/2026 with the scale itself: `lg` came down one 8px notch across the board when
+     the owner asked for tighter desktop bands. tight 32->24, default 40->32, feature 48->40. */
+  1440: { strip: 16, tight: 24, default: 32, feature: 40, stage: 0 },
 };
 
 const CHROME = [

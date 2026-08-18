@@ -191,7 +191,22 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
       never merely repaint its background. Painting the background alone changes what you see and
       not what you inherit.
     */
-    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-3 overflow-hidden rounded-2xl border border-hairline p-3 font-poppins shadow-sm transition-shadow duration-200 ease-out [@media(hover:hover)]:hover:shadow-lg">
+    /*
+      ── THE PRODUCT PAGE'S SURFACE VOCABULARY (owner, 18/08/2026) ──────────────────────────
+      *"redesign the ventes flash section like we did to the product page vibe"*.
+
+      That page has one way of drawing a plate and this card was using a different one:
+      `rounded-2xl` + `shadow-sm` resting + `shadow-lg` on hover. Four cards in a row, each casting
+      a drop shadow onto a sand band, is what makes this band read as a set of floating widgets
+      rather than as part of the page — and it is the same "wearing a costume" note this band has
+      already been through twice, with the panel and the hatch.
+
+      The product page separates with a HAIRLINE and reacts on hover by DARKENING that hairline:
+      `rounded-xl border border-hairline` -> `hover:border-rule`. No shadow at rest, none on hover,
+      one radius, and the hover feedback is on the boundary the card already had. That is the whole
+      change, and it is also two fewer composited layers on a band that lazy-loads four packshots.
+    */
+    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-3 overflow-hidden rounded-xl border border-hairline p-3 font-poppins transition-colors duration-200 ease-out [@media(hover:hover)]:hover:border-rule">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
@@ -211,7 +226,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
             is 177px wide at 430px or 363px wide at 1920. The `aspect-square w-full` version this
             replaces made every card as tall as it was wide, which is why the 390px phone band
             measured 1,227px. */}
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl bg-sunken sm:h-24 sm:w-24">
+        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-sunken sm:h-[5.5rem] sm:w-[5.5rem]">
           {image ? (
             <Image
               src={image}
@@ -229,7 +244,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
                  fetches — so two below-the-fold packshots were competing for bandwidth inside the
                  hero's LCP window at every width. */
               loading="lazy"
-              className={`object-contain p-1 transition-transform duration-500 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.06] ${
+              className={`object-contain p-1.5 transition-transform duration-500 ease-out motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.06] ${
                 outOfStock ? 'opacity-45' : ''
               }`}
             />
@@ -246,7 +261,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="line-clamp-2 text-xs font-semibold leading-snug text-ink-1 transition-colors sm:text-sm [@media(hover:hover)]:group-hover:text-brand">
+          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-1 transition-colors sm:text-sm [@media(hover:hover)]:group-hover:text-brand">
             {name}
           </h3>
 
@@ -270,8 +285,10 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
                     {Math.round(priceDisplay.oldPrice)} DT
                   </span>
                 )}
+                {/* The discount chip is the product page's badge, not a second flat rectangle:
+                    same `rounded-full`, same 11px display caps, same `bg-brand`. */}
                 {discount > 0 && (
-                  <span className="rounded bg-brand px-1.5 py-px font-display text-[11px] font-bold tabular-nums leading-normal text-on-brand">
+                  <span className="rounded-full bg-brand px-2 py-px font-display text-[11px] font-bold tabular-nums leading-normal text-on-brand">
                     −{discount}%
                   </span>
                 )}
@@ -303,10 +320,11 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
               ? `Stock maximum atteint pour ${name}`
               : `Ajouter ${name} au panier`
         }
-        /* 48px square at every width, up from a 44px-tall full-width bar below `sm`. The card is
-           a row now, so there is no column for a full-width bar to sit under — and 48 clears the
-           44px tap floor `measure-flash` asserts with room rather than exactly. */
-        className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
+        /* 44px, down from 48, and `rounded-lg` to match the plate it sits on. It is still on
+           the site's tap floor exactly — `measure-flash` asserts 44 and this is 44 — and four of
+           these in a row at 48px with full brand fill was the loudest thing in a band that has
+           been asked three separate times to be quieter. */
+        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-lg transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-elevated ${
           state === 'ok'
             ? 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'
             : 'cursor-not-allowed bg-sunken text-ink-3'

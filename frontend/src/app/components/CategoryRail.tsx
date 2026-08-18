@@ -158,7 +158,18 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     against 182px for 4:3, so the square is the bigger presentation there and it
                     is the approved 6-up design. It does crop horizontally at sm+; that is the
                     accepted trade. */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken sm:aspect-square">
+                {/* ── 5:4 FROM `sm`, NOT A SQUARE (owner, 18/08/2026) ──────────────────────
+                    The square was chosen when this rail was six tiles across a 1600px page and it
+                    made each one 255px tall. On the owner's actual screen — 1920 at 125% scaling,
+                    so a 1536 CSS viewport — the same six tiles are 244px wide and therefore 244px
+                    tall, and this support band was costing 426px of a page whose product rails
+                    cost 688. A navigation strip should not be two-thirds the height of the rail
+                    it navigates to.
+
+                    5:4 takes the tile to 195px and the band to ~330px, and it is a better crop
+                    besides: the source photography is 4:3 (1.333), so a square box cropped 25% off
+                    the sides of every category cover. 5:4 (1.25) crops 6%. */}
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken sm:aspect-[5/4]">
                   {category.cover ? (
                     <Image
                       src={getStorageUrl(category.cover)}
@@ -177,7 +188,26 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                          = 480 × 0.43 = 206.4 — unchanged, because `sm` is still the smallest
                          percentage in the string. Same candidate list, no new optimizer variants,
                          nothing re-fetched. */
-                      sizes="(min-width: 1280px) 340px, (min-width: 640px) 44vw, 50vw"
+                      /* ── RE-DERIVED FOR 5:4, WHICH IS NOT OPTIONAL ────────────────────────
+                         `object-cover` scales an image on whichever axis leaves the box covered,
+                         so the required source width depends on the BOX ASPECT and changes the
+                         moment the box does. Source is 4:3 (1.333):
+
+                           old, square box (1.0)   image is relatively wider -> covers by HEIGHT
+                                                   -> required = tile x 4/3  = tile x 1.333
+                           new, 5:4 box   (1.25)   still covers by height, but the box is flatter
+                                                   -> required = tile x 1.333/1.25 = tile x 1.067
+
+                           lg   tile (1600-64-5)/6 = 255px -> 255 x 1.067 = 272 -> 280px
+                           sm   tile (vw-50)/3, x1.067, peaking at 35.6vw @1023 -> 36vw
+                           phone 2-up full-bleed, box aspect MATCHES the 4:3 source -> 50vw
+
+                         Leaving `340px` / `44vw` behind would have served 25% more pixels than any
+                         tile can now show, on six lazy images below the hero. The srcset FLOOR
+                         moves the right way too: Next filters candidates at
+                         deviceSizes[0] x min(percent)/100, so 480 x 0.36 = 173 against 211 — the
+                         same candidates plus the smaller ones, never fewer. */
+                      sizes="(min-width: 1280px) 280px, (min-width: 640px) 36vw, 50vw"
                       quality={80}
                       /* Stays lazy on purpose: these sit just under the hero, and letting six
                          tiles compete with the preloaded hero image is how you lose LCP. */
@@ -244,7 +274,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     across the two lines `line-clamp-2` already allows, instead of being clipped.
                     `lang` on the span is what makes it work — the browser needs the language to
                     know where a word may break. */}
-                <div className="flex min-h-[56px] flex-1 items-center justify-between gap-1.5 px-2 pb-4 pt-3 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[60px] sm:gap-3 sm:px-4 sm:py-4">
+                <div className="flex min-h-[52px] flex-1 items-center justify-between gap-1.5 px-2 pb-3.5 pt-2.5 transition-colors duration-200 group-hover:bg-sunken sm:min-h-[52px] sm:gap-3 sm:px-4 sm:py-3">
                   <span
                     lang="fr"
                     className="hyphens-auto min-w-0 line-clamp-2 font-display font-compressed text-[14px] font-bold uppercase leading-[1.15] tracking-[0.01em] text-ink-1 sm:text-[15px] xl:text-[14px]"

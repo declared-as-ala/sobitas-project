@@ -362,9 +362,6 @@
     "DS002": 3,
     "DS004": 4
   },
-  "src/app/components/CartDrawer.tsx": {
-    "DS002": 3
-  },
   "src/app/components/CategoryGrid.tsx": {
     "DS001": 4,
     "DS002": 3,

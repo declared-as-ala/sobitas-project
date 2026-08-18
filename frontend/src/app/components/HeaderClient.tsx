@@ -824,18 +824,36 @@ export function HeaderClient() {
               */}
               <Link
                 href="/partenaires"
-                className="shrink-0 inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-2 text-[13.5px] font-semibold text-ink-2 transition-colors hover:text-brand"
+                className="shrink-0 inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-2.5 text-[13px] font-semibold text-ink-2 transition-colors hover:text-brand"
               >
                 <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
                 <span>Accès Pro</span>
               </Link>
 
+              {/*
+                ── THE BUTTON STOPS FILLING ITS ROW ───────────────────────────────────────────
+                Owner, 18/08/2026: *"the header, make some inner padding — don't make the buttons
+                stick to borders! or make buttons smaller"*.
+
+                Both halves of that describe the same object. MEASURED at 1536: this pill was 36px
+                tall inside a 48px nav row, so it cleared the row's own rules by 6px top and
+                bottom, and its right edge sat exactly ON the page rail. Correct alignment — every
+                band on this site ends at that rail — but a saturated orange rectangle pressed
+                into all three edges of its row reads as jammed in rather than placed.
+
+                The rail cannot move: `max-w-site` + `px-4 lg:px-8` is shared with the header bar
+                above, the footer and every band between them, and a header that insets further
+                than the page would step visibly at both edges. So the mass comes down instead,
+                which is the owner's own alternative. 36 -> 32px tall, 14 -> 13px label, and the
+                icon follows: 8px of air above and below now, and the pill reads as sitting in the
+                row rather than filling it.
+              */}
               {packBuilderLink && (
                 <NavigationLink
                   item={packBuilderLink}
-                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[14px] font-semibold text-on-brand shadow-[0_2px_8px_rgba(255,90,0,0.25)] transition-all duration-200 hover:bg-brand-hover hover:shadow-[0_4px_12px_rgba(255,90,0,0.35)] active:scale-[0.98] whitespace-nowrap"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand shadow-[0_2px_8px_rgba(255,90,0,0.25)] transition-all duration-200 hover:bg-brand-hover hover:shadow-[0_4px_12px_rgba(255,90,0,0.35)] active:scale-[0.98] whitespace-nowrap"
                 >
-                  <Gift className="h-4 w-4" aria-hidden />
+                  <Gift className="h-3.5 w-3.5" aria-hidden />
                   <span>{translateLegacy(packBuilderLink.label)}</span>
                 </NavigationLink>
               )}

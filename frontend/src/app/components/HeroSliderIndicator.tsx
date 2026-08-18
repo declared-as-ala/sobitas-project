@@ -262,7 +262,11 @@ export function HeroSliderControls({
                 aria-label={`Aller à la diapositive ${i + 1} sur ${count}`}
                 aria-current={isActive ? 'true' : undefined}
                 onClick={() => goTo(i)}
-                className="pointer-events-auto group flex h-11 w-5 items-center justify-center outline-none"
+                /* 24px wide, not 20. WCAG 2.2 SC 2.5.8 wants a 24x24 target INCLUDING its spacing,
+                   and with `gap-1` between dots the 20px box came to exactly 24 — passing on the
+                   boundary, on a control at the top of every page. 24 + 4 clears it. The dot
+                   itself is unchanged; only its hit box grew. */
+                className="pointer-events-auto group flex h-11 w-6 items-center justify-center outline-none"
               >
                 <span
                   data-motion

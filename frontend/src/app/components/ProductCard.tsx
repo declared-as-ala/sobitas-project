@@ -279,12 +279,12 @@ export const ProductCard = memo(function ProductCard({
             /* "Sur commande" for the 10,535 imported catalogue items, "Rupture" only for the ones
                the owner has explicitly switched off. They never sold out — they were never stocked
                — and a grid where 98.7% of the cards shout RUPTURE reads like a dead shop. */
-            <span className="pt-slab inline-flex items-center rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
+            <span className="pt-slab inline-flex items-center rounded-lg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1">
               {stock.isBackOrder ? 'Sur commande' : 'Rupture'}
             </span>
           )}
           {inStock && productData.priceDisplay.hasPromo && productData.discount > 0 && (
-            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-0.5 text-[10px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
+            <span className="inline-flex items-center gap-1 rounded-lg bg-brand px-2 py-0.5 text-[11px] font-bold tabular-nums tracking-wide text-on-brand shadow-sm sm:px-2.5 sm:py-1">
               <Flame className="h-3 w-3 shrink-0" aria-hidden="true" />
               -{productData.discount}%
             </span>
@@ -301,7 +301,7 @@ export const ProductCard = memo(function ProductCard({
 
               The DISCOUNT badge above is untouched: −7% is per-product and no heading states it. */}
           {inStock && showBadge !== false && (productData.isBestSeller || badgeText) && (
-            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1 sm:text-[11px]">
+            <span className="pt-slab inline-flex items-center gap-1 rounded-lg px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-1 shadow-sm sm:px-2.5 sm:py-1">
               <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
               {badgeText || 'Top vente'}
             </span>
@@ -411,7 +411,18 @@ export const ProductCard = memo(function ProductCard({
             the trust strip under the hero and again on the product page, and it was the chip that
             wrapped this row onto a second line in every narrow column — ~20px per card, spent on
             repetition. Stock + delivery window are the two facts that are per-PRODUCT. */}
-        <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden text-[10px] font-medium text-ink-3 sm:gap-x-3 sm:text-[11px]">
+      {/* ── 11px AT EVERY WIDTH (owner, 18/08/2026: "on mobile … measured spaces and colors and
+          font sizes") ────────────────────────────────────────────────────────────────────────
+          A sweep of the rendered homepage at 390px found FIFTY-THREE text nodes set at 10px, and
+          every one of them was on this card: the discount badge, the stock chip, the delivery
+          chip. All four were written `text-[10px] sm:text-[11px]` — the PHONE got the smaller of
+          the two sizes, which is backwards. A phone is held further from the eye than a laptop is,
+          and it is 81% of this site's traffic.
+
+          11px at every width, so the step disappears rather than inverting. Measured against the
+          space it has: this meta row is 222px wide on a 390px phone (390 − 32 gutter − 124
+          thumbnail − 12 gap) and "En stock · 24–48h" sets at ~108px. It was never tight. */}
+        <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden text-[11px] font-medium text-ink-3 sm:gap-x-3">
           {!stock.isUnknown && (
             <span className="inline-flex min-w-0 items-center gap-1">
               <CircleCheck

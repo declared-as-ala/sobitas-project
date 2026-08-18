@@ -39,7 +39,39 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
 
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="right">
-      <DrawerContent className="max-h-[96dvh] w-full border-0 bg-elevated shadow-none sm:max-w-md">
+      {/*
+        ── THE TRANSPARENT STRIP AT THE BOTTOM ────────────────────────────────────────────────
+        Owner, 18/08/2026: *"redesign the panier also — you can see a transparent bottom"*.
+
+        `max-h-[96dvh]` was the cause, and it is a genuinely non-obvious one. The drawer primitive
+        gives a right-hand panel `inset-y-0`, i.e. top:0 AND bottom:0, which resolves its height to
+        the full viewport. Adding a max-height over-constrains that box, and CSS resolves an
+        over-constrained absolutely-positioned element by keeping `top` and ignoring `bottom` — so
+        the panel became 96dvh tall, anchored to the top, and the remaining 4% of the screen was
+        the page showing through under it. On a 1080px screen that is a 43px band of the homepage
+        below the cart, which is exactly what the owner photographed.
+
+        A side drawer has no reason to be short. `h-full` states the intent the primitive already
+        had, and nothing caps it.
+
+        `shadow-none` went with it. The primitive ships `-8px 0 24px rgba(0,0,0,.12)` for this
+        direction and it is the only thing separating a white panel from a white page at the seam;
+        overriding it to none is why the drawer's left edge disappeared wherever the page behind
+        it was also white.
+
+        ── THE WIDTH, AND WHY IT NEEDS `!` ───────────────────────────────────────────────────
+        The primitive sets `data-[vaul-drawer-direction=right]:w-3/4`, which is an attribute-scoped
+        selector and therefore beats a plain `w-full` in the cascade — and tailwind-merge cannot
+        collapse the pair either, because the two classes have different keys. So a phone got a
+        cart 292px wide out of 390, and every product name in it clipped mid-word
+        ("NITROTECH WHEY PROTEI…"). `!w-[min(28rem,…)]` is the same escape hatch the mobile menu
+        Sheet already uses for the same reason, three files over.
+
+        `min(28rem, 100vw - 2.5rem)`: 448px on a desktop, exactly as before; 350px on a 390px
+        phone, which is +58px of name and keeps 40px of backdrop so the drawer still reads as an
+        overlay you can tap out of rather than a new page.
+      */}
+      <DrawerContent className="flex h-full !w-[min(28rem,calc(100vw-2.5rem))] flex-col border-0 bg-elevated">
         <DrawerHeader className="shrink-0 border-b border-hairline bg-elevated px-5 pb-4 pt-5">
           <DrawerTitle className="font-display font-compressed text-2xl font-extrabold uppercase tracking-tight text-ink-1">
             Panier
@@ -59,6 +91,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
           </DrawerDescription>
         </DrawerHeader>
 
+        {/* `h-full` on the scroller is what lets the empty state centre itself in it — see below. */}
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain bg-elevated px-5">
           {items.length === 0 ? (
             /* An empty drawer is a dead end unless it points somewhere. This one showed a box,
@@ -66,7 +99,12 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                immediately above it. It now carries a headline in the display face, one line
                saying what to do, and the free-delivery threshold, which is the most persuasive
                fact this shop has and the actual reason to start adding things. */
-            <div className="flex flex-col items-center justify-center px-6 py-12 text-center">
+            /* CENTRED IN THE PANEL, not stacked at the top of it. `py-12` put the icon 48px
+               under the header and left roughly 600px of empty white below the button — the
+               "fix the content and how it shows inside" half of the same note. `h-full` +
+               `justify-center` makes the drawer's one message sit in the middle of the space it
+               has, which is what an empty state is for. */
+            <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
               <div className="mb-5 flex h-20 w-20 items-center justify-center rounded-2xl border border-hairline bg-sunken">
                 <ShoppingBag className="h-9 w-9 text-brand" aria-hidden="true" />
               </div>
@@ -86,7 +124,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
               </DrawerClose>
             </div>
           ) : (
-            <div className="space-y-3 py-4">
+            <div className="space-y-2.5 py-4">
               {items.map(item => {
                 const displayPrice = getEffectivePrice(item.product);
                 const stockDisponible = getStockDisponible(item.product as any);
@@ -105,9 +143,15 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 return (
                   <div
                     key={item.product.id}
-                    className="flex gap-3 rounded-xl border border-hairline bg-sunken p-3"
+                    className="flex gap-3 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors hover:border-rule"
                   >
-                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg border border-hairline bg-elevated">
+                    {/* `bg-elevated` row on a `bg-elevated` panel, separated by its hairline —
+                        and the THUMBNAIL is the well. It was the other way round: a `bg-sunken`
+                        row holding a `bg-elevated` thumbnail, which reads as a card floating on a
+                        card and gives the packshot the brightest surface in the drawer for no
+                        reason. The product photograph is the thing that should recede into a well;
+                        the price and the controls are what should sit on the plate. */}
+                    <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-sunken">
                       {(item.product as any).image || (item.product as any).cover ? (
                         <Image
                           src={(item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : '')}
@@ -133,7 +177,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="-mr-1 -mt-1 h-9 w-9 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-brand"
+                          className="-mr-1 -mt-1 h-8 w-8 shrink-0 rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-destructive"
                           onClick={() => removeFromCart(item.product.id)}
                           aria-label="Retirer du panier"
                         >
@@ -144,10 +188,13 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         {formatCurrency(displayPrice)}
                       </p>
                       <div className="flex items-center justify-between gap-2 mt-2">
-                        <div className="flex items-center overflow-hidden rounded-lg border border-hairline bg-elevated">
+                        {/* The stepper is the WELL now that the row is a plate — the same swap as
+                            the thumbnail above, and for the same reason: a control that is pressed
+                            reads as recessed. */}
+                        <div className="flex items-center overflow-hidden rounded-lg border border-hairline bg-sunken">
                           <button
                             type="button"
-                            className="flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center text-ink-2 transition-colors hover:bg-sunken disabled:pointer-events-none disabled:opacity-50"
+                            className="flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                             onClick={() =>
                               updateQuantity(item.product.id, Math.max(1, item.quantity - 1))
                             }
@@ -161,7 +208,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                           </span>
                           <button
                             type="button"
-                            className="flex h-10 w-10 min-h-[44px] min-w-[44px] items-center justify-center text-ink-2 transition-colors hover:bg-sunken disabled:pointer-events-none disabled:opacity-50"
+                            className="flex h-10 w-10 min-h-[40px] min-w-[40px] items-center justify-center text-ink-2 transition-colors hover:bg-elevated hover:text-brand disabled:pointer-events-none disabled:opacity-40"
                             onClick={handleIncrease}
                             disabled={item.quantity >= maxQty}
                             aria-label="Augmenter la quantité"
@@ -200,12 +247,19 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 </div>
               </div>
             ) : (
-              <div className="mb-4 flex items-center gap-2 rounded-xl border border-green-100 dark:border-green-900/40 bg-green-50 dark:bg-green-950/30 p-3 text-sm font-medium text-green-700 dark:text-green-400">
+              /* `text-ok` + a tinted well, not `green-50/green-700` with a hand-written `dark:`
+                 twin for each. Six raw palette classes on the one panel that closes a sale, and
+                 the dark halves were guesses — `--c-ok` is 5.02:1 on canvas in light and 8.45:1
+                 on the slab in dark, measured, in one class. */
+              <div className="mb-4 flex items-center gap-2 rounded-xl border border-hairline bg-sunken p-3 text-sm font-medium text-ok">
                 <Truck className="h-4 w-4 shrink-0" aria-hidden="true" />
                 Vous bénéficiez de la livraison gratuite !
               </div>
             )}
-            <div className="flex justify-between items-center mb-4">
+            {/* One rule above the total, because the total is the only line in this panel that
+                summarises the ones above it. Without it the footer is three unrelated blocks of
+                the same weight and the eye has to hunt for the number it came for. */}
+            <div className="mb-4 flex items-center justify-between border-t border-hairline pt-4">
               <span className="font-display text-base font-semibold uppercase tracking-wide text-ink-1">Total</span>
               <span className="font-display text-2xl font-extrabold tabular-nums tracking-tight text-brand">
                 {formatCurrency(totalPrice)}
