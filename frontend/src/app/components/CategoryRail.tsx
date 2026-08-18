@@ -98,7 +98,11 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
          `lg:py-6`, and a `lg:` utility beats an `sm:` one in the cascade regardless of which was
          written last. Measured before adding it — the band still reported 24px of padding-top at
          1536. Every breakpoint the scale sets, this has to answer. */
-      className="border-t-0 sm:pt-0 lg:pt-0"
+      /* The PHONE gives up its top padding too (owner, 18/08/2026, second pass). It kept `pt-5`
+         in the first pass because the hero's mobile bottom is only 4px and zeroing both would fuse
+         the slider into the cards — the owner has now looked at that on a real phone and wants
+         them fused. 4px is the entire boundary. */
+      className="border-t-0 pt-0 sm:pt-0 lg:pt-0"
       /* 0.2em of gutter on a phone (owner). The Container's own `px-4` is the site rail and is
          right for prose and product grids; this band is photography that the owner wants running
          edge to edge, and 3px is the smallest gutter that still keeps the tiles' rounded corners

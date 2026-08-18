@@ -259,7 +259,14 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
                  a seam. It is now white, seamless and 8px deep, so 16px on top of it read as a
                  hole rather than as a boundary. `pt-2` is the owner's 0.5em; `sm:py-6` in the
                  scale still wins from 640px up, so desktop is untouched. */
-              className="pt-2"
+              /* `border-t-0 pt-0` BELOW `sm` ONLY (owner, 18/08/2026, second pass). The rail
+                 above is now white, seamless and 8px deep, so on a phone this band's own seam was
+                 the only line on the screen and it was drawing a boundary between two things that
+                 are meant to read as one scroll. `sm:border-t` puts the rule back from 640px up,
+                 where the desktop layout still wants the two bands distinguished — the width is
+                 set by the utility and the colour still comes from the `[data-band]` rule in
+                 globals.css, so the seam stays theme-aware. */
+              className="border-t-0 pt-0 sm:border-t"
               defer
             />
           </div>

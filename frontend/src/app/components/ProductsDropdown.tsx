@@ -461,12 +461,23 @@ FIXED COLUMN COUNTS, not `auto-fit`. The auto-fit version silently changed its o
                     )}
                   </p>
 
-                  {/* The one filled button in the panel. `text-on-brand` on a slab is near-black on
+                  {/* ── THE ONE FILLED BUTTON, AND WHY IT HAS A BORDER ────────────────────────
+                      `bg-brand-fill` keeps the IDENTITY orange (#D03B04) instead of the slab's
+                      lightened accent, so this button and the header CTA 40px above it are the
+                      same colour — measured, both rgb(208,59,4). See --brand-core in tokens.css.
+
+                      The border is not decoration. WCAG 1.4.11 wants 3:1 between a control and
+                      what surrounds it, and measured on the built page the deep orange sits at
+                      3.95:1 on the light-theme panel but 2.93:1 on the dark one, where the slab
+                      canvas lifts to ~#252528. `border-brand` is the slab accent (#FF8A4C, 8.25:1
+                      on the panel), so the boundary is carried by the edge in BOTH themes and the
+                      fill is free to be the brand colour rather than whatever measures. */}
+                  {/* Previously: `text-on-brand` on a slab is near-black on
                       #FF8A4C — 8.47:1. White on that same orange is 3.55:1 and FAILS, which is why
                       this is a token and not a literal. */}
                   <LinkWithLoading
                     href={link}
-                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-brand px-4 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-brand bg-brand-fill px-4 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand-fill transition-colors hover:bg-brand-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     loadingMessage="Chargement..."
                     onClick={close}
                   >

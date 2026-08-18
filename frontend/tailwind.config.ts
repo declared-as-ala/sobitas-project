@@ -156,6 +156,17 @@ const config: Config = {
          * a missing utility is invisible in review and invisible in the build.
          */
         "on-brand": "rgb(var(--c-on-brand) / <alpha-value>)",
+        /**
+         * `bg-brand-fill text-on-brand-fill` — a FILLED brand control that keeps the identity
+         * orange inside a dark scope, where `--c-brand` has to lighten to stay legible as text.
+         * See --brand-core in tokens.css for the measurements. Outside a dark scope this pair is
+         * identical to `brand` / `on-brand`, so it is always safe and never a second decision.
+         */
+        "brand-fill": {
+          DEFAULT: "rgb(var(--c-brand-fill) / <alpha-value>)",
+          hover: "rgb(var(--c-brand-fill-hover) / <alpha-value>)",
+        },
+        "on-brand-fill": "rgb(var(--c-on-brand-fill) / <alpha-value>)",
         ink: {
           DEFAULT: "rgb(var(--c-ink-1) / <alpha-value>)",
           1: "rgb(var(--c-ink-1) / <alpha-value>)",

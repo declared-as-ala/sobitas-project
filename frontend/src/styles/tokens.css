@@ -97,6 +97,27 @@
   --page-brand-hover: 178 50 4; /* #B23204 */
   --page-on-brand: 255 255 255; /* text/icon ON the accent — NOT a constant, see .dark */
 
+  /* ── THE IDENTITY ORANGE, AS A FILL ONLY ──────────────────────────────────────────────────
+   * Owner, 18/08/2026: *"make the colours of the Boutique dropdown better — use the main orange"*.
+   *
+   * The mega-menu is a `.pt-slab`, and that scope re-points `--c-brand` to #FF8A4C because the
+   * accent has to work as SMALL TEXT on near-black: #D03B04 there measures 4.08:1 and fails AA,
+   * #FF8A4C measures 8.25:1. That is correct and it stays. But it also means the one FILLED
+   * control in the panel — a 44px "ACHETER" button — was rendering in a pale salmon that reads as
+   * a different brand from the deep orange in the header 40px above it.
+   *
+   * The distinction the token layer was missing is TEXT vs FILL. Contrast on a fill is carried by
+   * the ink ON it, not by the fill against the page, so the fill only owes WCAG 1.4.11's 3:1 for
+   * a UI component boundary. Measured: #D03B04 on the slab canvas (#0A0A0B) is 4.08:1, and white
+   * on #D03B04 is 4.82:1. Both clear. The identity orange can be a button on black; it cannot be
+   * a link on black.
+   *
+   * `--brand-core` is deliberately NOT theme-flipped — it is the logo's orange, and the point of
+   * this pair is that a filled brand control looks the same everywhere. Page scope maps the fill
+   * back onto the ordinary accent, so nothing outside a dark scope changes. */
+  --brand-core: 208 59 4; /* #D03B04 — the identity orange, constant */
+  --brand-core-hover: 178 50 4; /* #B23204 */
+
   --page-focus: 208 59 4; /* #D03B04  focus rings, in page scope */
 
   /* Stock semantics. These replaced #22C55E (2.28:1) and #F59E0B (2.15:1), which were decorative
@@ -165,6 +186,11 @@
   --c-brand: var(--page-brand);
   --c-brand-hover: var(--page-brand-hover);
   --c-on-brand: var(--page-on-brand);
+  /* In page scope a brand FILL is just the brand — see --brand-core above. Declared here so the
+     utility resolves on every surface and never falls back to a Tailwind default. */
+  --c-brand-fill: var(--page-brand);
+  --c-brand-fill-hover: var(--page-brand-hover);
+  --c-on-brand-fill: var(--page-on-brand);
   --c-focus: var(--page-focus);
   --c-ok: var(--page-ok);
   --c-warn: var(--page-warn);
@@ -278,6 +304,12 @@
   --c-brand: var(--slab-brand);
   --c-brand-hover: var(--slab-brand-hover);
   --c-on-brand: var(--slab-on-brand);
+  /* The one place the pair earns its keep: a filled control keeps the identity orange while the
+     accent stays light enough to be read as text. White ink, NOT `--slab-on-brand` (#0A0A0B),
+     which measures 4.08:1 on #D03B04 against white's 4.82:1. */
+  --c-brand-fill: var(--brand-core);
+  --c-brand-fill-hover: var(--brand-core-hover);
+  --c-on-brand-fill: 255 255 255;
   --c-focus: var(--slab-focus);
   --c-ok: var(--slab-ok);
   --c-warn: var(--slab-warn);
@@ -317,6 +349,9 @@
   --c-brand: var(--page-brand);
   --c-brand-hover: var(--page-brand-hover);
   --c-on-brand: var(--page-on-brand);
+  --c-brand-fill: var(--page-brand);
+  --c-brand-fill-hover: var(--page-brand-hover);
+  --c-on-brand-fill: var(--page-on-brand);
   --c-focus: var(--page-focus);
   --c-ok: var(--page-ok);
   --c-warn: var(--page-warn);
@@ -343,6 +378,11 @@
   --c-brand: var(--promo-brand);
   --c-brand-hover: var(--promo-brand);
   --c-on-brand: 255 255 255;
+  /* On the orange band a "brand fill" cannot be the brand — it would be invisible. It follows
+     this scope's inverted pair like everything else here: white plate, orange ink. */
+  --c-brand-fill: var(--promo-brand);
+  --c-brand-fill-hover: var(--promo-brand);
+  --c-on-brand-fill: 255 255 255;
   --c-focus: 255 255 255;
   --c-ok: 255 255 255;
   --c-warn: 255 255 255;
