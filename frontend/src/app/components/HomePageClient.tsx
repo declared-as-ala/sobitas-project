@@ -190,7 +190,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
               hero + trust    canvas          artwork supplies the darkness; the trust row is a
                                               CARD inside this band, not a band of its own
-              catégories      sunken
+              catégories      canvas          ── EXCEPTION, owner 18/08/2026: they edited this
+                                              band to white in DevTools and asked for the seam and
+                                              the top padding with it, so the rail reads as part of
+                                              the hero rather than as the page's second section.
+                                              It is the one place invariant 1 below is broken, and
+                                              it is broken deliberately: with the heading and the
+                                              "Tout voir" link also gone there is no band apparatus
+                                              left to separate, only six navigation tiles. The
+                                              alternation resumes at "ventes flash".
               plus vendus     canvas
               ventes flash    sunken          + the four black countdown tiles
               nouveautés      canvas
@@ -245,6 +253,13 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               /* No per-card badge: the h2 above already says these are the best sellers, and on a
                  124px phone thumbnail the pill covered ~40% of the packshot. See ProductCard. */
               showBadge={false}
+              /* ── 0.5em ON A PHONE (owner, 18/08/2026) ──────────────────────────────────────
+                 `default` opens with `pt-4` (16px) on mobile, and that number was measured when
+                 the band above was a sand-filled category section with its own bottom padding and
+                 a seam. It is now white, seamless and 8px deep, so 16px on top of it read as a
+                 hole rather than as a boundary. `pt-2` is the owner's 0.5em; `sm:py-6` in the
+                 scale still wins from 640px up, so desktop is untouched. */
+              className="pt-2"
               defer
             />
           </div>

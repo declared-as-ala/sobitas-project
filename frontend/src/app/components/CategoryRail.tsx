@@ -5,7 +5,6 @@ import type { Category } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { buildCategoryAlt } from '@/util/productAlt';
 import { Section } from '@/app/components/layout/Section';
-import { SectionHeader } from '@/app/components/SectionHeader';
 
 /**
  * Category rail — the fastest path from landing to a product list.
@@ -65,7 +64,48 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
        longer shares the `max-w-site` rail the hero and the product grids use — it is the one band
        whose content is photography rather than a list, and it is the only one wide enough to carry
        six tiles without shrinking them. Everything below it keeps the rail. */
-    <Section surface="sunken" spacing="tight" width="full" aria-labelledby="category-rail-heading">
+    /*
+      ── THE BAND STOPS BEING A BAND (owner, 18/08/2026, edited live in DevTools) ─────────────
+      *"border-top: none; background-color: white; padding-top: 0 … delete the title 'Acheter par
+      objectif' … delete the button 'voir tous' … make the border-radius 8px and the gap 5px"*.
+
+      Every one of those edits points the same way: this strip should read as part of the hero
+      rather than as the page's second section. It was `sunken` — warm sand — with a 1px seam, a
+      22px heading, a "Tout voir" link and 20px of top padding, which is the full apparatus of a
+      content band wrapped around six navigation tiles.
+
+      So the apparatus goes and the tiles stay:
+        surface  `sunken` -> `base`. Canvas is #FFFFFF in light (tokens.css line 61) and #0A0A0B
+                 in dark, so "background-color: white" is expressed as the TOKEN that is white,
+                 not as white — the dark theme keeps working.
+        seam     `border-t-0` beats the `[data-band]` rule in globals.css because utilities are a
+                 later layer than base. The seam exists to separate two bands of different fills;
+                 with the hero above now the same fill, it was drawing a line across a continuous
+                 white area.
+        pt       `sm:pt-0` from 640px up. The gap to the hero is the hero's own `pb-6` and nothing
+                 else, which is this file's own rule (see Section.tsx) applied one band earlier
+                 than usual. The PHONE keeps `pt-5`: the hero's mobile bottom is 4px, so zeroing
+                 this too would fuse the slider into the cards.
+
+      This band now shares a surface with the one above it, which the band sequence in
+      HomePageClient calls an invariant. The comment there records the exception and why.
+    */
+    <Section
+      surface="base"
+      spacing="tight"
+      width="full"
+      /* `lg:pt-0` is not redundant with `sm:pt-0`: the scale's own value at this size is
+         `lg:py-6`, and a `lg:` utility beats an `sm:` one in the cascade regardless of which was
+         written last. Measured before adding it — the band still reported 24px of padding-top at
+         1536. Every breakpoint the scale sets, this has to answer. */
+      className="border-t-0 sm:pt-0 lg:pt-0"
+      /* 0.2em of gutter on a phone (owner). The Container's own `px-4` is the site rail and is
+         right for prose and product grids; this band is photography that the owner wants running
+         edge to edge, and 3px is the smallest gutter that still keeps the tiles' rounded corners
+         off the screen edge. Both desktop steps are unchanged. */
+      containerClassName="px-[3px] sm:px-6 lg:px-8"
+      aria-labelledby="category-rail-heading"
+    >
       {/* SCALE 3, and no kicker (owner: "that's a big title — no need. I just want to show the
           user that they can browse by category and directly do that").
 
@@ -76,14 +116,15 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
       {/* CENTRED BELOW `sm`, still — but the ORIGINAL reason is gone with the `-mx-4`. It now
           earns its place on the plainer ground that a two-up grid of square photographs reads as a
           centred composition on a phone, and a label pinned hard left over it does not. */}
-      <SectionHeader
-        id="category-rail-heading"
-        title="Acheter par objectif"
-        viewAllHref="/shop"
-        viewAllLabel="Tout voir"
-        scale="3"
-        centerOnMobile
-      />
+      {/* THE HEADING SURVIVES AS TEXT, NOT AS A HEADER (owner: "delete the title", "delete the
+          button voir tous"). Both are gone from the screen and the h2 stays in the document:
+          `aria-labelledby` on the band above points at it, so the landmark keeps its name for a
+          screen-reader user tabbing the page by region, and the heading outline keeps a level-2
+          entry between the sr-only h1 and "Les plus vendus". A section labelled by an element
+          that no longer exists is an aria reference into nothing — worse than no label. */}
+      <h2 id="category-rail-heading" className="sr-only">
+        Acheter par objectif
+      </h2>
 
       {/* SEPARATED CARDS, replacing the fused `gap-px over bg-rule` block (owner, 11/08/2026:
           "there's a lot of wide space in there… make the cards away from each other, make margins
@@ -112,7 +153,17 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
 
           Gaps grow with the tiles (`gap-3/4/5`) because a 2px gutter between 400px photographs
           reads as a printing error, not as a grid. */}
-      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-6 xl:gap-5">
+      {/* ── 5px, AND 0.2em ON A PHONE (owner, 18/08/2026) ────────────────────────────────
+          The gaps above were 12/16/20 and the note beside them argued that "a 2px gutter between
+          400px photographs reads as a printing error". That was written when the tiles were
+          separated cards on a sand band; on white, with an 8px radius and no heading over them,
+          the owner wants them read as ONE strip of six, and at 5px they do — the hairline borders
+          nearly touch and the row scans as a single control rather than as six objects.
+
+          3px on a phone (0.2em = 3.2px) with a 3px gutter, so the two columns and both margins
+          are the same measure and the grid reads as centred rather than as two cards that happen
+          to be near each other. */}
+      <ul className="grid grid-cols-2 gap-[3px] sm:grid-cols-3 sm:gap-[5px] xl:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -147,7 +198,14 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                    a card jumping at you.
 
                    `rounded-2xl border` per tile, since the shared rounded slab is gone. */
-                className="group flex h-full flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-rule hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                /* 8px, not 16 (owner). A 16px radius on a tile whose neighbour is 5px away
+                   eats most of the gap optically — the corners curve away from each other and the
+                   row loses its line.
+
+                   `rounded-[8px]`, NOT `rounded-lg`: this config re-points `lg` at `var(--radius)`
+                   (tailwind.config.ts), which resolves to 10px, so the obvious class would have
+                   quietly shipped 10. Measured. */
+                className="group flex h-full flex-col overflow-hidden rounded-[8px] border border-hairline bg-elevated transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-rule hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
