@@ -87,14 +87,41 @@ export function PackCardImage({
     // 'dark' = the GPT card's diagonal charcoal gradient so packshots pop; 'light' = white.
     isDark
       ? 'bg-gradient-to-br from-[#1b1f2a] to-[#0e1118]'
-      : 'bg-white dark:bg-gray-900',
+      /*
+        ── WHY THIS FRAME MUST STAY FLAT WHITE, AND WHAT THAT COSTS ──────────────────────────
+        Owner, 18/08/2026: *"give the image of the product a soul — don't make it look AI
+        generated."* The obvious first move — a soft `elevated -> sunken` wash so the packshot sits
+        in a lit space instead of on a blank rectangle — was written, rendered, and reverted, and
+        the screenshot is the reason:
+
+            THE PACKSHOTS ARE NOT TRANSPARENT. They are photographs on a baked-in WHITE
+            background, so the moment the frame is any colour other than #FFFFFF, every card shows
+            a hard white rectangle floating inside a tinted box.
+
+        Same reason there is no contact shadow under the product: it would be painted UNDER the
+        image's own opaque white, i.e. invisible on the cards it was drawn for. Any lighting this
+        frame gets has to be applied OVER the image (see the vignette below) or not at all.
+
+        `bg-elevated` rather than the old `bg-white dark:bg-gray-900`: identical in light theme
+        (elevated IS #FFFFFF), and in dark it drops a cool slate that sat visibly cooler than the
+        warm neutral card around it.
+
+        THE REAL FIX, when someone has the time, is upstream: background-removed PNGs. ~23,000
+        images, so it is a backend job, and it is the single change that would let this card light
+        its products properly.
+      */
+      : 'bg-elevated',
     productImageFrame(mode)
   );
 
   const imageClasses = cn(
     'transition-transform duration-300 ease-out',
     isContain
-      ? 'object-contain object-center [@media(hover:hover)]:group-hover:scale-[1.04]'
+      /* The packshot LIFTS as well as growing. A pure scale reads as a zoom — a picture getting
+         bigger; a small rise with a shadow that spreads underneath it reads as an object being
+         picked up. Same two composited properties, no extra cost, and it is the gesture the
+         ground below is drawn for. */
+      ? 'object-contain object-center [@media(hover:hover)]:group-hover:-translate-y-[3%] [@media(hover:hover)]:group-hover:scale-[1.04]'
       : 'object-cover [@media(hover:hover)]:group-hover:scale-[1.06]'
   );
 
@@ -106,6 +133,24 @@ export function PackCardImage({
         aria-label={`Voir ${productName}`}
         loadingMessage="Chargement"
       >
+        {/*
+          ── THE ONE PIECE OF LIGHT THAT WORKS ON AN OPAQUE PACKSHOT ───────────────────────
+          A vignette, painted OVER the image rather than behind it: transparent across the middle
+          55% and 5% black at the corners. It is what a softbox does to a white sweep — the edges
+          fall off — and it is the difference between a photograph and a cut-out pasted on a page.
+
+          Black, not `--c-ink-1`: the ink token INVERTS with the theme, so on a dark card it would
+          brighten the corners instead of deepening them. This overlay must darken in both themes,
+          because what it is darkening is the packshot's own white background, which does not flip.
+
+          5% is deliberately at the edge of perceptible. Anything you can point at on a product
+          grid is a filter, and a filter over 23 photographs the brands supplied is the thing that
+          makes a page look generated.
+        */}
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 z-[1] bg-[radial-gradient(120%_90%_at_50%_38%,transparent_55%,rgb(0_0_0/0.05)_100%)]"
+        />
         {imageSrc && !hasError ? (
           // The padded box. This is a POSITIONED, SIZED element, so the Image `fill` (which sets
           // inline `inset:0`) fills THIS inset box — the old approach put padding on the link and
@@ -115,7 +160,7 @@ export function PackCardImage({
           // inset-[5%], down from 9%. The frame went square → 5:4 to shorten the card; dropping
           // the inset gives most of that height back TO THE PACKSHOT rather than to padding, so
           // the product shrinks ~5% instead of ~20%.
-          <span className={cn('absolute block', isContain ? 'inset-[5%]' : 'inset-0')}>
+          <span className={cn('absolute block', isContain ? 'inset-[4%]' : 'inset-0')}>
             <Image
               src={imageSrc}
               alt={imageAlt || productName}

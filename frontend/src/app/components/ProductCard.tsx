@@ -246,9 +246,27 @@ export const ProductCard = memo(function ProductCard({
     */
     <>
     <article className="pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-lg">
-      {/* 124px thumbnail on phones, full-width image from `sm`. `self-stretch` gives the frame's
-          `h-full` a height to resolve against (see util/productCardFrame.ts). */}
-      <div className="relative w-[124px] shrink-0 self-stretch sm:w-auto sm:self-auto">
+      {/* ── 104px UNDER 400px, 124 ABOVE IT (owner, 18/08/2026) ──────────────────────────
+          *"on my iPhone 13 the cards are super good, but on smaller screens the text gets squeezed
+          and trimmed."* An iPhone 13 is 390 CSS px. The phones under it in real traffic are 375,
+          360 and 320 — and 320 is also what a 360px Android reports at the largest display-size
+          setting, i.e. a person who has asked the system for BIGGER text.
+
+          The arithmetic at 320, before: 288px card − 124 thumbnail − 24 padding = 140px of column,
+          minus 36 reserved for the heart on the two rows that carry the brand and the name = 104.
+          A 41-character product name in 104px at 13px clamps mid-word every time, which is exactly
+          what `measure-card.mjs` reports at 320, 360, 375 AND 390.
+
+          20px off the thumbnail and 4px off the body padding, plus the 36 the heart gives back,
+          takes that column from 104 to 168px.
+
+          THE BREAKPOINT IS 360, NOT 400, AND THAT IS A MEASUREMENT. With the heart out of the way
+          a 390px iPhone has a 210px text column at the FULL 124px thumbnail — it never needed the
+          smaller one, and the owner's note was explicit that 390 already looked right. Re-measured
+          at 360 and 375 with 124px: no clipping either. Only 320 — where the column would be 164 —
+          actually needs the narrower thumbnail, so only 320-359 gets it. `self-stretch` gives the frame's `h-full` a height to resolve against
+          (see util/productCardFrame.ts). */}
+      <div className="relative w-[104px] shrink-0 self-stretch min-[360px]:w-[124px] sm:w-auto sm:self-auto">
         <PackCardImage
           imageSrc={productData.image}
           productName={productData.name}
@@ -309,18 +327,6 @@ export const ProductCard = memo(function ProductCard({
         </div>
       </div>
 
-      {/* Favourite — anchored to the CARD, so it lands in the top-right corner in both layouts.
-          36px circle with a 44px tap area via `after:-inset-1`: the visual control can shrink on
-          a phone, the TARGET cannot — 44px is the floor. */}
-      <button
-        type="button"
-        onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-        className="pointer-events-auto absolute right-2 top-2 z-20 flex h-9 w-9 items-center justify-center rounded-full bg-elevated shadow-md ring-1 ring-hairline transition-transform after:absolute after:-inset-1 after:content-[''] hover:scale-105 sm:right-3 sm:top-3"
-        aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-      >
-        <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
-      </button>
-
       {/*
         Body — SIX stacked rows became FOUR (owner: "the card height is so long").
 
@@ -335,25 +341,49 @@ export const ProductCard = memo(function ProductCard({
           · gap-2 → gap-1.5, py-4 → py-3.5 is NOT used (off the 4px lattice); padding stays 16px
         Combined with the 5:4 image frame this takes the desktop card from ~608px to ~465px.
       */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-2.5 py-2.5 min-[360px]:px-3 min-[360px]:py-3 sm:px-4 sm:py-4">
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
-        {/* `pr-9` on phones ONLY on the two rows that sit in the favourite button's vertical band
-            (it is 36px tall at `top-2`, so it overlaps the brand row and the title's first line).
-            Padding the whole body instead would cost 36px of width on the price, the meta row and
-            the CTA — the rows that need it most in a 234px column. */}
+        {/* ── `pr-9` IS GONE, AND IT WAS 26% OF THE COLUMN ─────────────────────────────────
+            It reserved 36px on the brand row and the title for a favourite button overlaying the
+            card's top-right corner. On a 320px phone the text column is 140px wide, so those two
+            rows — the brand and the product name, the two things a shopper reads — were being run
+            in 104px while the price and the CTA below them had the full 140.
+
+            The button now joins the action row on phones (see the CTA block below), so nothing
+            overlays the text at any width and the reservation has nothing left to reserve. */}
         {brand && (
-          <div className="flex min-w-0 items-center gap-1 pr-9 sm:pr-0">
+          <div className="flex min-w-0 items-center gap-1">
             <span className="truncate text-[11px] font-semibold uppercase tracking-wide text-brand">{brand}</span>
             <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-brand" aria-label="Marque authentique" />
           </div>
         )}
 
-        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0 pr-9 sm:pr-0" loadingMessage="Chargement">
+        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
           <h3
             title={productData.name}
             /* 13px in a 173px phone column, 15 from `sm`. The `min-h` is the two-line reservation
                that keeps every card in a row the same height — it scales with the size. */
-            className="line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors sm:min-h-[2.75rem] sm:text-[15px] [@media(hover:hover)]:group-hover:text-brand"
+            /* ── 14px THROUGH THE TABLET COLUMNS ──────────────────────────────────────────
+               `measure-card.mjs` clips this name at 768 and 1024 as well as on phones, and for the
+               same reason: ProductGrid puts three columns at `md` (card 229px) and four at `lg`
+               (222px), which are the NARROWEST cards the desktop layout ever renders — narrower
+               than the 286px it gets back at `xl`. 15px type in a 222px column is ~25 characters
+               a line; the catalogue's names run past 40.
+
+               14px between `md` and `xl` buys the fourth line's worth of characters inside the two
+               lines that are already reserved, so nothing grows and nothing clips. It returns to
+               15px at `xl`, where the column can carry it. */
+            /* ── AND A THIRD LINE WHERE TWO STILL DO NOT FIT ──────────────────────────────
+               Re-measured after the 14px step: 768 came clean, 320 and 1024 did not. Those are the
+               two narrowest columns the layout produces — a 164px text column on a small phone and
+               a 222px card in the `lg` four-up grid — and at those widths a 41-character catalogue
+               name genuinely needs three lines. The owner's ask was that names stop being trimmed,
+               so they get the line rather than the type getting smaller: 13px is already the floor
+               on a phone, and shrinking it further to protect a clamp is solving the wrong half.
+
+               Scoped to exactly those two ranges. Everywhere else the reserved two-line box is
+               correct and unchanged, so no card grows anywhere it was already fine. */
+            className="line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors max-[399px]:line-clamp-3 sm:min-h-[2.75rem] sm:text-[15px] md:text-[14px] lg:line-clamp-3 xl:line-clamp-2 xl:text-[15px] [@media(hover:hover)]:group-hover:text-brand"
           >
             {productData.name}
           </h3>
@@ -394,8 +424,18 @@ export const ProductCard = memo(function ProductCard({
               (Dark is fine at 6.76:1; only light fails, which is the harder case to notice.)
               Ink on the tint is 17.6:1 / 12:1 and the pill still reads as brand-tinted, because
               the TINT carries the colour and the text does not have to. */}
+          {/* ── THE SAVING IS GREEN NOW, AND THE TEXT IS STILL INK ────────────────────────
+              A tint of the BRAND said "this is our colour"; a tint of `ok` says "this is money you
+              are not spending", which is what the number is — and it is the same language the cart
+              drawer uses for the same figure two clicks later.
+
+              The ink stays. `text-ok` on `bg-ok/10` composites to #15803D on #E8F2EC = 4.38:1 in
+              light theme — under AA for 11px text, and a failure nobody would ever spot because a
+              green number on a green chip looks obviously correct. Measured before writing it.
+              Same trap, same answer as the brand pill this replaces: the TINT carries the colour,
+              the TEXT carries the contrast (ink on that tint is ~17:1). */}
           {productData.savings > 0 && (
-            <span className="ml-auto inline-flex shrink-0 items-center rounded-md bg-brand/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-1">
+            <span className="ml-auto inline-flex shrink-0 items-center rounded-md bg-ok/10 px-2 py-0.5 text-[11px] font-semibold tabular-nums text-ink-1">
               −{Math.round(productData.savings)} DT
             </span>
           )}
@@ -447,7 +487,35 @@ export const ProductCard = memo(function ProductCard({
         </div>
 
         {/* CTA. min-h 44, not 46: 44 is the tap-target floor and 46 was two pixels of nothing. */}
-        <div className="mt-auto pt-1">
+        {/*
+          ── THE ACTION ROW, AND WHERE THE HEART LIVES NOW ────────────────────────────────────
+          ONE button, two positions, no duplicate node: on a phone it is a flex item beside the
+          cart button; from `sm` it is `absolute` and anchors to the <article> (which is
+          `relative`), landing back in the card's top-right corner over the packshot exactly as
+          before. An absolutely-positioned element ignores its DOM parent for layout, so the same
+          element can sit in the row here and float there — rendering it twice would have meant two
+          controls with the same `aria-label`, both announced.
+
+          Why it moved at all: overlaying the card's top-right corner cost `pr-9` on the brand row
+          and the title, which on a 320px phone is 36 of the 140px those rows had. The corner is
+          free real estate on a 350px vertical card and is the most expensive strip on the card on
+          a 288px row.
+
+          It also reads better on a phone: favourite and add-to-cart are the two things you can do
+          with a card, and they now sit together instead of one being a floating overlay.
+        */}
+        <div className="mt-auto flex items-center gap-2 pt-1 sm:block">
+          <button
+            type="button"
+            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
+            className={`pointer-events-auto z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-elevated transition-transform hover:scale-105 sm:absolute sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:rounded-full sm:border-0 sm:shadow-md sm:ring-1 sm:ring-hairline ${
+              favorite ? 'border-brand/40' : ''
+            }`}
+            aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+          >
+            <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
+          </button>
+          <div className="min-w-0 flex-1 sm:flex-none">
           {stock.isBackOrder ? (
             /*
               IT ASKS HERE. IT DOES NOT SEND THEM AWAY TO ASK.
@@ -517,6 +585,7 @@ export const ProductCard = memo(function ProductCard({
             )}
           </Button>
           )}
+          </div>
         </div>
       </div>
     </article>
