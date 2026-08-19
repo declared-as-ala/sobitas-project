@@ -32,6 +32,16 @@ console.log('  ' + '-'.repeat(78));
 
 for (const w of WIDTHS) {
   const page = await browser.newPage();
+  /* ── THE CACHE MUST BE OFF, AND THIS COST ME A WRONG REPORT ────────────────────────────
+     Run against production immediately after a deploy, this script reported six widths still
+     clipping — the pre-deploy numbers exactly — because the browser reused the CSS and JS it had
+     cached minutes earlier from the same origin. The HTML was already the new build; the styles
+     rendering it were not.
+
+     A measurement tool that can silently measure the PREVIOUS deployment is worse than no tool:
+     it produces a confident table of stale numbers, and the failure looks like a real regression.
+     Disabling the HTTP cache per page is the whole fix. */
+  await page.setCacheEnabled(false);
   await page.setViewport({ width: w, height: 900, isMobile: w < 768 });
   await page.goto(BASE + '/', { waitUntil: 'networkidle2', timeout: 180000 });
   await page.evaluate(() => document.querySelector('#products')?.scrollIntoView({ block: 'center' }));
