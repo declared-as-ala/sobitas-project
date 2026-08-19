@@ -873,6 +873,60 @@ body[data-page='product'] header.pt-site-header {
   }
 }
 
+/* ==============================================================================================
+   THE PRODUCT GRID'S ENTRANCE
+   ----------------------------------------------------------------------------------------------
+   Owner, 19/08/2026, on the boutique: *"add some life to the page, some micro animations, make it
+   unique — and don't make it look AI generated, make it look like a human designed it."*
+
+   The whole animation is ten pixels of upward travel over 260ms, staggered 35ms across the first
+   eight cards and flat after that. Three decisions in there are worth stating, because the reason
+   this reads as considered rather than as a template is that it does LESS than the obvious version:
+
+   1. TRANSFORM ONLY — NO FADE. Every stock "reveal" animation fades from opacity 0, and on THIS
+      page that is not a taste question: Chrome excludes fully transparent elements from Largest
+      Contentful Paint, so fading in the first row of product images would push the page's LCP out
+      by the length of the animation. A translate paints immediately and measures immediately.
+
+   2. THE STAGGER STOPS AT EIGHT. A 24-card grid staggered all the way through would take 840ms to
+      settle and the last row would still be moving after the reader had started scrolling. Eight
+      is the first row and a bit at every breakpoint, which is all anyone actually watches.
+
+   3. IT RUNS ON MOUNT ONLY. React reuses the DOM nodes across a filter change, so the grid does
+      not re-animate every time a checkbox moves — which would turn a considered entrance into a
+      twitch on every interaction.
+
+   No `data-motion`: globals.css clamps animation-duration to 0.2s below 768px unless a node opts
+   out, and letting the phone run this faster is correct rather than a limitation.
+   ============================================================================================== */
+.pt-grid-stagger > * {
+  animation: pt-card-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pt-grid-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.pt-grid-stagger > *:nth-child(2) { animation-delay: 35ms; }
+.pt-grid-stagger > *:nth-child(3) { animation-delay: 70ms; }
+.pt-grid-stagger > *:nth-child(4) { animation-delay: 105ms; }
+.pt-grid-stagger > *:nth-child(5) { animation-delay: 140ms; }
+.pt-grid-stagger > *:nth-child(6) { animation-delay: 175ms; }
+.pt-grid-stagger > *:nth-child(7) { animation-delay: 210ms; }
+.pt-grid-stagger > *:nth-child(8) { animation-delay: 245ms; }
+
+@keyframes pt-card-in {
+  from {
+    transform: translateY(10px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-grid-stagger > * {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
 @keyframes pt-marquee {
   from {
     transform: translate3d(0, 0, 0);

@@ -240,7 +240,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         className={`${RAIL} grid grid-cols-2 gap-x-6 gap-y-8 py-8 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] lg:gap-x-8 lg:py-10`}
       >
         <div className="col-span-2 min-w-0 lg:col-span-1">
-          <Link href="/" className="inline-block transition-opacity hover:opacity-80">
+          <Link href="/" prefetch={false} className="inline-block transition-opacity hover:opacity-80">
             <Image
               src={footerLogoUrl}
               alt="Proteine Tunisie"
@@ -280,7 +280,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             {footerPages.map((p) => (
               <li key={p.id}>
                 {p.slug ? (
-                  <Link href={`/${p.slug}`} className={FOOTER_LINK}>
+                  <Link href={`/${p.slug}`} prefetch={false} className={FOOTER_LINK}>
                     {p.title}
                   </Link>
                 ) : (
@@ -413,7 +413,7 @@ function FooterLinkColumn({ title, links }: { title: string; links: Array<[strin
       <ul className="mt-3 space-y-0.5">
         {links.map(([href, label]) => (
           <li key={href}>
-            <Link href={href} className={FOOTER_LINK}>
+            <Link href={href} prefetch={false} className={FOOTER_LINK}>
               {label}
             </Link>
           </li>

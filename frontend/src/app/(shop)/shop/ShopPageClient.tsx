@@ -40,325 +40,9 @@ import {
   type ShopQuery,
   type ShopSort,
 } from '@/util/shopQuery';
+import { ShopFilters, CREATINE_TYPES, CREATINE_GOALS, SORT_OPTIONS } from './ShopFilters';
 
 const SKELETON_MIN_MS = 300;
-
-const CREATINE_TYPES = ['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'];
-const CREATINE_GOALS = ['Force', 'Masse', 'Performance', 'Récupération'];
-
-/** Sort options — single source shared by the desktop top-bar select and the mobile sheet's "Trier par" group. */
-const SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'popularity', label: 'Popularité' },
-  { value: 'price-asc', label: 'Prix : croissant' },
-  { value: 'price-desc', label: 'Prix : décroissant' },
-  { value: 'newest', label: 'Nouveautés' },
-  { value: 'best-sellers', label: 'Meilleures ventes' },
-];
-
-interface ProductFiltersProps {
-  variant: 'mobile' | 'desktop';
-  inStockOnly: boolean;
-  setInStockOnly: (value: boolean) => void;
-  isCreatineCategory: boolean;
-  selectedTypes: string[];
-  toggleType: (type: string) => void;
-  selectedGoals: string[];
-  toggleGoal: (goal: string) => void;
-  uniqueFlavors: string[];
-  selectedFlavors: string[];
-  toggleFlavor: (flavor: string) => void;
-  categories: Category[];
-  brands: Brand[];
-  filterCounts: { categoryCounts: Map<string, number>; brandCounts: Map<number, number> };
-  selectedCategories: string[];
-  toggleCategory: (slug: string) => void;
-  selectedBrands: number[];
-  toggleBrand: (id: number) => void;
-  priceRange: [number, number];
-  setPriceRange: (value: [number, number]) => void;
-  priceBounds: { min: number; max: number };
-  sortBy: string;
-  setSortBy: (value: string) => void;
-}
-
-/**
- * The shop filter accordion (Disponibilité, Type/Objectif Créatine, Arômes, Catégories, Marques,
- * Prix). Rendered in BOTH the mobile Sheet and the desktop aside from this single source so the two
- * can no longer drift. `variant` only tunes density (checkbox size, paddings, default-open groups);
- * all state + handlers are owned by ShopContent and passed in, so the filter behavior is identical.
- */
-function ProductFilters({
-  variant,
-  inStockOnly,
-  setInStockOnly,
-  isCreatineCategory,
-  selectedTypes,
-  toggleType,
-  selectedGoals,
-  toggleGoal,
-  uniqueFlavors,
-  selectedFlavors,
-  toggleFlavor,
-  categories,
-  brands,
-  filterCounts,
-  selectedCategories,
-  toggleCategory,
-  selectedBrands,
-  toggleBrand,
-  priceRange,
-  setPriceRange,
-  priceBounds,
-  sortBy,
-  setSortBy,
-}: ProductFiltersProps) {
-  const isMobile = variant === 'mobile';
-  const idPrefix = isMobile ? 'mobile' : 'desktop';
-  const itemClass = 'border border-gray-200 dark:border-gray-800 rounded-xl px-4';
-  const triggerClass = `${isMobile ? 'py-3.5 text-sm' : 'py-2.5 text-xs sm:text-sm'} font-semibold hover:no-underline`;
-  const listClass = isMobile ? 'space-y-0.5' : 'space-y-2';
-  const scrollListClass = `${listClass} ${isMobile ? 'max-h-72' : 'max-h-60'} overflow-y-auto overflow-x-hidden -mr-2 pr-2`;
-  const checkboxClass = isMobile ? 'h-5 w-5' : 'h-4 w-4';
-  // On mobile every option row is a ≥44px tap target; the label pads to fill the row height.
-  const rowClass = isMobile ? 'flex items-center gap-3 min-h-[44px]' : 'flex items-center gap-3';
-  const rowBetweenClass = isMobile
-    ? 'flex items-center justify-between gap-3 min-h-[44px] group'
-    : 'flex items-center justify-between gap-3 group';
-  const labelBase = isMobile ? 'text-sm' : 'text-xs sm:text-sm';
-  const labelPad = isMobile ? 'py-2' : '';
-  const labelState = (selected: boolean) =>
-    selected ? 'font-semibold text-gray-900 dark:text-white' : 'font-normal text-gray-700 dark:text-gray-300';
-  const defaultOpen = isMobile
-    ? ['sort', 'availability', 'categories', 'brands']
-    : ['availability', 'types', 'goals', 'flavors'];
-
-  return (
-    <Accordion type="multiple" defaultValue={defaultOpen} className={isMobile ? 'space-y-2.5' : 'space-y-1'}>
-      {/* Trier — mobile only (the desktop top-bar select stays the sort control on ≥md) */}
-      {isMobile && (
-        <AccordionItem value="sort" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Trier par</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className="space-y-0.5">
-              {SORT_OPTIONS.map((opt) => {
-                const active = sortBy === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setSortBy(opt.value)}
-                    aria-pressed={active}
-                    className={`flex w-full items-center justify-between gap-3 min-h-[44px] px-3 rounded-lg text-sm transition-colors ${
-                      active
-                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {active && <Check className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Availability */}
-      <AccordionItem value="availability" className={itemClass}>
-        <AccordionTrigger className={triggerClass}>Disponibilité</AccordionTrigger>
-        <AccordionContent className="pb-3">
-          <div className={rowClass}>
-            <Checkbox
-              id={`${idPrefix}-in-stock`}
-              checked={inStockOnly}
-              onCheckedChange={(checked) => setInStockOnly(checked === true)}
-              className={checkboxClass}
-            />
-            <label htmlFor={`${idPrefix}-in-stock`} className={`${labelBase} ${labelPad} cursor-pointer flex-1 font-normal`}>
-              En stock uniquement
-            </label>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-
-      {/* Créatine Type */}
-      {isCreatineCategory && (
-        <AccordionItem value="types" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Type de Créatine</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={listClass}>
-              {CREATINE_TYPES.map((type) => (
-                <div key={type} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-type-${type}`}
-                    checked={selectedTypes.includes(type)}
-                    onCheckedChange={() => toggleType(type)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-type-${type}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedTypes.includes(type))}`}
-                  >
-                    {type}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Créatine Goal */}
-      {isCreatineCategory && (
-        <AccordionItem value="goals" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Objectif</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={listClass}>
-              {CREATINE_GOALS.map((goal) => (
-                <div key={goal} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-goal-${goal}`}
-                    checked={selectedGoals.includes(goal)}
-                    onCheckedChange={() => toggleGoal(goal)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-goal-${goal}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedGoals.includes(goal))}`}
-                  >
-                    {goal}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Arômes */}
-      {uniqueFlavors.length > 0 && (
-        <AccordionItem value="flavors" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Arômes</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {uniqueFlavors.map((flavor) => (
-                <div key={flavor} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-flavor-${flavor}`}
-                    checked={selectedFlavors.includes(flavor)}
-                    onCheckedChange={() => toggleFlavor(flavor)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-flavor-${flavor}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedFlavors.includes(flavor))}`}
-                  >
-                    {flavor}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Catégories */}
-      {categories.length > 0 && (
-        <AccordionItem value="categories" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Catégories</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {categories.map((category) => {
-                const count = filterCounts.categoryCounts.get(category.slug) || 0;
-                const isSelected = selectedCategories.includes(category.slug);
-                return (
-                  <div key={category.id} className={rowBetweenClass}>
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Checkbox
-                        id={`${idPrefix}-cat-${category.id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggleCategory(category.slug)}
-                        className={checkboxClass}
-                      />
-                      <label
-                        htmlFor={`${idPrefix}-cat-${category.id}`}
-                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
-                      >
-                        {category.designation_fr}
-                      </label>
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Marques */}
-      {brands.length > 0 && (
-        <AccordionItem value="brands" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Marques</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {brands.map((brand) => {
-                const count = filterCounts.brandCounts.get(brand.id) || 0;
-                const isSelected = selectedBrands.includes(brand.id);
-                return (
-                  <div key={brand.id} className={rowBetweenClass}>
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Checkbox
-                        id={`${idPrefix}-brand-${brand.id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggleBrand(brand.id)}
-                        className={checkboxClass}
-                      />
-                      <label
-                        htmlFor={`${idPrefix}-brand-${brand.id}`}
-                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
-                      >
-                        {brand.designation_fr}
-                      </label>
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Prix */}
-      <AccordionItem value="price" className={itemClass}>
-        <AccordionTrigger className={triggerClass}>Prix</AccordionTrigger>
-        <AccordionContent className="pb-3">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {priceRange[0]} DT - {priceRange[1]} DT
-              </span>
-            </div>
-            <Slider
-              value={priceRange}
-              onValueChange={(value) => setPriceRange(value as [number, number])}
-              min={priceBounds.min}
-              max={priceBounds.max}
-              step={10}
-              className="w-full [&_[data-slot=slider-range]]:bg-red-600 [&_[data-slot=slider-thumb]]:border-red-600"
-            />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>{priceBounds.min} DT</span>
-              <span>{priceBounds.max} DT</span>
-            </div>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-}
 
 interface ShopPageClientProps {
   productsData: {
@@ -368,6 +52,8 @@ interface ShopPageClientProps {
   };
   categories: Category[];
   brands: Brand[];
+  /** From getInStockCount — printed beside "En stock uniquement". null when the count failed. */
+  inStockCount?: number | null;
   initialCategory?: string;
   isSubcategory?: boolean;
   parentCategory?: string;
@@ -452,6 +138,7 @@ function ShopContent({
   productsData,
   categories,
   brands,
+  inStockCount = null,
   initialCategory,
   isSubcategory,
   parentCategory,
@@ -965,8 +652,20 @@ function ShopContent({
       filters.push({ type: 'flavor', label: flavor, value: flavor });
     });
 
+    /*
+     * ── AVAILABILITY WAS THE ONE FILTER WITH NO CHIP, AND IT IS THE ONE THAT CHANGES MOST ───
+     * `stock` was declared in the union and in removeFilter, and never pushed here — so ticking
+     * "En stock uniquement" left no chip, no count on the Filtres badge and nothing in the rail's
+     * "Tout effacer" state. On this catalogue that box takes the boutique from 11,263 products to
+     * 133, which is the single largest thing a shopper can do to the grid, and it was also the
+     * only one they could not see they had done.
+     */
+    if (inStockOnly) {
+      filters.push({ type: 'stock', label: 'En stock', value: 'stock' });
+    }
+
     return filters;
-  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands, selectedTypes, selectedGoals, selectedFlavors]);
+  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands, selectedTypes, selectedGoals, selectedFlavors, inStockOnly]);
 
   // Remove specific filters
   const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock' | 'type' | 'goal' | 'flavor', value: string | number) => {
@@ -1559,10 +1258,11 @@ function ShopContent({
     priceBounds,
     sortBy,
     setSortBy: handleSortChange,
+    inStockCount,
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
+    <div className="min-h-screen bg-canvas">
       {/* Own boundary, so reading search params defers only this null-rendering leaf (see above).
           Not mounted in server mode: the server page already parsed the query string and passed it
           down as `serverQuery`, so this would be a second, weaker reading of the same URL. */}
@@ -1572,7 +1272,23 @@ function ShopContent({
         </Suspense>
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 animate-fade-in">
+      {/*
+        ── THE RAIL IS max-w-site (1600), NOT max-w-7xl (1280) ───────────────────────────────
+        Owner, 19/08/2026: *"use the full width — why are we losing all of that white space?"*
+
+        MEASURED on the live page at a 1536 viewport: the content rail was 1,280px, so 256px —
+        17% of the window — was margin either side of a product grid. Every other full-width band
+        on this site runs on `max-w-site`; the boutique, the page with the most cards on it, was
+        the one surface not sharing the site's rail. tailwind.config.ts says exactly this: "if two
+        of them disagree their edges visibly step in and out down the page."
+
+        The extra 320px is what pays for the fourth column at `xl` below.
+
+        `py` comes down with it (32/48/64 -> 24/32/40): the old top padding was tuned when the
+        page was narrower and the grid shorter, and 64px of nothing above an H1 on a listing page
+        is a header, not breathing room.
+      */}
+      <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -1696,252 +1412,280 @@ function ShopContent({
           </div>
         )}
 
-        {/* Page title and product counts */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
+        {/*
+          ── THE HEADING, AND WHY THE COUNT IS BESIDE IT RATHER THAN UNDER IT ────────────────
+          The boutique's H1 is a 40px compressed line and the result count was a 12px grey line
+          under it with 8px between them — two blocks of type doing one job. On the baseline they
+          read as one sentence: what this page is, and how much of it there is.
+        */}
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-6">
+          <div className="min-w-0">
             {!categorySeoLanding && !isSubcategory && (
               // Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
               // rewritten to that route, so the two are the same page to a searcher but were two
-              // different headings: "Boutique — Protéines & Compléments Alimentaires en Tunisie" for
-              // the bot, "Tous nos produits" for everyone else. Divergent h1s on one URL are the
-              // thing that turns dynamic rendering into cloaking, and "Tous nos produits" names no
-              // product, category or country — nothing a Tunisian searcher would ever type.
-              <h1 className="font-display uppercase tracking-tight leading-[0.95] text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+              // different headings — divergent h1s on one URL are what turns dynamic rendering into
+              // cloaking.
+              <h1 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
                 {currentBrand
                   ? `Produits ${currentBrand.designation_fr}`
                   : 'Boutique — Protéines & Compléments Alimentaires en Tunisie'}
               </h1>
             )}
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {/* resultCount, not filteredProducts.length — in server mode the latter is the size of
-                  the page (12), so this line would read "12 produits trouvés" on a 10,669-product
-                  catalogue. See the resultCount definition. */}
-              {!showSkeleton && (totalPages > 1 ? (
-                `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, resultCount)} sur ${resultCount} produits`
-              ) : (
-                `${resultCount} produit${resultCount > 1 ? 's' : ''} trouvé${resultCount > 1 ? 's' : ''}`
-              ))}
-            </p>
           </div>
+          {!showSkeleton && (
+            <p className="shrink-0 text-[13px] tabular-nums text-ink-2 sm:pb-1">
+              {/* resultCount, not filteredProducts.length — in server mode the latter is the size of
+                  the page, so this would read "24 produits" on an 11,263-product catalogue. */}
+              {totalPages > 1 ? (
+                <>
+                  <span className="font-semibold text-ink-1">
+                    {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–
+                    {Math.min(currentPage * PRODUCTS_PER_PAGE, resultCount)}
+                  </span>{' '}
+                  sur <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produits
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produit
+                  {resultCount > 1 ? 's' : ''}
+                </>
+              )}
+            </p>
+          )}
         </div>
 
-        {/* Search, Filter & Sort Row */}
-        <div className="flex flex-col md:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="flex-1 relative min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden="true" />
-            <Input
-              type="search"
-              placeholder="Rechercher un produit..."
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-9 min-h-[44px] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:border-red-500 dark:focus:border-red-500 rounded-xl shadow-sm placeholder:text-gray-400 text-sm"
-            />
-          </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* Dynamic Sorting Select dropdown (Radix Select) */}
-            <div className="flex-1 md:w-56 min-w-[155px]">
-              <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger className="min-h-[44px] h-auto border-gray-200 dark:border-gray-700 focus:ring-red-500 rounded-xl">
-                  <SelectValue placeholder="Trier par" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popularity">Popularité</SelectItem>
-                  <SelectItem value="price-asc">Prix : croissant</SelectItem>
-                  <SelectItem value="price-desc">Prix : décroissant</SelectItem>
-                  <SelectItem value="newest">Nouveautés</SelectItem>
-                  <SelectItem value="best-sellers">Meilleures ventes</SelectItem>
-                </SelectContent>
-              </Select>
+        {/*
+          ── THE TOOLBAR IS STICKY ─────────────────────────────────────────────────────────
+          At 24 products a page the grid is ~2,400px tall, so the sort control and the filter
+          button spend most of the page's scroll off-screen. Sticking the toolbar means changing
+          your mind about the order does not mean scrolling back to the top — on a listing page
+          that is the single most-wanted control and it was the one furthest away.
+
+          `top-[var(--header-h,4rem)]` rather than `top-0`: the site header is sticky too, and a
+          toolbar pinned at 0 slides underneath it.
+        */}
+        <div className="sticky top-[4.25rem] z-30 -mx-4 mb-4 border-y border-hairline bg-canvas/95 px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                inputMode="search"
+                placeholder="Rechercher dans la boutique…"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                aria-label="Rechercher dans la boutique"
+                /* 16px on a phone — iOS Safari zooms the viewport on focusing any input under it. */
+                className="h-11 w-full rounded-xl border border-hairline bg-elevated pl-9 pr-9 text-[16px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/15 sm:text-[13.5px]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange('')}
+                  aria-label="Effacer la recherche"
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
-            {/* Desktop toggle filters view */}
-            <Button
-              variant="outline"
-              onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
-              className="hidden lg:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-            >
-              <Filter className="h-4 w-4" />
-              <span>Filtres</span>
-              {appliedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                  {appliedFilters.length}
-                </Badge>
-              )}
-            </Button>
+            <div className="flex items-center gap-2 md:w-auto">
+              <div className="min-w-0 flex-1 md:w-52">
+                <Select value={sortBy} onValueChange={handleSortChange}>
+                  <SelectTrigger className="h-11 rounded-xl border-hairline bg-elevated text-[13.5px] text-ink-1">
+                    <SelectValue placeholder="Trier par" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SORT_OPTIONS.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            {/* Mobile filter drawer sheet */}
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="lg:hidden shrink-0 min-h-[44px] px-4 border-gray-200 dark:border-gray-700 rounded-xl"
-                  aria-label="Ouvrir les filtres"
-                >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  <span>Filtres</span>
-                  {(appliedFilters.length > 0) && (
-                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                      {appliedFilters.length}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="bottom"
-                showCloseButton={false}
-                className="h-[92dvh] max-h-[92dvh] rounded-t-2xl p-0 gap-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col"
+              {/* Desktop: collapse the rail. It stays OPEN by default now — a filter rail that
+                  has to be summoned is a filter rail nobody uses, and this page has 577 brands
+                  and six aisles behind it. */}
+              <button
+                type="button"
+                onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
+                aria-pressed={showFiltersDesktop}
+                className="hidden h-11 items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand lg:flex"
               >
-                {/* Grab handle */}
-                <div className="shrink-0 flex justify-center pt-3 pb-1">
-                  <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-700" aria-hidden="true" />
-                </div>
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                Filtres
+                {appliedFilters.length > 0 && (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                    {appliedFilters.length}
+                  </span>
+                )}
+              </button>
 
-                {/* Header: title + active count + close (44px) */}
-                <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 px-4 pb-3 pt-1 border-b border-gray-200 dark:border-gray-800">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <SheetTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white">
-                      <Filter className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
-                      Filtres
-                    </SheetTitle>
-                    {appliedFilters.length > 0 && (
-                      <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                        {appliedFilters.length}
-                      </Badge>
-                    )}
-                  </div>
+              {/* Phone: the same rail in a bottom sheet. */}
+              <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                <SheetTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setShowFilters(false)}
-                    aria-label="Fermer les filtres"
-                    className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Ouvrir les filtres"
+                    className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand lg:hidden"
                   >
-                    <X className="h-5 w-5" />
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    Filtres
+                    {appliedFilters.length > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                        {appliedFilters.length}
+                      </span>
+                    )}
                   </button>
-                </SheetHeader>
-
-                {/* Scrollable filter body */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
-                  <ProductFilters variant="mobile" {...filterProps} />
-                </div>
-
-                {/* Sticky action footer: Réinitialiser + Appliquer */}
-                <div className="shrink-0 flex items-center gap-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                  <Button
-                    variant="outline"
-                    onClick={clearFilters}
-                    className="min-h-[48px] flex-1 rounded-xl border-gray-300 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    Réinitialiser
-                  </Button>
-                  <Button
-                    onClick={() => setShowFilters(false)}
-                    className="min-h-[48px] flex-[1.7] rounded-xl font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
-                  >
-                    Voir {resultCount} produit{resultCount > 1 ? 's' : ''}
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+                </SheetTrigger>
+                <SheetContent
+                  side="bottom"
+                  showCloseButton={false}
+                  className="flex h-[92dvh] max-h-[92dvh] flex-col gap-0 rounded-t-2xl border-t border-hairline bg-elevated p-0"
+                >
+                  <div className="flex shrink-0 justify-center pb-1 pt-3">
+                    <span className="h-1.5 w-10 rounded-full bg-rule" aria-hidden="true" />
+                  </div>
+                  <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 border-b border-hairline px-4 pb-3 pt-1">
+                    <SheetTitle className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wide text-ink-1">
+                      <Filter className="h-4 w-4 text-brand" aria-hidden="true" />
+                      Filtres
+                      {appliedFilters.length > 0 && (
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                          {appliedFilters.length}
+                        </span>
+                      )}
+                    </SheetTitle>
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      aria-label="Fermer les filtres"
+                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
+                    >
+                      <X className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+                    <ShopFilters variant="mobile" {...filterProps} />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="min-h-[48px] flex-1 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                    >
+                      Réinitialiser
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      className="min-h-[48px] flex-[1.7] rounded-xl bg-brand font-display text-[14px] font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover"
+                    >
+                      Voir {resultCount.toLocaleString('fr-FR')} produit{resultCount > 1 ? 's' : ''}
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+            </div>
           </div>
+
+          {/* ── ACTIVE FILTERS ─────────────────────────────────────────────────────────────
+              Inside the sticky toolbar, not below it. A chip that scrolls away is a filter the
+              shopper stops being able to see they applied — which is the commonest way a
+              "nothing matches" screen gets read as a broken shop. */}
+          {appliedFilters.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {appliedFilters.map((filter, index) => (
+                <button
+                  key={`${filter.type}-${filter.value}-${index}`}
+                  type="button"
+                  onClick={() => removeFilter(filter.type, filter.value)}
+                  aria-label={`Retirer le filtre ${filter.label}`}
+                  className="group inline-flex min-h-[30px] items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] pl-3 pr-2 text-[12px] font-semibold text-ink-1 transition-colors hover:border-brand hover:bg-brand/15"
+                >
+                  {filter.label}
+                  <X className="h-3.5 w-3.5 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="ml-0.5 inline-flex min-h-[30px] items-center rounded-full px-2.5 text-[12px] font-semibold text-brand transition-colors hover:underline"
+              >
+                Tout effacer
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Applied Filters Badges / Chips */}
-        {appliedFilters.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Filtres actifs :</span>
-            {appliedFilters.map((filter, index) => (
-              <Badge
-                key={`${filter.type}-${filter.value}-${index}`}
-                variant="outline"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-800 rounded-xl"
-              >
-                <span className="text-gray-900 dark:text-gray-100 font-medium">{filter.label}</span>
-                <button
-                  onClick={() => removeFilter(filter.type, filter.value)}
-                  className="-mr-1 ml-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-1 transition-colors"
-                  aria-label={`Retirer le filtre ${filter.label}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </Badge>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-8 rounded-lg"
-            >
-              Tout effacer
-            </Button>
-          </div>
-        )}
-
         {/* Grid and Sidebar main split */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Collapsible Desktop Filter Panel */}
-          {showFiltersDesktop && (
-              <aside className="hidden lg:block w-72 flex-shrink-0">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="font-display font-bold text-sm tracking-wide uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <Filter className="h-3.5 w-3.5 text-red-600 dark:text-red-400" /> Filtres
-                    </h2>
-                    <div className="flex items-center gap-1.5">
-                      {appliedFilters.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearFilters}
-                          className="text-xs text-red-600 hover:text-red-700 h-7 px-2"
-                        >
-                          Tout effacer
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFiltersDesktop(false)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+          {/*
+            ── THE RAIL IS 17rem AND IT STICKS ──────────────────────────────────
+            272px rather than 288: the extra 16px goes to the grid, where it is the difference
+            between four ~296px cards and four ~292px ones at 1600.
 
-                  <ProductFilters variant="desktop" {...filterProps} />
+            `sticky top-[8.5rem]` clears the site header AND this page's own sticky toolbar, and
+            the max-height plus overflow means a rail with two dozen brands open scrolls inside
+            itself instead of pushing the page. Without that the aside was 1,800px tall and the
+            grid beside it scrolled independently — the classic listing-page fault where the
+            filters end up somewhere above the products you are looking at.
+          */}
+          {showFiltersDesktop && (
+            <aside className="hidden w-[17rem] shrink-0 lg:block">
+              <div className="sticky top-[8.5rem] max-h-[calc(100dvh-9.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-hairline bg-elevated px-4 py-3">
+                <div className="mb-1 flex items-center justify-between gap-2 border-b border-hairline pb-2.5">
+                  <h2 className="flex items-center gap-1.5 font-display text-[13px] font-bold uppercase tracking-wide text-ink-1">
+                    <Filter className="h-3.5 w-3.5 text-brand" aria-hidden="true" /> Filtres
+                  </h2>
+                  {appliedFilters.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-lg px-1.5 py-1 text-[11px] font-semibold text-brand transition-colors hover:underline"
+                    >
+                      Tout effacer
+                    </button>
+                  )}
                 </div>
-              </aside>
-            )}
+                <ShopFilters variant="desktop" {...filterProps} />
+              </div>
+            </aside>
+          )}
 
           {/* Products Grid */}
           <div className="flex-1 min-w-0">
             {filterError ? (
-              <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-                <div className="rounded-lg bg-red-50 dark:bg-red-950/40 p-4 mb-4">
-                  <CircleAlert className="h-10 w-10 text-red-600 dark:text-red-400" aria-hidden />
-                </div>
-                <h3 className="font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white mb-1">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-hairline bg-elevated px-4 py-16">
+                <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                  <CircleAlert className="h-7 w-7" aria-hidden="true" />
+                </span>
+                <h3 className="mb-1 font-display text-lg font-bold uppercase tracking-wide text-ink-1">
                   Une erreur s&apos;est produite
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                  {filterError.message}
-                </p>
-                <Button
+                <p className="mb-6 max-w-md text-center text-sm text-ink-2">{filterError.message}</p>
+                <button
+                  type="button"
                   onClick={() => { setFilterError(null); setRetryCount(c => c + 1); }}
-                  className="gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide min-h-[44px]"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover"
                 >
                   Réessayer
-                </Button>
+                </button>
               </div>
             ) : showSkeleton || isNavigating ? (
               /* isNavigating: in server mode a filter or a page turn is a real round trip, and
                  without this the previous page's twelve products stay on screen for its whole
                  duration with no feedback — long enough on a Tunisian mobile connection for a
                  shopper to conclude the click did nothing and click again. */
-              <ProductsSkeleton showBreadcrumb={false} showFilters={false} gridClassName="lg:grid-cols-3" />
+              <ProductsSkeleton showBreadcrumb={false} showFilters={false} gridClassName="lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
             ) : filteredProducts.length === 0 ? (
-              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <div className="rounded-2xl border border-hairline bg-elevated">
                 <EmptyState
                   title="Aucun résultat"
                   description="Aucun produit ne correspond à ces filtres."
@@ -1949,37 +1693,38 @@ function ShopContent({
                   className="pb-2"
                 />
                 <div className="flex justify-center pb-12 sm:pb-16">
-                  <Button
-                    variant="outline"
+                  <button
+                    type="button"
                     onClick={clearFilters}
-                    className="rounded-xl border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950/40 min-h-[44px]"
+                    className="inline-flex min-h-[44px] items-center rounded-xl border border-brand px-5 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-on-brand"
                   >
                     Réinitialiser les filtres
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-8 sm:space-y-12">
                 {/*
-                  THREE ACROSS ON DESKTOP, NOT FOUR.
+                  ── THE COLUMN LADDER IS SET BY THE CARD'S WIDTH, NOT BY THE BREAKPOINT NAME ──
+                  MEASURED with the 272px filter rail open, at every step:
 
-                  Owner, 13/08/2026: "make them more bigger on /shop to show 3 beside each other so
-                  the image is clear." The complaint is about the PACKSHOT, not the column count —
-                  three columns is the means.
+                      lg   1024   2 cols   344px
+                      xl   1280   3 cols   288px
+                      2xl  1536   4 cols   274px      <- the owner's screen (1920 at 125%)
+                           1920   4 cols   290px      (rail capped at max-w-site)
 
-                  ── WHY AN OVERRIDE AND NOT AN EDIT TO ProductGrid ──────────────────────────
-                  ProductGrid is the one canonical grid for six surfaces: the homepage rails, this
-                  page, /offres, /packs, /favoris and the skeletons. Changing its constant would
-                  re-column the homepage too, which nobody asked for. `cn` is tailwind-merge, so
-                  `lg:grid-cols-3` here replaces `lg:grid-cols-4` for THIS grid only and leaves the
-                  1/2/3 steps below `lg` exactly as the docblock reasoned them out.
+                  The first attempt was `xl:grid-cols-4`, and that put the fourth column in at
+                  1280 where it measured 210px — narrower than the 285px the card was rebuilt at
+                  yesterday, and the exact "squeezed" failure that card work was fixing. The
+                  breakpoint that can afford four columns beside this rail is 1536, so that is
+                  where the fourth column starts.
 
-                  The same string is passed to <ProductsSkeleton gridClassName> below. That is not
-                  tidiness: the skeleton renders through this same primitive, so if it stayed 4-up
-                  the grid would visibly re-column the moment hydration swapped one for the other —
-                  CLS on the page with the most cards on it.
+                  The same string goes to <ProductsSkeleton> below, and that is not tidiness: the
+                  skeleton renders through this same primitive, so a mismatch re-columns the grid
+                  the moment hydration swaps one for the other — CLS on the page with the most
+                  cards on it.
                 */}
-                <ProductGrid className="min-w-0 w-full lg:grid-cols-3">
+                <ProductGrid className="pt-grid-stagger min-w-0 w-full lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
                   {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
@@ -1991,12 +1736,26 @@ function ShopContent({
                          this the browser keeps fetching the 4-up file and paints it into a box
                          nearly twice as wide, which is exactly the softness the wider cards were
                          meant to cure. Steps below `lg` are unchanged because the grid is. */
-                      imageSizes="(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, 30vw"
+                      /* Re-derived for the wider rail and the fourth column: at `xl` a card is
+                         ~300px of a 1600px rail, which is 19vw, not 30. Declaring 30vw made the
+                         browser fetch a file half again too large for every card on the page. */
+                      /* Re-derived against the MEASURED card width at every step of the ladder
+                         above, not guessed: 46vw (2-up), 32vw (3-up at md), 35vw (2-up at lg
+                         beside the rail), 25vw (3-up at xl), 19vw (4-up at 2xl). The previous
+                         string declared 30vw where the card is 34 and 19vw where it is 25, so the
+                         browser was fetching a file a step too small and painting it into a wider
+                         box — which is the softness the bigger cards were meant to cure. */
+                      imageSizes="(max-width: 640px) 46vw, (max-width: 1023px) 32vw, (max-width: 1279px) 35vw, (max-width: 1535px) 25vw, 19vw"
                       // Mobile-first: the shop grid is 2-col on phones (81% of traffic), so only
                       // the first 2 cards are above the fold. Eager-loading 4 made cards 3–4
                       // (off-screen on mobile) compete with the LCP image. Prioritize just the
                       // first 2; the rest lazy-load (still prompt near the desktop fold).
-                      priority={idx < 2}
+                      /* The first ROW, not the first two cards. LCP on this page is a product
+                         image, and at 4-up the first row is four of them — leaving cards 3 and 4
+                         lazy meant the largest painted element was often one the browser had been
+                         told not to hurry. Two on a phone (2-up), four from `lg`, and the cost of
+                         being wrong is bounded: `priority` on four 300px images is ~40 KB. */
+                      priority={idx < 4}
                     />
                   ))}
                 </ProductGrid>
@@ -2039,8 +1798,8 @@ export function ShopPageClient(props: ShopPageClientProps) {
   return (
     <Suspense fallback={
       <>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <ProductsSkeleton gridClassName="lg:grid-cols-3" />
+        <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+          <ProductsSkeleton gridClassName="lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
         </main>
       </>
     }>

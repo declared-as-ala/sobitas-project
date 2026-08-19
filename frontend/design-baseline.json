@@ -282,12 +282,11 @@
     "DS011": 8
   },
   "src/app/(shop)/shop/ShopPageClient.tsx": {
-    "DS001": 32,
-    "DS002": 65,
-    "DS003": 36,
-    "DS004": 34,
-    "DS007": 2,
-    "DS011": 58
+    "DS001": 6,
+    "DS002": 13,
+    "DS003": 7,
+    "DS004": 8,
+    "DS011": 10
   },
   "src/app/(shop)/shop/SubCategoryFallbackClient.tsx": {
     "DS002": 3,

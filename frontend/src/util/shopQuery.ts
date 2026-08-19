@@ -36,8 +36,24 @@
  * through ?page=890 is now the only crawl path to the 10,669th product.
  */
 
-/** 12, not 24: three columns on desktop (see ShopPageClient) so 12 is four clean rows. */
-export const SHOP_PER_PAGE = 12;
+/**
+ * 24, up from 12.
+ *
+ * ── WHY IT CHANGED ────────────────────────────────────────────────────────────────────────
+ * The old value existed because the grid was three across, so 12 was four clean rows. The grid
+ * is now FOUR across from `xl` on the site's full 1600px rail, which makes 24 six clean rows at
+ * every step of the responsive ladder (2-up = 12 rows, 3-up = 8, 4-up = 6).
+ *
+ * It also halves the catalogue's depth: 11,263 published products at 12 a page is 939 pages, and
+ * the pager IS the crawl path to the last of them. At 24 it is 470 — the same products, half the
+ * requests to reach them, for both a shopper paging through and Googlebot walking the tail.
+ *
+ * The cost is one API page being twice the size, and that cost is small and known: the shop's
+ * product rows measured ~750 bytes each at `light` projection, so a page goes from ~9 KB to ~18 KB
+ * — against a document that was 345 KB. Doubling the cheapest thing on the page to halve the
+ * number of round trips is the right side of that trade.
+ */
+export const SHOP_PER_PAGE = 24;
 
 export const SHOP_SORTS = ['popularity', 'price-asc', 'price-desc', 'newest', 'best-sellers'] as const;
 export type ShopSort = (typeof SHOP_SORTS)[number];

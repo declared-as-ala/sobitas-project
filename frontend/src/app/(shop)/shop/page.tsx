@@ -1,6 +1,6 @@
 import { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
-import { getShopPage, getShopFacets, getCategories } from '@/services/api';
+import { getShopPage, getShopFacets, getCategories, getInStockCount } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { getProductLink } from '@/util/productUrl';
@@ -130,17 +130,32 @@ async function getShopData(query: ShopQuery) {
    */
   const cachedShopPage = unstable_cache(
     () => getShopPage(query),
-    ['shop-page', buildShopUrl(query)],
+    /*
+     * THE PAGE SIZE IS PART OF THE KEY, and leaving it out is a bug I shipped and then measured.
+     *
+     * The key was `['shop-page', buildShopUrl(query)]`, which describes the QUERY but not the
+     * shape of the answer. When SHOP_PER_PAGE went 12 -> 24, every cached entry still held twelve
+     * rows, and Next's file-system cache handler persists these to disk — so `/shop?in_stock=1`
+     * kept rendering 12 products under a pager that had been recalculated for 24, through a
+     * rebuild and a restart. Nothing errored; the grid was just short, on exactly the queries a
+     * visitor had already warmed.
+     *
+     * Any value that changes what the fetch RETURNS for a given URL has to be in the key.
+     */
+    ['shop-page', String(SHOP_PER_PAGE), buildShopUrl(query)],
     { revalidate: 300, tags: ['shop', 'products'] }
   );
 
-  const [productsResponse, facets, categories] = await Promise.all([
+  const [productsResponse, facets, categories, inStockCount] = await Promise.all([
     loadForCache(
       cachedShopPage,
       { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
     ),
     getShopFacets(),
     getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
+    // See getInStockCount: 133 of 11,263 products are shippable, and the availability checkbox is
+    // unreadable without that number printed next to it.
+    getInStockCount(),
   ]);
 
   /*
@@ -186,6 +201,7 @@ async function getShopData(query: ShopQuery) {
   const facetsForClient = { ...facets, brands: [], subcategories: [] };
 
   return {
+    inStockCount,
     productsData: {
       products: productsResponse.products,
       brands: productsResponse.brands,
@@ -202,7 +218,7 @@ async function getShopData(query: ShopQuery) {
 
 export default async function ShopPage({ searchParams }: PageProps) {
   const query = parseShopQuery(await searchParams);
-  const { productsData, facets, categories, brands } = await getShopData(query);
+  const { productsData, facets, categories, brands, inStockCount } = await getShopData(query);
 
   const baseUrl = getBaseUrl();
   const products = Array.isArray(productsData.products) ? productsData.products : [];
@@ -247,6 +263,7 @@ export default async function ShopPage({ searchParams }: PageProps) {
         brands={brands}
         serverQuery={{ ...query, page: currentPage }}
         facets={facets}
+        inStockCount={inStockCount}
         serverPagination={{ total, totalPages, currentPage, perPage: SHOP_PER_PAGE }}
       />
     </>

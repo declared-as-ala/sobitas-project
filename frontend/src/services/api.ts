@@ -551,6 +551,35 @@ export const getShopPage = async (
  * landed on page 1 and then filtered page 1 by its own bounds — a sidebar that lies about the grid
  * beside it, with a 200 on both. See ApisController::shopFacets.
  */
+/**
+ * How many published products can actually be shipped today.
+ *
+ * ── WHY THIS IS ITS OWN CALL AND WHY IT IS WORTH ONE ────────────────────────────────────────
+ * /api/shop_facets does not compute it, and the number matters more here than any facet does:
+ * measured 19/08/2026, the boutique publishes 11,263 products and 133 of them pass the
+ * availability filter, because 11,130 rows carry `rupture = 1, qte = 0` (the iHerb import). So
+ * ticking "En stock uniquement" removes 98.8% of the shop, and without the count printed beside
+ * the checkbox that reads as a broken filter rather than as a fact about the catalogue.
+ *
+ * `per_page=1` and `light=1`: the response is one product row and a pagination block — about
+ * 900 bytes — and the only field read is `pagination.total`. It is called inside the shop page's
+ * `unstable_cache` window, so it costs one query per 300 seconds across all visitors.
+ *
+ * Fails to `null` rather than to 0: "we could not count" and "nothing is in stock" are different
+ * statements, and the UI shows the warning only for the first.
+ */
+export const getInStockCount = async (): Promise<number | null> => {
+  try {
+    const response = await api.get('/all_products', {
+      params: { per_page: 1, page: 1, light: 1, in_stock: 1 },
+    });
+    const total = Number(response.data?.pagination?.total);
+    return Number.isFinite(total) ? total : null;
+  } catch {
+    return null;
+  }
+};
+
 export const getShopFacets = async (): Promise<ShopFacets> => {
   const empty: ShopFacets = {
     price: { min: 0, max: 1000, p99: 1000 },
