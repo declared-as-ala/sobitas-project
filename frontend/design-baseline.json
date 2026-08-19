@@ -139,13 +139,6 @@
     "DS002": 1,
     "DS007": 1
   },
-  "src/app/(shop)/brands/BrandsPageClient.tsx": {
-    "DS001": 20,
-    "DS002": 36,
-    "DS003": 24,
-    "DS004": 14,
-    "DS011": 33
-  },
   "src/app/(shop)/cart/page.tsx": {
     "DS001": 30,
     "DS002": 63,

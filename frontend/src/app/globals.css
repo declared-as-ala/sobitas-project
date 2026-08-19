@@ -1388,3 +1388,101 @@ input[type="search"]::-webkit-search-results-decoration {
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
+
+/**
+ * ── ONE ROW OF THE BRAND DIRECTORY ────────────────────────────────────────────────────────
+ * /brands renders 577 of these, and the utility classes that used to express them were the
+ * single largest thing in the document. Measured on the production build before this rule:
+ *
+ *     row link className          130 chars x 577 =  75 KB
+ *     brand-name span className    86 chars x 577 =  50 KB
+ *     product-count span           44 chars x 577 =  25 KB
+ *                                                   ------
+ *                                                   150 KB of a 491 KB HTML body
+ *
+ * Tailwind is right almost everywhere and wrong at this multiplicity: a utility string is a
+ * per-element cost, so it stops being free the moment the same element repeats into the
+ * hundreds. Three classes here cost ~1 KB in the stylesheet, once, cached — and the markup
+ * that consumes them is `class="pt-brand-row"`.
+ *
+ * Written against the CONSUMED tokens (`--c-*`) rather than literals, for the same reason every
+ * component in this codebase is: the directory sits on canvas today and the rule survives a
+ * theme flip, a `.pt-slab` ancestor or a band-surface change with no `.dark` variant of its own.
+ */
+.pt-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding-block: 0.375rem;
+  border-bottom: 1px solid rgb(var(--c-hairline));
+  transition: border-color 150ms ease;
+}
+.pt-brand-row:hover {
+  border-bottom-color: rgb(var(--c-brand) / 0.4);
+}
+.pt-brand-row__lead {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+/* The 6px availability mark. A pill would out-weigh the brand name on a row this dense. */
+.pt-brand-row__dot {
+  flex-shrink: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgb(var(--c-ok));
+}
+.pt-brand-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--c-ink-1));
+  transition: color 150ms ease;
+}
+.pt-brand-row:hover .pt-brand-row__name {
+  color: rgb(var(--c-brand));
+}
+.pt-brand-row__count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-ink-3));
+}
+
+/**
+ * ── A BRAND LOGO SITS ON WHITE IN BOTH THEMES ─────────────────────────────────────────────
+ * Every other surface in this codebase follows the theme, and this one deliberately does not.
+ *
+ * A brand logo is artwork somebody else's designer authored, and it was authored on white:
+ * Optimum Nutrition, Nutrex, Universal and BioTech USA all ship a solid-black wordmark with no
+ * light variant. Rendered on a theme-aware plate they are legible in light mode and effectively
+ * invisible in dark — measured on the /brands featured tier, where four of the first twelve
+ * plates read as empty boxes at 1536 in dark theme. The contrast auditor cannot catch it, because
+ * a logo is an image and the rule it breaks is about text.
+ *
+ * So the WELL is fixed and the plate around it still flips: border, brand name, product count and
+ * the stock mark all stay band-aware, and only the artwork gets the background it was drawn for.
+ * The literal is deliberate and belongs here rather than in a token — a token that never varies
+ * is not a token, and putting it in tokens.css would invite a future `.dark` override that
+ * silently reintroduces this.
+ */
+.pt-logo-well {
+  /* BACKGROUND ONLY. Layout stays at the call site so the same class can dress a 160x80 marquee
+     tile and a full-width plate well without fighting their utilities — a `width: 100%` here
+     would silently override the marquee tile's `w-40`, since this file loads after Tailwind's
+     utility layer.
+
+     PURE WHITE, and that was measured rather than assumed. The first version used the warm
+     #F7F6F4 of --page-sunken to keep the well from glaring on a dark plate — but roughly half
+     these logos are WebP with a white background already baked into the artwork, so the beige
+     well framed a white rectangle framed a wordmark: three tones where there should be one.
+     White makes the well invisible in light theme (the plate is white too) and, in dark theme,
+     makes it continuous with the artwork it holds. */
+  background-color: #ffffff;
+}

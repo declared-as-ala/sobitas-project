@@ -580,6 +580,55 @@ export const getInStockCount = async (): Promise<number | null> => {
   }
 };
 
+/**
+ * How many SHIPPABLE products each brand has today, keyed by brand id.
+ *
+ * ── WHY /brands NEEDS THIS AND /shop_facets CANNOT GIVE IT ──────────────────────────────────
+ * `shop_facets.brand_counts` counts PUBLISHED products, and on this catalogue that number is
+ * mostly fiction: 11,130 of 11,263 rows carry `rupture = 1, qte = 0` (the iHerb import), so a
+ * brand directory built on it advertises 577 brands of which 30 can actually be bought. Measured
+ * 19/08/2026 — Swanson Vitamins leads the published counts with 577 products and has none in
+ * stock, while JX Fitness has 50 published and 26 on the shelf.
+ *
+ * A directory that cannot tell those two apart is not a directory, it is a list of names. So the
+ * page prints both numbers and lets the shopper filter on the one that matters.
+ *
+ * ── WHY IT IS TWO REQUESTS AND NOT 577 ─────────────────────────────────────────────────────
+ * The obvious shape — ask per brand — is 577 round trips. The whole in-stock set is 133 products,
+ * which is two pages at the API's clamped 100-row maximum, and every row carries `brand_id`. So
+ * the aggregate is computed here from the same two responses the shop already knows how to ask
+ * for. `fields=index` trims each row to its identifiers; the only field read is `brand_id`.
+ *
+ * Called inside the /brands ISR window (revalidate 3600), so it costs two queries an hour across
+ * all visitors, not two per visit.
+ *
+ * Fails to an EMPTY OBJECT rather than to zeros: "we could not count" and "nothing is in stock"
+ * are different statements, and the directory hides the availability control entirely for the
+ * first rather than telling every shopper the shop is empty.
+ */
+export const getInStockBrandCounts = async (): Promise<Record<number, number>> => {
+  const counts: Record<number, number> = {};
+  try {
+    for (let page = 1; page <= 4; page += 1) {
+      const response = await api.get('/all_products', {
+        params: { per_page: 100, page, in_stock: 1, light: 1, fields: 'index' },
+      });
+      const rows = response.data?.products;
+      if (!Array.isArray(rows) || rows.length === 0) break;
+      for (const row of rows) {
+        const id = Number(row?.brand_id);
+        if (Number.isFinite(id) && id > 0) counts[id] = (counts[id] ?? 0) + 1;
+      }
+      const lastPage = Number(response.data?.pagination?.last_page ?? 1);
+      if (!Number.isFinite(lastPage) || page >= lastPage) break;
+    }
+    return counts;
+  } catch (error) {
+    console.error('[getInStockBrandCounts] API error:', error);
+    return {};
+  }
+};
+
 export const getShopFacets = async (): Promise<ShopFacets> => {
   const empty: ShopFacets = {
     price: { min: 0, max: 1000, p99: 1000 },

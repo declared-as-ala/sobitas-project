@@ -35,6 +35,7 @@ const SKELETON_TILES = 10;
 function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: boolean }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
+  const hasLogo = Boolean(logoUrl) && !imageError;
 
   const inner =
     logoUrl && !imageError ? (
@@ -61,8 +62,18 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
       </span>
     );
 
-  const className =
-    'pt-plate group flex h-20 w-40 shrink-0 items-center justify-center rounded-xl border border-hairline px-3 transition-colors duration-200 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
+  /*
+    `.pt-logo-well` WHEN THERE IS A LOGO, `.pt-plate` WHEN THERE IS NOT.
+
+    Same defect, found on /brands and fixed here because this strip has it too: a brand wordmark
+    is black artwork with no dark variant, so Optimum Nutrition, Nutrex, Universal and BioTech USA
+    render as near-empty tiles in dark theme on a plate that follows the theme. The well is a
+    frozen light background (globals.css). The TEXT fallback keeps `.pt-plate`, because its colour
+    is a theme token and near-white type on a frozen light well is the same bug one layer down.
+  */
+  const className = `${
+    hasLogo ? 'pt-logo-well' : 'pt-plate'
+  } group flex h-20 w-40 shrink-0 items-center justify-center rounded-xl border border-hairline px-3 transition-colors duration-200 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`;
 
   if (!interactive) {
     return (
