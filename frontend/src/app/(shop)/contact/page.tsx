@@ -3,7 +3,7 @@ import { getCoordinates } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
-import ContactPageClient from './ContactPageClient';
+import ContactPageContent from './ContactPageContent';
 
 export const metadata: Metadata = {
   // `absolute` so the layout template doesn't append a 2nd " | Protéine Tunisie".
@@ -64,7 +64,7 @@ export default async function ContactPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(contactPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <ContactPageClient coordinates={coordinates} />
+      <ContactPageContent coordinates={coordinates} />
     </>
   );
 }

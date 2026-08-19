@@ -3,7 +3,7 @@ import { getPageBySlug, getCoordinates } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
-import AboutPageClient from './AboutPageClient';
+import AboutPageContent from './AboutPageContent';
 
 /**
  * THE ONE PAGE WHERE THE LEGAL NAME BELONGS IN THE TITLE.
@@ -75,7 +75,7 @@ export default async function QuiSommesNousPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <AboutPageClient initialPage={page} initialCoordinates={coordinates} />
+      <AboutPageContent page={page} coordinates={coordinates} />
     </>
   );
 }

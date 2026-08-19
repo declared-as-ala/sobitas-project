@@ -1,13 +1,13 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUp, ArrowUpRight, Facebook, Instagram, Linkedin, Loader2, Mail, MapPin, Phone, Youtube } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, Facebook, Instagram, Linkedin, Loader2, Mail, Map as MapIcon, MapPin, Phone, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
-import { subscribeNewsletter, getCmsPages, getCoordinates } from '@/services/api';
-import type { Coordinate } from '@/types';
+import { subscribeNewsletter } from '@/services/api';
+import { LEGAL_IDENTITY } from '@/util/company';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { toast } from 'sonner';
@@ -17,80 +17,148 @@ interface FooterClientProps {
   pages?: CmsPage[];
 }
 
-/** Single source for the newsletter subtitle so both breakpoints read identically. */
-const NEWSLETTER_SUBTITLE = 'Recevez les dernières offres exclusives et nouveautés.';
+/*
+ * ── THE FOOTER WAS HALF THE CONTACT PAGE ────────────────────────────────────────────────────
+ * Owner, 19/08/2026: *"redesign the footer, polish it and upgrade it, make it not that height too
+ * much, use the full width of the page."*
+ *
+ * MEASURED before touching it, with scripts/measure-pages.mjs:
+ *
+ *              footer      /contact document    footer's share
+ *   @390       1,652px           3,304px              50%
+ *   @1536        906px           2,052px              44%
+ *
+ * Half of a page whose entire job is a phone number and a form. That is not a padding problem and
+ * it was not fixed by shaving padding — it was FOUR stacked bands (brand+newsletter, four link
+ * columns, a "Nous trouver" panel, the legal line), three of which were full-height rows of their
+ * own on a 1600px rail that they each used about a third of.
+ *
+ * Three structural changes, in order of what they returned:
+ *
+ * 1. THE MAP PANEL IS GONE FROM THE RESTING FOOTER. It repeated the address that the contact
+ *    column already carries, one band lower, and cost ~190px at every width on every page of the
+ *    site to do it. The two controls it existed for — show the map, get directions — moved into
+ *    the contact column beside the address they belong to, and the map itself renders as a band
+ *    only once somebody presses for it. At rest that band does not exist.
+ *
+ * 2. THE NEWSLETTER IS A STRIP, NOT A HALF-BAND. It was a `lg:grid-cols-2` row where the form was
+ *    capped at `max-w-md` — a 448px form and a 380px blurb sharing a 1600px rail, which is where
+ *    "use the full width" came from. As one row (heading and blurb left, field and button right)
+ *    it spans the whole rail and costs ~90px instead of ~200.
+ *
+ * 3. THE BRAND BLOCK JOINED THE COLUMN GRID as its first column rather than sitting in a band
+ *    above it. Five columns across 1600px is what that rail is for; a two-row footer where row one
+ *    is 40% empty is not.
+ *
+ * The four link columns themselves are unchanged in content. They are the part a footer is FOR,
+ * and cutting links to buy height would have been trading the thing that works for the thing that
+ * was broken.
+ *
+ * ── AND IT KEEPS ONE FOOT ON THE GROUND ─────────────────────────────────────────────────────
+ * The legal line now carries the registered identity — RC and matricule fiscal, from the shop's
+ * own /coordonnees record. For a Tunisian cash-on-delivery shop that is the single cheapest proof
+ * that somebody real is on the other end of the order, and it belongs in the one place that
+ * renders on every page. It is also where "SOBITAS" — the site's biggest single query, and absent
+ * from indexed text since the rebrand — becomes machine-readable sitewide.
+ *
+ * ── THE DARK SCOPE, UNCHANGED AND STILL THE THING TO GET RIGHT ──────────────────────────────
+ * `.pt-slab` re-points every token underneath it, so everything here is written exactly as it
+ * would be on a white card — `text-ink-1`, `border-hairline`, `bg-sunken`, `text-brand` — with no
+ * `dark:` variant and no hardcoded grey.
+ *
+ * `bg-elevated` IS WHITE ON THIS BAND (`--slab-elevated` is 255 255 255 in light theme) while
+ * `--slab-ink-1` stays near-white, so `bg-elevated text-ink-1` here is white on white at ~1.04:1
+ * — and only in light theme, because in dark the same classes are correct. A control on a slab is
+ * a WELL, not a plate: `bg-sunken`. That trap caught the newsletter field, the social buttons and
+ * the map card on the previous rewrite; it is why every fill in this file is `bg-sunken`.
+ */
+
+const NAVIGATION: Array<[string, string]> = [
+  ['/', 'Accueil'],
+  ['/shop', 'Nos produits'],
+  ['/packs', 'Packs'],
+  ['/blog', 'Blog'],
+  ['/contact', 'Contact'],
+  ['/proteine-sousse', 'Protéine à Sousse'],
+];
+
+const CATEGORIES: Array<[string, string]> = [
+  ['/whey-proteine', 'Whey protéine'],
+  ['/creatine', 'Créatine'],
+  ['/gainers-proteines', 'Gainers'],
+  ['/prise-de-masse', 'Prise de masse'],
+  ['/perte-de-poids', 'Perte de poids'],
+  ['/pre-workout', 'Pre-workout'],
+  ['/brands', 'Toutes les marques'],
+];
+
+const SOCIALS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
+  { href: 'https://facebook.com/proteinetunisie', label: 'Facebook', icon: <Facebook className="h-[18px] w-[18px]" /> },
+  { href: 'https://www.instagram.com/sobitas.proteine.tunisie/', label: 'Instagram', icon: <Instagram className="h-[18px] w-[18px]" /> },
+  { href: 'https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/', label: 'LinkedIn', icon: <Linkedin className="h-[18px] w-[18px]" /> },
+  {
+    href: 'https://www.tiktok.com/@sobitas.proteine.tunisie',
+    label: 'TikTok',
+    icon: (
+      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+      </svg>
+    ),
+  },
+  { href: 'https://www.youtube.com/@proteine-tunisie', label: 'YouTube', icon: <Youtube className="h-[18px] w-[18px]" /> },
+];
+
+/** The rail. `max-w-site` (1600) is THE page container — see tailwind.config.ts. */
+const RAIL = 'mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8';
+
+/**
+ * One class string for every link in the footer, so the columns cannot drift.
+ * `min-h-[44px]` on a phone is the tap floor; `sm:min-h-[34px]` keeps a seven-item column from
+ * being 308px tall on a desktop where the pointer is a mouse — still well clear of the 24px
+ * minimum target size, which is the criterion that actually applies to a list of text links.
+ */
+const FOOTER_LINK =
+  'flex min-h-[44px] items-center py-1.5 text-sm text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[34px]';
+
+/** Both map controls, and the "Haut de page" button, share one shape. */
+const QUIET_BUTTON =
+  'inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-hairline px-2.5 text-xs font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const { footerLogoUrl } = useSiteLogos();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
-  const [shouldLoadMap, setShouldLoadMap] = useState(false);
-  // Server-fetched footer chrome (root layout → SiteChromeProvider): the CMS links + address are in
-  // the SSR HTML (crawlable, no post-hydration pop-in) and not re-fetched on every navigation.
-  const { cmsPages: ssrPages, coordinates: ssrCoord } = useSiteChrome();
-  const [pages, setPages] = useState<CmsPage[]>(pagesProp ?? (ssrPages.length > 0 ? ssrPages : []));
-  const [coord, setCoord] = useState<Coordinate | null>(ssrCoord);
-  const mapRef = useRef<HTMLDivElement>(null);
+  const [showMap, setShowMap] = useState(false);
+  /*
+   * Server-fetched footer chrome (root layout → SiteChromeProvider): the CMS links and the address
+   * are in the SSR HTML — crawlable, no post-hydration pop-in — and not re-fetched on navigation.
+   *
+   * The two `useEffect` fallbacks that used to re-fetch both of these client-side are GONE. They
+   * only ever fired when the server fetch had already failed, in which case the same request from
+   * the browser was unlikely to do better, and they cost two network round-trips' worth of code
+   * and a pair of state transitions on every page of the site to buy that. The provider is the
+   * source.
+   */
+  const { cmsPages, coordinates: coord } = useSiteChrome();
+  const footerPages = pagesProp && pagesProp.length > 0 ? pagesProp : cmsPages;
 
-  useEffect(() => {
-    // Fallback only: fetch client-side when the server didn't supply coordinates.
-    if (ssrCoord) return;
-    getCoordinates().then(setCoord).catch(() => {});
-  }, [ssrCoord]);
+  // /coordonnees returns the raw Coordinate model, so these are its real column names.
+  const contactAddress = coord?.adresse_fr?.trim() || coord?.adresse?.trim() || 'Rue Ribat, Sousse 4000';
+  const contactEmail = coord?.email || 'contact@protein.tn';
+  const contactPhones =
+    [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
+  const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
 
-  // The /coordonnees API returns the raw Coordinate model, so use its real
-  // column names (adresse_fr/adresse, phone_1, phone_2, email).
-  const contactAddress = coord?.adresse_fr || coord?.adresse || '';
-  // Default Google Maps embed for PROTEIN.TN (Sousse). Used as a fallback when
-  // the /coordonnees API doesn't return a gelocalisation embed.
+  /* Default Google Maps embed for PROTEIN.TN (Sousse), used when /coordonnees has none. */
   const DEFAULT_MAP_EMBED =
     '<iframe src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3234.515082636619!2d10.630613400000001!3d35.8363715!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x1302131b30e891b1%3A0x51dae0f25849b20c!2sPROTEIN.TN%20-%20PROTEINE%20TUNISIE!5e0!3m2!1sen!2stn!4v1782430269530!5m2!1sen!2stn" width="600" height="450" style="border:0;" allowfullscreen="" loading="lazy" referrerpolicy="strict-origin-when-cross-origin"></iframe>';
   const mapEmbedHtml = coord?.gelocalisation || DEFAULT_MAP_EMBED;
-  const contactEmail = coord?.email || 'contact@protein.tn';
-  const contactPhones = [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
-  const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
   /* Opens the address in whatever maps app the visitor has, with no iframe involved. `?api=1` is
-     Google's documented, key-free URL form. */
+     Google's documented, key-free URL form — and on a phone it is the better answer than an
+     embed, because it hands the address to the navigation app they actually use. */
   const mapsLinkHref = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-    contactAddress ? `PROTEIN.TN ${contactAddress}` : 'PROTEIN.TN PROTEINE TUNISIE Sousse'
+    `PROTEIN.TN ${contactAddress}`
   )}`;
-
-  // Fetch CMS pages only as a fallback: props > server (SiteChromeProvider) > client fetch.
-  useEffect(() => {
-    if (pagesProp && pagesProp.length > 0) {
-      setPages(pagesProp);
-      return;
-    }
-    if (ssrPages.length > 0) {
-      setPages(ssrPages);
-      return;
-    }
-    getCmsPages().then(setPages);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pagesProp]);
-
-  // Show all API pages in footer
-  const footerPages = pages;
-
-  // Lazy load Google Maps only when footer is visible (Intersection Observer).
-  // Depend on mapEmbedHtml so the observer attaches once the map element is
-  // actually rendered — coord loads async, so on first mount the ref is null.
-/*
-   * ── THE MAP LOADS WHEN SOMEBODY ASKS FOR IT ────────────────────────────────────────────────
-   * Owner, 17/08/2026: *"the footer also polish it, make renders fast"*.
-   *
-   * This used to mount the Google Maps embed as soon as an IntersectionObserver saw the footer
-   * approach the viewport. That is the standard "lazy" pattern and on this site it was close to no
-   * saving at all: the footer is at the bottom of every page, so "near the viewport" means "the
-   * reader scrolled down", which is most sessions. A Maps embed is a third-party iframe that pulls
-   * several hundred kilobytes of script and a dozen tile requests and runs its own main thread —
-   * spent, on every page, to render a picture of a street almost nobody was looking for.
-   *
-   * It is now a poster with the address on it and a button. The reader who wants the map presses
-   * once; everyone else pays nothing. The "Ouvrir dans Google Maps" link beside it needs no iframe
-   * at all and is the better answer for a phone anyway, because it hands the address to the
-   * navigation app the visitor actually uses.
-   */
 
   const handleNewsletterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -98,7 +166,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
       toast.error('Veuillez entrer votre email');
       return;
     }
-
     setIsSubscribing(true);
     try {
       const result = await subscribeNewsletter({ email: newsletterEmail });
@@ -106,309 +173,223 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         toast.success(result.success || 'Inscription réussie !');
         setNewsletterEmail('');
       } else if ('error' in result) {
-        toast.error(result.error || 'Erreur lors de l\'inscription');
+        toast.error(result.error || "Erreur lors de l'inscription");
       }
     } catch (error: any) {
-      toast.error(error.response?.data?.error || 'Erreur lors de l\'inscription');
+      toast.error(error.response?.data?.error || "Erreur lors de l'inscription");
     } finally {
       setIsSubscribing(false);
     }
   };
 
-  /*
-   * ── ONE FOOTER ──────────────────────────────────────────────────────────────────────────────
-   * Owner, 17/08/2026: *"the footer, redesign it, make it polished and clean, handmade, like a
-   * human designed it"*.
-   *
-   * It was TWO complete trees — a `md:hidden` stack and a `hidden md:grid` four-up — and that is
-   * the whole reason it read as assembled rather than designed. The same six navigation links, the
-   * same seven categories, the same five social buttons, the same newsletter form and the same
-   * three contact rows, each written twice, ~330 lines, with two sets of spacing decisions that had
-   * already drifted apart: the phone stack put Services above Navigation and the desktop grid put
-   * Contact first; the phone links were `space-y-1.5` with `min-h-11` rows and the desktop ones
-   * `space-y-3` with no minimum at all. Nobody chose either rhythm.
-   *
-   * This is the same defect, and the same fix, as the product hero four days ago: ONE tree, and the
-   * difference between a phone and a desktop is a grid change, which is what CSS grid is for.
-   *
-   * ── AND IT IS ON THE DESIGN SYSTEM'S OWN DARK SCOPE ─────────────────────────────────────────
-   * `bg-gray-950 text-gray-300 border-gray-800`, `bg-gray-800/60` separators, `bg-gray-800`
-   * social buttons, `hover:bg-red-600`, `text-red-500`, `bg-gray-800 border-gray-700` inputs — 93
-   * violations by the design lint's count, on a component that renders on every page of the site.
-   *
-   * `.pt-slab` is the system's dark band: it re-points every token underneath it, so everything in
-   * here is written exactly as it would be on a white card — `text-ink-1`, `border-hairline`,
-   * `bg-sunken`, `text-brand` — with no `dark:` variant and no hardcoded grey anywhere. Those
-   * values were contrast-checked when the scope was built; the ones I would have picked by eye
-   * were not.
-   *
-   * ── ONE THING TO GET RIGHT ON THIS BAND: `bg-elevated` IS WHITE HERE ──────────────────────
-   * `--slab-elevated` is `255 255 255` in light theme — "cards on a slab are WHITE PLATES, the
-   * punch-out moment", says tokens.css — while `--slab-ink-1` stays `245 244 242`. So
-   * `bg-elevated text-ink-1` inside this footer is white type on a white card at about 1.04:1,
-   * and it is invisible ONLY in light theme, because in dark `--slab-elevated` flips to `20 20 22`
-   * and the same classes are correct. That is the failure mode tokens.css warns about twice, and
-   * the footer rewrite walked straight into it on three elements: the newsletter input (typed text
-   * would have been unreadable), the five social buttons, and the map card.
-   *
-   * A form field or a control on a slab is a WELL, not a plate: `bg-sunken` is `32 32 39` here and
-   * is documented for exactly this ("wells: the header search field"). A genuine white card would
-   * need `.pt-plate`, which re-points the inks back to page scope so they flip to dark — not a
-   * fill class on its own. DESIGN_SYSTEM.md names this footer as the one screen that SHOULD be dark, and this
-   * is what being dark is supposed to mean here.
-   *
-   * ── THE ORDER ───────────────────────────────────────────────────────────────────────────────
-   * Brand and the newsletter first, because the newsletter is the only thing in a footer that can
-   * still earn something; then four equal columns of links; then where to find the shop; then one
-   * quiet legal line. A footer's job is to be scannable and to prove the shop is real, and the
-   * second half of that is why the address, the phone and the map are here and not folded away.
-   */
   const year = new Date().getFullYear();
-
-  const NAVIGATION: Array<[string, string]> = [
-    ['/', 'Accueil'],
-    ['/shop', 'Nos produits'],
-    ['/packs', 'Packs'],
-    ['/blog', 'Blog'],
-    ['/contact', 'Contact'],
-    ['/proteine-sousse', 'Protéine à Sousse'],
-  ];
-
-  const CATEGORIES: Array<[string, string]> = [
-    ['/whey-proteine', 'Whey protéine'],
-    ['/creatine', 'Créatine'],
-    ['/gainers-proteines', 'Gainers'],
-    ['/prise-de-masse', 'Prise de masse'],
-    ['/perte-de-poids', 'Perte de poids'],
-    ['/pre-workout', 'Pre-workout'],
-    ['/brands', 'Toutes les marques'],
-  ];
-
-  const SOCIALS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
-    { href: 'https://facebook.com/proteinetunisie', label: 'Facebook', icon: <Facebook className="h-[18px] w-[18px]" /> },
-    { href: 'https://www.instagram.com/sobitas.proteine.tunisie/', label: 'Instagram', icon: <Instagram className="h-[18px] w-[18px]" /> },
-    { href: 'https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/', label: 'LinkedIn', icon: <Linkedin className="h-[18px] w-[18px]" /> },
-    {
-      href: 'https://www.tiktok.com/@sobitas.proteine.tunisie',
-      label: 'TikTok',
-      icon: (
-        <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-        </svg>
-      ),
-    },
-    { href: 'https://www.youtube.com/@proteine-tunisie', label: 'YouTube', icon: <Youtube className="h-[18px] w-[18px]" /> },
-  ];
 
   return (
     <footer id="contact" className="pt-slab border-t border-hairline">
-      <div className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8">
-
-        {/* ── BRAND + NEWSLETTER ─────────────────────────────────────────────────────────── */}
-        <div className="grid gap-8 border-b border-hairline py-10 lg:grid-cols-2 lg:items-center lg:gap-16 lg:py-12">
+      {/* ── NEWSLETTER ─────────────────────────────────────────────────────────────────────
+          One row from `lg`: the pitch on the left, the field on the right, both on the full
+          1600px rail. Below `lg` it stacks, which is the only shape that works when the field
+          alone needs the whole width. */}
+      <div className="border-b border-hairline">
+        <form
+          onSubmit={handleNewsletterSubmit}
+          className={`${RAIL} flex flex-col gap-3 py-5 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-6`}
+        >
           <div className="min-w-0">
-            <Link href="/" className="inline-block transition-opacity hover:opacity-80">
-              <Image
-                src={footerLogoUrl}
-                alt="Proteine Tunisie"
-                width={230}
-                height={75}
-                className="h-11 w-auto object-contain sm:h-14"
-                sizes="230px"
-                loading="lazy"
-              />
-            </Link>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-ink-2">
-              Compléments alimentaires authentiques, sélectionnés et livrés partout en Tunisie.
-              Paiement à la livraison, expédition sous 24–72h.
-            </p>
-          </div>
-
-          {/* The newsletter is the only element in a footer that can still earn something, so it
-              gets half the band rather than a quarter of a column. */}
-          <form onSubmit={handleNewsletterSubmit} className="min-w-0 lg:justify-self-end lg:max-w-md">
             <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
               Abonnez-vous
             </h2>
-            <p className="mt-1.5 text-sm text-ink-2">{NEWSLETTER_SUBTITLE}</p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-              <Input
-                type="email"
-                placeholder="Votre adresse email…"
-                value={newsletterEmail}
-                onChange={(e) => setNewsletterEmail(e.target.value)}
-                className="h-12 min-w-0 flex-1 rounded-xl border-hairline bg-sunken text-ink-1 placeholder:text-ink-3"
-                aria-label="Votre adresse email"
-                required
-              />
-              <Button
-                type="submit"
-                className="h-12 shrink-0 rounded-xl px-6 font-display font-semibold uppercase tracking-wide"
-                disabled={isSubscribing}
-              >
-                {isSubscribing ? (
-                  <>
-                    <Loader2 className="me-2 h-4 w-4 animate-spin" /> Inscription…
-                  </>
-                ) : (
-                  "S'abonner"
-                )}
-              </Button>
-            </div>
-            <p className="mt-2.5 text-xs text-ink-3">
-              En vous abonnant, vous acceptez de recevoir nos offres par email.
-            </p>
-          </form>
-        </div>
-
-        {/* ── FOUR COLUMNS ───────────────────────────────────────────────────────────────── */}
-        {/*
-          ── TWO UP ON A PHONE, NOT FOUR STACKED ────────────────────────────────────────────
-          Owner, 17/08/2026: *"get benefit of the full screen of the mobile, no need for extra
-          whitespaces"*.
-
-          MEASURED at 390px before changing it: the footer was 2,238px — 29% of the entire product
-          page — and 1,388px of that was these four columns, stacked one under the other, each a
-          list of 44px rows. A phone screen is 390px wide and a footer link is about 120px of text,
-          so a single column spent two thirds of every row on nothing.
-
-          Two columns from the smallest phone. The longer service labels wrap to a second line at
-          171px, which costs a little back, and the measured saving is still ~600px of scroll on
-          every page of the site.
-
-          `gap-x-6` rather than the `gap-8` the vertical rhythm uses: 32px between two 171px
-          columns is 8% of the screen spent on a gutter.
-        */}
-        <div className="grid grid-cols-2 gap-x-6 gap-y-8 py-10 lg:grid-cols-4 lg:gap-10 lg:py-12">
-          <FooterLinkColumn title="Navigation" links={NAVIGATION} />
-          <FooterLinkColumn title="Catégories" links={CATEGORIES} />
-
-          <div className="min-w-0">
-            <FooterHeading>Services &amp; ventes</FooterHeading>
-            <ul className="mt-4 space-y-0.5">
-              {footerPages.map((p) => (
-                <li key={p.id}>
-                  {p.slug ? (
-                    <Link href={`/${p.slug}`} className={FOOTER_LINK}>
-                      {p.title}
-                    </Link>
-                  ) : (
-                    <span className="flex min-h-[44px] items-center text-sm text-ink-3 sm:min-h-[36px]">
-                      {p.title}
-                    </span>
-                  )}
-                </li>
-              ))}
-            </ul>
+            <p className="mt-1 text-sm text-ink-2">Offres exclusives et nouveautés, une fois par semaine.</p>
           </div>
-
-          <div className="min-w-0">
-            <FooterHeading>Nous contacter</FooterHeading>
-            <ul className="mt-4 space-y-0.5">
-              <li>
-                <a href={contactPhoneHref} className={FOOTER_LINK} aria-label="Appeler la boutique">
-                  <Phone className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                  <span className="min-w-0 break-words">{contactPhones}</span>
-                </a>
-              </li>
-              <li>
-                <a href={`mailto:${contactEmail}`} className={FOOTER_LINK}>
-                  <Mail className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                  <span className="min-w-0 break-words">{contactEmail}</span>
-                </a>
-              </li>
-              {contactAddress && (
-                <li className="flex min-h-[44px] items-start py-2 text-sm text-ink-2 sm:min-h-[36px]">
-                  <MapPin className="me-2.5 mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                  <span className="min-w-0 break-words">{contactAddress}</span>
-                </li>
-              )}
-            </ul>
-
-            {/* `bg-sunken`, not `bg-elevated`: on this band the latter is a WHITE plate and these
-                carry slab-light glyphs, which shipped as five near-invisible white-on-white circles
-                in light theme. `bg-sunken` is the slab's well (#202027), which is what the
-                `bg-gray-800` these replaced was approximating by hand. Hover goes to the brand,
-                which on the slab is the lighter #FF8A4C rather than the page's #D53B04 — the scope
-                doing its job: same class, correct colour for the surface it lands on. */}
-            <div className="mt-5 flex flex-wrap gap-2">
-              {SOCIALS.map(({ href, label, icon }) => (
-                <a
-                  key={label}
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  aria-label={label}
-                >
-                  {icon}
-                </a>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* ── WHERE THE SHOP IS ──────────────────────────────────────────────────────────── */}
-        {mapEmbedHtml && (
-          <div className="border-t border-hairline py-8 lg:py-10" ref={mapRef}>
-            <FooterHeading>Nous trouver</FooterHeading>
-            <div className="mt-4 overflow-hidden rounded-2xl border border-hairline bg-sunken">
-              {shouldLoadMap ? (
-                <div
-                  className="h-56 w-full sm:h-72 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
-                  dangerouslySetInnerHTML={{ __html: mapEmbedHtml }}
-                />
+          {/* ONE ROW AT EVERY WIDTH, including 320. The field and the button stacked cost 52px on
+              a phone for no gain: at 390 the button is ~112px and the field keeps ~230, which is
+              more than enough for an email — the placeholder is shortened to match rather than the
+              layout being grown to fit the placeholder. */}
+          <div className="flex w-full min-w-0 gap-2 lg:w-auto lg:shrink-0">
+            <Input
+              type="email"
+              placeholder="Votre email…"
+              value={newsletterEmail}
+              onChange={(e) => setNewsletterEmail(e.target.value)}
+              className="h-11 min-w-0 flex-1 rounded-xl border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 sm:w-72"
+              aria-label="Votre adresse email"
+              required
+            />
+            <Button
+              type="submit"
+              className="h-11 shrink-0 rounded-xl px-4 font-display text-xs font-semibold uppercase tracking-wide sm:px-6 sm:text-sm"
+              disabled={isSubscribing}
+            >
+              {isSubscribing ? (
+                <>
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" /> Inscription…
+                </>
               ) : (
-                <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
-                  <div className="flex min-w-0 items-start gap-3">
-                    <MapPin className="mt-0.5 h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-ink-1">PROTEIN.TN — Protéine Tunisie</p>
-                      {contactAddress && (
-                        <p className="mt-0.5 break-words text-sm text-ink-2">{contactAddress}</p>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex shrink-0 flex-wrap gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setShouldLoadMap(true)}
-                      className="inline-flex min-h-[44px] items-center justify-center rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    >
-                      Afficher la carte
-                    </button>
-                    <a
-                      href={mapsLinkHref}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex min-h-[44px] items-center justify-center gap-1.5 rounded-xl border border-hairline px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    >
-                      Itinéraire
-                      <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    </a>
-                  </div>
-                </div>
+                "S'abonner"
               )}
-            </div>
+            </Button>
           </div>
-        )}
+        </form>
       </div>
 
-      {/* ── LEGAL LINE ───────────────────────────────────────────────────────────────────── */}
-      <div className="border-t border-hairline">
-        {/* One row at every width. Two short strings stacked cost 53px of nothing on a phone. */}
-        <div className="mx-auto flex w-full max-w-site flex-row flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4 text-xs text-ink-3 sm:px-6 lg:px-8">
-          <p>
-            © {year}{' '}
-            <span className="font-display font-semibold uppercase tracking-wide text-brand">
-              Proteine Tunisie
-            </span>
-            . Tous droits réservés.
+      {/* ── BRAND + FOUR COLUMNS, ONE GRID ─────────────────────────────────────────────────
+          Two up on a phone (a footer link is ~120px of text on a 390px screen, so one column
+          spent two thirds of every row on nothing), five across from `lg` — the brand block is
+          the first of the five rather than a band above them. */}
+      <div
+        className={`${RAIL} grid grid-cols-2 gap-x-6 gap-y-8 py-8 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] lg:gap-x-8 lg:py-10`}
+      >
+        <div className="col-span-2 min-w-0 lg:col-span-1">
+          <Link href="/" className="inline-block transition-opacity hover:opacity-80">
+            <Image
+              src={footerLogoUrl}
+              alt="Proteine Tunisie"
+              width={230}
+              height={75}
+              className="h-10 w-auto object-contain sm:h-12"
+              sizes="230px"
+              loading="lazy"
+            />
+          </Link>
+          <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-2">
+            Compléments alimentaires authentiques, sélectionnés et livrés partout en Tunisie.
+            Paiement à la livraison, expédition sous 24–72h.
           </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {SOCIALS.map(({ href, label, icon }) => (
+              <a
+                key={label}
+                href={href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label={label}
+              >
+                {icon}
+              </a>
+            ))}
+          </div>
+        </div>
+
+        <FooterLinkColumn title="Navigation" links={NAVIGATION} />
+        <FooterLinkColumn title="Catégories" links={CATEGORIES} />
+
+        <div className="min-w-0">
+          <FooterHeading>Services &amp; ventes</FooterHeading>
+          <ul className="mt-3 space-y-0.5">
+            {footerPages.map((p) => (
+              <li key={p.id}>
+                {p.slug ? (
+                  <Link href={`/${p.slug}`} className={FOOTER_LINK}>
+                    {p.title}
+                  </Link>
+                ) : (
+                  <span className="flex min-h-[44px] items-center text-sm text-ink-3 sm:min-h-[34px]">
+                    {p.title}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        <div className="min-w-0">
+          <FooterHeading>Nous contacter</FooterHeading>
+          <ul className="mt-3 space-y-0.5">
+            <li>
+              <a href={contactPhoneHref} className={FOOTER_LINK} aria-label="Appeler la boutique">
+                <Phone className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <span className="min-w-0 break-words">{contactPhones}</span>
+              </a>
+            </li>
+            <li>
+              <a href={`mailto:${contactEmail}`} className={FOOTER_LINK}>
+                <Mail className="me-2.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                <span className="min-w-0 break-words">{contactEmail}</span>
+              </a>
+            </li>
+            <li className="flex items-start py-1.5 text-sm text-ink-2">
+              <MapPin className="me-2.5 mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+              <span className="min-w-0 break-words">{contactAddress}</span>
+            </li>
+          </ul>
+          {/* The two controls the deleted "Nous trouver" band existed for, beside the address
+              they act on. The map itself is a band below, and only once it is asked for. */}
+          <div className="mt-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowMap((v) => !v)}
+              className={QUIET_BUTTON}
+              aria-expanded={showMap}
+            >
+              <MapIcon className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              {showMap ? 'Masquer la carte' : 'Afficher la carte'}
+            </button>
+            <a href={mapsLinkHref} target="_blank" rel="noopener noreferrer" className={QUIET_BUTTON}>
+              Itinéraire
+              <ArrowUpRight className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* A Google Maps embed is a third-party iframe that pulls several hundred kilobytes of
+          script and runs its own main thread. It renders when — and only when — somebody presses
+          for it, so the footer costs nothing for the large majority who never do. */}
+      {showMap && (
+        <div className="border-t border-hairline">
+          <div className={`${RAIL} py-6`}>
+            <div
+              className="h-56 w-full overflow-hidden rounded-2xl border border-hairline bg-sunken sm:h-72 [&_iframe]:h-full [&_iframe]:w-full [&_iframe]:border-0"
+              dangerouslySetInnerHTML={{ __html: mapEmbedHtml }}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* ── LEGAL ──────────────────────────────────────────────────────────────────────────
+          The registered identity sits here rather than on a page nobody opens: for a cash-on-
+          delivery shop, a real RC and matricule fiscal is the cheapest proof that somebody
+          answerable is on the other end of the order. */}
+      <div className="border-t border-hairline">
+        {/*
+          ── ONE WRAPPING ROW, AND EVERY <p> CARRIES ITS OWN SIZE ─────────────────────────────
+          Written as a stack this measured 212px on a 390px phone — a legal line taller than the
+          newsletter — because each of the three parts claimed a full-width row of its own.
+          Wrapping lets the © and the button share a line and the identity fall under them only
+          when it has to.
+
+          THE SIZE IS ON THE <p>, NOT ON THE CONTAINER, and that is not a style preference.
+          globals.css sets `p { font-size: var(--text-base) }` in @layer base, so a paragraph
+          NEVER inherits a container's `text-xs` — it renders at 16px, silently, at the same
+          specificity the container's utility can't reach past because the utility isn't on the
+          element. The previous footer had `text-xs` on this container and two `<p>`s inside it,
+          and had been shipping a 16px legal line on every page of the site since it was written.
+          Measured: 53px for one sentence that fits on one 18px line.
+        */}
+        <div
+          className={`${RAIL} flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 py-3 text-ink-3`}
+        >
+          {/* The two legal strings are ONE group so they share a line on a desktop rail and wrap
+              against each other, not against the button, on a phone. */}
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2.5 gap-y-0.5">
+            <p className="min-w-0 text-[11px] leading-relaxed sm:text-xs">
+              © {year}{' '}
+              <span className="font-display font-semibold uppercase tracking-wide text-brand">
+                Proteine Tunisie
+              </span>
+              . Tous droits réservés.
+            </p>
+            <span className="hidden h-3 w-px bg-hairline lg:block" aria-hidden="true" />
+            <p className="min-w-0 break-words text-[11px] leading-relaxed sm:text-xs">
+              {LEGAL_IDENTITY.legalName} · RC {LEGAL_IDENTITY.registreCommerce} · MF{' '}
+              {LEGAL_IDENTITY.matriculeFiscal}
+            </p>
+          </div>
           <button
             type="button"
             onClick={() => typeof window !== 'undefined' && window.scrollTo({ top: 0, behavior: 'smooth' })}
-            className="-my-2 inline-flex min-h-[44px] items-center gap-1.5 py-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className={QUIET_BUTTON}
           >
             Haut de page
             <ArrowUp className="h-3.5 w-3.5" aria-hidden="true" />
@@ -418,15 +399,6 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
     </footer>
   );
 }
-
-/**
- * One class string for every link in the footer, so the four columns cannot drift the way the two
- * trees did. `min-h-[44px]` on a phone is the tap floor; `sm:min-h-[36px]` keeps a seven-item
- * column from being 308px tall on a desktop where the pointer is a mouse — still well clear of the
- * 24px minimum target size, which is the criterion that actually applies to a list of text links.
- */
-const FOOTER_LINK =
-  'flex min-h-[44px] items-center py-2 text-sm text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[36px]';
 
 function FooterHeading({ children }: { children: React.ReactNode }) {
   return (
@@ -438,7 +410,7 @@ function FooterLinkColumn({ title, links }: { title: string; links: Array<[strin
   return (
     <div className="min-w-0">
       <FooterHeading>{title}</FooterHeading>
-      <ul className="mt-4 space-y-0.5">
+      <ul className="mt-3 space-y-0.5">
         {links.map(([href, label]) => (
           <li key={href}>
             <Link href={href} className={FOOTER_LINK}>
