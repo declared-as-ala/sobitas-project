@@ -29,10 +29,27 @@ interface SearchBarProps {
  *
  * The four asks map to four changes, and only the first is visual.
  *
- * 1. THE SCRIM. Focusing the field dims the page BELOW the header, so the panel reads as the only
- *    live thing on screen without the field ever becoming a modal. It is a portal at z-40 — under
- *    the header's z-50 — which is what keeps the bar, the nav row and the panel lit while
- *    everything under them recedes. Clicking it closes.
+ * 1. THE SCRIM — AND IT DIMS THE HEADER TOO. First version dimmed only the page below the bar,
+ *    which left the logo, the whole nav row, the icon cluster and the orange pack CTA at full
+ *    strength around a field that was supposed to be the only lit thing. Owner, on that build:
+ *    *"make it highlight just the search bar."*
+ *
+ *    Covering the header as well takes TWO layers rather than one, and the reason is stacking
+ *    contexts, not fussiness. The header is `position: sticky; z-index: 50`, which makes it a
+ *    stacking context: nothing inside it can ever paint above a body-level sibling that outranks
+ *    it, and nothing outside it can paint between its children. So:
+ *
+ *      · the PAGE scrim is a body-level portal at z-40, pinned to the header's measured bottom —
+ *        under the header, over everything else;
+ *      · the HEADER scrim is rendered INSIDE this component, `position: fixed` across the header's
+ *        own box at z-[1]. Inside the header's context, a positioned z-1 element paints above the
+ *        logo, the icons and the nav row (all z-auto, in flow), while the search form sits at
+ *        z-50 in that same context and stays lit.
+ *
+ *    Two layers, one colour, no seam — and the field is the only thing left bright.
+ *
+ *    Desktop only. On a phone the trigger IS the close button, so dimming the header would grey
+ *    out the control the reader needs to get back.
  *
  * 2. THE RESTING PANEL. Six entry points and two real best-sellers, shown before a keystroke —
  *    see search/SearchPanel. A search field is focused far more often than it is completed.
@@ -206,13 +223,13 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
 
-  const scrim =
+  /* `rgb(0 0 0 / …)`, never `bg-ink-1/…`: the ink token INVERTS with the theme, so in dark mode an
+     ink-based scrim would brighten the page it is meant to recede. */
+  const pageScrim =
     mounted && open
       ? createPortal(
           <div
-            /* `rgb(0 0 0 / …)`, never `bg-ink-1/…`: the ink token INVERTS with the theme, so in
-               dark mode an ink-based scrim would brighten the page it is meant to recede. */
-            className="pt-search-scrim fixed inset-x-0 bottom-0 z-40 bg-black/45"
+            className="pt-search-scrim fixed inset-x-0 bottom-0 z-40 bg-black/50"
             style={{ top: `${headerBottom}px` }}
             onClick={close}
             aria-hidden="true"
@@ -220,6 +237,19 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           document.body
         )
       : null;
+
+  /* Not portalled — see the note at the top. It has to live inside the header's stacking context
+     to paint over the header's own children, and `fixed` gives it the header's box regardless of
+     where in that tree this component happens to sit. */
+  const headerScrim =
+    open && !isMobile ? (
+      <div
+        className="pt-search-scrim fixed inset-x-0 top-0 z-[1] bg-black/50"
+        style={{ height: `${headerBottom}px` }}
+        onClick={close}
+        aria-hidden="true"
+      />
+    ) : null;
 
   const panelBody = useMemo(
     () => (
@@ -235,7 +265,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             optionId={optionId}
             onNavigate={afterNavigate}
             rows={isMobile ? 5 : 6}
-            listClassName={isMobile ? 'max-h-[38vh]' : 'max-h-[19rem]'}
+            listClassName={isMobile ? 'max-h-[38vh]' : 'max-h-[23rem]'}
           />
         ) : (
           <SearchRestingPanel
@@ -303,7 +333,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
     return (
       <div ref={rootRef}>
         {trigger}
-        {scrim}
+        {pageScrim}
         {open &&
           createPortal(
             <div
@@ -355,7 +385,8 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
   // ── DESKTOP ───────────────────────────────────────────────────────────────────────────────
   return (
     <div ref={rootRef} className={cn('relative flex-1', className)}>
-      {scrim}
+      {pageScrim}
+      {headerScrim}
       <form onSubmit={submit} role="search" className="relative z-50">
         <input
           {...inputProps}
@@ -402,10 +433,18 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
           /* ── 42rem, ANCHORED LEFT ────────────────────────────────────────────────────────
              The field is ~1,130px on a 1536 screen because it fills the header bar, and the
              dropdown used to inherit that width. A 1,130px row holding a 300px name and a 60px
-             price put ~700px of nothing between the two things the reader is comparing. 672px,
-             pinned to the field's left edge, which is where the caret is and where every name
-             starts. */
-          className="pt-search-panel absolute left-0 top-full z-50 mt-2 w-full max-w-[42rem] overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-xl"
+             price put ~700px of nothing between the two things the reader is comparing.
+
+             46rem (736px) rather than the 42 it shipped at this morning — owner: *"the popup is
+             okay, you can make it bigger and more visible."* Wide enough that a full product name
+             stops truncating at the ~34-character mark, still narrow enough that a name and its
+             price are one saccade apart. Pinned to the field's left edge, which is where the caret
+             is and where every name starts.
+
+             `shadow-2xl` plus a `ring-1` on the accent: on a white page a panel separated only by
+             a hairline reads as part of the page. The ring is 8% brand — enough to make the box a
+             distinct object, far short of a coloured border. */
+          className="pt-search-panel absolute left-0 top-full z-50 mt-2.5 w-full max-w-[46rem] overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-2xl ring-1 ring-brand/[0.08]"
         >
           {panelBody}
         </div>

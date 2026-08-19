@@ -62,19 +62,19 @@ export function SearchResultRow({
       onClick={onNavigate}
       role="option"
       aria-selected={active}
-      className={`group flex items-center gap-3 rounded-xl px-2 py-1.5 transition-colors ${
+      className={`group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors ${
         active ? 'bg-sunken' : 'hover:bg-sunken'
       }`}
       loadingMessage="Chargement"
     >
-      <span className="relative block h-11 w-11 shrink-0 overflow-hidden rounded-lg border border-hairline bg-elevated">
+      <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-elevated">
         {product.cover ? (
           <Image
             src={getStorageUrl(product.cover)}
             alt=""
             fill
             className="object-contain p-1"
-            sizes="44px"
+            sizes="48px"
             loading="lazy"
             unoptimized
           />
@@ -82,7 +82,7 @@ export function SearchResultRow({
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13.5px] font-medium leading-snug text-ink-1 transition-colors group-hover:text-brand">
+        <span className="block truncate text-[14px] font-medium leading-snug text-ink-1 transition-colors group-hover:text-brand">
           {product.designation_fr}
         </span>
         {/* The second line is the one signal a shopper checks before clicking a search result, and
@@ -104,7 +104,7 @@ export function SearchResultRow({
       </span>
 
       <span className="flex shrink-0 flex-col items-end tabular-nums">
-        <span className={`text-[13.5px] font-bold ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
+        <span className={`text-[14px] font-bold ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
           {Math.round(pd.finalPrice)} DT
         </span>
         {pd.hasPromo && pd.oldPrice != null && (
@@ -120,8 +120,8 @@ function ResultSkeleton({ rows }: { rows: number }) {
   return (
     <div role="status" aria-label="Recherche en cours">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-2 py-1.5">
-          <Skeleton className="h-11 w-11 shrink-0 rounded-lg" />
+        <div key={i} className="flex items-center gap-3 px-2 py-2">
+          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <Skeleton className="h-3.5 w-4/5 rounded" />
             <Skeleton className="h-2.5 w-20 rounded" />
@@ -183,9 +183,12 @@ export function SearchRestingPanel({
   const hasSuggestions = suggestions.length > 0;
 
   return (
-    <div className={`grid gap-x-6 gap-y-4 p-3 ${hasSuggestions ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]' : ''}`}>
+    /* Roomier than the first pass (owner: *"you can make it bigger and more visible"*): 16px of
+       panel padding instead of 12, a 32px gutter, and the two columns kept at ~1:1.15 so the
+       product rows — which carry a thumbnail and two lines — get the wider half. */
+    <div className={`grid gap-x-8 gap-y-5 p-4 ${hasSuggestions ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]' : ''}`}>
       <div className="min-w-0">
-        <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+        <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
           Recherches populaires
         </p>
         <ul className="divide-y divide-hairline">
@@ -194,7 +197,7 @@ export function SearchRestingPanel({
               <button
                 type="button"
                 onClick={() => onPickTerm(term)}
-                className="group flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2 text-left text-[14px] text-ink-1 transition-colors hover:bg-sunken hover:text-brand"
+                className="group flex w-full items-center justify-between gap-2 rounded-lg px-2 py-2.5 text-left text-[14.5px] font-medium text-ink-1 transition-colors hover:bg-sunken hover:text-brand"
               >
                 {term}
                 {/* The arrow only exists on hover: six permanent chevrons in a 200px column is a
@@ -211,7 +214,7 @@ export function SearchRestingPanel({
 
       {hasSuggestions && (
         <div className="min-w-0">
-          <p className="px-2 pb-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
+          <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
             Les plus vendus
           </p>
           <div className="space-y-0.5">
@@ -313,7 +316,7 @@ export function SearchResults({
         href={`/shop?search=${encodeURIComponent(trimmed)}`}
         onClick={onNavigate}
         loadingMessage="Chargement des résultats…"
-        className="flex h-11 items-center justify-center gap-2 border-t border-hairline text-[13px] font-semibold text-brand transition-colors hover:bg-sunken"
+        className="flex h-12 items-center justify-center gap-2 border-t border-hairline bg-sunken text-[13.5px] font-semibold text-brand transition-colors hover:bg-brand hover:text-on-brand"
       >
         Voir les {total} résultats
         <ArrowRight className="h-4 w-4" aria-hidden="true" />
