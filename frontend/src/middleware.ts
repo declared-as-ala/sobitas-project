@@ -812,7 +812,36 @@ export async function middleware(request: NextRequest) {
     // Naming it here rather than loosening isReservedRouteSlug keeps that guard intact: it is what
     // stops /sitemap.xml and /robots.txt being rewritten into a 404, which has happened before.
     if (pathname === '/shop' || pathname === '/shop/') {
-      return NextResponse.rewrite(new URL('/x-crawler/shop', request.url));
+      /*
+       * ?page=N IS CARRIED THROUGH. NOTHING ELSE IS.
+       *
+       * `new URL('/x-crawler/shop', request.url)` replaces the whole path INCLUDING the query, so
+       * every paginated boutique URL reached the crawler view with no params at all. Measured on
+       * production 19/08/2026, as Googlebot:
+       *
+       *     GET /shop?page=2      200, page-1 content, rel=canonical → /shop
+       *     GET /shop?page=939    200, page-1 content, rel=canonical → /shop
+       *
+       * — while a browser at the same URLs gets page 2 and a self-canonical. Two consequences, both
+       * bad and both invisible from a browser:
+       *
+       *   1. The crawler view RENDERS a pager (this file's docblock explains why it was added: with
+       *      a 10,669-product catalogue "no link existed to the other 7,572 from anywhere on the
+       *      site"). Every one of those links led back to page 1, so the fix has never worked for
+       *      the only visitor it was for.
+       *   2. Each ?page=N is a 200 whose canonical is a different URL — the literal definition of
+       *      Search Console's "Alternate page with proper canonical", and /shop?page=2 and
+       *      /shop?page=939 are the two the boutique hands Googlebot on every crawl.
+       *
+       * Only `page` is forwarded. Carrying the facets too (?search, ?brand, ?flavors…) would turn
+       * an unbounded query space into one upstream catalogue call per distinct crawled URL; they
+       * are X-Robots noindexed in next.config anyway, so collapsing them onto the unfiltered first
+       * page is both cheaper and the consolidation we want.
+       */
+      const crawlerShop = new URL('/x-crawler/shop', request.url);
+      const page = searchParams.get('page');
+      if (page && /^\d{1,6}$/.test(page) && page !== '1') crawlerShop.searchParams.set('page', page);
+      return NextResponse.rewrite(crawlerShop);
     }
 
     /*

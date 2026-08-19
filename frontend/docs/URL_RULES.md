@@ -138,20 +138,36 @@ removed"*.
 - `X-Robots-Tag` removes it, but only if crawling is allowed.
 
 `/api-proxy/**` was serving 200 JSON with no `X-Robots-Tag` while robots.txt disallowed only
-`/api/`. `/x-crawler/**` is now refused in middleware — **not** via a `next.config` header, because
-whether such a header matches the original path or the rewritten one is not worth being wrong
-about: wrong means `noindex` on every page Googlebot is served.
+`/api/`; it is now disallowed. The header is declared too but does not arrive — that path rewrites
+to a different origin, so Next cannot attach headers to a response it only proxies.
+
+**`/x-crawler/**` is the exception, deliberately.** Refusing it in middleware was implemented and
+measured, and it answered Googlebot `404` for `/whey-proteine`, `/shop` and every product page: the
+rewrite re-enters middleware on a cold cache, so the guard cannot tell "someone asked for the
+internal path" from "we sent them there ourselves". A `next.config` header is no safer — whether it
+matches the original path or the rewritten one decides whether the whole site gets `noindex`. The
+`Disallow` is the entire defence, `L6` reports the direct-access 200 as an **advisory**, and this
+paragraph exists so nobody fixes it again the expensive way.
 
 *Enforced by `C3`, `L6`.*
 
-### 10. A private page that says `noindex` should stay crawlable
+### 10. A private page that says `noindex` must stay crawlable
 
-Blocking a `noindex` page in robots.txt guarantees Google never sees the `noindex`, so an
-already-indexed copy can never drop out. `robots.ts` already documents this trade for the faceted
-`/shop` params — it is why they are deliberately *not* disallowed.
+A `Disallow` does not remove a URL from the index — it removes Google's **permission to look**. So
+a page that is both disallowed and `noindex` is in the worst possible state: Google keeps the URL,
+cannot fetch it, and can therefore never discover the `noindex` that would drop it. If the page is
+also linked from the header or footer, discovery never stops either, and the URL sits in "Blocked
+by robots.txt" permanently. Validation on that row fails forever, because there is nothing a
+validation *can* do.
 
-*Advisory in `L8` (it reports the combination rather than failing, because `/cart` and `/account`
-are legitimately disallowed).*
+`/cart`, `/checkout`, `/account`, `/login`, `/register`, `/forgot-password` and `/reset-password`
+were in exactly that state. They all answer 200 with `noindex`, so the `Disallow` bought nothing
+and cost the only mechanism that could retire them. They are now crawlable.
+
+Only machine paths (`/api/`, `/api-proxy/`, `/x-crawler/`, `/admin`) and per-order URLs
+(`/order-confirmation/`) stay disallowed — none of them is linked, so none of them accumulates.
+
+*Enforced by `L8`, which fails when a `noindex` page is also disallowed.*
 
 ### 11. Dead URL classes are terminal, and never redirected to a hub
 

@@ -138,6 +138,20 @@ export function isReservedRouteSlug(slug: string): boolean {
      * every check run from a browser.
      */
     'avis',
+    /*
+     * 'x-crawler' — the rewrite TARGET, reserved so it can never be rewritten a second time.
+     *
+     * Middleware sends crawler user-agents from /shop to /x-crawler/shop. A rewrite is supposed to
+     * be internal and not re-enter middleware; on a local production build it does. On re-entry the
+     * path /x-crawler/shop matched the two-segment product rule, was rewritten AGAIN to
+     * /x-crawler/product/x-crawler/shop, and 404'd — so the boutique answered Googlebot 404 on any
+     * cold cache. Reserving the segment makes the second pass a no-op, which is the correct
+     * behaviour either way: /x-crawler/* is never a category or a product.
+     *
+     * check-reserved-routes.mjs skips this segment when it enumerates real routes, so listing it
+     * here is additive and cannot make that check drift.
+     */
+    'x-crawler',
     'api',
     'admin',
     '_next',

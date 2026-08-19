@@ -367,10 +367,22 @@ async function L8() {
       if (r.status === 200 && !isNoindex(r.robots ?? []) && !/noindex/i.test(r.xRobots)) {
         fail('L8', p, 'a transactional/private page that is not noindex');
       }
-      // Blocking a page that already says noindex prevents Google from ever SEEING the noindex.
+      /*
+       * BOTH noindex AND robots.txt-disallowed is the one combination that can never resolve.
+       * A Disallow removes Google's permission to LOOK, not the URL from the index — so the
+       * noindex that would drop the page is unreachable, and the URL sits in "Blocked by
+       * robots.txt" forever while the header and footer keep re-linking it. This was an advisory
+       * until 19/08/2026; it is a failure now, because seven pages sat in that state.
+       */
       const blocked = disallowed.some((d) => d !== '/' && p.startsWith(d.replace(/\/$/, '')));
       if (blocked && r.status === 200 && isNoindex(r.robots ?? [])) {
-        note(`L8 advisory: ${p} is BOTH noindex and robots.txt-disallowed. Google cannot crawl it to see the noindex, so an already-indexed copy can never drop out. robots.ts already documents this trade for the faceted /shop params.`);
+        fail(
+          'L8',
+          p,
+          'is BOTH noindex and robots.txt-disallowed. Google cannot crawl it to see the noindex, so ' +
+            'an already-indexed copy can never drop out and the URL is stuck in "Blocked by ' +
+            'robots.txt". Remove the Disallow and let the noindex do the work.'
+        );
       }
     }),
     ...MUST_BE_TERMINAL.map((p) => async () => {

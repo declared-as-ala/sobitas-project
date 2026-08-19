@@ -10,15 +10,32 @@ const ORIGIN = BASE_URL.replace(/\/$/, '');
 export default function robots(): MetadataRoute.Robots {
   // Chemins à ne jamais indexer (sécurité et expérience utilisateur)
   const disallow: string[] = [
-    '/account',
-    '/account/',
-    '/checkout',
-    '/checkout/',
-    '/cart',
-    '/login',
-    '/register',
-    '/forgot-password',
-    '/reset-password',
+    /*
+     * ── /cart /checkout /account /login /register /forgot-password /reset-password ARE NOT HERE ──
+     *
+     * They used to be, and it was the one thing keeping them permanently stuck in Search Console's
+     * "Blocked by robots.txt" bucket, which no amount of validating can ever clear.
+     *
+     * All seven answer 200 with `noindex` today — verified 19/08/2026, as Googlebot:
+     *     /cart              noindex, follow
+     *     /checkout /account /login /register /forgot-password /reset-password
+     *                        noindex, nofollow
+     *
+     * A Disallow does not remove a URL from the index, it removes Google's PERMISSION TO LOOK. So
+     * a page that is both disallowed and noindex is in the worst possible state: Google keeps the
+     * URL, cannot fetch it, and therefore can never discover the noindex that would drop it. And
+     * every one of these is linked from the header or footer of every page on the site, so
+     * discovery never stops either.
+     *
+     * Crawlable + noindex is Google's own documented answer, and it is the reasoning this file
+     * already applies to the faceted /shop params below. The cost is a handful of crawls of pages
+     * that render nothing without a session; the gain is that they leave the report instead of
+     * sitting in it forever.
+     *
+     * What stays blocked below is machine paths and per-order URLs — none of them linked, so none
+     * of them accumulating, and /order-confirmation carries an order id that should not be fetched
+     * speculatively at all.
+     */
     '/api/',
     // The Laravel API as this origin serves it: next.config.js rewrites /api-proxy/:path* to the
     // backend. Only `/api/` was listed, so every /api-proxy/** endpoint was fully crawlable —
