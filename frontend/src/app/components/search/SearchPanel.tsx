@@ -33,13 +33,32 @@ import type { Product } from '@/types';
 export const POPULAR_SEARCHES = ['Whey', 'Créatine', 'Mass gainer', 'BCAA', 'Pre-workout', 'Oméga 3'];
 
 /**
- * ONE row shape, and it is 52px.
+ * ONE row shape, and it is 84px.
+ *
+ * ── IT GREW, BECAUSE THE PANEL HAD ROOM AND THE NAME DID NOT ────────────────────────────────
+ * Owner, 19/08/2026, with the panel open: *"make the product rows bigger, since we have enough
+ * space, and more clean."*
+ *
+ * The row was 52px with a 48px thumbnail and a SINGLE truncated line, which on this catalogue
+ * meant "NITROTECH WHEY PROTEIN 1…", "THUNDER GAINER 5.4KG - CH…", "BIG WHEY 2KG - BIG RAMY LA…".
+ * Every one of those cuts at exactly the point where the name starts carrying what a shopper is
+ * scanning for — the weight, the flavour, the brand. The panel is 736px wide; the row was
+ * spending almost none of it.
+ *
+ * Three changes, in order of how much they matter:
+ *
+ *   1. THE NAME WRAPS TO TWO LINES (`line-clamp-2`). This is the whole point. A second line is
+ *      ~40 more characters, which clears every name in the catalogue's long tail.
+ *   2. The thumbnail goes 48 → 64px. A supplement tub at 48px is a coloured rectangle; at 64 the
+ *      label is recognisable, and recognising the tub is how a regular picks a product.
+ *   3. The category leads the meta line. `sous_categorie` already rides the light payload, costs
+ *      nothing, and answers "is this the right KIND of thing" before the name has been read.
  *
  * `object-contain`, not cover: supplement covers are studio shots of a tub on white with its own
  * margin, and cover crops the lid and the label off a small square.
  *
- * `loading="lazy"` plus `sizes="44px"` matters more here than anywhere else on the site — eight of
- * these mount and unmount on every keystroke batch, and a 44px slot must never pull a 600px file.
+ * `loading="lazy"` plus `sizes="64px"` matters more here than anywhere else on the site — eight of
+ * these mount and unmount on every keystroke batch, and a 64px slot must never pull a 600px file.
  */
 export function SearchResultRow({
   product,
@@ -54,6 +73,9 @@ export function SearchResultRow({
 }) {
   const pd = getPriceDisplay(product);
   const inStock = isInStock(product);
+  const category = product.sous_categorie?.designation_fr;
+  const saving =
+    pd.hasPromo && pd.oldPrice != null ? Math.max(0, Math.round(pd.oldPrice - pd.finalPrice)) : 0;
 
   return (
     <LinkWithLoading
@@ -62,53 +84,83 @@ export function SearchResultRow({
       onClick={onNavigate}
       role="option"
       aria-selected={active}
-      className={`group flex items-center gap-3 rounded-xl px-2 py-2 transition-colors ${
+      className={`group flex items-center gap-3.5 rounded-xl px-2.5 py-2.5 transition-colors ${
         active ? 'bg-sunken' : 'hover:bg-sunken'
       }`}
       loadingMessage="Chargement"
     >
-      <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg border border-hairline bg-elevated">
+      <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated">
         {product.cover ? (
           <Image
             src={getStorageUrl(product.cover)}
             alt=""
             fill
             className="object-contain p-1"
-            sizes="48px"
+            sizes="64px"
             loading="lazy"
-            unoptimized
+            /*
+              OPTIMISED, unlike the cart and checkout rows this was copied from.
+
+              `unoptimized` sends the browser to admin.protein.tn for the ORIGINAL file: the first
+              six results for "whey" are 123 KB, 98 KB, 141 KB… for a 64px slot. Eight of those
+              mount per query batch, so the panel was pulling roughly a megabyte to fill half a
+              square inch — on the one control this codebase spent a whole pass making cheap
+              (67,113 -> 8,895 bytes a keystroke).
+
+              next.config lists admin.protein.tn in `remotePatterns` and 64 in `imageSizes`, and
+              ProductCard already optimises these exact URLs, so the variant exists and is cached
+              for 30 days. Measured after: ~3 KB a thumbnail.
+
+              The transactional surfaces (cart, checkout, order confirmation) keep `unoptimized`
+              deliberately — they render two or three images on pages nobody browses, where an
+              optimizer round-trip buys nothing.
+            */
           />
         ) : null}
       </span>
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[14px] font-medium leading-snug text-ink-1 transition-colors group-hover:text-brand">
+        {/* A kicker, not a chip. A pill here would be a fourth coloured object on a row that
+            already carries a photograph, a price and a stock mark. */}
+        {category && (
+          <span className="mb-0.5 block truncate text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-3">
+            {category}
+          </span>
+        )}
+        {/* NO `block` HERE. `line-clamp-2` sets `display: -webkit-box`, and a `block` alongside it
+            wins on stylesheet order — which silently turned the clamp off and let a long name run
+            to three lines, making every row in the narrow resting column 111px instead of 84. */}
+        <span className="line-clamp-2 text-[14.5px] font-medium leading-[1.3] text-ink-1 transition-colors group-hover:text-brand">
           {product.designation_fr}
         </span>
-        {/* The second line is the one signal a shopper checks before clicking a search result, and
-            it is the reason the row grew by 4px rather than staying at 48: "en stock" is what makes
-            a result actionable in a shop that sells out. */}
-        <span className="mt-0.5 flex items-center gap-1.5 text-[11px] leading-none">
-          <span className={inStock ? 'text-ok' : 'text-ink-3'}>{inStock ? 'En stock' : 'Sur commande'}</span>
-          {pd.hasPromo && pd.oldPrice != null && (
+        {/* "En stock" is the one signal a shopper checks before clicking a search result — it is
+            what makes a result actionable in a shop that sells out. The dot carries the state as
+            well as the colour, because colour alone is not a signal (WCAG 1.4.1). */}
+        <span className="mt-1 flex items-center gap-1.5 text-[11.5px] leading-none">
+          <span className={`flex items-center gap-1.5 ${inStock ? 'text-ok' : 'text-ink-3'}`}>
+            <span
+              className={`h-1.5 w-1.5 shrink-0 rounded-full ${inStock ? 'bg-ok' : 'bg-ink-3'}`}
+              aria-hidden="true"
+            />
+            {inStock ? 'En stock' : 'Sur commande'}
+          </span>
+          {saving > 0 && (
             <>
               <span className="text-ink-3" aria-hidden="true">
                 ·
               </span>
-              <span className="font-semibold text-brand">
-                −{Math.max(0, Math.round(pd.oldPrice - pd.finalPrice))} DT
-              </span>
+              <span className="font-semibold text-brand">Économisez {saving} DT</span>
             </>
           )}
         </span>
       </span>
 
-      <span className="flex shrink-0 flex-col items-end tabular-nums">
-        <span className={`text-[14px] font-bold ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
+      <span className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
+        <span className={`text-[17px] font-bold leading-none ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
           {Math.round(pd.finalPrice)} DT
         </span>
         {pd.hasPromo && pd.oldPrice != null && (
-          <span className="text-[11px] leading-none text-ink-3 line-through">{Math.round(pd.oldPrice)} DT</span>
+          <span className="text-[12px] leading-none text-ink-3 line-through">{Math.round(pd.oldPrice)} DT</span>
         )}
       </span>
     </LinkWithLoading>
@@ -120,13 +172,14 @@ function ResultSkeleton({ rows }: { rows: number }) {
   return (
     <div role="status" aria-label="Recherche en cours">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3 px-2 py-2">
-          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
+        <div key={i} className="flex items-center gap-3.5 px-2.5 py-2.5">
+          <Skeleton className="h-16 w-16 shrink-0 rounded-xl" />
           <div className="min-w-0 flex-1 space-y-1.5">
+            <Skeleton className="h-2.5 w-16 rounded" />
             <Skeleton className="h-3.5 w-4/5 rounded" />
-            <Skeleton className="h-2.5 w-20 rounded" />
+            <Skeleton className="h-2.5 w-24 rounded" />
           </div>
-          <Skeleton className="h-3.5 w-12 shrink-0 rounded" />
+          <Skeleton className="h-4 w-14 shrink-0 rounded" />
         </div>
       ))}
       <span className="sr-only">Recherche en cours…</span>

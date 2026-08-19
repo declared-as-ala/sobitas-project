@@ -264,8 +264,15 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
             activeIndex={activeIndex}
             optionId={optionId}
             onNavigate={afterNavigate}
-            rows={isMobile ? 5 : 6}
-            listClassName={isMobile ? 'max-h-[38vh]' : 'max-h-[23rem]'}
+            /* ── THE CAP MOVED WITH THE ROW HEIGHT ──────────────────────────────────────
+               A row is 84px now, not 52. Left at 23rem the scroller would have shown 4.4
+               results where it used to show 7, which is the redesign paying for itself with
+               the thing it was meant to improve. 30rem restores ~5.7 rows on desktop, and the
+               `min()` keeps the panel off the fold on a 768px laptop, where the header already
+               costs ~150px. The skeleton count follows, or the loading state overflows its own
+               cap and the panel jumps when results land. */
+            rows={isMobile ? 4 : 5}
+            listClassName={isMobile ? 'max-h-[46vh]' : 'max-h-[min(30rem,52vh)]'}
           />
         ) : (
           <SearchRestingPanel
