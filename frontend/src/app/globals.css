@@ -820,6 +820,59 @@ body[data-page='product'] header.pt-site-header {
    container becomes a normal horizontal scroller, so all the brands remain reachable by swipe or
    scrollbar. A stopped marquee with `overflow: hidden` would hide two thirds of them.
    ========================================================================== */
+/* ==============================================================================================
+   THE SEARCH PANEL'S ENTRANCE
+   ----------------------------------------------------------------------------------------------
+   Two 140ms animations, and they are deliberately the smallest thing that reads as intentional:
+   the panel rises 6px while it fades, the scrim only fades. A dropdown that slides further than
+   its own padding reads as a page transition, and this is a control that opens on every focus of
+   the header field — several times a session — so it has to be quick enough never to be waited on.
+
+   `data-motion` is NOT set here on purpose. globals.css clamps every animation-duration to 0.2s
+   below 768px unless a node opts out, and 140ms is already inside that budget: the mobile panel
+   gets the same animation at the same speed with no exemption needed.
+
+   `will-change` is absent for the same reason it usually should be — it promotes a layer for the
+   life of the element, and this element's life is the whole time the panel is open. A 140ms
+   opacity/transform pair does not need one.
+   ============================================================================================== */
+.pt-search-panel {
+  animation: pt-search-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pt-search-scrim {
+  animation: pt-search-scrim-in 140ms ease-out both;
+}
+
+@keyframes pt-search-in {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pt-search-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The panel still has to APPEAR — `animation: none` on a `both`-filled keyframe would leave it
+     at opacity 0. It appears instantly instead. */
+  .pt-search-panel,
+  .pt-search-scrim {
+    animation-duration: 1ms;
+  }
+}
+
 @keyframes pt-marquee {
   from {
     transform: translate3d(0, 0, 0);

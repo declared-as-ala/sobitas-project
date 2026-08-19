@@ -439,7 +439,6 @@
     "DS011": 2
   },
   "src/app/components/SearchBar.tsx": {
-    "DS001": 2,
     "DS005": 1
   },
   "src/app/components/ShopBreadcrumbs.tsx": {

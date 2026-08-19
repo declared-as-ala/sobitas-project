@@ -854,18 +854,45 @@ export const getProductsByBrand = async (brandId: number): Promise<{
   return response.data;
 };
 
-export const searchProducts = async (text: string): Promise<{
-  products: Product[];
-  brands: Brand[];
-}> => {
+/**
+ * Type-ahead search for the header field.
+ *
+ * ── `light: 1` IS 87% OF THIS REQUEST ───────────────────────────────────────────────────────
+ * Measured against production on 19/08/2026, `?search=whey&per_page=10`:
+ *
+ *     total          67,113 bytes
+ *       products      9,051 bytes   (13%)  ← the only thing this function returns
+ *       brands       63,031 bytes   (94%)  ← 577 rows, discarded by every caller
+ *       categories      808 bytes
+ *
+ * The brand list is a FIXED cost this endpoint pays on every request — it is computed over the
+ * whole published catalogue on purpose, so /shop's brand filter is not reduced to the brands of
+ * page 1 — and the iHerb import took it from 84 brands to 577. A type-ahead field fires one of
+ * these per debounce window, so a shopper typing "creatine" paid several hundred kilobytes to
+ * read nine product names.
+ *
+ * `light=1` is an existing, documented switch on the controller (ApisController::allProducts) that
+ * drops both sets. It was added for the sitemap crawler and /shop and nobody wired it up here.
+ * Same request, same results, 67,113 -> 8,895 bytes.
+ *
+ * `brands` is dropped from the return type rather than returned empty: the only caller reads
+ * `products`, and handing back an array that is now always empty invites somebody to render it.
+ *
+ * `total` comes from `pagination.total`, not from `products.length`. The dropdown used to say
+ * "Voir tous les résultats (10)" for a query with 246 matches, because ten is the page size.
+ */
+export const searchProducts = async (
+  text: string,
+  signal?: AbortSignal
+): Promise<{ products: Product[]; total: number }> => {
   const response = await api.get('/all_products', {
-    params: { search: text.trim(), per_page: 10, page: 1 },
+    params: { search: text.trim(), per_page: 8, page: 1, light: 1 },
+    signal,
   });
   const raw = response.data;
-  const products = Array.isArray(raw.products)
-    ? raw.products
-    : (raw.products?.data ?? []);
-  return { products, brands: raw.brands ?? [] };
+  const products: Product[] = Array.isArray(raw.products) ? raw.products : (raw.products?.data ?? []);
+  const total = Number(raw.pagination?.total);
+  return { products, total: Number.isFinite(total) ? total : products.length };
 };
 
 export const searchProductsBySubCategory = async (slug: string, text: string): Promise<{
