@@ -23,16 +23,40 @@ return [
     | Hardcoded to match backend .env so Filament campaign emails use the same
     | SMTP as order emails (no dependency on Filament container env).
     |
+    | ── THE DEFAULTS BELOW ARE A LIVE CREDENTIAL, IN GIT ───────────────────────
+    | The values were literals with no env() around them, so the SMTP username
+    | and a Google App Password are committed to this repository and readable by
+    | anyone with clone access. Two things follow, and neither is a code change:
+    |
+    |   1. THAT APP PASSWORD MUST BE ROTATED. Revoke it in the Google account's
+    |      app-password list and issue a new one. Everything below reads from the
+    |      environment now, so the new value goes in .env and never in a commit.
+    |
+    |   2. THE FROM ADDRESS IS A PERSONAL GMAIL. Every order confirmation this
+    |      shop sends arrives from « bitoutawalid@gmail.com », not from
+    |      contact@protein.tn. To a customer who has just paid nothing yet and is
+    |      waiting for a delivery, that reads as a scam; it also caps the shop at
+    |      a free Gmail account's daily send limit and puts the shop's entire
+    |      transactional mail reputation on one personal mailbox.
+    |
+    | The literals are KEPT as the env() fallback on purpose: nothing changes on
+    | deploy until the variables are set, so this is safe to ship today and the
+    | migration to a proper mailbox is a .env edit rather than a release.
+    |
+    | Set in filament/.env:  MAIL_HOST, MAIL_PORT, MAIL_ENCRYPTION,
+    |                        MAIL_USERNAME, MAIL_PASSWORD,
+    |                        MAIL_FROM_ADDRESS=contact@protein.tn,
+    |                        ADMIN_EMAILS=contact@protein.tn
     */
 
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'host' => 'smtp.gmail.com',
-            'port' => 587,
-            'encryption' => 'tls',
-            'username' => 'bitoutawalid@gmail.com',
-            'password' => 'xwpfxykujdlorutz',
+            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+            'port' => (int) env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+            'username' => env('MAIL_USERNAME', 'bitoutawalid@gmail.com'),
+            'password' => env('MAIL_PASSWORD', 'xwpfxykujdlorutz'),
             'timeout' => null,
             'auth_mode' => null,
         ],

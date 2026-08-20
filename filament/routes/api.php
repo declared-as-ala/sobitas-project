@@ -133,6 +133,28 @@ Route::middleware(['throttle:30,1', 'cache.headers.api:300'])
 Route::middleware('throttle:10,1')->post('/login', [ClientController::class, 'login']);
 Route::middleware('throttle:5,1')->post('/register', [ClientController::class, 'register']);
 
+/*
+ * Sign in with Google. The credential is a Google-signed ID token verified server-side against
+ * services.google.client_id before any claim in it is read — see ClientController::googleLogin.
+ * Throttled like /login: it mints a session, so it is a credential endpoint even though the
+ * customer never types anything.
+ */
+Route::middleware('throttle:10,1')->post('/auth/google', [ClientController::class, 'googleLogin']);
+
+/*
+ * ── PASSWORD RESET — ROUTED AT LAST ────────────────────────────────────────────────────────
+ * The storefront has had /forgot-password and /reset-password screens for as long as it has had
+ * a login form, and both have been POSTing to endpoints that did not exist. Confirmed against
+ * the live API on 20/08/2026: both returned 404. Every customer who forgot their password was
+ * simply locked out.
+ *
+ * Tighter throttles than /login, and for a different reason: /forgot-password SENDS AN EMAIL to
+ * an address the caller chooses, so an untimed one is a way to use this shop's mail reputation to
+ * flood a stranger's inbox. 4/min per IP is generous for a human and useless for that.
+ */
+Route::middleware('throttle:4,1')->post('/forgot-password', [ClientController::class, 'forgotPassword']);
+Route::middleware('throttle:6,1')->post('/reset-password', [ClientController::class, 'resetPassword']);
+
 // ── Authenticated Routes ──────────────────────────────
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
@@ -150,5 +172,14 @@ Route::middleware('auth:sanctum')->group(function () {
 // ── Tokenized "verified purchase" review flow (PUBLIC — no login) ──────────────
 // The order_token in the emailed link proves the purchase, so COD guests (who have
 // no account) can still review. Powers the /avis/{token} page + review-request email.
-Route::get('/reviews/order/{token}', [ReviewController::class, 'orderForReview']);
-Route::post('/reviews/by-order', [ReviewController::class, 'storeByToken']);
+/*
+ * Throttled, which they were not.
+ *
+ * A 64-character order_token is unguessable and needed no rate limit. The 10-character
+ * `review_code` that makes the link fit in one SMS is 32^10 — still far out of reach, but only
+ * because nobody is allowed to sit on this endpoint making millions of attempts. The limit is what
+ * turns "very large" into "unreachable"; without it, adding the short code would have quietly
+ * weakened the review flow.
+ */
+Route::middleware('throttle:20,1')->get('/reviews/order/{token}', [ReviewController::class, 'orderForReview']);
+Route::middleware('throttle:10,1')->post('/reviews/by-order', [ReviewController::class, 'storeByToken']);

@@ -57,7 +57,20 @@ class CommandeController extends Controller
      * ⚠️ LEGACY CODE — This replicates the exact behavior from
      *   AdminCommandeController::storeCommandeApi() in the backend project.
      *   Price calculation logic preserved as-is.
-     *   SMS and email are now dispatched to queue for better response time.
+     *
+     * ── THE NOTIFICATIONS ARE SYNCHRONOUS, WHATEVER THE COMMENT USED TO SAY ─────────────────
+     * This docblock claimed "SMS and email are now dispatched to queue for better response time".
+     * They are not, and never were on this path: the SMS calls SmsService directly (not
+     * SendSmsJob) and the mails are `Mail::to()->send()`, not `->queue()`. So a customer pressing
+     * "commander" waits for one WinSMS request plus one SMTP handshake per recipient — with
+     * ADMIN_EMAILS holding two addresses that is three SMTP conversations on the request thread.
+     *
+     * Left synchronous deliberately, and the comment corrected instead. `QUEUE_CONNECTION` is
+     * `sync` in .env.example, so "queueing" these would change nothing except in an environment
+     * where a worker is running — and if that worker is ever down, a queued order confirmation
+     * disappears with no trace and nobody finds out for days. For a shop this size, an order
+     * confirmation that is slow is strictly better than one that is silently lost. Revisit only
+     * together with a supervised worker and an alert on the failed_jobs table.
      */
     public function storeCommandeApi(Request $request): JsonResponse
     {
@@ -377,11 +390,18 @@ class CommandeController extends Controller
                         ? ' (+' . ($commande->details->count() - 3) . ')'
                         : '';
 
+                    /*
+                     * No emoji. One character outside GSM-7 switches the whole message to UCS-2,
+                     * where a segment is 70 characters instead of 160 — so the tick and the
+                     * praying hands that used to be here turned a one-segment confirmation into
+                     * three, on every order. SmsService::toGsm7() strips them at the gateway now;
+                     * they should not be written in the first place.
+                     */
                     $greeting = $nom ? "Bonjour {$nom}" : 'Bonjour';
-                    $sms  = "{$greeting}, votre commande #{$numero} est confirmée ✅\n";
+                    $sms  = "{$greeting}, votre commande #{$numero} est confirmée.\n";
                     $sms .= "Produits: {$productNames}{$hasMore}\n";
-                    $sms .= "Total: {$total} TND\n";
-                    $sms .= "Merci pour votre confiance 🙌";
+                    $sms .= "Total: {$total} TND. Paiement à la livraison.\n";
+                    $sms .= "Nous vous appelons pour confirmer. Protein.tn";
                 }
 
                 if (! empty(trim($sms))) {

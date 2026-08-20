@@ -62,6 +62,13 @@ class Commande extends Model
                     ]);
                 }
             }
+
+            // The short alias the SMS link uses. Same rule: never block an order over it, and
+            // never assume the column exists — this runs on installs where the migration has not
+            // been applied yet.
+            if (empty($commande->review_code) && \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'review_code')) {
+                $commande->review_code = self::generateReviewCode();
+            }
         });
 
         // Give stock back when an order is DELETED (unless a prior cancel already restored it —
@@ -96,6 +103,60 @@ class Commande extends Model
                 ]);
             }
         });
+    }
+
+    /**
+     * A 10-character review code, from an alphabet with no 0/O/1/I/l.
+     *
+     * The excluded characters are not superstition: this code is read off a phone screen and
+     * occasionally typed by hand, and a "0" that is really an "O" turns a review request into a
+     * 404 with no way for the customer to tell which character betrayed them.
+     *
+     * Collision is checked rather than assumed. At 32^10 the birthday bound is astronomically far
+     * from this shop's order count, but a unique index that throws on insert would abort the
+     * ORDER, and no review link is worth losing a sale over.
+     */
+    public static function generateReviewCode(): string
+    {
+        $alphabet = '23456789abcdefghjkmnpqrstuvwxyz';
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 10; $i++) {
+                $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            if (! static::where('review_code', $code)->exists()) {
+                return $code;
+            }
+        }
+
+        // Five collisions in a row is not chance, it is a broken RNG. Fall back to something
+        // guaranteed unique rather than looping forever.
+        return substr(bin2hex(random_bytes(8)), 0, 10);
+    }
+
+    /**
+     * Find an order from whatever the review link carried — the 64-character `order_token` from an
+     * email, or the 10-character `review_code` from an SMS.
+     *
+     * One method, so the two review endpoints cannot come to disagree about which references are
+     * valid. Length is the discriminator and the two spaces cannot overlap: a review code is 10
+     * characters and a token is 64.
+     */
+    public static function findByReviewRef(?string $ref): ?self
+    {
+        $ref = trim((string) $ref);
+        if ($ref === '') {
+            return null;
+        }
+
+        if (strlen($ref) <= 16) {
+            return \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'review_code')
+                ? static::where('review_code', $ref)->first()
+                : null;
+        }
+
+        return static::where('order_token', $ref)->first();
     }
 
     // ── Status Labels (single source of truth) ────────────

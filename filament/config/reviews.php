@@ -43,6 +43,28 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | The same request, by SMS
+    |--------------------------------------------------------------------------
+    | OFF by default, and that default is a decision rather than caution.
+    |
+    | Every customer of this shop gives a phone number — it is how orders are
+    | confirmed — and far fewer of them read email than read a text. So an SMS
+    | review request will convert better than the email, and it also COSTS money
+    | per send, on a WinSMS balance the owner tops up.
+    |
+    | It is one segment per order, not two: the link uses the short `review_code`
+    | (10 characters) rather than the 64-character order_token, which is the whole
+    | reason that column exists. Turn it on with:
+    |
+    |     REVIEW_REQUEST_SMS_ENABLED=true
+    |
+    | and it rides along with the same daily sweep, the same cap, the same
+    | once-per-order marker. Nothing else needs changing.
+    */
+    'request_sms_enabled' => (bool) env('REVIEW_REQUEST_SMS_ENABLED', false),
+
+    /*
+    |--------------------------------------------------------------------------
     | AI review moderation (Groq LLM)
     |--------------------------------------------------------------------------
     | The star-gate alone auto-publishes every 4–5★ review and holds 1–3★. That

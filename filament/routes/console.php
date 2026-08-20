@@ -56,6 +56,22 @@ Schedule::command('seo:audit-reviews')->weeklyOn(1, '05:00');
 // 10:00 local is deliberate: a review request that lands at 04:00 gets buried by morning mail.
 Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlapping();
 
+/*
+ * ── ARAMEX -> ORDER STATUS ─────────────────────────────────────────────────────────────────
+ * The other half of the review engine, and the reason it had never fired: nothing marked orders
+ * delivered. This polls Aramex for shipments in flight and promotes the matching order to
+ * "livrée", which is what stamps delivered_at, awards the loyalty points, sends the status SMS
+ * and makes the order visible to the sweep above.
+ *
+ * Hourly during business hours only. A courier scan does not happen at 03:00, and every run costs
+ * one Aramex request per shipment still in flight — so overnight polling is money for nothing.
+ * `withoutOverlapping` matters here more than usual: a second pass entering while the first is
+ * mid-promotion would fire the observer twice on the same order.
+ *
+ * VERIFY THE DELIVERED CODE ONCE before relying on this — see config/aramex.php.
+ */
+Schedule::command('aramex:sync-tracking')->hourlyAt(20)->between('08:00', '20:00')->withoutOverlapping();
+
 Schedule::command('seo:health-report')->weeklyOn(1, '06:00'); // Monday summary of missing SEO data (logged)
 Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // gradual factual nutrition enrichment (OFF, by GTIN)
 

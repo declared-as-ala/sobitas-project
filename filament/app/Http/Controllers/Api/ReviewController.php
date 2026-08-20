@@ -24,7 +24,7 @@ class ReviewController extends Controller
      */
     public function orderForReview(string $token): JsonResponse
     {
-        $commande = Commande::where('order_token', $token)->first();
+        $commande = Commande::findByReviewRef($token);
         if (! $commande) {
             return response()->json(['message' => 'Lien invalide ou expiré.'], 404);
         }
@@ -77,7 +77,7 @@ class ReviewController extends Controller
             'comment'     => ['required', 'string', 'max:1000'],
         ]);
 
-        $commande = Commande::where('order_token', $data['order_token'])->first();
+        $commande = Commande::findByReviewRef($data['order_token']);
         if (! $commande) {
             return response()->json(['message' => 'Lien invalide ou expiré.'], 404);
         }
