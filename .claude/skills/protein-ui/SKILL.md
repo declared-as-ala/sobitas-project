@@ -99,6 +99,12 @@ and the element silently inherits its band's ink. That shipped once and rendered
 **No star/amber token exists.** Rating stars use `fill-amber-400 text-amber-400`
 (`components/product/StarRating.tsx` is canonical) — a raw palette colour no rule matches.
 
+**A status colour may not tint its own background.** `--c-ok` and `--c-warn` are 5.02:1 and
+`--c-destructive` is 4.84:1 **measured against an untinted surface**. Put the same hue behind them
+at 10% and the pair lands at 3.84–4.39:1 — a WCAG AA failure that looks completely fine. Status
+chips are therefore `border border-ok/40 bg-elevated text-ok`: the colour lives in the border and
+the text, never in the plate. This was measured on the account badges, not guessed.
+
 ---
 
 ## The band architecture
@@ -226,8 +232,20 @@ node scripts/visual-snap.mjs --routes /x --widths 390 1440 # the before/after ar
 ```
 
 There are also surface-specific measurers — `measure-card`, `measure-cart`, `measure-auth`,
-`measure-nav`, `measure-bands`, `check-inp`. **If you change a surface that has one, run it.** If you
-change a surface that does not have one and the claim you are making is numeric, write one.
+`measure-account`, `measure-nav`, `measure-bands`, `check-inp`. **If you change a surface that has
+one, run it.** If you change a surface that does not have one and the claim you are making is
+numeric, write one.
+
+`measure-account` is the template for **anything behind a login**: it seeds `localStorage.token`
+with `evaluateOnNewDocument`, intercepts the three API calls with fixtures, and runs the shared
+`lib/contrast-audit.mjs` per tab. Nothing reaches the real backend. Match on the request PATH, not
+the host — in the browser these calls go to a same-origin `/api-proxy/*` rewrite, not to
+`admin.protein.tn`.
+
+**A guard that cannot fail is worse than no guard.** `measure-account`'s first version wrapped its
+tab click in `.catch(() => {})` against a selector Radix does not render (`[role="tab"][value=…]`;
+it is `id$="-trigger-<value>"`). It measured the default tab three times and reported three passes.
+Never swallow a navigation error in a check — assert the state you navigated to.
 
 Report what you measured. "Looks good" is not a result.
 
@@ -260,6 +278,7 @@ examples from this project and what each turned out to be:
 | "the card height is so long" | six stacked rows where four carried all the information |
 | "make it more responsive" | a grid forcing a row-layout card into a third of its width |
 | "the panier eats all the height" | 330px of chrome on a 900px panel |
+| "the login page looks AI generated" | ~1,100px of panel, none of it about having an account |
 
 So: **find the measurable thing** before changing anything. Screenshot it, measure it, name the
 number, then fix that. A redesign that cannot say what was wrong will get the same note again.

@@ -24,6 +24,7 @@
     "check:overlay-contrast": "node scripts/check-overlay-contrast.mjs",
     "measure:auth": "node scripts/measure-auth.mjs",
     "measure:cart": "node scripts/measure-cart.mjs",
+    "measure:account": "node scripts/measure-account.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",
     "audit:console": "node scripts/check-console.mjs",
     "snap": "node scripts/visual-snap.mjs",

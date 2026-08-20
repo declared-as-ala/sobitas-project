@@ -749,6 +749,34 @@ landing pages. Delete it or use it; do not leave it undecided indefinitely.
 
 ---
 
+## 14b. Status colour — never tint the plate with the text's own hue
+
+`--c-ok` and `--c-warn` are documented at **5.02:1**, `--c-destructive` at **4.84:1**. Those numbers
+are measured against an *untinted* surface — the page canvas.
+
+Compositing the same hue behind them destroys the margin. Measured on the account status badges,
+which is where this rule came from:
+
+| Chip | `bg-<token>/10` | `bg-elevated` |
+|---|---|---|
+| Livrée (`ok`) | 4.39:1 ✗ | 5.02:1 ✓ |
+| En livraison (`warn`) | 4.38:1 ✗ | 5.02:1 ✓ |
+| Annulée (`destructive`) | 4.14:1 ✗ | 4.84:1 ✓ |
+| Gagnés, on a `bg-sunken` row | 4.08:1 ✗ | 5.02:1 ✓ |
+
+So the canonical status chip keeps the colour in the **border and the text** and leaves the plate
+alone:
+
+```
+border border-ok/40 bg-elevated text-ok
+border border-warn/40 bg-elevated text-warn
+border border-destructive/40 bg-elevated text-destructive
+border border-rule bg-elevated text-ink-2          /* neutral */
+```
+
+A `/10` tint behind an ICON is fine — a graphical object needs 3:1, not 4.5:1, and the icon plates
+in `AccountSummary` and `AuthShell`'s benefit list use exactly that.
+
 ## 15. The contract for a NEW component
 
 Sections 1-14 describe surfaces that exist. This one is the checklist for one that does not yet,
