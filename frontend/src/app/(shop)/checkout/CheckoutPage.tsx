@@ -22,13 +22,14 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
+import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
+import { REDEEM_POINTS_PER_DT, MAX_REDEEM_FRACTION } from '@/util/loyaltyPoints';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
-// Points economy — single source of truth is the backend PointsService; kept here as named
-// constants so the client estimate matches the server. The server total is always authoritative.
-const REDEEM_POINTS_PER_DT = 20; // 20 points = 1 DT of discount
-const MAX_REDEEM_FRACTION = 0.5; // points may cover at most 50% of the post-coupon-post-pack subtotal
+// Points economy — imported, not redeclared. These two numbers were previously written out here
+// AND in FidelitySection AND in two reassurance strings; util/loyaltyPoints.ts is now the one place
+// they live on the client, mirroring PointsService.php. The server total is always authoritative.
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -1351,6 +1352,25 @@ export default function CheckoutPage() {
                         Total estimé — le montant définitif est confirmé sur la page de confirmation.
                       </p>
                     )}
+
+                    {/*
+                      ── WHAT THIS ORDER PAYS BACK ─────────────────────────────────────────────
+                      The block above this one only ever appeared for a signed-in customer who
+                      ALREADY had a balance (`isAuthenticated && pointsBalance > 0`). So the two
+                      people the programme most needed to reach — a guest, and a new account with
+                      zero points — reached the final screen of the funnel without the word
+                      "fidélité" on it once.
+
+                      `subtotalAfterPack - pointsDiscountDt` is the backend's earn base to the
+                      millime: goods after coupon, after pack, after points spent, delivery
+                      excluded. This is the one place in the site where the figure is not an
+                      estimate, so it is the one place it is worth showing beside a real total.
+                    */}
+                    <LoyaltyEarnLine
+                      amountDt={Math.max(0, subtotalAfterPack - pointsDiscountDt)}
+                      variant="summary"
+                      className="pt-1"
+                    />
                   </div>
 
                   {/* Trust Badges — compact 3-up row */}

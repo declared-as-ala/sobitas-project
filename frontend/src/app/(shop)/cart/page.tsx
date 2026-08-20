@@ -7,6 +7,7 @@ import { PageHeader } from '@/app/components/PageHeader';
 import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Shield, Truck } from 'lucide-react';
+import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
@@ -359,6 +360,13 @@ export default function CartPage() {
                     {finalTotal.toFixed(2)} DT
                   </span>
                 </div>
+
+                {/* `totalPrice`, NOT `finalTotal` — delivery never earns points. The backend's earn
+                    base is `prix_ttc - frais_livraison`, so quoting the figure that still contains
+                    the 10 DT delivery fee would over-promise on every order under 300 DT, which is
+                    most of them. See util/loyaltyPoints.ts. */}
+                <LoyaltyEarnLine amountDt={totalPrice} variant="summary" />
+
                 <Button
                   size="lg"
                   className="hidden lg:flex w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide h-12 sm:h-14 min-h-[44px] text-base sm:text-lg rounded-xl"

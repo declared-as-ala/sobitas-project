@@ -8,6 +8,7 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
+import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
 import { ProductGallery } from '@/app/components/product/ProductGallery';
 import { ProductLabelGrid } from '@/app/components/product/ProductLabelGrid';
@@ -1088,6 +1089,19 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT
                 </p>
               )}
+
+              {/*
+                ── THE LOYALTY LINE, DIRECTLY UNDER THE PRICE ────────────────────────────────
+                This shop has run a 5% points programme the whole time and had never said so on a
+                product page. The figure lived behind a login, in the third tab of `/account` —
+                visible only to somebody who had already bought and already knew.
+
+                It goes here, between the price and the buy controls, because that is the span of
+                page where the number is still being weighed. `displayPrice * quantity` rather
+                than the unit price, so raising the stepper raises the reward in the same gesture
+                that raises the cost — the same pairing the "Total" line below the stepper makes.
+              */}
+              <LoyaltyEarnLine amountDt={displayPrice * quantity} className="mt-3" />
 
               {/* Reference and barcode, where a buyer looks for them. One call site now, not two. */}
               <ProductIdentifiers product={product} className="mt-2.5" />
