@@ -792,6 +792,43 @@ export async function middleware(request: NextRequest) {
   // of a hydration-dependent client page. Runs AFTER the 301 blocks above so bots
   // still follow legacy→canonical redirects first. Content stays at parity with the
   // human page — this is dynamic rendering, not cloaking. See util/isCrawler.ts.
+  /*
+   * ── /shop?category=X CONSOLIDATES BEFORE ANYTHING ELSE LOOKS AT THE REQUEST ────────────────
+   * This block used to sit ~90 lines further down, AFTER the crawler rewrite — and therefore
+   * unreachable for any crawler user-agent. A human on /shop?category=proteines got a 301 to
+   * /proteines; Googlebot got 200 and the unfiltered page-1 boutique, plus an uncached upstream
+   * catalogue fetch it did not need.
+   *
+   * Two different status codes for one URL, decided by user-agent, is the definition of the thing
+   * this file's own notes elsewhere warn against. It is a pure redirect with no dependency on the
+   * crawler branch, so it belongs above it.
+   *
+   * `sameOriginOrHome` STAYS on the target: `category` is a raw query param, and a value like
+   * `//evil.com` would otherwise become an off-origin 301.
+   */
+  // Redirect old query-based category URLs to new clean URLs
+  if (pathname === '/shop') {
+    const category = searchParams.get('category');
+    const brand = searchParams.get('brand');
+
+    if (category) {
+      // Redirect /shop?category=slug to /slug. Guard: `category` is a raw query param, so
+      // a value like //evil.com or \evil.com would otherwise become an off-origin 301.
+      const newUrl = sameOriginOrHome(new URL(`/${category}`, request.url), request);
+      // Preserve other query params (like page)
+      searchParams.forEach((value, key) => {
+        if (key !== 'category') {
+          newUrl.searchParams.set(key, value);
+        }
+      });
+      return NextResponse.redirect(newUrl, 301);
+    }
+
+    if (brand) {
+      // Brand query values are numeric IDs in this app, so the shop page keeps resolving them.
+    }
+  }
+
   const wantsCrawlerView =
     isCrawlerUA(request.headers.get('user-agent')) ||
     searchParams.get(CRAWLER_PREVIEW_PARAM) === '1';
@@ -894,28 +931,6 @@ export async function middleware(request: NextRequest) {
   // (POST /api/revalidate-blog); the blog HTML documents cache normally.
   const response = NextResponse.next();
 
-  // Redirect old query-based category URLs to new clean URLs
-  if (pathname === '/shop') {
-    const category = searchParams.get('category');
-    const brand = searchParams.get('brand');
-
-    if (category) {
-      // Redirect /shop?category=slug to /slug. Guard: `category` is a raw query param, so
-      // a value like //evil.com or \evil.com would otherwise become an off-origin 301.
-      const newUrl = sameOriginOrHome(new URL(`/${category}`, request.url), request);
-      // Preserve other query params (like page)
-      searchParams.forEach((value, key) => {
-        if (key !== 'category') {
-          newUrl.searchParams.set(key, value);
-        }
-      });
-      return NextResponse.redirect(newUrl, 301);
-    }
-
-    if (brand) {
-      // Brand query values are numeric IDs in this app, so the shop page keeps resolving them.
-    }
-  }
 
   // /product/* and /products/* are now handled by their own server components
   // which resolve the product and 301 directly to /{sousCategorySlug}/{productSlug}
