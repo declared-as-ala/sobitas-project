@@ -71,7 +71,7 @@ export function slugify(text: string): string {
 export function splitCmsBody(body: string | null | undefined): SplitCmsBody {
   if (!body) return { intro: '', sections: [] };
 
-  const cleaned = body
+  let cleaned = body
     /* The rules are the CMS author's way of separating sections. Once each section is its own
        block with its own heading, they are a second separator doing the same job — and they are
        what made the original render read as a stack of receipts. */
@@ -93,10 +93,57 @@ export function splitCmsBody(body: string | null | undefined): SplitCmsBody {
     .replace(/<img[^>]*>/gi, '')
     .replace(/<p>\s*<\/p>/gi, '');
 
-  /* Capture groups are included in the result, so the array is
-     [intro, level, heading, body, level, heading, body, …]. The backreference keeps <h3> from
-     being closed by a </h2>. */
-  const parts = cleaned.split(/<h([23])[^>]*>([\s\S]*?)<\/h\1>/i);
+  /*
+   * ── A DINGBAT USED AS A BULLET BECOMES A REAL BULLET ───────────────────────────────────────
+   * The live body writes its lists as one <p> of lines joined by <br>, each line opening with a
+   * `✅`:
+   *
+   *     <p>✅ Qualité et authenticité – …<br>✅ Sécurité – …<br>✅ Service client – …</p>
+   *
+   * Eight of them, one orphaned on a line of its own. Three things are wrong with that and only
+   * the first is visible: the repo bans emoji in UI text (DS010) and the CMS has no such guard; a
+   * <br>-separated paragraph is not a list, so a screen reader announces no item count and Google
+   * sees one blob; and a check mark rendered in the reader's emoji font is the one glyph on the
+   * page whose colour and weight the design system does not control.
+   *
+   * Converting rather than deleting: the author's intent — "these are items" — is correct and
+   * worth keeping. The markup they had available was not.
+   *
+   * Scoped to a paragraph that OPENS with the marker, so a stray dingbat mid-sentence is left
+   * alone rather than silently restructuring somebody's prose. The class hands styling back to
+   * `.pt-prose` where the rest of the body's lists already live.
+   */
+  cleaned = cleaned.replace(
+    /<p>\s*(?:✅|✔️?|☑️?|•|●|▪️?)\s*([\s\S]*?)<\/p>/gi,
+    (_match, inner: string) => {
+      const items = String(inner)
+        .split(/<br\s*\/?>/i)
+        .map((line) => line.replace(/^\s*(?:✅|✔️?|☑️?|•|●|▪️?)\s*/, '').trim())
+        // The orphaned marker in the live body produces an empty item; an empty <li> is a bullet
+        // pointing at nothing.
+        .filter((line) => line.length > 0 && line.replace(/<[^>]+>/g, '').trim().length > 0);
+      if (items.length === 0) return '';
+      return `<ul class="pt-cms-list">${items.map((li) => `<li>${li}</li>`).join('')}</ul>`;
+    }
+  );
+
+  /*
+   * CUT AT THE HIGHEST HEADING LEVEL PRESENT, not at "h2 or h3, whichever we meet".
+   *
+   * The original split on `<h([23])>` because the CMS body was written entirely in <h3> and
+   * looking for <h2> alone had matched nothing — every paragraph fell into one bucket, which is
+   * the wall of boxed text the owner screenshotted.
+   *
+   * That fix breaks the moment a body uses BOTH levels properly, which the repo-authored body now
+   * does: <h2> for sections, <h3> for what sits under them. Splitting on either would promote
+   * every sub-heading to a top-level section and put it in the table of contents, so a six-section
+   * page would show nine entries, three of which are not sections.
+   *
+   * So: if the body contains any <h2>, cut on <h2> and let <h3> ride inside the section it belongs
+   * to. Otherwise fall back to <h3> and keep the CMS body working exactly as before.
+   */
+  const level = /<h2[^>]*>/i.test(cleaned) ? '2' : '3';
+  const parts = cleaned.split(new RegExp(`<h(${level})[^>]*>([\\s\\S]*?)</h\\1>`, 'i'));
 
   const intro = (parts[0] || '').trim();
   const sections: CmsSection[] = [];

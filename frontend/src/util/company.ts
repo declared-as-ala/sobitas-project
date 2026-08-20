@@ -51,6 +51,45 @@ export const LEGAL_IDENTITY = {
  * without a count is worth less than one with it — that is a real cost, and it is the correct
  * trade against publishing a figure nobody verified.
  */
+/**
+ * When the shop is open, in ONE place.
+ *
+ * ── IT WAS WRITTEN OUT THREE TIMES AND ONE OF THE THREE WAS ALREADY DIFFERENT ───────────────
+ * The contact page's channel card said "Lun. – sam., 10 h – 19 h 30"; the store panel further
+ * down the same page said the same plus "Dimanche : 14 h – 19 h"; and
+ * `buildLocalBusinessSchema` carried a third copy in `openingHoursSpecification` with a comment
+ * telling the next reader to keep it in sync by hand. So the card was already a SUBSET of the
+ * panel beside it — Sunday simply missing — which is what three hand-maintained copies always
+ * decay into.
+ *
+ * /api/coordonnees cannot supply this: the Coordinate record has address, phones, email and logos
+ * and no hours field at all. So a constant, here, beside the other facts about the business that
+ * must render on the first byte.
+ *
+ * ── THE WEDNESDAY DISCREPANCY IS DELIBERATELY NOT RESOLVED HERE ─────────────────────────────
+ * The Google Business Profile shows Wednesday 11:00 while the site publishes 10:00 everywhere
+ * (read 19/08/2026, and only that one day was visible). Publishing a partial reading would put
+ * the site, the schema and the profile into three different states instead of two. It needs the
+ * full GBP hours confirmed — an owner task, not a code change — and until then these values are
+ * what the site has always said.
+ */
+export const OPENING_HOURS = {
+  /** Human-readable, for the page. */
+  weekdays: 'Lundi – Samedi : 10 h – 19 h 30',
+  sunday: 'Dimanche : 14 h – 19 h',
+  /** The same thing compressed for a one-line hint on a card. */
+  short: 'Lun. – sam. 10 h – 19 h 30 · dim. 14 h – 19 h',
+  /** schema.org OpeningHoursSpecification, so the markup cannot drift from the visible copy. */
+  spec: [
+    {
+      days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      opens: '10:00',
+      closes: '19:30',
+    },
+    { days: ['Sunday'], opens: '14:00', closes: '19:00' },
+  ],
+} as const;
+
 export const GOOGLE_PROFILE = {
   /** The name on the profile, which differs from the site's own H1s. */
   name: 'PROTEIN.TN - PROTEINE TUNISIE',

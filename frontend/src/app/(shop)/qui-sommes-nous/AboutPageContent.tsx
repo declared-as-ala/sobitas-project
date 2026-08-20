@@ -19,6 +19,7 @@ import { SectionHeader } from '@/app/components/SectionHeader';
 import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { splitCmsBody } from '@/util/cmsSections';
+import { ABOUT_BODY_FR, ABOUT_BODY_SOURCE, ABOUT_TITLE } from '@/content/aboutBody';
 import { GOOGLE_PROFILE, LEGAL_IDENTITY } from '@/util/company';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import type { Coordinate, Page } from '@/types';
@@ -120,7 +121,11 @@ const PROSE =
   'prose-p:text-ink-2 prose-p:leading-7 prose-p:mb-3 ' +
   'prose-strong:text-ink-1 prose-strong:font-semibold ' +
   'prose-a:text-brand prose-a:font-medium hover:prose-a:underline ' +
-  'prose-ul:text-ink-2 prose-li:mb-1 prose-li:marker:text-brand ' +
+  'prose-ul:text-ink-2 prose-ol:text-ink-2 prose-li:mb-1 prose-li:marker:text-brand ' +
+  /* The repo-authored body uses <h3> INSIDE a section (the CMS body had no level below its own
+     headings). Sized here rather than left to Typography's defaults, which scale off the prose
+     size and would land a sub-heading within 2px of the section heading above it. */
+  'prose-h3:text-ink-1 prose-h3:font-display prose-h3:font-bold prose-h3:text-[15px] prose-h3:mt-5 prose-h3:mb-1.5 ' +
   '[&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto';
 
 export default function AboutPageContent({
@@ -130,7 +135,17 @@ export default function AboutPageContent({
   page: Page | null;
   coordinates: Coordinate | null;
 }) {
-  const { intro, sections } = splitCmsBody(page?.body);
+  /*
+     THE PROSE COMES FROM THE REPO, NOT THE CMS — see content/aboutBody.ts for the six defects in
+     the published body, of which the emoji the owner pointed at was the least serious (the worst
+     was "livraison gratuite dans toute la Tunisie", twice, on a page whose cart charges 10 DT
+     below 300). Flip ABOUT_BODY_SOURCE to 'cms' the day that row is corrected; the CMS body stays
+     the fallback if this constant is ever emptied.
+
+     `splitCmsBody` runs over it either way: same pipeline, so the table of contents, the anchors
+     and the dingbat sanitiser all keep working whichever source is live. */
+  const bodyHtml = (ABOUT_BODY_SOURCE === 'repo' ? ABOUT_BODY_FR : page?.body) || ABOUT_BODY_FR;
+  const { intro, sections } = splitCmsBody(bodyHtml);
   const address = coordinates?.adresse_fr?.trim() || coordinates?.adresse?.trim() || 'Rue Ribat, Sousse 4000';
   const email = coordinates?.email || 'contact@protein.tn';
   const phones = [coordinates?.phone_1, coordinates?.phone_2].filter(Boolean) as string[];
@@ -148,7 +163,10 @@ export default function AboutPageContent({
                 Notre histoire
               </span>
               <h1 className="font-display font-compressed text-[2.25rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 sm:text-5xl lg:text-6xl">
-                {page?.title?.trim() || 'Qui sommes-nous ?'}
+                {/* ABOUT_TITLE, not page.title. The CMS row reads "Qui sommes nous ?" — no
+                    hyphen — and that is what rendered at 36-60px and went into the AboutPage
+                    schema's `name`. The correct spelling existed only as an unreachable fallback. */}
+                {ABOUT_TITLE}
               </h1>
               {/* The sentence the whole page exists to make machine-readable: the shop people
                   search for as SOBITAS is the shop now trading as Protein.tn. */}

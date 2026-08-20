@@ -5,6 +5,7 @@
  */
 
 import { getStorageUrl } from '@/services/api';
+import { OPENING_HOURS } from '@/util/company';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
@@ -973,21 +974,15 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     priceRange: '$$',
     currenciesAccepted: 'TND',
     paymentAccepted: 'Cash on delivery, Bank transfer',
-    // Must match the visible hours on the Contact page (Lun→Sam 10h–19h30, Dimanche 14h–19h).
-    openingHoursSpecification: [
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        opens: '10:00',
-        closes: '19:30',
-      },
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: 'Sunday',
-        opens: '14:00',
-        closes: '19:00',
-      },
-    ],
+    /* Derived from util/company.ts's OPENING_HOURS, not retyped. The comment that used to sit
+       here said "Must match the visible hours on the Contact page" — an instruction to a future
+       reader to keep two literals in sync by hand, which is the failure this now cannot have. */
+    openingHoursSpecification: OPENING_HOURS.spec.map((slot) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: slot.days,
+      opens: slot.opens,
+      closes: slot.closes,
+    })),
     sameAs: [
       'https://www.facebook.com/protein.tn',
       'https://www.instagram.com/protein.tn',

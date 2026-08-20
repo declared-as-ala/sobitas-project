@@ -18,7 +18,7 @@ import { SectionHeader } from '@/app/components/SectionHeader';
 import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
-import { LEGAL_IDENTITY } from '@/util/company';
+import { LEGAL_IDENTITY, OPENING_HOURS } from '@/util/company';
 import { ContactForm } from './ContactForm';
 import type { Coordinate } from '@/types';
 
@@ -63,7 +63,10 @@ const CHANNELS = [
     label: 'Par téléphone',
     value: '+216 27 612 500',
     href: 'tel:+21627612500',
-    hint: 'Lun. – sam., 10 h – 19 h 30',
+    /* OPENING_HOURS.short, not a fourth literal. This card used to read "Lun. – sam., 10 h –
+       19 h 30" while the store panel 160 lines below it added "Dimanche : 14 h – 19 h" — the card
+       was already a SUBSET of the panel beside it, on the same page. */
+    hint: OPENING_HOURS.short,
     external: false,
   },
   {
@@ -226,8 +229,8 @@ export default function ContactPageContent({ coordinates }: { coordinates: Coord
                       <ArrowRight className="h-3.5 w-3.5 text-brand" strokeWidth={2} aria-hidden="true" />
                       Samedi
                     </span>
-                    {' : 10 h – 19 h 30'}</span>
-                    <span className="block">Dimanche : 14 h – 19 h</span>
+                    {` : ${OPENING_HOURS.weekdays.split(' : ')[1]}`}</span>
+                    <span className="block">{OPENING_HOURS.sunday}</span>
                   </InfoRow>
                   <InfoRow icon={Phone} label="Téléphone">
                     {phones.map((p) => (
