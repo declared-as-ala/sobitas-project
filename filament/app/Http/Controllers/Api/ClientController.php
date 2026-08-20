@@ -16,6 +16,11 @@ use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 class ClientController extends Controller
 {
@@ -112,6 +117,265 @@ class ClientController extends Controller
             'name'  => $user->name,
             'id'    => $user->id,
         ], 201);
+    }
+
+    /**
+     * ── SIGN IN WITH GOOGLE ─────────────────────────────────────────────────────────────────
+     * Owner, 20/08/2026: *"add login via google in backend and frontend and make it easy to
+     * integrate it."*
+     *
+     * Takes the ID token the browser got from Google Identity Services and answers with the SAME
+     * envelope as login() and register() — {token, name, id} — so the storefront has one session
+     * path rather than two.
+     *
+     * ── THE ONLY THING THAT MAKES THIS SAFE ─────────────────────────────────────────────────
+     * The credential is an unverified string from a browser. Anyone can POST this endpoint a JWT
+     * they wrote themselves claiming to be contact@protein.tn. So it is NOT decoded here. It is
+     * handed to Google, which checks the signature against its own rotating keys, and only the
+     * response from GOOGLE is read.
+     *
+     * Two further checks that the signature alone does not give you:
+     *
+     *   `aud` MUST equal our client id. A validly-signed token issued to somebody ELSE'S Google
+     *   app is still a valid Google token — accepting one lets any other site's login mint
+     *   accounts here. This is the classic and most commonly missed mistake in this flow.
+     *
+     *   `email_verified` MUST be true. Workspace accounts can carry an address the domain admin
+     *   set without proof; matching an existing customer on an unverified address would be an
+     *   account takeover with extra steps.
+     *
+     * ── WHY tokeninfo AND NOT A JWT LIBRARY ─────────────────────────────────────────────────
+     * Verifying locally means fetching Google's JWKS, caching it, honouring its rotation, and
+     * implementing RS256 validation — either google/apiclient (a large dependency for one
+     * endpoint) or firebase/php-jwt plus the key handling. tokeninfo is Google's own published
+     * endpoint for exactly this and costs one server-to-server request on a path a customer hits
+     * once per session. If sign-in volume ever makes that round trip matter, swap the body of
+     * verifyGoogleIdToken() and nothing else changes.
+     */
+    public function googleLogin(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'credential' => ['required', 'string', 'max:4096'],
+        ]);
+
+        $clientId = (string) config('services.google.client_id', '');
+        if ($clientId === '') {
+            // Configuration, not a client error: the button should not have rendered.
+            return response()->json([
+                'message' => 'La connexion Google n’est pas encore configurée.',
+            ], 503);
+        }
+
+        $payload = $this->verifyGoogleIdToken($validated['credential'], $clientId);
+        if ($payload === null) {
+            return response()->json([
+                'message' => 'Connexion Google impossible. Réessayez ou utilisez votre mot de passe.',
+            ], 401);
+        }
+
+        $googleId = (string) ($payload['sub'] ?? '');
+        $email    = strtolower(trim((string) ($payload['email'] ?? '')));
+        $name     = trim((string) ($payload['name'] ?? '')) ?: (string) strstr($email, '@', true);
+        $picture  = (string) ($payload['picture'] ?? '');
+
+        if ($googleId === '' || $email === '') {
+            return response()->json(['message' => 'Compte Google incomplet.'], 401);
+        }
+
+        $hasGoogleColumn = Schema::hasColumn('users', 'google_id');
+
+        /*
+         * Resolution order, and it matters:
+         *   1. the stored google_id  — survives the customer changing their email with us;
+         *   2. the verified email    — links Google to the password account they already have,
+         *                              which is what stops a duplicate account on first sign-in;
+         *   3. create.
+         */
+        $user = null;
+        if ($hasGoogleColumn) {
+            $user = User::where('google_id', $googleId)->first();
+        }
+        if (! $user) {
+            $user = User::where('email', $email)->first();
+        }
+
+        if ($user) {
+            $changes = [];
+            if ($hasGoogleColumn && (string) ($user->google_id ?? '') === '') {
+                $changes['google_id'] = $googleId;
+            }
+            // Google has verified this address, so an account that reaches us this way is verified
+            // by definition. Filament's MustVerifyEmail contract reads exactly this column.
+            if (empty($user->email_verified_at)) {
+                $changes['email_verified_at'] = now();
+            }
+            if ($picture !== '' && empty($user->avatar)) {
+                $changes['avatar'] = $picture;
+            }
+            if ($changes) {
+                $user->forceFill($changes)->saveQuietly();
+            }
+        } else {
+            /*
+             * `users.password` is NOT NULL, so a Google-only account still needs a value in it. A
+             * 64-char random string, hashed, is unguessable and un-loggable-into — and the
+             * customer can give themselves a password any time through "mot de passe oublié",
+             * which is why this is a random secret rather than an empty hash.
+             *
+             * role_id is server-set here for the same reason register() sets it: the column is
+             * NOT NULL and guarded, so a plain create() would throw.
+             */
+            $attributes = [
+                'name'              => $name !== '' ? $name : 'Client',
+                'email'             => $email,
+                'password'          => Hash::make(Str::random(64)),
+                'role_id'           => 2,
+                'email_verified_at' => now(),
+            ];
+            if ($hasGoogleColumn) {
+                $attributes['google_id'] = $googleId;
+            }
+            if ($picture !== '') {
+                $attributes['avatar'] = $picture;
+            }
+
+            $user = (new User())->forceFill($attributes);
+            $user->save();
+        }
+
+        return response()->json([
+            'token' => $user->createToken('authToken')->plainTextToken,
+            'name'  => $user->name,
+            'id'    => $user->id,
+        ]);
+    }
+
+    /**
+     * Verify a Google ID token with Google and return its claims, or null.
+     *
+     * Null for every failure mode — bad signature, wrong audience, expired, unverified email,
+     * Google unreachable — because the caller has exactly one thing to say to a customer in all
+     * of those cases, and distinguishing them out loud only helps somebody probing the endpoint.
+     *
+     * @return array<string, mixed>|null
+     */
+    private function verifyGoogleIdToken(string $credential, string $clientId): ?array
+    {
+        try {
+            $response = Http::timeout(8)
+                ->retry(2, 200)
+                ->get('https://oauth2.googleapis.com/tokeninfo', ['id_token' => $credential]);
+        } catch (\Throwable $e) {
+            Log::warning('Google token verification unreachable', ['error' => $e->getMessage()]);
+
+            return null;
+        }
+
+        if (! $response->successful()) {
+            return null;
+        }
+
+        $claims = $response->json();
+        if (! is_array($claims)) {
+            return null;
+        }
+
+        // `aud` — the token was issued FOR US. Without this check any Google app's token works.
+        if (! hash_equals($clientId, (string) ($claims['aud'] ?? ''))) {
+            Log::warning('Google token rejected: audience mismatch');
+
+            return null;
+        }
+
+        // `iss` — both spellings are legitimate and Google returns either.
+        if (! in_array((string) ($claims['iss'] ?? ''), ['accounts.google.com', 'https://accounts.google.com'], true)) {
+            return null;
+        }
+
+        // tokeninfo rejects expired tokens itself; checked again because relying on someone else's
+        // validation for the one claim that governs replay is not a position worth defending.
+        if ((int) ($claims['exp'] ?? 0) <= time()) {
+            return null;
+        }
+
+        // The string 'true' — tokeninfo returns JSON claims as strings.
+        $verified = $claims['email_verified'] ?? false;
+        if ($verified !== true && $verified !== 'true') {
+            return null;
+        }
+
+        return $claims;
+    }
+
+    /**
+     * ── PASSWORD RESET: THE TWO ENDPOINTS THE STOREFRONT HAS ALWAYS CALLED ──────────────────
+     * /forgot-password and /reset-password were BUILT ON THE FRONTEND AND NEVER ROUTED HERE.
+     * Both screens exist, both are linked from the login form, and both have been posting into a
+     * 404 for as long as they have shipped — verified against the live API on 20/08/2026:
+     *
+     *     POST https://admin.protein.tn/api/forgot-password  -> 404
+     *     POST https://admin.protein.tn/api/reset-password   -> 404
+     *
+     * So any customer who forgot their password had no way back into their account. Everything
+     * needed was already in place — the `password_reset_tokens` table, the `users` broker in
+     * config/auth.php, `app.frontend_url` — except these twenty lines and the two routes.
+     *
+     * The answer is the same whether the address is a customer or not. A form that says "aucun
+     * compte" for one address and "e-mail envoyé" for another is an account enumerator, on the
+     * one endpoint that is unauthenticated by necessity.
+     */
+    public function forgotPassword(Request $request): JsonResponse
+    {
+        $request->validate(['email' => ['required', 'email', 'max:255']]);
+
+        $neutral = 'Si un compte correspond à cette adresse, un e-mail vient de partir avec le lien de réinitialisation.';
+
+        try {
+            Password::sendResetLink(['email' => strtolower(trim($request->input('email')))]);
+        } catch (\Throwable $e) {
+            // A mail-transport failure must not become a different HTTP answer, for the same
+            // enumeration reason. It is logged, loudly, because it means resets are silently dead.
+            Log::error('Password reset link failed to send', ['error' => $e->getMessage()]);
+        }
+
+        return response()->json(['message' => $neutral]);
+    }
+
+    public function resetPassword(Request $request): JsonResponse
+    {
+        // Identical to the register() rule, deliberately. The reset screen used to advertise
+        // "minimum 6 caractères" against a backend that wanted 8 with a letter and a digit.
+        $request->validate([
+            'token'    => ['required', 'string'],
+            'email'    => ['required', 'email'],
+            'password' => ['required', 'confirmed', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
+        ]);
+
+        $status = Password::reset(
+            $request->only('email', 'password', 'password_confirmation', 'token'),
+            function (User $user, string $password): void {
+                $user->forceFill([
+                    'password'       => Hash::make($password),
+                    'remember_token' => Str::random(60),
+                ])->save();
+
+                /*
+                 * Every existing API token is revoked. A password reset is what someone does when
+                 * they think their account is compromised, and leaving the attacker's Sanctum
+                 * token valid makes the reset theatre. It also signs the customer out of their own
+                 * other devices, which is the expected and correct behaviour.
+                 */
+                $user->tokens()->delete();
+            }
+        );
+
+        if ($status === Password::PASSWORD_RESET) {
+            return response()->json(['message' => 'Votre mot de passe a été mis à jour.']);
+        }
+
+        return response()->json([
+            'message' => 'Ce lien n’est plus valable. Demandez-en un nouveau.',
+        ], 422);
     }
 
     public function update_profile(Request $request): JsonResponse

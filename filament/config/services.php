@@ -45,6 +45,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Sign in with Google
+    |--------------------------------------------------------------------------
+    | ONE variable, and it is the same string the storefront uses as
+    | NEXT_PUBLIC_GOOGLE_CLIENT_ID. The client id is public by design — it is
+    | baked into the page that renders the button — so there is no secret here
+    | and nothing to rotate. What makes the flow safe is that the server checks
+    | the ID token's SIGNATURE and its `aud` against this value before trusting
+    | any claim in it (see ClientController::googleLogin).
+    |
+    | There is deliberately NO client SECRET: this is the browser ID-token flow,
+    | not an OAuth code exchange, so no secret is ever needed on the server.
+    |
+    | Leave it unset and POST /api/auth/google answers 503 while the storefront
+    | renders no button at all — the site works exactly as it does today.
+    |
+    | Google Cloud console → Credentials → OAuth 2.0 Client ID (Web application):
+    |   Authorised JavaScript origins:  https://protein.tn , http://localhost:3000
+    |   Authorised redirect URIs:       none — this flow never redirects.
+    */
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Frontend (Next.js storefront) — SEO automation
     |--------------------------------------------------------------------------
     | Used by App\Services\Seo\SeoNotifier to trigger on-demand ISR revalidation
