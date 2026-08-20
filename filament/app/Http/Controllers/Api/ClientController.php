@@ -262,8 +262,14 @@ class ClientController extends Controller
     private function verifyGoogleIdToken(string $credential, string $clientId): ?array
     {
         try {
+            /*
+             * Retry ONLY a connection failure. `retry()` on its own throws-and-retries on any
+             * non-2xx, and tokeninfo answers 400 for an invalid token — so a forged credential
+             * would cost three round trips to Google instead of one, which is a free amplifier
+             * for anyone hammering this endpoint.
+             */
             $response = Http::timeout(8)
-                ->retry(2, 200)
+                ->retry(2, 200, fn ($e) => $e instanceof \Illuminate\Http\Client\ConnectionException, throw: false)
                 ->get('https://oauth2.googleapis.com/tokeninfo', ['id_token' => $credential]);
         } catch (\Throwable $e) {
             Log::warning('Google token verification unreachable', ['error' => $e->getMessage()]);

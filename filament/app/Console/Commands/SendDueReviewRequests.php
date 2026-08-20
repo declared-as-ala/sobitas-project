@@ -10,7 +10,6 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Schema;
 
 /**
  * Send the post-delivery review request to orders that became DUE today.
@@ -225,7 +224,10 @@ class SendDueReviewRequests extends Command
         // Backfill the short code for orders created before the column existed, rather than
         // falling back to the 64-character token and silently sending a 3-segment message.
         if (empty($commande->review_code)) {
-            if (! Schema::hasColumn('commandes', 'review_code')) {
+            // `$this->hasColumn`, not Schema::hasColumn — see its docblock: Schema has twice
+            // reported false for columns that exist on this database, which would silently turn
+            // the SMS off rather than backfilling the code.
+            if (! $this->hasColumn('commandes', 'review_code')) {
                 return false;
             }
             $commande->forceFill(['review_code' => Commande::generateReviewCode()])->saveQuietly();
