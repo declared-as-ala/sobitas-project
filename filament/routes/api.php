@@ -100,7 +100,13 @@ Route::post('/pack/quote', [PackController::class, 'quote']);
 Route::post('/coupons/apply', [CouponController::class, 'apply']);
 Route::post('/coupons/remove', [CouponController::class, 'remove']);
 Route::post('/newsletter', [ApisController::class, 'newsLetter']);
-Route::post('/contact', [ApisController::class, 'sendContact']);
+/*
+ * Contact — PUBLIC, and it now sends two emails per call, which is exactly the shape a spam relay
+ * looks for. 6/minute per IP: a person who mis-taps submit is unaffected, a script is not worth
+ * running. The honeypot in sendContact() is the other half; see its docblock for why a bot that
+ * trips it gets a 200.
+ */
+Route::middleware('throttle:6,1')->post('/contact', [ApisController::class, 'sendContact']);
 // HIGH-03: Protected — auth:sanctum + admin only
 Route::post('/send_mail', [ApisController::class, 'send_email'])->middleware(['auth:sanctum', 'can:accessFilament']);
 

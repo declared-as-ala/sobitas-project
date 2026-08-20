@@ -33,6 +33,8 @@ class ContactResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('name')->label('Nom')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('email')->searchable(),
+                Tables\Columns\TextColumn::make('phone')->label('Téléphone')->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('subject')->label('Sujet')->limit(30)->toggleable(),
                 Tables\Columns\TextColumn::make('message')->limit(50),
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
             ])

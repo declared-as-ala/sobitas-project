@@ -18,6 +18,8 @@ use App\Models\Brand;
 use App\Models\Categ;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
+use App\Mail\ContactAcknowledgementMail;
+use App\Mail\ContactMessageMail;
 use App\Models\Contact;
 use App\Models\Coordinate;
 use App\Models\Faq;
@@ -43,6 +45,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class ApisController extends Controller
@@ -1780,17 +1783,106 @@ class ApisController extends Controller
         return response()->json(['success' => 'Merci de vous inscrire!']);
     }
 
+    /**
+     * /contact — persist the enquiry AND actually deliver it.
+     *
+     * ── WHAT THIS USED TO DO ────────────────────────────────────────────────────────────────
+     * Validate three fields, Contact::create(), and return "Votre message envoyé avec succès".
+     * No mail. Every message the form has ever taken has been sitting in the `contacts` table
+     * waiting for somebody to open Filament and look — while the visitor was told, in those
+     * words, that it had been sent. Owner, 20/08/2026: *"make it fully functional, it really
+     * works and sends emails."*
+     *
+     * The infrastructure was already here and already proven: mail.default is 'smtp', seven
+     * Mailables exist, and CommandeController sends an admin copy and a customer copy of every
+     * order this exact way. This endpoint was simply never wired to it.
+     *
+     * ── ORDER OF OPERATIONS, AND WHY IT IS THIS ORDER ───────────────────────────────────────
+     * PERSIST FIRST, then mail, with mail wrapped so it can never fail the request. A customer
+     * enquiry that was typed once and lost because an SMTP handshake timed out is the worst
+     * outcome available here; a stored row with no notification is recoverable, and the Filament
+     * ContactResource is where it is recovered from. Same shape as the order flow, same reason.
+     *
+     * ── SPAM ────────────────────────────────────────────────────────────────────────────────
+     * This is a public, unauthenticated endpoint that now sends two emails per call, so it is
+     * exactly the shape a spammer looks for. Two cheap defences, neither of which a real visitor
+     * ever meets:
+     *
+     *   HONEYPOT   `company` is rendered hidden and off-screen by the form and left empty by a
+     *              human. Anything that fills it gets 200 and success — a bot told it failed
+     *              retries with the field blank, and a bot told it succeeded goes away. Nothing
+     *              is stored and nothing is sent.
+     *   THROTTLE   6 per minute per IP, applied in routes/api.php. Enough for a person who mis-taps
+     *              submit, far below what makes this useful as a relay.
+     *
+     * `phone` and `subject` are accepted and stored ONLY when the columns exist. The `contacts`
+     * table currently has name/email/message and nothing else, and this endpoint has to keep
+     * working on a server where the migration that adds them has not run yet — the alternative is
+     * a mass-assignment error on a form that is the site's only contact channel.
+     */
     public function sendContact(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'name'    => ['required', 'string', 'max:255'],
             'email'   => ['required', 'email', 'max:255'],
             'message' => ['required', 'string', 'max:5000'],
+            'phone'   => ['nullable', 'string', 'max:40'],
+            'subject' => ['nullable', 'string', 'max:150'],
+            'company' => ['nullable', 'string', 'max:255'],
         ]);
 
-        Contact::create($validated);
+        // Honeypot. Answer exactly as if it worked — see the docblock.
+        if (filled($request->input('company'))) {
+            return response()->json(['success' => 'Votre message a bien été envoyé']);
+        }
 
-        return response()->json(['success' => 'Votre message envoyé avec succès']);
+        $attributes = [
+            'name'    => $validated['name'],
+            'email'   => $validated['email'],
+            'message' => $validated['message'],
+        ];
+
+        foreach (['phone', 'subject'] as $optional) {
+            if (filled($validated[$optional] ?? null) && Schema::hasColumn('contacts', $optional)) {
+                $attributes[$optional] = $validated[$optional];
+            }
+        }
+
+        $contact = Contact::create($attributes);
+
+        // The Mailable reads these whether or not they were persisted, so the admin copy carries
+        // the phone number even on a server that has not run the migration yet.
+        $contact->setAttribute('phone', $validated['phone'] ?? null);
+        $contact->setAttribute('subject', $validated['subject'] ?? null);
+
+        try {
+            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'contact@protein.tn'));
+            $adminEmails = is_array($adminEmailsRaw)
+                ? array_filter(array_map('trim', $adminEmailsRaw))
+                : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));
+
+            foreach ($adminEmails as $adminEmail) {
+                Mail::to($adminEmail)->send(new ContactMessageMail($contact));
+            }
+        } catch (\Exception $e) {
+            Log::error('Failed to send contact notification', [
+                'contact_id' => $contact->id,
+                'error'      => $e->getMessage(),
+            ]);
+        }
+
+        // Separate try/catch on purpose: the visitor's receipt failing must not suppress the
+        // admin copy, and vice versa. One shared block would let the first throw skip the second.
+        try {
+            Mail::to($contact->email)->send(new ContactAcknowledgementMail($contact));
+        } catch (\Exception $e) {
+            Log::error('Failed to send contact acknowledgement', [
+                'contact_id' => $contact->id,
+                'error'      => $e->getMessage(),
+            ]);
+        }
+
+        return response()->json(['success' => 'Votre message a bien été envoyé']);
     }
 
     /**

@@ -535,6 +535,14 @@ export interface ContactRequest {
   name: string;
   email: string;
   message: string;
+  /** Optional. Stored in its own column from migration 2026_08_20_000001; carried in the admin
+   *  notification either way, because a cash-on-delivery shop answers by telephone. */
+  phone?: string;
+  /** Optional routing hint ("Commande", "Disponibilité", "Conseil produit", …). */
+  subject?: string;
+  /** HONEYPOT. Rendered hidden and left empty by a human; a submission that fills it is answered
+   *  with success and silently dropped server-side. Never populate this from code. */
+  company?: string;
 }
 
 export interface NewsletterRequest {
