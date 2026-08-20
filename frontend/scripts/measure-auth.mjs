@@ -57,10 +57,15 @@ for (const theme of THEMES) {
 
     for (const route of ROUTES) {
       const where = `${theme} ${width} ${route.path.split('?')[0]}`;
-      await page.goto(BASE + route.path, { waitUntil: 'networkidle0' });
-      // The install banner appears on a 2s timer; wait past it so its suppression is what is
-      // measured rather than its absence.
-      await new Promise((r) => setTimeout(r, 2600));
+      /*
+        `domcontentloaded`, not `networkidle0`. Against a production build these pages never go
+        idle: the analytics tag keeps a beacon in flight, so `networkidle0` waits the full 30s and
+        then throws — a guard that fails on a perfectly good page is a guard that gets deleted.
+        The fixed settle below is what the measurement actually needs anyway, because the install
+        banner appears on a 2s timer and its SUPPRESSION is one of the things being asserted.
+      */
+      await page.goto(BASE + route.path, { waitUntil: 'domcontentloaded', timeout: 60000 });
+      await new Promise((r) => setTimeout(r, 2800));
 
       const result = await page.evaluate((submitLabel) => {
         const doc = document.documentElement;

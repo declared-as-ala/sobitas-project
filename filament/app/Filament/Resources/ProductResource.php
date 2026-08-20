@@ -359,7 +359,32 @@ class ProductResource extends Resource
                                         ->default([])
                                         ->collapsible()
                                         ->collapsed()
-                                        ->itemLabel(fn (array $state): ?string => $state['q'] ? '❓ ' . Str::limit($state['q'], 60) : 'Nouvelle question')
+                                        /*
+                                         * ── THIS LABEL COULD TAKE THE WHOLE PAGE DOWN ────────
+                                         * `$state['q']` with no `??`, and `array $state` typed
+                                         * non-nullable. Both throw rather than degrade:
+                                         *
+                                         *   · pressing "Ajouter une question" creates an item with
+                                         *     no keys yet -> "Undefined array key \"q\"" ->
+                                         *     ErrorException -> 500;
+                                         *   · a legacy `faq` JSON row shaped {question, answer}
+                                         *     instead of {q, a} -> the same, on EDIT, for that
+                                         *     product only;
+                                         *   · Filament passing null for a fresh item -> TypeError.
+                                         *
+                                         * An item LABEL is decoration. It must never be able to
+                                         * fail the render of the form it decorates — the sibling
+                                         * repeater ten lines down already got this right.
+                                         *
+                                         * The emoji goes with it: DS010 bans them in the
+                                         * storefront and there is no reason the admin should read
+                                         * differently.
+                                         */
+                                        ->itemLabel(function (?array $state): string {
+                                            $question = trim((string) ($state['q'] ?? ''));
+
+                                            return $question !== '' ? Str::limit($question, 60) : 'Nouvelle question';
+                                        })
                                         ->addActionLabel('Ajouter une question')
                                         ->reorderable()
                                         ->cloneable()

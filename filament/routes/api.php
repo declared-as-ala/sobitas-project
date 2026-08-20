@@ -57,9 +57,27 @@ Route::middleware(['cache.api:60', 'cache.headers.api:60'])->group(function () {
     Route::get('/product_details/{slug}', [ApisController::class, 'productDetails']);
     Route::get('/article_details/{slug}', [ApisController::class, 'articleDetails']);
     Route::get('/productsByCategoryId/{slug}', [ApisController::class, 'productsByCategoryId']);
-    Route::get('/productsByBrandId/{brand_id}', [ApisController::class, 'productsByBrandId']);
+    /*
+     * ── A LETTER IN A NUMERIC SEGMENT WAS A 500, NOT A 404 ──────────────────────────────────
+     * Verified against live on 20/08/2026, unauthenticated:
+     *
+     *     GET /api/productsByBrandId/abc   -> 500
+     *     GET /api/similar_products/abc    -> 500
+     *     GET /api/commande/abc            -> 500
+     *
+     * The controllers type-hint `int $id`, so PHP throws a TypeError before any of their own
+     * validation runs. Three consequences, and the third is the one that matters: the caller gets
+     * a server error for what is plainly a client mistake; every crawler and scanner that walks
+     * these URLs writes a stack trace into laravel.log, burying the real errors; and a 500 tells
+     * Google the endpoint is broken rather than that the URL is wrong.
+     *
+     * `whereNumber` makes the route simply not match, which is a 404 — the correct answer, and
+     * one that costs nothing to produce. Applied to every numeric segment in this file rather than
+     * only the three that were reported, because the next one is the same bug.
+     */
+    Route::get('/productsByBrandId/{brand_id}', [ApisController::class, 'productsByBrandId'])->whereNumber('brand_id');
     Route::get('/productsBySubCategoryId/{slug}', [ApisController::class, 'productsBySubCategoryId']);
-    Route::get('/similar_products/{sous_categorie_id}', [ApisController::class, 'similar_products']);
+    Route::get('/similar_products/{sous_categorie_id}', [ApisController::class, 'similar_products'])->whereNumber('sous_categorie_id');
     Route::get('/seo_page/{name}', [ApisController::class, 'seoPage']);
     Route::get('/page/{slug}', [ApisController::class, 'getPageBySlug']);
     Route::get('/all_products', [ApisController::class, 'allProducts']);
@@ -92,7 +110,7 @@ Route::get('/all_products_fast', [ApisController::class, 'allProducts'])
 Route::get('/searchProduct/{text}', [ApisController::class, 'searchProduct']);
 Route::get('/searchProductBySubCategoryText/{slug}/{text}', [ApisController::class, 'searchProductBySubCategoryText']);
 // CRIT-04: Controller validates ownership (auth user or ?email= / ?phone= for guests)
-Route::get('/commande/{id}', [CommandeController::class, 'details']);
+Route::get('/commande/{id}', [CommandeController::class, 'details'])->whereNumber('id');
 
 Route::post('/add_commande', [CommandeController::class, 'storeCommandeApi']);
 // Pack (bundle) tier quote — PUBLIC, server-computes discount from real prices
@@ -165,7 +183,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/points/history', [PointsController::class, 'history']);
     Route::get('/client_commandes', [ClientController::class, 'client_commandes']);
     Route::post('/update_profile', [ClientController::class, 'update_profile']);
-    Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande']);
+    Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande'])->whereNumber('id');
     Route::post('/add_review', [ApisController::class, 'add_review']);
 });
 
