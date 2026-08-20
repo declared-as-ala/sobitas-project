@@ -1,7 +1,7 @@
 'use client';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield, Mail } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
@@ -59,7 +59,7 @@ interface ProductCardProps {
   brandName?: string;
 }
 
-function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; promo_expiration_date?: string | null; qte?: number; rupture?: number } {
+function toFavoriteProduct(product: Product): { id: number; designation_fr: string; slug?: string; cover?: string; prix?: number; promo?: number | null; promo_expiration_date?: string | null; qte?: number; rupture?: number; sous_categorie_id?: number; brand_id?: number } {
   const p = product as any;
   return {
     id: product.id,
@@ -72,6 +72,10 @@ function toFavoriteProduct(product: Product): { id: number; designation_fr: stri
     promo_expiration_date: p.promo_expiration_date ?? undefined,
     qte: p.qte,
     rupture: p.rupture,
+    // The aisle, so /favoris can ask for "more like these" without a request per favourite —
+    // see FavoriteProduct. Both are already on every listing payload; nothing extra is fetched.
+    sous_categorie_id: p.sous_categorie_id,
+    brand_id: p.brand_id,
   };
 }
 
@@ -325,6 +329,68 @@ export const ProductCard = memo(function ProductCard({
             </span>
           )}
         </div>
+
+        {/* ── REVIEWS ARE A STICKER ON THE PHOTOGRAPH, NOT A ROW OF THE CARD ────────────────
+            Owner, 20/08/2026: *"on mobile and on desktop try to make the avis or stars in a
+            better place — position absolute maybe, a tag or something, for a better look, and use
+            a good icon."*
+
+            It was the fifth row of the text column: a gold star, then `(1 avis)`, on its own
+            baseline between the title and the price. Two things wrong with that, and the second
+            is not cosmetic.
+
+            THE ROW. Every row on this card costs its own height plus a gap, and the whole
+            history of this component is rows being removed (savings pill folded onto the price,
+            "Paiement à la livraison" deleted, six rows to four). A fact that is one glyph and
+            three words does not earn a line of its own between the two things a shopper actually
+            reads. As a chip on the packshot it costs ZERO height and the card comes down another
+            ~26px, on every card, on every listing.
+
+            THE STAR. `rating` is null for every product in this catalogue right now — the 203
+            reviews the site used to carry had no purchase behind a single one and were removed —
+            so what actually rendered was a filled gold star with NO NUMBER beside `(1 avis)`.
+            That does not read as "one review". It reads as ONE STAR: the worst rating a product
+            can have, printed in gold on the photograph, on a product nobody has rated badly. The
+            owner's screenshot is exactly that, and it is the reason this is a correctness fix and
+            not a styling one.
+
+            So the icon now follows the DATA:
+              · a real average (4,8)  ->  filled star, the number, the count. A rating.
+              · a count and no average ->  a speech bubble and "N avis". A COUNT of opinions, which
+                                           is all we know, said in the one glyph that cannot be
+                                           misread as a score.
+
+            It fills in on its own: as attested reviews arrive `rating_value` stops being null and
+            the same chip becomes a star rating without anyone touching this file.
+
+            `pointer-events-none` because the whole frame is one link to the product — a chip that
+            swallowed the tap would be a dead 60px hole in the middle of the card's own target. */}
+        {productData.reviewCount > 0 && (
+          <div className="pointer-events-none absolute bottom-2 left-2 z-10 sm:bottom-3 sm:left-3">
+            <span
+              className="inline-flex items-center gap-1 rounded-full border border-hairline bg-elevated/95 px-1.5 py-1 text-[11px] font-semibold leading-none text-ink-1 shadow-sm sm:px-2"
+              aria-label={
+                productData.rating != null
+                  ? `Note ${productData.rating.toFixed(1)} sur 5, ${productData.reviewCount} avis`
+                  : `${productData.reviewCount} avis`
+              }
+            >
+              {productData.rating != null ? (
+                <>
+                  <Star className="h-3 w-3 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
+                  <span className="tabular-nums">{productData.rating.toFixed(1)}</span>
+                  <span className="font-medium tabular-nums text-ink-3">({productData.reviewCount})</span>
+                </>
+              ) : (
+                <>
+                  <MessageSquare className="h-3 w-3 shrink-0 text-ink-3" aria-hidden="true" />
+                  <span className="tabular-nums">{productData.reviewCount}</span>
+                  <span className="font-medium text-ink-3">avis</span>
+                </>
+              )}
+            </span>
+          </div>
+        )}
       </div>
 
       {/*
@@ -388,18 +454,6 @@ export const ProductCard = memo(function ProductCard({
             {productData.name}
           </h3>
         </LinkWithLoading>
-
-        {/* Rating. Numeric average only if the backend actually provides `note` (null in the grid
-            today) — never fabricated. The review COUNT is real. */}
-        {productData.reviewCount > 0 && (
-          <div className="flex items-center gap-1.5 text-[12px] text-ink-3">
-            <Star className="h-3.5 w-3.5 shrink-0 fill-[#FFB020] text-[#FFB020]" aria-hidden="true" />
-            {productData.rating != null && (
-              <span className="font-semibold text-ink-1">{productData.rating.toFixed(1)}</span>
-            )}
-            <span>({productData.reviewCount} avis)</span>
-          </div>
-        )}
 
         {/* Price · struck · savings — ONE row, wrapping only if it has to.
             The savings pill used to be its own row beneath. It is a restatement of the difference

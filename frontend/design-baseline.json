@@ -194,14 +194,6 @@
     "DS002": 4,
     "DS004": 4
   },
-  "src/app/(shop)/favoris/FavorisPageClient.tsx": {
-    "DS001": 4,
-    "DS002": 7,
-    "DS003": 3,
-    "DS004": 2,
-    "DS007": 1,
-    "DS011": 6
-  },
   "src/app/(shop)/offres/OffresPageClient.tsx": {
     "DS001": 2,
     "DS002": 2,

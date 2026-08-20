@@ -33,6 +33,17 @@ interface ProductSectionProps {
   /** Skip rendering while off-screen. Must be on the Section, never on a wrapper — see Section. */
   defer?: boolean;
   /**
+   * Passthrough for Section's `last`. Set on the page's FINAL band, which is the one whose
+   * neighbour is the footer rather than another band — below `sm` every band has `pb-0` so it
+   * reads as connected to the one under it, and without this the last rail's bottom row of cards
+   * touches the dark footer with zero space.
+   *
+   * A passthrough rather than a `:last-child` rule for the reason Section already gives: bands are
+   * rendered by different components on different pages, so which one is last is a fact only the
+   * page knows.
+   */
+  last?: boolean;
+  /**
    * Band-level override, merged onto the Section by tailwind-merge.
    *
    * Exists for ONE case and should stay rare: a band whose neighbour above it has given up its
@@ -58,6 +69,7 @@ export const ProductSection = memo(function ProductSection({
   spacing = 'default',
   scale = '1',
   defer = false,
+  last = false,
   className,
 }: ProductSectionProps) {
   return (
@@ -71,7 +83,7 @@ export const ProductSection = memo(function ProductSection({
        undersized padding above it. That compensation is gone: DESIGN_SYSTEM §3 says the gap
        between two bands is the upper band's `pb` plus the lower band's `pt` — never add a prop
        here to fix a neighbour's spacing. */
-    <Section id={id} surface={surface} spacing={spacing} width="wide" defer={defer} className={className}>
+    <Section id={id} surface={surface} spacing={spacing} width="wide" defer={defer} last={last} className={className}>
       <SectionHeader
         kicker={kicker}
         title={title}

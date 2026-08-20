@@ -1670,16 +1670,24 @@ function ShopContent({
                     </button>
                   </SheetHeader>
                   <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
-                    <ShopFilters variant="mobile" {...filterProps} />
+                    <ShopFilters
+                      variant="mobile"
+                      {...filterProps}
+                      appliedFilters={appliedFilters}
+                      removeFilter={removeFilter}
+                      clearFilters={clearFilters}
+                    />
                   </div>
                   <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="min-h-[48px] flex-1 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
-                    >
-                      Réinitialiser
-                    </button>
+                    {appliedFilters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="min-h-[48px] flex-1 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => setShowFilters(false)}

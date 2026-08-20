@@ -278,20 +278,38 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                         and the two longest strings lose their explanatory halves (below). That is
                         150px of name column instead of 122 - about 17 characters a line, which
                         holds "NITROTECH WHEY" before the break. */}
-                    <div className="relative h-[52px] w-[52px] flex-shrink-0 overflow-hidden rounded-lg bg-sunken sm:h-16 sm:w-16">
+                    {/* ── AND THEN IT GREW AGAIN (owner, 20/08/2026: "for the panier also make
+                        the product images a bit bigger") ──────────────────────────────────────
+                        52 -> 68 on a phone, 64 -> 72 from `sm`, and the two steps are different
+                        sizes because the two layouts have different money to spend.
+
+                        On a PHONE the row wraps: the stepper and the bin are on their own line
+                        (see the note below), so line one is packshot + text and nothing else. At
+                        390px that line is 350 - 20 of row padding = 330, so a 68px packshot still
+                        leaves a 254px name column - wider than the 150 the four-column desktop
+                        row gets. The phone had the most room and was showing the smallest image.
+
+                        From `sm` the row is `flex-nowrap` and all four columns share 388px, so
+                        every pixel here comes straight off the name. 72 is +8, which measure-cart
+                        confirms still holds "NITROTECH WHEY" on the first line; 80 did not.
+
+                        `p-1` rather than `p-1.5`: the padding is inside the box, so at 52px the
+                        6px inset was giving the actual PHOTOGRAPH 40px. Trimming it is 8px more
+                        packshot on a phone before the box grows at all. */}
+                    <div className="relative h-[68px] w-[68px] flex-shrink-0 overflow-hidden rounded-lg bg-sunken sm:h-[72px] sm:w-[72px]">
                       {(item.product as any).image || (item.product as any).cover ? (
                         <Image
                           src={(item.product as any).image || ((item.product as any).cover ? getStorageUrl((item.product as any).cover) : '')}
                           alt={localizedName(item.product as any, locale, 'Product')}
                           fill
-                          className="object-contain p-1.5"
-                          sizes="64px"
+                          className="object-contain p-1"
+                          sizes="(max-width: 639px) 68px, 72px"
                           loading="lazy"
                           unoptimized
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center">
-                          <ShoppingBag className="h-6 w-6 text-ink-3" aria-hidden="true" />
+                          <ShoppingBag className="h-7 w-7 text-ink-3" aria-hidden="true" />
                         </div>
                       )}
                     </div>

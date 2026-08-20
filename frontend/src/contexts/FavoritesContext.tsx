@@ -26,6 +26,21 @@ export interface FavoriteProduct {
   promo_expiration_date?: string | null;
   qte?: number;
   rupture?: number | boolean;
+  /**
+   * The aisle and the brand this product belongs to.
+   *
+   * Persisted so /favoris can answer "more like these" WITHOUT a request per favourite. The
+   * wishlist lives entirely in localStorage — there is no favourites row in the database — so the
+   * only thing the page knows about a saved product is what was written here when the heart was
+   * tapped, and `sous_categorie_id` is the one field the recommendation endpoint takes.
+   *
+   * Both are optional and both are allowed to be missing: every favourite saved before this field
+   * existed has neither, and the page falls back to reading ONE product's detail to discover the
+   * aisle rather than showing nothing. Nothing breaks, it just costs a request until the list
+   * turns over.
+   */
+  sous_categorie_id?: number;
+  brand_id?: number;
 }
 
 interface FavoritesContextValue {
@@ -37,6 +52,9 @@ interface FavoritesContextValue {
   toggleFavorite: (product: FavoriteProduct) => void;
   addFavorite: (product: FavoriteProduct) => void;
   removeFavorite: (productId: number) => void;
+  /** Empty the whole list in one write. Looping removeFavorite would be N renders and N
+   *  localStorage writes for one gesture the shopper thinks of as a single action. */
+  clearFavorites: () => void;
   count: number;
 }
 
@@ -51,7 +69,7 @@ const FavoritesContext = createContext<FavoritesContextValue | null>(null);
  * on the homepage — each of which then called `isFavorite` for its own id and got the same answer
  * as before. Tapping one heart re-rendered the whole grid to change one icon's fill.
  */
-type FavoritesActions = Pick<FavoritesContextValue, 'toggleFavorite' | 'addFavorite' | 'removeFavorite'>;
+type FavoritesActions = Pick<FavoritesContextValue, 'toggleFavorite' | 'addFavorite' | 'removeFavorite' | 'clearFavorites'>;
 const FavoritesActionsContext = createContext<FavoritesActions | null>(null);
 
 type FavoritesStore = {
@@ -130,7 +148,7 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const addFavorite = useCallback((product: FavoriteProduct) => {
     setFavoriteProducts((prev) => {
       if (prev.some((p) => p.id === product.id)) return prev;
-      const next = [...prev, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, promo_expiration_date: product.promo_expiration_date, qte: product.qte, rupture: product.rupture }];
+      const next = [...prev, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, promo_expiration_date: product.promo_expiration_date, qte: product.qte, rupture: product.rupture, sous_categorie_id: product.sous_categorie_id, brand_id: product.brand_id }];
       saveToStorage(next);
       return next;
     });
@@ -142,6 +160,11 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
       saveToStorage(next);
       return next;
     });
+  }, []);
+
+  const clearFavorites = useCallback(() => {
+    setFavoriteProducts([]);
+    saveToStorage([]);
   }, []);
 
   // `idsRef`, not `favoriteIds` — and therefore an EMPTY dependency list, so this function is
@@ -166,13 +189,14 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
     toggleFavorite,
     addFavorite,
     removeFavorite,
+    clearFavorites,
     count: favoriteProducts.length,
-  }), [favoriteIds, favoriteProducts, isLoaded, isFavorite, toggleFavorite, addFavorite, removeFavorite]);
+  }), [favoriteIds, favoriteProducts, isLoaded, isFavorite, toggleFavorite, addFavorite, removeFavorite, clearFavorites]);
 
   // Built once — every member is stable for the provider's lifetime. See CartProvider.
   const actions = useMemo<FavoritesActions>(
-    () => ({ toggleFavorite, addFavorite, removeFavorite }),
-    [toggleFavorite, addFavorite, removeFavorite]
+    () => ({ toggleFavorite, addFavorite, removeFavorite, clearFavorites }),
+    [toggleFavorite, addFavorite, removeFavorite, clearFavorites]
   );
 
   return (

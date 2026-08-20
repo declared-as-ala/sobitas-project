@@ -108,6 +108,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     prix: product.prix,
     promo: product.promo ?? null,
     rupture: product.rupture,
+    // See FavoriteProduct: /favoris recommends from the aisle, and this is where a shopper who
+    // hearts from the product page would otherwise save nothing to recommend from.
+    sous_categorie_id: (product as any).sous_categorie_id,
+    brand_id: (product as any).brand_id,
   };
   // Backend already filters reviews by publier = 1 in the relationship, so use all reviews returned
   // The publier field is hidden in JSON response, so we can't filter on frontend
