@@ -264,3 +264,23 @@ $fmt = fn($n) => number_format((float)$n, 3, '.', ' ');
 8. **TopRegionsWidget** — queries `commandes.region` grouped by region for orders + `clients` joined to `commandes` for top clients. Both respect the global period filter.
 
 9. **Custom blade widgets** must wrap content in `<x-filament-widgets::widget>` to get the card shell.
+
+10. **`Get` / `Set` live at `Filament\Schemas\Components\Utilities\*` in v4** — `Filament\Forms\Get`
+    does NOT exist (filament/forms v4.2.0 ships only `FormsComponent`, `FormsServiceProvider` and
+    `helpers` at the root of `src/`). A leftover v3 hint is invisible until the closure runs, so it
+    can sit in a shipped file for weeks.
+
+    That is exactly what made `/products/create` return 500 while editing a product worked: the two
+    broken hints were inside a `Repeater` item, and `CreateRecord::fillForm()` calls
+    `$this->form->fill()` with **no arguments** — the call that applies component defaults — while
+    `Repeater::setUp()` defaults to one empty item. Create instantiated the item and crashed; edit
+    fills from the record, skips defaults, renders zero items, and never touched the bug.
+
+    Run `php artisan filament:check-classes` before deploying. It resolves every Filament class
+    name referenced under `app/` through the file's `use` aliases and fails on any that
+    `class_exists()` cannot find.
+
+11. **A repeater `itemLabel` must be defensive.** `fn (array $state) => $state['q']` throws twice
+    over: `array` is non-nullable and Filament passes null for a fresh item, and a missing key is an
+    `Undefined array key` ErrorException. Both are fatal, and an item LABEL must never be able to
+    fail the render of the form it decorates. Type it `?array` and reach for keys with `??`.

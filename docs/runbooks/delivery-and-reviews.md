@@ -173,8 +173,18 @@ GSM-7 alphabet and are left alone.
 ```bash
 php artisan migrate                    # google_id, review_code, contact phone/subject
 php artisan config:clear
+php artisan filament:check-classes             # fails on a v3 class name left in an admin form
 php artisan aramex:sync-tracking --dry-run     # verify the delivered code, then let the schedule run
 php artisan notifications:doctor               # read both warnings
+```
+
+`filament:check-classes` is there because a single leftover `Filament\Forms\Get` type hint — a
+class removed in Filament v4 — made `/products/create` return 500 on every load while editing a
+product worked fine. PHP does not care about a dead class name until something evaluates it, so it
+sat in a shipped file invisibly. When a page 500s and you want the reason:
+
+```bash
+php artisan errors:last --grep=products/create
 ```
 
 And confirm the **scheduler container** is running (`schedule:work`) — without it neither the
