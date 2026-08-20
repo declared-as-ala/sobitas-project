@@ -83,7 +83,20 @@ export function ProductInfoSection({
         </span>
       </summary>
 
-      <div className="pb-6 pt-1 text-[15px] leading-relaxed text-ink-2">{children}</div>
+      {/*
+        ── THE CONTENT REVEALS, IT DOES NOT APPEAR ─────────────────────────────────────────
+        `<details>` has no native open transition that works across engines — `::details-content`
+        and `interpolate-size` are Chrome-only as of this writing — so the HEIGHT is not animated
+        and deliberately so: faking it needs JS, a measured height and a resize observer, on a
+        component that renders up to seven times per page and currently costs zero hydration.
+
+        What is animated is the content's own arrival: 4px of travel and an opacity ramp, keyed off
+        `[open]` so it plays on open and never on close. That is enough to connect the chevron's
+        rotation to the panel appearing, which is the whole job — without it the two read as two
+        unrelated events. Under 768px the mobile motion clamp shortens it to 0.2s automatically,
+        and `prefers-reduced-motion` removes it (see globals.css).
+      */}
+      <div className="pdp-reveal-content pb-6 pt-1 text-[15px] leading-relaxed text-ink-2">{children}</div>
     </details>
   );
 }

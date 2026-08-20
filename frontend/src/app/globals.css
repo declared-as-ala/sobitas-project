@@ -1492,6 +1492,27 @@ input[type="search"]::-webkit-search-results-decoration {
  * this panel is `bg-elevated` in page scope and a white plate inside `.pt-slab` — the same class of
  * assumption that put white text on a white card in the footer. A mask is colour-blind.
  */
+/**
+ * The disclosure panels on the product page (ProductInfoSection).
+ *
+ * Keyed off `details[open]` rather than a class React toggles, because the element is native and
+ * has no React state — the animation has to come from the same place the open/closed state does.
+ * It plays on OPEN only: a closing `<details>` removes its content from the box tree immediately,
+ * so there is nothing left to animate out and attempting it produces a flash.
+ */
+@keyframes pdp-reveal-content {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+details[open] > .pdp-reveal-content {
+  animation: pdp-reveal-content 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details[open] > .pdp-reveal-content { animation: none; }
+}
+
 .pdp-clamped {
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);

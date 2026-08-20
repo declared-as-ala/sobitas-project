@@ -19,7 +19,7 @@ import { ProductQualityPanel } from '@/app/components/product/ProductQualityPane
 import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -1250,8 +1250,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </>
                 ) : (
                   <>
+                    {/* ── A PRESS THAT LOOKS LIKE A PRESS ──────────────────────────────────
+                        The two CTAs answered a tap with a background-colour change alone, which on
+                        a phone is invisible under the thumb that caused it. `active:scale-[0.99]`
+                        is 0.5px of travel on a 52px button — below the threshold where it reads as
+                        an animation and above the one where it reads as nothing.
+
+                        Named properties rather than `transition-all`, and `motion-reduce` opts out
+                        entirely: a scale is movement, and DESIGN_SYSTEM §9 is explicit that
+                        anything moving more than a colour respects the preference. */}
                     <Button
-                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide"
+                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide transition-[background-color,transform] duration-150 active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100"
                       onClick={handleAddToCart}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -1260,7 +1269,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </Button>
                     <Button
                       variant="outline"
-                      className="min-h-[52px] w-full border-brand bg-transparent font-display text-sm font-bold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand"
+                      className="min-h-[52px] w-full border-brand bg-transparent font-display text-sm font-bold uppercase tracking-wide text-brand transition-[background-color,color,transform] duration-150 hover:bg-brand hover:text-on-brand active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100"
                       onClick={handleQuickOrderClick}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -2167,7 +2176,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule-strong">
-                              <div className="h-full rounded-full bg-amber-400 transition-all" style={{ width: `${pct}%` }} />
+                              {/* `transition-[width]`, not `transition-all`: DESIGN_SYSTEM §9 asks
+                                  for named properties because `all` also animates `ring-color`,
+                                  so a focus ring fades in instead of appearing. 500ms because
+                                  this bar changes when the SORT changes, and a bar that jumps
+                                  reads as a re-render rather than as the same data reordered. */}
+                              <div
+                                className="h-full rounded-full bg-amber-400 transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                                style={{ width: `${pct}%` }}
+                              />
                             </div>
                             <span className="w-7 shrink-0 text-right text-xs text-ink-3 tabular-nums">{count}</span>
                           </div>
@@ -2229,7 +2246,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     {reviewsToShowOnPage.map((review) => {
                       const reviewerName = review.user?.name?.trim() || 'Client';
                       return (
-                        <li key={review.id} className="py-4 sm:py-5">
+                        /* A hover plate that bleeds past the text column, so a row highlights as a
+                           ROW rather than as a rectangle inset inside a list. `-mx-3 px-3` is the
+                           same trick the applied-filter chips use to grow a target without moving
+                           the text. Colour only — a review is not a control and must not lift. */
+                        <li
+                          key={review.id}
+                          className="-mx-3 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-sunken sm:py-5"
+                        >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
                               <span className="truncate text-sm font-bold text-ink-1">{reviewerName}</span>
@@ -2301,10 +2325,42 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   pipeline has never fired and not one product has a published review. A loud
                   empty state repeated across 11,263 pages would read as a site with no customers.
                 */
-                <div className="rounded-xl border border-hairline bg-sunken px-4 py-6 text-center">
-                  <p className="text-sm text-ink-2">Aucun avis pour le moment</p>
-                  <p className="mt-1 text-xs text-ink-3">
+                /*
+                  ── AND IT IS THE ONLY STATE THIS SECTION IS EVER IN (owner, 20/08/2026) ──────
+                  *"work more on the avis section and avis components — redesign them."*
+
+                  Not one product in this catalogue has a published review: I sampled the 300 most
+                  popular and every one returns `review_count: 0`. So this branch — two grey lines
+                  in a box — is what "Avis clients" renders on all 11,263 product pages, under a
+                  32px heading, above the related-products rail. It was the emptiest 90px on the
+                  site and it was on every page of it.
+
+                  What replaced it is still quiet, deliberately: a loud "BE THE FIRST!" repeated
+                  across a whole catalogue reads as a shop with no customers, which is the thing to
+                  avoid. What it adds is the one fact that is worth a visitor's attention here —
+                  that a review attached to a real order is marked as such.
+
+                  THAT SENTENCE IS CAREFULLY WORDED AND THE WORDING IS THE POINT. It says reviews
+                  from an order CARRY A BADGE. It does not say only buyers may review, because that
+                  is not true of this backend: `ClientController` publishes any authenticated
+                  review of 4 stars or more, purchase or no purchase. The badge test in the row
+                  below (`verified === 1 || commande_id != null`) is the same one
+                  buildAggregateRatingAndReviews uses to decide what may enter the structured data,
+                  and this copy describes exactly that and nothing more.
+                */
+                <div className="rounded-2xl border border-hairline bg-sunken px-5 py-8 text-center sm:py-10">
+                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-hairline bg-elevated">
+                    <MessageSquare className="h-5 w-5 text-ink-3" aria-hidden="true" />
+                  </div>
+                  <p className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
+                    Aucun avis pour le moment
+                  </p>
+                  <p className="mx-auto mt-2 max-w-[46ch] text-sm leading-relaxed text-ink-3">
                     Soyez le premier à donner votre avis sur ce produit.
+                  </p>
+                  <p className="mx-auto mt-5 inline-flex max-w-full items-center gap-2 rounded-full border border-hairline bg-elevated px-3.5 py-2 text-start text-[12.5px] leading-snug text-ink-2">
+                    <BadgeCheck className="h-4 w-4 shrink-0 text-ok" aria-hidden="true" />
+                    Les avis rattachés à une commande portent la mention «&nbsp;Achat vérifié&nbsp;».
                   </p>
                 </div>
               )}
