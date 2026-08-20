@@ -1114,7 +1114,11 @@ export function buildItemListSchema(
     name: options?.name || 'Produits',
     description: options?.description || undefined,
     numberOfItems: items.length,
-    itemListElement: items.slice(0, 20).map((item, index) => ({
+    /* 30, not 20. /shop renders SHOP_PER_PAGE = 24 products a page, so a 20-item cap silently
+       dropped four products from every page of a 470-page series — 1,880 products, on the only
+       listing markup they appear in. The cap exists to stop a 3,000-item category page emitting
+       600 KB of JSON-LD, which 30 still does; it was never meant to be tighter than a page. */
+    itemListElement: items.slice(0, 30).map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       name: item.name,

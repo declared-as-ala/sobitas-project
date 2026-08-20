@@ -562,8 +562,11 @@ export const getShopPage = async (
  * the checkbox that reads as a broken filter rather than as a fact about the catalogue.
  *
  * `per_page=1` and `light=1`: the response is one product row and a pagination block — about
- * 900 bytes — and the only field read is `pagination.total`. It is called inside the shop page's
- * `unstable_cache` window, so it costs one query per 300 seconds across all visitors.
+ * 900 bytes — and the only field read is `pagination.total`. The shop page wraps this call in its
+ * own `unstable_cache` (revalidate 300, tags shop/products), so it costs one query per 300 seconds
+ * across all visitors. It is NOT cached here — this module's axios instance is invisible to Next's
+ * Data Cache, so every caller has to opt in, and for a while /shop's docblock claimed a cache that
+ * its call site did not actually have.
  *
  * Fails to `null` rather than to 0: "we could not count" and "nothing is in stock" are different
  * statements, and the UI shows the warning only for the first.

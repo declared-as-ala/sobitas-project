@@ -466,7 +466,19 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
         id="ventes-flash-heading"
         kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
         icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
-        title="Ventes flash"
+        /*
+          THE TITLE FOLLOWS THE DATA, because the alternative is a lie with a name.
+
+          "Ventes flash" is a claim about time, and the countdown beside it is the evidence. When
+          the set carries no expiration date the countdown and the spoken deadline both drop out by
+          themselves (see `earliestExpiration`) — and a heading that still says "flash" over four
+          undated discounts is the band asserting an urgency the page can no longer show.
+
+          This is not hypothetical: every promo in the catalogue expires on 2026-09-03, after which
+          the homepage falls back to the deepest real discounts it already holds (HomePageClient),
+          which have no deadline. Same band, same layout, honest label.
+        */
+        title={earliestExpiration ? 'Ventes flash' : 'Meilleures promos'}
         /* ── THE CLOCK RETURNS TO THE HEADING ROW, WITHOUT THE BUG THAT MOVED IT OFF ──────
            It was pulled out of `trailing` because that slot is `hidden … sm:flex`, so on a phone
            — most of this site's traffic — the urgency device did not exist at all. It went to a

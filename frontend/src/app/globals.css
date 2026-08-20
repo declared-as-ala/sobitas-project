@@ -147,10 +147,16 @@
 
   /* Reserve the mobile tab bar's height so the last row of content and the footer are never
      hidden behind it. Driven by --tabbar-h (styles/tokens.css), which is 0px above 767px and
-     is the single knob that also switches the bar off entirely. */
+     is the single knob that also switches the bar off entirely.
+
+     NO env() HERE. `--tabbar-h` is `calc(56px + env(safe-area-inset-bottom, 0px))` — the inset was
+     folded INTO the token precisely because consumers kept forgetting it, and adding it again
+     counts it twice. On a notched iPhone that was ~34px of dead canvas under the footer of every
+     page on the site. The token is the whole footprint; consumers subtract against it and nothing
+     else. */
   @media (max-width: 767px) {
     body {
-      padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: var(--tabbar-h);
     }
   }
 
@@ -556,6 +562,82 @@ html[dir="rtl"] [data-i18n-ltr] {
  * ============================================================================================ */
 body[data-page='product'] header.pt-site-header {
   position: relative;
+}
+
+/* ==============================================================================================
+ * THE HEADER'S HEIGHT IS A TOKEN, AND THESE ARE THE THREE THINGS THAT CHANGE IT.
+ *
+ * `--header-h` is declared in styles/tokens.css (65px phone / 114px from 768). Everything that
+ * pins itself below the header reads it — today that is /shop's filter-and-sort toolbar, which
+ * previously hardcoded 68px and was therefore wrong at BOTH widths: a 13px seam on a phone with
+ * page content scrolling through it, and a 26px overlap on desktop with the search field's top
+ * edge hidden under the header. Measured 20/08/2026.
+ *
+ * 1. COMPACT. The header collapses on scroll (see [data-compact] above), 65 -> 55 and 114 -> 94.
+ *    A pinned element that does not follow leaves the same seam back, 10-20px of it, for the
+ *    entire time the reader is scrolling — which is the entire time it matters. `:has()` rather
+ *    than a second attribute write in HeaderClient: the attribute already exists, and this keeps
+ *    the whole geometry in CSS where the transition lives. A browser without `:has()` gets the
+ *    expanded value and a 10px gap while scrolling, which is exactly the old behaviour.
+ *
+ * 2. THE PRODUCT PAGE. Its header is relative (above), so nothing is above a pinned element.
+ *
+ * 3. /shop BELOW 768. Same argument the product page won on, and the owner made it again on
+ *    20/08/2026 looking at a phone: *"the header and the filter sticky in wrong place — maybe
+ *    don't even make the header pos top, make it relative"*.
+ *
+ *    Measured on a 390x844 phone before this: site header 55px + shop toolbar 118px + tab bar
+ *    56px = 229px of chrome, 27% of the viewport, three persistent strips, with a product grid
+ *    behind them. The header is the one of the three that is doing the least: the bottom tab bar
+ *    already carries Accueil / Favoris / Boutique / Compte / Panier, and the shop toolbar carries
+ *    a search field scoped to the catalogue you are actually looking at. So the header scrolls
+ *    away and the toolbar becomes the single pinned layer, at top 0 by construction — there is no
+ *    offset left to get wrong.
+ *
+ *    DESKTOP KEEPS IT. There the header is the category nav, the viewport is not the constraint,
+ *    and the toolbar pins under it correctly now that the offset is a token.
+ * ============================================================================================ */
+/* `--header-h` is COMPOSED on <body>, not declared four times, and that is load-bearing rather
+   than tidy. A custom property is substituted at computed-value time on the element that DECLARES
+   it: put the calc on `:root` and html would resolve it against html's own `--header-shrink`, so
+   the compact state — which is only knowable from an attribute on the header, i.e. inside body —
+   could never reach it. Declared on body, body's own shrink applies and every descendant inherits
+   the right answer.
+
+   It also means the two page overrides below need no specificity games. They set `--header-h`
+   directly on the same element the calc lives on, with one more attribute of specificity, so they
+   win by the ordinary cascade. The first attempt used `body:has(...)` for the compact state and a
+   plainer `body[data-page='shop']` for the override, and the `:has()` selector — (0,2,2) against
+   (0,1,1) — quietly won: the phone toolbar pinned itself 55px down the viewport with page content
+   showing above it. */
+body {
+  --header-h: calc(var(--header-h-full) - var(--header-shrink));
+}
+
+body:has(header.pt-site-header[data-compact]) {
+  --header-shrink: 10px;
+}
+
+@media (min-width: 768px) {
+  body:has(header.pt-site-header[data-compact]) {
+    --header-shrink: 20px;
+  }
+}
+
+/* Nothing is pinned above a pinned element on these two templates, so the offset is zero and the
+   consumer needs no media query of its own — `top: var(--header-h)` is correct everywhere. */
+body[data-page='product'] {
+  --header-h: 0px;
+}
+
+@media (max-width: 767px) {
+  body[data-page='shop'] header.pt-site-header {
+    position: relative;
+  }
+
+  body[data-page='shop'] {
+    --header-h: 0px;
+  }
 }
 
 /* WCAG 2.3.3. The collapse still HAPPENS — it is a layout state, not decoration, and removing it

@@ -307,9 +307,6 @@
   "src/app/(shop)/shop/[slug]/page.tsx": {
     "DS001": 1
   },
-  "src/app/(shop)/shop/loading.tsx": {
-    "DS007": 1
-  },
   "src/app/components/AddressSelector.tsx": {
     "DS001": 2,
     "DS002": 3,
@@ -426,9 +423,6 @@
     "DS001": 6,
     "DS002": 6,
     "DS003": 6
-  },
-  "src/app/components/ScrollToTop.tsx": {
-    "DS011": 2
   },
   "src/app/components/SearchBar.tsx": {
     "DS005": 1

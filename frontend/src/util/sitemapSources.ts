@@ -310,6 +310,65 @@ export const STATIC_ROUTES: ReadonlyArray<{ path: string; changeFrequency: NonNu
   { path: '/partenaires', changeFrequency: 'monthly', priority: 0.6 },
 ];
 
+/**
+ * /shop?page=2 … /shop?page=N.
+ *
+ * ── 470 PAGES, ONE OF THEM DISCOVERABLE ─────────────────────────────────────────────────────
+ * `STATIC_ROUTES` carries `/shop` and nothing else, and no other source emits a `?page=` URL. The
+ * only path to page 470 was the pager itself, which shows `{1, current±1, last}` — so reaching the
+ * middle of the catalogue meant walking roughly 235 hops from page 1. Googlebot does not do that,
+ * which is how ~11,000 products came to sit behind a listing chain nothing crawled.
+ *
+ * These URLs are legitimately indexable: `page` is deliberately absent from next.config's
+ * FACET_KEYS, each page self-canonicalises (a paged view is not a duplicate — it holds products
+ * that appear on no other URL), and /shop now 308s anything past the end rather than serving an
+ * indexable empty page. So they qualify for a sitemap, and 469 extra URLs is noise beside the
+ * 11,263 product URLs already emitted.
+ *
+ * `priority: 0.3` and `weekly`: they are a crawl PATH, not destinations competing with the
+ * products they link to. Google treats priority as a hint at best, but stating the hierarchy
+ * honestly costs nothing.
+ *
+ * `critical: false` and `verified: false`: this is discovery scaffolding. If /api/shop_facets is
+ * down, the right outcome is a sitemap without the pager pages, never a failed build — the
+ * products themselves are emitted by their own source and do not depend on this.
+ */
+const shopPaginationSource: SitemapSource = {
+  id: 'shop-pagination',
+  section: 'listings',
+  critical: false,
+  load: async (ctx) => {
+    const { getShopFacets } = await import('@/services/api');
+    const { SHOP_PER_PAGE } = await import('@/util/shopQuery');
+
+    const facets = await getShopFacets().catch(() => null);
+    const total = Number(facets?.total_published ?? 0) || 0;
+    // Ceiling, then cap. The cap is a guard against a malformed total looping, not a budget:
+    // 2,000 pages is 48,000 products.
+    const totalPages = Math.min(2000, Math.ceil(total / SHOP_PER_PAGE));
+
+    if (totalPages < 2) {
+      return {
+        entries: [],
+        verified: false,
+        note: '[sitemap] shop-pagination: no total_published, skipped',
+      };
+    }
+
+    const entries = Array.from({ length: totalPages - 1 }, (_, i) => ({
+      url: `${ctx.baseUrl}/shop?page=${i + 2}`,
+      changeFrequency: 'weekly' as const,
+      priority: 0.3,
+    }));
+
+    return {
+      entries,
+      verified: false,
+      note: `[sitemap] shop-pagination: ${entries.length} pager URL(s) from ${total} products`,
+    };
+  },
+};
+
 const staticSource: SitemapSource = {
   id: 'static',
   section: 'static',
@@ -793,6 +852,7 @@ const blogTagsSource: SitemapSource = {
  */
 export const SITEMAP_SOURCES: ReadonlyArray<SitemapSource> = [
   staticSource,
+  shopPaginationSource,
   // Products first among the data sources: it is the only thing that knows which brands and which
   // subcategories have something to sell, and the two listing sources below refuse to submit an
   // empty listing page. `needs` makes that a runtime assertion rather than a comment about order.

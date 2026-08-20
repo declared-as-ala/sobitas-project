@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Section } from '@/app/components/layout/Section';
+import { SectionHeader } from '@/app/components/SectionHeader';
 import { ProductCard } from '@/app/components/ProductCard';
 import { ProductGrid } from '@/app/components/ProductGrid';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
@@ -14,7 +16,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X, CircleAlert, Check, SlidersHorizontal } from 'lucide-react';
+import { ArrowDownUp, Filter, Search, X, CircleAlert, Check, SlidersHorizontal } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
@@ -36,6 +38,8 @@ import { generateBrandDescriptionFallback } from '@/util/brandDescriptionFallbac
 import {
   buildShopUrl,
   DEFAULT_SHOP_SORT,
+  SHOP_GRID_COLS,
+  SHOP_PER_PAGE,
   type ShopFacets,
   type ShopQuery,
   type ShopSort,
@@ -202,6 +206,10 @@ function ShopContent({
 
   // Sorting and sub-filters states
   const [sortBy, setSortBy] = useState<string>(serverQuery?.sort ?? 'popularity');
+  /* Drives the sort trigger's outline on a phone, where the trigger is an icon with no room for
+     its own value. "A sort is applied" is the half of the information that fits in 44px, and it
+     is the half that matters — a shopper who did not change it does not need telling. */
+  const sortIsDefault = sortBy === 'popularity';
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
   const [selectedFlavors, setSelectedFlavors] = useState<string[]>(serverQuery?.flavors ?? []);
@@ -329,6 +337,32 @@ function ShopContent({
     const timer = setTimeout(() => setIsNavigating(false), 8000);
     return () => clearTimeout(timer);
   }, [isNavigating]);
+
+  /*
+    ── THIS TEMPLATE OWNS THE TOP OF A PHONE VIEWPORT ────────────────────────────────────────
+    `data-page="shop"` drives two rules in globals.css, both scoped to `max-width: 767px`: the
+    site header stops being sticky, and `--header-h` goes to 0 so this page's toolbar pins at the
+    very top with nothing above it to get the offset wrong.
+
+    The attribute is set here, by the page, rather than tested for in HeaderClient — the same
+    reasoning the product page's block records: the header would have to know which routes own
+    their viewport, a list it has no business holding and would get wrong the first time a route
+    was added.
+
+    Measured on a 390x844 phone before this: 55px header + 118px toolbar + 56px tab bar = 229px,
+    27% of the viewport, with a 13px seam between the first two because the toolbar's offset was
+    hardcoded at 68px.
+  */
+  useEffect(() => {
+    document.body.setAttribute('data-page', 'shop');
+    return () => {
+      // Only clear what this page set. A cleanup that removed the attribute unconditionally would
+      // fight the product page during a client-side transition between the two.
+      if (document.body.getAttribute('data-page') === 'shop') {
+        document.body.removeAttribute('data-page');
+      }
+    };
+  }, []);
 
   // Keep skeleton visible at least SKELETON_MIN_MS to avoid flicker on fast loads
   useEffect(() => {
@@ -1071,6 +1105,28 @@ function ShopContent({
    * between a shop that says it has 10,669 products and one that insists it has 12.
    */
   const resultCount = isServerMode ? (serverPagination?.total ?? 0) : filteredProducts.length;
+
+  /*
+   * The six rayons for the "Parcourir par rayon" band at the foot of the page. Derived from the
+   * props the page already ships — `categories` for the names and `facets.category_counts` for the
+   * numbers, which /api/shop_facets computes anyway — so the band costs no fetch and no payload.
+   * `scoped` inside the navigation callback answers the same question, but it is a local there.
+   */
+  const isBoutiqueRoot = serverBasePath === '/shop';
+  const browseCategories = useMemo(
+    () =>
+      (categories ?? [])
+        .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
+          Boolean(c?.slug && c?.designation_fr)
+        )
+        .map((c) => ({
+          slug: c.slug,
+          designation_fr: c.designation_fr.trim(),
+          count: Number(facets?.category_counts?.[c.slug] ?? 0) || 0,
+        }))
+        .sort((a, b) => b.count - a.count),
+    [categories, facets]
+  );
   const totalPages = isServerMode
     ? (serverPagination?.totalPages ?? 1)
     : Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
@@ -1325,7 +1381,14 @@ function ShopContent({
             }
           }
           
-          return breadcrumbItems.length > 1 ? (
+          /*
+             `> 0`, not `> 1`. On /shop itself the array holds exactly one item — Boutique — and the
+             old guard rendered null, so the page emitted BreadcrumbList JSON-LD with no visible
+             counterpart and no link back to the homepage from its main content. ShopBreadcrumbs
+             injects the "Accueil" crumb itself and renders the last item unlinked, so `> 0` gives
+             "Accueil › Boutique" with a real anchor on Accueil and the current page as text.
+          */
+          return breadcrumbItems.length > 0 ? (
             <div className="mb-4">
               <ShopBreadcrumbs items={breadcrumbItems} />
             </div>
@@ -1359,7 +1422,12 @@ function ShopContent({
                 <li key={sub.slug}>
                   <Link
                     href={`/${sub.slug}`}
-                    className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:border-red-500 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400"
+                    /* min-h-[44px] only. The hardcoded grey and red literals on this line are
+                       enumerated accepted debt in design-baseline.json; migrating half of them
+                       would raise the baseline's noise without lowering its count, which is the
+                       failure mode that file exists to prevent. Tap target first; tokens when this
+                       file gets its own migration pass. */
+                    className="inline-flex min-h-[44px] items-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:border-red-500 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400"
                   >
                     {sub.designation_fr}
                   </Link>
@@ -1464,8 +1532,14 @@ function ShopContent({
           `top-[var(--header-h,4rem)]` rather than `top-0`: the site header is sticky too, and a
           toolbar pinned at 0 slides underneath it.
         */}
-        <div className="sticky top-[4.25rem] z-30 -mx-4 mb-4 border-y border-hairline bg-canvas/95 px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+        <div className="sticky top-[var(--header-h)] z-30 -mx-4 mb-4 border-b border-rule bg-canvas px-4 py-2 transition-[top] duration-200 motion-reduce:transition-none sm:-mx-6 sm:px-6 sm:py-2.5 lg:-mx-8 lg:px-8">
+          {/* ONE ROW AT EVERY WIDTH. It was `flex-col` below `md`, which made the pinned bar two
+              rows and 118px tall — on a 390px phone that was 118 of the 186px of chrome standing
+              between the reader and a product. Sort collapses to its icon below `sm` instead,
+              which is the control that survives compression best: it has a default nobody changes,
+              and when somebody does change it the button goes brand-coloured, the same way the
+              filter count does. */}
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
             <div className="relative min-w-0 flex-1">
               <Search
                 className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
@@ -1474,7 +1548,10 @@ function ShopContent({
               <input
                 type="text"
                 inputMode="search"
-                placeholder="Rechercher dans la boutique…"
+                /* Short enough to survive the ~200px this field gets on a 390px phone once
+                   sort and Filtres are beside it. The full sentence is on aria-label, where it
+                   costs no pixels. */
+                placeholder="Rechercher…"
                 value={searchQuery}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 aria-label="Rechercher dans la boutique"
@@ -1486,28 +1563,42 @@ function ShopContent({
                   type="button"
                   onClick={() => handleSearchChange('')}
                   aria-label="Effacer la recherche"
-                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand"
+                  /* 28px VISUAL, 44px TARGET. Growing the box to 44 would drag the X off the
+                     input's optical centre, which is worse than the small glyph; `after:-inset-2`
+                     extends the hit area instead. DESIGN_SYSTEM's 44px floor is about what a thumb
+                     can land on, not about what is painted. */
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors after:absolute after:-inset-2 after:content-[''] hover:text-brand"
                 >
                   <X className="h-4 w-4" aria-hidden="true" />
                 </button>
               )}
             </div>
 
-            <div className="flex items-center gap-2 md:w-auto">
-              <div className="min-w-0 flex-1 md:w-52">
-                <Select value={sortBy} onValueChange={handleSortChange}>
-                  <SelectTrigger className="h-11 rounded-xl border-hairline bg-elevated text-[13.5px] text-ink-1">
+            <div className="flex shrink-0 items-center gap-2">
+              {/* `w-11` below `sm` renders the trigger as a square icon button — Radix keeps the
+                  listbox and the keyboard behaviour, only the label is dropped. `sortIsDefault`
+                  drives the brand outline, so a phone still shows that a sort is APPLIED even
+                  though it cannot show which one until the sheet opens. */}
+              <Select value={sortBy} onValueChange={handleSortChange}>
+                <SelectTrigger
+                  aria-label={`Trier — ${SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Popularité'}`}
+                  className={`h-11 w-11 justify-center rounded-xl bg-elevated px-0 text-[13.5px] text-ink-1 sm:w-44 sm:justify-between sm:px-3 lg:w-52 [&>svg:last-child]:hidden sm:[&>svg:last-child]:block ${
+                    sortIsDefault ? 'border-hairline' : 'border-brand text-brand'
+                  }`}
+                >
+                  <ArrowDownUp className="h-4 w-4 shrink-0 sm:hidden" aria-hidden="true" />
+                  <span className="hidden truncate sm:block">
                     <SelectValue placeholder="Trier par" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SORT_OPTIONS.map((o) => (
-                      <SelectItem key={o.value} value={o.value}>
-                        {o.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  </span>
+                </SelectTrigger>
+                <SelectContent>
+                  {SORT_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>
+                      {o.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
               {/* Desktop: collapse the rail. It stays OPEN by default now — a filter rail that
                   has to be summoned is a filter rail nobody uses, and this page has 577 brands
@@ -1533,7 +1624,14 @@ function ShopContent({
                   <button
                     type="button"
                     aria-label="Ouvrir les filtres"
-                    className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand lg:hidden"
+                    /* Keeps its word at every width. It is the highest-value control on this bar
+                       — the one that takes 11,263 products down to something a person can read —
+                       and an unlabelled funnel glyph is the commonest way that gets missed. */
+                    className={`flex h-11 shrink-0 items-center gap-2 rounded-xl border bg-elevated px-3.5 text-[13.5px] font-semibold transition-colors sm:px-4 lg:hidden ${
+                      appliedFilters.length > 0
+                        ? 'border-brand text-brand'
+                        : 'border-hairline text-ink-1 hover:border-brand'
+                    }`}
                   >
                     <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
                     Filtres
@@ -1607,7 +1705,12 @@ function ShopContent({
                   type="button"
                   onClick={() => removeFilter(filter.type, filter.value)}
                   aria-label={`Retirer le filtre ${filter.label}`}
-                  className="group inline-flex min-h-[30px] items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] pl-3 pr-2 text-[12px] font-semibold text-ink-1 transition-colors hover:border-brand hover:bg-brand/15"
+                  /* Same trick as the clear button, and here it is load-bearing: these chips sit
+                     INSIDE the pinned toolbar, so raising them to a real 44px would spend the
+                     viewport the header-h work just bought back. The inset is asymmetric
+                     (`-inset-y-1.5 -inset-x-1`) because `gap-1.5` between adjacent chips is 6px —
+                     a uniform -inset-2 would make neighbouring hit boxes overlap. */
+                  className="group relative inline-flex min-h-[30px] items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] pl-3 pr-2 text-[12px] font-semibold text-ink-1 transition-colors after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-[''] hover:border-brand hover:bg-brand/15"
                 >
                   {filter.label}
                   <X className="h-3.5 w-3.5 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
@@ -1616,7 +1719,7 @@ function ShopContent({
               <button
                 type="button"
                 onClick={clearFilters}
-                className="ml-0.5 inline-flex min-h-[30px] items-center rounded-full px-2.5 text-[12px] font-semibold text-brand transition-colors hover:underline"
+                className="relative ml-0.5 inline-flex min-h-[30px] items-center rounded-full px-2.5 text-[12px] font-semibold text-brand transition-colors after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-[''] hover:underline"
               >
                 Tout effacer
               </button>
@@ -1631,15 +1734,26 @@ function ShopContent({
             272px rather than 288: the extra 16px goes to the grid, where it is the difference
             between four ~296px cards and four ~292px ones at 1600.
 
-            `sticky top-[8.5rem]` clears the site header AND this page's own sticky toolbar, and
-            the max-height plus overflow means a rail with two dozen brands open scrolls inside
+            THE OFFSET IS DERIVED, NOT TYPED. It was `top-[8.5rem]` — 136px — chosen when the
+            toolbar above it pinned at a hardcoded 68px and ended at 134px. The day the toolbar
+            moved to `top-[var(--header-h)]` that arithmetic stopped holding and nothing complained:
+            measured at 1536, the toolbar now runs 94 -> 160 in the compact state and 114 -> 180 at
+            rest, so the rail's "Filtres" heading pinned 24px (compact) to 44px (resting) INSIDE
+            the toolbar's own box. A hardcoded offset under a derived one is a regression waiting
+            for someone to change the derived one.
+
+            `4.75rem` is 76px: the toolbar's measured 66px (py-2.5 + border-y + an h-11 control row)
+            plus a 10px gutter. `5.75rem` adds a 16px bottom gutter, so the rail's foot lands clear
+            of the viewport edge in BOTH header states rather than only the one it was measured in.
+
+            The max-height plus overflow means a rail with two dozen brands open scrolls inside
             itself instead of pushing the page. Without that the aside was 1,800px tall and the
             grid beside it scrolled independently — the classic listing-page fault where the
             filters end up somewhere above the products you are looking at.
           */}
           {showFiltersDesktop && (
             <aside className="hidden w-[17rem] shrink-0 lg:block">
-              <div className="sticky top-[8.5rem] max-h-[calc(100dvh-9.5rem)] overflow-y-auto overscroll-contain rounded-2xl border border-hairline bg-elevated px-4 py-3">
+              <div className="sticky top-[calc(var(--header-h)+4.75rem)] max-h-[calc(100dvh-var(--header-h)-5.75rem)] overflow-y-auto overscroll-contain rounded-2xl border border-hairline bg-elevated px-4 py-3">
                 <div className="mb-1 flex items-center justify-between gap-2 border-b border-hairline pb-2.5">
                   <h2 className="flex items-center gap-1.5 font-display text-[13px] font-bold uppercase tracking-wide text-ink-1">
                     <Filter className="h-3.5 w-3.5 text-brand" aria-hidden="true" /> Filtres
@@ -1683,7 +1797,12 @@ function ShopContent({
                  without this the previous page's twelve products stay on screen for its whole
                  duration with no feedback — long enough on a Tunisian mobile connection for a
                  shopper to conclude the click did nothing and click again. */
-              <ProductsSkeleton showBreadcrumb={false} showFilters={false} gridClassName="lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
+              <ProductsSkeleton
+                showBreadcrumb={false}
+                showFilters={false}
+                gridClassName={SHOP_GRID_COLS}
+                cardCount={SHOP_PER_PAGE}
+              />
             ) : filteredProducts.length === 0 ? (
               <div className="rounded-2xl border border-hairline bg-elevated">
                 <EmptyState
@@ -1724,7 +1843,7 @@ function ShopContent({
                   the moment hydration swaps one for the other — CLS on the page with the most
                   cards on it.
                 */}
-                <ProductGrid className="pt-grid-stagger min-w-0 w-full lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+                <ProductGrid className={`pt-grid-stagger min-w-0 w-full ${SHOP_GRID_COLS}`}>
                   {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
@@ -1745,7 +1864,35 @@ function ShopContent({
                          string declared 30vw where the card is 34 and 19vw where it is 25, so the
                          browser was fetching a file a step too small and painting it into a wider
                          box — which is the softness the bigger cards were meant to cure. */
-                      imageSizes="(max-width: 640px) 46vw, (max-width: 1023px) 32vw, (max-width: 1279px) 35vw, (max-width: 1535px) 25vw, 19vw"
+                      /*
+                        ── THE LADDER HAS SIX STEPS AND THE OLD STRING DESCRIBED FOUR ──────────
+                        `46vw` below 640 described a 2-up phone grid this page does not have.
+                        Below `sm` the card is a ROW, not a tile: ProductCard pins the image column
+                        to a fixed `w-[104px]` (`min-[360px]:w-[124px]`), and PackCardImage insets
+                        the <Image> by 4%. So at 390px the real box is 124 x 0.92 = 114 CSS px
+                        against 179px declared — a 1.57x over-declaration, which at DPR 3 makes the
+                        browser choose the 640w candidate where 384w would do. 2.78x the pixels, on
+                        the connection least able to afford them.
+
+                        The window 641-767 had the opposite fault: one `32vw` bracket UNDER-declared
+                        a 2-up grid by ~30%, so the browser upscaled a candidate that was too small
+                        and the packshots were soft.
+
+                        Six brackets for the six real steps of `ProductGrid` twMerged with the
+                        override below — 1 / 2 / 3 / 2 / 3 / 4 columns — each derived as
+                        (card width x 0.92) at the WIDEST point of its range:
+                          <360   the fixed 104px column
+                          360-639 the fixed 124px column
+                          640-767 2-up, peaks 42vw at 767   -> 45
+                          768-1023 3-up, peaks 28.2vw       -> 30
+                          1024-1279 2-up beside the 272px rail, peaks 31.9vw -> 33
+                          1280-1535 3-up, peaks 22.3vw      -> 23
+                          >=1536 4-up, 16.4vw at 1536       -> 18
+
+                        Getting this wrong is SILENT — nothing errors, the page just ships the
+                        wrong bytes. Re-derive it here if the column ladder below ever changes.
+                      */
+                      imageSizes="(max-width: 359px) 104px, (max-width: 639px) 124px, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 33vw, (max-width: 1535px) 23vw, 18vw"
                       // Mobile-first: the shop grid is 2-col on phones (81% of traffic), so only
                       // the first 2 cards are above the fold. Eager-loading 4 made cards 3–4
                       // (off-screen on mobile) compete with the LCP image. Prioritize just the
@@ -1789,6 +1936,43 @@ function ShopContent({
         </div>
       </main>
 
+      {/*
+        ── SIX LINKS THE HUMAN PAGE DID NOT HAVE AND THE CRAWLER VIEW DID ─────────────────────
+        /x-crawler/shop passes `subCategories={categoryLinks}` and lists all six rayons; the human
+        /shop listed none in its main content. That is a bot/human content divergence on one URL,
+        which is the exact thing the crawler route's own docblock forbids — and it is the direction
+        that looks like cloaking rather than merely like an inconsistency.
+
+        BELOW the grid, never above: this is a navigation aid for someone who did not find what
+        they wanted, and putting it above would push 24 products down the page to serve the
+        minority who did not.
+
+        Rendered only on the boutique proper. On a brand or category view the crumb trail and the
+        page's own heading already say where you are, and a second "browse by" block there competes
+        with the filters instead of complementing them.
+      */}
+      {isBoutiqueRoot && !currentBrand && browseCategories.length > 0 && (
+        <Section spacing="tight" surface="sunken" width="wide" aria-labelledby="shop-parcourir">
+          <SectionHeader id="shop-parcourir" title="Parcourir par rayon" scale="3" />
+          <ul className="flex flex-wrap gap-2">
+            {browseCategories.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/${c.slug}`}
+                  prefetch={false}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                >
+                  {c.designation_fr}
+                  {c.count > 0 && (
+                    <span className="tabular-nums text-[12px] text-ink-3">{c.count.toLocaleString('fr-FR')}</span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <ScrollToTop />
     </div>
   );
@@ -1799,7 +1983,7 @@ export function ShopPageClient(props: ShopPageClientProps) {
     <Suspense fallback={
       <>
         <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
-          <ProductsSkeleton gridClassName="lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4" />
+          <ProductsSkeleton gridClassName={SHOP_GRID_COLS} cardCount={SHOP_PER_PAGE} />
         </main>
       </>
     }>

@@ -153,6 +153,60 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     .map(transformProduct)
     .map(withBrand);
 
+  /*
+   * ── THE BAND HAS A DATE ON WHICH IT DELETES ITSELF, AND IT IS 3 SEPTEMBER 2026 ────────────
+   * `/ventes_flash?per_page=100` returns four products. All four carry `promo_expiration_date` of
+   * 2026-09-03, stamped inside one 32-minute window — somebody set up a fortnight's promotion in a
+   * single sitting. The filter above is correct and, on that morning, will return an empty array,
+   * at which point the render gate below (`flashSales.length > 0`) removes the band from the
+   * homepage in one step.
+   *
+   * Two things break, and only one of them is visible. The obvious one is that the page's discount
+   * moment disappears. The quiet one is that the bands either side of it are canvas and sunken, so
+   * removing the band between them leaves two adjacent surfaces of the same colour — and the whole
+   * band architecture rests on no two neighbours sharing a fill, with the 1px seam doing the
+   * separating. The page would not look broken; it would look slightly wrong, on the day nobody
+   * was looking for a layout change.
+   *
+   * SO THE BAND FALLS BACK TO REAL DISCOUNTS RATHER THAN TO NOTHING. Every homepage pool already
+   * in hand is searched for products whose promo price genuinely beats their list price —
+   * `getPriceDisplay` is the same helper the cards price with, including its guard against a promo
+   * entered ABOVE the list price — and the four deepest discounts take the slots.
+   *
+   * No extra request: these are the payloads the page already received. And no dishonesty: with no
+   * expiration date in the set, `VentesFlashSection` drops the countdown and the deadline line by
+   * itself, and now retitles to "Meilleures promos" — because a discount without a deadline is a
+   * promotion, not a flash sale.
+   *
+   * The real repair is upstream and is the owner's: a flash band wants ~8 products across ~6
+   * categories on staggered 24-72h expiries, rotating. Three of the current four are creatine.
+   */
+  const promoFallback =
+    flashSales.length > 0
+      ? []
+      : Array.from(
+          new Map(
+            [
+              ...(safeAccueil.best_sellers || []),
+              ...(safeAccueil.new_product || []),
+              ...(safeAccueil.ventes_flash || []),
+            ].map((p) => [p.id, p])
+          ).values()
+        )
+          .map((p) => ({ product: p, price: getPriceDisplay(p) }))
+          .filter(({ price }) => price.hasPromo && price.oldPrice != null && price.oldPrice > price.finalPrice)
+          .sort(
+            (a, b) =>
+              (b.price.oldPrice! - b.price.finalPrice) / b.price.oldPrice! -
+              (a.price.oldPrice! - a.price.finalPrice) / a.price.oldPrice!
+          )
+          .slice(0, 4)
+          .map(({ product }) => product)
+          .map(transformProduct)
+          .map(withBrand);
+
+  const discountBand = flashSales.length > 0 ? flashSales : promoFallback;
+
   return (
     /* overflow-x-clip, NOT overflow-x-hidden. `hidden` makes this div a scroll container (a
        `hidden` axis forces the other axis from `visible` to `auto`), and because it wraps the
@@ -284,9 +338,12 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
         {/* Ventes flash moved ABOVE Nouveaux produits: the discount moment should land before the
             newest, least-discounted rail. SLAB — white product plates punched out of black. */}
-        {flashSales.length > 0 && (
+        {discountBand.length > 0 && (
           <>
-            <VentesFlashSection products={flashSales as any} />
+            {/* `discountBand`, not `flashSales` — see the note where it is built. The band keeps
+                its slot (and therefore the canvas/sunken alternation) on the day the last promo
+                expires, and retitles itself when there is no deadline left to count down to. */}
+            <VentesFlashSection products={discountBand as any} />
           </>
         )}
 

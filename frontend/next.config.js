@@ -86,7 +86,22 @@ const nextConfig = {
     // duplicate this rule exists to keep out of the index. A facet key that is not listed here is
     // indexed, and the cost of that mistake compounds — /shop?search={search_term_string} reached
     // 169 impressions at position 76 before anyone noticed it was in there at all.
-    const FACET_KEYS = ['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter', 'flavors', 'in_stock'];
+    /*
+     * ── EVERY ALIAS parseShopQuery HONOURS, NOT JUST THE ONES buildShopUrl WRITES ────────────
+     * util/shopQuery.ts reads BOTH spellings of three of these — `csv(sp.brand).concat(csv(sp.brands))`
+     * and the same for category/categories and subcategory/subcategories. So `/shop?brands=72`,
+     * `?categories=…`, `?subcategory=whey-isolate` and `?subcategories=…` all returned a genuinely
+     * narrowed slice of the boutique with NO X-Robots-Tag, index/follow, and a canonical pointing
+     * at /shop — the "Alternate page with proper canonical" bucket instead of the clean noindex the
+     * singular keys get.
+     *
+     * `buildShopUrl` only ever writes the singular forms, so no internal link mints these; they
+     * arrive from external links and hand-typed URLs, which is exactly the traffic this list exists
+     * to handle. Note `subcategory` — SINGULAR — was missing too.
+     *
+     * `page` stays absent on purpose: that is what keeps the 470 real paginated pages indexable.
+     */
+    const FACET_KEYS = ['search', 'brand', 'brands', 'category', 'categories', 'subcategory', 'subcategories', 'orderby', 'sort', 'min_price', 'max_price', 'filter', 'flavors', 'in_stock'];
     const facetedShopNoindex = FACET_KEYS.map((key) => ({
       source: '/shop',
       has: [{ type: 'query', key }],

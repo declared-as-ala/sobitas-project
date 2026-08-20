@@ -55,6 +55,22 @@
  */
 export const SHOP_PER_PAGE = 24;
 
+/**
+ * The boutique's column override, in ONE place because FOUR files have to agree on it.
+ *
+ * `ShopPageClient` passes it to `<ProductGrid>`, and the same string has to reach every
+ * `<ProductsSkeleton>` that stands in for that grid — the route's `loading.tsx`, the Suspense
+ * fallback and the searching fallback. Three of the four had it and `loading.tsx` did not, so a
+ * navigation into /shop rendered a 4-up 12-card skeleton and then swapped it for a 2/3/4-up
+ * 24-card grid: a 320px horizontal jump at 1536 and a doubling of grid height, on the page with
+ * the most cards on it. That is CLS, and it is precisely what ProductsSkeleton's own docblock
+ * exists to prevent.
+ *
+ * Exported from here rather than from the page, so the skeleton files do not have to import from
+ * a `'use client'` module to find out what shape to be.
+ */
+export const SHOP_GRID_COLS = 'lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4';
+
 export const SHOP_SORTS = ['popularity', 'price-asc', 'price-desc', 'newest', 'best-sellers'] as const;
 export type ShopSort = (typeof SHOP_SORTS)[number];
 export const DEFAULT_SHOP_SORT: ShopSort = 'popularity';

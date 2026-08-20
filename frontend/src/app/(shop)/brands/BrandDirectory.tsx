@@ -175,12 +175,23 @@ export function BrandDirectory({
     <div>
       {/*
         ── THE TOOLBAR IS STICKY, AND IT CARRIES THE ALPHABET ─────────────────────────────────
-        `top-[4.25rem]` clears the site header, which is itself sticky — a toolbar pinned at 0
-        slides underneath it. Search, availability and the A–Z live in one bar because they are
+        `top-[var(--header-h)]` rather than a number: the site header is sticky here (only /shop
+        and the product page unstick it), it is 65px on a phone and 114px from 768, and it collapses
+        by 10-20px on scroll. This shipped as a hardcoded `4.25rem` the same day the token was
+        introduced on /shop — 68px, which is 3px short of the phone header and 46px short of the
+        desktop one.
+
+        `bg-canvas`, not `bg-canvas/95`: DS009 bans backdrop-blur outright, so a translucent chrome
+        surface can never be masked and 45 brand logos ghost through it as you scroll.
+
+        `border-b border-rule`, not `border-y border-hairline`: a bar with no fill difference against
+        the page it sits on needs the stronger of the two boundary weights — hairline measures
+        1.26:1 there. The top border goes because with zero seam this bar sits flush under the
+        header's own `border-b border-rule`, and two adjacent rules paint as one 2px double line. Search, availability and the A–Z live in one bar because they are
         one decision ("narrow this list") and because on a directory this long the controls are
         off-screen for the entire time they are wanted otherwise.
       */}
-      <div className="sticky top-[4.25rem] z-30 -mx-4 mb-5 border-y border-hairline bg-canvas/95 px-4 py-2.5 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
+      <div className="sticky top-[var(--header-h)] z-30 -mx-4 mb-5 border-b border-rule bg-canvas px-4 py-2 transition-[top] duration-200 motion-reduce:transition-none sm:-mx-6 sm:px-6 sm:py-2.5 lg:-mx-8 lg:px-8">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
           <div className="relative min-w-0 flex-1">
             <Search

@@ -1,7 +1,11 @@
+import { permanentRedirect } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
 import { getShopPage, getCategories } from '@/services/api';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { loadForCache } from '@/util/loadForCache';
-import { parseShopQuery, buildShopUrl, type RawSearchParams } from '@/util/shopQuery';
+import { getBaseUrl } from '@/util/canonical';
+import { buildShopSchemas, shopCanonicalPath } from '@/util/shopJsonLd';
+import { parseShopQuery, buildShopUrl, SHOP_PER_PAGE, type RawSearchParams } from '@/util/shopQuery';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 
 /**
@@ -40,9 +44,15 @@ import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/craw
  * above applied to pagination rather than abandoned because of it.
  */
 
-// Same metadata object as the human page: title, description, canonical, facet noindex rules and
-// prev/next. Re-exported rather than re-declared so the two can never disagree — including the
-// page-N canonical and the "— Page N" title suffix that arrived with server-side pagination.
+// Same metadata object as the human page: title, description and canonical. Re-exported rather
+// than re-declared so the two can never disagree — including the page-N canonical and the
+// "— Page N" title suffix that arrived with server-side pagination.
+//
+// It does NOT carry "facet noindex rules and prev/next", which this comment claimed for months.
+// The facet rules are response headers set in next.config.js and never touch generateMetadata, and
+// no rel=prev/next is emitted anywhere (Google retired support in 2019; the anchor-level rel
+// attributes in CrawlerCategoryView are all Bing needs). A comment that describes protection the
+// code does not provide is worse than no comment.
 export { generateMetadata } from '@/app/(shop)/shop/page';
 
 type PageProps = { searchParams: Promise<RawSearchParams> };
@@ -50,15 +60,36 @@ type PageProps = { searchParams: Promise<RawSearchParams> };
 export default async function CrawlerShopPage({ searchParams }: PageProps) {
   const query = parseShopQuery(await searchParams);
 
-  // loadForCache, not a bare catch: a transient upstream failure (the build runner getting
-  // Cloudflare-403'd is the known one) renders empty but must NOT be baked into any cache entry,
-  // or Googlebot gets an empty boutique pinned for the whole window.
+  /*
+   * ── THE SAME CACHE ENTRY A HUMAN FETCH USES ───────────────────────────────────────────────
+   * This was the only x-crawler route with neither `unstable_cache` nor `revalidate` — its two
+   * siblings both opt in. Every Googlebot fetch of every one of the 470 pages was an uncached
+   * upstream catalogue call, against the origin whose php-fpm pool has been exhausted before.
+   *
+   * The key is BYTE-IDENTICAL to the human route's (same prefix, same SHOP_PER_PAGE, same URL
+   * builder) so `/shop?page=7` fetched by a bot and by a shopper share one entry rather than
+   * doubling the load. If you change one, change both — a divergent key silently halves the hit
+   * rate and nothing errors.
+   *
+   * loadForCache stays OUTSIDE the wrapper: inside, an empty render is what gets cached, and
+   * Googlebot would get an empty boutique pinned for the whole window.
+   */
+  const cachedShopPage = unstable_cache(
+    () => getShopPage(query),
+    ['shop-page', String(SHOP_PER_PAGE), buildShopUrl(query)],
+    { revalidate: 300, tags: ['shop', 'products'] }
+  );
+  const cachedCategories = unstable_cache(() => getCategories(), ['shop-categories'], {
+    revalidate: 3600,
+    tags: ['categories'],
+  });
+
   const [productsResponse, categories] = await Promise.all([
     loadForCache(
-      () => getShopPage(query),
+      cachedShopPage,
       { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
     ),
-    getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
+    cachedCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
   ]);
 
   const rawProducts = Array.isArray(productsResponse.products) ? productsResponse.products : [];
@@ -72,6 +103,26 @@ export default async function CrawlerShopPage({ searchParams }: PageProps) {
   const currentPage = Math.min(Math.max(1, productsResponse.pagination?.current_page ?? query.page), totalPages);
   const total = productsResponse.pagination?.total ?? products.length;
 
+  /*
+   * The same 308 guard the human route carries, and it matters MORE here: middleware forwards the
+   * page number to this route, so an unbounded ?page=N space is one a crawler can walk. Serving a
+   * bot a 200 with an empty product list, from the view that exists specifically to be indexed, is
+   * the worst version of that bug. See (shop)/shop/page.tsx for the two guard conditions.
+   */
+  if (productsResponse.pagination && query.page > totalPages && query.page !== totalPages) {
+    permanentRedirect(buildShopUrl({ ...query, page: totalPages }));
+  }
+
+  // The three schemas the human page emits, from the same builder. Before this, a crawler UA got
+  // ZERO structured data on /shop while every shopper got three blocks of it.
+  const schemas = buildShopSchemas({
+    products,
+    categories: categories ?? [],
+    currentPage,
+    canonicalPath: shopCanonicalPath({ ...query, page: currentPage }),
+    baseUrl: getBaseUrl(),
+  });
+
   const categoryLinks: CrawlerListLink[] = (categories ?? [])
     .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
       Boolean(c?.slug && c?.designation_fr)
@@ -79,7 +130,15 @@ export default async function CrawlerShopPage({ searchParams }: PageProps) {
     .map((c) => ({ name: c.designation_fr.trim(), url: `/${c.slug}` }));
 
   return (
-    <CrawlerCategoryView
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+      <CrawlerCategoryView
       kind="category"
       title="Boutique — Protéines & Compléments Alimentaires en Tunisie"
       introHtml={
@@ -99,6 +158,7 @@ export default async function CrawlerShopPage({ searchParams }: PageProps) {
         // byte-identical URLs rather than two spellings of one page.
         buildHref: (page) => buildShopUrl({ ...query, page }),
       }}
-    />
+      />
+    </>
   );
 }

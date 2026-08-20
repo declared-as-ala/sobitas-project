@@ -205,6 +205,41 @@
    * Desktop keeps 0px — the bar is md:hidden. */
   --tabbar-h: 0px;
 
+  /* ---- Sticky site header --------------------------------------------------
+   * THE SAME KIND OF KNOB AS --tabbar-h, AND IT EXISTS FOR THE SAME REASON.
+   *
+   * Anything that pins itself BELOW the header has to know how tall the header
+   * is, and until this token existed each one guessed. /shop guessed
+   * `top-[4.25rem]` — 68px — and measured on 20/08/2026 that was wrong at every
+   * width the site supports:
+   *
+   *     390px   header  55px   toolbar pinned at 68  ->  13px SEAM, page
+   *                                                      content scrolling
+   *                                                      through the gap
+   *     1536px  header  94px   toolbar pinned at 68  ->  26px OVERLAP, the top
+   *                                                      of the search field
+   *                                                      hidden under the header
+   *
+   * One number cannot be right for both, because the header is two rows on
+   * desktop and one on a phone, AND it collapses on scroll ([data-compact] in
+   * globals.css). So there are four values, and they are declared here rather
+   * than measured at runtime: a ResizeObserver writing a variable would make
+   * every pinned element on the site depend on a JS frame landing before paint.
+   *
+   *   expanded   65px  phone   ·  114px  >=768   (h-16 + border, + h-12 navrow)
+   *   compact    55px  phone   ·   94px  >=768   (54px bar, 52+40 desktop)
+   *
+   * The compact override and the two templates that unstick the header
+   * (product, and /shop below 768) live in globals.css beside the rules that
+   * cause them — see "THE HEADER'S HEIGHT IS A TOKEN" there. */
+  --header-h-full: 65px;
+
+  /* How much the header gives back when it collapses on scroll. Zero until [data-compact]
+     lands; the two values match .pt-hdr-bar-* in globals.css exactly (64->54 on a phone,
+     64+48 -> 52+40 on desktop). Kept as a DELTA rather than a second full height so the two
+     numbers cannot drift apart the next time a row is added to the bar. */
+  --header-shrink: 0px;
+
   /* How far the raised Boutique tile protrudes ABOVE the bar's top edge.
    * 52px tile + 4px gap + 10px label + 6px pad = 72px, minus the 56px row = 16px.
    * Any bar that stacks on top of the tab bar pads its content by this much, so the
@@ -403,5 +438,14 @@
   :root {
     --tabbar-h: calc(56px + env(safe-area-inset-bottom, 0px));
     --tabbar-raise: 16px;
+  }
+}
+
+/* The desktop header carries a second row (the category nav), so it is 49px taller.
+   Kept beside --tabbar-h's own breakpoint rather than in the :root block, because both
+   are statements about what the chrome measures at a given width. */
+@media (min-width: 768px) {
+  :root {
+    --header-h-full: 114px;
   }
 }

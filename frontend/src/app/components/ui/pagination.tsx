@@ -142,12 +142,14 @@ export function Pagination({
       {control(currentPage - 1, {
         disabled: currentPage === 1,
         label: 'Page précédente',
-        className: 'h-10 w-10 p-0',
+        className: 'h-11 w-11 p-0',
         children: <ChevronLeft className="h-4 w-4" />,
       })}
 
       {/* Page Numbers */}
-      <div className="flex items-center gap-1">
+      {/* 44px targets and gap-1.5. DESIGN_SYSTEM sets a hard 44x44 floor with no pointer
+          carve-out, and this is the control that walks a 470-page series on a phone. */}
+      <div className="flex flex-wrap items-center justify-center gap-1.5">
         {pageNumbers.map((page, index) => {
           if (page === 'ellipsis') {
             return (
@@ -172,7 +174,7 @@ export function Pagination({
                 // disabling it would grey out the one control that must look SELECTED.
                 noLink: isActive,
                 label: `Page ${pageNumber}`,
-                className: 'h-10 min-w-10',
+                className: 'h-11 min-w-11',
                 children: pageNumber,
               })}
             </React.Fragment>
@@ -184,7 +186,7 @@ export function Pagination({
       {control(currentPage + 1, {
         disabled: currentPage === totalPages,
         label: 'Page suivante',
-        className: 'h-10 w-10 p-0',
+        className: 'h-11 w-11 p-0',
         children: <ChevronRight className="h-4 w-4" />,
       })}
     </nav>

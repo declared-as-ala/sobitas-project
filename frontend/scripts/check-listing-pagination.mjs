@@ -28,7 +28,11 @@
  */
 const BASE = (process.env.BASE_URL || 'https://protein.tn').replace(/\/$/, '');
 const API = (process.env.API_BASE || 'https://admin.protein.tn').replace(/\/$/, '');
-const PER_PAGE = 12;
+// MUST match SHOP_PER_PAGE in src/util/shopQuery.ts. It was 12 while the app served 24, so any
+// subcategory holding 13-24 products — one full page, correctly pagerless — tripped a false
+// "has >=12 products and NO ?page= link" and exited 1. A guard that cries wolf is a guard someone
+// switches off.
+const PER_PAGE = 24;
 
 const j = async (p) => (await fetch(`${API}/api${p}`, { signal: AbortSignal.timeout(60_000) })).json();
 
