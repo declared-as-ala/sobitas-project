@@ -84,19 +84,32 @@ export function SearchResultRow({
       onClick={onNavigate}
       role="option"
       aria-selected={active}
-      className={`group flex items-center gap-3.5 rounded-xl px-2.5 py-2.5 transition-colors ${
+      /*
+        ── THE ROW HAD ONE SET OF NUMBERS FOR EVERY SCREEN ─────────────────────────────────
+        Owner, 20/08/2026: *"make the search results more responsive… most users are mobile."*
+
+        MEASURED at 360px: 64px thumb + 14px gap + 20px of padding + a price column that reaches
+        62px for "279 DT / 300 DT" leaves the name and its meta line **200px**. At 320px — still
+        ~4% of Tunisian mobile traffic, and the width of an iPhone SE — it is 160px. The result
+        was "Économisez 31 DT" breaking mid-phrase onto a second line under the stock mark, which
+        is what the owner's screenshot shows.
+
+        Below `sm` the row now gives that space back: a 56px thumb, 12px gutters, 8px padding.
+        Eight pixels of thumbnail is not a loss on a packshot; forty pixels of name is a gain.
+      */
+      className={`group flex items-center gap-3 rounded-xl px-2 py-2.5 transition-colors sm:gap-3.5 sm:px-2.5 ${
         active ? 'bg-sunken' : 'hover:bg-sunken'
       }`}
       loadingMessage="Chargement"
     >
-      <span className="relative block h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated">
+      <span className="relative block h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated sm:h-16 sm:w-16">
         {product.cover ? (
           <Image
             src={getStorageUrl(product.cover)}
             alt=""
             fill
             className="object-contain p-1"
-            sizes="64px"
+            sizes="(max-width: 639px) 56px, 64px"
             loading="lazy"
             /*
               OPTIMISED, unlike the cart and checkout rows this was copied from.
@@ -130,14 +143,23 @@ export function SearchResultRow({
         {/* NO `block` HERE. `line-clamp-2` sets `display: -webkit-box`, and a `block` alongside it
             wins on stylesheet order — which silently turned the clamp off and let a long name run
             to three lines, making every row in the narrow resting column 111px instead of 84. */}
-        <span className="line-clamp-2 text-[14.5px] font-medium leading-[1.3] text-ink-1 transition-colors group-hover:text-brand">
+        <span className="line-clamp-2 text-[13.5px] font-medium leading-[1.3] text-ink-1 transition-colors group-hover:text-brand sm:text-[14.5px]">
           {product.designation_fr}
         </span>
         {/* "En stock" is the one signal a shopper checks before clicking a search result — it is
             what makes a result actionable in a shop that sells out. The dot carries the state as
             well as the colour, because colour alone is not a signal (WCAG 1.4.1). */}
-        <span className="mt-1 flex items-center gap-1.5 text-[11.5px] leading-none">
-          <span className={`flex items-center gap-1.5 ${inStock ? 'text-ok' : 'text-ink-3'}`}>
+        {/*
+          `flex-wrap` plus `whitespace-nowrap` on each phrase. Without the wrap the flex items
+          shrink and the TEXT INSIDE them breaks, which is how "Économisez 31 DT" ended up split
+          across two lines with the "DT" orphaned. With it, either both phrases fit on one line or
+          the second phrase moves down whole. `gap-y-1` keeps the two-line case from touching.
+
+          The separator is hidden when it would end a line — a middle dot left hanging at the end
+          of a wrapped row is the small kind of wrong that makes a UI look unfinished.
+        */}
+        <span className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[11.5px] leading-none">
+          <span className={`flex shrink-0 items-center gap-1.5 whitespace-nowrap ${inStock ? 'text-ok' : 'text-ink-3'}`}>
             <span
               className={`h-1.5 w-1.5 shrink-0 rounded-full ${inStock ? 'bg-ok' : 'bg-ink-3'}`}
               aria-hidden="true"
@@ -146,21 +168,24 @@ export function SearchResultRow({
           </span>
           {saving > 0 && (
             <>
-              <span className="text-ink-3" aria-hidden="true">
+              <span className="hidden text-ink-3 sm:inline" aria-hidden="true">
                 ·
               </span>
-              <span className="font-semibold text-brand">Économisez {saving} DT</span>
+              <span className="whitespace-nowrap font-semibold text-brand">Économisez {saving} DT</span>
             </>
           )}
         </span>
       </span>
 
-      <span className="flex shrink-0 flex-col items-end gap-0.5 tabular-nums">
-        <span className={`text-[17px] font-bold leading-none ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
+      {/* `shrink-0` with no width cap let a four-digit price take 70px out of a 200px name on a
+          phone. The column is stacked, right-aligned and nowrap, so a cap costs nothing and stops
+          the one long price on the page from squeezing every name beside it. */}
+      <span className="flex shrink-0 flex-col items-end gap-0.5 whitespace-nowrap tabular-nums">
+        <span className={`text-[15.5px] font-bold leading-none sm:text-[17px] ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
           {Math.round(pd.finalPrice)} DT
         </span>
         {pd.hasPromo && pd.oldPrice != null && (
-          <span className="text-[12px] leading-none text-ink-3 line-through">{Math.round(pd.oldPrice)} DT</span>
+          <span className="text-[11.5px] leading-none text-ink-3 line-through sm:text-[12px]">{Math.round(pd.oldPrice)} DT</span>
         )}
       </span>
     </LinkWithLoading>
@@ -172,8 +197,8 @@ function ResultSkeleton({ rows }: { rows: number }) {
   return (
     <div role="status" aria-label="Recherche en cours">
       {Array.from({ length: rows }).map((_, i) => (
-        <div key={i} className="flex items-center gap-3.5 px-2.5 py-2.5">
-          <Skeleton className="h-16 w-16 shrink-0 rounded-xl" />
+        <div key={i} className="flex items-center gap-3 px-2 py-2.5 sm:gap-3.5 sm:px-2.5">
+          <Skeleton className="h-14 w-14 shrink-0 rounded-xl sm:h-16 sm:w-16" />
           <div className="min-w-0 flex-1 space-y-1.5">
             <Skeleton className="h-2.5 w-16 rounded" />
             <Skeleton className="h-3.5 w-4/5 rounded" />
@@ -369,7 +394,9 @@ export function SearchResults({
         href={`/shop?search=${encodeURIComponent(trimmed)}`}
         onClick={onNavigate}
         loadingMessage="Chargement des résultats…"
-        className="flex h-12 items-center justify-center gap-2 border-t border-hairline bg-sunken text-[13.5px] font-semibold text-brand transition-colors hover:bg-brand hover:text-on-brand"
+        /* `min-h` rather than `h`: at 320px "Voir les 1 234 résultats" plus the arrow is wider
+           than the panel, and a fixed height turns a wrapped label into clipped text. */
+        className="flex min-h-[48px] items-center justify-center gap-2 border-t border-hairline bg-sunken px-3 text-center text-[13.5px] font-semibold text-brand transition-colors hover:bg-brand hover:text-on-brand"
       >
         Voir les {total} résultats
         <ArrowRight className="h-4 w-4" aria-hidden="true" />

@@ -1,6 +1,6 @@
 'use client';
 
-import { useLoading } from '@/contexts/LoadingContext';
+import { useLoadingState } from '@/contexts/LoadingContext';
 
 /**
  * Global navigation feedback: a thin red progress bar pinned to the top of the viewport.
@@ -9,7 +9,10 @@ import { useLoading } from '@/contexts/LoadingContext';
  * navigation without hiding the skeleton underneath. Action/data loaders still use LoadingSpinner.
  */
 export function GlobalLoader() {
-  const { isLoading } = useLoading();
+  /* `useLoadingState`, not `useLoading` — this is the one component that genuinely wants the
+     flag, and the split exists so that every OTHER consumer stops paying for it. See the
+     docblock in LoadingContext.tsx. */
+  const { isLoading } = useLoadingState();
 
   if (!isLoading) return null;
 

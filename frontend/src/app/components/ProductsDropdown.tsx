@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ChevronDown, ArrowRight } from 'lucide-react';
+import { ChevronDown, ChevronRight, ArrowRight } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getCategories, getCategoryHighlights, getStorageUrl } from '@/services/api';
@@ -25,18 +25,15 @@ function canPrefetch(href: string): boolean {
 }
 
 /**
- * ── THE CAP IS GONE, AND SO ARE THE SIX "+N AUTRES" LINKS ───────────────────────────────────
- * `MAX_SUBS_PER_COLUMN = 5` hid 21 of the 55 subcategories behind an overflow link per column.
- * The reasoning it shipped with was sound for the layout it shipped with: six columns of the full
- * lists is ~660px of panel and two rows of rayons below 1280, which is why the cap existed.
- *
- * The rail-and-pane layout removes the premise. One rayon is visible at a time, so the panel's
- * height is bounded by the TALLEST rayon rather than by the sum of six — and the tallest is 21
- * subcategories over three columns, seven rows. Nothing has to be hidden to make it fit, so
- * nothing is: all 55 links are in the panel, on every page, which is what they were worth as
- * sitewide internal links in the first place.
+ * ── NOTHING IS HIDDEN BEHIND A "+N AUTRES" LINK ─────────────────────────────────────────────
+ * `MAX_SUBS_PER_COLUMN = 5` used to hide 21 of the 55 subcategories behind an overflow link per
+ * column. The cap made sense for the layout it shipped with — six columns of full lists is ~660px
+ * of panel — and the rail-and-pane layout removes the premise entirely: one rayon is visible at a
+ * time, so the panel's height is bounded by the TALLEST rayon rather than the sum of six. The
+ * tallest is 21 subcategories over four columns, six rows. Nothing has to be hidden to make it
+ * fit, so nothing is — which is what those links were worth as sitewide internal links in the
+ * first place.
  */
-
 export function ProductsDropdown({
   label = 'NOS PRODUITS',
   href = '/shop',
@@ -105,7 +102,9 @@ export function ProductsDropdown({
     slug: string;
     designation_fr: string;
   }>;
-  const feature = activeRayon ? (highlights[activeRayon.id]?.[0] ?? null) : null;
+  /* The whole highlight list, not `[0]`. The strip shows three; the previous single-card
+     aside used one and threw the other three away. */
+  const feature = activeRayon ? (highlights[activeRayon.id] ?? []) : [];
 
   const scheduleClose = useCallback(() => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -248,378 +247,271 @@ export function ProductsDropdown({
   const targetProps = opensNewTab ? { target: '_blank', rel: 'noopener noreferrer' } : {};
 
   /**
-   * ── THE MEGA-MENU, REBUILT ON THE DESIGN SYSTEM (owner, 15/08/2026) ─────────────────────────
-   * *"redesign the dropdown of the button boutique in the header."*
+   * ── THE PANEL, LIGHT AND FULL-WIDTH (owner, 20/08/2026) ─────────────────────────────────────
+   * *"the dropdown of the shop looks kind of dark with a dark background of the slider, that's so
+   * bad… the tabs inside it look AI generated… the border left of Santé & Vitalité looks super
+   * noob. Change the design, make it pro and fit the design of the landing page, like Impact made
+   * it — clean, easy and simple. Use the full width."*
    *
-   * The panel predated the token layer and had never been migrated: `bg-white dark:bg-gray-900`,
-   * `text-red-600 dark:text-red-400`, `border-gray-100 dark:border-gray-800`, `text-gray-600` —
-   * eleven raw palette classes, each with a hand-written `dark:` twin, on the one surface that
-   * overlays every page of the site. That is the exact failure mode `tokens.css` exists to end:
-   * two hard-coded values per decision, drifting independently, and a dark mode that is correct
-   * only where someone remembered to type the twin.
+   * ── THE DARK CURTAIN IS GONE, AND THE EARLIER ARGUMENT FOR IT WAS WRONG ────────────────────
+   * It was `.pt-slab`: near-black in both themes, chosen on 18/08 to make the panel read as
+   * something laid OVER the page rather than as the page having grown taller. That reasoning only
+   * holds if the page underneath is light. It is not — the panel opens directly over the hero
+   * slider, which is a dark photograph, so a near-black card on a near-black image is two dark
+   * masses with a hairline between them. The owner's screenshot is exactly that.
    *
-   * What changed, and why each is not just a repaint:
+   * `bg-elevated` inverts the relationship: white on the light page, and the shadow does the
+   * separating. It is also what tokens.css v6 asks for in as many words — dark arrives as OBJECTS
+   * inside a ~12% painted-area budget, never as a full-width surface, and 1,472 x 500px of
+   * near-black hanging off the header spends that budget several times over on one hover.
    *
-   *   COLUMNS ARE DERIVED, NOT DECLARED. `grid-cols-3 lg:grid-cols-4 xl:grid-cols-6` was fixed at
-   *   six columns for six categories. Add a seventh in Filament and the row goes ragged; the panel
-   *   has no way to know. `grid-cols-[repeat(auto-fit,minmax(11rem,1fr))]` fills the rail with
-   *   whatever exists, at a minimum column width chosen from the longest real subcategory label so
-   *   nothing wraps.
+   * A side effect worth naming: in page scope `--c-brand` is #D03B04, the identity orange. In slab
+   * scope it was #FF8A4C, a lightened salmon, because small text needs 8.25:1 on near-black. So
+   * the whole panel was rendering in a different orange from the header 40px above it. Nothing in
+   * here has to compensate for that any more.
    *
-   *   THE CATEGORY IS A HEADING, NOT A LINK IN RED. It was `text-red-600 uppercase` with a
-   *   decorative 32px red rule under it — brand colour spent on a label rather than on the one
-   *   thing in the panel a visitor should press. The heading is now ink, and `text-brand` is left
-   *   for hover and for the single CTA. DESIGN_SYSTEM §11: colour marks state, not category.
+   * ── WHY THE "NOOB BORDER" WAS THE ONLY AFFORDANCE, AND WHAT REPLACED IT ────────────────────
+   * The active rayon was marked by a 2px orange bar and orange text, on a black rail, next to
+   * orange text. One cue, in one colour, at 2px. It is now a TILE: the row takes the pane's own
+   * surface, so the selected rayon reads as physically continuous with the panel it controls —
+   * the tab-and-body relationship every desktop menu has used for thirty years — plus a hairline
+   * (which carries it in dark theme, where the fill delta is only 1.14:1), brand ink, and the
+   * chevron. Four redundant cues instead of one.
    *
-   *   THE BULLETS ARE GONE. Every subcategory carried a 4px grey dot that turned red on hover —
-   *   96 decorative nodes in a menu whose job is to be scanned. The hover affordance is now the
-   *   row itself picking up `bg-sunken`, which also makes the whole 32px line clickable-looking
-   *   instead of just the text.
+   * ── IMAGES, BECAUSE THE TAXONOMY ALREADY HAS THEM ──────────────────────────────────────────
+   * *"add some icons or images to it."* Every one of the six rayons has a `cover` in the API —
+   * the same 4:3 photography the homepage category rail uses — and this panel was rendering none
+   * of it. 44px thumbnails in the rail and 56px packshots in the popular strip; no new asset, no
+   * icon set, and nothing invented.
    *
-   *   THE FOOTER SAYS SOMETHING. "Découvrez toute notre gamme de produits" is a sentence that
-   *   informs nobody standing in front of the gamme. It now states the count, which is the one
-   *   fact the panel can offer that the links cannot.
+   * ── FULL WIDTH MEANS THE PAGE RAIL, NOT THE VIEWPORT ───────────────────────────────────────
+   * `min(96rem, 100vw - 4rem)` with `left` tracking `max-w-site` is byte-for-byte the box the
+   * header content sits in (`max-w-site mx-auto px-4 lg:px-8`), so the panel's edges line up with
+   * the logo above it and the footer below it. It was 84rem (1,344px) against a 1,536px rail —
+   * 96px short on each side, which is the "small" the owner is pointing at.
    */
   const dropdownContent = isOpen && mounted ? (
     <div
       ref={dropdownRef}
       /*
-        ── A DARK CURTAIN, WHICH IS THE WHOLE POINT ──────────────────────────────────────────
-        Owner, 18/08/2026, with the reference storefront's SHOP menu open beside ours: *"in the
-        header i want you to redesign the shop popup, make it something like this"*.
-
-        `.pt-slab` rather than `bg-elevated`. The panel used to be the same near-white as the
-        header it dropped out of, separated only by a shadow, so at a glance it read as the page
-        having grown taller rather than as something laid OVER the page. The reference drops a dark
-        charcoal curtain, and that is the difference: a surface unmistakably not the page underneath
-        needs no shadow to explain itself.
-
-        The scope also re-points every token, so the contents use `text-ink-1` / `border-hairline`
-        with no `dark:` variant and stay correct in both themes — the panel is dark in BOTH, the
-        way the footer and the header's own contact strip already are.
-
-        ── THE TRAP THIS SURFACE CARRIES ─────────────────────────────────────────────────────
-        `--slab-elevated` is 255 255 255 — cards on a slab are WHITE PLATES, "the punch-out
-        moment". So `bg-elevated text-ink-1` inside here is white type on a white card at 1.04:1,
-        invisible in LIGHT theme ONLY, which is exactly the bug this same scope produced in the
-        footer two days ago. A control on a slab is a WELL: `bg-sunken`. The feature card obeys it.
-
-        No `border-t`: a hairline in slab scope is #3A3A42, a dark line drawn at the top of a dark
-        panel — invisible, and unnecessary, because a near-black band under a near-white bar is
-        already an edge.
+        The 8px above is `pt-2` INSIDE this element rather than a gap in `top`, so the hover
+        surface runs continuously from the label into the card. This wrapper must stay transparent
+        and unstyled — it spans the full rail, and any fill on it paints a strip across the page.
       */
-      /*
-        ── CONTAINED, NOT A CURTAIN ACROSS THE WHOLE SCREEN ──────────────────────────────────
-        Owner, 18/08/2026, looking at the first version: *"polish the design of the popup of the
-        shop in header, make it smaller, clean and more beautiful, better colors — no need to be
-        full screen like that!"*
-
-        And they were looking at a genuinely worse version than the one that was measured. The
-        grid is `auto-fit` at `minmax(10.5rem, 1fr)`, so its column count depends on the width it
-        is given: at a true 1920 it made six columns and everything sat in one row, which is what
-        the guard screenshots showed. The owner's screen is 1920 at 125% Windows scaling — a CSS
-        viewport of 1536 — where the same grid gets ~1128px, cannot fit six 168px columns, drops
-        to FIVE, and wraps ÉQUIPEMENT onto a second row 300px further down. A full-bleed band that
-        reflows into two rows on the most common desktop configuration in the country is the
-        "full screen" they are describing.
-
-        A panel with a FIXED column count cannot do that, so the columns are declared rather than
-        negotiated, and it is anchored under the nav item with its own hairline, radius and shadow
-        so it reads as an object laid on the page — which is what a dropdown is — instead of as a
-        section of it.
-
-        ── WIDTH IS WHAT BUYS HEIGHT (owner, 18/08/2026, second pass) ─────────────────────────
-        *"it hides under the height of the screen, so make it go more in the width"*.
-
-        Exactly the right diagnosis. At 960px the six rayons had to stack 3x2, and two rows of
-        links plus the promoted product came to ~660px — which, starting 348px down a browser
-        whose inner height is ~860, put the "Voir tous les produits" link and the rayon counts
-        BELOW the bottom of the screen. A hover panel that closes when the pointer leaves it must
-        never require a scroll to reach its own footer.
-
-        1,344px is the width at which the six rayons fit in ONE row on the owner's 1536 viewport,
-        and one row is ~340px tall instead of ~660: the panel now ends roughly 170px above the
-        fold on the screen where it used to run 150px past it. It is still not full-bleed — 1,344
-        of 1,536 leaves the page visible down both sides, which was the point of the first pass.
-
-        `min(84rem, 100vw - 2rem)` and `left-4 lg:left-8` keep it on screen at every width with no
-        measurement and no resize listener; below `xl` it falls back to three columns and two rows,
-        where the viewport is short of horizontal room but has the vertical room to spare.
-      */
-      /*
-        ── THE GAP ABOVE IS PART OF THE PANEL NOW, NOT A HOLE BETWEEN TWO HOVER TARGETS ──────
-        `top` used to be `dropdownTop + 8`, which put 8px of PAGE between the trigger's bottom
-        edge and the panel's top edge. Cross it slowly and both hover targets are lost at once, so
-        the 200ms close timer starts and the panel you were reaching for begins to go away. The
-        8px is now `pt-2` INSIDE this element, which is transparent and carries the mouse
-        handlers, so the hover surface runs continuously from the label into the card.
-
-        This wrapper must NOT carry `.pt-slab` — it would paint an 8px black strip across the
-        whole viewport. The scope lives on the inner card.
-
-        ── WIDTH AND ALIGNMENT ──────────────────────────────────────────────────────────────
-        `calc(100vw-4rem)` gives 32px on BOTH sides. It was `-2rem` against `left-4 lg:left-8`, so
-        from `lg` up the right edge landed at exactly `100vw` — flush to the glass on every
-        viewport below 1376, the 1280 laptop included.
-
-        The `max()` on `left` keeps the panel at 32px until the viewport outgrows the site rail,
-        then tracks the rail's own left edge — above 1664 the header content starts at
-        `(100vw - 1600px) / 2 + 32`, and a panel still starting at 32 was visibly out of line with
-        the BOUTIQUE label that opened it. No listener and no measurement, which preserves the
-        no-JS property this panel was built with. `100rem` is `max-w-site` (tailwind.config.ts).
-      */
-      className="fixed left-4 z-[200] w-[min(84rem,calc(100vw-4rem))] pt-2 lg:left-[max(2rem,calc((100vw-100rem)/2+2rem))]"
+      className="fixed left-4 z-[200] w-[min(96rem,calc(100vw-2rem))] pt-2 lg:left-[max(2rem,calc((100vw-100rem)/2+2rem))] lg:w-[min(96rem,calc(100vw-4rem))]"
       style={{ top: 'var(--menu-top, 9.5rem)' }}
       onMouseEnter={() => { hoverDropdown.current = true; cancelClose(); }}
       onMouseLeave={() => { hoverDropdown.current = false; scheduleClose(); }}
     >
       <div
         id="boutique-megamenu"
-        className="pt-slab overflow-hidden rounded-2xl border border-hairline shadow-2xl"
+        /* `border-rule`, not `border-hairline`: on a white page a white card needs the heavier of
+           the two boundary weights or its edge disappears into the canvas. */
+        className="overflow-hidden rounded-2xl border border-rule bg-elevated shadow-card-hover"
       >
-      <div
-        className="flex gap-6 overflow-y-auto overscroll-contain p-6"
-        style={{ maxHeight: 'calc(100vh - var(--menu-top, 9.5rem) - 1.5rem)' }}
-      >
-        {/*
-          ── ONE RAYON AT A TIME, NOT SIX COLUMNS OF FIVE ────────────────────────────────────
-          Owner, 20/08/2026: *"make the popup easier to read and use, and when I hover over
-          categories change the right shown product."*
-
-          The panel was `grid-cols-3 xl:grid-cols-6` with `MAX_SUBS_PER_COLUMN = 5`, which is two
-          things at once and both of them bad. Below 1280 the six rayons wrapped onto two rows, so
-          the reader scanned a 6-cell matrix with no reading order. And the cap hid 21 of the 55
-          subcategories behind six "+N autres" links — a menu that answers "what do you sell?" with
-          "some of it".
-
-          A rail plus a pane fixes both without hiding anything. The eye reads six rayons down one
-          column, and the rayon under the pointer shows ALL of its subcategories across three
-          columns of real width. Height is now bounded by the TALLEST rayon rather than the sum of
-          six, which is what pays for uncapping the lists.
-
-          Geometry at 1536 (panel 1344, p-6 -> inner 1296): 224 rail + 1 + 24 + pane + 24 + 1 + 224
-          aside leaves the pane 798px, three 250px columns — wide enough for the longest label in
-          the taxonomy ("Barres & Snacks Protéinés") with no truncation. At 1280 the pane drops to
-          two columns rather than squeezing three.
-        */}
-        <ul
-          className="w-[13rem] shrink-0 space-y-0.5 border-e border-hairline pe-5 xl:w-[14rem]"
-          aria-label="Rayons"
+        <div
+          className="flex overflow-y-auto overscroll-contain"
+          style={{ maxHeight: 'calc(100vh - var(--menu-top, 9.5rem) - 1.5rem)' }}
         >
-          {categories.length === 0
-            ? Array.from({ length: 6 }).map((_, i) => (
-                <li key={i} className="px-3 py-2.5" role="status" aria-label="Chargement des rayons">
-                  <Skeleton className="h-3.5 w-28" />
-                </li>
-              ))
-            : categories.map((cat) => (
-                <li key={cat.id}>
-                  <LinkWithLoading
-                    href={`/${cat.slug}`}
-                    data-active={cat.id === activeRayonId}
-                    /*
-                      HOVER SELECTS, CLICK NAVIGATES. It stays a real <a href> — a rayon is a real
-                      page and this menu's whole SEO value is that its rows are crawlable links —
-                      and the pointer merely decides which pane is showing. `onFocus` gives a
-                      keyboard reader the same behaviour without a second control to tab through.
-
-                      The affordance is a 2px ACCENT BAR, not a fill. `hover:bg-sunken` was what
-                      these rows used, and inside `.pt-slab` that pair measures 1.19:1 — and in
-                      dark theme it inverts, so the "highlight" goes darker than the row. It could
-                      never be tuned for both. `border-brand` resolves to the slab accent (#FF8A4C)
-                      and clears the WCAG 1.4.11 3:1 floor at 8.25:1 in both themes.
-                    */
-                    className="group -ms-3 flex min-h-[44px] items-center justify-between gap-2 rounded-md border-s-2 border-transparent pe-2 ps-3 font-display text-[12.5px] font-bold uppercase leading-snug tracking-[0.06em] text-ink-2 transition-[color,border-color] hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus data-[active=true]:border-brand data-[active=true]:text-brand"
-                    loadingMessage="Chargement..."
-                    onMouseEnter={() => selectRayon(cat)}
-                    onFocus={() => selectRayon(cat)}
-                    onClick={close}
-                  >
-                    <span className="min-w-0 truncate">{cat.designation_fr}</span>
-                    <ArrowRight
-                      className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover:opacity-100 group-data-[active=true]:opacity-100"
-                      aria-hidden="true"
-                    />
-                  </LinkWithLoading>
-                </li>
-              ))}
-        </ul>
-
-        {/* THE PANE. `min-h` matches the rail's six 44px rows so the panel never shrinks below its
-            own navigation when a short rayon is selected — a box that changes height as the
-            pointer travels down the rail is the same fault as a menu that moves its links. */}
-        <div className="flex min-h-[17rem] min-w-0 flex-1 flex-col">
-          <p className="mb-3 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
-            {activeRayon ? activeRayon.designation_fr : 'Catégories'}
-          </p>
-
-          {categories.length === 0 ? (
-            <div className="grid grid-cols-2 gap-x-6 gap-y-2 xl:grid-cols-3">
-              {Array.from({ length: 9 }).map((_, i) => (
-                <Skeleton key={i} className="h-3.5 w-24" />
-              ))}
-            </div>
-          ) : (
-            <ul className="grid grid-cols-2 content-start gap-x-6 gap-y-0.5 xl:grid-cols-3">
-              {/* First cell, always: the rayon itself. The subcategory list below is complete now,
-                  so this is not an overflow escape hatch — it is the "everything in here" option
-                  a shopper wants when none of the shelves is quite it. */}
-              {activeRayon && (
-                <li>
-                  <LinkWithLoading
-                    href={`/${activeRayon.slug}`}
-                    className="-ms-3 block truncate rounded-md border-s-2 border-transparent py-2 pe-2 ps-3 text-[12.5px] font-semibold leading-snug text-ink-1 transition-[color,border-color] hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    loadingMessage="Chargement..."
-                    onClick={close}
-                  >
-                    Tout voir
-                  </LinkWithLoading>
-                </li>
-              )}
-              {activeSubs.map((sub) => (
-                <li key={sub.id}>
-                  <LinkWithLoading
-                    href={`/${sub.slug}`}
-                    className="-ms-3 block truncate rounded-md border-s-2 border-transparent py-2 pe-2 ps-3 text-[12.5px] leading-snug text-ink-2 transition-[color,border-color] hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                    loadingMessage="Chargement..."
-                    onClick={close}
-                  >
-                    {sub.designation_fr}
-                  </LinkWithLoading>
-                </li>
-              ))}
+          {/* ── THE RAIL ──────────────────────────────────────────────────────────────────── */}
+          <div className="flex w-[15.5rem] shrink-0 flex-col bg-sunken py-2 xl:w-[17rem]">
+            <ul aria-label="Rayons">
+              {categories.length === 0
+                ? Array.from({ length: 6 }).map((_, i) => (
+                    <li key={i} className="flex items-center gap-3 px-3 py-2" role="status" aria-label="Chargement des rayons">
+                      <Skeleton className="h-11 w-14 shrink-0 rounded-lg" />
+                      <Skeleton className="h-3.5 w-24" />
+                    </li>
+                  ))
+                : categories.map((cat) => {
+                    const isActive = cat.id === activeRayon?.id;
+                    const subCount = cat.sous_categories?.length ?? 0;
+                    return (
+                      <li key={cat.id}>
+                        <LinkWithLoading
+                          href={`/${cat.slug}`}
+                          data-active={isActive}
+                          /*
+                            HOVER SELECTS, CLICK NAVIGATES — a rayon is a real page and this menu's
+                            SEO value is that its rows are crawlable links. `onFocus` gives a
+                            keyboard reader the same behaviour with no second control to tab past.
+                          */
+                          className="group mx-2 flex min-h-[56px] items-center gap-3 rounded-xl border border-transparent px-2 py-2 transition-colors hover:border-hairline hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus data-[active=true]:border-hairline data-[active=true]:bg-elevated"
+                          loadingMessage="Chargement..."
+                          onMouseEnter={() => selectRayon(cat)}
+                          onFocus={() => selectRayon(cat)}
+                          onClick={close}
+                        >
+                          <span className="relative h-11 w-14 shrink-0 overflow-hidden rounded-lg bg-canvas">
+                            {cat.cover ? (
+                              <Image
+                                src={getStorageUrl(cat.cover)}
+                                alt=""
+                                fill
+                                sizes="56px"
+                                className="object-cover"
+                              />
+                            ) : (
+                              <span className="flex h-full w-full items-center justify-center font-display text-lg font-bold text-ink-3" aria-hidden="true">
+                                {cat.designation_fr.trim().charAt(0)}
+                              </span>
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate font-display text-[12.5px] font-bold uppercase leading-tight tracking-[0.04em] text-ink-1 transition-colors group-hover:text-brand group-data-[active=true]:text-brand">
+                              {cat.designation_fr}
+                            </span>
+                            <span className="mt-0.5 block text-[11.5px] leading-tight text-ink-3">
+                              {subCount} {subCount > 1 ? 'catégories' : 'catégorie'}
+                            </span>
+                          </span>
+                          <ChevronRight
+                            className="h-4 w-4 shrink-0 text-ink-3 opacity-0 transition-opacity group-hover:opacity-100 group-data-[active=true]:text-brand group-data-[active=true]:opacity-100"
+                            aria-hidden="true"
+                          />
+                        </LinkWithLoading>
+                      </li>
+                    );
+                  })}
             </ul>
-          )}
 
-          <div className="mt-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-2 border-t border-hairline pt-4">
-            <LinkWithLoading
-              href={href}
-              className="-mx-2 inline-flex min-h-[44px] items-center gap-2 px-2 text-[14px] font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              loadingMessage="Chargement de la boutique..."
-              onMouseEnter={prefetchShop}
-              onClick={close}
-              {...targetProps}
-            >
-              Voir tous les produits
-              <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </LinkWithLoading>
-            <p className="text-xs text-ink-3">
-              {categories.length > 0
-                ? `${categories.length} rayons · ${categories.reduce((n, c) => n + (c.sous_categories?.length ?? 0), 0)} catégories`
-                : 'Toute la gamme'}
-            </p>
-          </div>
-        </div>
-
-        {/*
-          ── THE CARD NOW FOLLOWS THE RAIL ───────────────────────────────────────────────────
-          It used to show `new_product[0]` — the newest product in the whole catalogue — beside
-          every rayon and every one of the 55 subcategories. There was no code path anywhere in
-          this file that reacted to where the pointer was.
-
-          `getCategoryHighlights` fetches on rayon hover, once per rayon per page, and its docblock
-          records why that beats bucketing one `/latest_products` call: those 16 rows land in 2 of
-          the 6 rayons, so four rayons would still show a generic card.
-
-          ── THE COLUMN IS RESERVED BEFORE ITS CONTENTS EXIST, ON PURPOSE ────────────────────
-          The pane is `flex-1`, so an aside that appears once its product arrives narrows the links
-          AT THE MOMENT the pointer is travelling towards one. The width and the divider are held
-          from the first frame and only the card waits — and now that the card changes per rayon,
-          that reservation is what stops the pane resizing every time the pointer moves one row.
-        */}
-        <aside className="hidden w-[14rem] shrink-0 border-s border-hairline ps-6 lg:block">
-          <p className="mb-4 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
-            {activeRayon ? 'Populaire dans ce rayon' : 'Populaire'}
-          </p>
-
-          {!feature ? (
-            <div className="flex flex-col gap-3" role="status" aria-label="Chargement du produit mis en avant">
-              <Skeleton className="aspect-square w-full rounded-xl" />
-              <Skeleton className="h-4 w-4/5" />
-              <Skeleton className="h-6 w-24" />
-              <Skeleton className="h-11 w-full rounded-lg" />
+            {/* The one filled control in the panel, and it sits at the end of the rail where the
+                eye lands after reading the six rayons. */}
+            <div className="mt-auto px-4 pb-2 pt-4">
+              <LinkWithLoading
+                href={href}
+                className="flex min-h-[44px] w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 font-display text-[12.5px] font-bold uppercase tracking-[0.08em] text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                loadingMessage="Chargement de la boutique..."
+                onMouseEnter={prefetchShop}
+                onClick={close}
+                {...targetProps}
+              >
+                Voir tous les produits
+              </LinkWithLoading>
+              <p className="mt-2 text-center text-[11.5px] text-ink-3">
+                {categories.length > 0
+                  ? `${categories.length} rayons · ${categories.reduce((n, c) => n + (c.sous_categories?.length ?? 0), 0)} catégories`
+                  : 'Toute la gamme'}
+              </p>
             </div>
-          ) : (() => {
-            const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(feature);
-            const link = getProductLink(feature);
-            return (
-              <div className="flex flex-col gap-3">
-                {/*
-                  `bg-elevated` here and NOWHERE else in this panel. `--slab-elevated` is white — a
-                  PLATE, the punch-out moment — and that is exactly right for a packshot frame,
-                  which carries no text and whose photographs are shot on white anyway. It would be
-                  wrong for anything a reader has to read, which is why the name, the price and the
-                  button below sit on the slab itself.
-                */}
-                <LinkWithLoading
-                  href={link}
-                  className="relative block aspect-square w-full overflow-hidden rounded-xl border border-hairline bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  loadingMessage="Chargement..."
-                  onClick={close}
-                  aria-label={feature.designation_fr || 'Voir le produit'}
-                >
-                  <Image
-                    src={getStorageUrl(feature.cover || '')}
-                    alt=""
-                    fill
-                    /* 224px, matching `w-[14rem]`. It said 196 while the column was 196 and the two
-                       have to move together — leave it behind and the browser under-requests and
-                       upscales, silently. */
-                    sizes="224px"
-                    className="object-contain p-3"
-                  />
-                </LinkWithLoading>
+          </div>
 
+          {/* ── THE PANE ──────────────────────────────────────────────────────────────────────
+              `min-h` matches the rail's six 56px rows plus its CTA, so the panel never shrinks
+              below its own navigation when a short rayon is selected. A box that changes height
+              as the pointer travels down the rail is the same fault as a menu that moves its
+              links. */}
+          <div className="flex min-h-[25rem] min-w-0 flex-1 flex-col p-6">
+            <div className="flex items-center justify-between gap-4 border-b border-hairline pb-3">
+              <h2 className="min-w-0 truncate font-display text-[15px] font-bold uppercase tracking-[0.04em] text-ink-1">
+                {activeRayon ? activeRayon.designation_fr : 'Catégories'}
+              </h2>
+              {activeRayon && (
                 <LinkWithLoading
-                  href={link}
-                  /* `min-h` for two lines: the name is clamped at two and the products rotate as
-                     the pointer moves down the rail, so without a reserved height the price and
-                     the button jump between a one-line name and a two-line one. */
-                  className="line-clamp-2 min-h-[2.6em] text-[14px] font-semibold leading-snug text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  href={`/${activeRayon.slug}`}
+                  className="-my-2 inline-flex shrink-0 items-center gap-1.5 rounded py-2 text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   loadingMessage="Chargement..."
                   onClick={close}
                 >
-                  {feature.designation_fr}
+                  Tout voir
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </LinkWithLoading>
+              )}
+            </div>
 
-                <p className="flex items-baseline gap-2">
-                  <span className="font-display text-lg font-bold tabular-nums text-brand">
-                    {finalPrice.toFixed(2)} DT
-                  </span>
-                  {hasPromo && oldPrice != null && oldPrice > finalPrice && (
-                    <span className="text-[13px] tabular-nums text-ink-3 line-through">
-                      {oldPrice.toFixed(2)} DT
-                    </span>
-                  )}
-                </p>
-
-                {/* ── THE ONE FILLED BUTTON, AND WHY IT HAS A BORDER ────────────────────────
-                    `bg-brand-fill` keeps the IDENTITY orange (#D03B04) instead of the slab's
-                    lightened accent, so this button and the header CTA 40px above it are the same
-                    colour — measured, both rgb(208,59,4). See --brand-core in tokens.css.
-
-                    The border is not decoration. WCAG 1.4.11 wants 3:1 between a control and what
-                    surrounds it, and measured on the built page the deep orange sits at 3.95:1 on
-                    the light-theme panel but 2.93:1 on the dark one, where the slab canvas lifts to
-                    ~#252528. `border-brand` is the slab accent (#FF8A4C, 8.25:1 on the panel), so
-                    the boundary is carried by the edge in BOTH themes and the fill is free to be
-                    the brand colour rather than whatever measures.
-
-                    `text-on-brand-fill` on a slab is near-black on #FF8A4C — 8.47:1. White on that
-                    same orange is 3.55:1 and FAILS, which is why this is a token and not a
-                    literal. */}
-                <LinkWithLoading
-                  href={link}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-lg border border-brand bg-brand-fill px-4 font-display text-[13px] font-bold uppercase tracking-[0.08em] text-on-brand-fill transition-colors hover:bg-brand-fill-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  loadingMessage="Chargement..."
-                  onClick={close}
-                >
-                  Acheter
-                </LinkWithLoading>
+            {categories.length === 0 ? (
+              <div className="grid grid-cols-2 gap-x-6 gap-y-3 pt-4 lg:grid-cols-3 2xl:grid-cols-4">
+                {Array.from({ length: 12 }).map((_, i) => (
+                  <Skeleton key={i} className="h-4 w-24" />
+                ))}
               </div>
-            );
-          })()}
-        </aside>
+            ) : (
+              <ul className="grid grid-cols-2 content-start gap-x-4 pt-2 lg:grid-cols-3 2xl:grid-cols-4">
+                {activeSubs.map((sub) => (
+                  <li key={sub.id}>
+                    <LinkWithLoading
+                      href={`/${sub.slug}`}
+                      /* The row is the hover target, not the words. `bg-sunken` on a white pane is
+                         a 1.08:1 tint — deliberately quiet, because 21 of these are on screen at
+                         once and the brand ink is what actually marks the one under the pointer. */
+                      className="-mx-2 block truncate rounded-lg px-2 py-2 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      loadingMessage="Chargement..."
+                      onClick={close}
+                    >
+                      {sub.designation_fr}
+                    </LinkWithLoading>
+                  </li>
+                ))}
+              </ul>
+            )}
+
+            {/*
+              ── THE POPULAR STRIP ─────────────────────────────────────────────────────────────
+              Was a single 224px column pinned to the right of the panel, showing ONE product —
+              and until 20/08 the same product beside every rayon, because nothing in this file
+              reacted to where the pointer was.
+
+              Horizontal, at the foot of the pane, is what the extra 128px of width bought: three
+              products instead of one, each with its packshot, in the space a single portrait card
+              used to occupy. `getCategoryHighlights` fetches once per rayon per page, so a pass
+              down the whole rail is six small requests and every hover after that is a cache read.
+            */}
+            <div className="mt-auto border-t border-hairline pt-4">
+              <p className="mb-3 font-display text-[10px] font-bold uppercase tracking-[0.2em] text-ink-3">
+                Populaire dans ce rayon
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {(feature.length > 0 ? feature : Array.from({ length: 3 }).map(() => null)).slice(0, 3).map((p, i) => {
+                  if (!p) {
+                    return (
+                      <div key={`sk-${i}`} className="flex items-center gap-3 rounded-xl border border-hairline p-2" role="status" aria-label="Chargement">
+                        <Skeleton className="h-14 w-14 shrink-0 rounded-lg" />
+                        <div className="min-w-0 flex-1 space-y-2">
+                          <Skeleton className="h-3 w-full" />
+                          <Skeleton className="h-3.5 w-16" />
+                        </div>
+                      </div>
+                    );
+                  }
+                  const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(p);
+                  return (
+                    <LinkWithLoading
+                      key={p.id}
+                      href={getProductLink(p)}
+                      className="group flex items-center gap-3 rounded-xl border border-hairline p-2 transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      loadingMessage="Chargement..."
+                      onClick={close}
+                    >
+                      <span className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-sunken">
+                        <Image
+                          src={getStorageUrl(p.cover || '')}
+                          alt=""
+                          fill
+                          sizes="56px"
+                          className="object-contain p-1"
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="line-clamp-2 text-[12.5px] font-medium leading-snug text-ink-1 transition-colors group-hover:text-brand">
+                          {p.designation_fr}
+                        </span>
+                        <span className="mt-1 flex items-baseline gap-1.5">
+                          <span className="font-display text-[14px] font-bold tabular-nums text-brand">
+                            {finalPrice.toFixed(0)} DT
+                          </span>
+                          {hasPromo && oldPrice != null && oldPrice > finalPrice && (
+                            <span className="text-[11.5px] tabular-nums text-ink-3 line-through">
+                              {oldPrice.toFixed(0)} DT
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </LinkWithLoading>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

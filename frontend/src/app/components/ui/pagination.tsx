@@ -111,7 +111,12 @@ export function Pagination({
     const shared = {
       variant: (opts.active ? 'default' : 'outline') as 'default' | 'outline',
       size: 'sm' as const,
-      className: cn(opts.className, opts.active && 'bg-red-600 hover:bg-red-700 text-white border-red-600'),
+      /* `bg-brand`, not `bg-red-600`. #DC2626 is a signal red and this site's accent is #D03B04;
+         the selected page was rendering in a colour that appears nowhere else on the page. The
+         tokens also carry their own dark values, so the two hand-written `dark:` twins this line
+         used to need are gone. (This directory is excluded from lint:design as vendored shadcn,
+         which is exactly why the wrong colour survived here and nowhere else.) */
+      className: cn(opts.className, opts.active && 'bg-brand text-on-brand border-brand hover:bg-brand-hover'),
       'aria-label': opts.label,
       'aria-current': opts.active ? ('page' as const) : undefined,
     };
@@ -134,8 +139,27 @@ export function Pagination({
   };
 
   return (
+    /*
+      ── THE NUMBERED PAGER DOES NOT FIT ON A PHONE, AND NEVER DID ─────────────────────────────
+      Owner, 20/08/2026: *"the paginator, make it responsive on mobile."*
+
+      MEASURED against /shop, which is 470 pages. Deep in the series the pager renders
+      `‹ 1 … 234 235 236 … 470 ›` — seven 44px controls, two ellipses and eight gaps, 404px of
+      content in a 390px viewport. `flex-wrap` caught it, so it did not overflow; it broke into
+      two ragged rows with the arrows stranded beside a half-row of numbers.
+
+      Below `sm` the numbers become "Page 235 sur 470" between the two arrows: one line, always,
+      at any page count, with both arrows at a full 44px where a thumb expects them.
+
+      ── THE NUMBERS ARE HIDDEN, NOT REMOVED ─────────────────────────────────────────────────
+      `hidden sm:flex`, deliberately, rather than a `useMediaQuery` that renders one or the other.
+      Those links are the only crawl path to 99% of the catalogue (see `buildHref` above), and
+      Googlebot renders at 412px wide — a JS branch keyed on viewport width would have served the
+      crawler the phone layout and removed pages 2–470 from the site's link graph. `display:none`
+      changes nothing about whether a link is followed.
+    */
     <nav
-      className={cn('flex items-center justify-center gap-2', className)}
+      className={cn('flex items-center justify-center gap-1.5 sm:gap-2', className)}
       aria-label="Pagination"
     >
       {/* Previous Button */}
@@ -149,13 +173,13 @@ export function Pagination({
       {/* Page Numbers */}
       {/* 44px targets and gap-1.5. DESIGN_SYSTEM sets a hard 44x44 floor with no pointer
           carve-out, and this is the control that walks a 470-page series on a phone. */}
-      <div className="flex flex-wrap items-center justify-center gap-1.5">
+      <div className="hidden flex-wrap items-center justify-center gap-1.5 sm:flex">
         {pageNumbers.map((page, index) => {
           if (page === 'ellipsis') {
             return (
               <span
                 key={`ellipsis-${index}`}
-                className="px-2 py-1 text-gray-500 dark:text-gray-400"
+                className="px-1 py-1 text-ink-3 sm:px-2"
               >
                 <MoreHorizontal className="h-4 w-4" />
               </span>
@@ -181,6 +205,16 @@ export function Pagination({
           );
         })}
       </div>
+
+      {/* The phone's page indicator. `tabular-nums` so the width does not jitter as the number
+          changes, and `aria-hidden` because the numbered list beside it already announces the
+          same thing to a screen reader — reading both is a stutter. */}
+      <span
+        className="flex h-11 min-w-[7.5rem] items-center justify-center rounded-lg border border-hairline bg-sunken px-3 text-[13px] font-semibold tabular-nums text-ink-1 sm:hidden"
+        aria-hidden="true"
+      >
+        Page {currentPage} sur {totalPages}
+      </span>
 
       {/* Next Button */}
       {control(currentPage + 1, {
