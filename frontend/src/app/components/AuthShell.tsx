@@ -5,11 +5,12 @@ import { useId, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
-import { ShieldCheck, Truck, CreditCard, ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ShieldCheck, Truck, CreditCard, ArrowLeft, Eye, EyeOff, Loader2, Coins, PackageCheck, Zap, Star } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { cn } from '@/app/components/ui/utils';
+import { CASHBACK_PERCENT, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
 
 /**
  * ── THE AUTH SCREENS, ON THE SITE'S OWN VOCABULARY (owner, 20/08/2026) ──────────────────────
@@ -67,6 +68,44 @@ import { cn } from '@/app/components/ui/utils';
  *
  * `.pt-no-chrome` is read by globals.css to drop the body's tab-bar reserve — these routes render
  * no tab bar, and the reserve was leaving a ~90px strip of canvas below the fold.
+ *
+ * ──────────────────────────────────────────────────────────────────────────────────────────
+ * ── THIRD PASS (owner, 20/08/2026): "IT LOOKS AI GENERATED" ─────────────────────────
+ *
+ * *"the design that you've made for the login and the sign up page looks like AI generated …
+ * make the best UX/UI, showing on the login and the sign up that if they log in they will get
+ * benefits."*
+ *
+ * The second pass fixed the SURFACE problem and left the CONTENT problem untouched, and the
+ * content problem is the one that reads as machine-made. Measured, on the screenshot the owner
+ * sent back:
+ *
+ *   - The panel is ~1,100px tall and **not one pixel of it is about having an account.** The
+ *     headline is the homepage's headline. The paragraph is the homepage's paragraph. And all
+ *     three trust facts — authentique, livraison 24–72h, paiement à la livraison — are equally
+ *     true for a guest who never registers. The panel argues for the SHOP, on the one screen
+ *     whose entire job is to argue for the ACCOUNT.
+ *   - ~430px of that height is a decorative photograph carrying `alt=""`. It is the homepage
+ *     hero, reused. Generic imagery filling space that has nothing to say is precisely the tell
+ *     the owner is naming; the fix is not a better photograph, it is having something to say.
+ *
+ * ── AND THIS SHOP HAS SOMETHING TO SAY, IT JUST NEVER SAID IT ───────────────────────
+ * There is a complete loyalty programme behind the login: a points ledger, a 5% earn rate, a
+ * redemption slider in checkout, a balance and a full history. It has been reachable only from
+ * the third tab of `/account` — that is, only to somebody who had already registered. The one
+ * concrete, quantified, guest-unavailable reason to make an account was the one thing the signup
+ * screen did not mention.
+ *
+ * So the photograph is gone and the benefits take its place: four rows, in the trust strip's own
+ * shape, each of which had to be **verified true against the backend before it could be written
+ * here**. Two candidates were cut for failing that test — favourites (`FavoritesContext` is
+ * localStorage-only, there is no favourites row in the database, so an account syncs nothing) and
+ * a saved address book (`AddressSelector` is a gouvernorat picker, not storage). What survived is
+ * points, order history, prefilled checkout details and verified reviews. See ACCOUNT_BENEFITS.
+ *
+ * The trust strip stays, demoted and compact, at the bottom of the column: those three facts are
+ * still why somebody trusts the shop enough to type an email, they are simply not the argument
+ * for the account and no longer occupy the position of one.
  */
 
 const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
@@ -74,6 +113,79 @@ const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
   { Icon: Truck, label: 'Livraison 24–72h', hint: 'Partout en Tunisie, offerte dès 300 DT' },
   { Icon: CreditCard, label: 'Paiement à la livraison', hint: 'Vous réglez le livreur, à la réception' },
 ];
+
+/**
+ * ── WHAT AN ACCOUNT ACTUALLY GIVES YOU ──────────────────────────────────────────
+ *
+ * Every row here is a claim made to somebody who has not signed up yet, so every row was checked
+ * against the code that would have to honour it:
+ *
+ *   Points      PointsService::EARN_RATE = 1/DT, REDEEM_POINTS_PER_DT = 20 → 5%. Credited on the
+ *               transition to `livree`, which is why the row says "livrée" and not "payée".
+ *   Commandes   `/account` → OrdersSection, backed by the orders endpoint. Guests get an email and
+ *               nothing else.
+ *   Coordonnées CheckoutPage seeds livraison_nom / prenom / email from `user` on mount.
+ *   Avis        ClientController requires an authenticated user to publish a review, and a review
+ *               carrying a commande_id is what earns the "Achat vérifié" mark on the product page.
+ *
+ * Two rows that would have been easy to write and are FALSE here, recorded so nobody adds them
+ * back: favourites do not sync (localStorage, no table), and there is no saved address book.
+ *
+ * The numbers come from `util/loyaltyPoints.ts` rather than being typed into the sentence. If the
+ * economy is ever retuned, the promise on the signup screen moves with it instead of quietly
+ * becoming a lie.
+ */
+const ACCOUNT_BENEFITS: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
+  {
+    Icon: Coins,
+    label: `${CASHBACK_PERCENT}% en points de fidélité`,
+    hint: `1 point par dinar, ${REDEEM_POINTS_PER_DT} points = 1 DT de remise. Crédités à la livraison.`,
+  },
+  {
+    Icon: PackageCheck,
+    label: 'Vos commandes au même endroit',
+    hint: 'Historique complet, statut et détail de chaque commande.',
+  },
+  {
+    Icon: Zap,
+    label: 'Commande plus rapide',
+    hint: 'Vos coordonnées sont pré-remplies au moment de commander.',
+  },
+  {
+    Icon: Star,
+    label: 'Donnez votre avis',
+    hint: 'Les avis rattachés à une commande portent la mention « Achat vérifié ».',
+  },
+];
+
+/**
+ * The benefits, in the same bordered, hairline-divided box the trust strip uses.
+ *
+ * Deliberately NOT a new visual pattern. This screen's problem was never that it lacked a device —
+ * it is the site's most recognisable small component, and reusing it here means the panel reads as
+ * this shop rather than as a template. The only difference from `TrustStrip` is the accent plate
+ * behind each glyph, which is what separates "here is what you get" from "here is who we are".
+ */
+function BenefitList({ compact = false }: { compact?: boolean }) {
+  return (
+    <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-canvas">
+      {ACCOUNT_BENEFITS.map(({ Icon, label, hint }) => (
+        <li key={label} className="flex items-start gap-3 px-4 py-3.5">
+          <span
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand"
+            aria-hidden="true"
+          >
+            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
+          </span>
+          <span className="min-w-0 pt-0.5">
+            <span className="block text-[13px] font-bold uppercase tracking-[0.04em] text-ink-1">{label}</span>
+            {!compact && <span className="mt-1 block text-[12.5px] leading-snug text-ink-3">{hint}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 /**
  * The three facts, in the homepage trust strip's shape: one bordered box, hairline-divided rows,
@@ -127,36 +239,43 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <div className="max-w-xl">
           <span className="mb-3 inline-flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
             <span className="h-px w-5 bg-brand" aria-hidden="true" />
-            La boutique
+            Espace client
           </span>
-          {/* `font-display` already carries wdth 82 from globals.css — `font-compressed` beside it
-              is redundant. Same headline treatment as every section title on the site. */}
+          {/*
+              The headline is a NUMBER, and it is the number this screen is selling.
+
+              It was "La nutrition sportive n°1 en Tunisie" — the homepage's headline, on a page
+              nobody reaches without already having chosen the shop. A visitor here has a cart or
+              an order; what they have not decided is whether to type an email address. So the
+              headline answers that question instead, with the one quantified thing an account
+              gives that a guest checkout does not.
+
+              `font-display` already carries wdth 82 from globals.css — `font-compressed` beside it
+              is redundant. Same treatment as every section title on the site.
+          */}
           <h2 className="font-display text-[38px] font-bold uppercase leading-[0.95] tracking-tight text-ink-1 xl:text-[46px]">
-            La nutrition sportive <span className="text-brand">n°1</span> en Tunisie
+            Votre compte vous rapporte <span className="text-brand">{CASHBACK_PERCENT}%</span>
           </h2>
           <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-2">
-            Whey, créatine, gainers et compléments authentiques — commandés depuis n’importe quel
-            gouvernorat, payés à la réception.
+            Gratuit, en une minute. Vos points sont crédités dès que la commande est livrée, et se
+            déduisent de la suivante.
           </p>
 
-          {/* THE ONE DARK OBJECT ON THE PAGE. No scrim: nothing is written over it, so nothing
-              needs contrast bought, and the photograph is the only thing here that is not type.
-              `aspect-[16/9]` is the source's own ratio, so `object-cover` crops nothing. */}
-          <div className="mt-8 overflow-hidden rounded-2xl border border-hairline shadow-card">
-            <div className="relative aspect-[16/9]">
-              <Image
-                src="/slides/home-hero-web.webp"
-                alt=""
-                fill
-                sizes="(min-width: 1280px) 46vw, 50vw"
-                className="object-cover"
-                priority
-              />
-            </div>
+          <div className="mt-8">
+            <BenefitList />
           </div>
 
-          <div className="mt-8">
-            <TrustStrip />
+          {/*
+              The shop's three facts, kept and demoted.
+
+              They are still the reason somebody trusts this site enough to type an email — but
+              they are true for a guest too, so they cannot be the argument for registering and no
+              longer sit where that argument belongs. `compact` drops the second lines: under the
+              benefit list, which now carries the explanatory prose, three more hint rows were
+              120px of text at the bottom of a column nobody reads to the end of.
+          */}
+          <div className="mt-5">
+            <TrustStrip compact />
           </div>
         </div>
 
@@ -204,10 +323,18 @@ export function AuthShell({ children }: { children: ReactNode }) {
               {children}
             </div>
 
-            {/* Same component the brand column uses, in its compact form. The trust points are the
-                reason someone finishes a signup, and on a phone they were on the panel phones
-                never render. */}
-            <div className="mt-5 lg:hidden">
+            {/*
+              ── THE PHONE GETS THE ARGUMENT TOO ────────────────────────────────────────────
+              81% of this site's traffic is mobile, and the brand column is `hidden lg:flex`. So
+              every reason to open an account lived on a panel that four visitors in five never
+              render. Both lists come down here, both compact: labels only, no hint rows, ~250px
+              under the card rather than the ~640px the full versions would cost.
+
+              Below the card and not above it — the form is what this screen is for, and a signup
+              that opens with 250px of marketing is a signup that starts scrolled.
+            */}
+            <div className="mt-5 space-y-3 lg:hidden">
+              <BenefitList compact />
               <TrustStrip compact />
             </div>
           </div>

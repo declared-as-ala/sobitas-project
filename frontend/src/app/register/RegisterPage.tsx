@@ -15,6 +15,7 @@ import {
   AuthAlt,
 } from '@/app/components/AuthShell';
 import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
+import { CASHBACK_PERCENT } from '@/util/loyaltyPoints';
 
 /** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
  *  password before the request rather than surfacing a 422 the customer cannot read. */
@@ -96,7 +97,16 @@ export default function RegisterPage() {
       <AuthCardHeader
         kicker="Créer un compte"
         title="Rejoignez-nous"
-        subtitle="Suivi de commande, historique et points fidélité — en une minute."
+        /* The subtitle leads with the number, because on a phone this line IS the benefits panel:
+           the brand column is `hidden lg:flex`, and the compact lists sit below the form. Three
+           words of it are the only argument a mobile visitor reads before deciding to type. */
+        subtitle={
+          <>
+            Gagnez{' '}
+            <strong className="font-semibold text-ink-1">{CASHBACK_PERCENT}% en points</strong> sur
+            chaque commande livrée, et suivez vos commandes. En une minute.
+          </>
+        }
       />
 
       <form onSubmit={handleSubmit} className="space-y-4">
