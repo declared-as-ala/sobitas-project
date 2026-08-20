@@ -7,6 +7,16 @@
 The canonical visual language for protein.tn. Every page and component must read as one
 art-directed brand, not assembled parts. When redesigning a surface, conform it to this document.
 
+> **This document is long because it records reasoning, and reasoning is what stops a decision being
+> undone six weeks later. It is not the thing you read at the start of every task.**
+>
+> The operating layer is the **`protein-ui` skill** — `.claude/skills/protein-ui/SKILL.md` — which
+> loads automatically for any UI, UX, visual, styling or layout work, and which every redesign is
+> expected to have been read against. It carries the rules, the token vocabulary, the primitive
+> table, the verification commands and the new-component contract, and it points back here for the
+> *why*. **If you change a rule in this document, change it in the skill in the same commit** — a
+> second source of truth that drifts is worse than one long file.
+
 > **Golden rule:** change the *look*, never the *logic*. Only touch `className`, JSX
 > layout/structure, typography, spacing, icons, and decorative motion. Do **not** alter data
 > fetching, props, API calls, `generateMetadata`, JSON-LD, SEO copy, `href`s, form behaviour, or
@@ -736,3 +746,32 @@ landing pages. Delete it or use it; do not leave it undecided indefinitely.
 
 `globals.css:196-281` overrides physical-direction utilities with `!important` for `html[dir="rtl"]`
 (~85 lines). New components should prefer logical properties, or they will break in Arabic.
+
+---
+
+## 15. The contract for a NEW component
+
+Sections 1-14 describe surfaces that exist. This one is the checklist for one that does not yet,
+because "conform it to this document" is not actionable when there is nothing to conform.
+
+1. **Does a primitive already do this?** Extend it before adding a sibling. `ProductGrid` grew an
+   `as`/`role` prop rather than letting Ventes flash keep its forked copy of the class string — and
+   the fork had already drifted a whole breakpoint. A component that cannot be reused in the one
+   shape a caller needs does not prevent the fork; it guarantees it.
+2. **Server component** unless it needs state, an effect, a handler or a browser API.
+3. **Tokens only.** A new file is absent from `design-baseline.json`, so `lint:design` requires it
+   to be at **zero** violations. This is not a nice-to-have — it is the gate.
+4. **Both themes and 320 / 390 / 768 / 1024 / 1440 from the first draft.** Not a later pass. 81% of
+   this site's traffic is a phone, and 320 is also what a 360px Android reports at the largest
+   display-size setting — i.e. someone who has asked the system for bigger text.
+5. **≥44x44px** on everything interactive, keyboard reachable, `focus-visible:ring-focus`, French
+   labels. A control that must *look* smaller keeps its target with `-my-3 py-3`, never by shrinking.
+6. **A skeleton if it loads**, matching the final layout's padding, gaps and aspect ratios exactly.
+   Shared geometry goes in a constant both files import — see `util/productCardFrame.ts`. Two
+   hand-matched copies is how the card and its skeleton drifted into CLS.
+7. **Write down why, next to the code**, wherever the reason is not obvious from reading it. Every
+   long comment in this codebase exists because someone undid a decision that looked arbitrary.
+
+Then verify against the rendered page, not the source (§0). If the component's claim is numeric
+("the card is shorter", "the sheet fits on one screen"), write the measurement script — there are
+eleven already in `scripts/` to copy from.
