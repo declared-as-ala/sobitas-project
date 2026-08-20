@@ -12,49 +12,61 @@ import { Label } from '@/app/components/ui/label';
 import { cn } from '@/app/components/ui/utils';
 
 /**
- * ── THE FOUR AUTH SCREENS, REBUILT ON THE DESIGN SYSTEM (owner, 20/08/2026) ─────────────────
- * *"redesign the login and signup page, make it fit the landing page and the other pages design
- * we made, make it super responsive on all mobiles."*
+ * ── THE AUTH SCREENS, ON THE SITE'S OWN VOCABULARY (owner, 20/08/2026) ──────────────────────
+ * *"completely redesign the login and signup page, make it fit the vibe of the website and the
+ * landing page, and use the colours of the website."*
  *
- * These four screens (login / register / forgot / reset) were the last part of the site still
- * written in the pre-token vocabulary, and they were the WORST of it: 132 lint violations across
- * five files — `bg-white dark:bg-gray-950`, `text-red-600 dark:text-red-400`, `border-gray-100`,
- * `focus-visible:ring-red-500`, a three-stop `from-red-700/60 via-gray-950/85 to-gray-950`
- * gradient, and `brightness-0 invert` on the logo. Every one of those is a decision written twice
- * that drifts independently, on the surface where a customer decides whether this shop looks like
- * a real business.
+ * The previous pass fixed the COLOUR — it was `red-600` (#DC2626, a signal red) where the brand
+ * is #D03B04, so side by side with the homepage the two did not read as the same company. That
+ * part was right and it stays.
  *
- * The colour was not merely off-system, it was off-BRAND. `red-600` is #DC2626, a signal red; the
- * shop's accent is #D03B04, a deep orange. Side by side with the landing page the two do not read
- * as the same company — which is exactly what the owner is describing when they say it does not
- * fit.
+ * What it got wrong is the thing the owner is now pointing at: **it made dark a SURFACE.**
  *
- * ── WHAT CHANGED STRUCTURALLY, NOT JUST IN COLOUR ───────────────────────────────────────────
+ * ── HALF THE SCREEN WAS A DARKENED PHOTOGRAPH ───────────────────────────────────────────────
+ * The brand panel was `.pt-slab` with the hero image under `bg-black/70` plus a brand gradient on
+ * top. At 1536 that is ~768 x 869px — 44% of the viewport — painted near-black. DESIGN_SYSTEM §0.5
+ * is unambiguous about this and it is the owner's own constraint, quoted there:
  *
- *   THE FORM SAT IN A WHITE VOID. The right half was `bg-white` with a 448px form floating in the
- *   middle of it — on a 1536 viewport that is ~1,090px of empty white beside a form. It is now a
- *   CARD (`bg-elevated`, hairline, `shadow-card`) on a `bg-sunken` field, which is the same
- *   figure-on-ground the rest of the site uses for every panel it owns.
+ *     "I want something light, and it has a dark mode and a light mode. Keep it white and just
+ *      use black for important things."
  *
- *   THE PANEL IS A SLAB, NOT A GRADIENT. `.pt-slab` is the scope the footer and the header's
- *   contact strip already use, so the left panel inherits ink and accent that are correct on a
- *   dark surface in BOTH themes with no `dark:` variant anywhere. The photograph keeps a plain
- *   `bg-black/…` scrim — DESIGN_SYSTEM is explicit that a scrim is black, never `bg-ink-1/…`,
- *   because ink inverts with the theme and a scrim must not.
+ * The budget is ~12% of painted area. A 70% black scrim over half the page spends it four times
+ * over — and it spends it on a photograph it simultaneously destroys. The source image is a
+ * beautifully lit studio shot: five products, warm rim light, an athlete on a bench. Under
+ * `bg-black/70` it is a brown smear in which none of that is legible. We were paying 135 KB and
+ * half the composition to show nothing.
  *
- *   THE LOGO IS THE LOGO. `brightness-0 invert` turned the orange wordmark into a white
- *   silhouette — the one asset on the page that carries the brand, with the brand removed from
- *   it. The footer renders it untouched on its own dark surface and so does this.
+ * ── SO THE PAGE IS LIGHT AND THE PHOTOGRAPH IS AN OBJECT ────────────────────────────────────
+ * Which is exactly what the landing page does, and is the pattern this screen should have copied
+ * in the first place. On the homepage the hero is not a background — it is a contained, rounded,
+ * hairline-bordered card sitting on white, beside a white best-sellers panel. The category tiles
+ * are the same move: dark photograph, rounded, with a light caption row under it.
  *
- *   ONE FIELD COMPONENT, NOT FIVE COPIES. The icon + input + focus-ring markup was written out
- *   nine times across four files, and it had already drifted (the reset screen's ring, the
- *   forgot screen's card chrome). `AuthField` is the single definition.
+ * So here: the brand column is `bg-canvas`, and the photograph is a `rounded-2xl` card in it,
+ * UNDARKENED. The dark is still there — it is simply an object with edges instead of a curtain,
+ * and now you can see the products in it. Painted-dark area at 1536 drops from ~44% to ~9%.
+ *
+ * ── AND THE TRUST ROWS ARE THE HOMEPAGE'S TRUST STRIP ───────────────────────────────────────
+ * They were a bare `<ul>` of icon + two lines. The homepage states the same three facts in a
+ * bordered, hairline-divided strip — the site's most recognisable small component. Reusing that
+ * shape is most of what "fit the vibe" means: a returning customer has already read this row on
+ * the homepage, and meeting it again on the signup screen is continuity rather than decoration.
+ *
+ * ── FIGURE ON GROUND, WHICH IS WHY THE COLUMNS ARE THESE WAY ROUND ──────────────────────────
+ * `--c-canvas` and `--c-elevated` are BOTH #FFFFFF in light mode. So a white card needs a
+ * non-white field or it disappears, leaving only its hairline. The form column is therefore
+ * `bg-sunken` (warm sand) with a `bg-elevated` card on it, and the brand column is `bg-canvas`.
+ * That also makes the two halves the site's own canvas <-> sunken alternation, turned on its side,
+ * with a hairline on the seam — §0.5's rule that no two adjacent surfaces may match.
  *
  * ── MOBILE ──────────────────────────────────────────────────────────────────────────────────
  * `min-h-dvh`, not `min-h-screen`: on iOS Safari `100vh` includes the browser chrome, so the old
  * shell was ~90px taller than the visible viewport and every auth screen started life scrolled.
- * The brand panel is desktop-only, so phones get a compact slab strip with the wordmark instead
- * of a 50% image they would never see. Layout holds down to 320px.
+ * The brand column is `hidden lg:flex`, so a phone never requests the 135 KB photograph; it gets
+ * the same trust strip under the card instead. Layout holds to 320px.
+ *
+ * `.pt-no-chrome` is read by globals.css to drop the body's tab-bar reserve — these routes render
+ * no tab bar, and the reserve was leaving a ~90px strip of canvas below the fold.
  */
 
 const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
@@ -63,72 +75,92 @@ const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
   { Icon: CreditCard, label: 'Paiement à la livraison', hint: 'Vous réglez le livreur, à la réception' },
 ];
 
+/**
+ * The three facts, in the homepage trust strip's shape: one bordered box, hairline-divided rows,
+ * an 18px brand glyph, an uppercase label and a quiet hint.
+ *
+ * `hint` is dropped on the phone (`compact`) — under a 5-field signup form, three second lines are
+ * 60px of reassurance nobody scrolls to. The labels alone carry it.
+ */
+function TrustStrip({ compact = false }: { compact?: boolean }) {
+  return (
+    <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-canvas">
+      {TRUST.map(({ Icon, label, hint }) => (
+        <li key={label} className="flex items-start gap-3 px-4 py-3">
+          <Icon className="mt-px h-[18px] w-[18px] shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+          <span className="min-w-0">
+            <span className="block text-[12px] font-bold uppercase tracking-[0.06em] text-ink-1">{label}</span>
+            {!compact && <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-3">{hint}</span>}
+          </span>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
-    /* `.pt-no-chrome` is read by globals.css to drop the body's tab-bar reserve — these routes
-       render no tab bar, and the padding was leaving a ~90px strip of canvas under the screen on
-       every phone. It carries no styles of its own. */
     <div className="pt-no-chrome min-h-dvh bg-sunken lg:grid lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
-      {/*
-        ── THE BRAND PANEL — DESKTOP ONLY ────────────────────────────────────────────────────
-        `lg:flex` on a `hidden` element: the <Image> is never requested on a phone, which matters
-        because it is the same 1.2 MB hero the homepage uses. `sizes="50vw"` is honest — this
-        column is exactly half the grid from `lg` up.
-      */}
-      <aside className="pt-slab relative hidden overflow-hidden lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div className="absolute inset-0" aria-hidden="true">
-          <Image
-            src="/slides/home-hero-web.webp"
-            alt=""
-            fill
-            priority
-            sizes="50vw"
-            className="object-cover"
-          />
-          {/* Two layers, and they do different jobs. The black scrim buys contrast for the type;
-              the brand wash on top of it is what stops a dark photograph reading as grey. Both
-              are needed — a single orange gradient over a photo never gets dark enough for
-              17.5:1 ink, and a single black one is a stock overlay with no brand in it. */}
-          <div className="absolute inset-0 bg-black/70" />
-          <div className="absolute inset-0 bg-gradient-to-br from-brand/30 via-transparent to-transparent" />
-        </div>
-
-        <Link href="/" className="relative w-fit" aria-label="Protein.tn — Accueil">
+      {/* ── THE BRAND COLUMN — DESKTOP ONLY ──────────────────────────────────────────────── */}
+      <aside className="hidden border-e border-hairline bg-canvas lg:flex lg:flex-col lg:justify-between lg:gap-10 lg:p-10 xl:p-12">
+        <Link
+          href="/"
+          /* `min-h-[44px]` on a link whose only child is a 40px image. Without it this is a 40px
+             target — caught by measure-auth, not by looking at it, which is the entire argument
+             for that script: the logo LOOKS like a comfortable click at any zoom level. */
+          className="flex min-h-[44px] w-fit items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          aria-label="Protein.tn — Accueil"
+        >
           <Image
             src={headerLogoUrl}
             alt="Protein.tn"
             width={230}
             height={75}
             sizes="200px"
-            className="h-12 w-auto object-contain"
+            className="h-10 w-auto object-contain"
             priority
           />
         </Link>
 
-        <div className="relative">
-          <h2 className="font-display text-4xl font-bold uppercase leading-[0.95] tracking-tight text-ink-1 xl:text-5xl">
+        <div className="max-w-xl">
+          <span className="mb-3 inline-flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
+            <span className="h-px w-5 bg-brand" aria-hidden="true" />
+            La boutique
+          </span>
+          {/* `font-display` already carries wdth 82 from globals.css — `font-compressed` beside it
+              is redundant. Same headline treatment as every section title on the site. */}
+          <h2 className="font-display text-[38px] font-bold uppercase leading-[0.95] tracking-tight text-ink-1 xl:text-[46px]">
             La nutrition sportive <span className="text-brand">n°1</span> en Tunisie
           </h2>
           <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-2">
             Whey, créatine, gainers et compléments authentiques — commandés depuis n’importe quel
             gouvernorat, payés à la réception.
           </p>
-          <ul className="mt-8 space-y-4">
-            {TRUST.map(({ Icon, label, hint }) => (
-              <li key={label} className="flex items-start gap-3">
-                <Icon className="mt-0.5 h-5 w-5 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold text-ink-1">{label}</span>
-                  <span className="block text-[13px] leading-snug text-ink-3">{hint}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+
+          {/* THE ONE DARK OBJECT ON THE PAGE. No scrim: nothing is written over it, so nothing
+              needs contrast bought, and the photograph is the only thing here that is not type.
+              `aspect-[16/9]` is the source's own ratio, so `object-cover` crops nothing. */}
+          <div className="mt-8 overflow-hidden rounded-2xl border border-hairline shadow-card">
+            <div className="relative aspect-[16/9]">
+              <Image
+                src="/slides/home-hero-web.webp"
+                alt=""
+                fill
+                sizes="(min-width: 1280px) 46vw, 50vw"
+                className="object-cover"
+                priority
+              />
+            </div>
+          </div>
+
+          <div className="mt-8">
+            <TrustStrip />
+          </div>
         </div>
 
-        <p className="relative text-xs text-ink-3">© Protein.tn — SOBITAS, Sousse, Tunisie</p>
+        <p className="text-xs text-ink-3">© Protein.tn — SOBITAS, Sousse, Tunisie</p>
       </aside>
 
       {/* ── THE FORM COLUMN ──────────────────────────────────────────────────────────────── */}
@@ -138,15 +170,22 @@ export function AuthShell({ children }: { children: ReactNode }) {
         <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-10">
           <Link
             href="/"
-            className="-ms-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="group -ms-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
-            <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
+            <ArrowLeft
+              className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+              aria-hidden="true"
+            />
             <span className="hidden sm:inline">Retour à la boutique</span>
             <span className="sm:hidden">Boutique</span>
           </Link>
           {/* `min-h-[44px]` on a link that wraps nothing but a 32px image: without it the logo is a
               32px target, and it is one of only two controls on the screen before the form. */}
-          <Link href="/" className="flex min-h-[44px] items-center lg:hidden" aria-label="Protein.tn — Accueil">
+          <Link
+            href="/"
+            className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+            aria-label="Protein.tn — Accueil"
+          >
             <Image
               src={headerLogoUrl}
               alt="Protein.tn"
@@ -165,16 +204,12 @@ export function AuthShell({ children }: { children: ReactNode }) {
               {children}
             </div>
 
-            {/* The trust points are the reason someone finishes a signup, and on a phone they
-                were on the panel that phones never render. Three chips, one line each. */}
-            <ul className="mt-5 grid gap-2 lg:hidden">
-              {TRUST.map(({ Icon, label }) => (
-                <li key={label} className="flex items-center gap-2 text-[13px] text-ink-2">
-                  <Icon className="h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
-                  {label}
-                </li>
-              ))}
-            </ul>
+            {/* Same component the brand column uses, in its compact form. The trust points are the
+                reason someone finishes a signup, and on a phone they were on the panel phones
+                never render. */}
+            <div className="mt-5 lg:hidden">
+              <TrustStrip compact />
+            </div>
           </div>
         </div>
       </div>
@@ -298,8 +333,13 @@ export function AuthSubmit({
       className={cn(
         'inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4',
         'font-display text-[13.5px] font-bold uppercase tracking-[0.08em] text-on-brand',
-        'transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
-        'disabled:cursor-not-allowed disabled:opacity-60',
+        /* Named properties, not `transition-all` — that would also animate the focus ring's
+           colour, which should appear instantly. The 0.99 press is the only motion on this
+           screen and it is what makes a 12px-tall colour change read as a button being pressed
+           rather than as a repaint. */
+        'transition-[background-color,transform] duration-150 hover:bg-brand-hover active:scale-[0.99]',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
+        'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         props.className
       )}
     >

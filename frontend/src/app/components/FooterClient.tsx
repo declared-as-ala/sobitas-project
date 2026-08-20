@@ -3,12 +3,13 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUp, ArrowUpRight, Facebook, Instagram, Linkedin, Loader2, Mail, Map as MapIcon, MapPin, Phone, Youtube } from 'lucide-react';
+import { ArrowUp, ArrowUpRight, ChevronDown, Facebook, Instagram, Linkedin, Loader2, Mail, Map as MapIcon, MapPin, Phone, Youtube } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter } from '@/services/api';
 import { LEGAL_IDENTITY } from '@/util/company';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { cn } from '@/app/components/ui/utils';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { toast } from 'sonner';
@@ -121,9 +122,15 @@ const RAIL = 'mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8';
 const FOOTER_LINK =
   'flex min-h-[44px] items-center py-1.5 text-sm text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[34px]';
 
-/** Both map controls, and the "Haut de page" button, share one shape. */
+/**
+ * Both map controls, and the "Haut de page" button, share one shape.
+ *
+ * 44px on a phone, 36 from `sm`. It was a flat 36 everywhere, which measure-footer flagged on all
+ * three of them: 36px is under the WCAG 2.5.5 floor, and these sit at the very bottom of the
+ * screen where a thumb is least accurate.
+ */
 const QUIET_BUTTON =
-  'inline-flex min-h-[36px] items-center gap-1.5 rounded-lg border border-hairline px-2.5 text-xs font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
+  'inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[36px] sm:px-2.5';
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const { footerLogoUrl } = useSiteLogos();
@@ -194,7 +201,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
       <div className="border-b border-hairline">
         <form
           onSubmit={handleNewsletterSubmit}
-          className={`${RAIL} flex flex-col gap-3 py-5 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-6`}
+          className={`${RAIL} flex flex-col gap-2.5 py-4 lg:flex-row lg:items-center lg:justify-between lg:gap-10 lg:py-6`}
         >
           <div className="min-w-0">
             <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
@@ -234,14 +241,36 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
       </div>
 
       {/* ── BRAND + FOUR COLUMNS, ONE GRID ─────────────────────────────────────────────────
-          Two up on a phone (a footer link is ~120px of text on a 390px screen, so one column
+          Two up from `sm` (a footer link is ~120px of text on a 390px screen, so one column
           spent two thirds of every row on nothing), five across from `lg` — the brand block is
-          the first of the five rather than a band above them. */}
+          the first of the five rather than a band above them.
+
+          ── ON A PHONE IT IS ONE COLUMN OF COLLAPSED GROUPS (owner, 20/08/2026) ─────────────
+          *"polish the footer on mobile, make it more clean and simple and optimised and
+          minimalistic."*
+
+          Measured before touching it: **1,282px at 390 — 1.52 phone screens**, of which this grid
+          was 993. Twenty internal links, all expanded, under every page of the site. Each column
+          was defensible alone; only the sum was absurd, which is why it survived four passes.
+
+          Nothing is deleted. Every one of the twenty links is still in the HTML and still one tap
+          away — the three link groups simply start closed below `sm`, which is what a footer
+          accordion is for and what every shop this size does. Contact does NOT collapse: an
+          address, a phone number and an email are the reason somebody scrolls to a footer on a
+          cash-on-delivery shop, and hiding them behind a chevron would be minimalism applied to
+          the one block that earns its height. */}
       <div
-        className={`${RAIL} grid grid-cols-2 gap-x-6 gap-y-8 py-8 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] lg:gap-x-8 lg:py-10`}
+        className={`${RAIL} grid grid-cols-1 gap-y-0 py-6 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-8 sm:py-8 lg:grid-cols-[minmax(0,1.4fr)_repeat(4,minmax(0,1fr))] lg:gap-x-8 lg:py-10`}
       >
-        <div className="col-span-2 min-w-0 lg:col-span-1">
-          <LinkWithLoading href="/" className="inline-block transition-opacity hover:opacity-80">
+        <div className="mb-2 min-w-0 sm:col-span-2 sm:mb-0 lg:col-span-1">
+          {/* `min-h-[44px]` and an aria-label: this wraps nothing but a 40px image, so without the
+              first it is a 40px target and without the second a screen reader announces an anchor
+              with no accessible name. measure-footer catches both. */}
+          <LinkWithLoading
+            href="/"
+            aria-label="Proteine Tunisie — Accueil"
+            className="inline-flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
             <Image
               src={footerLogoUrl}
               alt="Proteine Tunisie"
@@ -263,7 +292,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                /* 44px on a phone, 40 from `sm` — five 40px circles in a row was five targets
+                   under the floor, and they are the last thing a thumb reaches on the page. */
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-hairline bg-sunken text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:h-10 sm:w-10"
                 aria-label={label}
               >
                 {icon}
@@ -275,9 +306,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         <FooterLinkColumn title="Navigation" links={NAVIGATION} />
         <FooterLinkColumn title="Catégories" links={CATEGORIES} />
 
-        <div className="min-w-0">
-          <FooterHeading>Services &amp; ventes</FooterHeading>
-          <ul className="mt-3 space-y-0.5">
+
+        <FooterGroup title="Services &amp; ventes">
+          <ul className="space-y-0.5 pb-2 sm:pb-0">
             {footerPages.map((p) => (
               <li key={p.id}>
                 {p.slug ? (
@@ -292,9 +323,10 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
               </li>
             ))}
           </ul>
-        </div>
+        </FooterGroup>
 
-        <div className="min-w-0">
+        {/* Never collapsed — see the note on the grid above. */}
+        <div className="min-w-0 border-t border-hairline pt-4 sm:border-t-0 sm:pt-0">
           <FooterHeading>Nous contacter</FooterHeading>
           <ul className="mt-3 space-y-0.5">
             <li>
@@ -407,11 +439,62 @@ function FooterHeading({ children }: { children: React.ReactNode }) {
   );
 }
 
+
+/**
+ * A footer group: a plain titled column from `sm`, a disclosure below it.
+ *
+ * ── WHY A BUTTON AND A GRID, NOT `<details>` ────────────────────────────────────────────────
+ * `<details>` would need no JavaScript, which is why it is right for the shop's filter rail. It
+ * is wrong here, because this component must be OPEN at `sm` and CLOSED below it, and `open` is
+ * an HTML attribute that no media query can reach. Forcing a closed `<details>` to show its
+ * children with CSS depends on how each engine implements the hidden slot, and Safari and Chrome
+ * do not agree.
+ *
+ * `grid-rows-[0fr] -> [1fr]` animates a height nobody has to measure, and `sm:!grid-rows-[1fr]`
+ * makes the desktop state a fact of the stylesheet rather than of React — so the columns are open
+ * at `sm` even before hydration, and a crawler at any width sees every link in the markup.
+ *
+ * The heading is rendered TWICE and exactly one is ever displayed: a `<button>` below `sm`, a
+ * plain `<h2>` from `sm`. That is deliberate rather than lazy — `aria-expanded` on a control that
+ * cannot collapse anything is a lie to a screen reader, and `display: none` keeps the unused one
+ * out of the accessibility tree entirely.
+ */
+function FooterGroup({ title, children }: { title: string; children: React.ReactNode }) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <div className="min-w-0 border-t border-hairline sm:border-t-0">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+        className="flex min-h-[52px] w-full items-center justify-between gap-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:hidden"
+      >
+        <FooterHeading>{title}</FooterHeading>
+        <ChevronDown
+          className={cn('h-4 w-4 shrink-0 text-ink-3 transition-transform duration-200', open && 'rotate-180')}
+          aria-hidden="true"
+        />
+      </button>
+      <div className="hidden sm:block">
+        <FooterHeading>{title}</FooterHeading>
+      </div>
+      <div
+        className={cn(
+          'grid transition-[grid-template-rows] duration-300 ease-out sm:!grid-rows-[1fr]',
+          open ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+        )}
+      >
+        <div className="overflow-hidden sm:mt-3">{children}</div>
+      </div>
+    </div>
+  );
+}
+
 function FooterLinkColumn({ title, links }: { title: string; links: Array<[string, string]> }) {
   return (
-    <div className="min-w-0">
-      <FooterHeading>{title}</FooterHeading>
-      <ul className="mt-3 space-y-0.5">
+    <FooterGroup title={title}>
+      <ul className="space-y-0.5 pb-2 sm:pb-0">
         {links.map(([href, label]) => (
           <li key={href}>
             <LinkWithLoading href={href} className={FOOTER_LINK}>
@@ -420,6 +503,6 @@ function FooterLinkColumn({ title, links }: { title: string; links: Array<[strin
           </li>
         ))}
       </ul>
-    </div>
+    </FooterGroup>
   );
 }
