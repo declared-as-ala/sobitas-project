@@ -20,8 +20,16 @@ import AboutPageContent from './AboutPageContent';
  * more in truncation than it wins in recognition.
  */
 const ABOUT_TITLE = 'À propos de SOBITAS — Protein.tn | Protéine Tunisie';
+/*
+ * 154 characters, and both halves of that matter.
+ *
+ * The previous one was 161 — past the point Google truncates a desktop snippet, so the last words
+ * were being cut. It also ended "créatine depuis des années en Tunisie", a vagueness the page
+ * itself contradicts: company.ts and the CMS excerpt both say 2010, and a founding year is the
+ * single most credible thing an About description can carry.
+ */
 const ABOUT_DESCRIPTION =
-  'SOBITAS, aujourd’hui Protein.tn : distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.';
+  'SOBITAS, aujourd’hui Protein.tn : compléments alimentaires et matériel de sport à Sousse depuis 2010. Whey, créatine, vitamines livrés partout en Tunisie.';
 
 export const metadata: Metadata = {
   title: { absolute: ABOUT_TITLE },

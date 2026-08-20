@@ -290,8 +290,17 @@ export default function AboutPageContent({
               room; below that the layout is ToC + prose, and on a phone it is one column.
             */}
             <div className="grid gap-8 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)] lg:gap-12 xl:grid-cols-[minmax(0,14rem)_minmax(0,46rem)_minmax(0,1fr)]">
+              {/* HIDDEN below `lg`, not conditionally rendered — the anchors stay in the HTML for a
+                  crawler either way. Only `sticky`/`top`/`self-start` were prefixed, so on a phone
+                  this was a static block: seven jump links, five of which wrap to two or three lines
+                  at 13px in a 340px column — roughly 450px of table of contents standing between the
+                  reader and the first word of prose. A ToC earns its place beside the text, not on
+                  top of it. */}
               {sections.length > 1 && (
-                <nav aria-label="Sommaire" className="min-w-0 lg:sticky lg:top-28 lg:self-start">
+                <nav
+                  aria-label="Sommaire"
+                  className="hidden min-w-0 lg:block lg:sticky lg:top-28 lg:self-start"
+                >
                   <h3 className="font-display text-xs font-bold uppercase tracking-[0.16em] text-ink-3">
                     Sommaire
                   </h3>
@@ -310,7 +319,11 @@ export default function AboutPageContent({
                 </nav>
               )}
 
-              <div className="min-w-0 xl:max-w-[46rem]">
+              {/* `lg:` not `xl:`. The cap only applied from 1280, so between 1024 and 1279 the prose ran
+                  1279 - 64 (gutters) - 224 (ToC) - 48 (gap) = 943px — about 118 characters a line, on
+                  every laptop in that band, while the docblock above claimed it was capped. The `xl`
+                  grid track already constrains it, so this is additive rather than conflicting. */}
+              <div className="min-w-0 lg:max-w-[46rem]">
                 {intro && (
                   <div
                     className={`${PROSE} border-b border-rule pb-6 prose-p:text-[0.9375rem] sm:prose-p:text-base`}
@@ -319,7 +332,14 @@ export default function AboutPageContent({
                 )}
                 <div className="divide-y divide-rule">
                   {sections.map((s) => (
-                    <article key={s.id} id={s.id} className="scroll-mt-28 py-6 first:pt-6">
+                    /* scroll-mt: 80px on a phone (the sticky header is 65) and 112 from `lg`
+                       (where it is 114). A single 112 overshot the mobile header by 47px, so an
+                       anchor jump left a gap of nothing above the heading it landed on. */
+                    <article
+                      key={s.id}
+                      id={s.id}
+                      className="scroll-mt-20 py-6 first:pt-6 lg:scroll-mt-28"
+                    >
                       <h3 className="font-display font-compressed text-xl font-extrabold uppercase leading-tight tracking-[-0.01em] text-ink-1 sm:text-2xl">
                         {s.title}
                       </h3>
@@ -472,7 +492,10 @@ export default function AboutPageContent({
         </Section>
 
         {/* ── CTA ───────────────────────────────────────────────────────────────────────── */}
-        <Section spacing="feature" width="wide" last>
+        {/* `default`, not `feature`. Section.tsx: "At most ONE per page: two dominant bands is zero
+          dominant bands." The hero above already holds this page's one feature step, and a closing
+          CTA competing with the page's own opening is what makes a document read as two documents. */}
+      <Section spacing="default" width="wide" last>
           <div className="mx-auto max-w-3xl text-center">
             <span className="pt-kicker mb-3 inline-flex items-center gap-2.5 text-brand">
               <span className="h-px w-5 bg-brand" aria-hidden="true" />
