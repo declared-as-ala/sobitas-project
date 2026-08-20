@@ -3,19 +3,33 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Loader2, Mail, Lock, User, Phone, ArrowRight } from 'lucide-react';
-import Link from 'next/link';
+import { Mail, Lock, User, Phone } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { AuthShell, AuthCardHeader } from '@/app/components/AuthShell';
+import {
+  AuthShell,
+  AuthCardHeader,
+  AuthField,
+  AuthSubmit,
+  AuthDivider,
+  AuthAlt,
+} from '@/app/components/AuthShell';
+import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
+
+/** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
+ *  password before the request rather than surfacing a 422 the customer cannot read. */
+function passwordProblem(pw: string): string | null {
+  if (pw.length < 8) return 'Le mot de passe doit contenir au moins 8 caractères.';
+  if (!/[A-Za-z]/.test(pw)) return 'Le mot de passe doit contenir au moins une lettre.';
+  if (!/[0-9]/.test(pw)) return 'Le mot de passe doit contenir au moins un chiffre.';
+  return null;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { register, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -24,193 +38,142 @@ export default function RegisterPage() {
     confirmPassword: '',
   });
 
-  // Redirect if already authenticated (using useEffect to avoid render error)
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push('/');
-    }
+    if (!authLoading && isAuthenticated) router.replace('/');
   }, [isAuthenticated, authLoading, router]);
 
-  // Show loading while checking auth status
-  if (authLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Don't render form if authenticated (will redirect)
-  if (isAuthenticated) {
-    return <LoadingSpinner />;
-  }
+  if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas');
+    const problem = passwordProblem(formData.password);
+    if (problem) {
+      toast.error(problem);
       return;
     }
-
-    // Must match the backend rule (min 8, at least one letter and one digit) so the form rejects
-    // bad passwords up-front with a clear message instead of surfacing a backend 422.
-    if (
-      formData.password.length < 8 ||
-      !/[A-Za-z]/.test(formData.password) ||
-      !/[0-9]/.test(formData.password)
-    ) {
-      toast.error('Le mot de passe doit contenir au moins 8 caractères, dont une lettre et un chiffre');
+    if (formData.password !== formData.confirmPassword) {
+      toast.error('Les mots de passe ne correspondent pas.');
       return;
     }
 
     setIsLoading(true);
-
     try {
       await register({
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
         password: formData.password,
-        role_id: 2, // Default role for customers
+        role_id: 2, // customer; the server sets this itself and never trusts the field
       });
-      toast.success('Compte créé avec succès !');
-      // Use setTimeout to ensure smooth transition
-      setTimeout(() => {
-        router.push('/');
-      }, 300);
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de l\'inscription');
-      setIsLoading(false);
-    } finally {
+      toast.success('Compte créé, bienvenue');
+      router.replace('/');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de l’inscription');
+      /* `finally { setIsLoading(false) }` used to run on the SUCCESS path too, so the button
+         flicked back to "Créer mon compte" for the 300ms before the redirect — long enough to be
+         pressed a second time. It resets only on failure now. */
       setIsLoading(false);
     }
   };
 
+  const handleGoogle = async (credential: string) => {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      toast.success('Compte créé, bienvenue');
+      router.replace('/');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Inscription Google impossible');
+      setGoogleLoading(false);
+    }
+  };
+
+  const busy = isLoading || googleLoading;
+
   return (
     <AuthShell>
       <AuthCardHeader
-        showLogo
-        kicker="Rejoignez-nous"
-        title="Créer un compte"
-        subtitle="Rejoignez-nous pour profiter de nos services"
+        kicker="Créer un compte"
+        title="Rejoignez-nous"
+        subtitle="Suivi de commande, historique et points fidélité — en une minute."
       />
-      <form onSubmit={handleSubmit} className="space-y-5">
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nom complet</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="name"
-                      type="text"
-                      placeholder="Jean Dupont"
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      required
-                    />
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="votre@email.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      autoComplete="email"
-                      required
-                    />
-                  </div>
-                </div>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <AuthField
+          label="Nom complet"
+          Icon={User}
+          type="text"
+          placeholder="Prénom et nom"
+          autoComplete="name"
+          value={formData.name}
+          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+          required
+        />
 
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Téléphone</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="+216 XX XXX XXX"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      required
-                    />
-                  </div>
-                </div>
+        <AuthField
+          label="Email"
+          Icon={Mail}
+          type="email"
+          inputMode="email"
+          placeholder="votre@email.com"
+          autoComplete="email"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
 
-                <div className="space-y-2">
-                  <Label htmlFor="password">Mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      autoComplete="new-password"
-                      required
-                      minLength={8}
-                    />
-                  </div>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Au moins 8 caractères, dont une lettre et un chiffre.
-                  </p>
-                </div>
+        <AuthField
+          label="Téléphone"
+          Icon={Phone}
+          type="tel"
+          inputMode="tel"
+          placeholder="+216 XX XXX XXX"
+          autoComplete="tel"
+          hint="Nous appelons ce numéro pour confirmer chaque commande."
+          value={formData.phone}
+          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+          required
+        />
 
-                <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmer le mot de passe</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.confirmPassword}
-                      onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      autoComplete="new-password"
-                      required
-                      minLength={8}
-                    />
-                  </div>
-                </div>
+        <AuthField
+          label="Mot de passe"
+          Icon={Lock}
+          reveal
+          placeholder="8 caractères minimum"
+          autoComplete="new-password"
+          hint="Au moins 8 caractères, dont une lettre et un chiffre."
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          required
+          minLength={8}
+        />
 
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Création du compte...
-                    </>
-                  ) : (
-                    <>
-                      Créer mon compte
-                      <ArrowRight className="h-5 w-5 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
+        <AuthField
+          label="Confirmer le mot de passe"
+          Icon={Lock}
+          reveal
+          placeholder="Retapez le mot de passe"
+          autoComplete="new-password"
+          value={formData.confirmPassword}
+          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+          required
+          minLength={8}
+        />
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Vous avez déjà un compte ?{' '}
-          <Link
-            href="/login"
-            className="font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-          >
-            Se connecter
-          </Link>
-        </p>
-      </div>
+        <AuthSubmit loading={isLoading} loadingLabel="Création…" disabled={busy}>
+          Créer mon compte
+        </AuthSubmit>
+      </form>
+
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+        <div className="mt-5 space-y-4">
+          <AuthDivider />
+          <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
+        </div>
+      )}
+
+      <AuthAlt question="Vous avez déjà un compte ?" href="/login" cta="Se connecter" />
     </AuthShell>
   );
 }

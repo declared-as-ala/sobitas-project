@@ -22,6 +22,7 @@
     "audit:pdp:update": "node scripts/audit-pdp-content.mjs --update",
     "audit:contrast": "node scripts/audit-contrast.mjs",
     "check:overlay-contrast": "node scripts/check-overlay-contrast.mjs",
+    "measure:auth": "node scripts/measure-auth.mjs",
     "measure:cart": "node scripts/measure-cart.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",
     "audit:console": "node scripts/check-console.mjs",

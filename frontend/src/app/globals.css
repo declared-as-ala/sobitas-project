@@ -158,6 +158,32 @@
     body {
       padding-bottom: var(--tabbar-h);
     }
+
+    /* ── EXCEPT WHERE THERE IS NO TAB BAR ────────────────────────────────────────────────────
+       MobileTabBar renders nothing on /checkout, /login, /register, /forgot-password and
+       /reset-password (CHROME_FREE_ROUTES) — but this padding was reserving 56px plus the
+       safe-area inset for it anyway. On a phone that is a ~90px strip of bare canvas under the
+       bottom of every auth screen, in the page background rather than the screen's own surface,
+       which reads as the layout having run out.
+
+       `:has()` on an ordinary class rather than a body attribute set from an effect: this way it
+       is correct in the SSR'd HTML, so there is no frame where the strip exists and then
+       disappears. `.pt-no-chrome` is declared by AuthShell; /checkout can adopt it the day its
+       own fixed footer is revisited.
+
+       ── THE TOKEN, NOT THE PADDING ────────────────────────────────────────────────────────
+       Zeroing `padding-bottom` here would fix the strip and leave a subtler bug behind, which is
+       exactly what the first version of this rule did. `--tabbar-h` is not only the body's
+       reserve: every fixed-bottom element in the app is positioned against it. The install
+       banner parks itself at `bottom: var(--tabbar-h)` translated down by 110% of its own height
+       — 89px against an 81px element — which clears the fold only because the last 56px are
+       behind the tab bar. Take the tab bar away and leave the token at 56px, and 48px of a
+       banner that is supposed to be hidden sits at the bottom of every auth screen. Measured.
+
+       So the token goes to zero, which is simply the truth on these routes: there is no bar. */
+    body:has(.pt-no-chrome) {
+      --tabbar-h: 0px;
+    }
   }
 
   body {

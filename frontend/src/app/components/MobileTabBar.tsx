@@ -43,8 +43,22 @@ import { cn } from '@/app/components/ui/utils';
  *    background colour is what punches it visually out of the bar's top edge.
  */
 
-/** Routes that own the bottom of the viewport, or intentionally have no chrome. */
-const HIDDEN_ON = ['/checkout', '/login', '/register', '/forgot-password', '/reset-password'];
+/**
+ * Routes that own the bottom of the viewport, or intentionally have no chrome.
+ *
+ * EXPORTED, because this list is the answer to a question more than one component asks. The
+ * install banner is a second fixed thing at the bottom of the screen, and it was covering the
+ * "CRÉER MON COMPTE" button on the register page — measured at 390px, the banner sat exactly over
+ * the submit. Two copies of a route list drift; one does not.
+ */
+export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/forgot-password', '/reset-password'];
+
+/** True when `pathname` is one of those routes, or a child of one. */
+export function isChromeFreeRoute(pathname: string): boolean {
+  return CHROME_FREE_ROUTES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+}
+
+const HIDDEN_ON = CHROME_FREE_ROUTES;
 
 type TabItem = {
   key: string;

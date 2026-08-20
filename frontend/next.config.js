@@ -144,7 +144,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "frame-src 'self' https://www.google.com",
+              /* `accounts.google.com` is required by Sign in with Google: the GIS button and the
+                 FedCM prompt both render inside an iframe from that origin, and CSP rejects it
+                 silently — the button simply never appears, with nothing in the console that
+                 names the policy. `www.google.com` was already here for reCAPTCHA. */
+              "frame-src 'self' https://www.google.com https://accounts.google.com",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
               "style-src 'self' 'unsafe-inline' https:",
               "img-src 'self' data: https:",

@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import Image from 'next/image';
 import { X, Download, Share, Plus, Check, MoreVertical } from 'lucide-react';
+import { isChromeFreeRoute } from '@/app/components/MobileTabBar';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt(): Promise<void>;
@@ -98,6 +99,12 @@ export function InstallAppBanner() {
        * and this component lives in the root layout and survives navigation.
        */
       if (document.body.hasAttribute('data-has-sticky-cta')) return;
+      /*
+        Nor over a route that deliberately has no bottom chrome. Measured at 390px on /register:
+        the banner landed on top of the "Créer mon compte" button — the one control the page
+        exists for. The same list already governs the tab bar, and for the same reason.
+      */
+      if (isChromeFreeRoute(window.location.pathname)) return;
       setShow(true);
     }, 2000);
 

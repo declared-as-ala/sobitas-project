@@ -314,13 +314,6 @@
     "DS004": 2,
     "DS011": 10
   },
-  "src/app/components/AuthShell.tsx": {
-    "DS001": 5,
-    "DS002": 6,
-    "DS003": 5,
-    "DS008": 1,
-    "DS011": 9
-  },
   "src/app/components/BlogCardSkeleton.tsx": {
     "DS001": 2,
     "DS002": 3,
@@ -453,32 +446,8 @@
     "DS004": 2,
     "DS011": 2
   },
-  "src/app/forgot-password/ForgotPasswordClient.tsx": {
-    "DS001": 2,
-    "DS002": 3,
-    "DS003": 3,
-    "DS004": 2,
-    "DS011": 6
-  },
-  "src/app/login/LoginPageClient.tsx": {
-    "DS002": 3,
-    "DS003": 4,
-    "DS011": 14
-  },
   "src/app/not-found.tsx": {
     "DS001": 2,
     "DS002": 1
-  },
-  "src/app/register/RegisterPage.tsx": {
-    "DS002": 3,
-    "DS003": 9,
-    "DS011": 16
-  },
-  "src/app/reset-password/ResetPasswordClient.tsx": {
-    "DS001": 6,
-    "DS002": 9,
-    "DS003": 7,
-    "DS004": 4,
-    "DS011": 15
   }
 }

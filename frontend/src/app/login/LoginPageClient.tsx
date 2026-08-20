@@ -2,144 +2,134 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { useAuth } from '@/contexts/AuthContext';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Loader2, Mail, Lock, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/contexts/AuthContext';
+import { Mail, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { AuthShell, AuthCardHeader } from '@/app/components/AuthShell';
+import {
+  AuthShell,
+  AuthCardHeader,
+  AuthField,
+  AuthSubmit,
+  AuthDivider,
+  AuthAlt,
+} from '@/app/components/AuthShell';
+import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
 
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [formData, setFormData] = useState({
-    email: '',
-    password: '',
-  });
+  const [googleLoading, setGoogleLoading] = useState(false);
+  /* `?email=` is set by the reset-password screen when it hands the customer back here, so they
+     do not retype the address they just proved they own. */
+  const [formData, setFormData] = useState({ email: searchParams.get('email') ?? '', password: '' });
 
-  const redirectTo = searchParams.get('redirect') || '/';
+  /*
+    ── AN OPEN REDIRECT, CLOSED ──────────────────────────────────────────────────────────────
+    `?redirect=` was pushed straight into router.push(). A link to
+    /login?redirect=https://evil.example/login sends a customer who just typed their password to
+    a page that looks like ours and asks for it again. Only a same-site PATH is accepted; anything
+    else falls back to the homepage. `//host` is rejected too — the browser reads a
+    protocol-relative URL as absolute.
+  */
+  const raw = searchParams.get('redirect') || '/';
+  const redirectTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 
-  // Redirect if already authenticated (using useEffect to avoid render error)
   useEffect(() => {
-    if (!authLoading && isAuthenticated) {
-      router.push(redirectTo);
-    }
+    if (!authLoading && isAuthenticated) router.replace(redirectTo);
   }, [isAuthenticated, authLoading, router, redirectTo]);
 
-  // Show loading while checking auth status
-  if (authLoading) {
-    return <LoadingSpinner />;
-  }
-
-  // Don't render form if authenticated (will redirect)
-  if (isAuthenticated) {
-    return <LoadingSpinner />;
-  }
+  if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
-
     try {
       await login(formData);
-      toast.success('Connexion réussie !');
-      // Use setTimeout to ensure smooth transition
-      setTimeout(() => {
-        router.push(redirectTo);
-      }, 300);
-    } catch (error: any) {
-      toast.error(error.message || 'Erreur lors de la connexion');
+      toast.success('Connexion réussie');
+      router.replace(redirectTo);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Erreur lors de la connexion');
       setIsLoading(false);
     }
   };
 
+  const handleGoogle = async (credential: string) => {
+    setGoogleLoading(true);
+    try {
+      await loginWithGoogle(credential);
+      toast.success('Connexion réussie');
+      router.replace(redirectTo);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Connexion Google impossible');
+      setGoogleLoading(false);
+    }
+  };
+
+  const busy = isLoading || googleLoading;
+
   return (
     <AuthShell>
       <AuthCardHeader
-        showLogo
         kicker="Espace client"
         title="Connexion"
-        subtitle="Connectez-vous à votre compte pour continuer"
+        subtitle="Retrouvez vos commandes, vos points fidélité et vos adresses de livraison."
       />
-      <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="votre@email.com"
-                      value={formData.email}
-                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      autoComplete="username"
-                      required
-                    />
-                  </div>
-                </div>
 
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="password">Mot de passe</Label>
-                    <Link
-                      href="/forgot-password"
-                      className="text-sm text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-                    >
-                      Mot de passe oublié ?
-                    </Link>
-                  </div>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="password"
-                      type="password"
-                      placeholder="••••••••"
-                      value={formData.password}
-                      onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      autoComplete="current-password"
-                      required
-                    />
-                  </div>
-                </div>
+      <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+        <AuthField
+          label="Email"
+          Icon={Mail}
+          type="email"
+          inputMode="email"
+          placeholder="votre@email.com"
+          autoComplete="username"
+          value={formData.email}
+          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          required
+        />
 
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide"
-                  disabled={isLoading}
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                      Connexion...
-                    </>
-                  ) : (
-                    <>
-                      Se connecter
-                      <ArrowRight className="h-5 w-5 ml-2" />
-                    </>
-                  )}
-                </Button>
-              </form>
+        <AuthField
+          label="Mot de passe"
+          Icon={Lock}
+          reveal
+          placeholder="Votre mot de passe"
+          autoComplete="current-password"
+          value={formData.password}
+          onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+          required
+          action={
+            <Link
+              href="/forgot-password"
+              /* `-my-3 py-3` grows the TARGET to 45px without growing the label row: the padding
+                 makes it tappable, the negative margin gives the height back to the layout. At
+                 21px it was the smallest control on the screen and it sits next to a field a
+                 thumb is already aiming at. */
+              className="-my-3 rounded py-3 text-[13px] font-medium text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              Mot de passe oublié ?
+            </Link>
+          }
+        />
 
-      <div className="mt-8 text-center">
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Vous n'avez pas de compte ?{' '}
-          <Link
-            href="/register"
-            className="font-semibold text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-          >
-            Créer un compte
-          </Link>
-        </p>
-      </div>
+        <AuthSubmit loading={isLoading} loadingLabel="Connexion…" disabled={busy}>
+          Se connecter
+        </AuthSubmit>
+      </form>
+
+      {/* Renders nothing at all when NEXT_PUBLIC_GOOGLE_CLIENT_ID is unset — including the
+          divider, which would otherwise separate the form from an empty space. */}
+      {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
+        <div className="mt-5 space-y-4">
+          <AuthDivider />
+          <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
+        </div>
+      )}
+
+      <AuthAlt question="Vous n’avez pas de compte ?" href="/register" cta="Créer un compte" />
     </AuthShell>
   );
 }

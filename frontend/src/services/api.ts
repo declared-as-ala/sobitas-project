@@ -1548,6 +1548,18 @@ export const register = async (data: RegisterRequest): Promise<AuthResponse> => 
   return response.data;
 };
 
+/**
+ * Exchange a Google ID token for a Sanctum token.
+ *
+ * The `credential` is the JWT that Google Identity Services hands the browser — it is NOT trusted
+ * here and is not decoded here. The server verifies its signature and its audience with Google
+ * before it will look at a single claim inside it; see ClientController::googleLogin.
+ */
+export const loginWithGoogle = async (credential: string): Promise<AuthResponse> => {
+  const response = await api.post<AuthResponse>('/auth/google', { credential });
+  return response.data;
+};
+
 export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
   const response = await api.post<{ message: string }>('/forgot-password', { email });
   return response.data;

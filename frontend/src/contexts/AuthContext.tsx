@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { login as apiLogin, register as apiRegister, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
+import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
 import type { User, LoginRequest, RegisterRequest, Order } from '@/types';
 
 interface AuthContextType {
@@ -10,6 +10,8 @@ interface AuthContextType {
   isLoading: boolean;
   login: (credentials: LoginRequest) => Promise<void>;
   register: (data: RegisterRequest) => Promise<void>;
+  /** Sign in (or sign up, first time) with a Google ID token from GoogleSignInButton. */
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User> & { password?: string }) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -101,6 +103,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  /**
+   * Google sign-in. Deliberately the SAME shape as login()/register() from here on: the API
+   * returns the same {token, id, name} envelope, so everything downstream — the stored session,
+   * the profile fetch, the order history — is one code path rather than a parallel one.
+   *
+   * The profile fetch is what fills in the fields Google cannot give us (phone, addresses,
+   * loyalty balance), which is why it is not optional here either.
+   */
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      const response = await apiLoginWithGoogle(credential);
+      localStorage.setItem('token', response.token);
+      localStorage.setItem('user', JSON.stringify({ id: response.id, name: response.name }));
+      const profile = await getProfile();
+      setUser(profile);
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Connexion Google impossible');
+    }
+  };
+
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
@@ -182,6 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
+        loginWithGoogle,
         logout,
         updateProfile,
         refreshProfile,
