@@ -30,6 +30,7 @@ import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
 import { ProductsDropdown } from './ProductsDropdown';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
 import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -179,14 +180,32 @@ function NavigationLink({
      * four other pages before the visitor has looked at this one. On a Tunisian 3G connection that
      * is several seconds of contention against the page's own images.
      *
-     * `false` disables the VIEWPORT prefetch only. Next still prefetches on hover and on
-     * touchstart, so a deliberate move toward a link is as fast as it was; what stops is
-     * downloading four pages nobody asked for. This is the right default for a persistent nav —
-     * a link that is on screen on every page of the site is not evidence of intent.
+     * ── AND THE SENTENCE THAT USED TO FOLLOW THAT ONE WAS WRONG ────────────────────────────
+     * It read: *"`false` disables the VIEWPORT prefetch only. Next still prefetches on hover and
+     * on touchstart, so a deliberate move toward a link is as fast as it was."* That is true of
+     * the PAGES router and false here. From next/dist/client/app-dir/link.js:
+     *
+     *     const prefetchEnabled = prefetchProp !== false;
+     *     onMouseEnter:  if (!prefetchEnabled || NODE_ENV === 'development') return;
+     *     onTouchStart:  if (!prefetchEnabled) return;
+     *
+     * One flag, all three strategies. So every item in this header — and every row of the mobile
+     * drawer, which renders through the same component — has had NO prefetch of ANY kind since the
+     * day that prop was added. Not viewport, not hover, not touch. The saving above was real and
+     * the cost was invisible.
+     *
+     * `LinkWithLoading` is the component that already resolves this correctly, and it has been
+     * sitting one directory over: it keeps `prefetch={false}` (so the viewport prefetch stays off,
+     * which is the whole point of the measurement above) and adds `router.prefetch()` on a 90ms
+     * hover, on pointerdown and on touchstart — a gesture toward a link, which IS evidence of
+     * intent, unlike being on screen. It also puts the loading bar up in the same frame as the
+     * click, so a nav item now answers the tap instead of sitting there.
+     *
+     * External hrefs are handled above and never reach this branch.
      */
-    <Link href={item.href} prefetch={false} className={className} onClick={onClick} {...targetProps} {...currentProps}>
+    <LinkWithLoading href={item.href} className={className} onClick={onClick} {...targetProps} {...currentProps}>
       {content}
-    </Link>
+    </LinkWithLoading>
   );
 }
 
@@ -563,7 +582,7 @@ export function HeaderClient() {
               on every page of the site.
             */}
             <div className="pt-hdr-bar pt-hdr-bar-desktop flex h-16 items-center gap-6">
-              <Link href="/" prefetch={false} className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
+              <LinkWithLoading href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
                     BOTH logo variants in a race with the hero LCP image. The logo is small and in
@@ -575,7 +594,7 @@ export function HeaderClient() {
                   height={70}
                   className="pt-hdr-logo h-9 lg:h-10 w-auto object-contain dark:brightness-0 dark:invert"
                 />
-              </Link>
+              </LinkWithLoading>
 
               {/* Search grows to fill the WHOLE middle (flex-1) so the icon cluster is pushed flush
                   to the right edge. Without this wrapper the search capped at max-w-2xl and the
@@ -959,47 +978,86 @@ export function HeaderClient() {
                       const hasCategories = sidebarCategories.length > 0;
                       return (
                         <div key={`${link.href}-${link.label}`}>
-                          <button
-                            type="button"
-                            aria-expanded={hasCategories ? productsOpen : undefined}
-                            onClick={() => {
-                              if (!hasCategories) {
-                                router.push('/shop');
-                                closeMobileMenu();
-                                return;
-                              }
-                              // Collapsing the whole section also collapses whichever category was
-                              // expanded, so reopening starts from a clean list.
-                              if (productsOpen) setOpenCategoryId(null);
-                              setProductsOpen((v) => !v);
-                            }}
-                            /* ── THE REFERENCE'S ROW (owner, 18/08/2026) ──────────────────
-                               Impact's drawer is a column of uppercase display type with a chevron
-                               where a row expands and nothing where it does not — no icons, no
-                               tinted active pill, no rounded hover plate. It reads as a list of
-                               destinations rather than as a toolbar, which is what a menu is.
+                          {/*
+                            ── TAPPING BOUTIQUE GOES TO THE BOUTIQUE (owner, 20/08/2026) ──────
+                            *"still when i click on boutique it's not instantly browsing to /shop
+                            — fix it in the entire website."*
 
-                               Ours had a 20px icon on every row, and the icons came from a
-                               free-text `icon` column in the DB: half of them fell back to the same
-                               generic glyph, so the column was six identical marks pretending to be
-                               information. The active row keeps its brand colour and loses its
-                               `bg-brand/10` plate — colour is enough on a list this short. */
+                            THIS ROW WAS THE BUG, and it was not slowness. It was a `<button>`, and
+                            its only behaviour when categories had loaded — which is always, one
+                            tick after the drawer opens — was `setProductsOpen(v => !v)`. Tapping
+                            BOUTIQUE did not navigate to /shop. It could not: no branch of that
+                            handler pushed a route unless `sidebarCategories` was EMPTY, i.e. only
+                            when the API had failed. The one path the owner takes was the fallback
+                            path for a broken fetch.
+
+                            So the row now does what its label says, and the accordion moves to its
+                            own control beside it. That is the same split the desktop mega-menu
+                            already makes, for the same stated reason (see ProductsDropdown): the
+                            link goes to /shop, the chevron opens the rayons, and merging them
+                            forces a choice between navigating and browsing that neither a mouse
+                            nor a keyboard should have to make.
+
+                            `LinkWithLoading`, not `<Link>`: it warms /shop on `touchstart` — ~80ms
+                            before the tap even completes — and it is what puts the loading state on
+                            screen in the same frame as the tap. The chevron carries the label in
+                            its `aria-label` so a screen reader can tell the two apart.
+                          */}
+                          <div
                             className={cn(
-                              'flex w-full items-center gap-3 min-h-[52px] rounded-lg px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em] transition-colors',
-                              shopActive
-                                ? 'text-brand'
-                                : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
+                              'flex items-stretch rounded-lg transition-colors',
+                              shopActive ? 'text-brand' : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
                             )}
                           >
-                            <span className="flex-1 text-left">{translateLegacy(link.label)}</span>
-                            {!hasCategories ? (
-                              <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
-                            ) : productsOpen ? (
-                              <ChevronUp className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                            <LinkWithLoading
+                              href={link.href}
+                              onClick={closeMobileMenu}
+                              loadingMessage="Chargement de la boutique..."
+                              aria-current={shopActive ? 'page' : undefined}
+                              /* ── THE REFERENCE'S ROW (owner, 18/08/2026) ──────────────────
+                                 Impact's drawer is a column of uppercase display type with a chevron
+                                 where a row expands and nothing where it does not — no icons, no
+                                 tinted active pill, no rounded hover plate. It reads as a list of
+                                 destinations rather than as a toolbar, which is what a menu is.
+
+                                 Ours had a 20px icon on every row, and the icons came from a
+                                 free-text `icon` column in the DB: half of them fell back to the same
+                                 generic glyph, so the column was six identical marks pretending to be
+                                 information. The active row keeps its brand colour and loses its
+                                 `bg-brand/10` plate — colour is enough on a list this short. */
+                              className="flex min-h-[52px] flex-1 items-center px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em]"
+                            >
+                              {translateLegacy(link.label)}
+                            </LinkWithLoading>
+                            {hasCategories ? (
+                              <button
+                                type="button"
+                                aria-expanded={productsOpen}
+                                aria-label={
+                                  productsOpen
+                                    ? 'Masquer les rayons'
+                                    : `Afficher les rayons de ${translateLegacy(link.label)}`
+                                }
+                                onClick={() => {
+                                  // Collapsing the whole section also collapses whichever category
+                                  // was expanded, so reopening starts from a clean list.
+                                  if (productsOpen) setOpenCategoryId(null);
+                                  setProductsOpen((v) => !v);
+                                }}
+                                className="flex min-h-[52px] w-12 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                              >
+                                {productsOpen ? (
+                                  <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                                )}
+                              </button>
                             ) : (
-                              <ChevronDown className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                              <span className="flex min-h-[52px] w-12 shrink-0 items-center justify-center" aria-hidden>
+                                <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />
+                              </span>
                             )}
-                          </button>
+                          </div>
 
                           {hasCategories && (
                             <div

@@ -1,6 +1,6 @@
 'use client';
 
-import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, Heart, User, ShoppingCart, type LucideIcon } from 'lucide-react';
 import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
@@ -111,10 +111,26 @@ export function MobileTabBar() {
             `relative` + an absolutely-positioned, bottom-anchored child: the tile grows upward out
             of the 56px row instead of stretching it, so `--tabbar-h` still describes the bar. */}
         <li className="relative">
-          <Link
+          {/* ── THE TAB BAR NOW WARMS ITS DESTINATION ON `touchstart` ─────────────────────
+              A plain `<Link>` here had Next's DEFAULT prefetch, i.e. the viewport strategy — and
+              this bar is fixed on screen on EVERY mobile page, so it was prefetching /, /favoris,
+              /shop and /account from every page of the site, whether or not anyone was going
+              there. That is the exact cost HeaderClient measured at 800 KB and turned off.
+
+              `LinkWithLoading` keeps the viewport prefetch off and fires `router.prefetch()` on
+              `touchstart` instead — roughly 80ms before the `click` on a phone, and free time. It
+              also puts the loading bar up on the tap, which this bar had no feedback for at all:
+              the centre tile is the primary way into the shop on a phone and it answered a press
+              with nothing but its own `active:scale-95`.
+
+              Both only started mattering again once `experimental.staleTimes.static` stopped being
+              0 — see next.config.js. Until then every one of these prefetches was deleted before
+              the navigation that asked for it could read it. */}
+          <LinkWithLoading
             href="/shop"
             aria-current={isShop ? 'page' : undefined}
             aria-label="Boutique"
+            loadingMessage="Chargement de la boutique..."
             className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-1 pb-1.5"
           >
             {/* Static `red-600` (#D53B04), not the theme-aware `bg-brand`: brand lightens to
@@ -132,7 +148,7 @@ export function MobileTabBar() {
             >
               Boutique
             </span>
-          </Link>
+          </LinkWithLoading>
         </li>
 
         <li>
@@ -186,7 +202,7 @@ function TabLink({
   const count = badge ?? 0;
 
   return (
-    <Link
+    <LinkWithLoading
       href={href}
       aria-current={active ? 'page' : undefined}
       aria-label={count > 0 ? `${label} — ${count}` : label}
@@ -206,6 +222,6 @@ function TabLink({
         )}
       </span>
       <span className="text-[10px] font-medium leading-none">{label}</span>
-    </Link>
+    </LinkWithLoading>
   );
 }

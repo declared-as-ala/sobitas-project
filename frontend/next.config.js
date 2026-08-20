@@ -294,18 +294,61 @@ const nextConfig = {
      *     curl -s https://protein.tn/ | grep -c '<style'
      */
     inlineCss: false,
-    // Disable the client-side Router Cache for both dynamic and static pages.
-    // With non-zero values the browser REUSES a prefetched RSC payload for that many
-    // seconds — so a <Link> prefetched while a page's data was momentarily empty/stale
-    // (e.g. an ISR page prerendered before the backend had the data) keeps replaying that
-    // stale snapshot on soft navigation, while a hard refresh (which bypasses the Router
-    // Cache) shows the correct content. That is exactly the "click Packs → empty, refresh
-    // → products appear" bug, and it applied site-wide (shop, category, offres, blog…).
-    // 0/0 makes every navigation refetch a fresh RSC payload from the server (the route is
-    // still ISR-cached on the origin, so this stays fast), matching the intent above.
+    /*
+     * ── `static: 0` MADE EVERY PREFETCH ON THIS SITE DEAD ON ARRIVAL ────────────────────────
+     * Owner, 20/08/2026: *"still when i click on boutique it's not instantly browsing to /shop —
+     * fix it in the entire website."* "The entire website" is exactly right, and this line is why.
+     *
+     * WHAT THIS VALUE ACTUALLY CONTROLS. From next/dist/client/components/router-reducer/
+     * prefetch-cache-utils.js (15.5.9), `getPrefetchEntryCacheStatus` decides whether a prefetched
+     * entry may be reused:
+     *
+     *     if (Date.now() < (lastUsedTime ?? prefetchTime) + DYNAMIC_STALETIME_MS) …
+     *     if (kind === 'auto' && Date.now() < prefetchTime + STATIC_STALETIME_MS) return stale;
+     *     if (kind === 'full' && Date.now() < prefetchTime + STATIC_STALETIME_MS) return reusable;
+     *     return expired;
+     *
+     * Every branch is a strict `<` against `+ N`. At N = 0 all three are false for EVERY entry —
+     * including one prefetched a millisecond ago. And `static` gates BOTH kinds, so it is this
+     * value, not `dynamic`, that governs a prefetch that has not been used yet.
+     *
+     * Then navigate-reducer.js:160 calls `prunePrefetchCache()` at the TOP of every navigation,
+     * before it looks the entry up on line 183 — so the entry is deleted, the click creates a
+     * fresh lazy one, and the reducer returns the network promise. Because router.push runs inside
+     * a transition, the OLD PAGE STAYS ON SCREEN until the server answers. Nothing paints. That is
+     * the reported symptom, precisely.
+     *
+     * Verified in the shipped bundle rather than inferred: .next-prod/static/chunks/1255-*.js
+     * contains `let d=1e3*Number("0"),p=1e3*Number("0")`.
+     *
+     * WHAT THAT COST. LinkWithLoading warms every card, nav item and search result with
+     * `router.prefetch(href)` on hover/pointerdown/touchstart. That is `PrefetchKind.FULL`, which
+     * omits the Next-Router-Prefetch header, so the server does a COMPLETE dynamic render and the
+     * client caches the finished page — products, facets, pagination. One hundred per cent of that
+     * work was being thrown away on the next line of the reducer.
+     *
+     * WHY IT WAS 0, AND WHY THAT REASON NO LONGER HOLDS. The note this replaces described a real
+     * bug: a Link prefetched while an ISR page's data was momentarily empty kept replaying the
+     * empty snapshot on soft navigation — "click Packs → empty, refresh → products appear". But
+     * that was a bug about the ORIGIN serving an empty payload, and it has since been fixed at the
+     * source: util/loadForCache.ts calls `noStore()` whenever a primary fetch throws, so a failed
+     * render is never baked into the Full Route Cache and the client can no longer be handed an
+     * empty payload to cache. Killing the client cache was treating the symptom.
+     *
+     * The old note also justified itself with "the route is still ISR-cached on the origin, so this
+     * stays fast". That is false for the one route the owner is complaining about: /shop awaits
+     * `searchParams`, which opts it out of static rendering entirely (see its own header comment).
+     * For /shop, 0 meant a full origin round-trip, every click, with nothing on screen.
+     *
+     * 30 SECONDS, NOT NEXT'S DEFAULT 300. A gesture-driven prefetch is consumed within a second of
+     * being fired, so 30s covers the entire case this exists for with an order of magnitude to
+     * spare, while capping how stale a price or a stock badge can be at half a minute rather than
+     * five. `dynamic` stays at 0 — Next's own default — so returning to a page you have already
+     * visited still refetches.
+     */
     staleTimes: {
       dynamic: 0,
-      static: 0,
+      static: 30,
     },
     optimizePackageImports: [
       'lucide-react',
