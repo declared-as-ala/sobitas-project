@@ -52,7 +52,13 @@ const OVERLAYS = [
   {
     name: 'mega-menu',
     minNodes: 20,
-    selector: '.pt-slab.fixed',
+    /* `#boutique-megamenu`, not `.pt-slab.fixed`. The panel was restructured on 20/08/2026 so the
+       `fixed` wrapper is a transparent 8px hover bridge and `.pt-slab` moved onto the card inside
+       it — at which point this selector matched nothing and the guard reported four failures. It
+       was right to: a structural selector on someone else's className is a hook that breaks
+       silently the first time that element is refactored. The id is declared by the panel for its
+       own `aria-controls`, so it is load-bearing markup rather than a styling coincidence. */
+    selector: '#boutique-megamenu',
     open: async (page) => {
       const trigger = (
         await page.evaluateHandle(

@@ -632,6 +632,55 @@ export const getInStockBrandCounts = async (): Promise<Record<number, number>> =
   }
 };
 
+/**
+ * A few products to feature for ONE rayon, for the mega-menu's right-hand card.
+ *
+ * ── WHY A REQUEST PER RAYON BEATS THE ONE-SHOT ALTERNATIVES ─────────────────────────────────
+ * The menu used to show `new_product[0]` — the single newest product in the catalogue — beside all
+ * six rayons and all fifty-five subcategories. Owner, 20/08/2026: *"when I hover over categories,
+ * change the right showed product."*
+ *
+ * The cheap-looking fix is to fetch `/latest_products` once (16 rows, 15 KB) and bucket it on
+ * `sous_categorie.categorie_id`. Measured: those 16 rows fall into **2 of the 6 rayons**. Four
+ * rayons would still show a generic card, which is the bug with extra steps.
+ *
+ * So: one request per rayon, made on hover, cached in the component for the life of the page. Six
+ * requests is the ceiling and only for someone who visits all six columns; measured at 3.2-4.7 KB
+ * each with `light=1`. That is smaller than the single `/latest_products` call it replaces.
+ *
+ * `in_stock=1` and `sort=popularity` are the two parameters that make this a merchandising slot
+ * rather than a lucky dip. 11,130 of 11,263 published products are flagged out of stock, so
+ * without the filter the card would usually promote something nobody can buy — on the panel whose
+ * one filled button says "Acheter".
+ *
+ * Returns an empty array rather than throwing: the card is a nicety on a navigation panel, and the
+ * panel must never degrade into a hole where a card should be.
+ */
+export const getCategoryHighlights = async (
+  categorySlug: string,
+  limit = 4,
+  signal?: AbortSignal
+): Promise<Product[]> => {
+  if (!categorySlug) return [];
+  try {
+    const response = await api.get('/all_products', {
+      params: {
+        categories: categorySlug,
+        per_page: limit,
+        page: 1,
+        light: 1,
+        in_stock: 1,
+        sort: 'popularity',
+      },
+      signal,
+    });
+    const rows = response.data?.products;
+    return Array.isArray(rows) ? rows.filter((p: Product) => p?.id && p?.cover) : [];
+  } catch {
+    return [];
+  }
+};
+
 export const getShopFacets = async (): Promise<ShopFacets> => {
   const empty: ShopFacets = {
     price: { min: 0, max: 1000, p99: 1000 },
