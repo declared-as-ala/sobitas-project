@@ -49,10 +49,18 @@ return [
     | codes vary by account and product group, so VERIFY IT ONCE against the real
     | account before trusting the automation:
     |
-    |     php artisan aramex:sync-tracking --dry-run
+    |     php artisan aramex:sync-tracking --codes
     |
-    | and compare the "Vers" column against a parcel you know was delivered. Add
-    | codes here rather than editing the service.
+    | which lists every distinct update code the account is actually returning, with
+    | a sample description and whether it currently counts as a delivery. It writes
+    | nothing. That replaced "--dry-run and compare the Vers column against a parcel
+    | you know was delivered", which required already knowing the answer.
+    |
+    | If this list is WRONG the failure is silent, not loud: the hourly sweep polls
+    | every shipment, promotes nothing, and exits 0 — while loyalty points and review
+    | requests stay dormant. AramexTrackingSync now watches for that specific case and
+    | warns when a code whose description reads like a delivery is missing from here.
+    | Add codes here rather than editing the service.
     |
     | `settled_codes` is the narrower question of which shipments are finished
     | with, so the sweep stops paying for a request on them. A failed delivery

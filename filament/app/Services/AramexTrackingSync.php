@@ -46,11 +46,42 @@ use Illuminate\Support\Facades\Schema;
  *   - `dryRun` reports the exact same set without writing, so the first run on production can be
  *     read before it is believed.
  *   - Every promotion is logged with the order, the HAWB and the code that caused it.
+ *
+ * ── AND THE FAILURE MODE THAT IS NOT AN ERROR (owner, 21/08/2026) ───────────────────────────
+ * *"make the aramex async automated."* It already is: `aramex:sync-tracking` has been on the
+ * schedule since 248daeb2, hourly between 08:00 and 20:00. So the interesting question is not why
+ * it is not running — it is why orders are still not being marked delivered while it runs.
+ *
+ * There is exactly one way for this class to do nothing while looking perfectly healthy: a
+ * `delivered_codes` list that does not contain the code this Aramex ACCOUNT actually uses. The
+ * sweep then polls every shipment, records every status change, promotes nothing, exits 0, and
+ * reports "0 orders marked livrée" — which is indistinguishable from "nothing was delivered today".
+ * Repeat hourly, forever. Nobody gets loyalty points, nobody is asked for a review, and no alert
+ * fires anywhere because nothing failed.
+ *
+ * `SH006` was inherited from the dashboard widget and has never been verified against the live
+ * account (config/aramex.php says so out loud). So the sweep now watches for its own blind spot:
+ * it collects the DISTINCT update codes it sees, and when a code's own description reads like a
+ * delivery while that code is not configured as one, it says so — in the command output and in the
+ * log. That converts a permanent silent no-op into a sentence naming the code to add.
  */
 class AramexTrackingSync
 {
     /** Statuses past which an order must never be dragged backwards or forwards by a robot. */
     private const TERMINAL_ORDER_STATES = ['livree', 'livrée', 'livre', 'annuler'];
+
+    /**
+     * Words that make an Aramex update description read like a delivery.
+     *
+     * Used ONLY to raise a question, never to promote an order — a description is free text from a
+     * courier system and is not something to hang a customer's loyalty balance on. `delivered_codes`
+     * stays the single authority for what promotes; this list decides whether to point at a code
+     * and ask whether it belongs there.
+     *
+     * Both languages, because this account's descriptions arrive in either. "Delivered to consignee"
+     * and "Livré au destinataire" are the same event.
+     */
+    private const DELIVERY_HINTS = ['delivered', 'livré', 'livre au', 'livree', 'consignee', 'destinataire', 'remis'];
 
     public function __construct(private AramexService $aramex)
     {
@@ -59,11 +90,19 @@ class AramexTrackingSync
     /**
      * Poll Aramex for every shipment still in flight and write back what changed.
      *
-     * @return array{checked:int, status_changed:int, delivered:int, orders_updated:int, errors:int, rows:array<int, array<string, mixed>>}
+     * @return array{checked:int, status_changed:int, delivered:int, orders_updated:int, errors:int, rows:array<int, array<string, mixed>>, codes:array<string, array<string, mixed>>, unrecognised_delivery:array<int, string>}
      */
     public function sync(int $limit = 200, bool $dryRun = false): array
     {
-        $out = ['checked' => 0, 'status_changed' => 0, 'delivered' => 0, 'orders_updated' => 0, 'errors' => 0, 'rows' => []];
+        $out = [
+            'checked' => 0, 'status_changed' => 0, 'delivered' => 0, 'orders_updated' => 0, 'errors' => 0,
+            'rows' => [],
+            // Every distinct update code this pass saw, with a count and one sample description.
+            // This is the table that answers "is SH006 the right code for this account?" without
+            // anybody having to find a parcel they know was delivered and read a dashboard.
+            'codes' => [],
+            'unrecognised_delivery' => [],
+        ];
 
         if (! Schema::hasColumn('factures', 'aramex_hawb')) {
             return $out;
@@ -106,6 +145,26 @@ class AramexTrackingSync
 
             $isDelivered = in_array($code, $deliveredCodes, true);
             $changed     = $code !== strtoupper((string) ($bl->aramex_status ?? ''));
+            $description = (string) ($result['description'] ?? '');
+
+            if (! isset($out['codes'][$code])) {
+                $out['codes'][$code] = ['count' => 0, 'description' => $description, 'delivered' => $isDelivered];
+            }
+            $out['codes'][$code]['count']++;
+            if ($out['codes'][$code]['description'] === '' && $description !== '') {
+                $out['codes'][$code]['description'] = $description;
+            }
+
+            /*
+             * The blind-spot check. A code whose description reads like a delivery but which is not
+             * in `delivered_codes` is the exact shape of the bug that keeps this whole pipeline
+             * dormant, and it is invisible in every other output this class produces.
+             */
+            if (! $isDelivered && $description !== '' && $this->looksLikeDelivery($description)) {
+                if (! in_array($code, $out['unrecognised_delivery'], true)) {
+                    $out['unrecognised_delivery'][] = $code;
+                }
+            }
 
             $row = [
                 'bl'          => $bl->numero ?? $bl->id,
@@ -155,7 +214,44 @@ class AramexTrackingSync
             $out['rows'][] = $row;
         }
 
+        /*
+         * Said out loud, every run, in the application log — not only in a command's stdout.
+         *
+         * The schedule runs unattended in a container. If the one sentence that explains why this
+         * pipeline is dormant only ever appears in a terminal somebody has to open, it is the same
+         * silence it is meant to break.
+         */
+        if (! empty($out['unrecognised_delivery'])) {
+            Log::warning('Aramex: update code(s) that look like a delivery are NOT in aramex.delivered_codes', [
+                'codes'           => $out['unrecognised_delivery'],
+                'configured'      => $deliveredCodes,
+                'orders_updated'  => $out['orders_updated'],
+                'action'          => 'Add the code to config/aramex.php delivered_codes after confirming it against the account.',
+            ]);
+        }
+
         return $out;
+    }
+
+    /**
+     * Does this Aramex description read like a delivery?
+     *
+     * Deliberately generous — its only consequence is a warning asking a human to look. Being wrong
+     * in the "too eager" direction costs one line of log; being wrong the other way is the failure
+     * this method exists to catch, and that one costs the loyalty programme and every review
+     * request the shop would have sent.
+     */
+    private function looksLikeDelivery(string $description): bool
+    {
+        $haystack = mb_strtolower($description);
+
+        foreach (self::DELIVERY_HINTS as $hint) {
+            if (str_contains($haystack, $hint)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**

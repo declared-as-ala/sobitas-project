@@ -70,7 +70,30 @@ Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlap
  *
  * VERIFY THE DELIVERED CODE ONCE before relying on this — see config/aramex.php.
  */
-Schedule::command('aramex:sync-tracking')->hourlyAt(20)->between('08:00', '20:00')->withoutOverlapping();
+Schedule::command('aramex:sync-tracking')
+    ->hourlyAt(20)
+    ->between('08:00', '20:00')
+    ->withoutOverlapping()
+    /*
+     * ── EVIDENCE, WHICH THIS ENTRY DID NOT HAVE ────────────────────────────────────────────
+     * It was scheduled and silent. Every other load-bearing entry in this file learned the same
+     * lesson the hard way (see catalog:iherb:hydrate above): a scheduled command with no output
+     * log and no onFailure is indistinguishable from a scheduler that is not running at all.
+     *
+     * That matters more here than anywhere else in this file, because this command has a failure
+     * mode that is not an error. If `aramex.delivered_codes` does not match what this account
+     * actually returns, the sweep polls every shipment, promotes nothing, and exits 0 — hourly,
+     * forever, while the loyalty programme and every review request stay dormant and nothing
+     * anywhere reports a problem. The log is where the "code X looks like a delivery and is not
+     * configured" warning lands; without appendOutputTo, nobody would ever read it.
+     */
+    ->appendOutputTo(storage_path('logs/aramex-sync.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'aramex:sync-tracking FAILED on the schedule — orders are not being marked delivered, '
+            .'so loyalty points and review requests are both stalled. See storage/logs/aramex-sync.log.',
+        );
+    });
 
 Schedule::command('seo:health-report')->weeklyOn(1, '06:00'); // Monday summary of missing SEO data (logged)
 Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // gradual factual nutrition enrichment (OFF, by GTIN)
