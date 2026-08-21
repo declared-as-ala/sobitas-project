@@ -74,6 +74,7 @@ on:
           # not match reality, the hourly sweep polls every shipment, promotes nothing, and exits 0
           # — while loyalty points and review requests both stay dormant and no alert fires.
           - aramex-codes
+          - aramex-history
           - aramex-sync-dry-run
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
@@ -90,6 +91,11 @@ on:
           # Re-slices the sections out of HTML we already hold. No HTTP at all.
           - content-rederive-dry
           # WRITES: these need confirm=APPLY
+          # `aramex-sync-apply` is the one that actually marks orders delivered. Gated with the
+          # other writes because it is the most consequential button here: each promotion stamps a
+          # delivery date, credits loyalty points, and makes the order eligible for a review
+          # request. Read `aramex-sync-dry-run` first — it prints the exact same list.
+          - aramex-sync-apply
           - research-import-apply
           - seo-ctr-pass
           - catalog-promote
@@ -102,7 +108,7 @@ on:
           # Staging-only, but it REWRITES stored HTML, so it is gated like the rest.
           - content-rederive
       confirm:
-        description: "Writing tasks only (research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
+        description: "Writing tasks only (aramex-sync-apply, research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
         required: false
         default: ""
 
@@ -150,6 +156,21 @@ jobs:
               ARGS="aramex:sync-tracking --codes --limit=200"
               WRITES=no
               ;;
+            aramex-history)
+              # The full event list for five shipments, oldest first, with the rows that count as a
+              # delivery marked. This is the view `--codes` cannot give: it shows a delivery event
+              # sitting UNDERNEATH a later payment, which is the shape of the bug that kept this
+              # pipeline dormant while every other output reported success. Writes nothing.
+              ARGS="aramex:sync-tracking --history=5"
+              WRITES=no
+              ;;
+
+            aramex-sync-apply)
+              # The real sweep. Promotes every order whose Aramex history contains a delivery code.
+              ARGS="aramex:sync-tracking --limit=200"
+              WRITES=yes
+              ;;
+
             aramex-sync-dry-run)
               # Same poll, the ordinary table: which shipments moved, and which orders it WOULD
               # promote. Still writes nothing.

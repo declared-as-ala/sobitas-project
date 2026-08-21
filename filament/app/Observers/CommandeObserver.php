@@ -89,6 +89,37 @@ class CommandeObserver
             return;
         }
 
+        /*
+         * ── THE BACKFILL GUARD ──────────────────────────────────────────────────────────────
+         * A status change is normally something an admin just did, so texting about it is the
+         * point. But `AramexTrackingSync` also flips orders to "livrée" from the courier's own
+         * history, and on the run that follows a fix to the delivery codes that history is months
+         * deep — so this same line would send a hundred people "votre commande est livrée" about
+         * parcels they unpacked in June. Confusing, and billed per message.
+         *
+         * The test is the DELIVERY date, not the row's age: an order created long ago and
+         * delivered this morning is exactly the case that must still send. `delivered_at` is set
+         * by the sync from Aramex's own timestamp before it saves, so it is already correct here.
+         *
+         * Only delivery statuses are gated. A cancellation or a status an operator sets by hand
+         * carries no such timestamp and is always sent.
+         */
+        $smsMaxAgeDays = (int) config('aramex.status_sms_max_age_days', 3);
+        if (
+            $smsMaxAgeDays > 0
+            && in_array($commande->etat, PointsService::DELIVERED_STATUSES, true)
+            && ! empty($commande->delivered_at)
+            && $commande->delivered_at->lt(now()->subDays($smsMaxAgeDays))
+        ) {
+            Log::info('Order status SMS suppressed: delivery is older than the notify window', [
+                'commande_id'  => $commande->id,
+                'delivered_at' => (string) $commande->delivered_at,
+                'max_age_days' => $smsMaxAgeDays,
+            ]);
+
+            return;
+        }
+
         $msg = Message::getCached();
         $commande->loadMissing('details.product:id,designation_fr');
         $products = $commande->details

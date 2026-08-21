@@ -44,66 +44,91 @@ return [
     | the customer and queues the review-request email (App\Services\
     | AramexTrackingSync).
     |
-    | SH006 is what this codebase has always mapped to "Livré" in the dashboard
-    | widget, and it is the default here for that reason — but Aramex update
-    | codes vary by account and product group, so VERIFY IT ONCE against the real
-    | account before trusting the automation:
+    | ── WHAT WAS WRONG, AND HOW IT WAS ANSWERED (21/08/2026) ─────────────────────────
+    | This defaulted to `['SH006']`, inherited from an admin dashboard widget and never
+    | verified. Aramex publishes what its codes mean, and SH006 is not the one:
     |
-    |     php artisan aramex:sync-tracking --codes
+    |     SH005  Delivered                 <- the delivery event. WAS NEVER CONFIGURED.
+    |     SH006  Collected by Consignee    <- the customer went to an Aramex counter.
     |
-    | which lists every distinct update code the account is actually returning, with
-    | a sample description and whether it currently counts as a delivery. It writes
-    | nothing. That replaced "--dry-run and compare the Vers column against a parcel
-    | you know was delivered", which required already knowing the answer.
+    | A home-delivery shop was therefore detecting only counter pickups. It found almost
+    | none, promoted nothing, and exited 0 — hourly, forever, with no error anywhere.
+    | That is the whole explanation for 1,082 orders with not one marked delivered, a
+    | loyalty ledger that has never paid out, and a review-request engine that has never
+    | sent an email.
     |
-    | If this list is WRONG the failure is silent, not loud: the hourly sweep polls
-    | every shipment, promotes nothing, and exits 0 — while loyalty points and review
-    | requests stay dormant. AramexTrackingSync now watches for that specific case and
-    | warns when a code whose description reads like a delivery is missing from here.
+    | The default is now App\Support\Aramex\AramexStatusCodes::DELIVERED — the five
+    | codes that mean the consignee has the goods (delivered, collected, letter box,
+    | locker pickup, drop-off pickup). That file also records the receipts deliberately
+    | NOT auto-promoted (partial delivery, handed to a postal service, documents) and
+    | why, so the next person does not have to re-derive the decision.
     |
-    | ── MEASURED ON THE LIVE ACCOUNT, 21/08/2026 ─────────────────────────────────────
-    | `aramex:sync-tracking --codes` against production returned:
+    | ── AND THE MEASUREMENT THAT MISLED US ───────────────────────────────────────────
+    | `--codes` against the live account first returned SH239 "Shipment charges paid"
+    | x40 and SH014 "Record created." x1, and nothing else. That looked like an account
+    | with no delivery events at all.
     |
-    |     SH239  x40   "Shipment charges paid"
-    |     SH014  x1    "Record created."
+    | It was an artefact of the question. The tracking call used
+    | `GetLastTrackingUpdateOnly`, so it returned the NEWEST row of each history — and
+    | on a cash-on-delivery account the COD payment posts after the courier hands the
+    | parcel over, so the newest row is a payment and the delivery is the row above it,
+    | which was never fetched. The sweep now reads full histories and asks whether a
+    | delivery code appears ANYWHERE in one.
     |
-    | SH006 does not appear AT ALL. That is the whole explanation for 1,082 orders and
-    | not one marked delivered: the sweep polls 54 shipments, matches nothing, and exits
-    | successfully, hourly, forever.
+    | SH239 is still not in this list, and that is deliberate: "shipment charges paid"
+    | is a payment event, and Aramex files payments separately from deliveries (SH074,
+    | SH383, SH480, SH505). Those forty parcels are promoted on the SH005 in their
+    | history, not on the money.
     |
-    | SH239 is NOT added here, and that is a decision rather than an oversight. It has
-    | two readings and only Aramex can settle which applies to this account:
+    | ── VERIFYING IT ON ANY ACCOUNT ──────────────────────────────────────────────────
+    |     php artisan aramex:sync-tracking --codes      every code the account returns
+    |     php artisan aramex:sync-tracking --history=5  full event lists, oldest first
     |
-    |   COD collected   the courier took the customer's money, which happens at the
-    |                   door. Then SH239 IS delivery and belongs in this list.
-    |   freight billed  the shipper's own charges were applied. `payment_type => 'P'`
-    |                   above means prepaid-by-shipper, so this reading is plausible —
-    |                   and under it, promoting on SH239 would text 40 customers that
-    |                   their order arrived, credit loyalty points and request reviews
-    |                   for parcels still in a van.
+    | Both write nothing. `--history` is the one that shows a delivery sitting under a
+    | payment, which is the shape of the bug above.
     |
-    | Ask Aramex which one SH239 is for account 60506486. Then set it WITHOUT a deploy:
+    | If a documented delivery code ever turns up that is not listed here, the sweep
+    | says so by name in the command output and in the application log, so the silent
+    | no-op cannot come back.
     |
-    |     ARAMEX_DELIVERED_CODES=SH006,SH239
-    |
-    | in the VPS .env, then `php artisan config:clear`. The env override exists so that
-    | answering this question is a one-line change by whoever gets the answer, rather
-    | than a code edit, a review and a release.
-    |
-    | Add codes via the env var rather than editing the service.
-    |
-    | `settled_codes` is the narrower question of which shipments are finished
-    | with, so the sweep stops paying for a request on them. A failed delivery
-    | attempt (SH069) is settled for polling purposes but is NOT delivered.
+    | `settled_codes` is the narrower question of which shipments are finished with, so
+    | the sweep stops paying for a request on them. A return to shipper is settled for
+    | polling purposes but is NOT delivered. Delivered shipments are no longer parked
+    | here at all — `factures.aramex_delivered_at` does that, because a delivered COD
+    | parcel's latest code is a payment and would never have matched this list.
     */
+
     /*
-     * Comma-separated in the env, so the answer to "which code means delivered?" can be
-     * applied by whoever obtains it, without a deploy. Falls back to the historical
-     * default when unset — which is what is running today, and is why nothing promotes.
+     * Comma-separated in the env, so a per-account correction is a one-line change plus
+     * `php artisan config:clear`, rather than a code edit, a review and a release.
      */
     'delivered_codes' => array_values(array_filter(array_map(
         'trim',
-        explode(',', (string) env('ARAMEX_DELIVERED_CODES', 'SH006'))
+        explode(',', (string) env(
+            'ARAMEX_DELIVERED_CODES',
+            implode(',', \App\Support\Aramex\AramexStatusCodes::DELIVERED)
+        ))
     ))),
-    'settled_codes'   => ['SH006', 'SH069', 'annulé'],
+
+    /*
+     * Terminal without ever being a delivery: returned to shipper, confiscated by
+     * customs. Polling these again can only ever spend money to be told the same thing.
+     */
+    'settled_codes' => array_merge(
+        \App\Support\Aramex\AramexStatusCodes::TERMINAL,
+        ['annulé']
+    ),
+
+    /*
+     * Do not text a customer about a parcel they received weeks ago.
+     *
+     * The first run after the fix above promotes a backlog months deep. Every promotion
+     * fires CommandeObserver, which sends the order-status SMS — so without this, fixing
+     * a silent bug would announce itself as a hundred confusing text messages, at cost,
+     * in one afternoon. Loyalty points and review requests are NOT suppressed: those are
+     * owed, and the review sweep has its own max-age window.
+     *
+     * 0 disables the guard and texts everybody.
+     */
+    'status_sms_max_age_days' => (int) env('ARAMEX_STATUS_SMS_MAX_AGE_DAYS', 3),
 ];

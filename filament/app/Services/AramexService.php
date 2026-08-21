@@ -351,13 +351,33 @@ class AramexService
      *
      * @return array{update_code: string|null, problem_code: string|null, description: string|null, error: string|null}
      */
-    public function trackShipment(string $hawb): array
+    /**
+     * Every tracking event Aramex holds for a waybill, oldest first.
+     *
+     * ── WHY THIS REPLACED `GetLastTrackingUpdateOnly => true` ───────────────────────────────
+     * It used to ask Aramex for the single most recent event and read `Value[0]`. On 21/08/2026
+     * that returned `SH239 "Shipment charges paid"` for forty shipments and nothing else, which
+     * was read here as "forty parcels whose latest news is a payment".
+     *
+     * It meant nothing of the sort. It meant the last LINE of forty histories was a payment —
+     * and on a cash-on-delivery account the money is posted AFTER the courier hands the parcel
+     * over, so the delivery event is the line above the one we were looking at. We were asking
+     * the courier for the end of the story and then concluding the story had no middle.
+     *
+     * Delivery is a question about the whole history ("was this ever delivered?"), never about
+     * the newest row. A parcel delivered on Tuesday whose COD was posted on Wednesday is
+     * delivered, and any check that reads only the newest row says it is not.
+     *
+     * @return array{events:array<int, array{code:string, description:string, problem_code:?string, at:?\Illuminate\Support\Carbon, location:?string}>, error:?string}
+     */
+    public function trackShipmentHistory(string $hawb): array
     {
         $payload = [
-            'ClientInfo'              => $this->clientInfo(),
-            'GetLastTrackingUpdateOnly' => true,
-            'Shipments'               => [$hawb],
-            'Transaction'             => [
+            'ClientInfo' => $this->clientInfo(),
+            // FALSE, deliberately and permanently. See the note above before changing it back.
+            'GetLastTrackingUpdateOnly' => false,
+            'Shipments'  => [$hawb],
+            'Transaction' => [
                 'Reference1' => '',
                 'Reference2' => '',
                 'Reference3' => '',
@@ -367,7 +387,7 @@ class AramexService
         ];
 
         try {
-            $response = Http::timeout(20)
+            $response = Http::timeout(25)
                 ->withHeaders(['Content-Type' => 'application/json', 'Accept' => 'application/json'])
                 ->post(
                     $this->baseUrl() . '/ShippingAPI.V2/Tracking/Service_1_0.svc/json/TrackShipments',
@@ -375,27 +395,129 @@ class AramexService
                 );
 
             if (! $response->successful()) {
-                return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => 'HTTP ' . $response->status()];
+                return ['events' => [], 'error' => 'HTTP ' . $response->status()];
             }
 
-            $body     = $response->json();
-            $tracking = $body['TrackingResults'][0] ?? null;
-            $updates  = $tracking['Value'][0] ?? null;
+            $body = $response->json();
 
-            if (! $updates) {
-                return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => null];
+            /*
+             * `TrackingResults` is a list of {Key: waybill, Value: [updates]} pairs rather than a
+             * map, and one request can carry several waybills. Only ours is wanted, but a single
+             * -waybill request that returns one unkeyed result must still work, so an exact Key
+             * match is preferred and a lone result is accepted as ours.
+             */
+            $results = $body['TrackingResults'] ?? [];
+            $updates = null;
+
+            foreach ($results as $pair) {
+                if ((string) ($pair['Key'] ?? '') === $hawb) {
+                    $updates = $pair['Value'] ?? [];
+                    break;
+                }
+            }
+            if ($updates === null && count($results) === 1) {
+                $updates = $results[0]['Value'] ?? [];
             }
 
-            return [
-                'update_code'  => $updates['UpdateCode'] ?? null,
-                'problem_code' => $updates['ProblemCode'] ?? null,
-                'description'  => $updates['UpdateDescription'] ?? null,
-                'error'        => null,
-            ];
+            if (empty($updates)) {
+                // Not an error. A waybill created minutes ago genuinely has no events yet, and
+                // Aramex also answers this way for one it has never heard of.
+                return ['events' => [], 'error' => null];
+            }
+
+            $events = [];
+            foreach ($updates as $u) {
+                $code = strtoupper(trim((string) ($u['UpdateCode'] ?? '')));
+                if ($code === '') {
+                    continue;
+                }
+                $events[] = [
+                    'code'         => $code,
+                    'description'  => trim((string) ($u['UpdateDescription'] ?? '')),
+                    'problem_code' => ($u['ProblemCode'] ?? null) ?: null,
+                    'at'           => $this->parseAramexDate($u['UpdateDateTime'] ?? null),
+                    'location'     => ($u['UpdateLocation'] ?? null) ?: null,
+                ];
+            }
+
+            /*
+             * Sorted here rather than trusted. Aramex does not document an ordering for this array
+             * and has been observed returning newest-first; "which event is the latest" decides
+             * what gets written to aramex_status, so it is answered from the timestamps. Events
+             * with no parseable date sort to the front so they can never win the "latest" slot on
+             * the strength of being unparseable.
+             */
+            usort($events, function (array $a, array $b) {
+                $ta = $a['at']?->getTimestamp() ?? PHP_INT_MIN;
+                $tb = $b['at']?->getTimestamp() ?? PHP_INT_MIN;
+
+                return $ta <=> $tb;
+            });
+
+            return ['events' => $events, 'error' => null];
 
         } catch (\Throwable $e) {
-            return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => $e->getMessage()];
+            return ['events' => [], 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Aramex timestamps arrive as .NET JSON dates — `/Date(1755734400000+0100)/` — and sometimes
+     * as plain ISO strings depending on the endpoint. Both are accepted; anything else becomes
+     * null rather than an exception, because a date this class cannot read must not be able to
+     * take down a delivery sweep.
+     */
+    private function parseAramexDate(mixed $raw): ?\Illuminate\Support\Carbon
+    {
+        if (empty($raw) || ! is_string($raw)) {
+            return null;
+        }
+
+        if (preg_match('#/Date\((-?\d+)([+-]\d{4})?\)/#', $raw, $m)) {
+            try {
+                // Milliseconds since the epoch, and intdiv rather than / so a huge value cannot
+                // become a float and lose precision on the way to a timestamp.
+                return \Illuminate\Support\Carbon::createFromTimestampMs((int) $m[1]);
+            } catch (\Throwable) {
+                return null;
+            }
+        }
+
+        try {
+            return \Illuminate\Support\Carbon::parse($raw);
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * The most recent tracking event for a waybill.
+     *
+     * Kept at its original signature because the admin dashboard widget calls it, but it is now
+     * derived from the full history rather than from a "last update only" request — so the code it
+     * returns is the genuinely latest one by timestamp, not whichever row Aramex happened to put
+     * first in the array.
+     */
+    public function trackShipment(string $hawb): array
+    {
+        $history = $this->trackShipmentHistory($hawb);
+
+        if (! empty($history['error'])) {
+            return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => $history['error']];
+        }
+
+        $latest = ! empty($history['events']) ? $history['events'][count($history['events']) - 1] : null;
+
+        if (! $latest) {
+            return ['update_code' => null, 'problem_code' => null, 'description' => null, 'error' => null];
+        }
+
+        return [
+            'update_code'  => $latest['code'],
+            'problem_code' => $latest['problem_code'],
+            'description'  => $latest['description'],
+            'error'        => null,
+        ];
     }
 
     /**

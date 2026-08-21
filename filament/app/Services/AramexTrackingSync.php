@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Commande;
 use App\Models\Facture;
+use App\Support\Aramex\AramexStatusCodes;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 
@@ -59,11 +60,27 @@ use Illuminate\Support\Facades\Schema;
  * Repeat hourly, forever. Nobody gets loyalty points, nobody is asked for a review, and no alert
  * fires anywhere because nothing failed.
  *
- * `SH006` was inherited from the dashboard widget and has never been verified against the live
- * account (config/aramex.php says so out loud). So the sweep now watches for its own blind spot:
- * it collects the DISTINCT update codes it sees, and when a code's own description reads like a
- * delivery while that code is not configured as one, it says so — in the command output and in the
- * log. That converts a permanent silent no-op into a sentence naming the code to add.
+ * ── THE ANSWER, 21/08/2026: TWO BUGS, NOT ONE ──────────────────────────────────────────────
+ * `SH006` was inherited from the dashboard widget and had never been verified. Aramex's own status
+ * table says what it means, and it is not what this codebase assumed:
+ *
+ *     SH005  Delivered                 <- the delivery event. NEVER CONFIGURED.
+ *     SH006  Collected by Consignee    <- the customer went to an Aramex counter. Configured.
+ *
+ * So a home-delivery shop was detecting only counter pickups, correctly finding almost none, and
+ * reporting success. That was the first bug. `AramexStatusCodes` now holds the real table and
+ * `delivered_codes` defaults to the five codes that actually mean the consignee has the goods.
+ *
+ * The second bug was worse, because it would have survived fixing the first. `trackShipment()`
+ * asked Aramex for `GetLastTrackingUpdateOnly` and read the newest row — so the sweep was asking
+ * "what is the latest news?" when the question it needed answered was "was this EVER delivered?".
+ * Those differ for every cash-on-delivery parcel in the account: the courier hands the parcel over,
+ * and the COD payment posts afterwards, so the newest row is a payment (`SH239 "Shipment charges
+ * paid"`, forty of them) and the delivery is the row above it, which was never fetched.
+ *
+ * Both are fixed here. The sweep reads the FULL history and looks for a delivery code anywhere in
+ * it. The blind-spot detector remains, now backed by Aramex's documented table rather than by
+ * guessing at words, so the next unconfigured delivery code names itself instead of hiding.
  */
 class AramexTrackingSync
 {
@@ -81,20 +98,21 @@ class AramexTrackingSync
      * Both languages, because this account's descriptions arrive in either. "Delivered to consignee"
      * and "Livré au destinataire" are the same event.
      *
-     * ── AND THE MONEY WORDS, WHICH THE FIRST VERSION MISSED ─────────────────────────────────
-     * Run against the live account on 21/08/2026, this detector found NOTHING — while the account
-     * was returning `SH239 "Shipment charges paid"` forty times and `delivered_codes` was `SH006`,
-     * which never appeared at all. The blind-spot detector had a blind spot, and it was the one
-     * that mattered.
+     * ── DEMOTED TO A SECOND NET, AND WHY ────────────────────────────────────────────────────
+     * This word list used to be the ONLY blind-spot detector, and on 21/08/2026 it found nothing
+     * while the account returned `SH239 "Shipment charges paid"` forty times — so the money words
+     * were added to it. That was treating the symptom.
      *
-     * The lesson is specific to what this shop is: on a CASH-ON-DELIVERY account the money is
-     * collected at the door, so a payment event and a delivery event are the same moment. A
-     * vocabulary that knows "delivered" and not "paid" is a vocabulary written for a prepaid shop.
+     * The real detector is `AramexStatusCodes::isDeliveryClass()`: Aramex publishes what its codes
+     * mean, so "is this a delivery code we have not configured?" is a lookup, not a guess about
+     * English and French prose. That runs first.
      *
-     * These only ever raise a question in a log — `delivered_codes` remains the sole authority for
-     * what promotes an order, and SH239 is deliberately still not in it: "shipment charges paid"
-     * also reads as the shipper's own freight being billed, and this account is `payment_type => P`
-     * (prepaid by shipper). See config/aramex.php for the question to put to Aramex.
+     * The words stay as a second net for codes the table has never seen — SH239 is exactly that,
+     * absent from the table entirely — where prose is the only evidence available. Both only ever
+     * raise a question in a log; `delivered_codes` remains the sole authority for what promotes an
+     * order, and SH239 is still not in it, because "charges paid" is a payment event and Aramex
+     * files payments separately from deliveries (SH074, SH383, SH480, SH505). The parcels behind
+     * those forty payments are promoted on the SH005 in their history, not on the payment.
      */
     private const DELIVERY_HINTS = [
         'delivered', 'livré', 'livre au', 'livree', 'consignee', 'destinataire', 'remis',
@@ -109,26 +127,33 @@ class AramexTrackingSync
     /**
      * Poll Aramex for every shipment still in flight and write back what changed.
      *
-     * @return array{checked:int, status_changed:int, delivered:int, orders_updated:int, errors:int, rows:array<int, array<string, mixed>>, codes:array<string, array<string, mixed>>, unrecognised_delivery:array<int, string>}
+     * @return array{checked:int, status_changed:int, delivered:int, orders_updated:int, errors:int, rows:array<int, array<string, mixed>>, codes:array<string, array<string, mixed>>, unrecognised_delivery:array<int, string>, possible_delivery:array<int, string>, histories:array<int, array<string, mixed>>}
      */
-    public function sync(int $limit = 200, bool $dryRun = false): array
+    public function sync(int $limit = 200, bool $dryRun = false, bool $collectHistory = false): array
     {
         $out = [
             'checked' => 0, 'status_changed' => 0, 'delivered' => 0, 'orders_updated' => 0, 'errors' => 0,
             'rows' => [],
-            // Every distinct update code this pass saw, with a count and one sample description.
-            // This is the table that answers "is SH006 the right code for this account?" without
-            // anybody having to find a parcel they know was delivered and read a dashboard.
+            // Every distinct update code this pass saw ANYWHERE in a history, with a count and one
+            // sample description. Built from full histories rather than from latest-events-only,
+            // which is why it can now show SH005 sitting under a payment.
             'codes' => [],
+            // Codes Aramex documents as a delivery that `delivered_codes` does not list.
             'unrecognised_delivery' => [],
+            // Codes the table has never seen whose description merely reads like a delivery.
+            'possible_delivery' => [],
+            // Full event lists, only when asked for: this is the diagnostic that answers
+            // "what does Aramex actually hold for this waybill?" without a support ticket.
+            'histories' => [],
         ];
 
         if (! Schema::hasColumn('factures', 'aramex_hawb')) {
             return $out;
         }
 
-        $deliveredCodes = array_map('strtoupper', (array) config('aramex.delivered_codes', ['SH006']));
+        $deliveredCodes = array_map('strtoupper', (array) config('aramex.delivered_codes', AramexStatusCodes::DELIVERED));
         $settledCodes   = array_map('strtoupper', (array) config('aramex.settled_codes', ['SH006', 'SH069']));
+        $hasDeliveredAt = Schema::hasColumn('factures', 'aramex_delivered_at');
 
         /*
          * Which shipments are worth a request.
@@ -137,10 +162,16 @@ class AramexTrackingSync
          * Eloquent binds as `(A AND B) OR (C AND D)` — so it also pulled in rows the first half had
          * just excluded. Written as one closure here so the intent survives the next edit: has a
          * HAWB, and is not already in a state Aramex will never move it out of.
+         *
+         * `aramex_delivered_at` is the newer half of that, and it exists because the latest code is
+         * no longer a reliable stopping condition: a delivered COD parcel's newest event is a
+         * PAYMENT, which is not in `settled_codes` and never will be, so without this the sweep
+         * would keep paying for a request on every parcel it had already promoted, forever.
          */
         $shipments = Facture::query()
             ->whereNotNull('aramex_hawb')
             ->where('aramex_hawb', '!=', '')
+            ->when($hasDeliveredAt, fn ($q) => $q->whereNull('aramex_delivered_at'))
             ->where(function ($q) use ($settledCodes) {
                 $q->whereNull('aramex_status')->orWhereNotIn('aramex_status', $settledCodes);
             })
@@ -149,50 +180,103 @@ class AramexTrackingSync
             ->get(['id', 'numero', 'commande_id', 'aramex_hawb', 'aramex_status']);
 
         foreach ($shipments as $bl) {
-            $result = $this->aramex->trackShipment((string) $bl->aramex_hawb);
+            $history = $this->aramex->trackShipmentHistory((string) $bl->aramex_hawb);
             $out['checked']++;
 
-            if (! empty($result['error'])) {
+            if (! empty($history['error'])) {
                 $out['errors']++;
                 continue;
             }
 
-            $code = strtoupper((string) ($result['update_code'] ?? ''));
-            if ($code === '') {
+            $events = $history['events'];
+            if (empty($events)) {
                 continue; // Aramex has no update for this HAWB yet — normal for a fresh shipment.
             }
 
-            $isDelivered = in_array($code, $deliveredCodes, true);
-            $changed     = $code !== strtoupper((string) ($bl->aramex_status ?? ''));
-            $description = (string) ($result['description'] ?? '');
-
-            if (! isset($out['codes'][$code])) {
-                $out['codes'][$code] = ['count' => 0, 'description' => $description, 'delivered' => $isDelivered];
-            }
-            $out['codes'][$code]['count']++;
-            if ($out['codes'][$code]['description'] === '' && $description !== '') {
-                $out['codes'][$code]['description'] = $description;
+            if ($collectHistory) {
+                $out['histories'][] = [
+                    'bl'     => $bl->numero ?? $bl->id,
+                    'hawb'   => $bl->aramex_hawb,
+                    'events' => array_map(fn (array $e) => [
+                        'code'        => $e['code'],
+                        'description' => $e['description'],
+                        'at'          => $e['at']?->format('Y-m-d H:i'),
+                        'delivered'   => in_array($e['code'], $deliveredCodes, true),
+                    ], $events),
+                ];
             }
 
             /*
-             * The blind-spot check. A code whose description reads like a delivery but which is not
-             * in `delivered_codes` is the exact shape of the bug that keeps this whole pipeline
-             * dormant, and it is invisible in every other output this class produces.
+             * ── THE DELIVERY QUESTION, ASKED OF THE WHOLE HISTORY ────────────────────────────
+             * Not "is the newest event a delivery?" but "is there a delivery anywhere in here?".
+             * They are different questions for every COD parcel in this account, and the old code
+             * asked the wrong one. The FIRST match wins, chronologically, because that is the
+             * moment the customer actually received the goods — which is the date the loyalty
+             * clock and the review-request delay both have to be measured from.
              */
-            if (! $isDelivered && $description !== '' && $this->looksLikeDelivery($description)) {
-                if (! in_array($code, $out['unrecognised_delivery'], true)) {
-                    $out['unrecognised_delivery'][] = $code;
+            $deliveryEvent = null;
+            foreach ($events as $event) {
+                if (in_array($event['code'], $deliveredCodes, true)) {
+                    $deliveryEvent = $event;
+                    break;
+                }
+            }
+
+            $latest      = $events[count($events) - 1];
+            $code        = $latest['code'];
+            $description = $latest['description'];
+            $isDelivered = $deliveryEvent !== null;
+            $changed     = $code !== strtoupper((string) ($bl->aramex_status ?? ''));
+
+            /*
+             * Tally EVERY code in the history, not only the latest. This is the table that answers
+             * "which code does this account use for delivery?" — and it could never have answered
+             * it while it only ever saw the newest row of each shipment.
+             */
+            foreach ($events as $event) {
+                $c = $event['code'];
+                if (! isset($out['codes'][$c])) {
+                    $out['codes'][$c] = [
+                        'count'       => 0,
+                        'description' => AramexStatusCodes::describe($c, $event['description']) ?? '',
+                        'delivered'   => in_array($c, $deliveredCodes, true),
+                    ];
+                }
+                $out['codes'][$c]['count']++;
+                if ($out['codes'][$c]['description'] === '' && $event['description'] !== '') {
+                    $out['codes'][$c]['description'] = $event['description'];
+                }
+
+                if (in_array($c, $deliveredCodes, true)) {
+                    continue;
+                }
+
+                /*
+                 * The blind-spot check, in two tiers. Tier one is a lookup against Aramex's own
+                 * documented meanings and is the one that would have caught this bug on day one.
+                 * Tier two is prose, for codes the table has never seen.
+                 */
+                if (AramexStatusCodes::isDeliveryClass($c)) {
+                    if (! in_array($c, $out['unrecognised_delivery'], true)) {
+                        $out['unrecognised_delivery'][] = $c;
+                    }
+                } elseif ($event['description'] !== '' && $this->looksLikeDelivery($event['description'])) {
+                    if (! in_array($c, $out['possible_delivery'], true)) {
+                        $out['possible_delivery'][] = $c;
+                    }
                 }
             }
 
             $row = [
-                'bl'          => $bl->numero ?? $bl->id,
-                'hawb'        => $bl->aramex_hawb,
-                'from'        => $bl->aramex_status,
-                'to'          => $code,
-                'description' => $result['description'] ?? null,
-                'commande_id' => $bl->commande_id,
-                'promotes'    => false,
+                'bl'           => $bl->numero ?? $bl->id,
+                'hawb'         => $bl->aramex_hawb,
+                'from'         => $bl->aramex_status,
+                'to'           => $code,
+                'description'  => $description,
+                'commande_id'  => $bl->commande_id,
+                'promotes'     => false,
+                'delivered_at' => $deliveryEvent['at']?->format('Y-m-d H:i'),
+                'delivered_by' => $deliveryEvent['code'] ?? null,
             ];
 
             if ($changed) {
@@ -204,6 +288,17 @@ class AramexTrackingSync
 
             if ($isDelivered) {
                 $out['delivered']++;
+
+                /*
+                 * Stamped on the BL whether or not there is an order behind it. A BL typed by hand
+                 * in the admin has no `commande_id` and can never promote anything, but it is still
+                 * finished, and without this the sweep would re-poll it on every run for the rest
+                 * of its life.
+                 */
+                if (! $dryRun && $hasDeliveredAt) {
+                    $bl->forceFill(['aramex_delivered_at' => $deliveryEvent['at'] ?? now()])->saveQuietly();
+                }
+
                 $order = $this->orderFor($bl);
 
                 if ($order && ! in_array((string) $order->etat, self::TERMINAL_ORDER_STATES, true)) {
@@ -211,6 +306,22 @@ class AramexTrackingSync
                     $out['orders_updated']++;
 
                     if (! $dryRun) {
+                        /*
+                         * The REAL delivery moment, from Aramex, not the moment this sweep noticed.
+                         *
+                         * It is set here rather than left to CommandeObserver (which stamps `now()`
+                         * when the field is empty) because the whole post-delivery pipeline measures
+                         * from this timestamp. On the first run after this fix, the backlog is
+                         * months deep — stamping it all as "today" would tell the loyalty ledger and
+                         * the review sweep that a hundred parcels arrived this afternoon.
+                         *
+                         * Only when empty: an operator who set a delivery date by hand knows
+                         * something the courier's feed does not, and is not overruled by a robot.
+                         */
+                        if (empty($order->delivered_at) && $deliveryEvent['at']) {
+                            $order->delivered_at = $deliveryEvent['at'];
+                        }
+
                         /*
                          * `save()`, NOT `saveQuietly()`. The observer is the entire point: this one
                          * write is what stamps delivered_at, awards the loyalty points, sends the
@@ -221,10 +332,12 @@ class AramexTrackingSync
                         $order->save();
 
                         Log::info('Aramex: order marked delivered from tracking', [
-                            'commande_id' => $order->id,
-                            'numero'      => $order->numero,
-                            'hawb'        => $bl->aramex_hawb,
-                            'update_code' => $code,
+                            'commande_id'  => $order->id,
+                            'numero'       => $order->numero,
+                            'hawb'         => $bl->aramex_hawb,
+                            'update_code'  => $deliveryEvent['code'],
+                            'delivered_at' => $deliveryEvent['at']?->toDateTimeString(),
+                            'latest_code'  => $code,
                         ]);
                     }
                 }
@@ -241,11 +354,17 @@ class AramexTrackingSync
          * silence it is meant to break.
          */
         if (! empty($out['unrecognised_delivery'])) {
-            Log::warning('Aramex: update code(s) that look like a delivery are NOT in aramex.delivered_codes', [
-                'codes'           => $out['unrecognised_delivery'],
-                'configured'      => $deliveredCodes,
-                'orders_updated'  => $out['orders_updated'],
-                'action'          => 'Add the code to config/aramex.php delivered_codes after confirming it against the account.',
+            Log::warning('Aramex: documented DELIVERY codes are missing from aramex.delivered_codes', [
+                'codes'          => $out['unrecognised_delivery'],
+                'configured'     => $deliveredCodes,
+                'orders_updated' => $out['orders_updated'],
+                'action'         => 'Add them to ARAMEX_DELIVERED_CODES in the environment, then php artisan config:clear.',
+            ]);
+        }
+        if (! empty($out['possible_delivery'])) {
+            Log::info('Aramex: unknown code(s) whose description reads like a delivery', [
+                'codes'  => $out['possible_delivery'],
+                'action' => 'Check them against Aramex before adding — a payment event is not a delivery.',
             ]);
         }
 
