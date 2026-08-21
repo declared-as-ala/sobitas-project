@@ -275,7 +275,11 @@ class AramexTrackingSync
                 'description'  => $description,
                 'commande_id'  => $bl->commande_id,
                 'promotes'     => false,
-                'delivered_at' => $deliveryEvent['at']?->format('Y-m-d H:i'),
+                // `?->` guards the METHOD CALL, not the array access before it. A shipment with no
+                // delivery event has $deliveryEvent === null, and `null['at']` is a fatal in PHP 8
+                // no matter what follows it. Line 299 onward is safe because it sits inside
+                // `if ($isDelivered)`; this row is built for every shipment, delivered or not.
+                'delivered_at' => $deliveryEvent ? $deliveryEvent['at']?->format('Y-m-d H:i') : null,
                 'delivered_by' => $deliveryEvent['code'] ?? null,
             ];
 
