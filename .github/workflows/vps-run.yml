@@ -76,6 +76,13 @@ on:
           - aramex-codes
           - aramex-history
           - aramex-sync-dry-run
+          # ── REVIEWS ─────────────────────────────────────────────────────────────────────
+          # `reviews-rescore` measures the authenticity detector instead of trusting it: it scores
+          # every existing review and reports the verdict spread, the signals that fired, and the
+          # split by attested purchase. This shop owns a known-fake test set — the seeded pool that
+          # `seo:audit-reviews` unpublished — so the report is a real false-negative check rather
+          # than a self-assessment. Writes nothing, and never touches `publier`.
+          - reviews-rescore
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
@@ -91,6 +98,10 @@ on:
           # Re-slices the sections out of HTML we already hold. No HTTP at all.
           - content-rederive-dry
           # WRITES: these need confirm=APPLY
+          # `reviews-rescore-apply` stores the scores so the Filament queue can be sorted by them,
+          # and backfills `text_hash` — without which duplicate detection has nothing to compare a
+          # new review against and silently finds nothing. It never changes `publier`.
+          - reviews-rescore-apply
           # `aramex-sync-apply` is the one that actually marks orders delivered. Gated with the
           # other writes because it is the most consequential button here: each promotion stamps a
           # delivery date, credits loyalty points, and makes the order eligible for a review
@@ -108,7 +119,7 @@ on:
           # Staging-only, but it REWRITES stored HTML, so it is gated like the rest.
           - content-rederive
       confirm:
-        description: "Writing tasks only (aramex-sync-apply, research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
+        description: "Writing tasks only (aramex-sync-apply, reviews-rescore-apply, research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
         required: false
         default: ""
 
@@ -156,6 +167,16 @@ jobs:
               ARGS="aramex:sync-tracking --codes --limit=200"
               WRITES=no
               ;;
+            reviews-rescore)
+              ARGS="reviews:rescore --limit=5000"
+              WRITES=no
+              ;;
+
+            reviews-rescore-apply)
+              ARGS="reviews:rescore --apply --limit=5000"
+              WRITES=yes
+              ;;
+
             aramex-history)
               # The full event list for five shipments, oldest first, with the rows that count as a
               # delivery marked. This is the view `--codes` cannot give: it shows a delivery event

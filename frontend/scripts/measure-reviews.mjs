@@ -196,6 +196,22 @@ for (const theme of THEMES) {
       if (opened === 0) fail(where, 'no reply-count button found — the thread never rendered');
       await new Promise((r) => setTimeout(r, 700));
 
+      /*
+       * Open a reply form too. The reply box carries its own honeypot, and until it is on the page
+       * the assertion below cannot see it — a check that passes because the thing it checks is not
+       * rendered yet is the same class of guard as one that swallows its own navigation error.
+       */
+      const replyForms = await page.evaluate(() => {
+        const b = [...document.querySelectorAll('button')].find((x) =>
+          /^r[ée]pondre$/i.test((x.textContent || '').trim())
+        );
+        if (!b) return 0;
+        b.click();
+        return 1;
+      });
+      if (replyForms === 0) fail(where, 'no "Répondre" button on an open thread — the reply form is unreachable');
+      await new Promise((r) => setTimeout(r, 400));
+
       const report = await page.evaluate(() => {
         const text = document.body.innerText;
         const doc = document.documentElement;
@@ -259,31 +275,55 @@ for (const theme of THEMES) {
       if (honeypot?.missing) fail(where, honeypot.missing);
       await new Promise((r) => setTimeout(r, 500));
 
-      const hp = await page.evaluate(() => {
-        const el = document.querySelector('input[name="hp_field"]');
-        if (!el) return { present: false };
-        const r = el.getBoundingClientRect();
-        const cs = getComputedStyle(el);
+      /*
+        querySelectorAll, not querySelector. There are now TWO honeypots on an open product page —
+        the review form's and the reply form's — and a single-element query would assert whichever
+        happened to render first while the other went unchecked. That is how a guard reports a pass
+        it did not earn.
+      */
+      const hps = await page.evaluate(() => {
+        const els = [...document.querySelectorAll('input[name="hp_field"]')];
         return {
-          present: true,
-          area: Math.round(r.width * r.height),
-          tabIndex: el.tabIndex,
-          ariaHidden: !!el.closest('[aria-hidden="true"]'),
-          autocomplete: el.getAttribute('autocomplete'),
-          opacityVisible: cs.visibility !== 'hidden',
           docOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+          fields: els.map((el, i) => {
+            const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            const form = el.closest('form') || el.parentElement;
+            return {
+              // Enough to say WHICH honeypot failed, since there is more than one.
+              label: el.id || `hp_field[${i}]`,
+              area: Math.round(r.width * r.height),
+              tabIndex: el.tabIndex,
+              ariaHidden: !!el.closest('[aria-hidden="true"]'),
+              autocomplete: el.getAttribute('autocomplete'),
+              visibility: cs.visibility,
+              nearby: (form?.textContent || '').trim().slice(0, 40),
+            };
+          }),
         };
       });
 
-      if (!hp.present) {
-        fail(where, 'honeypot input[name="hp_field"] is missing — scripted reviews would go straight through');
-      } else {
-        if (hp.area > 4) fail(where, `honeypot is visible (${hp.area}px²) — real reviews typed into it are silently discarded`);
-        if (hp.tabIndex !== -1) fail(where, `honeypot is in the tab order (tabIndex ${hp.tabIndex})`);
-        if (!hp.ariaHidden) fail(where, 'honeypot is exposed to assistive technology');
-        if (hp.autocomplete !== 'off') fail(where, `honeypot autocomplete is "${hp.autocomplete}" — autofill would trip it`);
-        if (hp.docOverflow) fail(where, 'the open review form causes horizontal overflow');
+      // Two: the review form and the reply form. Fewer means a submission path is unguarded, and
+      // an unguarded path is the only one a script needs.
+      if (hps.fields.length < 2) {
+        fail(
+          where,
+          `expected 2 honeypots (review form + reply form), found ${hps.fields.length} — an unguarded submission path accepts scripted reviews`
+        );
       }
+
+      for (const hp of hps.fields) {
+        if (hp.area > 4) fail(where, `honeypot ${hp.label} is visible (${hp.area}px²) — real text typed into it is silently discarded`);
+        if (hp.tabIndex !== -1) fail(where, `honeypot ${hp.label} is in the tab order (tabIndex ${hp.tabIndex})`);
+        if (!hp.ariaHidden) fail(where, `honeypot ${hp.label} is exposed to assistive technology`);
+        if (hp.autocomplete !== 'off') fail(where, `honeypot ${hp.label} autocomplete is "${hp.autocomplete}" — autofill would trip it`);
+        if (hp.visibility === 'hidden') {
+          // Not a hard failure, but worth saying: some crawlers skip visibility:hidden inputs, which
+          // is the one way to make a honeypot invisible to the thing it is meant to catch.
+          console.log(`  note: honeypot ${hp.label} uses visibility:hidden — some bots skip such fields`);
+        }
+      }
+      if (hps.docOverflow) fail(where, 'the open review form causes horizontal overflow');
 
       const contrast = (await page.evaluate(AUDIT)).filter((x) => x.status === 'FAIL');
       if (contrast.length) {
