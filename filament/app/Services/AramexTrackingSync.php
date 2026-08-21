@@ -80,8 +80,27 @@ class AramexTrackingSync
      *
      * Both languages, because this account's descriptions arrive in either. "Delivered to consignee"
      * and "Livré au destinataire" are the same event.
+     *
+     * ── AND THE MONEY WORDS, WHICH THE FIRST VERSION MISSED ─────────────────────────────────
+     * Run against the live account on 21/08/2026, this detector found NOTHING — while the account
+     * was returning `SH239 "Shipment charges paid"` forty times and `delivered_codes` was `SH006`,
+     * which never appeared at all. The blind-spot detector had a blind spot, and it was the one
+     * that mattered.
+     *
+     * The lesson is specific to what this shop is: on a CASH-ON-DELIVERY account the money is
+     * collected at the door, so a payment event and a delivery event are the same moment. A
+     * vocabulary that knows "delivered" and not "paid" is a vocabulary written for a prepaid shop.
+     *
+     * These only ever raise a question in a log — `delivered_codes` remains the sole authority for
+     * what promotes an order, and SH239 is deliberately still not in it: "shipment charges paid"
+     * also reads as the shipper's own freight being billed, and this account is `payment_type => P`
+     * (prepaid by shipper). See config/aramex.php for the question to put to Aramex.
      */
-    private const DELIVERY_HINTS = ['delivered', 'livré', 'livre au', 'livree', 'consignee', 'destinataire', 'remis'];
+    private const DELIVERY_HINTS = [
+        'delivered', 'livré', 'livre au', 'livree', 'consignee', 'destinataire', 'remis',
+        'charges paid', 'payment collected', 'cod collected', 'amount collected',
+        'encaiss', 'contre remboursement', 'montant perçu',
+    ];
 
     public function __construct(private AramexService $aramex)
     {
