@@ -18,6 +18,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class ReviewController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\CapturesReviewSignals;
+
     /**
      * List the products of an order (by order_token) so the /avis/{token} page can
      * render one review form per purchased product, hiding those already reviewed.
@@ -96,12 +98,18 @@ class ReviewController extends Controller
             }
         }
 
+        if ($this->trippedHoneypot($request)) {
+            // Ordinary success, no row — see the note on add_review.
+            return response()->json(['message' => 'Merci pour votre avis !', 'published' => false, 'id' => null], 201);
+        }
+
         $stars = (int) $data['stars'];
 
         // Attribute to a real User only; a guest (Client id in user_id) stays anonymous.
         $userId = ($commande->user_id && User::find($commande->user_id)) ? $commande->user_id : null;
 
         $payload = [
+            ...$this->reviewSignalColumns($request, (string) $data['comment']),
             'user_id'    => $userId,
             'product_id' => $data['product_id'],
             'stars'      => $stars,

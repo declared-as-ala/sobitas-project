@@ -94,6 +94,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Points for writing a review
+    |--------------------------------------------------------------------------
+    | A review earns loyalty points, and loyalty points are money: 20 to the dinar,
+    | redeemable at checkout. So this block is not a marketing setting — it is the
+    | price the shop pays per review, and the reason ReviewAuthenticity exists.
+    |
+    | 50 points = 2.50 DT. Enough to be worth writing three sentences for, small
+    | enough that a hundred reviews is 250 DT rather than a budget line. Set to 0
+    | to switch the whole reward off without a deploy.
+    |
+    | PAYMENT REQUIRES BOTH, and neither is configurable:
+    |   - an attested review (verified, or an order attached) — you bought it;
+    |   - an authenticity verdict of "human" — it reads as written by one.
+    | See ReviewAuthenticity for why either alone is a way to get paid for nothing.
+    */
+    'points' => [
+        'award' => (int) env('REVIEW_POINTS_AWARD', 50),
+
+        // Below this many characters a review is not paid for. Not a quality bar —
+        // "Bon produit" is a fine review — but a rating with three characters
+        // attached tells the next customer nothing, and paying for it is paying
+        // for noise. ReviewAuthenticity applies the same number as a signal.
+        'min_length' => (int) env('REVIEW_POINTS_MIN_LENGTH', 15),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Replies — the thread under a review
     |--------------------------------------------------------------------------
     */

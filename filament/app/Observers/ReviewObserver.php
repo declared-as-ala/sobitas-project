@@ -5,6 +5,8 @@ namespace App\Observers;
 use App\Models\Product;
 use App\Models\Review;
 use App\Models\User;
+use App\Services\PointsService;
+use App\Services\Reviews\ReviewAuthenticity;
 use App\Services\Reviews\ReviewModerator;
 use App\Services\Seo\SeoNotifier;
 use Filament\Notifications\Notification;
@@ -34,12 +36,109 @@ class ReviewObserver
      */
     public function saved(Review $review): void
     {
-        if (! $review->wasChanged('publier') || (int) $review->publier !== 1) {
+        if (! $review->wasChanged('publier')) {
             return;
         }
-        $product = $review->product ?? Product::find($review->product_id);
-        if ($product) {
-            app(SeoNotifier::class)->productChanged($product);
+
+        if ((int) $review->publier === 1) {
+            $product = $review->product ?? Product::find($review->product_id);
+            if ($product) {
+                app(SeoNotifier::class)->productChanged($product);
+            }
+
+            /*
+             * An admin approving a held review in the panel is the OTHER way a review gets
+             * published, and it has to pay the same as the automatic path. Without this, the
+             * reward would depend on which route the review happened to take — and the manual
+             * route is the one a genuine customer whose review was held ends up on.
+             */
+            self::settlePoints($review);
+
+            return;
+        }
+
+        /*
+         * Unpublished. Take the points back.
+         *
+         * An award that cannot be reversed turns "publish, get paid, delete" into a loop, and the
+         * loop is worth 2.50 DT a turn. `reverseForReview` is idempotent, so an admin toggling a
+         * review twice does not claw back twice.
+         */
+        self::clawBackPoints($review);
+    }
+
+    /**
+     * Pay for a published review, if it has earned it.
+     *
+     * @param  array<string,mixed>|null  $authenticity  Reuses the verdict when it was just computed,
+     *                                                  rather than re-running the DB checks.
+     */
+    private static function settlePoints(Review $review, ?array $authenticity = null): void
+    {
+        try {
+            if ((int) $review->publier !== 1) {
+                return;
+            }
+
+            // A guest review has nobody to pay. That is not a limitation to work around: an
+            // anonymous author is precisely the case where "who receives the money" has no answer.
+            $userId = $review->user_id;
+            if (empty($userId)) {
+                return;
+            }
+
+            $user = User::find($userId);
+            if (! $user) {
+                return;
+            }
+
+            if ((int) config('reviews.points.award', 0) <= 0) {
+                return;
+            }
+
+            if (mb_strlen(trim((string) $review->comment)) < (int) config('reviews.points.min_length', 15)) {
+                return;
+            }
+
+            $authenticity ??= app(ReviewAuthenticity::class)->assess($review, ['compose_ms' => $review->compose_ms]);
+            if (empty($authenticity['may_earn_points'])) {
+                return;
+            }
+
+            $awarded = app(PointsService::class)->awardForReview(
+                $user,
+                (int) $review->id,
+                optional($review->product)->designation_fr
+            );
+
+            if ($awarded && Schema::hasColumn('reviews', 'points_awarded')) {
+                $review->forceFill(['points_awarded' => true])->saveQuietly();
+            }
+        } catch (\Throwable $e) {
+            // A points failure must never affect a review, exactly as with order points.
+            Log::error('settlePoints failed', ['review_id' => $review->id ?? null, 'error' => $e->getMessage()]);
+        }
+    }
+
+    /** Reverse a review award when the review stops being published. */
+    private static function clawBackPoints(Review $review): void
+    {
+        try {
+            $userId = $review->user_id;
+            if (empty($userId)) {
+                return;
+            }
+            $user = User::find($userId);
+            if (! $user) {
+                return;
+            }
+
+            if (app(PointsService::class)->reverseForReview($user, (int) $review->id)
+                && Schema::hasColumn('reviews', 'points_awarded')) {
+                $review->forceFill(['points_awarded' => false])->saveQuietly();
+            }
+        } catch (\Throwable $e) {
+            Log::error('clawBackPoints failed', ['review_id' => $review->id ?? null, 'error' => $e->getMessage()]);
         }
     }
 
@@ -107,8 +206,39 @@ class ReviewObserver
             return;
         }
 
+        /*
+         * ── AUTHENTICITY, AFTER MODERATION AND BEFORE PUBLICATION ────────────────────────
+         * Order matters. The authenticity score CONSUMES the moderator's verdict — it reads the
+         * sentiment to spot a five-star rating on angry text, and the decision to know the
+         * classifier already wanted this gone. Running them the other way round would throw away
+         * both signals.
+         *
+         * The client-side evidence (`compose_ms`) was written onto the row by the controller at
+         * submission; the observer has no request. The honeypot never reaches here at all — a
+         * filled honeypot is discarded at the controller, so there is no row to score.
+         */
+        $authenticity = app(ReviewAuthenticity::class)->assess(
+            $review,
+            ['compose_ms' => $review->compose_ms],
+            $verdict
+        );
+
         $original = (int) $review->publier;
         $target   = self::targetPublier($original, $verdict);
+
+        /*
+         * The authenticity floor can HOLD a review the moderator was happy with, and never the
+         * reverse: it cannot publish something moderation rejected. A bot writes publishable prose
+         * — that is the entire difficulty — so "the text is fine" and "a person wrote it" are two
+         * questions and the stricter answer wins.
+         *
+         * It never DELETES and never unpublishes a genuine negative. A held review is visible to
+         * an admin with every signal that fired printed next to it, which is the difference between
+         * moderation and review-gating.
+         */
+        if ($target === 1 && ($authenticity['verdict'] ?? '') === 'bot') {
+            $target = 0;
+        }
 
         // Persist the verdict (+ any publish-state change) WITHOUT re-firing
         // observer events (saveQuietly avoids a recursive moderation loop).
@@ -122,8 +252,24 @@ class ReviewObserver
         if ($target !== $original) {
             $updates['publier'] = $target;
         }
+        if (Schema::hasColumn('reviews', 'authenticity_score')) {
+            $updates['authenticity_score'] = (int) $authenticity['score'];
+        }
+        if (Schema::hasColumn('reviews', 'authenticity_signals')) {
+            $updates['authenticity_signals'] = $authenticity;
+        }
         if (! empty($updates)) {
+            /*
+             * `saveQuietly` — which means `saved()` does NOT fire here, so the points settlement
+             * below is explicit rather than incidental. That is deliberate: the quiet save exists
+             * to avoid a recursive moderation loop, and quietly relying on an observer hook that
+             * has been suppressed is how a feature works in testing and pays nobody in production.
+             */
             $review->forceFill($updates)->saveQuietly();
+        }
+
+        if ($target === 1) {
+            self::settlePoints($review->refresh(), $authenticity);
         }
 
         // Refresh the PDP when the review is (or just became) live, and also

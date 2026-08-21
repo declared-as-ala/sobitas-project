@@ -53,11 +53,45 @@ class ReviewResource extends Resource
                 Tables\Columns\TextColumn::make('stars')->label('Note')->sortable(),
                 Tables\Columns\TextColumn::make('comment')->label('Commentaire')->limit(40),
                 Tables\Columns\IconColumn::make('publier')->label('Publié')->boolean(),
+                /*
+                 * ── THE AUTHENTICITY COLUMN IS THE POINT OF THIS TABLE NOW ──────────────────
+                 * A review earns loyalty points, so this list is no longer only a content queue —
+                 * it is where money is approved. A score with no reasons beside it is a number
+                 * nobody can argue with, which is the wrong property for something that withholds
+                 * a reward from a real customer, so the signals ride along in the tooltip.
+                 *
+                 * Colours are deliberately not a traffic light on the star rating: they describe
+                 * how likely a HUMAN wrote it, and a genuine one-star review is green.
+                 */
+                Tables\Columns\TextColumn::make('authenticity_score')
+                    ->label('Authenticité')
+                    ->badge()
+                    ->color(fn ($state) => match (true) {
+                        $state === null => 'gray',
+                        $state >= 70 => 'success',
+                        $state >= 35 => 'warning',
+                        default => 'danger',
+                    })
+                    ->formatStateUsing(fn ($state) => $state === null ? '—' : $state . '/100')
+                    ->tooltip(fn ($record) => $record->authenticity_signals['reason'] ?? null)
+                    ->sortable(),
+                Tables\Columns\IconColumn::make('points_awarded')
+                    ->label('Points versés')
+                    ->boolean()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->defaultPaginationPageOption(25)
-            ->filters([Tables\Filters\TernaryFilter::make('publier')->label('Publié')])
+            ->filters([
+                Tables\Filters\TernaryFilter::make('publier')->label('Publié'),
+                Tables\Filters\TernaryFilter::make('points_awarded')->label('Points versés'),
+                // The queue that actually needs a human: everything the bot detector was not
+                // confident about. Sorted worst-first by the score column above.
+                Tables\Filters\Filter::make('suspect')
+                    ->label('Authenticité douteuse')
+                    ->query(fn ($query) => $query->whereNotNull('authenticity_score')->where('authenticity_score', '<', 70)),
+            ])
             ->actions([Actions\EditAction::make(), Actions\DeleteAction::make()])
             ->bulkActions([Actions\DeleteBulkAction::make()]);
     }

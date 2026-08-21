@@ -65,6 +65,16 @@ on:
           - hydrate-log
           - dsld-log
           - laravel-log
+          # ── DELIVERY ────────────────────────────────────────────────────────────────────
+          # `aramex-codes` is the answer to "why is nothing ever marked delivered?". It lists every
+          # update code this Aramex ACCOUNT actually returns, with a sample description and whether
+          # each currently counts as a delivery. Writes nothing.
+          #
+          # It matters because the failure it diagnoses is silent: if `aramex.delivered_codes` does
+          # not match reality, the hourly sweep polls every shipment, promotes nothing, and exits 0
+          # — while loyalty points and review requests both stay dormant and no alert fires.
+          - aramex-codes
+          - aramex-sync-dry-run
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
@@ -131,6 +141,19 @@ jobs:
           case "$TASK" in
             catalog-status)
               ARGS="catalog:iherb:hydrate --status"
+              WRITES=no
+              ;;
+            aramex-codes)
+              # Read-only: --codes implies --dry-run inside the command itself, because the reason
+              # to run it is not knowing which code means delivered — the worst possible moment to
+              # also be writing order statuses.
+              ARGS="aramex:sync-tracking --codes --limit=200"
+              WRITES=no
+              ;;
+            aramex-sync-dry-run)
+              # Same poll, the ordinary table: which shipments moved, and which orders it WOULD
+              # promote. Still writes nothing.
+              ARGS="aramex:sync-tracking --dry-run --limit=200"
               WRITES=no
               ;;
             queue-log)

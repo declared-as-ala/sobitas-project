@@ -50,6 +50,8 @@ use Illuminate\Support\Facades\Schema;
 
 class ApisController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\CapturesReviewSignals;
+
     private const DEFAULT_PER_PAGE = 20;
     private const MAX_PER_PAGE = 100;
 
@@ -2116,6 +2118,18 @@ class ApisController extends Controller
             'comment'    => ['required', 'string', 'max:1000'],
         ]);
 
+        /*
+         * A filled honeypot gets the ordinary success response and no row.
+         *
+         * Not an error, deliberately: telling a script it was caught tells whoever wrote it which
+         * field to skip. Letting it believe it worked costs nothing and teaches it nothing. No
+         * human can trip this — the field is invisible, unlabelled, tabindex=-1 and named so that
+         * browser autofill does not recognise it.
+         */
+        if ($this->trippedHoneypot($request)) {
+            return response()->json(['id' => null], 201);
+        }
+
         // Attach the order this review is about, when there is one.
         //
         // Without this, a review left on the product page is unattested BY CONSTRUCTION: it never
@@ -2133,6 +2147,7 @@ class ApisController extends Controller
         );
 
         $review = Review::create([
+            ...$this->reviewSignalColumns($request, (string) $validated['comment']),
             'user_id'     => Auth::id(),
             'product_id'  => $validated['product_id'],
             'stars'       => $validated['stars'] ?? 5,

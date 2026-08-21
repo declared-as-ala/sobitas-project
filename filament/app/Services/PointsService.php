@@ -7,6 +7,8 @@ use App\Models\User;
 use App\Models\UserPointTransaction;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 
 /**
  * Single source of truth for the loyalty points economy.
@@ -18,6 +20,17 @@ use Illuminate\Support\Facades\Log;
  *
  * Effective cashback is therefore 5%. Tune the three constants below to
  * change the whole economy in one place.
+ *
+ * ── AND SINCE 21/08/2026, REVIEWS PAY TOO ───────────────────────────────────────────────────
+ * `awardForReview()` credits a flat number of points for a published review. That makes this class
+ * the place where a REVIEW becomes MONEY, which changes what a fake review is worth: at 20 points
+ * to the dinar, a bot that clears moderation is a printing press rather than a nuisance.
+ *
+ * So the award has two gates and both live outside this class, deliberately — this one does the
+ * arithmetic and the ledger, and refuses to be the place where "should we pay?" is decided:
+ *
+ *   ReviewAuthenticity   was a human behind it, and was it bought? Both, or no points.
+ *   the ledger itself    `review_id` dedupes, exactly as `commande_id` does for order points.
  */
 class PointsService
 {
@@ -217,6 +230,101 @@ class PointsService
                 'commande_id' => $commandeId,
                 'error'       => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Credit the flat reward for a published, human-written, purchase-backed review.
+     *
+     * ── EVERY GUARD HERE IS LOAD-BEARING, SO NONE OF THEM IS AN `if` WITH NO COMMENT ─────────
+     *   $points <= 0        the reward is configurable and 0 is a legitimate value meaning "off".
+     *   the ledger check    `review_id` already credited = this ran twice. It runs from an
+     *                       observer that fires on `saved`, so it WILL run again the next time
+     *                       anybody touches the row in Filament.
+     *   never throws        a points failure must never affect a review, exactly as with earn().
+     *
+     * The dedupe is on the LEDGER, not on `reviews.points_awarded`. The flag is a cache for
+     * humans reading the table; the ledger is the money, and money is what must not double.
+     */
+    public function awardForReview(User $user, int $reviewId, ?string $productLabel = null): bool
+    {
+        $points = (int) config('reviews.points.award', 0);
+        if ($points <= 0 || $reviewId <= 0) {
+            return false;
+        }
+
+        try {
+            if (! Schema::hasColumn('user_point_transactions', 'review_id')) {
+                // The migration has not run yet. Crediting without the dedupe column would mean
+                // paying again on every save, which is the one failure worth refusing outright.
+                return false;
+            }
+
+            $already = UserPointTransaction::where('review_id', $reviewId)
+                ->where('type', 'earn')
+                ->exists();
+            if ($already) {
+                return false;
+            }
+
+            $label = $productLabel ? (' — ' . Str::limit($productLabel, 60)) : '';
+
+            $tx = $this->record($user, 'earn', $points, 'Points pour votre avis' . $label, null);
+            $tx->forceFill(['review_id' => $reviewId])->saveQuietly();
+
+            Log::info('Points awarded for review', [
+                'user_id'   => $user->getKey(),
+                'review_id' => $reviewId,
+                'points'    => $points,
+            ]);
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('PointsService.awardForReview failed', [
+                'user_id'   => $user->getKey(),
+                'review_id' => $reviewId,
+                'error'     => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /**
+     * Take back the points paid for a review that has since been unpublished or deleted.
+     *
+     * The mirror of `reverseForCommande`, and needed for the same reason: an award that cannot be
+     * reversed turns "publish, get paid, delete" into a loop. Idempotent by the sign of any
+     * existing adjustment already recorded against the review.
+     */
+    public function reverseForReview(User $user, int $reviewId): bool
+    {
+        try {
+            if (! Schema::hasColumn('user_point_transactions', 'review_id')) {
+                return false;
+            }
+
+            $earned = (int) UserPointTransaction::where('review_id', $reviewId)->where('type', 'earn')->sum('points');
+            if ($earned <= 0) {
+                return false;
+            }
+
+            $clawed = UserPointTransaction::where('review_id', $reviewId)
+                ->where('type', 'adjustment')
+                ->where('points', '<', 0)
+                ->exists();
+            if ($clawed) {
+                return false;
+            }
+
+            $tx = $this->record($user, 'adjustment', -$earned, 'Annulation des points d’avis (avis retiré)', null);
+            $tx->forceFill(['review_id' => $reviewId])->saveQuietly();
+
+            return true;
+        } catch (\Throwable $e) {
+            Log::error('PointsService.reverseForReview failed', ['review_id' => $reviewId, 'error' => $e->getMessage()]);
+
+            return false;
         }
     }
 

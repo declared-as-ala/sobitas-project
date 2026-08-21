@@ -17,6 +17,9 @@ class Review extends Model
         'publier' => 'integer',
         'ai_moderation' => 'array',
         'ai_checked_at' => 'datetime',
+        'authenticity_signals' => 'array',
+        'points_awarded' => 'boolean',
+        'compose_ms' => 'integer',
     ];
 
     /**
@@ -28,7 +31,16 @@ class Review extends Model
      * public as a page gets. The API selects review columns explicitly too — this is the second
      * lock, for the day somebody returns a model straight out of a controller.
      */
-    protected $hidden = ['author_email', 'ip_hash'];
+    /**
+     * NEVER serialise these.
+     *
+     * `author_email` and `ip_hash` are moderation handles, not facts the storefront is entitled to.
+     * `text_hash` and `authenticity_signals` joined them for a different reason: publishing what
+     * the bot detector looks at, and what it concluded about a specific review, is publishing the
+     * evasion instructions. A reviewer is told their review is being checked; they are not told
+     * which checks it passed.
+     */
+    protected $hidden = ['author_email', 'ip_hash', 'text_hash', 'authenticity_signals', 'authenticity_score'];
 
     public function user(): BelongsTo
     {
