@@ -125,14 +125,23 @@ class SyncAramexTracking extends Command
         $moved = array_values(array_filter($result['rows'], fn (array $r) => $r['from'] !== $r['to'] || $r['promotes']));
 
         if ($moved) {
+            /*
+             * `Vers` is the LATEST code, and on this cash-on-delivery account that is routinely the
+             * COD payment rather than the delivery. Printed alone beside "Livrée OUI" it reads as
+             * though the payment promoted the order, which is precisely the misreading that cost
+             * this pipeline months. So the delivery event gets its own two columns: the code that
+             * actually promoted it, and when the customer actually received the parcel.
+             */
             $this->table(
-                ['BL', 'HAWB', 'De', 'Vers', 'Description', 'Commande', 'Livrée'],
+                ['BL', 'HAWB', 'De', 'Vers (dernier)', 'Description', 'Livré le', 'Par', 'Commande', 'Livrée'],
                 array_map(fn (array $r) => [
                     $r['bl'],
                     $r['hawb'],
                     $r['from'] ?? '—',
                     $r['to'],
-                    mb_strimwidth((string) ($r['description'] ?? ''), 0, 40, '…'),
+                    mb_strimwidth((string) ($r['description'] ?? ''), 0, 32, '…'),
+                    $r['delivered_at'] ?? '—',
+                    $r['delivered_by'] ?? '—',
                     $r['commande_id'] ?? '—',
                     $r['promotes'] ? 'OUI' : '',
                 ], $moved)
