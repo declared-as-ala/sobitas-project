@@ -114,6 +114,11 @@ export function isReservedRouteSlug(slug: string): boolean {
     'page',
     'proteine-sousse',
     'qui-sommes-nous',
+    // Public member profiles (/membres/{id}). Caught by check-reserved-routes on the very first
+    // build after the route was added: without this the middleware rewrites /membres to
+    // /x-crawler/category/membres, which resolves category → brand → CMS page, finds none, and
+    // serves Googlebot a 404 for a route that answers 200 to a browser.
+    'membres',
     // Missing here meant middleware rewrote /pack-builder to /x-crawler/category/pack-builder,
     // which resolves category → brand → CMS page, found none, and served Googlebot a 404 +
     // noindex for a page that returns 200 to every human. Verified live before the fix:

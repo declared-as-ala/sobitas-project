@@ -777,6 +777,37 @@ border border-rule bg-elevated text-ink-2          /* neutral */
 A `/10` tint behind an ICON is fine — a graphical object needs 3:1, not 4.5:1, and the icon plates
 in `AccountSummary` and `AuthShell`'s benefit list use exactly that.
 
+## 14c. A form screen fits the phone, and "fits" is measured on the content
+
+Auth, checkout steps and any other screen whose job is one form: the content must fit the viewport
+without page scroll. A form that scrolls puts its own submit button below the fold, and the
+customer's estimate of how long it will take is made from what is on screen when the page lands.
+
+Enforced by `measure-auth` against **real devices**, not a cross-product of widths and heights —
+320×667 is not a phone, and testing it produces failures nobody can act on:
+
+| Device | | Enforced |
+|---|---|---|
+| iPhone 14 | 390×844 | yes |
+| Android | 360×740 | yes |
+| iPhone SE | 375×667 | yes |
+| iPhone 5 | 320×568 | **no** — printed as a note every run |
+
+Two rules that come out of getting this wrong:
+
+- **Measure the content, not the document.** `documentElement.scrollHeight` is never smaller than
+  the viewport. Use explicit hooks (`data-auth-header` / `-body` / `-card`) and sum the real
+  heights, or a page that fits reports the viewport height and tells you nothing.
+- **Reserve for anything an env flag hides.** The Google sign-in block is behind
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and is absent locally — ~96px that only appears in production.
+
+**44px is a floor, not a budget line.** Shrinking a control to buy vertical space is the first idea
+and always the wrong one; it failed 12 combinations within a minute of being tried.
+
+When a screen genuinely cannot fit, drop the least essential element at that height rather than
+crushing the design everywhere — `[@media(max-height:700px)]:hidden` on the mobile benefit line is
+the only height query in the codebase and it exists for exactly that trade.
+
 ## 15. The contract for a NEW component
 
 Sections 1-14 describe surfaces that exist. This one is the checklist for one that does not yet,

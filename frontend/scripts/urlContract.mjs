@@ -236,6 +236,20 @@ export const ROUTE_CONTRACT = [
     why: 'Per-order, auth-guarded, robots.txt-disallowed AND noindex. No public contract to probe.',
   },
   {
+    route: '(shop)/membres/[id]',
+    probe: '/membres/99999{n}',
+    missing: [404],
+    indexable: false,
+    sample: null,
+    why:
+      'Public member profile, noindex + follow. The FIRST version rendered a "profil introuvable" ' +
+      'panel client-side, which is an HTTP 200 — this check failed the build over it, and was ' +
+      'right to: /membres/{anything} answering 200 mints an unbounded family of near-identical ' +
+      'pages, and noindex does not help because a crawler still has to fetch each one to learn ' +
+      'that. The page now resolves the profile server-side and calls notFound(). The API also ' +
+      '404s any member with no PUBLISHED review, so most ids are genuine misses.',
+  },
+  {
     route: '(shop)/account/orders/[id]',
     probe: null,
     missing: null,

@@ -52,3 +52,5 @@ next-env.d.ts
 /pdp-audit.json
 .next-prod/
 .next-verify/
+# scripts/stub-api.mjs + a dev server pointed at it — see measure-reviews.
+.next-stub/

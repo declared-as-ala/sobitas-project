@@ -1,15 +1,11 @@
-'use client';
-
-import { useEffect, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import { BadgeCheck, MessageSquare, Star, UserRound, ArrowLeft } from 'lucide-react';
-import { getMemberProfile, getStorageUrl } from '@/services/api';
+import { BadgeCheck, MessageSquare, Star } from 'lucide-react';
+import { getStorageUrl } from '@/services/api';
 import type { MemberProfile } from '@/types';
 import { Section } from '@/app/components/layout/Section';
 import { PageHeader } from '@/app/components/PageHeader';
 import { StarRating } from '@/app/components/product/StarRating';
-import { Skeleton } from '@/app/components/ui/skeleton';
 
 /**
  * What a member has published, and nothing else.
@@ -55,80 +51,12 @@ function Stat({ icon, value, label }: { icon: React.ReactNode; value: string; la
   );
 }
 
-export default function MemberProfileClient({ id }: { id: string }) {
-  const [profile, setProfile] = useState<MemberProfile | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-
-  useEffect(() => {
-    let ignore = false;
-    const numeric = Number(id);
-    if (!Number.isFinite(numeric) || numeric <= 0) {
-      setNotFound(true);
-      setLoading(false);
-      return;
-    }
-    getMemberProfile(numeric)
-      .then((data) => {
-        if (!ignore) setProfile(data);
-      })
-      .catch(() => {
-        // The API 404s a member with nothing published, which is the same outcome as a member who
-        // does not exist — and deliberately indistinguishable. Whether an account exists is not a
-        // fact worth confirming to somebody typing ids into the address bar.
-        if (!ignore) setNotFound(true);
-      })
-      .finally(() => {
-        if (!ignore) setLoading(false);
-      });
-    return () => {
-      ignore = true;
-    };
-  }, [id]);
-
-  if (loading) {
-    return (
-      <main className="min-h-dvh bg-sunken">
-        <Section as="div" spacing="default" first last>
-          <div className="space-y-3">
-            <Skeleton className="h-3 w-28" />
-            <Skeleton className="h-9 w-56" />
-          </div>
-          <Skeleton className="mt-6 h-[13rem] w-full rounded-2xl sm:h-[5.5rem]" />
-          <div className="mt-6 space-y-4">
-            <Skeleton className="h-32 w-full rounded-2xl" />
-            <Skeleton className="h-32 w-full rounded-2xl" />
-          </div>
-        </Section>
-      </main>
-    );
-  }
-
-  if (notFound || !profile) {
-    return (
-      <main className="min-h-dvh bg-sunken">
-        <Section as="div" spacing="feature" first last>
-          <div className="mx-auto max-w-md text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-hairline bg-elevated">
-              <UserRound className="h-5 w-5 text-ink-3" aria-hidden="true" />
-            </div>
-            <h1 className="font-display text-2xl font-bold uppercase tracking-tight text-ink-1">Profil introuvable</h1>
-            <p className="mx-auto mt-2 max-w-[46ch] text-sm leading-relaxed text-ink-3">
-              Ce membre n’a pas encore publié d’avis, ou le profil n’existe pas.
-            </p>
-            <Link
-              href="/shop"
-              className="mt-6 inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-5 font-display text-[13px] font-bold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-            >
-              <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden="true" />
-              Retour à la boutique
-            </Link>
-          </div>
-        </Section>
-      </main>
-    );
-  }
-
+/**
+ * Presentational only. No `'use client'`, no fetch, no loading state and no not-found branch — the
+ * page above resolves all three, because a missing profile has to be an HTTP 404 rather than a
+ * rendered panel. See page.tsx.
+ */
+export default function MemberProfileView({ profile }: { profile: MemberProfile }) {
   return (
     <main className="min-h-dvh bg-sunken">
       <Section as="div" spacing="default" first last>

@@ -1,27 +1,35 @@
 import type { Metadata } from 'next';
-import MemberProfileClient from './MemberProfileClient';
+import { notFound } from 'next/navigation';
+import { getMemberProfile } from '@/services/api';
+import MemberProfileView from './MemberProfileView';
 
 /**
- * ── A MEMBER'S PUBLIC PAGE, AND WHY IT IS noindex ───────────────────────────────────────────
+ * ── A MEMBER'S PUBLIC PAGE ──────────────────────────────────────────────────────────────────
  * Owner, 21/08/2026: *"make user profiles can be visible since we will make users, when click on
  * them shows profile and how much reviews."*
  *
- * The page is public — anybody with the link reads it, which is what "visible" asks for. It is
- * `robots: index false, follow true`, and that is a deliberate pair rather than caution:
+ * ── IT IS A SERVER COMPONENT BECAUSE THE STATUS CODE MATTERS ────────────────────────────────
+ * The first version fetched on the client and rendered a "Profil introuvable" panel when the API
+ * 404'd. `check-url-contract` failed the build over it, correctly: a client-rendered miss is an
+ * HTTP **200**, and `/membres/{anything}` answering 200 mints an unbounded family of near-identical
+ * pages for Google to crawl forever. `noindex` does not fix that — a crawler still has to fetch
+ * each one to find out.
  *
- *   NOT INDEXED, because a member page is thin by construction — a name, a date and a handful of
- *   reviews whose text is already on the product pages those reviews belong to. Letting Google
- *   crawl one per customer would add thousands of near-duplicate pages to a site whose blog
- *   already has 184 of its 224 articles unindexed. Thin pages do not sit inertly; they dilute how
- *   the domain is read, and the pages being diluted here are the ones that sell.
+ * So the fetch happens here and a miss calls `notFound()`, which is a real 404. That also removes
+ * the loading state, the error state and the `'use client'` from the view below it: the page either
+ * exists and renders, or it does not exist.
  *
- *   STILL FOLLOWED, because every review on a profile links back to a product, and those links are
- *   worth passing. `follow` keeps the crawl value without asking for the page itself to rank.
+ * ── AND WHY MOST IDS ARE MISSES ─────────────────────────────────────────────────────────────
+ * `/members/{id}` 404s for anybody with no PUBLISHED review — see `ReviewThreadController`. A
+ * profile exists only once its owner has chosen to write in public, and it carries a display name
+ * and their reviews: never an email, never an order, never a points balance. Customers here
+ * registered to buy protein, not to have a public page.
  *
- * The privacy side is enforced in the API rather than here: `/members/{id}` 404s for anybody with
- * no PUBLISHED review, so a page exists only once its owner has chosen to write in public, and it
- * carries a display name and reviews — never an email, an order, or a points balance. See
- * `ReviewThreadController::publicProfile`.
+ * `robots: index false, follow true` is a deliberate pair. NOT indexed, because the page is thin by
+ * construction — a name, a date, and review text that already lives on the product pages those
+ * reviews belong to; thousands of those would dilute a domain whose blog already has 184 of 224
+ * articles unindexed. STILL followed, because every review here links back to a product and that
+ * link is worth passing.
  */
 export const metadata: Metadata = {
   title: 'Profil membre',
@@ -31,5 +39,25 @@ export const metadata: Metadata = {
 
 export default async function MemberPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  return <MemberProfileClient id={id} />;
+
+  const numeric = Number(id);
+  if (!Number.isFinite(numeric) || numeric <= 0 || !Number.isInteger(numeric)) {
+    notFound();
+  }
+
+  try {
+    const profile = await getMemberProfile(numeric);
+    return <MemberProfileView profile={profile} />;
+  } catch {
+    /*
+     * Every failure is a 404, including a backend that is down.
+     *
+     * Deliberate: the alternative is a 500 on a page nobody is entitled to see in the first place,
+     * and "this profile is not available" is true either way. It also keeps the answer for a
+     * missing member indistinguishable from the answer for a member with nothing published —
+     * whether an account exists is not a fact worth confirming to somebody typing ids into the
+     * address bar.
+     */
+    notFound();
+  }
 }

@@ -242,6 +242,30 @@ with `evaluateOnNewDocument`, intercepts the three API calls with fixtures, and 
 the host — in the browser these calls go to a same-origin `/api-proxy/*` rewrite, not to
 `admin.protein.tn`.
 
+`measure-reviews` + `scripts/stub-api.mjs` are the template for **a surface with no data**. Browser
+interception cannot reach anything the page renders server-side (`getApiBaseUrl()` returns the
+absolute backend URL when `window` is undefined), so `product_details` is baked into the HTML
+before a browser exists. `stub-api` is a READ-ONLY pass-through to the real backend that rewrites
+only the fields under test; a dev server pointed at it via `NEXT_PUBLIC_API_URL` +
+`API_BACKEND_URL` renders the real page with the missing data in it. No POST is ever forwarded.
+
+Reach for it whenever the empty state is the only state: **no product in this catalogue has a
+published review**, so the entire reviews UI is otherwise invisible.
+
+**Three ways a guard can lie, all of which have happened here:**
+
+1. **It swallows its own navigation error.** `measure-account`'s first version wrapped a tab click
+   in `.catch(() => {})` against a selector Radix does not render — it measured the default tab
+   three times and reported three passes. Assert the state you navigated to.
+2. **It measures a quantity that cannot express failure.** `documentElement.scrollHeight` is never
+   smaller than the viewport, so "does this page fit" answered `844 of 844` for every page that
+   fits — and reported nothing about the slack left. Measure the CONTENT (`measure-auth` uses
+   `data-auth-*` hooks), not the document.
+3. **It measures a different page than production.** `/login` and `/register` render the Google
+   block behind `process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID`, which is unset locally — so the fit
+   guard was cheerfully passing a page ~96px shorter than the real one. If an env flag hides a
+   block, RESERVE its height and print which mode the run was in.
+
 **A guard that cannot fail is worse than no guard.** `measure-account`'s first version wrapped its
 tab click in `.catch(() => {})` against a selector Radix does not render (`[role="tab"][value=…]`;
 it is `id$="-trigger-<value>"`). It measured the default tab three times and reported three passes.
@@ -279,6 +303,7 @@ examples from this project and what each turned out to be:
 | "make it more responsive" | a grid forcing a row-layout card into a third of its width |
 | "the panier eats all the height" | 330px of chrome on a 900px panel |
 | "the login page looks AI generated" | ~1,100px of panel, none of it about having an account |
+| "make it not scrolling, fit the full height" | /register was 507px taller than an iPhone 14 |
 
 So: **find the measurable thing** before changing anything. Screenshot it, measure it, name the
 number, then fix that. A redesign that cannot say what was wrong will get the same note again.
