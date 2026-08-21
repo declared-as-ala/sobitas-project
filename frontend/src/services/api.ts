@@ -1644,6 +1644,9 @@ export const submitReviewByToken = async (payload: {
   product_id: number;
   stars: number;
   comment: string;
+  /** See the note on AddReviewPayload — same two signals, same reasons. */
+  compose_ms?: number;
+  hp_field?: string;
 }): Promise<{ message: string; published: boolean; id: number }> => {
   const response = await api.post('/reviews/by-order', payload);
   return response.data;
@@ -1736,8 +1739,15 @@ export const getReviewReplies = async (reviewId: number): Promise<ReviewReply[]>
 
 export const addReviewReply = async (
   reviewId: number,
-  data: { body: string; parent_id?: number | null; author_name?: string; author_email?: string }
-): Promise<{ message: string; published: boolean; reply: ReviewReply }> => {
+  data: {
+    body: string;
+    parent_id?: number | null;
+    author_name?: string;
+    author_email?: string;
+    /** The honeypot. See AddReviewPayload — a reply is farmed for links rather than for points. */
+    hp_field?: string;
+  }
+): Promise<{ message: string; published: boolean; reply: ReviewReply | null }> => {
   const response = await api.post(`/reviews/${reviewId}/replies`, data);
   return response.data;
 };

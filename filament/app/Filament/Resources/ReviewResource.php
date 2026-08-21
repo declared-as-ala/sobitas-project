@@ -92,8 +92,68 @@ class ReviewResource extends Resource
                     ->label('Authenticité douteuse')
                     ->query(fn ($query) => $query->whereNotNull('authenticity_score')->where('authenticity_score', '<', 70)),
             ])
-            ->actions([Actions\EditAction::make(), Actions\DeleteAction::make()])
-            ->bulkActions([Actions\DeleteBulkAction::make()]);
+            /*
+             * ── PUBLISHING IS A CLICK, BECAUSE HOLDING IS NOW COMMON ────────────────────────
+             * Moderation and the authenticity floor both HOLD rather than delete, which is the
+             * right behaviour — an unpublished review is recoverable and a deleted one is not, and
+             * a genuine angry customer must never be silenced by a scoring mistake. The cost is
+             * that the hold queue is the normal place a real review now waits.
+             *
+             * Until this existed, releasing one meant opening the edit form, finding a toggle and
+             * saving. A moderator working through fifty of those will start approving in bulk
+             * without reading, which defeats the point of holding them at all.
+             *
+             * Both actions go through `save()`, never `saveQuietly()`: ReviewObserver::saved() is
+             * what settles the loyalty points in one direction and claws them back in the other.
+             * Saving quietly here would publish a review and never pay for it — or unpublish one
+             * and let the customer keep the points.
+             */
+            ->actions([
+                Actions\Action::make('publier')
+                    ->label('Publier')
+                    ->icon('heroicon-m-check-circle')
+                    ->color('success')
+                    ->visible(fn (Review $record) => (int) $record->publier !== 1)
+                    ->requiresConfirmation()
+                    ->modalHeading('Publier cet avis')
+                    ->modalDescription('L’avis deviendra visible sur la fiche produit. Si l’achat est attesté et que le contrôle d’authenticité est favorable, les points de fidélité seront crédités à son auteur.')
+                    ->action(fn (Review $record) => $record->update(['publier' => 1])),
+
+                Actions\Action::make('masquer')
+                    ->label('Masquer')
+                    ->icon('heroicon-m-eye-slash')
+                    ->color('warning')
+                    ->visible(fn (Review $record) => (int) $record->publier === 1)
+                    ->requiresConfirmation()
+                    ->modalHeading('Masquer cet avis')
+                    ->modalDescription('L’avis sera retiré de la fiche produit. Les points de fidélité éventuellement versés pour cet avis seront repris.')
+                    ->action(fn (Review $record) => $record->update(['publier' => 0])),
+
+                Actions\EditAction::make(),
+                Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Actions\BulkAction::make('publier')
+                    ->label('Publier la sélection')
+                    ->icon('heroicon-m-check-circle')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    // Looped rather than a mass update, deliberately: a mass `update()` on a query
+                    // does not fire model events, so the loyalty points would never settle. Review
+                    // volumes here are hundreds, not millions.
+                    ->action(fn ($records) => $records->each(fn (Review $r) => $r->update(['publier' => 1]))),
+
+                Actions\BulkAction::make('masquer')
+                    ->label('Masquer la sélection')
+                    ->icon('heroicon-m-eye-slash')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->deselectRecordsAfterCompletion()
+                    ->action(fn ($records) => $records->each(fn (Review $r) => $r->update(['publier' => 0]))),
+
+                Actions\DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getPages(): array

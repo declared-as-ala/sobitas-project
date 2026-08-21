@@ -91,6 +91,22 @@ class ReviewThreadController extends Controller
             return response()->json(['message' => 'Avis introuvable.'], 404);
         }
 
+        /*
+         * A reply earns no loyalty points, so it is not worth farming for money — it is worth
+         * farming for LINKS, which is the older and more common motive. `auto_publish_clean`
+         * defaults to true, so a reply the classifier is happy with goes live without a human,
+         * and a classifier judges text rather than who typed it.
+         *
+         * Ordinary success, no row. See the note on ApisController::add_review.
+         */
+        if ($this->trippedHoneypot($request)) {
+            return response()->json([
+                'message'   => 'Merci ! Votre réponse sera visible après vérification.',
+                'published' => false,
+                'reply'     => null,
+            ], 201);
+        }
+
         $user = $this->optionalUser($request);
 
         $rules = [

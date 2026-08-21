@@ -75,6 +75,13 @@ export function ReviewThread({
   const [showForm, setShowForm] = useState(false);
   const [body, setBody] = useState('');
   const [guestName, setGuestName] = useState('');
+  /*
+    A field no human can see. Filled means a script filled it, and the server answers with the
+    ordinary success message while storing nothing — telling a bot it was caught tells whoever wrote
+    it which field to skip. The clip is on the input itself, never on a wrapper: a wrapper hides the
+    field visually while leaving the input's own box at full size.
+  */
+  const [replyHoneypot, setReplyHoneypot] = useState('');
   const [replyTo, setReplyTo] = useState<ReviewReply | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -130,19 +137,30 @@ export function ReviewThread({
         body: text,
         parent_id: replyTo?.id ?? null,
         ...(isAuthenticated ? {} : { author_name: guestName.trim() }),
+        hp_field: replyHoneypot,
       });
 
       /* Appended locally with `pending`, never refetched into place. The server has the reply but
          has not published it yet, so a refetch here would return a list WITHOUT it and the author
-         would watch their own message disappear. */
-      setReplies((prev) => [
-        ...prev,
-        {
-          ...res.reply,
-          name: res.reply.name || (isAuthenticated ? user?.name || 'Vous' : guestName.trim()),
-          pending: !res.published,
-        },
-      ]);
+         would watch their own message disappear.
+
+         `res.reply` can be null: a submission that trips the honeypot gets the ordinary success
+         response and no row, because telling a bot it was caught tells whoever wrote it which field
+         to skip. Nothing is appended in that case, and the message below is the same one everybody
+         else sees — which is the whole point. No human reaches this branch. */
+      // Bound to a local first: inside the setState callback TypeScript can no longer see that the
+      // null check above holds, because `res` is captured rather than narrowed.
+      const created = res.reply;
+      if (created) {
+        setReplies((prev) => [
+          ...prev,
+          {
+            ...created,
+            name: created.name || (isAuthenticated ? user?.name || 'Vous' : guestName.trim()),
+            pending: !res.published,
+          },
+        ]);
+      }
       setBody('');
       setReplyTo(null);
       setShowForm(false);
@@ -156,7 +174,7 @@ export function ReviewThread({
     } finally {
       setSubmitting(false);
     }
-  }, [body, guestName, isAuthenticated, replyTo, reviewId, user?.name]);
+  }, [body, guestName, isAuthenticated, replyHoneypot, replyTo, reviewId, user?.name]);
 
   return (
     <div className="mt-3">
@@ -281,6 +299,26 @@ export function ReviewThread({
                 </div>
               )}
 
+              {/* Moved off the visible page rather than `display:none` (some bots skip hidden
+                  inputs), out of the tab order, hidden from assistive technology, and told not to
+                  autofill — that last one is the failure mode this technique actually has, since an
+                  autofilled honeypot silently discards a real person's reply. Named `hp_field` for
+                  the same reason: `website` and `company` are names browsers recognise. */}
+              <label htmlFor={`${formId}-hp`} className="absolute h-px w-px overflow-hidden [clip-path:inset(50%)]">
+                Ne pas remplir
+              </label>
+              <input
+                id={`${formId}-hp`}
+                name="hp_field"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                aria-hidden="true"
+                className="absolute h-px w-px overflow-hidden border-0 p-0 opacity-0 [clip-path:inset(50%)]"
+                value={replyHoneypot}
+                onChange={(e) => setReplyHoneypot(e.target.value)}
+              />
+
               <label htmlFor={`${formId}-body`} className="mb-1 block text-xs font-semibold text-ink-1">
                 Votre réponse
               </label>
@@ -290,6 +328,7 @@ export function ReviewThread({
                 onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))}
                 rows={3}
                 placeholder="Posez une question ou partagez votre expérience…"
+                data-reply-body
                 className="rounded-lg border-hairline bg-canvas"
               />
               <p className="mt-1 text-end text-[11px] tabular-nums text-ink-3">
