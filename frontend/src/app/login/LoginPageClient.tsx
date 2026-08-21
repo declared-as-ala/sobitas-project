@@ -76,6 +76,7 @@ function LoginContent() {
       <AuthCardHeader
         kicker="Espace client"
         title="Connexion"
+        subtitleDesktopOnly
         /* "et vos adresses de livraison" was false. There is no address book in this system —
            `AddressSelector` is a gouvernorat/délégation picker that fetches a static dataset, and
            nothing persists a delivery address against a user. Checkout does prefill the NAME and
@@ -84,7 +85,7 @@ function LoginContent() {
         subtitle="Retrouvez vos commandes et vos points de fidélité."
       />
 
-      <form onSubmit={handleSubmit} className="space-y-4" noValidate={false}>
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate={false}>
         <AuthField
           label="Email"
           Icon={Mail}
@@ -128,7 +129,7 @@ function LoginContent() {
       {/* Renders nothing at all when NEXT_PUBLIC_GOOGLE_CLIENT_ID is unset — including the
           divider, which would otherwise separate the form from an empty space. */}
       {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-        <div className="mt-5 space-y-4">
+        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
           <AuthDivider />
           <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
         </div>

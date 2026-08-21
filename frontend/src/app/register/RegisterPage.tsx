@@ -15,7 +15,6 @@ import {
   AuthAlt,
 } from '@/app/components/AuthShell';
 import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
-import { CASHBACK_PERCENT } from '@/util/loyaltyPoints';
 
 /** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
  *  password before the request rather than surfacing a 422 the customer cannot read. */
@@ -36,7 +35,6 @@ export default function RegisterPage() {
     email: '',
     phone: '',
     password: '',
-    confirmPassword: '',
   });
 
   useEffect(() => {
@@ -53,10 +51,17 @@ export default function RegisterPage() {
       toast.error(problem);
       return;
     }
-    if (formData.password !== formData.confirmPassword) {
-      toast.error('Les mots de passe ne correspondent pas.');
-      return;
-    }
+    /*
+     * ── THE CONFIRM FIELD IS GONE (owner, 21/08/2026: "minimalistic", "fit the full height") ──
+     * It existed to catch a typo in a field the user cannot see. This form has carried a
+     * show/hide toggle on the password since the second pass, which solves the same problem by
+     * letting them READ what they typed — and it solves it better, because a mistyped password
+     * repeated identically twice passes a confirm field and still locks the account.
+     *
+     * It was also 110px on the screen that measured 507px too tall, and it never reached the
+     * server: `register()` sends name, email, phone and password. Removing it changes what the
+     * customer fills in, not what the backend receives.
+     */
 
     setIsLoading(true);
     try {
@@ -97,19 +102,17 @@ export default function RegisterPage() {
       <AuthCardHeader
         kicker="Créer un compte"
         title="Rejoignez-nous"
+        subtitleDesktopOnly
         /* The subtitle leads with the number, because on a phone this line IS the benefits panel:
            the brand column is `hidden lg:flex`, and the compact lists sit below the form. Three
            words of it are the only argument a mobile visitor reads before deciding to type. */
-        subtitle={
-          <>
-            Gagnez{' '}
-            <strong className="font-semibold text-ink-1">{CASHBACK_PERCENT}% en points</strong> sur
-            chaque commande livrée, et suivez vos commandes. En une minute.
-          </>
-        }
+        /* One line on a phone. The 5% claim moved to `MobileBenefitLine` above the card, so
+           repeating it here was ~50px of the same sentence twice on the screen that measured
+           507px too tall. What is left is the OTHER reason, and the time cost. */
+        subtitle="Suivez vos commandes et cumulez des points. En une minute."
       />
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
         <AuthField
           label="Nom complet"
           Icon={User}
@@ -140,7 +143,7 @@ export default function RegisterPage() {
           inputMode="tel"
           placeholder="+216 XX XXX XXX"
           autoComplete="tel"
-          hint="Nous appelons ce numéro pour confirmer chaque commande."
+          hint="Pour confirmer votre commande."
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           required
@@ -150,23 +153,10 @@ export default function RegisterPage() {
           label="Mot de passe"
           Icon={Lock}
           reveal
-          placeholder="8 caractères minimum"
+          placeholder="8 caractères, une lettre et un chiffre"
           autoComplete="new-password"
-          hint="Au moins 8 caractères, dont une lettre et un chiffre."
           value={formData.password}
           onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-          required
-          minLength={8}
-        />
-
-        <AuthField
-          label="Confirmer le mot de passe"
-          Icon={Lock}
-          reveal
-          placeholder="Retapez le mot de passe"
-          autoComplete="new-password"
-          value={formData.confirmPassword}
-          onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
           required
           minLength={8}
         />
@@ -177,7 +167,7 @@ export default function RegisterPage() {
       </form>
 
       {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-        <div className="mt-5 space-y-4">
+        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
           <AuthDivider />
           <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
         </div>

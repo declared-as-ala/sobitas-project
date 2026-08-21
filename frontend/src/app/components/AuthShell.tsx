@@ -106,6 +106,33 @@ import { CASHBACK_PERCENT, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
  * The trust strip stays, demoted and compact, at the bottom of the column: those three facts are
  * still why somebody trusts the shop enough to type an email, they are simply not the argument
  * for the account and no longer occupy the position of one.
+ *
+ * ────────────────────────────────────────────────────────────────────────────────────────────
+ * ── FOURTH PASS (owner, 21/08/2026): "NOT SCROLLING, FIT THE FULL HEIGHT, MINIMALISTIC" ─────
+ *
+ * Measured before touching anything (`measure-auth --report`, which this pass added):
+ *
+ *        390x844   /login 1000px (156 over) · /register 1351px (507 over)
+ *        390x667   /login 1000px (333 over) · /register 1351px (684 over)
+ *
+ * Every auth screen on this site scrolled, on every phone, and /register scrolled by more than
+ * half a screen. That is not a cosmetic problem: a signup form that scrolls puts its own submit
+ * button below the fold, and the customer's judgement of "how long will this take" is made from
+ * what is on screen when the page lands.
+ *
+ * The height went, in descending order of how much it was worth:
+ *
+ *   ~320px  the two stacked lists under the card on mobile. The BENEFIT survives as one line —
+ *           `MobileBenefitLine` — because it is the argument for the account and the third pass
+ *           put it there for a reason. Four rows of it was the mistake, not the message.
+ *   ~110px  the confirm-password field (see RegisterPage — the reveal toggle already does its job)
+ *    ~60px  field metrics: 48px inputs to 44, 13px labels to 12, space-y-4 to space-y-3
+ *    ~40px  the title block: 26px to 22px, tighter kicker, one-line subtitles
+ *    ~30px  card padding and the header row
+ *
+ * On DESKTOP the trust strip becomes a single inline row rather than a three-row box. Same three
+ * facts, ~100px less, and "minimalistic" is the owner's word for what a bordered box of restated
+ * shop policy was not.
  */
 
 const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
@@ -166,7 +193,7 @@ const ACCOUNT_BENEFITS: Array<{ Icon: LucideIcon; label: string; hint: string }>
  * this shop rather than as a template. The only difference from `TrustStrip` is the accent plate
  * behind each glyph, which is what separates "here is what you get" from "here is who we are".
  */
-function BenefitList({ compact = false }: { compact?: boolean }) {
+function BenefitList() {
   return (
     <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-canvas">
       {ACCOUNT_BENEFITS.map(({ Icon, label, hint }) => (
@@ -179,7 +206,7 @@ function BenefitList({ compact = false }: { compact?: boolean }) {
           </span>
           <span className="min-w-0 pt-0.5">
             <span className="block text-[13px] font-bold uppercase tracking-[0.04em] text-ink-1">{label}</span>
-            {!compact && <span className="mt-1 block text-[12.5px] leading-snug text-ink-3">{hint}</span>}
+            <span className="mt-1 block text-[12.5px] leading-snug text-ink-3">{hint}</span>
           </span>
         </li>
       ))}
@@ -194,19 +221,47 @@ function BenefitList({ compact = false }: { compact?: boolean }) {
  * `hint` is dropped on the phone (`compact`) — under a 5-field signup form, three second lines are
  * 60px of reassurance nobody scrolls to. The labels alone carry it.
  */
-function TrustStrip({ compact = false }: { compact?: boolean }) {
+function TrustStrip() {
   return (
-    <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-canvas">
-      {TRUST.map(({ Icon, label, hint }) => (
-        <li key={label} className="flex items-start gap-3 px-4 py-3">
-          <Icon className="mt-px h-[18px] w-[18px] shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
-          <span className="min-w-0">
-            <span className="block text-[12px] font-bold uppercase tracking-[0.06em] text-ink-1">{label}</span>
-            {!compact && <span className="mt-0.5 block text-[12.5px] leading-snug text-ink-3">{hint}</span>}
-          </span>
+    <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
+      {TRUST.map(({ Icon, label }) => (
+        <li key={label} className="inline-flex items-center gap-1.5">
+          <Icon className="h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+          <span className="text-[12px] font-semibold text-ink-2">{label}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+/**
+ * The account's argument, on a phone, in one line.
+ *
+ * The third pass gave the phone a four-row benefit list and a three-row trust strip under the
+ * form — ~320px of it, which is why /register was 507px too tall. Both are gone from mobile and
+ * this is what replaced them: the same claim, from the same constant, at 1/12th the height.
+ *
+ * ABOVE the card, not below. Below the card it was under the fold on every phone measured, which
+ * is a strange place to put the reason somebody should fill in the form above it.
+ */
+function MobileBenefitLine() {
+  return (
+    /*
+       `[@media(max-height:700px)]:hidden` — a HEIGHT query, not a width one, because the constraint
+       is vertical. On an iPhone SE (667px tall) /register was 28px over with this line present and
+       fits without it; on every taller phone it stays. Removing it everywhere to satisfy the
+       smallest screen would delete the account's argument from the 81% of traffic that has room
+       for it, and keeping it everywhere would make the shortest screens scroll. The query is the
+       honest answer to a genuine trade, and it is the only element on this screen cheap enough to
+       be the one that goes.
+    */
+    <p className="mb-2.5 flex items-center justify-center gap-2 text-[12.5px] leading-snug text-ink-2 lg:hidden [@media(max-height:700px)]:hidden">
+      <Coins className="h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+      <span>
+        <span className="font-bold text-ink-1">{CASHBACK_PERCENT}% en points</span> sur chaque
+        commande livrée
+      </span>
+    </p>
   );
 }
 
@@ -274,8 +329,8 @@ export function AuthShell({ children }: { children: ReactNode }) {
               benefit list, which now carries the explanatory prose, three more hint rows were
               120px of text at the bottom of a column nobody reads to the end of.
           */}
-          <div className="mt-5">
-            <TrustStrip compact />
+          <div className="mt-6">
+            <TrustStrip />
           </div>
         </div>
 
@@ -286,7 +341,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
       <div className="flex min-h-dvh flex-col">
         {/* The escape hatch was `absolute left-5 top-5`, so on a short phone in landscape it
             overlapped the form it was meant to sit above. It is a real row now, in flow. */}
-        <div className="flex items-center justify-between gap-3 px-4 py-4 sm:px-6 lg:px-10">
+        <div
+          data-auth-header=""
+          className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-4 lg:px-10"
+        >
           <Link
             href="/"
             className="group -ms-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -317,26 +375,27 @@ export function AuthShell({ children }: { children: ReactNode }) {
           </Link>
         </div>
 
-        <div className="flex flex-1 items-center justify-center px-4 pb-10 pt-2 sm:px-6 lg:px-10">
-          <div className="w-full max-w-[27rem]">
-            <div className="rounded-2xl border border-hairline bg-elevated p-5 shadow-card sm:p-8">
+        {/* `data-auth-*` so the fit guard can measure the CONTENT height rather than the document
+            height. `documentElement.scrollHeight` is never smaller than the viewport, so a page
+            that fits reports exactly the viewport and tells you nothing about how much slack is
+            left — which matters here, because the Google block is behind an env flag and is
+            absent from every local measurement. See measure-auth. */}
+        <div
+          data-auth-body=""
+          className="flex flex-1 items-center justify-center px-4 pb-5 pt-1 sm:px-6 sm:pb-10 lg:px-10"
+        >
+          <div data-auth-card="" className="w-full max-w-[27rem]">
+            <MobileBenefitLine />
+            <div className="rounded-2xl border border-hairline bg-elevated p-3.5 shadow-card sm:p-8">
               {children}
             </div>
 
             {/*
-              ── THE PHONE GETS THE ARGUMENT TOO ────────────────────────────────────────────
-              81% of this site's traffic is mobile, and the brand column is `hidden lg:flex`. So
-              every reason to open an account lived on a panel that four visitors in five never
-              render. Both lists come down here, both compact: labels only, no hint rows, ~250px
-              under the card rather than the ~640px the full versions would cost.
-
-              Below the card and not above it — the form is what this screen is for, and a signup
-              that opens with 250px of marketing is a signup that starts scrolled.
+              The two compact lists that used to sit here are gone — see the header note. They were
+              ~320px on a screen that was already 507px too tall, and they were below the fold on
+              every phone measured, so they were paying for themselves in scroll and being read by
+              nobody. `MobileBenefitLine` above the card carries the one claim that mattered.
             */}
-            <div className="mt-5 space-y-3 lg:hidden">
-              <BenefitList compact />
-              <TrustStrip compact />
-            </div>
           </div>
         </div>
       </div>
@@ -350,22 +409,49 @@ interface AuthCardHeaderProps {
   kicker?: string;
   title: string;
   subtitle?: ReactNode;
+  /**
+   * Hide the subtitle below `sm`.
+   *
+   * Opt-in per screen, and NOT a blanket rule, because the four auth screens use the subtitle for
+   * two different jobs. On /login and /register it is promotional — and on a phone it now repeats
+   * what `MobileBenefitLine` says directly above the card. On /forgot-password and
+   * /reset-password it is an INSTRUCTION ("Indiquez l'adresse e-mail de votre compte…", "Ce lien
+   * est incomplet ou a déjà été utilisé…"), and hiding it would leave a phone looking at a form
+   * with no explanation of what the link it just clicked did.
+   *
+   * ~34px, which is most of what /register was still over by on an iPhone SE.
+   */
+  subtitleDesktopOnly?: boolean;
 }
 
 /** Kicker + display-face title for an auth form. */
-export function AuthCardHeader({ kicker, title, subtitle }: AuthCardHeaderProps) {
+export function AuthCardHeader({ kicker, title, subtitle, subtitleDesktopOnly }: AuthCardHeaderProps) {
   return (
-    <div className="mb-6">
+    <div className="mb-3 sm:mb-6">
+      {/* The kicker is `hidden sm:inline-flex` on every screen. "CRÉER UN COMPTE" sitting directly
+          above an H1 reading "REJOIGNEZ-NOUS" is the same sentence twice, and on a phone it cost
+          ~22px to say it — the definition of what "minimalistic" was asking to remove. */}
       {kicker && (
-        <span className="mb-3 inline-flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
+        <span className="mb-1.5 hidden items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand sm:mb-3 sm:inline-flex">
           <span className="h-px w-5 bg-brand" aria-hidden="true" />
           {kicker}
         </span>
       )}
-      <h1 className="font-display text-[26px] font-bold uppercase leading-tight tracking-tight text-ink-1 sm:text-3xl">
+      {/* 22px on a phone, 30px from `sm`. The 26px it carried was a desktop size on a screen where
+          every pixel above the first field is a pixel of the form pushed under the fold. */}
+      <h1 className="font-display text-[22px] font-bold uppercase leading-tight tracking-tight text-ink-1 sm:text-3xl">
         {title}
       </h1>
-      {subtitle && <p className="mt-2 text-sm leading-relaxed text-ink-2">{subtitle}</p>}
+      {subtitle && (
+        <p
+          className={cn(
+            'mt-1.5 text-[13px] leading-snug text-ink-2 sm:mt-2 sm:text-sm sm:leading-relaxed',
+            subtitleDesktopOnly && 'hidden sm:block'
+          )}
+        >
+          {subtitle}
+        </p>
+      )}
     </div>
   );
 }
@@ -396,9 +482,9 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
   const [shown, setShown] = useState(false);
 
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-1">
       <div className="flex items-center justify-between gap-3">
-        <Label htmlFor={id} className="text-[13px] font-semibold text-ink-1">
+        <Label htmlFor={id} className="text-[12px] font-semibold text-ink-1 sm:text-[13px]">
           {label}
         </Label>
         {action}
@@ -415,7 +501,9 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
           {...props}
           type={reveal ? (shown ? 'text' : 'password') : props.type}
           className={cn(
-            'h-12 rounded-xl border-hairline bg-canvas ps-10 text-ink-1 placeholder:text-ink-3',
+            /* 44px on a phone — the target minimum exactly, not a pixel more — and 48 from `sm`.
+               Five fields at 48 was 20px of pure height on the screen that was furthest over. */
+            'h-11 rounded-xl border-hairline bg-canvas ps-10 text-ink-1 placeholder:text-ink-3 sm:h-12',
             'focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-0',
             reveal && 'pe-11',
             className
@@ -426,6 +514,10 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
             type="button"
             onClick={() => setShown((v) => !v)}
             /* 44px target, but drawn as a 36px glyph box so it does not crowd a 48px field. */
+            /* h-11 on EVERY width. This was briefly h-10 to buy 4px back on a short phone, and
+               measure-auth failed it across 12 combinations within the minute: 44px is a hard
+               floor, not a budget line, and the show/hide toggle is now load-bearing — the
+               confirm-password field was removed on the grounds that this control replaces it. */
             className="absolute end-1 top-1/2 flex h-11 w-10 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             aria-label={shown ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
           >
@@ -459,6 +551,8 @@ export function AuthSubmit({
       disabled={loading || props.disabled}
       className={cn(
         'inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4',
+        /* The submit stays 48px on every screen. It is the one control on the page that must never
+           be the thing that gets smaller, and it is the target a thumb reaches for last. */
         'font-display text-[13.5px] font-bold uppercase tracking-[0.08em] text-on-brand',
         /* Named properties, not `transition-all` — that would also animate the focus ring's
            colour, which should appear instantly. The 0.99 press is the only motion on this
@@ -496,7 +590,7 @@ export function AuthDivider({ label = 'ou' }: { label?: string }) {
 /** The "already have an account?" line under the card. */
 export function AuthAlt({ question, href, cta }: { question: string; href: string; cta: string }) {
   return (
-    <p className="mt-6 text-center text-sm text-ink-2">
+    <p className="mt-3 text-center text-[13px] text-ink-2 sm:mt-6 sm:text-sm">
       {question}{' '}
       <Link
         href={href}

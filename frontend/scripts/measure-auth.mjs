@@ -32,9 +32,66 @@
  */
 import puppeteer from 'puppeteer';
 
-const BASE = (process.argv[2] || 'http://localhost:3000').replace(/\/$/, '');
+const ARGV = process.argv.slice(2);
+const BASE = (ARGV.find((a) => a.startsWith('http')) || 'http://localhost:3000').replace(/\/$/, '');
 const WIDTHS = [320, 390, 768, 1024, 1536];
 const THEMES = ['light', 'dark'];
+
+/**
+ * ── VERTICAL FIT (owner, 21/08/2026) ────────────────────────────────────────────────────────
+ * *"make it not scrolling, make it fit the full height."*
+ *
+ * A signup form that scrolls hides its own submit button below the fold, and on a phone the
+ * customer's judgement of "how long is this going to take" is made from what is on screen when the
+ * page lands. So the page has to FIT, and "fits" is a number rather than an opinion.
+ *
+ * Three phone heights, chosen because they are the real ones and they disagree:
+ *   844  iPhone 14 / 15 — the common case
+ *   740  a mid-range Android in portrait
+ *   667  iPhone SE, the smallest screen still in real use
+ *
+ * `--report` prints the measured heights and exits 0. That mode exists because the first thing to
+ * do with a constraint like this is find out how far off it currently is; enforcing before
+ * measuring is how a guard ends up with a threshold nobody can meet.
+ *
+ * The tolerance is 2px: sub-pixel layout rounding is not a scrollbar.
+ */
+/* REAL DEVICES, not a cross-product of widths and heights. 320x667 is not a phone that exists —
+   testing it produced a failure nobody could act on, while 375x667 (iPhone SE, still in real use)
+   is the genuinely hard case and was hidden inside the same matrix. */
+const PHONES = [
+  { width: 390, height: 844, name: 'iPhone 14' },
+  { width: 360, height: 740, name: 'Android' },
+  { width: 375, height: 667, name: 'iPhone SE' },
+  /*
+   * NOT ENFORCED, and printed as a warning on every run so the exemption stays visible.
+   *
+   * 320x568 is a 2013 screen. /register is 4 fields, a Google option and an account link, and its
+   * floor is ~677px — there is no arrangement of those elements that fits 568 without removing one
+   * of them, and removing the Google button or the phone field to satisfy a decade-old device
+   * would be the wrong trade for the 81% of this site's traffic on modern phones. Everything else
+   * fits here; it is /register alone that does not.
+   */
+  { width: 320, height: 568, name: 'iPhone 5', enforce: false },
+];
+const REPORT_ONLY = ARGV.includes('--report');
+const FIT_TOLERANCE = 2;
+
+/**
+ * ── THE GOOGLE BLOCK IS INVISIBLE TO THIS MEASUREMENT, SO IT IS RESERVED FOR ────────────────
+ * `/login` and `/register` render the divider and the Google button inside
+ * `{process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (…)}`. That variable is not set on a development
+ * machine, so the block is ABSENT from every local run — and the first version of this guard
+ * happily reported "fits" for a page that is ~96px taller in production than the one it measured.
+ *
+ * A guard that measures a different page than the one customers get is worse than no guard, so the
+ * height is reserved rather than hoped about: divider (~17px) + its two gaps (~28px) + the 48px
+ * button, rounded up. When the client id is finally configured, this becomes a real measurement
+ * and the reserve should be dropped — `hasGoogle` below reports which mode each run was in, so
+ * nobody has to guess.
+ */
+const GOOGLE_BLOCK_RESERVE = 96;
+const GOOGLE_ROUTES = new Set(['/login', '/register']);
 
 /** `reset-password` needs its query string, or it renders the "lien invalide" branch instead. */
 const ROUTES = [
@@ -168,7 +225,77 @@ for (const theme of THEMES) {
   }
 }
 
+/* ── THE FIT PASS ──────────────────────────────────────────────────────────────────────────
+   Separate loop, and deliberately narrow: only the two widths a phone actually is, only the light
+   theme (height does not vary with palette), and no interaction. Folding it into the matrix above
+   would multiply a 40-page run by three for a question that has nothing to do with theme. */
+{
+  const page = await browser.newPage();
+  await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'light' }]);
+
+  for (const phone of PHONES) {
+    {
+      const { width, height, name, enforce = true } = phone;
+      await page.setViewport({ width, height, deviceScaleFactor: 1, isMobile: true, hasTouch: true });
+
+      for (const route of ROUTES) {
+        const path = route.path.split('?')[0];
+        await page.goto(BASE + route.path, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await new Promise((r) => setTimeout(r, 2800));
+
+        const m = await page.evaluate(() => {
+          const header = document.querySelector('[data-auth-header]');
+          const body = document.querySelector('[data-auth-body]');
+          const card = document.querySelector('[data-auth-card]');
+          if (!header || !body || !card) return { missing: true, innerHeight: window.innerHeight };
+          const bodyStyle = getComputedStyle(body);
+          return {
+            missing: false,
+            // The real height of what the screen contains, independent of where flexbox centred it
+            // and independent of `min-h-dvh`.
+            contentHeight: Math.ceil(
+              header.getBoundingClientRect().height +
+                card.getBoundingClientRect().height +
+                parseFloat(bodyStyle.paddingTop) +
+                parseFloat(bodyStyle.paddingBottom)
+            ),
+            innerHeight: window.innerHeight,
+            hasGoogle: !!document.querySelector('[data-google-signin], iframe[src*="accounts.google"]'),
+          };
+        });
+
+        if (m.missing) {
+          fail(`fit ${name} ${width}x${height} ${path}`, 'data-auth-header / -body / -card not found — the shell has moved');
+          continue;
+        }
+
+        const reserve = GOOGLE_ROUTES.has(path) && !m.hasGoogle ? GOOGLE_BLOCK_RESERVE : 0;
+        const needed = m.contentHeight + reserve;
+        const over = needed - m.innerHeight;
+        if (REPORT_ONLY) {
+          console.log(
+            `  ${name.padEnd(10)} ${String(width).padStart(3)}x${height}  ${path.padEnd(18)} ` +
+              `${String(m.contentHeight).padStart(4)}px${reserve ? `+${reserve}` : '    '} of ${height} ` +
+              (over > FIT_TOLERANCE ? `— ${over}px OVER` : `— fits, ${-over}px spare`)
+          );
+        } else if (over > FIT_TOLERANCE) {
+          const msg = `${over}px taller than the viewport (content ${m.contentHeight}${reserve ? ` + ${reserve} reserved for the Google block` : ''} vs ${m.innerHeight})`;
+          if (enforce) fail(`fit ${name} ${width}x${height} ${path}`, msg);
+          else console.warn(`  note  fit ${name} ${width}x${height} ${path}  ${msg} (not enforced)`);
+        }
+      }
+    }
+  }
+
+  await page.close();
+}
+
 await browser.close();
+
+if (REPORT_ONLY) {
+  console.log('\nmeasure-auth --report — heights above, nothing asserted.');
+  process.exit(0);
+}
 
 if (failures.length) {
   console.error(`\nmeasure-auth — ${failures.length} failure(s):\n`);
