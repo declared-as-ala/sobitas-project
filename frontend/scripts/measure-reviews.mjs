@@ -18,7 +18,9 @@
  *   a GUEST review         `author_name`, no user, NO link (linking one would 404)
  *   a STAFF reply          renders as Protein.tn with a badge, never the admin's name
  *
- * plus the thread states: collapsed with a count, expanded, and a reply that answers another reply.
+ * plus the thread states: collapsed with a count, expanded, and a reply that answers another reply,
+ * and the anti-abuse honeypot — which has to be present (or bots walk in) AND invisible (or real
+ * customers' reviews are silently discarded).
  *
  *   node scripts/measure-reviews.mjs [base] [--shots]
  */
@@ -230,6 +232,57 @@ for (const theme of THEMES) {
        */
       if (report.memberLinks.some((h) => h === '/membres/null' || h === '/membres/undefined')) {
         fail(where, `member link built from a missing id: ${report.memberLinks.join(', ')}`);
+      }
+
+      /*
+        ── THE HONEYPOT MUST EXIST AND MUST BE UNREACHABLE ───────────────────────────────────
+        Its failure mode is silent in BOTH directions and that is why it is asserted rather than
+        trusted:
+
+          missing   every scripted submission sails through, and reviews are worth 50 loyalty
+                    points each, so the filter is the only thing between a bot and the till.
+          VISIBLE   a real customer types in it and their review is discarded without a word —
+                    the server accepts honeypot submissions and stores nothing, by design, so a
+                    visible honeypot destroys genuine reviews and reports success while doing it.
+
+        Also checks it is out of the tab order and hidden from assistive technology, since a
+        keyboard or screen-reader user reaching it is the same disaster as a sighted one.
+      */
+      const honeypot = await page.evaluate(() => {
+        const openBtn = [...document.querySelectorAll('button')].find((b) =>
+          /écrire un avis/i.test((b.textContent || '').trim())
+        );
+        if (!openBtn) return { missing: 'no "Écrire un avis" button' };
+        openBtn.click();
+        return null;
+      });
+      if (honeypot?.missing) fail(where, honeypot.missing);
+      await new Promise((r) => setTimeout(r, 500));
+
+      const hp = await page.evaluate(() => {
+        const el = document.querySelector('input[name="hp_field"]');
+        if (!el) return { present: false };
+        const r = el.getBoundingClientRect();
+        const cs = getComputedStyle(el);
+        return {
+          present: true,
+          area: Math.round(r.width * r.height),
+          tabIndex: el.tabIndex,
+          ariaHidden: !!el.closest('[aria-hidden="true"]'),
+          autocomplete: el.getAttribute('autocomplete'),
+          opacityVisible: cs.visibility !== 'hidden',
+          docOverflow: document.documentElement.scrollWidth > document.documentElement.clientWidth + 1,
+        };
+      });
+
+      if (!hp.present) {
+        fail(where, 'honeypot input[name="hp_field"] is missing — scripted reviews would go straight through');
+      } else {
+        if (hp.area > 4) fail(where, `honeypot is visible (${hp.area}px²) — real reviews typed into it are silently discarded`);
+        if (hp.tabIndex !== -1) fail(where, `honeypot is in the tab order (tabIndex ${hp.tabIndex})`);
+        if (!hp.ariaHidden) fail(where, 'honeypot is exposed to assistive technology');
+        if (hp.autocomplete !== 'off') fail(where, `honeypot autocomplete is "${hp.autocomplete}" — autofill would trip it`);
+        if (hp.docOverflow) fail(where, 'the open review form causes horizontal overflow');
       }
 
       const contrast = (await page.evaluate(AUDIT)).filter((x) => x.status === 'FAIL');

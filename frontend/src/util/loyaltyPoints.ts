@@ -53,6 +53,20 @@ export const MAX_REDEEM_FRACTION = 0.5;
 export const CASHBACK_PERCENT = Math.round((EARN_RATE / REDEEM_POINTS_PER_DT) * 100);
 
 /**
+ * Points paid for a published review — mirrors `config/reviews.php` → `points.award`.
+ *
+ * A MIRROR, with the same contract as the three constants above: change it in PHP and change it
+ * here in the same commit. The server is authoritative and will pay what it pays; this number only
+ * decides what the storefront PROMISES, and the failure mode of letting the two drift is a customer
+ * who was told 50 and credited 20.
+ *
+ * The promise is also conditional in a way the copy has to carry: points are paid only for a review
+ * on a product you actually bought and received, and only when the authenticity check reads it as
+ * human-written. See ReviewAuthenticity — both gates, or nothing.
+ */
+export const REVIEW_POINTS_AWARD = 50;
+
+/**
  * Points earned on a goods amount in DT.
  *
  * FLOORED, exactly as `PointsService::earnForSpend()` floors it. Rounding here instead would

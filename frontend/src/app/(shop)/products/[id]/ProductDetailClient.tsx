@@ -9,6 +9,8 @@ import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
+import { REVIEW_POINTS_AWARD, pointsToDt } from '@/util/loyaltyPoints';
+import { formatTnd } from '@/util/productPrice';
 import { buildProductUrl } from '@/util/productUrl';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
@@ -23,7 +25,7 @@ import { ProductQualityPanel } from '@/app/components/product/ProductQualityPane
 import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -93,6 +95,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [reviewComment, setReviewComment] = useState('');
   /** Display name for a review written without an account. Unused when signed in. */
   const [guestReviewName, setGuestReviewName] = useState('');
+  /*
+    ── ANTI-ABUSE, BECAUSE A REVIEW IS NOW WORTH MONEY ────────────────────────────────────────
+    A published review credits 50 loyalty points, redeemable at 20 to the dinar. That turns review
+    spam from a nuisance into a way to mint currency, so the submission carries two pieces of
+    evidence that it came from a person:
+
+      reviewHoneypot   a field no human can see. A script that fills every input it finds fills
+                       this one; the server then accepts the submission, stores nothing, and
+                       returns the ordinary success message — telling a bot it was caught tells
+                       whoever wrote it which field to skip.
+      reviewOpenedAt   when the form was opened. `Date.now()` at submit minus this is how long
+                       composing took, which the server scales against the text length. Three
+                       sentences in 900ms were not typed.
+
+    Neither decides anything alone — see ReviewAuthenticity for how they are weighed.
+  */
+  const [reviewHoneypot, setReviewHoneypot] = useState('');
+  const reviewOpenedAt = useRef<number | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -636,6 +656,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
    *
    * So a guest review is a real review that costs the shop nothing if it turns out to be noise.
    */
+  /* Stamped when the form OPENS, not on mount: the page can sit unread for ten minutes before
+     somebody presses "Écrire un avis", and counting that as composition time would make every
+     review look laboriously hand-written — the opposite of the signal being measured. */
+  useEffect(() => {
+    if (showReviewForm && reviewOpenedAt.current === null) {
+      reviewOpenedAt.current = Date.now();
+    }
+    if (!showReviewForm) {
+      reviewOpenedAt.current = null;
+    }
+  }, [showReviewForm]);
+
+  const composeMs = () => (reviewOpenedAt.current ? Math.max(0, Date.now() - reviewOpenedAt.current) : 0);
+
   const handleSubmitReview = async () => {
     if (reviewStars === 0) {
       toast.error('Veuillez sélectionner une note');
@@ -662,6 +696,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           stars: reviewStars,
           comment: reviewComment.trim(),
           author_name: guestReviewName.trim(),
+          compose_ms: composeMs(),
+          hp_field: reviewHoneypot,
         });
         setReviewStars(0);
         setReviewComment('');
@@ -694,6 +730,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         product_id: product.id,
         stars: reviewStars,
         comment: reviewComment,
+        compose_ms: composeMs(),
+        hp_field: reviewHoneypot,
       });
 
       // Backend logic: reviews with stars >= 4 are automatically published (publier = 1)
@@ -2502,8 +2540,68 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   dark:border-red-900/50` quartet. The brand edge survives as a single
                   `border-brand` — it marks the one part of this section the reader can act on. */}
               {showReviewForm && (
-                <div className="min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
+                <div className="relative min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
                   <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
+
+                  {/*
+                    THE HONEYPOT. Four separate reasons a person never reaches it: it is moved off
+                    the visible page rather than `display:none` (some bots skip hidden inputs),
+                    removed from the tab order, hidden from assistive technology, and told not to
+                    autofill. The last one is the failure mode this technique actually has — an
+                    autofilled honeypot silently discards a real customer's review — which is also
+                    why the field is named `hp_field` and not `website` or `company`.
+                  */}
+                  <div className="pointer-events-none absolute" aria-hidden="true">
+                    <label htmlFor="hp_field" className="absolute h-px w-px overflow-hidden [clip-path:inset(50%)]">
+                      Ne pas remplir
+                    </label>
+                    <input
+                      id="hp_field"
+                      name="hp_field"
+                      type="text"
+                      tabIndex={-1}
+                      autoComplete="off"
+                      /* The clip is on the INPUT, not on a wrapper. Clipping the wrapper hides the
+                         field visually but leaves the input's own box at full size — measured at
+                         5160px², which measure-reviews failed, correctly: "is it inside something
+                         hidden" and "is it unreachable" are different questions, and only the
+                         second one is the guarantee this needs.
+
+                         `clip-path` rather than `-left-[9999px]`, because the off-screen trick
+                         assumes LTR and this site renders Arabic — in RTL a -9999px offset puts the
+                         field on the visible side of the page. And not `display:none`, which is the
+                         one form of hiding some bots are written to skip. */
+                      className="absolute h-px w-px overflow-hidden border-0 p-0 opacity-0 [clip-path:inset(50%)]"
+                      value={reviewHoneypot}
+                      onChange={(e) => setReviewHoneypot(e.target.value)}
+                    />
+                  </div>
+
+                  {/*
+                    ── THE REWARD, STATED WITH ITS CONDITION ATTACHED ─────────────────────────
+                    A review pays 50 points. Saying that without the condition would be the more
+                    persuasive sentence and the wrong one: the points are only credited for a
+                    product you actually bought and received, so somebody who writes a review on a
+                    product they browsed would be told they had earned something and then not be
+                    paid. That is worse than never mentioning it.
+
+                    Shown to signed-in customers only. A guest cannot earn — there is no account to
+                    credit — and the guest branch below already explains what their review does and
+                    does not do.
+                  */}
+                  {isAuthenticated && (
+                    <p className="mb-3 flex items-start gap-2 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-[12.5px] leading-snug text-ink-2">
+                      <Coins className="mt-px h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+                      <span>
+                        Un avis publié sur un produit que vous avez commandé et reçu vous rapporte{' '}
+                        <span className="font-semibold text-ink-1">
+                          {REVIEW_POINTS_AWARD} points
+                        </span>{' '}
+                        ({formatTnd(pointsToDt(REVIEW_POINTS_AWARD))}).
+                      </span>
+                    </p>
+                  )}
+
                   <div className="space-y-2 sm:space-y-3">
                     {!isAuthenticated && (
                       <div>

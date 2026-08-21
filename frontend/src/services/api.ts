@@ -1687,10 +1687,22 @@ export const getOrderDetail = async (id: number): Promise<{
   return response.data;
 };
 
+/**
+ * ── THE TWO EXTRA FIELDS ARE ANTI-ABUSE, NOT TELEMETRY ──────────────────────────────────────
+ * `compose_ms` is how long the form was open before submit, and `hp_field` is a honeypot the
+ * server expects to be empty. Both feed `ReviewAuthenticity`, which decides whether the review is
+ * paid for — a review earns 50 loyalty points, and points are money, so a submission that cannot
+ * show it was composed by a person is not one to credit.
+ *
+ * Neither is a verdict on its own. A script can send a plausible `compose_ms`; almost none are
+ * written to send one at all, and the server treats a missing value as its own (mild) signal.
+ */
 export const addReview = async (data: {
   product_id: number;
   stars: number;
   comment?: string;
+  compose_ms?: number;
+  hp_field?: string;
 }): Promise<Review> => {
   const response = await api.post<Review>('/add_review', data);
   return response.data;
@@ -1744,6 +1756,8 @@ export const addGuestReview = async (data: {
   comment: string;
   author_name: string;
   author_email?: string;
+  compose_ms?: number;
+  hp_field?: string;
 }): Promise<{ message: string; published: boolean; id: number }> => {
   const response = await api.post('/reviews/guest', data);
   return response.data;
