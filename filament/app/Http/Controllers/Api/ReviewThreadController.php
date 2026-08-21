@@ -37,6 +37,8 @@ use Illuminate\Support\Facades\Schema;
  */
 class ReviewThreadController extends Controller
 {
+    use \App\Http\Controllers\Api\Concerns\CapturesReviewSignals;
+
     /** Guest names are printed on a public page; this is a display name, not an identity. */
     private const NAME_MIN = 2;
 
@@ -163,6 +165,11 @@ class ReviewThreadController extends Controller
             'author_email' => ['nullable', 'email', 'max:190'],
         ]);
 
+        if ($this->trippedHoneypot($request)) {
+            // Ordinary success, no row — see the note on add_review.
+            return response()->json(['message' => 'Merci pour votre avis ! Il sera publié après vérification.', 'published' => false, 'id' => null], 201);
+        }
+
         $identity = $this->identityKey($request, null);
         $limit    = max(1, (int) config('reviews.guest.max_per_hour', 3));
         if (! $this->withinHourlyLimit('guest-review:' . $identity, $limit)) {
@@ -170,6 +177,7 @@ class ReviewThreadController extends Controller
         }
 
         $payload = [
+            ...$this->reviewSignalColumns($request, trim((string) $data['comment'])),
             'user_id'    => null,
             'product_id' => (int) $data['product_id'],
             'stars'      => (int) $data['stars'],
@@ -214,19 +222,38 @@ class ReviewThreadController extends Controller
             return response()->json(['message' => 'Profil introuvable.'], 404);
         }
 
+        /*
+         * ── THE COLUMN LIST IS BUILT, NOT WRITTEN ────────────────────────────────────────
+         * This exact query 500'd on production within minutes of deploying, on every id that
+         * resolved to a real user. `reviews` is a legacy table whose columns differ between
+         * environments — which is why `ReviewController::storeByToken` guards `note` with
+         * `Schema::hasColumn` before WRITING it, and why this had to guard it before READING it.
+         * An explicit select naming a column that does not exist is a SQL error, not a null.
+         *
+         * There was no way to catch this locally: nothing here boots Laravel (no vendor/), and
+         * `measure-reviews` answers from a stub. The check that found it was hitting the live
+         * endpoint straight after the deploy, which is now the habit for anything with an
+         * explicit select on this table.
+         */
+        $optional = array_values(array_filter(
+            ['stars', 'note', 'verified', 'commande_id'],
+            fn (string $c) => Schema::hasColumn('reviews', $c)
+        ));
+        $columns = array_merge(['id', 'product_id', 'comment', 'created_at'], $optional);
+
         $reviews = Review::query()
             ->where('user_id', $id)
             ->where('publier', 1)
             ->with('product:id,slug,designation_fr,cover')
             ->latest()
             ->limit(50)
-            ->get(['id', 'product_id', 'stars', 'note', 'comment', 'verified', 'commande_id', 'created_at']);
+            ->get($columns);
 
         if ($reviews->isEmpty()) {
             return response()->json(['message' => 'Profil introuvable.'], 404);
         }
 
-        $stars = $reviews->map(fn ($r) => (int) ($r->stars ?: $r->note))->filter()->values();
+        $stars = $reviews->map(fn (Review $r) => $this->starsOf($r))->filter()->values();
 
         return response()->json([
             'id'            => (int) $user->id,
@@ -236,12 +263,12 @@ class ReviewThreadController extends Controller
             // The member's OWN average, over their own published reviews. Unrelated to any
             // product's aggregateRating and never used as one.
             'average_given' => $stars->isEmpty() ? null : round($stars->avg(), 1),
-            'verified_count' => $reviews->filter(fn ($r) => (int) $r->verified === 1 || $r->commande_id !== null)->count(),
+            'verified_count' => $reviews->filter(fn (Review $r) => $this->isAttested($r))->count(),
             'reviews'       => $reviews->map(fn (Review $r) => [
                 'id'         => (int) $r->id,
-                'stars'      => (int) ($r->stars ?: $r->note),
+                'stars'      => $this->starsOf($r),
                 'comment'    => (string) $r->comment,
-                'verified'   => (int) $r->verified === 1 || $r->commande_id !== null,
+                'verified'   => $this->isAttested($r),
                 'created_at' => optional($r->created_at)->toIso8601String(),
                 'product'    => $r->product ? [
                     'id'          => (int) $r->product->id,
@@ -285,6 +312,30 @@ class ReviewThreadController extends Controller
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /**
+     * The rating on a review, from whichever of the two columns this database actually has.
+     *
+     * `stars` is what the storefront and Filament use; `note` is the legacy twin, and the model
+     * casts it. Either may be absent, so both are read through the model's attribute bag rather
+     * than assumed — an absent column is `null` there, not an error.
+     */
+    private function starsOf(Review $review): int
+    {
+        return (int) ($review->stars ?? $review->note ?? 0);
+    }
+
+    /**
+     * Evidence of a real purchase — the same test as `Review::scopeAttested` and as
+     * `buildAggregateRatingAndReviews` on the storefront. One rule, three places.
+     *
+     * Used here only to LABEL a review on a member's page. It never changes a rating: nothing this
+     * controller returns feeds an aggregate.
+     */
+    private function isAttested(Review $review): bool
+    {
+        return (int) ($review->verified ?? 0) === 1 || ($review->commande_id ?? null) !== null;
     }
 
     /** The public shape of one reply. Never includes author_email or ip_hash. */
