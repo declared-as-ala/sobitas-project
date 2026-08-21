@@ -239,7 +239,61 @@ export interface Review {
     name: string;
     avatar?: string;
   };
+  /**
+   * Display name of a reviewer with NO account. `user` is null on these rows, so without this the
+   * whole guest-review feature renders as a page of "Client".
+   */
+  author_name?: string | null;
+  /**
+   * Published replies under this review. Sent by `product_details` via `withCount`, so a product
+   * page can label a thread without one request per review. Absent (not 0) when the backend has
+   * not been migrated yet — treat undefined as "unknown", never as "none".
+   */
+  replies_count?: number;
   created_at?: string;
+}
+
+/** One message in the thread under a review. Carries no rating and never touches aggregateRating. */
+export interface ReviewReply {
+  id: number;
+  review_id: number;
+  /** The reply this one answers, when it answers a reply rather than the review. One level only. */
+  parent_id: number | null;
+  /** Null for a guest and for the shop. Present = there is a member profile to link to. */
+  user_id: number | null;
+  name: string;
+  body: string;
+  /** Written from the admin panel, rendered as Protein.tn with a badge. */
+  is_staff: boolean;
+  created_at?: string;
+  /**
+   * CLIENT-SIDE ONLY — never sent by the API.
+   *
+   * Every reply is created held and published by the moderator a second later, so the author would
+   * otherwise post and see nothing. The reply is appended locally with this flag so they can read
+   * their own words with an honest "en cours de vérification" label, instead of the UI either
+   * lying about publication or appearing to have swallowed the message.
+   */
+  pending?: boolean;
+}
+
+/** A member's public page — what `/members/{id}` returns. Never an email, an order or a balance. */
+export interface MemberProfile {
+  id: number;
+  name: string;
+  member_since: string | null;
+  review_count: number;
+  /** The member's own average over their own published reviews. Not a product rating. */
+  average_given: number | null;
+  verified_count: number;
+  reviews: Array<{
+    id: number;
+    stars: number;
+    comment: string;
+    verified: boolean;
+    created_at?: string;
+    product: { id: number; slug: string; designation: string; cover?: string | null } | null;
+  }>;
 }
 
 // Slide types removed. This interface described columns (`titre`/`image`/`lien`) that never

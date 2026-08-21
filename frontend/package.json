@@ -25,6 +25,8 @@
     "measure:auth": "node scripts/measure-auth.mjs",
     "measure:cart": "node scripts/measure-cart.mjs",
     "measure:account": "node scripts/measure-account.mjs",
+    "measure:reviews": "node scripts/measure-reviews.mjs",
+    "stub:api": "node scripts/stub-api.mjs",
     "audit:bands": "node scripts/measure-bands.mjs",
     "audit:console": "node scripts/check-console.mjs",
     "snap": "node scripts/visual-snap.mjs",

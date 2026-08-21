@@ -31,6 +31,8 @@ import type {
   Review,
   PackQuote,
   PointsHistory,
+  ReviewReply,
+  MemberProfile,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
@@ -1691,6 +1693,65 @@ export const addReview = async (data: {
   comment?: string;
 }): Promise<Review> => {
   const response = await api.post<Review>('/add_review', data);
+  return response.data;
+};
+
+/**
+ * ── THE THREAD UNDER A REVIEW ───────────────────────────────────────────────────────────────
+ * All four endpoints are public. `api` already attaches the bearer token when there is one, so a
+ * signed-in customer's reply is attributed to their account without a second code path — the
+ * backend resolves the sanctum guard explicitly for exactly this reason.
+ */
+export const getReviewReplies = async (reviewId: number): Promise<ReviewReply[]> => {
+  try {
+    const response = await api.get<{ replies: ReviewReply[] }>(`/reviews/${reviewId}/replies`);
+    return Array.isArray(response.data?.replies) ? response.data.replies : [];
+  } catch (e: unknown) {
+    /*
+     * A 404 here means the BACKEND HAS NOT BEEN DEPLOYED YET, not that something is broken.
+     * Frontend and backend ship from one repository but not in one instant, and for the window
+     * between them this route does not exist. "No replies" is the truthful answer in that window,
+     * and it is also what the endpoint itself returns before `php artisan migrate` creates the
+     * table — so the two failure modes agree.
+     *
+     * Every other status still throws, because a 500 or a timeout is a real fault and the caller
+     * shows the customer an error for it.
+     */
+    if ((e as { response?: { status?: number } })?.response?.status === 404) return [];
+    throw e;
+  }
+};
+
+export const addReviewReply = async (
+  reviewId: number,
+  data: { body: string; parent_id?: number | null; author_name?: string; author_email?: string }
+): Promise<{ message: string; published: boolean; reply: ReviewReply }> => {
+  const response = await api.post(`/reviews/${reviewId}/replies`, data);
+  return response.data;
+};
+
+/**
+ * A review from somebody with no account.
+ *
+ * Deliberately a DIFFERENT function from `addReview`, not a branch inside it. The two have
+ * different endpoints, different validation and — most importantly — different outcomes: this one
+ * is always held for moderation and can never reach the star rating, and a single function whose
+ * behaviour silently changed with auth state would hide that.
+ */
+export const addGuestReview = async (data: {
+  product_id: number;
+  stars: number;
+  comment: string;
+  author_name: string;
+  author_email?: string;
+}): Promise<{ message: string; published: boolean; id: number }> => {
+  const response = await api.post('/reviews/guest', data);
+  return response.data;
+};
+
+/** A member's public page. 404s for anybody with no published review — see the controller. */
+export const getMemberProfile = async (id: number): Promise<MemberProfile> => {
+  const response = await api.get<MemberProfile>(`/members/${id}`);
   return response.data;
 };
 

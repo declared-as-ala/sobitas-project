@@ -9,6 +9,9 @@ import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
+import { buildProductUrl } from '@/util/productUrl';
+import { ReviewThread } from '@/app/components/reviews/ReviewThread';
+import { MemberLink } from '@/app/components/reviews/MemberLink';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
 import { ProductGallery } from '@/app/components/product/ProductGallery';
 import { ProductLabelGrid } from '@/app/components/product/ProductLabelGrid';
@@ -25,7 +28,7 @@ import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
-import { getStorageUrl, addReview, getProductDetails } from '@/services/api';
+import { getStorageUrl, addReview, addGuestReview, getProductDetails } from '@/services/api';
 import { hasValidPromo } from '@/util/productPrice';
 import { buildComparison } from '@/util/productComparison';
 import { splitHighlights } from '@/util/productHighlights';
@@ -88,6 +91,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
+  /** Display name for a review written without an account. Unused when signed in. */
+  const [guestReviewName, setGuestReviewName] = useState('');
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
@@ -178,23 +183,40 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     : 0);
   const reviewCount = reviews.length;
 
-  /* The WhatsApp message names the product, its reference and its URL — see the CTA for why that
-     matters more than the button existing. `useMemo` because the href is a string built from four
-     fields and this component re-renders on every quantity tap. */
+  /*
+    The WhatsApp message names the product, its reference and its URL — see the CTA for why that
+    matters more than the button existing. `useMemo` because the href is a string built from four
+    fields and this component re-renders on every quantity tap.
+
+    ── THIS USED TO READ `window.location.href`, AND IT WAS A HYDRATION MISMATCH ──────────────
+    `typeof window === 'undefined' ? '' : window.location.href` is the first bullet in React's own
+    hydration-mismatch error, and it was firing on EVERY product page on this site: the server
+    rendered the href with no URL in it, the client rendered one with, and React's message says
+    plainly that a mismatched attribute "won't be patched up".
+
+    So the customer got the SERVER's version — the message with the product link missing — which is
+    the one thing the comment above says is the point of the button. A shop that runs on WhatsApp
+    orders was sending itself "Bonjour, je suis intéressé(e) par : NITROTECH" with no way to tell
+    which listing the person was looking at.
+
+    `buildProductUrl` derives the same canonical URL from props on both sides, so there is nothing
+    to mismatch. It is also a better link than `location.href` was: no `?utm_…`, no `#avis`, no
+    filter query string — just the product's own address.
+  */
   const whatsappHref = useMemo(() => {
     const ref = (product.sku || product.schema?.sku || '').toString().trim();
-    const url = typeof window === 'undefined' ? '' : window.location.href;
+    const url = buildProductUrl(product);
     return buildWhatsAppHref(
       [
         `Bonjour, je suis intéressé(e) par : ${product.designation_fr || 'ce produit'}`,
         ref ? `Référence : ${ref}` : '',
-        url ? url : '',
+        url,
         'Est-il disponible ?',
       ]
         .filter(Boolean)
         .join('\n')
     );
-  }, [product.designation_fr, product.sku, product.schema?.sku]);
+  }, [product]);
 
   /*
     -- THE SORT ------------------------------------------------------------------------------
@@ -596,15 +618,71 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     openQuickOrder(quickOrderProduct, { initialQty: quantity, initialVariantId: effectiveAromaId ?? undefined });
   };
 
+  /**
+   * ── A VISITOR WITH NO ACCOUNT CAN NOW WRITE ONE (owner, 21/08/2026) ───────────────────────
+   * *"make a system for anonymous reviews without an account."*
+   *
+   * This used to bounce straight to /login, which is the single most effective way to not collect
+   * a review: somebody who has just formed an opinion is asked to create an account first, and
+   * they leave. Now the same form submits down one of two paths.
+   *
+   * The two paths are NOT interchangeable and the difference is deliberate:
+   *
+   *   signed in   `/add_review` — attaches a delivered order when one matches the email, which is
+   *               what makes the review attested and therefore able to move the star rating.
+   *   guest       `/reviews/guest` — always held for moderation, and never written with `verified`
+   *               or `commande_id`, so it is readable on the page and INVISIBLE to the rating and
+   *               to the JSON-LD. That is what makes accepting it safe.
+   *
+   * So a guest review is a real review that costs the shop nothing if it turns out to be noise.
+   */
   const handleSubmitReview = async () => {
-    if (!isAuthenticated) {
-      toast.error('Veuillez vous connecter pour laisser un avis');
-      router.push('/login');
+    if (reviewStars === 0) {
+      toast.error('Veuillez sélectionner une note');
       return;
     }
 
-    if (reviewStars === 0) {
-      toast.error('Veuillez sélectionner une note');
+    if (!isAuthenticated) {
+      // The guest endpoint requires both, and failing here with a specific message beats a 422
+      // rendered as "Envoi impossible". The comment minimum is the backend's own (10 characters):
+      // a star with no words is not a review anybody can read, and it is what a bot submits.
+      if (guestReviewName.trim().length < 2) {
+        toast.error('Indiquez un nom à afficher avec votre avis.');
+        return;
+      }
+      if (reviewComment.trim().length < 10) {
+        toast.error('Écrivez quelques mots sur le produit (10 caractères minimum).');
+        return;
+      }
+
+      setIsSubmittingReview(true);
+      try {
+        const res = await addGuestReview({
+          product_id: product.id,
+          stars: reviewStars,
+          comment: reviewComment.trim(),
+          author_name: guestReviewName.trim(),
+        });
+        setReviewStars(0);
+        setReviewComment('');
+        setGuestReviewName('');
+        setShowReviewForm(false);
+        // No optimistic insert. A guest review is ALWAYS held, so showing it in the list would be
+        // the UI asserting something false about a row that is not published — and the next
+        // refetch would silently delete it from under the author.
+        toast.success(res.message || 'Merci ! Votre avis sera publié après vérification.');
+      } catch (e: unknown) {
+        const status = (e as { response?: { status?: number } })?.response?.status;
+        const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
+        toast.error(
+          message ||
+            (status === 429
+              ? 'Vous avez déjà envoyé plusieurs avis. Réessayez plus tard.'
+              : 'Envoi impossible pour le moment.')
+        );
+      } finally {
+        setIsSubmittingReview(false);
+      }
       return;
     }
 
@@ -2143,13 +2221,20 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     {showReviewForm ? 'Annuler' : 'Écrire un avis'}
                   </Button>
                 ) : (
+                  /*
+                    This was "Connectez-vous pour laisser un avis" and it went to /login. Asking
+                    somebody who has just formed an opinion to create an account first is how a
+                    review is lost — so the button now opens the same form, and the form asks for a
+                    name instead of a password. What changes is where the submission goes and
+                    whether it can touch the rating, not whether it is accepted.
+                  */
                   <Button
-                    onClick={() => router.push('/login')}
+                    onClick={() => setShowReviewForm(!showReviewForm)}
                     variant="outline"
                     className="min-h-[44px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand sm:w-auto"
                     size="default"
                   >
-                    Connectez-vous pour laisser un avis
+                    {showReviewForm ? 'Annuler' : 'Écrire un avis'}
                   </Button>
                 )}
               </div>
@@ -2189,7 +2274,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
                               {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
-                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule-strong">
+                            {/* The TRACK is `bg-rule` (#D6D2CC, 1.51:1 — the band-seam grey), not `bg-rule-strong`
+                                  (#8C8C92, 3.34:1 — the brand-wall grey). At rule-strong the empty
+                                  portion of the bar was darker and heavier than the amber fill, so
+                                  the eye read the GREY as the data: a distribution where one review
+                                  in three is five stars looked like a mostly-full dark bar with a
+                                  short highlight on it. An empty track is structure, not a value. */}
+                            <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule">
                               {/* `transition-[width]`, not `transition-all`: DESIGN_SYSTEM §9 asks
                                   for named properties because `all` also animates `ring-color`,
                                   so a focus ring fades in instead of appearing. 500ms because
@@ -2258,7 +2349,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   */}
                   <ul className="divide-y divide-hairline">
                     {reviewsToShowOnPage.map((review) => {
-                      const reviewerName = review.user?.name?.trim() || 'Client';
+                      /*
+                        THREE sources, in this order, and the middle one is new.
+
+                        `user.name` is a member. `author_name` is somebody who reviewed WITHOUT an
+                        account — that column did not exist before the guest-review endpoint, and
+                        without reading it here every anonymous review on the site would render as
+                        "Client". "Client" survives as the last fallback because the legacy backlog
+                        genuinely has neither: those rows have no user and no author_name.
+                      */
+                      const reviewerName =
+                        review.user?.name?.trim() || review.author_name?.trim() || 'Client';
                       return (
                         /* A hover plate that bleeds past the text column, so a row highlights as a
                            ROW rather than as a rectangle inset inside a list. `-mx-3 px-3` is the
@@ -2270,7 +2371,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-                              <span className="truncate text-sm font-bold text-ink-1">{reviewerName}</span>
+                              {/* A link only when there is a page to link to — a guest review has
+                                  no member page and linking one would 404. MemberLink decides. */}
+                              <MemberLink
+                                userId={review.user?.id}
+                                name={reviewerName}
+                                className="truncate text-sm font-bold text-ink-1"
+                              />
                               {/*
                                 ── ACHAT VÉRIFIÉ ──────────────────────────────────────────────
                                 Shown on exactly the reviews that carry evidence — `verified` set,
@@ -2308,6 +2415,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           {review.comment && (
                             <p className="mt-2 text-sm leading-relaxed text-ink-2">{review.comment}</p>
                           )}
+
+                          {/*
+                            The conversation. Collapsed to a single 44px row unless there is
+                            something to show — see ReviewThread for why it is not expanded
+                            inline, and why the replies are fetched on open rather than shipped
+                            with the page.
+                          */}
+                          <ReviewThread
+                            reviewId={review.id}
+                            replyCount={review.replies_count}
+                            reviewerName={reviewerName}
+                          />
                         </li>
                       );
                     })}
@@ -2382,10 +2501,34 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {/* Review form. Tokens, not a `bg-gray-50 dark:bg-gray-800/50` + `border-red-200
                   dark:border-red-900/50` quartet. The brand edge survives as a single
                   `border-brand` — it marks the one part of this section the reader can act on. */}
-              {showReviewForm && isAuthenticated && (
+              {showReviewForm && (
                 <div className="min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
                   <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
                   <div className="space-y-2 sm:space-y-3">
+                    {!isAuthenticated && (
+                      <div>
+                        <label htmlFor="guest-review-name" className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">
+                          Votre nom *
+                        </label>
+                        <input
+                          id="guest-review-name"
+                          value={guestReviewName}
+                          onChange={(e) => setGuestReviewName(e.target.value.slice(0, 60))}
+                          placeholder="Prénom ou pseudo"
+                          className="min-h-[44px] w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        />
+                        {/* Said plainly and up front, because it is true and because finding out
+                            later feels like being ignored. It is also the honest framing of the
+                            trade: no account, so no proof of purchase, so a human looks first. */}
+                        <p className="mt-1.5 text-xs leading-snug text-ink-3">
+                          Sans compte, votre avis est publié après vérification et n’est pas compté
+                          dans la note du produit.{' '}
+                          <Link href="/login" className="font-semibold text-brand underline-offset-2 hover:underline">
+                            Se connecter
+                          </Link>
+                        </p>
+                      </div>
+                    )}
                     <div>
                       <label className="block text-xs sm:text-sm font-semibold mb-2 text-ink-1">Note *</label>
                       <div className="flex gap-1">
@@ -2397,7 +2540,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">Commentaire (optionnel)</label>
+                      <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">
+                        {isAuthenticated ? 'Commentaire (optionnel)' : 'Commentaire *'}
+                      </label>
                       <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
                       <p className="text-xs mt-0.5 text-ink-3">{reviewComment.length}/500</p>
                     </div>
@@ -2405,7 +2550,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold" size="sm">
                         {isSubmittingReview ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Publication...</> : 'Publier'}
                       </Button>
-                      <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); }}>Annuler</Button>
+                      <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); setGuestReviewName(''); }}>Annuler</Button>
                     </div>
                   </div>
                 </div>
