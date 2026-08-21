@@ -83,6 +83,11 @@ on:
           # `seo:audit-reviews` unpublished — so the report is a real false-negative check rather
           # than a self-assessment. Writes nothing, and never touches `publier`.
           - reviews-rescore
+          # The other end of the delivery chain: which orders are now due a review request,
+          # and what would be sent to whom. Read-only, and the proof that marking an order
+          # delivered actually reaches the review engine rather than stopping at the order
+          # table — two facts that were previously only ever assumed together.
+          - reviews-due-dry-run
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
@@ -167,6 +172,11 @@ jobs:
               ARGS="aramex:sync-tracking --codes --limit=200"
               WRITES=no
               ;;
+            reviews-due-dry-run)
+              ARGS="reviews:send-due-requests --dry-run"
+              WRITES=no
+              ;;
+
             reviews-rescore)
               ARGS="reviews:rescore --limit=5000"
               WRITES=no
