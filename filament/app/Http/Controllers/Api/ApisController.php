@@ -729,7 +729,35 @@ class ApisController extends Controller
                 'sousCategorie.categorie:id,designation_fr,slug',
                 'tags:id,designation_fr',
                 'aromes:id,designation_fr',
-                'reviews' => fn ($q) => $q->where('publier', 1)->with('user:id,name,avatar')->latest(),
+                /*
+                 * `withCount('replies')` so the product page can label the thread ("3 réponses")
+                 * without a second request per review — a PDP with twenty reviews would otherwise
+                 * make twenty calls to find out that nineteen threads are empty.
+                 *
+                 * The replies THEMSELVES are not eager-loaded, deliberately: they are fetched only
+                 * when a thread is opened. Inlining them would put every message on the page into
+                 * the ISR payload for a product nobody has expanded, and `reviews` is already the
+                 * heaviest relation in this response.
+                 *
+                 * `author_name` joins the selection because a guest review has no `user` to read a
+                 * name from — without it every anonymous review would render as "Client".
+                 */
+                'reviews' => function ($q) {
+                    $q->where('publier', 1)->with('user:id,name,avatar')->latest();
+
+                    /*
+                     * GUARDED, and this guard is not decoration. `review_replies` is created by a
+                     * migration the owner runs by hand on a live database, and an un-guarded
+                     * withCount against a missing table is a SQL error inside the eager-load —
+                     * which does not degrade to "no replies", it 500s EVERY PRODUCT PAGE on the
+                     * site for the entire window between deploying this code and running
+                     * `php artisan migrate`. The rest of this file is schema-defensive for exactly
+                     * that reason and this line has to be too.
+                     */
+                    if (Schema::hasTable('review_replies')) {
+                        $q->withCount(['replies' => fn ($r) => $r->where('publier', 1)]);
+                    }
+                },
                 /**
                  * The staging row an imported product was promoted from — NULL for all 309 legacy
                  * products, which have no such row and never will.

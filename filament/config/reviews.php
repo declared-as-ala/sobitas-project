@@ -91,4 +91,53 @@ return [
         // itself violates consumer-protection / platform rules.
         'auto_publish_genuine' => (bool) env('REVIEW_AI_AUTOPUBLISH_GENUINE', false),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Replies — the thread under a review
+    |--------------------------------------------------------------------------
+    */
+    'replies' => [
+        // Master switch for accepting new replies at all. Turning this off leaves every existing
+        // thread readable and stops new messages — the setting you want during a spam wave, and
+        // the one you want instead of deleting the feature.
+        'enabled' => (bool) env('REVIEW_REPLIES_ENABLED', true),
+
+        // A reply the moderator clears goes live without a human.
+        //
+        // DEFAULT ON, and the opposite of `auto_publish_genuine` above, which is off. The two are
+        // asymmetric on purpose: a review carries a STAR RATING that moves a product's
+        // aggregateRating and its structured data, so a human keeps the final say. A reply carries
+        // no rating and can move nothing. Holding every reply for manual approval would mean a
+        // customer asking "est-ce que ça se prend avant l'entraînement ?" waits until somebody
+        // opens the panel — which, in practice, means the thread is dead and the feature is
+        // decorative.
+        'auto_publish_clean' => (bool) env('REVIEW_REPLIES_AUTOPUBLISH', true),
+
+        // Per-author ceiling inside the rate-limit window, checked on top of the route throttle.
+        // The route limit is per IP; this one is per identity, and it is what stops one signed-in
+        // account from carpeting a popular product's thread from a phone and a laptop at once.
+        'max_per_hour' => (int) env('REVIEW_REPLIES_MAX_PER_HOUR', 10),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reviews from visitors with no account
+    |--------------------------------------------------------------------------
+    | A guest review can NEVER be attested — `Review::scopeAttested` requires
+    | `verified = 1` or a `commande_id`, and a guest submission has neither by
+    | construction. So these are readable on the page and INVISIBLE to the star
+    | rating and to the JSON-LD. That is not a limitation to work around; it is
+    | the property that makes accepting them safe at all.
+    */
+    'guest' => [
+        'enabled' => (bool) env('REVIEW_GUEST_ENABLED', true),
+
+        // Guest reviews are held until the moderator clears them, and unlike replies there is no
+        // switch to skip that. A star rating from an unauthenticated stranger is the single
+        // easiest thing on this site to abuse, and the legacy backlog — 203 published reviews with
+        // no purchase behind any of them, which had to be unpublished wholesale — is what that
+        // abuse looks like after the fact.
+        'max_per_hour' => (int) env('REVIEW_GUEST_MAX_PER_HOUR', 3),
+    ],
 ];

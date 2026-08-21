@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\PackController;
 use App\Http\Controllers\Api\PointsController;
 use App\Http\Controllers\Api\ProductFeedController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\ReviewThreadController;
 
 /*
 |--------------------------------------------------------------------------
@@ -201,3 +202,26 @@ Route::middleware('auth:sanctum')->group(function () {
  */
 Route::middleware('throttle:20,1')->get('/reviews/order/{token}', [ReviewController::class, 'orderForReview']);
 Route::middleware('throttle:10,1')->post('/reviews/by-order', [ReviewController::class, 'storeByToken']);
+
+/*
+ * ── THE THREAD UNDER AN AVIS, AND THE MEMBER WHO WROTE IT ──────────────────────────────────
+ * All four are PUBLIC. A reply and a guest review are both things a visitor with no account is
+ * meant to be able to do, so `auth:sanctum` would defeat the feature — but `$request->user()`
+ * still resolves a bearer token when one is sent, which is how a signed-in customer's reply gets
+ * attributed to their account without a second endpoint.
+ *
+ * ── WHY THE WRITE LIMITS ARE THIS TIGHT ────────────────────────────────────────────────────
+ * These endpoints put stranger-written text on a product page. The throttle here is per IP and is
+ * the outer wall; `ReviewThreadController` applies a second, per-identity ceiling from
+ * config/reviews.php, because one account with a phone and a laptop defeats an IP limit and one
+ * household behind a single NAT trips it for everybody.
+ *
+ * The guest REVIEW limit (5/min) is deliberately harsher than the reply limit (15/min): a review
+ * carries a star rating, and this shop has already had to unpublish 203 reviews wholesale for
+ * having no purchase behind them. Nothing on this route can reach `Review::scopeAttested`, so none
+ * of it can move a rating — but volume alone is still a moderation bill somebody has to pay.
+ */
+Route::middleware('throttle:60,1')->get('/reviews/{review}/replies', [ReviewThreadController::class, 'index'])->whereNumber('review');
+Route::middleware('throttle:15,1')->post('/reviews/{review}/replies', [ReviewThreadController::class, 'store'])->whereNumber('review');
+Route::middleware('throttle:5,1')->post('/reviews/guest', [ReviewThreadController::class, 'storeGuestReview']);
+Route::middleware('throttle:60,1')->get('/members/{id}', [ReviewThreadController::class, 'publicProfile'])->whereNumber('id');
