@@ -66,7 +66,9 @@ class SendDueReviewRequests extends Command
         // Ask MySQL directly rather than Schema::hasColumn, which has twice reported false for
         // columns that exist on this database and silently turned guarded code into a no-op.
         if (! $this->hasColumn('commandes', 'delivered_at')) {
-            $this->error('commandes.delivered_at is missing — run migrations first.');
+            $this->error('commandes.delivered_at cannot be read — run migrations first.');
+            $this->line('Si les migrations sont à jour, cherchez « could not probe a column » dans le log Laravel :');
+            $this->line('la colonne existe et c’est la base qui refuse la lecture pour une autre raison.');
 
             return self::FAILURE;
         }
@@ -189,11 +191,52 @@ class SendDueReviewRequests extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Can this command read `$table.$column`?
+     *
+     * ── THIS METHOD TURNED THE WHOLE FEATURE OFF FOR AS LONG AS IT EXISTED ──────────────────
+     * It was `SHOW COLUMNS FROM \`{$table}\` LIKE ?` with the column BOUND as a parameter, and it
+     * returned false for `commandes.delivered_at` on 21/08/2026 — on the same afternoon that
+     * AramexTrackingSync wrote that exact column, successfully, on forty orders, with the values
+     * visible in the production log. The column plainly exists.
+     *
+     * So `reviews:send-due-requests` exited at its first line — *"commandes.delivered_at is
+     * missing — run migrations first."* — every single day at 10:00, and the `catch` turned the
+     * database's explanation into `false` on the way past. The one occurrence of this query
+     * elsewhere in the codebase (LoyaltyCard, `LIKE 'status'`) passes the column as a LITERAL and
+     * works, which is the difference.
+     *
+     * ── SO IT NO LONGER ASKS A PROXY QUESTION ──────────────────────────────────────────────
+     * Two metadata checks in a row have now voted "missing" on a column that exists: first
+     * `Schema::hasColumn` (per the note that introduced this method), then this one. Rather than
+     * replace it with a third way of asking the database about itself, this asks the question the
+     * command actually has — *can I select this column?* — because a SELECT that touches it cannot
+     * be wrong about whether it is there.
+     *
+     * `LIMIT 1` and no ordering, so the cost is one index-free row on a table of ~1,100.
+     *
+     * A genuine absence returns false, as before. Any OTHER database failure is logged with its
+     * message instead of being silently rewritten as "the feature is off", which is the specific
+     * behaviour that hid this for as long as it did.
+     */
     private function hasColumn(string $table, string $column): bool
     {
         try {
-            return ! empty(DB::select("SHOW COLUMNS FROM `{$table}` LIKE ?", [$column]));
+            DB::table($table)->select($column)->limit(1)->get();
+
+            return true;
         } catch (\Throwable $e) {
+            $message = strtolower($e->getMessage());
+            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column');
+
+            if (! $missing) {
+                Log::error('reviews:send-due-requests could not probe a column, and it is NOT a missing column', [
+                    'table'  => $table,
+                    'column' => $column,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+
             return false;
         }
     }
