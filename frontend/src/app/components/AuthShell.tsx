@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import type { LucideIcon } from 'lucide-react';
-import { ShieldCheck, Truck, CreditCard, ArrowLeft, Eye, EyeOff, Loader2, Coins, PackageCheck, Zap, Star } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, Coins, PackageCheck, Zap, Star } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -133,13 +133,67 @@ import { CASHBACK_PERCENT, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
  * On DESKTOP the trust strip becomes a single inline row rather than a three-row box. Same three
  * facts, ~100px less, and "minimalistic" is the owner's word for what a bordered box of restated
  * shop policy was not.
+ *
+ * ────────────────────────────────────────────────────────────────────────────────────────────
+ * ── FIFTH PASS (owner, 22/08/2026): "MAKE IT MINIMALISTIC DESIGN" ───────────────────────────
+ *
+ * Said again, about a screen the fourth pass had already called minimal. So it was measured
+ * before anything was touched, at the width the owner's screenshot was taken (1920x995):
+ *
+ *     card 432px inside a 983px column   -> 79% of the form half is empty
+ *     left panel: 14 text blocks, 553 characters
+ *     "ESPACE CLIENT" rendered TWICE, 1,060px apart, in identical accent-caps
+ *
+ * Three separate problems, and none of them is "the spacing is wrong".
+ *
+ * ── THE SAME WORDS TWICE ────────────────────────────────────────────────────────────────────
+ * The brand column has a kicker. `AuthCardHeader` has a kicker. Neither knew about the other, so
+ * on `/login` the screen said ESPACE CLIENT at x=93 and again at x=1234, in the same orange, at
+ * the same size, with the same rule before it. That is the single loudest "generated" tell on the
+ * page: a decorative label repeated because two components each independently decided they wanted
+ * one. The card's kicker is now `lg:hidden` — it exists for the widths where the brand column does
+ * not, which is the only reason it was ever needed.
+ *
+ * ── THE SAME FACT THREE TIMES ───────────────────────────────────────────────────────────────
+ * The headline said "VOTRE COMPTE VOUS RAPPORTE 5%". The paragraph under it explained that points
+ * are credited on delivery. Then the first row of the benefit box said "5% EN POINTS DE FIDÉLITÉ"
+ * and its hint said "1 point par dinar, 20 points = 1 DT de remise. Crédités à la livraison."
+ *
+ * One fact, stated three times, in three type sizes, the third time inside a bordered box. That is
+ * what 553 characters buys on a screen whose job is to get an email address typed. The mechanics
+ * line survives once, attached to the headline that makes the claim; the benefit rows keep their
+ * labels and lose their hints, because a label like "Vos commandes au même endroit" does not need
+ * a sentence explaining that it means order history.
+ *
+ * The BOX goes with them. Four bordered, divided rows with a tinted plate behind each glyph is a
+ * component, and a component is what you reach for when a list needs to look like something. This
+ * list does not: it is four short facts under a headline.
+ *
+ * The trust strip goes entirely. The third pass kept it "demoted", the fourth made it inline, and
+ * both passes wrote down the reason it does not belong — the three facts are equally true for a
+ * guest who never registers, on the one screen whose entire job is to argue for the account. A
+ * thing that has been demoted twice and still does not earn its place is not demoted again.
+ *
+ * ── AND THE VOID ────────────────────────────────────────────────────────────────────────────
+ * 79% empty is not a spacing bug either, it is an alignment one. The panel was pinned hard left
+ * (`p-12`, so x=48) while the card was centred in its own half — so the composition read as
+ * "content jammed against the left edge, a void, then a small box". Both halves now centre a
+ * column of the SAME max width, so the two blocks mirror each other across the seam instead of one
+ * hugging the frame. Nothing was resized to achieve it.
+ *
+ * The card also loses `shadow-card`. DESIGN_SYSTEM says flat; a drop shadow is what makes a small
+ * white rectangle read as floating in a field rather than sitting on one.
+ *
+ * ── AND THEN THE SCREENSHOT SAID THE OBVIOUS THING ──────────────────────────────────────────
+ * Centring each block in its own half was not enough: at 1920 the panel ended at x=675 and the
+ * card began at x=1213, so a ~540px corridor ran down the middle of the page while both outer
+ * margins sat empty. Two blocks drifting apart, symmetrically.
+ *
+ * So neither block is centred in its half any more — both are pulled to the SEAM. The panel is
+ * `items-end`, the card is `justify-start`, and the divider they meet at is what holds the
+ * composition together. The empty space is still there; it is now all on the outside, where empty
+ * space in a minimal layout is supposed to be, instead of splitting the page in two.
  */
-
-const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
-  { Icon: ShieldCheck, label: '100% authentique', hint: 'Importé et distribué conformément aux autorisations' },
-  { Icon: Truck, label: 'Livraison 24–72h', hint: 'Partout en Tunisie, offerte dès 300 DT' },
-  { Icon: CreditCard, label: 'Paiement à la livraison', hint: 'Vous réglez le livreur, à la réception' },
-];
 
 /**
  * ── WHAT AN ACCOUNT ACTUALLY GIVES YOU ──────────────────────────────────────────
@@ -162,27 +216,13 @@ const TRUST: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
  * economy is ever retuned, the promise on the signup screen moves with it instead of quietly
  * becoming a lie.
  */
-const ACCOUNT_BENEFITS: Array<{ Icon: LucideIcon; label: string; hint: string }> = [
-  {
-    Icon: Coins,
-    label: `${CASHBACK_PERCENT}% en points de fidélité`,
-    hint: `1 point par dinar, ${REDEEM_POINTS_PER_DT} points = 1 DT de remise. Crédités à la livraison.`,
-  },
-  {
-    Icon: PackageCheck,
-    label: 'Vos commandes au même endroit',
-    hint: 'Historique complet, statut et détail de chaque commande.',
-  },
-  {
-    Icon: Zap,
-    label: 'Commande plus rapide',
-    hint: 'Vos coordonnées sont pré-remplies au moment de commander.',
-  },
-  {
-    Icon: Star,
-    label: 'Donnez votre avis',
-    hint: 'Les avis rattachés à une commande portent la mention « Achat vérifié ».',
-  },
+const ACCOUNT_BENEFITS: Array<{ Icon: LucideIcon; label: string }> = [
+  // The points row that used to open this list is gone: the headline directly above it already
+  // says 5%, and the line under the headline already gives the mechanics. It was the same fact
+  // three times.
+  { Icon: PackageCheck, label: 'Toutes vos commandes au même endroit' },
+  { Icon: Zap, label: 'Coordonnées pré-remplies au moment de commander' },
+  { Icon: Star, label: 'Vos avis portent la mention « Achat vérifié »' },
 ];
 
 /**
@@ -195,39 +235,14 @@ const ACCOUNT_BENEFITS: Array<{ Icon: LucideIcon; label: string; hint: string }>
  */
 function BenefitList() {
   return (
-    <ul className="divide-y divide-hairline overflow-hidden rounded-xl border border-hairline bg-canvas">
-      {ACCOUNT_BENEFITS.map(({ Icon, label, hint }) => (
-        <li key={label} className="flex items-start gap-3 px-4 py-3.5">
-          <span
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand"
-            aria-hidden="true"
-          >
-            <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
-          </span>
-          <span className="min-w-0 pt-0.5">
-            <span className="block text-[13px] font-bold uppercase tracking-[0.04em] text-ink-1">{label}</span>
-            <span className="mt-1 block text-[12.5px] leading-snug text-ink-3">{hint}</span>
-          </span>
-        </li>
-      ))}
-    </ul>
-  );
-}
-
-/**
- * The three facts, in the homepage trust strip's shape: one bordered box, hairline-divided rows,
- * an 18px brand glyph, an uppercase label and a quiet hint.
- *
- * `hint` is dropped on the phone (`compact`) — under a 5-field signup form, three second lines are
- * 60px of reassurance nobody scrolls to. The labels alone carry it.
- */
-function TrustStrip() {
-  return (
-    <ul className="flex flex-wrap items-center gap-x-5 gap-y-1.5">
-      {TRUST.map(({ Icon, label }) => (
-        <li key={label} className="inline-flex items-center gap-1.5">
-          <Icon className="h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
-          <span className="text-[12px] font-semibold text-ink-2">{label}</span>
+    // Three lines under a headline, not a component. The bordered, hairline-divided box with a
+    // tinted plate behind every glyph was doing the work of making four short facts look like a
+    // designed object — which is exactly the weight "minimalistic" was asking to remove.
+    <ul className="space-y-3">
+      {ACCOUNT_BENEFITS.map(({ Icon, label }) => (
+        <li key={label} className="flex items-center gap-3 text-[14px] leading-snug text-ink-2">
+          <Icon className="h-[18px] w-[18px] shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+          <span>{label}</span>
         </li>
       ))}
     </ul>
@@ -271,31 +286,40 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div className="pt-no-chrome min-h-dvh bg-sunken lg:grid lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
       {/* ── THE BRAND COLUMN — DESKTOP ONLY ──────────────────────────────────────────────── */}
-      <aside className="hidden border-e border-hairline bg-canvas lg:flex lg:flex-col lg:justify-between lg:gap-10 lg:p-10 xl:p-12">
-        <Link
-          href="/"
-          /* `min-h-[44px]` on a link whose only child is a 40px image. Without it this is a 40px
-             target — caught by measure-auth, not by looking at it, which is the entire argument
-             for that script: the logo LOOKS like a comfortable click at any zoom level. */
-          className="flex min-h-[44px] w-fit items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-          aria-label="Protein.tn — Accueil"
-        >
-          <Image
-            src={headerLogoUrl}
-            alt="Protein.tn"
-            width={230}
-            height={75}
-            sizes="200px"
-            className="h-10 w-auto object-contain"
-            priority
-          />
-        </Link>
+      {/*
+          `lg:items-center` + a capped inner column, rather than `p-12` and left-aligned.
 
-        <div className="max-w-xl">
+          Measured at 1920: the panel started at x=48 while the card was centred in its own half,
+          so the page read as content jammed against the left frame, then a void, then a small box
+          — 79% of the form half empty. Both halves now centre a column of the same max width, so
+          the two blocks mirror each other across the seam. Nothing was resized to get there.
+      */}
+      <aside className="hidden border-e border-hairline bg-canvas lg:flex lg:flex-col lg:items-end lg:justify-center lg:p-10 xl:py-12 xl:pe-16 xl:ps-12">
+        <div className="w-full max-w-[27rem]">
+          <Link
+            href="/"
+            /* `min-h-[44px]` on a link whose only child is a 40px image. Without it this is a 40px
+               target — caught by measure-auth, not by looking at it, which is the entire argument
+               for that script: the logo LOOKS like a comfortable click at any zoom level. */
+            className="mb-12 flex min-h-[44px] w-fit items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            aria-label="Protein.tn — Accueil"
+          >
+            <Image
+              src={headerLogoUrl}
+              alt="Protein.tn"
+              width={230}
+              height={75}
+              sizes="200px"
+              className="h-9 w-auto object-contain"
+              priority
+            />
+          </Link>
+
           <span className="mb-3 inline-flex items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand">
             <span className="h-px w-5 bg-brand" aria-hidden="true" />
             Espace client
           </span>
+
           {/*
               The headline is a NUMBER, and it is the number this screen is selling.
 
@@ -311,30 +335,20 @@ export function AuthShell({ children }: { children: ReactNode }) {
           <h2 className="font-display text-[38px] font-bold uppercase leading-[0.95] tracking-tight text-ink-1 xl:text-[46px]">
             Votre compte vous rapporte <span className="text-brand">{CASHBACK_PERCENT}%</span>
           </h2>
-          <p className="mt-4 max-w-md text-[15px] leading-relaxed text-ink-2">
-            Gratuit, en une minute. Vos points sont crédités dès que la commande est livrée, et se
-            déduisent de la suivante.
+          {/* The mechanics, once. The benefit rows below used to repeat them and the headline
+              above already makes the claim, so this is the only place the numbers are spelled
+              out — and they come from the constants, so retuning the economy moves the promise. */}
+          <p className="mt-4 text-[15px] leading-relaxed text-ink-2">
+            Gratuit, en une minute. 1 point par dinar, {REDEEM_POINTS_PER_DT} points = 1 DT de
+            remise sur votre prochaine commande.
           </p>
 
           <div className="mt-8">
             <BenefitList />
           </div>
 
-          {/*
-              The shop's three facts, kept and demoted.
-
-              They are still the reason somebody trusts this site enough to type an email — but
-              they are true for a guest too, so they cannot be the argument for registering and no
-              longer sit where that argument belongs. `compact` drops the second lines: under the
-              benefit list, which now carries the explanatory prose, three more hint rows were
-              120px of text at the bottom of a column nobody reads to the end of.
-          */}
-          <div className="mt-6">
-            <TrustStrip />
-          </div>
+          <p className="mt-12 text-xs text-ink-3">© Protein.tn — SOBITAS, Sousse, Tunisie</p>
         </div>
-
-        <p className="text-xs text-ink-3">© Protein.tn — SOBITAS, Sousse, Tunisie</p>
       </aside>
 
       {/* ── THE FORM COLUMN ──────────────────────────────────────────────────────────────── */}
@@ -343,7 +357,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             overlapped the form it was meant to sit above. It is a real row now, in flow. */}
         <div
           data-auth-header=""
-          className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-4 lg:px-10"
+          className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-6 sm:py-4 lg:px-10 xl:ps-16"
         >
           <Link
             href="/"
@@ -382,11 +396,14 @@ export function AuthShell({ children }: { children: ReactNode }) {
             absent from every local measurement. See measure-auth. */}
         <div
           data-auth-body=""
-          className="flex flex-1 items-center justify-center px-4 pb-5 pt-1 sm:px-6 sm:pb-10 lg:px-10"
+          className="flex flex-1 items-center justify-center px-4 pb-5 pt-1 sm:px-6 sm:pb-10 lg:justify-start lg:px-10 xl:ps-16"
         >
           <div data-auth-card="" className="w-full max-w-[27rem]">
             <MobileBenefitLine />
-            <div className="rounded-2xl border border-hairline bg-elevated p-3.5 shadow-card sm:p-8">
+            {/* No `shadow-card`. DESIGN_SYSTEM says flat, and a drop shadow is precisely what
+                makes a small white rectangle read as floating in a field rather than sitting on
+                one — which is what the owner's screenshot showed. */}
+            <div className="rounded-2xl border border-hairline bg-elevated p-3.5 sm:p-8">
               {children}
             </div>
 
@@ -428,11 +445,18 @@ interface AuthCardHeaderProps {
 export function AuthCardHeader({ kicker, title, subtitle, subtitleDesktopOnly }: AuthCardHeaderProps) {
   return (
     <div className="mb-3 sm:mb-6">
-      {/* The kicker is `hidden sm:inline-flex` on every screen. "CRÉER UN COMPTE" sitting directly
-          above an H1 reading "REJOIGNEZ-NOUS" is the same sentence twice, and on a phone it cost
-          ~22px to say it — the definition of what "minimalistic" was asking to remove. */}
+      {/* `hidden sm:inline-flex lg:hidden` — a band, not a floor.
+
+          Below `sm` it is off because "CRÉER UN COMPTE" directly above an H1 reading
+          "REJOIGNEZ-NOUS" is the same sentence twice, and on a phone it cost ~22px to say it.
+
+          From `lg` it is off because the brand column appears there and carries its own kicker, so
+          the screen printed ESPACE CLIENT at x=93 and again at x=1234 — same words, same orange,
+          same rule before it, 1,060px apart. Two components each decided independently that they
+          wanted a decorative label. The band between the two is exactly the range where this one
+          is the only one on the page. */}
       {kicker && (
-        <span className="mb-1.5 hidden items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand sm:mb-3 sm:inline-flex">
+        <span className="mb-1.5 hidden items-center gap-2 font-display text-[11px] font-bold uppercase tracking-[0.2em] text-brand sm:mb-3 sm:inline-flex lg:hidden">
           <span className="h-px w-5 bg-brand" aria-hidden="true" />
           {kicker}
         </span>
