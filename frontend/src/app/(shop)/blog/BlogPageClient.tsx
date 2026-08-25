@@ -6,6 +6,8 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
+import { SectionHeader } from '@/app/components/SectionHeader';
+import { Section } from '@/app/components/layout/Section';
 import type { Article } from '@/types';
 import { type BlogTaxonomyItem } from '@/services/api';
 import { BlogCard } from './BlogCard';
@@ -299,128 +301,153 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-        <div className="mb-10 sm:mb-12">
+    <>
+      <main className="min-h-screen bg-canvas">
+        <Section first spacing="tight" width="wide">
           <PageHeader
             kicker="Blog"
             title="Blog nutrition sportive & compléments en Tunisie"
             subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
           >
-            {/* Category filters – pills, red accent (client-side filter UX) */}
-            <nav className="flex flex-wrap gap-2.5 md:gap-3" aria-label="Catégories du blog">
-              {BLOG_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  aria-pressed={activeCategory === cat.id}
-                  className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                    activeCategory === cat.id
-                      ? 'border-red-600 bg-red-600 text-white'
-                      : 'border-gray-200 bg-elevated text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </nav>
+            <div className="rounded-2xl border border-hairline bg-elevated p-3 sm:p-4">
+              {/* Category filters – client-side filtering, presented as a compact horizontal rail. */}
+              <nav
+                className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                aria-label="Catégories du blog"
+              >
+                {BLOG_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    aria-pressed={activeCategory === cat.id}
+                    aria-controls="blog-articles"
+                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                      activeCategory === cat.id
+                        ? 'border-brand bg-brand text-on-brand'
+                        : 'border-hairline bg-canvas text-ink-2 hover:border-brand/40 hover:text-brand'
+                    }`}
+                  >
+                    {cat.label}
+                  </button>
+                ))}
+              </nav>
 
-            {/* Crawlable taxonomy navigation → real /blog/category & /blog/tag pages.
-                Real <Link href> (unlike the client filter buttons above) so search engines
-                can discover and index the taxonomy pages. */}
-            {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
-              <div className="mt-5 flex flex-col gap-3">
-                {blogCategoryLinks.length > 0 && (
-                  <nav className="flex flex-wrap items-center gap-2 sm:gap-2.5" aria-label="Parcourir les catégories du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                      <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-                      Catégories
-                    </span>
-                    {blogCategoryLinks.map((cat) => (
-                      <Link
-                        key={cat.slug}
-                        href={`/blog/category/${cat.slug}`}
-                        className="inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-elevated px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                      >
-                        {decodeHtmlEntities(cat.name)}
-                      </Link>
-                    ))}
-                  </nav>
-                )}
-                {blogTagLinks.length > 0 && (
-                  <nav className="flex flex-wrap items-center gap-2" aria-label="Parcourir les tags du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                      <Tag className="h-3.5 w-3.5" aria-hidden="true" />
-                      Tags
-                    </span>
-                    {blogTagLinks.map((t) => (
-                      <Link
-                        key={t.slug}
-                        href={`/blog/tag/${t.slug}`}
-                        className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-ink-2 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/60 dark:hover:border-red-400 dark:hover:text-red-400"
-                      >
-                        {decodeHtmlEntities(t.name)}
-                      </Link>
-                    ))}
-                  </nav>
-                )}
-              </div>
-            )}
-          </PageHeader>
-        </div>
-
-        {sortedArticles.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-ink-3">Aucun article dans cette catégorie.</p>
-          </div>
-        ) : (
-          <>
-            {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 sm:mb-12">
-              {cardData.map(({ article, excerpt, readingMinutes }, index) => (
-                <BlogCard
-                  key={`blog-${currentPage}-${article.id}`}
-                  article={article}
-                  excerpt={excerpt}
-                  readingMinutes={readingMinutes}
-                  priority={index < 3}
-                />
-              ))}
+              {/* Crawlable taxonomy navigation → real /blog/category & /blog/tag pages.
+                  Real <Link href> (unlike the client filter buttons above) so search engines
+                  can discover and index the taxonomy pages. */}
+              {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
+                <div className="mt-4 grid gap-4 border-t border-hairline pt-4 lg:grid-cols-2">
+                  {blogCategoryLinks.length > 0 && (
+                    <nav className="min-w-0" aria-label="Parcourir les catégories du blog">
+                      <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+                        <FolderOpen className="h-4 w-4" aria-hidden="true" />
+                        Catégories
+                      </span>
+                      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {blogCategoryLinks.map((cat) => (
+                          <Link
+                            key={cat.slug}
+                            href={`/blog/category/${cat.slug}`}
+                            className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-canvas px-3.5 text-sm font-medium text-ink-2 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          >
+                            {decodeHtmlEntities(cat.name)}
+                          </Link>
+                        ))}
+                      </div>
+                    </nav>
+                  )}
+                  {blogTagLinks.length > 0 && (
+                    <nav className="min-w-0" aria-label="Parcourir les tags du blog">
+                      <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+                        <Tag className="h-4 w-4" aria-hidden="true" />
+                        Sujets
+                      </span>
+                      <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        {blogTagLinks.map((t) => (
+                          <Link
+                            key={t.slug}
+                            href={`/blog/tag/${t.slug}`}
+                            className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-sunken px-3.5 text-sm text-ink-2 transition-colors hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          >
+                            {decodeHtmlEntities(t.name)}
+                          </Link>
+                        ))}
+                      </div>
+                    </nav>
+                  )}
+                </div>
+              )}
             </div>
+          </PageHeader>
+        </Section>
 
-            {/* Compact pagination – "‹ 1/37 ›" style */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                  aria-label="Page précédente"
-                >
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                <span
-                  className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-ink-1"
-                  aria-live="polite"
-                >
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                  aria-label="Page suivante"
-                >
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </button>
-              </div>
+        <Section id="blog-articles" surface="sunken" spacing="default" width="wide">
+          <SectionHeader
+            kicker="Publications"
+            title={BLOG_CATEGORIES.find((cat) => cat.id === activeCategory)?.label ?? 'Tous les articles'}
+            scale="3"
+            trailing={(
+              <span className="inline-flex min-h-11 items-center rounded-full border border-hairline bg-elevated px-4 text-sm font-semibold tabular-nums text-ink-2">
+                {sortedArticles.length} article{sortedArticles.length > 1 ? 's' : ''}
+              </span>
             )}
-          </>
-        )}
+            trailingAllWidths
+          />
+
+          {sortedArticles.length === 0 ? (
+            <div className="rounded-2xl border border-hairline bg-elevated px-6 py-12 text-center">
+              <p className="text-ink-3">Aucun article dans cette catégorie.</p>
+            </div>
+          ) : (
+            <>
+              {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-5 lg:grid-cols-3 xl:gap-6">
+                {cardData.map(({ article, excerpt, readingMinutes }, index) => (
+                  <BlogCard
+                    key={`blog-${currentPage}-${article.id}`}
+                    article={article}
+                    excerpt={excerpt}
+                    readingMinutes={readingMinutes}
+                    priority={index < 3}
+                  />
+                ))}
+              </div>
+
+              {/* Compact pagination – "‹ 1/37 ›" style */}
+              {totalPages > 1 && (
+                <nav className="mt-6 flex justify-center lg:mt-8" aria-label="Pagination du blog">
+                  <div className="inline-flex items-center gap-2 rounded-2xl border border-hairline bg-elevated p-1.5">
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-40"
+                      aria-label="Page précédente"
+                    >
+                      <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                    <span
+                      className="min-w-[4.5rem] text-center font-display text-sm font-bold tabular-nums text-ink-1"
+                      aria-live="polite"
+                    >
+                      {currentPage} / {totalPages}
+                    </span>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-40"
+                      aria-label="Page suivante"
+                    >
+                      <ChevronRight className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </div>
+                </nav>
+              )}
+            </>
+          )}
+        </Section>
       </main>
 
       <ScrollToTop />
-    </div>
+    </>
   );
 }

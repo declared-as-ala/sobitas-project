@@ -1,6 +1,8 @@
 import { Metadata } from 'next';
 import Link from 'next/link';
 import { Suspense } from 'react';
+import { ArrowUpRight, BookOpen, ChevronDown } from 'lucide-react';
+import { Section } from '@/app/components/layout/Section';
 import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
@@ -162,34 +164,56 @@ export default async function BlogPage() {
         anchor pointing at them from anywhere on the site — they were reachable only via the
         sitemap, which is discovery without any link equity or crawl priority.
 
-        This is a real, visible archive list rather than hidden markup or a duplicate paginated
+        This is a real, user-accessible archive rather than hidden markup or a duplicate paginated
         surface: every article gets one honest internal link, it needs no extra fetch (the server
         component already has the full list for the JSON-LD above), and it stays correct as the
-        blog grows. Deliberately NOT hidden — cloaked link farms are exactly what this site has
-        just finished cleaning up.
+        blog grows. Native <details> keeps the full list in the server HTML while letting visitors
+        choose when to expand the library instead of forcing a 100-link wall into the page flow.
       */}
       {list.length > 0 && (
-        <nav aria-label="Tous les articles" className="mx-auto w-full max-w-7xl px-4 pb-12 sm:px-6 lg:px-8">
-          <h2 className="font-display text-lg font-semibold text-gray-900 dark:text-white">
-            Tous les articles ({list.length})
-          </h2>
-          <ul className="mt-4 grid grid-cols-1 gap-x-6 gap-y-2 sm:grid-cols-2 lg:grid-cols-3">
-            {list.map((a: { designation_fr?: string; slug?: string }) => {
-              const slug = (a.slug ?? '').trim();
-              if (!slug) return null;
-              return (
-                <li key={slug} className="text-sm leading-snug">
-                  <Link
-                    href={`/blog/${encodeURIComponent(slug)}`}
-                    className="text-gray-600 underline-offset-2 hover:text-red-600 hover:underline dark:text-gray-400 dark:hover:text-red-400"
-                  >
-                    {decodeHtmlEntities(a.designation_fr || slug)}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+        <Section surface="base" spacing="tight" width="wide" last>
+          <nav aria-labelledby="blog-archive-title">
+            <h2 id="blog-archive-title" className="sr-only">Archive complète du blog</h2>
+            <details className="group overflow-hidden rounded-2xl border border-hairline bg-elevated">
+              <summary className="flex min-h-[88px] cursor-pointer list-none items-center gap-3 px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:gap-4 sm:px-6 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand">
+                  <BookOpen className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+                    Archives du blog
+                  </span>
+                  <span className="mt-1 block font-display text-lg font-bold leading-tight text-ink-1 sm:text-xl">
+                    Explorer tous nos guides
+                  </span>
+                  <span className="mt-1 block text-sm text-ink-2">
+                    {list.length} articles, réunis dans une bibliothèque facile à parcourir.
+                  </span>
+                </span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <div className="border-t border-hairline bg-canvas p-3 sm:p-5">
+                <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
+                  {list.map((a: { designation_fr?: string; slug?: string }) => {
+                    const slug = (a.slug ?? '').trim();
+                    if (!slug) return null;
+                    return (
+                      <li key={slug} className="min-w-0">
+                        <Link
+                          href={`/blog/${encodeURIComponent(slug)}`}
+                          className="group/link flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        >
+                          <span>{decodeHtmlEntities(a.designation_fr || slug)}</span>
+                          <ArrowUpRight className="h-3.5 w-3.5 shrink-0 opacity-0 transition-opacity group-hover/link:opacity-100" aria-hidden="true" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            </details>
+          </nav>
+        </Section>
       )}
     </>
   );

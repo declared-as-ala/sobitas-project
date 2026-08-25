@@ -12,27 +12,6 @@
     "DS008": 1,
     "DS011": 7
   },
-  "src/app/(shop)/blog/BlogCard.tsx": {
-    "DS001": 8,
-    "DS002": 13,
-    "DS003": 9,
-    "DS004": 4,
-    "DS011": 9
-  },
-  "src/app/(shop)/blog/BlogListSkeleton.tsx": {
-    "DS001": 2,
-    "DS002": 1,
-    "DS007": 1,
-    "DS008": 1
-  },
-  "src/app/(shop)/blog/BlogPageClient.tsx": {
-    "DS001": 2,
-    "DS002": 10,
-    "DS003": 8,
-    "DS004": 10,
-    "DS007": 1,
-    "DS011": 22
-  },
   "src/app/(shop)/blog/BlogPager.tsx": {
     "DS002": 3,
     "DS003": 3,
@@ -77,12 +56,6 @@
     "DS007": 1,
     "DS008": 1,
     "DS011": 10
-  },
-  "src/app/(shop)/blog/page.tsx": {
-    "DS002": 2,
-    "DS003": 3,
-    "DS007": 1,
-    "DS011": 2
   },
   "src/app/(shop)/blog/tag/[slug]/page.tsx": {
     "DS001": 2,
@@ -263,11 +236,6 @@
     "DS003": 1,
     "DS004": 2,
     "DS011": 10
-  },
-  "src/app/components/BlogCardSkeleton.tsx": {
-    "DS001": 2,
-    "DS002": 3,
-    "DS004": 4
   },
   "src/app/components/CategoryGrid.tsx": {
     "DS001": 4,
