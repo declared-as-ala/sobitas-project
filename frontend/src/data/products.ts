@@ -56,7 +56,7 @@ export const productsData: Product[] = [
     price: 330,
     priceText: "330 DT289 DT",
     image: "https://admin.protein.tn/storage/produits/January2026/100_pure_whey_227kg_-_biotech_usa.webp",
-    link: "/proteine-whey/100-pure-whey-2-27kg-biotech-usa",
+    link: "/whey-proteine/100-pure-whey-2-27kg-biotech-usa",
     category: "Protéines",
     description: null
   },
@@ -66,7 +66,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT359 DT",
     image: "https://admin.protein.tn/storage/produits/May2024/iso_sensation_93_227kg.webp",
-    link: "/proteine-whey/iso-sensation-93-2-27kg",
+    link: "/whey-proteine/iso-sensation-93-2-27kg",
     category: "Protéines",
     description: null
   },
@@ -76,7 +76,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT359 DT",
     image: "https://admin.protein.tn/storage/produits/July2025/iso_hd_22kg_-_bpi_sports.webp",
-    link: "/proteine-whey/iso-hd-2-2kg-bpi-sports",
+    link: "/whey-proteine/iso-hd-2-2kg-bpi-sports",
     category: "Protéines",
     description: null
   },
@@ -86,7 +86,7 @@ export const productsData: Product[] = [
     price: 350,
     priceText: "350 DT299 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/gold_iso_2_kg_-_kevin_levrone.webp",
-    link: "/proteine-whey/gold-iso-2-kg-kevin-levrone",
+    link: "/whey-proteine/gold-iso-2-kg-kevin-levrone",
     category: "Protéines",
     description: null
   },

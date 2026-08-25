@@ -12,13 +12,13 @@ export interface TunisiaCategoryKeywords {
 
 export const tunisiaCategoryKeywords: Record<string, TunisiaCategoryKeywords> = {
   // Main protein category
-  'proteine-whey': {
+  'whey-proteine': {
     primary: 'Whey Protéine Tunisie',
-    variations: ['whey protein tunisie', 'proteine whey tunisie', 'whey pas cher tunisie', 'whey isolate tunisie', 'whey concentre tunisie'],
-    description: 'Découvrez notre sélection de whey protein en Tunisie. Whey isolé, concentré, hydrolysé - livraison rapide partout en Tunisie.',
+    variations: ['whey protein tunisie', 'protéine whey tunisie', 'prix whey tunisie', 'whey isolate tunisie', 'whey concentrée tunisie'],
+    description: 'Comparez les whey protein disponibles en Tunisie : concentrée, isolate et hydrolysée, avec prix en dinars, stock réel et livraison nationale.',
     faqQuestions: [
-      { question: 'Quelle whey choisir en Tunisie ?', answer: 'Pour une absorption rapide et un dosage optimal en protéines, la whey isolate est recommandée. La whey concentré offre un meilleur rapport qualité-prix.' },
-      { question: 'La whey protein est-elle disponible en livraison en Tunisie ?', answer: 'Oui, nous livrons dans tout le pays - Tunis, Sousse, Sfax, etc. Livraison gratuite dès 200 DT.' },
+      { question: 'Quelle whey choisir en Tunisie ?', answer: 'La whey concentrée convient à la plupart des budgets. Une isolate contient généralement plus de protéines et moins de lactose : comparez surtout la composition, le format et le prix par portion.' },
+      { question: 'La whey protein est-elle livrée partout en Tunisie ?', answer: 'Oui, les produits affichés en stock peuvent être commandés en ligne et livrés dans les 24 gouvernorats tunisiens.' },
     ],
   },
   'proteine': {
@@ -54,13 +54,13 @@ export const tunisiaCategoryKeywords: Record<string, TunisiaCategoryKeywords> = 
 
   // Creatine
   creatine: {
-    primary: 'Creatine Tunisie',
-    variations: ['crétine tunisie', 'créatine monohydrate tunisie', 'creatine monohydrate tunisie', 'creatine HCL tunisie', 'creatine capsules tunisie'],
-    description: 'Creatine de qualité professionnelle en Tunisie. Monohydrate, HCL, Effervescente - améliorez vos performances.',
+    primary: 'Créatine Tunisie',
+    variations: ['créatine tunisie', 'créatine monohydrate tunisie', 'creatine monohydrate tunisie', 'prix creatine tunisie', 'creatine capsules tunisie'],
+    description: 'Comparez les créatines disponibles en Tunisie : monohydrate, micronisée et capsules, avec prix en dinars, stock réel et livraison nationale.',
     faqQuestions: [
-      { question: 'Quelle creatine choisir en Tunisie ?', answer: 'La creatine monohydrate est le format le plus étudié et le plus efficace. Elle est aussi la plus économique.' },
-      { question: 'La creatine est-elle légale en Tunisie ?', answer: 'Oui, la creatine est légale et disponible sans ordonnance en Tunisie.' },
-      { question: 'Comment prendre la creatine ?', answer: 'Prendre 3-5g par jour, de préférence après l\'entraînement. Un cycle de 8-12 semaines est recommandé.' },
+      { question: 'Quelle créatine choisir en Tunisie ?', answer: 'La créatine monohydrate est la forme la plus étudiée et généralement la plus économique. Comparez la quantité nette, le prix au gramme et la traçabilité du produit.' },
+      { question: 'La créatine est-elle disponible en Tunisie ?', answer: 'Oui, plusieurs formats de créatine sont proposés à la vente en Tunisie. Vérifiez la disponibilité et les informations du produit avant de commander.' },
+      { question: 'Comment prendre la créatine ?', answer: 'La dose courante indiquée sur de nombreux produits est de 3 à 5 g par jour. Suivez l’étiquette et demandez un avis médical en cas de maladie, de traitement ou de doute.' },
     ],
   },
 

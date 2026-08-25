@@ -20,11 +20,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où acheter de la whey en Tunisie ?", answer: "Proteine Tunisie propose une large gamme de whey protein en Tunisie avec livraison à Sousse, Tunis et Sfax. Consultez notre catégorie whey protein tunisie pour les prix et la livraison." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
-      { anchor: 'acheter whey en tunisie', href: '/proteine-whey' },
-      { anchor: 'meilleure whey protein', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
+      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
-      { anchor: 'prix whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'prix whey Tunisie', href: '/whey-proteine' },
     ],
   },
   'whey-ou-isolate': {
@@ -33,10 +33,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Quel est le meilleur prix isolate whey Tunisie ?", answer: "Proteine Tunisie propose des isolats de whey à des prix compétitifs. Consultez notre catégorie whey protein tunisie pour comparer les prix et la livraison en Tunisie." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
-      { anchor: 'acheter whey en tunisie', href: '/proteine-whey' },
-      { anchor: 'meilleure whey protein', href: '/proteine-whey' },
-      { anchor: 'isolat whey tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
+      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
+      { anchor: 'isolat whey tunisie', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
     ],
   },
@@ -49,7 +49,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'creatine tunisie', href: '/creatine' },
       { anchor: 'creatine monohydrate prix tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
   'bcaa-utile-ou-pas': {
@@ -60,7 +60,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'bcaa tunisie', href: '/bcaa' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
     ],
   },
@@ -72,7 +72,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'créatine Tunisie', href: '/creatine' },
       { anchor: 'comment prendre creatine', href: '/blog/comment-prendre-creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -86,7 +86,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les prix de nos créatines', href: '/creatine' },
       { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -98,7 +98,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
       { anchor: 'acheter créatine originale en Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -110,7 +110,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
       { anchor: 'créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -134,7 +134,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'choisir votre créatine sur Protein.tn', href: '/creatine' },
       { anchor: 'créatine Creapure® Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -146,7 +146,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les prix de nos créatines', href: '/creatine' },
       { anchor: 'sélection créatine Protein.tn', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -157,7 +157,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les créatines disponibles', href: '/creatine' },
       { anchor: 'acheter créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey', href: '/proteine-whey' },
+      { anchor: 'protéines whey', href: '/whey-proteine' },
     ],
   },
 
@@ -168,7 +168,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'acheter créatine en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
       { anchor: 'gainers prise de masse Tunisie', href: '/gainers-proteines' },
     ],
   },
@@ -181,7 +181,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
       { anchor: 'acheter créatine originale Tunisie', href: '/creatine' },
-      { anchor: 'whey protein originale tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein originale tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -193,7 +193,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
       { anchor: 'voir les créatines disponibles', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -205,7 +205,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
       { anchor: 'créatine Tunisie prix', href: '/creatine' },
-      { anchor: 'whey protein Tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein Tunisie', href: '/whey-proteine' },
     ],
   },
 };

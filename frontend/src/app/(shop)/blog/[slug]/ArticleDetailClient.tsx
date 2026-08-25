@@ -440,7 +440,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
             <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                <Link href="/proteine-whey" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
+                <Link href="/whey-proteine" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/whey-proteine" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/whey-proteine" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
               </p>
             </div>
           )}

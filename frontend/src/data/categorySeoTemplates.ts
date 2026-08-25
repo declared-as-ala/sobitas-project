@@ -19,7 +19,7 @@ export interface CategorySeoTemplate {
 export const categorySeoTemplates: CategorySeoTemplate[] = [
   // ============ PROTEINES ============
   {
-    slug: 'proteine-whey',
+    slug: 'whey-proteine',
     name: 'Protéine Whey',
     metaTitle: 'Whey Protein Tunisie | Acheter Whey Pas Cher',
     metaDescription: 'Whey protein de qualité premium en Tunisie. Whey isolate, concentré, hydrolysé. Livraison rapide dans tout le pays. Protéine authentique au meilleur prix.',

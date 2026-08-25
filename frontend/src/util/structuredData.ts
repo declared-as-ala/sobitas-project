@@ -1184,7 +1184,12 @@ export function buildArticleSchema(article: {
   const rawAuthor = String(article.seo?.author || article.schema?.author || '').trim();
   const author = rawAuthor && rawAuthor !== SITE_BRAND_NAME
     ? { '@type': 'Person', name: rawAuthor }
-    : { '@type': 'Organization', name: SITE_BRAND_NAME, '@id': `${base}/#organization` };
+    : {
+        '@type': 'Organization',
+        name: SITE_BRAND_NAME,
+        '@id': `${base}/#organization`,
+        url: base,
+      };
   return {
     '@context': 'https://schema.org',
     '@type': article.schema?.type || 'BlogPosting',
