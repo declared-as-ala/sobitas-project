@@ -268,7 +268,7 @@ function buildRedirects() {
     p('/protein-vegan-1-5kg-eric-favre', '/proteines'),
     p('/proteine', '/proteines'),
     p('/proteine-de-caseine', '/proteines'),
-    p('/proteine-whey', '/whey-isolate'),
+    p('/proteine-whey', '/whey-proteine'),
     p('/serious-mass-5-45-kg-optimum-nutrition', '/gainers-proteines'),
     p('/serious-mass-5-45kg', '/gainers-proteines'),
     p('/squat-rack-jx-fitness', '/musculation/squat-rack-jx-fitness'),
@@ -283,7 +283,9 @@ function buildRedirects() {
     // ── Legacy category roots (from the GSC "Not found (404)" export) ─────
     // Old WooCommerce category slugs that changed name → current category. Destinations
     // verified against the live taxonomy. (Genuinely-removed products are left to 404.)
-    p('/whey-protein', '/whey-isolate'),
+    // Broad whey aliases belong on the full commercial category, not the isolate-only subset.
+    p('/whey', '/whey-proteine'),
+    p('/whey-protein', '/whey-proteine'),
     p('/proteines-en-poudre', '/proteines'),
     p('/proteine-en-poudre', '/proteines'),
     p('/proteines-completes', '/proteines'),

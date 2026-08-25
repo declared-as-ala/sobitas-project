@@ -168,7 +168,7 @@ export function SectionHeader({
         // control in the band, so it is worth being reachable.
         <div
           className={`shrink-0 items-center gap-3 sm:flex sm:pb-1 ${
-            trailingAllWidths ? 'flex' : 'hidden'
+            trailingAllWidths ? 'flex max-sm:w-full' : 'hidden'
           }`}
         >
           {trailing}

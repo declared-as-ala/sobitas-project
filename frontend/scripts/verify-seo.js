@@ -35,8 +35,16 @@ const INDEXABLE_PATHS = [
 ];
 
 const REDIRECT_CHECKS = [
-  { from: '/product/whey-protein', expectPath: '/shop/whey-protein', desc: '/product/:slug → /shop/:slug' },
-  { from: '/products/whey-protein', expectPath: '/shop/whey-protein', desc: '/products/:slug (non-numeric) → /shop/:slug' },
+  {
+    from: '/product/100-creatine-monohydrate-300g-biotech-usa',
+    expectPath: '/creatine/100-creatine-monohydrate-300g-biotech-usa',
+    desc: '/product/:slug → canonical product URL',
+  },
+  {
+    from: '/products/100-creatine-monohydrate-300g-biotech-usa',
+    expectPath: '/creatine/100-creatine-monohydrate-300g-biotech-usa',
+    desc: '/products/:slug (non-numeric) → canonical product URL',
+  },
 ];
 
 const META_TITLE_MIN = 30;

@@ -214,7 +214,7 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
        The hover edge goes from `border-rule` (a neutral grey) to the brand at 40%: this band's
        cards are the only ones on the page whose subject is a discount, and the one colour they
        are allowed to react in is the one already printed on every badge inside them. */
-    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-2.5 overflow-hidden rounded-xl border border-hairline p-2.5 font-poppins transition-colors duration-200 ease-out [@media(hover:hover)]:hover:border-brand/40">
+    <div className="pt-plate group relative flex h-full w-full min-w-0 flex-row items-center gap-2.5 overflow-hidden rounded-xl border border-brand/20 p-2.5 font-poppins transition-colors duration-200 ease-out before:absolute before:inset-x-0 before:top-0 before:h-0.5 before:bg-brand [@media(hover:hover)]:hover:border-brand/50">
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement"
@@ -234,10 +234,10 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: FlashDealC
             is 177px wide at 430px or 363px wide at 1920. The `aspect-square w-full` version this
             replaces made every card as tall as it was wide, which is why the 390px phone band
             measured 1,227px. */}
-        {/* 80px at every width, down from 88 at `sm`. The packshot is an identifier here, not
-            the sell — the price and the badge are — and a 4-across row card cannot afford 88px of
-            it plus a 44px control plus two lines of name inside 286px. */}
-        <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-sunken">
+        {/* 64px in the phone rail, 80px from `sm`. The packshot is an identifier here, not the
+            sell, and the smaller mobile step gives the name and price enough room while the next
+            snap card remains visible as the rail's discovery cue. */}
+        <div className="pt-logo-well relative h-16 w-16 shrink-0 overflow-hidden rounded-lg sm:h-20 sm:w-20">
           {image ? (
             <Image
               src={image}

@@ -40,6 +40,65 @@ function stripHtml(html: string): string {
   return htmlToText(html, 160);
 }
 
+const ARTICLE_TOPIC_PATTERNS = [
+  /\bwhey\b/i,
+  /cr[eé]atine/i,
+  /om[eé]ga\s*3/i,
+  /magn[eé]sium/i,
+  /\bbcaa\b/i,
+  /pre[- ]?workout/i,
+  /gainer|prise de masse/i,
+  /collag[eè]ne/i,
+];
+
+/**
+ * Keep a Filament SEO title when it names the article's subject. If a generic campaign title drops
+ * that subject, use the concise first clause of the visible H1 instead. This is deliberately an
+ * alignment guard, not an override table: editors still control every topic-aligned title.
+ */
+function topicAlignedArticleHeadline(preferred: string, visibleHeadline: string): string {
+  const preferredTitle = preferred.trim();
+  const visibleTitle = visibleHeadline.trim();
+  if (!visibleTitle) return preferredTitle;
+
+  const visibleIsArabic = /[\u0600-\u06ff]/u.test(visibleTitle);
+  const preferredIsArabic = /[\u0600-\u06ff]/u.test(preferredTitle);
+  const dropsLanguage = visibleIsArabic && !preferredIsArabic;
+  const dropsCoreTopic = ARTICLE_TOPIC_PATTERNS.some(
+    (pattern) => pattern.test(visibleTitle) && !pattern.test(preferredTitle)
+  );
+
+  if (preferredTitle && !dropsLanguage && !dropsCoreTopic) return preferredTitle;
+
+  const firstClause = visibleTitle.split(/\s+(?:[|—–])\s+|\s*[:?!]\s*/u, 1)[0]?.trim();
+  return firstClause && firstClause.length >= 12 ? firstClause : visibleTitle;
+}
+
+/**
+ * Apply the same alignment rule to snippets. A generic campaign description is useful across a
+ * landing page, but on an article it can erase the exact subject that earned the impression.
+ * Preserve topic-aligned editor copy; otherwise fall back to the article's own opening text.
+ */
+function topicAlignedArticleDescription(
+  preferred: string,
+  articleOpening: string,
+  visibleHeadline: string
+): string {
+  const preferredDescription = preferred.trim();
+  const opening = articleOpening.trim();
+  const visibleTitle = visibleHeadline.trim();
+  if (!preferredDescription) return opening;
+
+  const visibleIsArabic = /[\u0600-\u06ff]/u.test(visibleTitle);
+  const preferredIsArabic = /[\u0600-\u06ff]/u.test(preferredDescription);
+  const dropsLanguage = visibleIsArabic && !preferredIsArabic;
+  const dropsCoreTopic = ARTICLE_TOPIC_PATTERNS.some(
+    (pattern) => pattern.test(visibleTitle) && !pattern.test(preferredDescription)
+  );
+
+  return !dropsLanguage && !dropsCoreTopic ? preferredDescription : opening || preferredDescription;
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
@@ -53,17 +112,25 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // The headline, resolved BEFORE the description because the description is built relative to
     // it — an article body opens with its own headline, so stripping tags leaves the title
     // restated as the first words of the snippet.
-    const articleHeadline =
+    const storedHeadline =
       article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+    const articleHeadline = topicAlignedArticleHeadline(
+      storedHeadline,
+      article.designation_fr || storedHeadline
+    );
 
     // buildMetaDescription wraps the RESOLVED value, not just the fallback: seo.description and
     // meta_description_fr are CMS fields and carry the same raw entities AND the same repeated
     // headline. It decodes, drops that repetition, and truncates on a word boundary.
+    const storedDescription =
+      article.seo?.description || article.seo_description || article.meta_description_fr || '';
+    const alignedDescription = topicAlignedArticleDescription(
+      storedDescription,
+      description,
+      article.designation_fr || articleHeadline
+    );
     const metaDescription = buildMetaDescription(
-      article.seo?.description ||
-        article.seo_description ||
-        article.meta_description_fr ||
-        description ||
+      alignedDescription ||
         `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
       { title: articleHeadline, maxLen: 500 }
     );

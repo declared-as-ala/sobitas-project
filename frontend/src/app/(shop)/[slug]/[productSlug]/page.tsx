@@ -20,6 +20,7 @@ import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 import { buildMetaDescription } from '@/util/sanitizeProductHtml';
 import { getComplementProducts } from '@/services/productComplements';
+import { getPriceDisplay } from '@/util/productPrice';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -68,7 +69,29 @@ function productDescription(product: Product, productName: string): string {
   const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
   if (explicit?.trim()) {
     const plain = buildMetaDescription(explicit, { title: productName, maxLen: 160 });
-    if (plain) return plain;
+    if (plain) {
+      /*
+       * Imported catalogue rows often carry one identical template with only the category changed:
+       * "… en Tunisie. Livraison 24-72h… paiement… authentique." It is valid text but weak SERP
+       * copy—the highest-impression example, Omega 3 Fish Oil, earned 3,475 impressions at position
+       * 7.4 and only 0.75% CTR. Google explicitly recommends bringing scattered product facts such
+       * as price together in a product description, so enrich ONLY that known template. Hand-written
+       * benefit copy remains authoritative.
+       */
+      const isGenericImportTemplate =
+        /livraison\s+24\s*[-–]\s*72h/i.test(plain) &&
+        /paiement\s+[àa]\s+la\s+livraison/i.test(plain) &&
+        /authentique/i.test(plain);
+
+      if (!isGenericImportTemplate) return plain;
+
+      const price = getPriceDisplay(product).finalPrice;
+      const priceText = Number.isFinite(price) && price > 0 ? ` : ${Math.round(price)} DT` : '';
+      return buildMetaDescription(
+        `${productName}${priceText}. Livraison 24–72h partout en Tunisie, paiement à la livraison. Produit authentique.`,
+        { maxLen: 160 }
+      );
+    }
   }
   // Leave room for the trust line rather than truncating it away.
   const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });

@@ -217,7 +217,7 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
        `measure-flash` asserts at that width. */
     <div
       ref={stripRef}
-      className="flex flex-wrap items-center gap-x-2.5 gap-y-1.5 sm:gap-x-3"
+      className="flex w-full flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl border border-brand/20 bg-elevated px-3 py-2.5 sm:w-auto sm:gap-x-3"
       aria-hidden="true"
     >
       <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
@@ -462,10 +462,19 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           Everything it was carrying is carried by parts the rest of the page already uses: the
           separation by the 4px brand edge above, the urgency by the flame, the `Jusqu'a -24%`
           kicker, the live clock, and the orange badge already painted on every card. */}
-      <SectionHeader
-        id="ventes-flash-heading"
-        kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
-        icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
+      <div className="border-l-4 border-brand pl-4 sm:pl-5">
+        <SectionHeader
+          id="ventes-flash-heading"
+          kicker={
+            earliestExpiration
+              ? maxDiscount > 0
+                ? `En direct · jusqu'à −${maxDiscount}%`
+                : 'En direct · offres limitées'
+              : maxDiscount > 0
+                ? `Jusqu'à −${maxDiscount}%`
+                : 'Offres limitées'
+          }
+          icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
         /*
           THE TITLE FOLLOWS THE DATA, because the alternative is a lie with a name.
 
@@ -478,7 +487,12 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
           the homepage falls back to the deepest real discounts it already holds (HomePageClient),
           which have no deadline. Same band, same layout, honest label.
         */
-        title={earliestExpiration ? 'Ventes flash' : 'Meilleures promos'}
+          title={earliestExpiration ? 'Ventes flash' : 'Meilleures promos'}
+          subtitle={
+            earliestExpiration
+              ? 'Les prix baissent, le chrono tourne.'
+              : 'Une sélection courte, des remises bien visibles.'
+          }
         /* ── THE CLOCK RETURNS TO THE HEADING ROW, WITHOUT THE BUG THAT MOVED IT OFF ──────
            It was pulled out of `trailing` because that slot is `hidden … sm:flex`, so on a phone
            — most of this site's traffic — the urgency device did not exist at all. It went to a
@@ -489,8 +503,8 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
            `trailingAllWidths` fixes the original bug at its source instead: ONE node, rendered
            beside the title from `sm` and under it below that. Not two copies — this node owns an
            IntersectionObserver and a 1s interval, and `display: none` stops neither. */
-        trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
-        trailingAllWidths
+          trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
+          trailingAllWidths
         /* `scale="2"` IS DELIBERATE AND HAD TO SURVIVE THIS PASS. SectionHeader reserves scale 1
            to the three rails that sell and names this band as the documented scale-2 case: it
            keeps its urgency from the brand edge and the live clock, not from type size. Uniform
@@ -508,7 +522,8 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
            footer and reachable from the boutique nav, and this band's job is now what its name says
            — showing what is discounted right now. Three consecutive bands each carrying a
            "Tout voir" is what made the page read as a list of shops rather than one shop. */
-      />
+        />
+      </div>
 
       {/* The spoken deadline, once, as an absolute date. Separate from the strip above because
           that strip is `aria-hidden` — live digits are either a screen-reader firehose (with
@@ -552,12 +567,15 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
            band's card is a row and theirs is a column, which is what keeps this band a banner —
            a row card simply does not fit four-across in a 950px container, and the honest way to
            say that is in the column count rather than by letting the text break. */
-        className="md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+        className="scrollbar-hide flex snap-x snap-mandatory overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
         as="ul"
         role="list"
       >
         {products.map((product) => (
-          <li key={product.id}>
+          <li
+            key={product.id}
+            className="w-[calc(100%-2rem)] min-w-0 flex-none snap-start sm:w-auto"
+          >
             <FlashDealCard product={product} />
           </li>
         ))}
