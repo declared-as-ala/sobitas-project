@@ -25,6 +25,14 @@ function passwordProblem(pw: string): string | null {
   return null;
 }
 
+function normalizeTunisianPhone(value: string): string | null {
+  let digits = value.replace(/\D/g, '');
+  if (digits.startsWith('00216')) digits = digits.slice(5);
+  if (digits.startsWith('216') && digits.length === 11) digits = digits.slice(3);
+
+  return /^[234579]\d{7}$/.test(digits) ? `+216${digits}` : null;
+}
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -46,9 +54,19 @@ export default function RegisterPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    const name = formData.name.trim();
+    if (name.length < 2) {
+      toast.error('Saisissez votre nom complet.');
+      return;
+    }
     const problem = passwordProblem(formData.password);
     if (problem) {
       toast.error(problem);
+      return;
+    }
+    const phone = normalizeTunisianPhone(formData.phone);
+    if (!phone) {
+      toast.error('Saisissez un numéro tunisien valide à 8 chiffres.');
       return;
     }
     /*
@@ -66,9 +84,9 @@ export default function RegisterPage() {
     setIsLoading(true);
     try {
       await register({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
+        name,
+        email: formData.email.trim().toLowerCase(),
+        phone,
         password: formData.password,
         role_id: 2, // customer; the server sets this itself and never trusts the field
       });
@@ -100,16 +118,9 @@ export default function RegisterPage() {
   return (
     <AuthShell>
       <AuthCardHeader
-        kicker="Créer un compte"
-        title="Rejoignez-nous"
+        title="Créer mon compte"
         subtitleDesktopOnly
-        /* The subtitle leads with the number, because on a phone this line IS the benefits panel:
-           the brand column is `hidden lg:flex`, and the compact lists sit below the form. Three
-           words of it are the only argument a mobile visitor reads before deciding to type. */
-        /* One line on a phone. The 5% claim moved to `MobileBenefitLine` above the card, so
-           repeating it here was ~50px of the same sentence twice on the screen that measured
-           507px too tall. What is left is the OTHER reason, and the time cost. */
-        subtitle="Suivez vos commandes et cumulez des points. En une minute."
+        subtitle="Vos commandes et vos points, au même endroit."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -140,10 +151,10 @@ export default function RegisterPage() {
           label="Téléphone"
           Icon={Phone}
           type="tel"
-          inputMode="tel"
-          placeholder="+216 XX XXX XXX"
+          inputMode="numeric"
+          placeholder="20 000 000"
           autoComplete="tel"
-          hint="Pour confirmer votre commande."
+          maxLength={16}
           value={formData.phone}
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           required

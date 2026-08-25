@@ -77,7 +77,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->getResetPasswordUrl($token, $this);
 
         $user     = $this;
-        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromAddr = (string) config('mail.from.address');
         $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PartnerInviteReset: attempting send', [
@@ -134,7 +134,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
 
         $user     = $this;
-        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromAddr = (string) config('mail.from.address');
         $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PasswordReset: attempting to send reset email', [

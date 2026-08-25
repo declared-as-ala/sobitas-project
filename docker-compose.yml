@@ -115,12 +115,16 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      MAIL_MAILER: smtp
-      MAIL_HOST: smtp.gmail.com
-      MAIL_PORT: "587"
-      MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
-      MAIL_FROM_NAME: Protein.tn
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Protein.tn}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@protein.tn}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
     networks:
       - sobitas-net
     expose:
@@ -281,12 +285,16 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      MAIL_MAILER: smtp
-      MAIL_HOST: smtp.gmail.com
-      MAIL_PORT: "587"
-      MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
-      MAIL_FROM_NAME: Protein.tn
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-Protein.tn}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-contact@protein.tn}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
     command: >
       php artisan queue:work redis
       --sleep=3

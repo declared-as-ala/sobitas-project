@@ -32,6 +32,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const isFetchingOrdersRef = useRef(false);
 
+  const clearStoredSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const establishSession = async (token: string, seed: Partial<User>) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(seed));
+
+    try {
+      const profile = await getProfile();
+      setUser(profile);
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch (error) {
+      clearStoredSession();
+      throw error;
+    }
+  };
+
   // Load user from localStorage on mount
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -62,21 +82,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiLogin(credentials);
       
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      const userData: User = {
+      await establishSession(response.token, {
         id: response.id,
         name: response.name,
         email: credentials.email,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Fetch full profile
-      const profile = await getProfile();
-      setUser(profile);
-      localStorage.setItem('user', JSON.stringify(profile));
+      });
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
+      throw new Error(error.response?.data?.message || 'Connexion impossible. Réessayez.');
     }
   };
 
@@ -84,22 +96,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiRegister(data);
       
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      const userData: User = {
+      await establishSession(response.token, {
         id: response.id,
         name: response.name,
         email: data.email,
         phone: data.phone,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Fetch full profile
-      const profile = await getProfile();
-      setUser(profile);
-      localStorage.setItem('user', JSON.stringify(profile));
+      });
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
+      const firstValidationError = Object.values(error.response?.data?.errors ?? {})
+        .flat()
+        .find((message) => typeof message === 'string');
+      throw new Error(firstValidationError || error.response?.data?.message || 'Inscription impossible. Réessayez.');
     }
   };
 
@@ -114,20 +121,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loginWithGoogle = async (credential: string) => {
     try {
       const response = await apiLoginWithGoogle(credential);
-      localStorage.setItem('token', response.token);
-      localStorage.setItem('user', JSON.stringify({ id: response.id, name: response.name }));
-      const profile = await getProfile();
-      setUser(profile);
-      localStorage.setItem('user', JSON.stringify(profile));
+      await establishSession(response.token, { id: response.id, name: response.name });
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Connexion Google impossible');
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
+    clearStoredSession();
     setOrders([]);
     setOrdersError(null);
     setOrdersLoading(false);

@@ -33,12 +33,15 @@ class NotificationsDoctor extends Command
     protected $signature = 'notifications:doctor
                             {--order= : An order id or numero to render the real messages for}
                             {--send-email= : Send the customer confirmation to THIS address}
-                            {--send-sms= : Send the confirmation SMS to THIS number}';
+                            {--send-sms= : Send the confirmation SMS to THIS number}
+                            {--strict : Return a failure code when production notification configuration is incomplete}';
 
     protected $description = 'Report how order emails and SMS are configured, and optionally send a test';
 
     public function handle(): int
     {
+        $strict = (bool) $this->option('strict');
+        $issues = [];
         $this->line('');
         $this->components->info('E-MAIL');
 
@@ -56,6 +59,25 @@ class NotificationsDoctor extends Command
             ['admin_emails', $admins ? implode(', ', $admins) : '(aucun)'],
             ['queue', config('queue.default')],
         ]);
+
+        if ($mailer !== 'smtp') {
+            $issues[] = "MAIL_MAILER={$mailer} (smtp attendu en production)";
+        }
+        foreach ([
+            'MAIL_HOST' => $host,
+            'MAIL_USERNAME' => $user,
+            'MAIL_FROM_ADDRESS' => $from,
+        ] as $key => $value) {
+            if (trim($value) === '' || str_ends_with(strtolower($value), '@example.com')) {
+                $issues[] = "{$key} est vide ou utilise une valeur d’exemple";
+            }
+        }
+        if ((string) config("mail.mailers.{$mailer}.password", '') === '') {
+            $issues[] = 'MAIL_PASSWORD est vide';
+        }
+        if ($admins === []) {
+            $issues[] = 'ADMIN_EMAILS est vide';
+        }
 
         /*
          * The two things most likely to be wrong on this install, stated plainly rather than left
@@ -84,6 +106,7 @@ class NotificationsDoctor extends Command
         ]);
 
         if ($apiKey === '' || $senderId === '') {
+            $issues[] = 'SMS_API_KEY ou SMS_SENDER_ID est vide';
             $this->error('  SMS_API_KEY ou SMS_SENDER_ID manquant : SmsService s’arrête avant');
             $this->error('  l’appel et écrit un warning dans le log. Aucun client ne reçoit de SMS.');
         }
@@ -96,6 +119,15 @@ class NotificationsDoctor extends Command
         if (! $orderRef) {
             $this->line('');
             $this->line('  Passez --order=<id|numero> pour voir les messages réels d’une commande.');
+
+            if ($strict && $issues !== []) {
+                $this->line('');
+                foreach ($issues as $issue) {
+                    $this->error('  ' . $issue);
+                }
+
+                return self::FAILURE;
+            }
 
             return self::SUCCESS;
         }
@@ -156,6 +188,14 @@ class NotificationsDoctor extends Command
 
                 return self::FAILURE;
             }
+        }
+
+        if ($strict && $issues !== []) {
+            foreach ($issues as $issue) {
+                $this->error('  ' . $issue);
+            }
+
+            return self::FAILURE;
         }
 
         return self::SUCCESS;

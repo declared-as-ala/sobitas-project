@@ -214,6 +214,9 @@ jobs:
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
             fi
 
+            echo "🩺 Checking SMTP and SMS configuration (no messages are sent)..."
+            docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan notifications:doctor --strict
+
             echo "🔄 Recreating backend container with latest image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2
 
@@ -358,6 +361,9 @@ jobs:
               KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
             fi
+
+            echo "🩺 Checking SMTP and SMS configuration (no messages are sent)..."
+            docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan notifications:doctor --strict
 
             echo "🔄 Recreating backend container with latest image..."
             docker compose -f "$COMPOSE_FILE" up -d --force-recreate --no-deps backend-v2

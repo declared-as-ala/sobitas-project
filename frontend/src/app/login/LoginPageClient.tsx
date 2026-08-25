@@ -48,7 +48,10 @@ function LoginContent() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login(formData);
+      await login({
+        email: formData.email.trim().toLowerCase(),
+        password: formData.password,
+      });
       toast.success('Connexion réussie');
       router.replace(redirectTo);
     } catch (error) {
@@ -74,15 +77,9 @@ function LoginContent() {
   return (
     <AuthShell>
       <AuthCardHeader
-        kicker="Espace client"
         title="Connexion"
         subtitleDesktopOnly
-        /* "et vos adresses de livraison" was false. There is no address book in this system —
-           `AddressSelector` is a gouvernorat/délégation picker that fetches a static dataset, and
-           nothing persists a delivery address against a user. Checkout does prefill the NAME and
-           EMAIL from the profile, which is the true version of that promise and is where the
-           benefit list states it. */
-        subtitle="Retrouvez vos commandes et vos points de fidélité."
+        subtitle="Vos commandes et vos points vous attendent."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate={false}>

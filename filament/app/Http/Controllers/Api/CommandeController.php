@@ -415,24 +415,48 @@ class CommandeController extends Controller
             ]);
         }
 
-        // ── Send emails ───────────────────────────────────────────────────────────
-        try {
-            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'admin@protein.tn'));
-            $adminEmails = is_array($adminEmailsRaw)
-                ? array_filter(array_map('trim', $adminEmailsRaw))
-                : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));
-            foreach ($adminEmails as $adminEmail) {
-                Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
-            }
-
-            $clientEmail = $commande->email ?? $commande->livraison_email ?? null;
-            if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
-                Mail::to($clientEmail)->send(new OrderConfirmedCustomerMail($commande));
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send order email', [
+        // Each recipient is isolated: one broken admin address must never suppress the
+        // customer's confirmation or the other admin recipients.
+        $adminEmails = array_values(array_filter((array) config('mail.admin_emails', [])));
+        if ($adminEmails === []) {
+            Log::error('Order admin email skipped: ADMIN_EMAILS is not configured', [
                 'commande_id' => $commande->id,
-                'error'       => $e->getMessage(),
+            ]);
+        }
+        foreach ($adminEmails as $adminEmail) {
+            try {
+                Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
+                Log::info('Order admin email sent', [
+                    'commande_id' => $commande->id,
+                    'recipient' => $adminEmail,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Order admin email failed', [
+                    'commande_id' => $commande->id,
+                    'recipient' => $adminEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        $clientEmail = $commande->email ?? $commande->livraison_email ?? null;
+        if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
+            try {
+                Mail::to($clientEmail)->send(new OrderConfirmedCustomerMail($commande));
+                Log::info('Order customer email sent', [
+                    'commande_id' => $commande->id,
+                    'recipient' => $clientEmail,
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Order customer email failed', [
+                    'commande_id' => $commande->id,
+                    'recipient' => $clientEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        } else {
+            Log::warning('Order customer email skipped: invalid or missing address', [
+                'commande_id' => $commande->id,
             ]);
         }
 

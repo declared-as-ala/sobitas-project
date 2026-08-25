@@ -1885,20 +1885,22 @@ class ApisController extends Controller
         $contact->setAttribute('phone', $validated['phone'] ?? null);
         $contact->setAttribute('subject', $validated['subject'] ?? null);
 
-        try {
-            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'contact@protein.tn'));
-            $adminEmails = is_array($adminEmailsRaw)
-                ? array_filter(array_map('trim', $adminEmailsRaw))
-                : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));
-
-            foreach ($adminEmails as $adminEmail) {
-                Mail::to($adminEmail)->send(new ContactMessageMail($contact));
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send contact notification', [
+        $adminEmails = array_values(array_filter((array) config('mail.admin_emails', [])));
+        if ($adminEmails === []) {
+            Log::error('Contact admin email skipped: ADMIN_EMAILS is not configured', [
                 'contact_id' => $contact->id,
-                'error'      => $e->getMessage(),
             ]);
+        }
+        foreach ($adminEmails as $adminEmail) {
+            try {
+                Mail::to($adminEmail)->send(new ContactMessageMail($contact));
+            } catch (\Throwable $e) {
+                Log::error('Failed to send contact notification', [
+                    'contact_id' => $contact->id,
+                    'recipient' => $adminEmail,
+                    'error' => $e->getMessage(),
+                ]);
+            }
         }
 
         // Separate try/catch on purpose: the visitor's receipt failing must not suppress the
@@ -2017,7 +2019,13 @@ class ApisController extends Controller
             ->select('id', 'commande_id', 'produit_id', 'qte', 'prix_unitaire', 'prix_ht', 'prix_ttc')
             ->get();
 
-        $adminEmail = config('mail.admin_email', 'bitoutawalid@gmail.com');
+        $adminEmails = array_values(array_filter((array) config('mail.admin_emails', [])));
+        if ($adminEmails === []) {
+            return response()->json([
+                'message' => 'Aucun destinataire administrateur n’est configuré.',
+            ], 503);
+        }
+        $fromAddress = (string) config('mail.from.address');
 
         $data = [
             'titre'    => 'Nouvelle commande',
@@ -2025,9 +2033,13 @@ class ApisController extends Controller
             'details'  => $details->toArray(),
         ];
 
-        SendOrderEmailJob::dispatch($data, $adminEmail, $adminEmail);
+        foreach ($adminEmails as $adminEmail) {
+            SendOrderEmailJob::dispatch($data, (string) $adminEmail, $fromAddress);
+        }
 
-        return response()->json(['success' => 'Email en cours d\'envoi']);
+        return response()->json([
+            'success' => count($adminEmails).' e-mail(s) en cours d’envoi',
+        ]);
     }
 
     public function similar_products(int $sous_categorie_id): array

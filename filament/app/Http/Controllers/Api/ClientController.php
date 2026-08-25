@@ -67,14 +67,30 @@ class ClientController extends Controller
         ];
     }
 
+    private function normalizeTunisianPhone(string $value): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?? '';
+        if (str_starts_with($digits, '00216')) {
+            $digits = substr($digits, 5);
+        } elseif (str_starts_with($digits, '216') && strlen($digits) === 11) {
+            $digits = substr($digits, 3);
+        }
+
+        return preg_match('/^[234579]\d{7}$/', $digits) === 1 ? '+216'.$digits : null;
+    }
+
     public function login(Request $request): JsonResponse
     {
-        $request->validate([
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email'))),
+        ]);
+
+        $validated = $request->validate([
             'email'    => ['required', 'email'],
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt(['email' => $request->input('email'), 'password' => $request->input('password')])) {
+        if (Auth::attempt($validated)) {
             $user = Auth::user();
             $accessToken = $user->createToken('authToken')->plainTextToken;
 
@@ -85,17 +101,33 @@ class ClientController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Données invalides, vérifiez votre email et mot de passe'], 403);
+        return response()->json(['message' => 'E-mail ou mot de passe incorrect.'], 401);
     }
 
     public function register(Request $request): JsonResponse
     {
+        $request->merge([
+            'name'  => trim((string) $request->input('name')),
+            'email' => strtolower(trim((string) $request->input('email'))),
+        ]);
+
         $validated = $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
-            'phone'    => ['required', 'string', 'max:20'],
+            'name'     => ['required', 'string', 'min:2', 'max:255'],
+            'phone'    => [
+                'required',
+                'string',
+                'max:20',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->normalizeTunisianPhone((string) $value) === null) {
+                        $fail('Saisissez un numéro tunisien valide à 8 chiffres.');
+                    }
+                },
+            ],
             'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
         ]);
+
+        $phone = $this->normalizeTunisianPhone($validated['phone']);
 
         // role_id is intentionally non-fillable/guarded on the User model, so `User::create([...])`
         // silently DROPS it — and with a NOT NULL `users.role_id` column the insert throws (HTTP 500,
@@ -104,7 +136,7 @@ class ClientController extends Controller
         $user = (new User())->forceFill([
             'name'     => $validated['name'],
             'role_id'  => 2, // default customer role — always server-set, never from the client
-            'phone'    => $validated['phone'],
+            'phone'    => $phone,
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
         ]);

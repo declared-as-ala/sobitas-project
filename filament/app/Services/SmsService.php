@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use RuntimeException;
 
 class SmsService
 {
@@ -85,22 +86,21 @@ class SmsService
                 'phone_length' => strlen($tel),
                 'phone_last4'  => strlen($tel) >= 4 ? substr($tel, -4) : '****',
             ]);
-            return;
+            throw new RuntimeException('Numéro SMS tunisien invalide.');
         }
 
         $apiKey = config('services.sms.api_key');
         $senderId = config('services.sms.sender_id');
 
         if (! $apiKey || ! $senderId) {
-            Log::warning('SMS API key or sender ID not configured');
-            return;
+            Log::error('SMS API key or sender ID not configured');
+            throw new RuntimeException('SMS_API_KEY ou SMS_SENDER_ID non configuré.');
         }
 
         $sms = self::toGsm7($sms);
         if ($sms === '') {
             Log::warning('SMS skipped: message empty after encoding');
-
-            return;
+            throw new RuntimeException('Le SMS est vide après normalisation GSM-7.');
         }
 
         $apiUrl = 'https://www.winsmspro.com/sms/sms/api?' . http_build_query([
@@ -114,27 +114,17 @@ class SmsService
         try {
             $response = Http::timeout(15)->get($apiUrl);
 
-            /*
-             * ── THE RESPONSE USED TO BE THROWN AWAY ─────────────────────────────────────────
-             * `Http::get($apiUrl);` with the return value discarded. So an exhausted credit
-             * balance, a revoked API key, a blocked sender id or a 500 from WinSMS all looked
-             * exactly like a successful send — and the only symptom anywhere was customers not
-             * receiving anything, with nothing in the log to find.
-             *
-             * WinSMS answers 200 with a body that says what happened, so the STATUS CODE alone is
-             * not enough: the body has to be read. `code: ok` is success; anything else is logged
-             * with the payload so the reason is in the log rather than inferred.
-             */
+            // Do not discard the gateway response. HTTP failures and explicit refusal payloads
+            // must reach the queue as exceptions so Laravel can retry and operators can diagnose
+            // the actual failure instead of logging a false successful send.
             $body = trim((string) $response->body());
 
             if (! $response->successful()) {
-                Log::error('SMS gateway returned an error status', [
-                    'status'      => $response->status(),
-                    'phone_last4' => substr($tel, -4),
-                    'body'        => mb_substr($body, 0, 300),
-                ]);
-
-                return;
+                throw new RuntimeException(sprintf(
+                    'WinSMS HTTP %d: %s',
+                    $response->status(),
+                    mb_substr($body, 0, 180)
+                ));
             }
 
             $json = $response->json();
@@ -144,12 +134,7 @@ class SmsService
                 : in_array($code, ['ok', 'success', '0', '200'], true);
 
             if (! $ok) {
-                Log::error('SMS gateway refused the message', [
-                    'phone_last4' => substr($tel, -4),
-                    'body'        => mb_substr($body, 0, 300),
-                ]);
-
-                return;
+                throw new RuntimeException('WinSMS a refusé le message: '.mb_substr($body, 0, 180));
             }
 
             Log::info('SMS sent', [

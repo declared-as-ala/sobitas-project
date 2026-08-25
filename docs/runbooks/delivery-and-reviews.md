@@ -126,6 +126,7 @@ to tap.
 
 ```bash
 php artisan notifications:doctor                       # config only, sends nothing
+php artisan notifications:doctor --strict              # fails when SMTP/SMS config is incomplete
 php artisan notifications:doctor --order=1234          # + the real messages for that order
 php artisan notifications:doctor --order=1234 --send-email=vous@exemple.tn
 php artisan notifications:doctor --order=1234 --send-sms=+216XXXXXXXX
@@ -134,18 +135,10 @@ php artisan notifications:doctor --order=1234 --send-sms=+216XXXXXXXX
 Nothing is sent unless you pass an address or a number, and it goes **to what you passed**, never
 to the customer on the order.
 
-Two things it will tell you about this install, and both are worth acting on:
-
-**Order confirmations are sent from a personal Gmail.** `MAIL_FROM_ADDRESS` and the SMTP username
-are `bitoutawalid@gmail.com`, and `ADMIN_EMAILS` defaults to the same address. So a customer who
-has just ordered — and paid nothing, and is waiting for a parcel — gets their confirmation from a
-personal Gmail rather than from `contact@protein.tn`. That reads as a scam, and it caps the shop at
-a free Gmail account's daily send limit.
-
-**That mailbox's app password is committed to this repository.** It was a literal in
-`config/mail.php` with no `env()` around it. The config now reads the environment with the old
-values as fallback, so nothing breaks on deploy — but **the password should be revoked and
-reissued**, and the new one belongs in `filament/.env`:
+SMTP credentials now come only from the environment; source-code fallbacks are intentionally
+non-delivering. The previously committed mailbox app password remains exposed in Git history, so
+it must still be revoked and reissued. On the VPS, put the replacement values in the repository
+root `.env` read by Docker Compose:
 
 ```dotenv
 MAIL_HOST=…
@@ -153,12 +146,15 @@ MAIL_USERNAME=contact@protein.tn
 MAIL_PASSWORD=…                      # the NEW one
 MAIL_FROM_ADDRESS=contact@protein.tn
 ADMIN_EMAILS=contact@protein.tn
+SMS_API_KEY=…
+SMS_SENDER_ID=ProteinTN
 FRONTEND_URL=https://protein.tn      # or reset links point at admin.protein.tn
 ```
 
 **The SMS gateway's answer used to be thrown away.** `Http::get($apiUrl);`, return value discarded
 — so an empty credit balance, a revoked key or a blocked sender id looked exactly like a
-successful send. It is checked and logged now.
+successful send. Refusals now throw after being logged, which lets queued sends retry and makes
+direct sends report the failure to their caller.
 
 And the order-confirmation SMS carried `✅` and `🙌`. One character outside GSM-7 switches the whole
 message to UCS-2, where a segment is 70 characters instead of 160 — so those two glyphs were

@@ -25,7 +25,7 @@ class SendOrderEmailJob implements ShouldQueue
     public function __construct(
         public array $mailData,
         public string $recipientEmail,
-        public string $fromLabel,
+        public string $fromAddress,
     ) {}
 
     public function handle(): void
@@ -35,11 +35,11 @@ class SendOrderEmailJob implements ShouldQueue
             'mail_default' => config('mail.default'),
             'mail_from' => config('mail.from'),
             'recipient' => $this->recipientEmail,
-            'from_label_passed' => $this->fromLabel,
+            'from_address' => $this->fromAddress,
         ]);
 
         try {
-            Mail::to($this->recipientEmail)->send(new SoumissionMail($this->mailData, $this->fromLabel));
+            Mail::to($this->recipientEmail)->send(new SoumissionMail($this->mailData, $this->fromAddress));
         } catch (\Exception $e) {
             Log::error('SendOrderEmailJob failed', [
                 'recipient' => $this->recipientEmail,
