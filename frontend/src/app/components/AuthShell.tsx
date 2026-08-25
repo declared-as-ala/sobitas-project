@@ -18,13 +18,13 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
-    <div className="pt-no-chrome flex min-h-dvh items-center bg-sunken sm:py-5 lg:py-6">
-      <Container width="wide">
-        <main className="pt-promo relative isolate overflow-hidden rounded-none border border-rule shadow-card sm:rounded-3xl lg:min-h-[42rem]">
+    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-sunken sm:items-center sm:py-5 lg:py-6">
+      <Container width="full" className="flex sm:block">
+        <main className="pt-promo relative isolate flex w-full overflow-hidden rounded-none border border-rule shadow-card sm:rounded-3xl lg:min-h-[42rem]">
           <div className="pointer-events-none absolute inset-3 rounded-2xl border border-rule opacity-60 sm:inset-4" />
 
-          <div className="relative grid lg:min-h-[42rem] lg:grid-cols-[minmax(24rem,0.82fr)_minmax(0,1.18fr)]">
-            <div className="pt-plate relative z-10 m-3 flex min-h-0 flex-col rounded-2xl p-4 shadow-card sm:m-5 sm:p-6 lg:m-6 lg:me-0 lg:p-8 xl:p-10">
+          <div className="relative grid flex-1 lg:min-h-[42rem] lg:grid-cols-5">
+            <div className="pt-plate relative z-10 m-3 flex min-h-0 flex-col rounded-2xl p-4 shadow-card sm:m-5 sm:p-6 lg:col-span-2 lg:m-6 lg:me-0 lg:p-8 xl:p-10">
               <div data-auth-header="" className="flex min-h-[44px] items-center justify-between gap-4">
                 <Link
                   href="/"
@@ -61,22 +61,25 @@ export function AuthShell({ children }: { children: ReactNode }) {
               </div>
             </div>
 
-            <aside className="relative hidden min-h-[42rem] overflow-hidden lg:block" aria-label="Athlète Protein.tn">
-              <div className="absolute start-8 top-10 w-[42%] text-on-brand xl:start-12 xl:top-12">
+            <aside
+              className="relative hidden min-h-[42rem] overflow-hidden lg:col-span-3 lg:grid lg:grid-cols-7 lg:gap-6 lg:p-8 xl:gap-8 xl:p-10"
+              aria-label="Athlète Protein.tn"
+            >
+              <div className="relative z-10 self-start text-on-brand lg:col-span-4">
                 <p className="font-display text-xs font-bold uppercase tracking-[0.2em] opacity-80">
                   Espace client
                 </p>
-                <p className="mt-2 max-w-sm font-display text-4xl font-bold uppercase leading-[0.92] tracking-tight xl:text-5xl">
+                <p className="mt-2 font-display text-3xl font-bold uppercase leading-[0.94] tracking-tight 2xl:text-5xl">
                   Votre effort.<br />Vos avantages.
                 </p>
               </div>
-              <div className="absolute inset-y-8 end-8 w-[50%] overflow-hidden rounded-3xl border border-rule bg-brand-50 shadow-card xl:end-10 xl:w-[52%]">
+              <div className="relative min-h-0 self-stretch overflow-hidden rounded-3xl border border-rule bg-brand-50 shadow-card lg:col-span-3">
                 <Image
                   src={AUTH_ATHLETE}
                   alt="Athlète tunisienne portant le maillot Protein.tn"
                   fill
                   sizes="(min-width: 1280px) 48vw, 44vw"
-                  className="object-cover"
+                  className="object-cover object-center"
                   priority
                 />
               </div>
