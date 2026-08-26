@@ -33,7 +33,8 @@ import { crawlPaginated, describeCrawl, type PaginatedCrawl } from '@/util/sitem
  *   IN
  *     /                                    static     home
  *     /shop /packs /offres /brands /blog   static     top-level listing hubs
- *     /qui-sommes-nous /contact /faqs      static     evergreen informational
+ *     /qui-sommes-nous /mentions-legales
+ *     /contact /faqs                       static     evergreen informational
  *     /proteine-sousse                     static     local-SEO landing page
  *     /pack-builder                        static     indexable tool page
  *     /partenaires                         static     WAS ORPHANED — 200, self-canonical, indexable,
@@ -299,6 +300,7 @@ export const STATIC_ROUTES: ReadonlyArray<{ path: string; changeFrequency: NonNu
   { path: '/brands', changeFrequency: 'weekly', priority: 0.8 },
   { path: '/blog', changeFrequency: 'daily', priority: 0.85 },
   { path: '/qui-sommes-nous', changeFrequency: 'monthly', priority: 0.7 },
+  { path: '/mentions-legales', changeFrequency: 'yearly', priority: 0.5 },
   { path: '/contact', changeFrequency: 'monthly', priority: 0.8 },
   { path: '/faqs', changeFrequency: 'monthly', priority: 0.7 },
   // Local SEO landing page ("protéine Sousse"): indexable + self-canonical but was orphaned.

@@ -172,6 +172,13 @@ const CASES = [
   { path: '/public/api/searchProduct/BCAA', why: 'old API path, permanently gone' },
   { path: '/public/api/page/16', why: 'ditto — 21 of these in the export' },
 
+  /* Product API returned a definitive 404 for each on 26/08/2026. They were the residual
+     /products/* and nested-product 404s after the generic resolver pass, and must now terminate
+     as 410 even when the taxonomy cache is cold. */
+  { path: '/products/amino-target-xplode-275-g', why: 'confirmed retired product slug' },
+  { path: '/pre-workout/king-real-preworkout-500gr-real-pharm', why: 'confirmed retired nested product' },
+  { path: '/cardio-fitness/ring-de-boxe', why: 'confirmed retired product from canonical-conflict export' },
+
   /* ── CASE ─────────────────────────────────────────────────────────────────────────────────
    *
    * Not a 404: MySQL's collation is case-insensitive, so the category RESOLVES and the page body

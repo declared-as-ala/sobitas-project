@@ -65,6 +65,44 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_URL?.replace('/api-proxy', '') ||
   'https://admin.protein.tn/api';
 
+/**
+ * Product slugs confirmed HTTP 404 by the live product API on 26/08/2026.
+ *
+ * These are not speculative matches. They are the residual product URLs from the Search Console
+ * exports that still reached a route-level 404 after the generic resolver ran. Their old
+ * `/products/*` and category/product addresses are permanently retired, so a direct 410 is both
+ * honest and faster for Google to remove than a repeatedly crawled 404. Keep this deliberately
+ * small and evidence-based: a slug must never be added here merely because a single request timed
+ * out — the product API must positively answer 404.
+ */
+const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
+  'amino-target-xplode-275-g',
+  'kolagen-60-caps-real-pharm',
+  'citruargin-300-g',
+  'whey-pro-warriors-2kg-warriors',
+  'compact-whey-gold-protein-1kg',
+  'blackweiler-shred-480g-olimp-sport-nutrition',
+  'mass-gainer-3kg',
+  'beef-protein-1-8-kg',
+  'amino-eaa-ultra-speed-300-g',
+  'creatine-monohydrate-powder-250g',
+  'citrulline-synergy-240-g',
+  'king-real-preworkout-500gr-real-pharm',
+  'ring-de-boxe',
+]);
+
+const CONFIRMED_RETIRED_ASSETS = new Set([
+  '/_next/static/media/8e9860b6e62d6359-s.p.woff2',
+  '/_next/static/media/e4af272ccee01ff0-s.p.woff2',
+]);
+
+function gone(): NextResponse {
+  return new NextResponse('Gone', {
+    status: 410,
+    headers: { 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex, nofollow' },
+  });
+}
+
 /** Look a product up by slug. Returns its canonical path, `false` for a clean 404, null on error. */
 async function lookupProduct(slug: string): Promise<string | null | false> {
   try {
@@ -253,6 +291,32 @@ async function retireLegacyPath(
 export async function middleware(request: NextRequest) {
   const { pathname, searchParams } = request.nextUrl;
 
+  // Exact, immutable build assets from an old Next deployment. They cannot reappear because their
+  // filenames are content hashes. The two exact matcher entries at the foot of this file let only
+  // these retired assets through; current /_next/static files still bypass middleware entirely.
+  if (CONFIRMED_RETIRED_ASSETS.has(pathname)) return gone();
+
+  // WordPress/action/scanner artifacts that are permanently meaningless on this application.
+  // They were the final front-end 404s in the URL-level coverage sweep; returning 410 prevents
+  // Google from treating them as temporarily absent and retrying them indefinitely.
+  if (
+    pathname === '/cart-2' ||
+    pathname === '/checkout-2' ||
+    pathname === '/cdn-cgi/l/email-protection' ||
+    pathname === '/k/T42' ||
+    pathname === '/k/t42' ||
+    pathname === '/&' ||
+    pathname === '/$'
+  ) {
+    return gone();
+  }
+
+  // A small, verified set of discontinued products still fell through to the filesystem route
+  // when the taxonomy lookup was unavailable. The product API positively reports each slug 404,
+  // so terminal retirement here does not depend on a second backend call or a warm cache.
+  const retiredProductSlug = pathname.split('/').filter(Boolean).at(-1)?.toLowerCase();
+  if (retiredProductSlug && CONFIRMED_RETIRED_PRODUCT_SLUGS.has(retiredProductSlug)) return gone();
+
   /* ── Machine paths from the old Laravel deployment → 410 ─────────────────────────────────────
    *
    * /public/api/searchProduct/BCAA, /public/api/productsBySubCategoryId/898-accessories,
@@ -266,7 +330,7 @@ export async function middleware(request: NextRequest) {
    * never be reached through a redirect.
    */
   if (/^\/(?:public|storage)(?:\/|$)/i.test(pathname)) {
-    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    return gone();
   }
 
   /* ── URL CASE, NORMALISED BEFORE ANYTHING ELSE RUNS ──────────────────────────────────────────
@@ -375,6 +439,13 @@ export async function middleware(request: NextRequest) {
       return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
     }
     const dest = sameOriginOrTrusted(new URL(adminRule.to as string, request.url), request);
+    // Admin redirects are trusted but historically stored mixed-case destinations such as
+    // `/Intra-Workout`. Every public slug is lowercase, so that value created a second 301 when
+    // the case-normalisation block saw the destination. Normalise same-origin destinations before
+    // emitting the first hop; external/trusted subdomain paths are left untouched.
+    if (dest.origin === request.nextUrl.origin) {
+      dest.pathname = lowercasePreservingEscapes(dest.pathname);
+    }
     request.nextUrl.searchParams.forEach((value, key) => {
       if (!dest.searchParams.has(key)) dest.searchParams.append(key, value);
     });
@@ -410,7 +481,7 @@ export async function middleware(request: NextRequest) {
     // /YYYY can never collide with a numeric category/brand slug.
     /^\/(19|20)\d{2}(?:\/\d{1,2}){1,2}\/?$/.test(pathname);
   if (isWordPressDeadPath) {
-    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    return gone();
   }
 
   /*
@@ -455,8 +526,21 @@ export async function middleware(request: NextRequest) {
   //
   // Extension test, not a substring test: `/creatine-500g-php-blend` must not match.
   if (/\.php\d?$/i.test(pathname) || /(^|\/)\.env(\.[a-z0-9-]+)?$/i.test(pathname)) {
-    return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    return gone();
   }
+
+  // Old WordPress CMS namespace. The exact legal aliases and numeric pagination are handled by
+  // redirects.js before middleware. Everything else has one of two honest outcomes:
+  //   • one slug: preserve the historic `/page/foo -> /foo` mapping and its link equity;
+  //   • undefined/deeper junk: terminal 410, never a redirect into a 404 or an unrelated hub.
+  // Moving this conditional out of redirects.js is what lets `/page/undefined` be distinguished
+  // from a real legacy CMS page at all — static redirects cannot return 410.
+  const legacyCmsPage = pathname.match(/^\/page\/([^/]+)\/?$/);
+  if (legacyCmsPage?.[1]) {
+    if (legacyCmsPage[1].toLowerCase() === 'undefined') return gone();
+    return redirectPreservingQuery(request, `/${legacyCmsPage[1]}`);
+  }
+  if (pathname.startsWith('/page/')) return gone();
 
   // ── Blog taxonomy: a feature with no data, serving an unbounded 200 space ───
   // /blog_categories and /blog_tags BOTH return `[]` from the API — measured through the
@@ -548,6 +632,12 @@ export async function middleware(request: NextRequest) {
   if (wpPaging?.[1]) {
     // Guard against a backslash first segment (/\evil.com/page/2 → off-origin) via same-origin check.
     const pagedUrl = sameOriginOrHome(new URL(`/${wpPaging[1]}`, request.url), request);
+    // Preserve the listing state. The old implementation discarded `orderby`, search and every
+    // other query key, which turned `/shop/page/1?orderby=price-desc` into a bare `/shop` hub and
+    // Search Console correctly classified it as a soft 404.
+    searchParams.forEach((value, key) => {
+      if (key !== 'page') pagedUrl.searchParams.append(key, value);
+    });
     if (Number(wpPaging[2]) > 1) pagedUrl.searchParams.set('page', wpPaging[2]);
     return NextResponse.redirect(pagedUrl, 301);
   }
@@ -969,5 +1059,10 @@ export const config = {
     // and friends). They are machine paths like sitemap.xml itself, and without this every crawler
     // fetch of one paid for an admin-redirect lookup that can never match.
     '/((?!api/|api-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|sitemaps/|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
+    // Exact historical content-hashed assets from the Search Console export. Current static
+    // assets remain excluded by the broad matcher above; only these immutable missing hashes run
+    // through middleware so they can answer 410 instead of being retried as ordinary 404s.
+    '/_next/static/media/8e9860b6e62d6359-s.p.woff2',
+    '/_next/static/media/e4af272ccee01ff0-s.p.woff2',
   ],
 };

@@ -114,6 +114,7 @@ export function isReservedRouteSlug(slug: string): boolean {
     'page',
     'proteine-sousse',
     'qui-sommes-nous',
+    'mentions-legales',
     // Public member profiles (/membres/{id}). Caught by check-reserved-routes on the very first
     // build after the route was added: without this the middleware rewrites /membres to
     // /x-crawler/category/membres, which resolves category → brand → CMS page, finds none, and

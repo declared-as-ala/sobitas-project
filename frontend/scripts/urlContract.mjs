@@ -199,16 +199,16 @@ export const ROUTE_CONTRACT = [
   {
     route: '(shop)/page/[slug]',
     probe: '/page/zz-{n}',
-    missing: [404, 410, 308],
+    missing: [404, 410, 301],
     indexable: false,
     sample: null,
     why:
-      'DELIBERATE EXCEPTION. /page/:slug 308s to /{slug}, so a missing slug costs two hops to reach ' +
-      'a 404 rather than one. The redirect stays because it was built from real Search Console data ' +
+      'DELIBERATE EXCEPTION. /page/:slug 301s to /{slug}. The redirect stays because it was built ' +
+      'from real Search Console data ' +
       '— /page/creatine-monohydrate-tunisie carried 698 impressions at position 9.58, ' +
       '/page/proteine-tunisie 205 — and those URLs must reach their live page. Making the rule ' +
-      'conditional would need a per-request CMS lookup in middleware to save one hop on URLs that ' +
-      'do not exist. L1 still asserts the chain terminates within 2 hops and never lands on a hub.',
+      'conditional would need a per-request CMS lookup in middleware. Known invalid forms such as ' +
+      '/page/undefined and deeper junk are intercepted with 410 before this mapping.',
   },
   {
     route: '(shop)/avis/[token]',
@@ -295,7 +295,7 @@ export const ROUTE_CONTRACT = [
  */
 export const STATIC_PAGES = [
   '/', '/shop', '/blog', '/brands', '/packs', '/offres', '/pack-builder',
-  '/partenaires', '/proteine-sousse', '/qui-sommes-nous', '/faqs', '/contact',
+  '/partenaires', '/proteine-sousse', '/qui-sommes-nous', '/mentions-legales', '/faqs', '/contact',
 ];
 
 /** 200 + noindex, and NOT robots.txt-disallowed — Google must be able to crawl to see the noindex. */
@@ -322,7 +322,10 @@ export const NORMALISATIONS = [
 export const MUST_BE_TERMINAL = [
   '/wp-login.php', '/wp-admin', '/wp-json', '/feed', '/trackback',
   '/2023/01', '/tag/whey', '/author/admin', '/xmlrpc.php',
-  '/foo.php', '/index.php', '/.env',
+  '/foo.php', '/index.php', '/.env', '/page/undefined', '/cart-2', '/checkout-2',
+  '/products/amino-target-xplode-275-g',
+  '/pre-workout/king-real-preworkout-500gr-real-pharm',
+  '/cardio-fitness/ring-de-boxe',
 ];
 
 /** Replace the {n} nonce so a probe measures the origin rather than a CDN entry a prior run made. */

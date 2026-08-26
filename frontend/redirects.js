@@ -164,9 +164,17 @@ function buildRedirects() {
     // and /page/proteine-tunisie resolve (both 200, both real traffic in Search Console).
     p('/page/a-propos', '/qui-sommes-nous'),
     p('/page/cookies', '/politique-des-cookies'),
-    { source: '/page/:slug', destination: '/:slug', permanent: true },
-    // Anything deeper than one segment has no /{slug} equivalent — keep the old behaviour.
-    p('/page/:path*', '/qui-sommes-nous'),
+    // The CMS uses a different public slug from the old WordPress label. Point at the FINAL
+    // canonical (without the historical `.tn` suffix) so this does not become a redirect chain.
+    p('/page/conditions-generales', '/conditions-generale-de-ventes-protein'),
+    p('/page/mentions-legales', '/mentions-legales'),
+    /*
+     * The generic /page/:slug redirect now lives in middleware.ts. A static redirect cannot
+     * distinguish `/page/undefined` (permanently invalid → 410) from a real legacy CMS slug, and
+     * next.config redirects run before middleware. Keeping the catch-all here made the invalid
+     * path 308 into a 404 forever and also prevented the legal-page exceptions above from being
+     * retired correctly. Middleware preserves the valid one-segment mapping and terminates junk.
+     */
     p('/connexion', '/contact'),
     p('/connexion/', '/contact'),
     p('/contact-us', '/contact'),
@@ -232,6 +240,9 @@ function buildRedirects() {
     p('/bcaa-gluta-500g-scenit-nutrition', '/bcaa'),
     p('/beef-mass-plus-27kg-big-ramy-labs', '/proteine-de-boeuf/beef-mass-plus-27kg-big-ramy-labs'),
     p('/big-ramy-labs-beef-mass-gainer-4-9kg', '/big-ramy-labs'),
+    // Retired support-band listing. The current equipment category is the closest surviving
+    // equivalent; unlike /shop, it answers the same product intent and is not a soft-404 hub.
+    p('/bandes-de-renfort', '/materiel-de-musculation'),
     p('/carbo-plus-1kg-universal', '/glucides/carbo-plus-1kg-universal'),
     p('/complements-alimentaires', '/proteines'),
     p('/creatine-300gr-challenger-nutrition', '/creatine/creatine-300gr-challenger-nutrition'),
