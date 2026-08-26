@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import {
   ShoppingCart,
@@ -209,10 +208,95 @@ function NavigationLink({
   );
 }
 
+/**
+ * Badge subscriptions live in leaf controls. Keeping either count in HeaderClient makes one heart
+ * or cart tap reconcile the entire header, including both navigation systems and the search.
+ */
+function DesktopFavoritesAction() {
+  const count = useFavoritesCount();
+
+  return (
+    <Link
+      href="/favoris"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
+      aria-label={count > 0 ? `Favoris - ${count} produits` : 'Favoris'}
+    >
+      <Heart className="h-5 w-5" aria-hidden />
+      {count > 0 && (
+        <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function DesktopCartAction({ onOpen }: { onOpen: () => void }) {
+  const count = useCartCount();
+
+  return (
+    <button
+      type="button"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
+      onClick={onOpen}
+      aria-label={count > 0 ? `Panier - ${count} articles` : 'Panier'}
+    >
+      <ShoppingCart className="h-5 w-5" aria-hidden />
+      {count > 0 && (
+        <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MobileCartMenuAction({ onOpen }: { onOpen: () => void }) {
+  const count = useCartCount();
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
+    >
+      <ShoppingCart className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
+      <span className="flex-1 text-left">Panier</span>
+      {count > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MobileFavoritesMenuAction({ onNavigate }: { onNavigate: () => void }) {
+  const count = useFavoritesCount();
+
+  return (
+    <Link
+      href="/favoris"
+      onClick={onNavigate}
+      className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
+    >
+      <Heart
+        className={cn('h-5 w-5 shrink-0', count > 0 ? 'fill-brand text-brand' : 'text-ink-3')}
+        aria-hidden
+      />
+      <span className="flex-1">Favoris</span>
+      {count > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function HeaderClient() {
   const { translateLegacy } = useI18n();
   const { headerLogoUrl } = useSiteLogos();
-  const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
@@ -253,13 +337,9 @@ export function HeaderClient() {
     sidebar: normalizeNavigationItems(ssrNavigation.sidebar),
   }));
 
-  // NARROW SUBSCRIPTIONS. `useCart()` here re-rendered all ~1,050 lines of this component on every
-  // cart change; the header only ever needed the badge number and a way to open the drawer.
-  // `useCartCount()` returns a number, so React bails out unless the count actually moved, and
-  // `useCartActions()` never changes identity at all.
+  // Mutators are stable. Badge subscriptions live in the four small action components above, so
+  // changing a count no longer rerenders this full header.
   const { setCartDrawerOpen } = useCartActions();
-  const cartItemsCount = useCartCount();
-  const favoritesCount = useFavoritesCount();
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
@@ -667,36 +747,8 @@ export function HeaderClient() {
                   {theme === 'dark' ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
                 </button>
 
-                {/* Favoris — icon only, keeps its count badge. */}
-                <Link
-                  href="/favoris"
-                  className="relative h-10 w-10 flex items-center justify-center rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
-                  aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
-                >
-                  <Heart className="h-5 w-5" aria-hidden />
-                  {favoritesCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-brand text-on-brand text-[10px] font-bold leading-none rounded-full ring-2 ring-canvas">
-                      {favoritesCount > 99 ? '99+' : favoritesCount}
-                    </span>
-                  )}
-                </Link>
-
-                {/* Panier — icon + french label + count badge. */}
-                <button
-                  type="button"
-                  className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
-                  onClick={() => setCartDrawerOpen(true)}
-                  aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
-                >
-                  <ShoppingCart className="h-5 w-5" aria-hidden />
-                  {/* Same corner as the favourites badge beside it — they were 6px apart before,
-                      because one was positioned against the icon and the other against the box. */}
-                  {cartItemsCount > 0 && (
-                    <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
-                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                    </span>
-                  )}
-                </button>
+                <DesktopFavoritesAction />
+                <DesktopCartAction onOpen={() => setCartDrawerOpen(true)} />
               </div>
             </div>
           </div>
@@ -1264,36 +1316,14 @@ export function HeaderClient() {
                   </span>
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}
-                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                >
-                  <ShoppingCart className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                  <span className="flex-1 text-left">Panier</span>
-                  {cartItemsCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
-                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                    </span>
-                  )}
-                </button>
+                <MobileCartMenuAction
+                  onOpen={() => {
+                    setCartDrawerOpen(true);
+                    closeMobileMenu();
+                  }}
+                />
 
-                <Link
-                  href="/favoris"
-                  onClick={closeMobileMenu}
-                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                >
-                  <Heart
-                    className={cn('h-5 w-5 shrink-0', favoritesCount > 0 ? 'fill-brand text-brand' : 'text-ink-3')}
-                    aria-hidden
-                  />
-                  <span className="flex-1">Favoris</span>
-                  {favoritesCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
-                      {favoritesCount > 99 ? '99+' : favoritesCount}
-                    </span>
-                  )}
-                </Link>
+                <MobileFavoritesMenuAction onNavigate={closeMobileMenu} />
 
                 {/* Connexion / Mon compte / Déconnexion used to live here, at the BOTTOM of a
                     scroll, under WhatsApp and Favoris. They are the first thing in the drawer now

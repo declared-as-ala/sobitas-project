@@ -52,7 +52,9 @@ function LoginContent() {
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
-      toast.success('Connexion réussie');
+      toast.success('Bienvenue !', {
+        description: 'Votre espace client est prêt.',
+      });
       router.replace(redirectTo);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la connexion');
@@ -64,7 +66,9 @@ function LoginContent() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle(credential);
-      toast.success('Connexion réussie');
+      toast.success('Bienvenue !', {
+        description: 'Votre espace client est prêt.',
+      });
       router.replace(redirectTo);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Connexion Google impossible');

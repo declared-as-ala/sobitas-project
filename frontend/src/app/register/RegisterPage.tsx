@@ -90,7 +90,9 @@ export default function RegisterPage() {
         password: formData.password,
         role_id: 2, // customer; the server sets this itself and never trusts the field
       });
-      toast.success('Compte créé, bienvenue');
+      toast.success('Compte créé !', {
+        description: 'Bienvenue dans votre espace Protein.tn.',
+      });
       router.replace('/');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de l’inscription');
@@ -105,7 +107,9 @@ export default function RegisterPage() {
     setGoogleLoading(true);
     try {
       await loginWithGoogle(credential);
-      toast.success('Compte créé, bienvenue');
+      toast.success('Compte créé !', {
+        description: 'Bienvenue dans votre espace Protein.tn.',
+      });
       router.replace('/');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Inscription Google impossible');

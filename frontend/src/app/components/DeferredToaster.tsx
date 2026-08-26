@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
+import { CircleCheck, CircleX, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
 
 const Toaster = dynamic(
   () => import('sonner').then((mod) => mod.Toaster),
@@ -36,5 +37,35 @@ export function DeferredToaster() {
   }, []);
 
   if (!mounted) return null;
-  return <Toaster position="top-center" richColors className="sonner-toaster" />;
+  return (
+    <Toaster
+      position="top-center"
+      dir="ltr"
+      className="sonner-toaster"
+      duration={4200}
+      gap={8}
+      visibleToasts={3}
+      offset={{ top: 16 }}
+      mobileOffset={{ top: 12, left: 12, right: 12 }}
+      toastOptions={{
+        classNames: {
+          toast: 'pt-toast shadow-card',
+          icon: 'pt-toast__icon',
+          content: 'pt-toast__content',
+          title: 'pt-toast__title',
+          description: 'pt-toast__description',
+          actionButton: 'pt-toast__action',
+          cancelButton: 'pt-toast__cancel',
+        },
+      }}
+      icons={{
+        success: <CircleCheck aria-hidden="true" />,
+        error: <CircleX aria-hidden="true" />,
+        warning: <TriangleAlert aria-hidden="true" />,
+        info: <Info aria-hidden="true" />,
+        loading: <LoaderCircle className="animate-spin" aria-hidden="true" />,
+      }}
+      containerAriaLabel="Notifications"
+    />
+  );
 }

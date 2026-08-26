@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
 import { useCartDrawer } from '@/app/contexts/CartContext';
 
@@ -38,6 +38,7 @@ const CartDrawer = dynamic(() => import('./CartDrawer').then((m) => ({ default: 
 
 export function CartDrawerHost() {
   const { open, setOpen } = useCartDrawer();
+  const [keepMounted, setKeepMounted] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,5 +69,17 @@ export function CartDrawerHost() {
     };
   }, []);
 
+  useEffect(() => {
+    if (open) {
+      setKeepMounted(true);
+      return;
+    }
+
+    // Keep the panel for its short Vaul exit animation, then remove its full-cart subscription.
+    const id = window.setTimeout(() => setKeepMounted(false), 320);
+    return () => window.clearTimeout(id);
+  }, [open]);
+
+  if (!open && !keepMounted) return null;
   return <CartDrawer open={open} onOpenChange={setOpen} />;
 }

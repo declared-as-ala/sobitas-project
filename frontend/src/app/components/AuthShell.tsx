@@ -46,13 +46,16 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
-    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-8 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2">
-      <Container bleed className="flex">
-        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
+    <div
+      dir="ltr"
+      className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
+    >
+      <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
+        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(50rem,calc(100dvh-3rem))] lg:min-h-[42rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
           <span className="absolute inset-x-0 top-0 z-20 h-1 bg-brand" aria-hidden="true" />
 
           <aside
-            className="relative h-56 shrink-0 overflow-hidden bg-brand-50 sm:h-64 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline"
+            className="relative h-52 shrink-0 overflow-hidden bg-brand-50 sm:h-60 lg:order-2 lg:h-auto lg:min-h-[42rem] lg:border-s lg:border-hairline"
             aria-label="Athlète Protein.tn"
           >
             <Image
@@ -80,11 +83,21 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </div>
           </aside>
 
-          <div className="pt-plate relative z-10 mx-3 -mt-6 flex flex-col rounded-2xl p-4 shadow-card sm:mx-6 sm:-mt-8 sm:p-6 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[40rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-6">
-            <div data-auth-header="" className="flex min-h-[44px] items-center justify-start gap-4 lg:justify-between">
+          <div className="pt-plate relative z-10 mx-3 -mt-5 flex flex-col rounded-2xl p-4 shadow-card sm:mx-6 sm:-mt-7 sm:p-6 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[42rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-6">
+            <div data-auth-header="" className="flex min-h-[44px] items-center gap-4 lg:justify-between">
               <Link
                 href="/"
-                className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                className="group -ms-2 hidden min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:inline-flex"
+              >
+                <ArrowLeft
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                  aria-hidden="true"
+                />
+                Retour à la boutique
+              </Link>
+              <Link
+                href="/"
+                className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:ms-auto"
                 aria-label="Protein.tn — Accueil"
               >
                 <Image
@@ -97,20 +110,10 @@ export function AuthShell({ children }: { children: ReactNode }) {
                   priority
                 />
               </Link>
-              <Link
-                href="/"
-                className="group -me-2 hidden min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:inline-flex"
-              >
-                <ArrowLeft
-                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
-                  aria-hidden="true"
-                />
-                Retour à la boutique
-              </Link>
             </div>
 
             <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
-              <div data-auth-card="" className="mx-auto w-full sm:max-w-lg">
+              <div data-auth-card="" className="mx-auto w-full sm:max-w-lg xl:max-w-xl">
                 {children}
               </div>
             </div>

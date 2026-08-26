@@ -105,16 +105,15 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const favoriteIds = useMemo(() => new Set(favoriteProducts.map((p) => p.id)), [favoriteProducts]);
 
-  // Readable without subscribing. Assigned during render, not in an effect, so a snapshot taken
-  // in the render pass right after a toggle already reflects it — see CartProvider for the full
-  // reasoning (an effect runs too late and the heart paints one tap behind).
+  // The refs are the urgent source of truth for the small heart/count subscribers. The array state
+  // feeds the full /favoris view and is published immediately after the feedback paint.
   const idsRef = useRef(favoriteIds);
-  idsRef.current = favoriteIds;
+  const productsRef = useRef(favoriteProducts);
 
   const listenersRef = useRef<Set<() => void>>(new Set());
-  useEffect(() => {
-    listenersRef.current.forEach((notify) => notify());
-  }, [favoriteIds]);
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publishTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const publishFrameRef = useRef<number | null>(null);
 
   const store = useMemo<FavoritesStore>(
     () => ({
@@ -131,41 +130,78 @@ export function FavoritesProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    setFavoriteProducts(loadFromStorage());
+    const saved = loadFromStorage();
+    productsRef.current = saved;
+    idsRef.current = new Set(saved.map((product) => product.id));
+    setFavoriteProducts(saved);
     setIsLoaded(true);
+    listenersRef.current.forEach((notify) => notify());
+
+    return () => {
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
+      if (publishFrameRef.current != null && typeof cancelAnimationFrame === 'function') {
+        cancelAnimationFrame(publishFrameRef.current);
+      }
+    };
   }, []);
 
-  const persist = useCallback((next: FavoriteProduct[]) => {
-    setFavoriteProducts(next);
-    saveToStorage(next);
+  /**
+   * Update the one tapped heart before React walks the provider tree. The former effect-based
+   * notification required a provider render, then an effect, then a second card render before the
+   * icon could paint — exactly the extra presentation delay reported by PerformanceEventTiming.
+   * Storage is coalesced into the next task so JSON/string storage work is not inside the tap.
+   */
+  const commit = useCallback((next: FavoriteProduct[]) => {
+    productsRef.current = next;
+    idsRef.current = new Set(next.map((product) => product.id));
+    listenersRef.current.forEach((notify) => notify());
+
+    const publish = () => {
+      if (publishTimerRef.current) clearTimeout(publishTimerRef.current);
+      publishTimerRef.current = setTimeout(() => {
+        setFavoriteProducts(productsRef.current);
+        publishTimerRef.current = null;
+      }, 0);
+    };
+    if (typeof requestAnimationFrame === 'function') {
+      if (publishFrameRef.current != null) cancelAnimationFrame(publishFrameRef.current);
+      publishFrameRef.current = requestAnimationFrame(() => {
+        publishFrameRef.current = requestAnimationFrame(() => {
+          publishFrameRef.current = null;
+          setFavoriteProducts(productsRef.current);
+        });
+      });
+    } else {
+      publish();
+    }
+
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+    saveTimerRef.current = setTimeout(() => {
+      saveToStorage(next);
+      saveTimerRef.current = null;
+    }, 0);
   }, []);
 
   const isFavorite = useCallback(
     (productId: number) => favoriteIds.has(productId),
-    [favoriteProducts]
+    [favoriteIds]
   );
 
   const addFavorite = useCallback((product: FavoriteProduct) => {
-    setFavoriteProducts((prev) => {
-      if (prev.some((p) => p.id === product.id)) return prev;
-      const next = [...prev, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, promo_expiration_date: product.promo_expiration_date, qte: product.qte, rupture: product.rupture, sous_categorie_id: product.sous_categorie_id, brand_id: product.brand_id }];
-      saveToStorage(next);
-      return next;
-    });
-  }, []);
+    if (idsRef.current.has(product.id)) return;
+    commit([...productsRef.current, { id: product.id, designation_fr: product.designation_fr, slug: product.slug, cover: product.cover, prix: product.prix, promo: product.promo, promo_expiration_date: product.promo_expiration_date, qte: product.qte, rupture: product.rupture, sous_categorie_id: product.sous_categorie_id, brand_id: product.brand_id }]);
+  }, [commit]);
 
   const removeFavorite = useCallback((productId: number) => {
-    setFavoriteProducts((prev) => {
-      const next = prev.filter((p) => p.id !== productId);
-      saveToStorage(next);
-      return next;
-    });
-  }, []);
+    if (!idsRef.current.has(productId)) return;
+    commit(productsRef.current.filter((product) => product.id !== productId));
+  }, [commit]);
 
   const clearFavorites = useCallback(() => {
-    setFavoriteProducts([]);
-    saveToStorage([]);
-  }, []);
+    if (productsRef.current.length === 0) return;
+    commit([]);
+  }, [commit]);
 
   // `idsRef`, not `favoriteIds` — and therefore an EMPTY dependency list, so this function is
   // created once. Depending on `favoriteIds` is what made every heart tap invalidate the context

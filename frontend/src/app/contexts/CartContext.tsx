@@ -199,7 +199,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
    * already in memory by the time anyone taps.
    */
   const openDrawerDeferred = useCallback(() => {
-    startTransition(() => setCartDrawerOpen(true));
+    const open = () => {
+      startTransition(() => setCartDrawerOpen(true));
+    };
+
+    // A transition can still be completed before the browser presents the urgent "Ajouté !"
+    // state. Cross one paint boundary explicitly, then mount the already-warmed drawer.
+    if (typeof window !== 'undefined' && typeof window.requestAnimationFrame === 'function') {
+      window.requestAnimationFrame(() => window.requestAnimationFrame(open));
+      return;
+    }
+    setTimeout(open, 0);
   }, []);
 
   const addToCart = useCallback((product: Product, quantity: number = 1) => {
@@ -248,8 +258,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prevItems, { product, quantity }];
     });
     openDrawerDeferred();
-    // EMPTY dependency list — this function is now created once for the lifetime of the provider.
-  }, []);
+    // `openDrawerDeferred` is itself lifetime-stable, so this callback remains lifetime-stable.
+  }, [openDrawerDeferred]);
 
   const removeFromCart = useCallback((productId: number) => {
     setItems(prevItems => prevItems.filter(item => item.product.id !== productId));

@@ -1,7 +1,7 @@
 'use client';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Shield, Mail, MessageSquare } from 'lucide-react';
+import { ShoppingCart, Heart, Flame, Star, BadgeCheck, CircleCheck, Truck, Mail, MessageSquare } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { PackCardImage } from '@/app/components/PackCardImage';
 import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
@@ -79,6 +79,123 @@ function toFavoriteProduct(product: Product): { id: number; designation_fr: stri
   };
 }
 
+function scheduleAfterPaint(task: () => void) {
+  if (typeof window === 'undefined' || typeof window.requestAnimationFrame !== 'function') {
+    setTimeout(task, 0);
+    return;
+  }
+  window.requestAnimationFrame(() => window.requestAnimationFrame(task));
+}
+
+const ProductFavoriteButton = memo(function ProductFavoriteButton({ product }: { product: Product }) {
+  const { toggleFavorite } = useFavoritesActions();
+  const favorite = useIsFavorite(product.id);
+
+  return (
+    <button
+      type="button"
+      onClick={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleFavorite(toFavoriteProduct(product));
+      }}
+      className={`pointer-events-auto z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-elevated transition-transform hover:scale-105 sm:absolute sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:rounded-full sm:border-0 sm:shadow-md sm:ring-1 sm:ring-hairline ${
+        favorite ? 'border-brand/40' : ''
+      }`}
+      aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
+    >
+      <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
+    </button>
+  );
+});
+
+const ProductAddToCartButton = memo(function ProductAddToCartButton({
+  product,
+  productName,
+  fallbackImage,
+  fallbackPrice,
+  inStock,
+  stockDisponible,
+}: {
+  product: Product;
+  productName: string;
+  fallbackImage: string;
+  fallbackPrice: number;
+  inStock: boolean;
+  stockDisponible: number;
+}) {
+  const { addToCart } = useCartActions();
+  const inCartQty = useCartQty(product.id);
+  const [isAdding, setIsAdding] = useState(false);
+  const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
+
+  const handleAddToCart = useCallback((event: React.MouseEvent) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!inStock || stockDisponible <= 0) {
+      toast.error('Rupture de stock');
+      return;
+    }
+    if (!canAddMore) {
+      toast.error('Stock maximum atteint.');
+      return;
+    }
+
+    const rawProduct = product as any;
+    const price = rawProduct.prix != null ? getPriceDisplay(rawProduct).finalPrice : fallbackPrice;
+    const image = rawProduct.cover ? getStorageUrl(rawProduct.cover) : fallbackImage;
+    const aromas = rawProduct.aromes;
+    const selectedAroma = Array.isArray(aromas) && aromas.length > 0 ? aromas[0] : null;
+    const cartProduct = {
+      ...rawProduct,
+      name: rawProduct.name ?? rawProduct.designation_fr,
+      price,
+      priceText: `${price} DT`,
+      image,
+      ...(selectedAroma && { selectedAroma }),
+    };
+
+    // Paint the local confirmation first. Cart state, drawer and toast follow one frame later;
+    // the mutation is unchanged, but it no longer sits between the tap and visible feedback.
+    setIsAdding(true);
+    scheduleAfterPaint(() => {
+      addToCart(cartProduct, 1);
+      startTransition(() => {
+        toast.success('Produit ajouté au panier');
+      });
+    });
+    setTimeout(() => setIsAdding(false), 500);
+  }, [addToCart, canAddMore, fallbackImage, fallbackPrice, inStock, product, stockDisponible]);
+
+  return (
+    <Button
+      size="sm"
+      className={`flex min-h-[44px] w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl px-3 py-2.5 text-sm font-semibold leading-none transition-colors duration-150 active:scale-[0.98] ${
+        inStock && canAddMore
+          ? 'bg-brand text-on-brand shadow-md hover:bg-brand-hover hover:shadow-lg'
+          : 'cursor-not-allowed bg-sunken text-ink-3'
+      }`}
+      onClick={handleAddToCart}
+      disabled={isAdding || !inStock || !canAddMore}
+      aria-label={!canAddMore && inStock ? 'Stock maximum atteint' : `Ajouter ${productName} au panier`}
+    >
+      <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
+      {!inStock ? (
+        <span className="truncate">Rupture</span>
+      ) : !canAddMore ? (
+        <span className="truncate">Stock max</span>
+      ) : isAdding ? (
+        <span className="truncate">Ajouté !</span>
+      ) : (
+        <span className="truncate">
+          Ajouter<span className="hidden sm:inline"> au panier</span>
+        </span>
+      )}
+    </Button>
+  );
+});
+
 export const ProductCard = memo(function ProductCard({
   product,
   showBadge,
@@ -105,21 +222,15 @@ export const ProductCard = memo(function ProductCard({
    * The actions never change identity, and the two subscriptions return a number and a boolean
    * for THIS product only, so React's Object.is bailout keeps the other 22 cards untouched.
    */
-  const { addToCart } = useCartActions();
-  const { toggleFavorite } = useFavoritesActions();
-  const [isAdding, setIsAdding] = useState(false);
   /* Back-order is the DEFAULT state of this catalogue (10,535 of 10,669), so this state exists
      on almost every card. It stays `false` until the customer taps: the dialog's markup is only
      mounted while open, so a 12-card grid does not carry 12 hidden forms. */
   const [requestOpen, setRequestOpen] = useState(false);
-  const favorite = useIsFavorite(product.id);
   // The SAME call the product detail page makes. Card and page now derive their label from one
   // function over the same four columns (qte, rupture, force_out_of_stock, low_stock_threshold),
   // so a product cannot advertise "En stock" in a grid and "Rupture de stock" on its own page.
   const stock = getProductStockStatus(product as any);
   const stockDisponible = getStockDisponible(product as any);
-  const inCartQty = useCartQty(product.id);
-  const canAddMore = stockDisponible > 0 && inCartQty < stockDisponible;
 
   const productData = useMemo(() => {
     const name = localizedName(product as any, locale);
@@ -176,51 +287,6 @@ export const ProductCard = memo(function ProductCard({
       imagePresentation,
     };
   }, [product, imageContext, locale]);
-
-  const doAddToCart = useCallback((prod: any, selectedAroma: { id: number; designation_fr: string } | null) => {
-    const price = prod.prix != null ? getPriceDisplay(prod).finalPrice : productData.priceDisplay.finalPrice;
-    const image = prod.cover ? getStorageUrl(prod.cover) : productData.image;
-    const cartProduct = {
-      ...prod,
-      name: prod.name ?? prod.designation_fr,
-      price,
-      priceText: `${price} DT`,
-      image,
-      ...(selectedAroma && { selectedAroma }),
-    };
-    // ORDER MATTERS, and so does what is urgent.
-    //
-    // `setIsAdding(true)` is the only thing the shopper is waiting to see — the button flips to
-    // "Ajouté !". It stays urgent, so it is in the very next frame, which is the frame INP stops
-    // the clock on.
-    //
-    // The toast is not. Mounting a sonner toast into its portal was running inside the tap
-    // handler, ahead of the paint, to show a message that says the same thing as the button that
-    // just changed and the drawer that is about to open. `startTransition` moves it into a second,
-    // interruptible render pass — visually identical, off the critical interaction path.
-    setIsAdding(true);
-    addToCart(cartProduct, 1);
-    startTransition(() => {
-      toast.success('Produit ajouté au panier');
-    });
-    setTimeout(() => setIsAdding(false), 500);
-  }, [productData.priceDisplay.finalPrice, productData.image, addToCart]);
-
-  const handleAddToCart = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (stock.isOutOfStock || stockDisponible <= 0) {
-      toast.error('Rupture de stock');
-      return;
-    }
-    if (inCartQty >= stockDisponible) {
-      toast.error(`Stock insuffisant. Il reste ${stockDisponible - inCartQty} unité(s).`);
-      return;
-    }
-    const aromesFromProduct = (product as any).aromes;
-    const firstAroma = Array.isArray(aromesFromProduct) && aromesFromProduct.length > 0 ? aromesFromProduct[0] : null;
-    doAddToCart(product as any, firstAroma);
-  }, [stock.isOutOfStock, stockDisponible, inCartQty, product, doAddToCart]);
 
   void variant;
   void showDescription;
@@ -559,16 +625,7 @@ export const ProductCard = memo(function ProductCard({
           with a card, and they now sit together instead of one being a floating overlay.
         */}
         <div className="mt-auto flex items-center gap-2 pt-1 sm:block">
-          <button
-            type="button"
-            onClick={(e) => { e.preventDefault(); e.stopPropagation(); toggleFavorite(toFavoriteProduct(product)); }}
-            className={`pointer-events-auto z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-elevated transition-transform hover:scale-105 sm:absolute sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:rounded-full sm:border-0 sm:shadow-md sm:ring-1 sm:ring-hairline ${
-              favorite ? 'border-brand/40' : ''
-            }`}
-            aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
-          >
-            <Heart className={`h-[18px] w-[18px] ${favorite ? 'fill-brand text-brand' : 'text-ink-3'}`} />
-          </button>
+          <ProductFavoriteButton product={product} />
           <div className="min-w-0 flex-1 sm:flex-none">
           {stock.isBackOrder ? (
             /*
@@ -606,38 +663,14 @@ export const ProductCard = memo(function ProductCard({
               <span className="truncate">Demander</span>
             </button>
           ) : (
-          <Button
-            size="sm"
-            className={`flex w-full min-h-[44px] items-center justify-center gap-2 rounded-xl px-3 py-2.5 text-sm font-semibold leading-none whitespace-nowrap transition-colors duration-150 active:scale-[0.98] ${
-              inStock && canAddMore
-                ? 'bg-brand text-on-brand shadow-md hover:bg-brand-hover hover:shadow-lg'
-                : 'cursor-not-allowed bg-sunken text-ink-3'
-            }`}
-            onClick={handleAddToCart}
-            disabled={isAdding || !inStock || !canAddMore}
-            aria-label={!canAddMore && inStock ? 'Stock maximum atteint' : `Ajouter ${productData.name} au panier`}
-          >
-            <ShoppingCart className="size-4 shrink-0" aria-hidden="true" />
-            {!inStock ? (
-              <span className="truncate">{stock.isBackOrder ? 'Sur commande' : 'Rupture'}</span>
-            ) : !canAddMore ? (
-              <span className="truncate">Stock max</span>
-            ) : isAdding ? (
-              <span className="truncate">Ajouté !</span>
-            ) : (
-              /* "AJOUTER" ON PHONES, "AJOUTER AU PANIER" FROM `sm` (owner, in DevTools: "add to
-                 panier — that's bad; I just put the word 'Ajouter' with the icon, it looks good").
-                 On the 1-up mobile card the text column is ~190px wide and the full label at 14px
-                 measured ~150px, so the button was almost entirely text with the cart glyph
-                 crushed against it. `au panier` is redundant next to a cart icon in the first
-                 place — the icon IS the noun. The `aria-label` on the Button above still reads
-                 "Ajouter {product} au panier" at every width, so nothing is lost to a screen
-                 reader; this is purely what is drawn. */
-              <span className="truncate">
-                Ajouter<span className="hidden sm:inline"> au panier</span>
-              </span>
-            )}
-          </Button>
+          <ProductAddToCartButton
+            product={product}
+            productName={productData.name}
+            fallbackImage={productData.image}
+            fallbackPrice={productData.priceDisplay.finalPrice}
+            inStock={inStock}
+            stockDisponible={stockDisponible}
+          />
           )}
           </div>
         </div>

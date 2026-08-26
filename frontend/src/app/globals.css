@@ -1076,14 +1076,107 @@ body[data-page='product'] {
   }
 }
 
-/* Toast: top-center so it doesn't cover cart; compact on mobile */
+/*
+ * Notifications use the same quiet plate, hairline and single-accent grammar as the shop.
+ * Sonner owns stacking and swipe behaviour; this layer owns only the Protein.tn visual system.
+ */
 .sonner-toaster {
-  --width: 22rem;
+  --width: 23rem;
 }
+
+.sonner-toaster [data-sonner-toast].pt-toast {
+  --pt-toast-status: var(--c-brand);
+  position: relative;
+  min-height: 4rem;
+  overflow: hidden;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem 0.75rem 0.875rem;
+  border: 1px solid rgb(var(--c-hairline));
+  border-radius: 1rem;
+  background: rgb(var(--c-elevated));
+  color: rgb(var(--c-ink-1));
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast::before {
+  position: absolute;
+  inset-block: 0.75rem;
+  inset-inline-start: 0;
+  width: 0.1875rem;
+  border-radius: 999px;
+  background: rgb(var(--pt-toast-status));
+  content: '';
+}
+
+.sonner-toaster [data-sonner-toast][data-type='success'] {
+  --pt-toast-status: var(--c-ok);
+}
+
+.sonner-toaster [data-sonner-toast][data-type='warning'] {
+  --pt-toast-status: var(--c-warn);
+}
+
+.sonner-toaster [data-sonner-toast][data-type='error'] {
+  --pt-toast-status: var(--c-danger);
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon {
+  display: grid;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex: 0 0 2.25rem;
+  place-items: center;
+  border-radius: 0.75rem;
+  background: rgb(var(--pt-toast-status) / 0.1);
+  color: rgb(var(--pt-toast-status));
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  stroke-width: 2.25;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__content {
+  gap: 0.125rem;
+}
+
+.sonner-toaster .pt-toast__title {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: rgb(var(--c-ink-1));
+}
+
+.sonner-toaster .pt-toast__description {
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: rgb(var(--c-ink-2));
+}
+
+.sonner-toaster .pt-toast__action,
+.sonner-toaster .pt-toast__cancel {
+  min-height: 2.25rem;
+  border-radius: 0.625rem;
+  padding-inline: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sonner-toaster .pt-toast__action {
+  background: rgb(var(--c-brand-fill));
+  color: rgb(var(--c-on-brand));
+}
+
+.sonner-toaster .pt-toast__cancel {
+  background: rgb(var(--c-sunken));
+  color: rgb(var(--c-ink-2));
+}
+
 @media (max-width: 640px) {
   .sonner-toaster [data-sonner-toast] {
-    max-width: min(90vw, 22rem) !important;
-    width: auto !important;
+    width: calc(100vw - 1.5rem) !important;
+    max-width: 23rem !important;
   }
 }
 
