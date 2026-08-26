@@ -18,73 +18,70 @@ export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
-    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-sunken sm:items-center sm:py-5 lg:py-6">
-      <Container width="full" className="flex sm:block">
-        <main className="pt-promo relative isolate flex w-full overflow-hidden rounded-none border border-rule shadow-card sm:rounded-3xl lg:min-h-[42rem]">
-          <div className="pointer-events-none absolute inset-3 rounded-2xl border border-rule opacity-60 sm:inset-4" />
+    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-sunken sm:items-center sm:py-6 lg:py-8">
+      <Container className="flex sm:block">
+        <main className="relative grid w-full overflow-hidden border-0 border-hairline bg-elevated shadow-card sm:min-h-[44rem] sm:rounded-3xl sm:border lg:min-h-[42rem] lg:grid-cols-12">
+          <span className="absolute inset-x-0 top-0 z-20 h-1 bg-brand" aria-hidden="true" />
 
-          <div className="relative grid flex-1 lg:min-h-[42rem] lg:grid-cols-5">
-            <div className="pt-plate relative z-10 m-3 flex min-h-0 flex-col rounded-2xl p-4 shadow-card sm:m-5 sm:p-6 lg:col-span-2 lg:m-6 lg:me-0 lg:p-8 xl:p-10">
-              <div data-auth-header="" className="flex min-h-[44px] items-center justify-between gap-4">
-                <Link
-                  href="/"
-                  className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  aria-label="Protein.tn — Accueil"
-                >
-                  <Image
-                    src={headerLogoUrl}
-                    alt="Protein.tn"
-                    width={230}
-                    height={75}
-                    sizes="145px"
-                    className="h-7 w-auto object-contain"
-                    priority
-                  />
-                </Link>
-                <Link
-                  href="/"
-                  className="group -me-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:text-sm"
-                >
-                  <ArrowLeft
-                    className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
-                    aria-hidden="true"
-                  />
-                  <span className="hidden sm:inline">Retour à la boutique</span>
-                  <span className="sm:hidden">Boutique</span>
-                </Link>
-              </div>
-
-              <div data-auth-body="" className="flex flex-1 items-start pb-4 pt-8 sm:items-center sm:py-5 lg:py-6">
-                <div data-auth-card="" className="mx-auto w-full sm:max-w-md">
-                  {children}
-                </div>
-              </div>
-            </div>
-
-            <aside
-              className="relative hidden min-h-[42rem] overflow-hidden lg:col-span-3 lg:grid lg:grid-cols-7 lg:gap-6 lg:p-8 xl:gap-8 xl:p-10"
-              aria-label="Athlète Protein.tn"
-            >
-              <div className="relative z-10 self-start text-on-brand lg:col-span-4">
-                <p className="font-display text-xs font-bold uppercase tracking-[0.2em] opacity-80">
-                  Espace client
-                </p>
-                <p className="mt-2 font-display text-3xl font-bold uppercase leading-[0.94] tracking-tight 2xl:text-5xl">
-                  Votre effort.<br />Vos avantages.
-                </p>
-              </div>
-              <div className="relative min-h-0 self-stretch overflow-hidden rounded-3xl border border-rule bg-brand-50 shadow-card lg:col-span-3">
+          <div className="pt-plate relative z-10 flex min-h-dvh flex-col p-4 pt-5 sm:min-h-[44rem] sm:p-6 sm:pt-8 lg:col-span-7 lg:min-h-[42rem] lg:p-10 xl:p-12">
+            <div data-auth-header="" className="flex min-h-[44px] items-center justify-between gap-4">
+              <Link
+                href="/"
+                className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label="Protein.tn — Accueil"
+              >
                 <Image
-                  src={AUTH_ATHLETE}
-                  alt="Athlète tunisienne portant le maillot Protein.tn"
-                  fill
-                  sizes="(min-width: 1280px) 48vw, 44vw"
-                  className="object-cover object-center"
+                  src={headerLogoUrl}
+                  alt="Protein.tn"
+                  width={230}
+                  height={75}
+                  sizes="145px"
+                  className="h-7 w-auto object-contain"
                   priority
                 />
+              </Link>
+              <Link
+                href="/"
+                className="group -me-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:text-sm"
+              >
+                <ArrowLeft
+                  className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
+                  aria-hidden="true"
+                />
+                <span className="hidden sm:inline">Retour à la boutique</span>
+                <span className="sm:hidden">Boutique</span>
+              </Link>
+            </div>
+
+            <div data-auth-body="" className="flex flex-1 items-start pb-4 pt-8 sm:items-center sm:py-6 lg:py-8">
+              <div data-auth-card="" className="mx-auto w-full sm:max-w-md">
+                {children}
               </div>
-            </aside>
+            </div>
           </div>
+
+          <aside
+            className="relative hidden min-h-[42rem] overflow-hidden border-s border-hairline bg-brand-50 lg:col-span-5 lg:block"
+            aria-label="Athlète Protein.tn"
+          >
+            <Image
+              src={AUTH_ATHLETE}
+              alt="Athlète tunisienne portant le maillot Protein.tn"
+              fill
+              sizes="(min-width: 1280px) 34vw, 40vw"
+              className="object-cover object-center"
+              priority
+            />
+
+            <div className="pt-scrim absolute bottom-6 start-6 max-w-xs rounded-xl border border-rule p-5 shadow-card xl:bottom-8 xl:start-8 xl:p-6">
+              <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-brand">
+                Espace client
+              </p>
+              <p className="mt-2 font-display text-2xl font-bold uppercase leading-none tracking-tight text-ink-1 xl:text-3xl">
+                Votre effort.<br />Vos avantages.
+              </p>
+            </div>
+          </aside>
         </main>
       </Container>
     </div>
