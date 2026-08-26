@@ -20,9 +20,11 @@ class SmsServiceTest extends TestCase
 
     public function test_it_normalizes_a_tunisian_number_and_sends_gsm7_text(): void
     {
-        Http::fake(['www.winsmspro.com/*' => Http::response(['code' => 'ok'], 200)]);
+        Http::fake(['www.winsmspro.com/*' => Http::response(['code' => 'ok', 'reference' => 'ref-123'], 200)]);
 
-        app(SmsService::class)->send_sms('+216 20 123 456', 'Commande confirmée ✅');
+        $reference = app(SmsService::class)->send_sms('+216 20 123 456', 'Commande confirmée ✅');
+
+        $this->assertSame('ref-123', $reference);
 
         Http::assertSent(function (Request $request): bool {
             $url = urldecode($request->url());
@@ -32,6 +34,28 @@ class SmsServiceTest extends TestCase
                 && str_contains($url, 'sms=Commande confirmée')
                 && ! str_contains($url, '✅');
         });
+    }
+
+    public function test_it_rejects_a_non_json_gateway_response(): void
+    {
+        Http::fake(['www.winsmspro.com/*' => Http::response('<html>gateway error</html>', 200)]);
+
+        $this->expectException(RuntimeException::class);
+
+        app(SmsService::class)->send_sms('20123456', 'Votre commande est confirmée.');
+    }
+
+    public function test_probe_checks_balance_without_sending_a_message(): void
+    {
+        Http::fake(['www.winsmspro.com/*' => Http::response(['code' => 'ok', 'balance' => 1496], 200)]);
+
+        $result = app(SmsService::class)->probe();
+
+        $this->assertSame(1496, $result['balance']);
+        Http::assertSent(fn (Request $request): bool =>
+            str_contains($request->url(), 'action=check-balance')
+            && ! str_contains($request->url(), 'action=send-sms')
+        );
     }
 
     public function test_it_throws_when_the_gateway_refuses_a_message(): void

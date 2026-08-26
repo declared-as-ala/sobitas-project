@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, CreditCard, Eye, EyeOff, Loader2, Star, Truck } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -13,34 +13,7 @@ import { cn } from '@/app/components/ui/utils';
 import { Container } from '@/app/components/layout/Container';
 
 const AUTH_ATHLETE = '/auth/protein-athlete-studio-v3.png';
-
-const AUTH_BENEFITS = [
-  { Icon: Truck, label: 'Livraison 24–48h' },
-  { Icon: CreditCard, label: 'Paiement à la livraison' },
-  { Icon: Star, label: 'Points fidélité' },
-] as const;
-
-function AuthTrustRow() {
-  return (
-    <div
-      data-auth-trust=""
-      className="mt-5 grid grid-cols-3 border-t border-rule pt-4 [@media(max-height:700px)]:hidden [@media(min-width:1024px)_and_(max-height:800px)]:hidden sm:mt-6 sm:pt-5 lg:mt-0"
-    >
-      {AUTH_BENEFITS.map(({ Icon, label }, index) => (
-        <div
-          key={label}
-          className={cn(
-            'flex min-w-0 flex-col items-center gap-1.5 px-2 text-center',
-            index > 0 && 'border-s border-rule'
-          )}
-        >
-          <Icon className="h-5 w-5 text-brand" strokeWidth={1.8} aria-hidden="true" />
-          <span className="text-[10px] font-medium leading-tight text-ink-2 sm:text-xs">{label}</span>
-        </div>
-      ))}
-    </div>
-  );
-}
+const AUTH_MOTION = '/auth/auth-motion-graphic-v1.png';
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
@@ -48,42 +21,41 @@ export function AuthShell({ children }: { children: ReactNode }) {
   return (
     <div
       dir="ltr"
-      className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
+      className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
     >
       <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
-        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(50rem,calc(100dvh-3rem))] lg:min-h-[42rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
-          <span className="absolute inset-x-0 top-0 z-20 h-1 bg-brand" aria-hidden="true" />
-
+        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-[52fr_48fr] lg:border lg:border-hairline">
           <aside
-            className="relative h-52 shrink-0 overflow-hidden bg-brand-50 sm:h-60 lg:order-2 lg:h-auto lg:min-h-[42rem] lg:border-s lg:border-hairline"
+            className="relative h-56 shrink-0 overflow-hidden bg-brand-50 sm:h-64 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline"
             aria-label="Athlète Protein.tn"
           >
+            <Image
+              src={AUTH_MOTION}
+              alt=""
+              fill
+              sizes="(min-width: 1024px) 48vw, 100vw"
+              className="z-0 object-cover opacity-55 lg:object-contain lg:opacity-70"
+              aria-hidden="true"
+            />
             <Image
               src={AUTH_ATHLETE}
               alt="Athlète tunisienne portant le maillot Protein.tn"
               fill
-              sizes="(min-width: 1024px) 50vw, 100vw"
-              className="object-cover object-[center_10%] lg:object-[center_24%]"
+              sizes="(min-width: 1024px) 48vw, 100vw"
+              className="z-10 object-cover object-[center_4%] lg:object-contain lg:object-bottom"
               priority
             />
 
             <Link
               href="/"
-              className="pt-plate absolute start-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 shadow-card transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+              className="pt-plate absolute start-4 top-4 z-20 inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 shadow-card transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
               aria-label="Retour à la boutique"
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" />
             </Link>
-
-            <div className="pt-scrim absolute bottom-8 end-8 z-10 hidden max-w-44 items-center gap-3 rounded-lg border border-rule px-3 py-2 lg:flex">
-              <span className="h-8 w-0.5 shrink-0 bg-brand" aria-hidden="true" />
-              <p className="text-xs font-medium leading-snug text-ink-1">
-                Conçue pour<br />vos objectifs.
-              </p>
-            </div>
           </aside>
 
-          <div className="pt-plate relative z-10 mx-3 -mt-5 flex flex-col rounded-2xl p-4 shadow-card sm:mx-6 sm:-mt-7 sm:p-6 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[42rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-6">
+          <div className="pt-plate relative z-20 mx-3 -mt-6 flex flex-col rounded-2xl px-6 py-4 shadow-card sm:mx-6 sm:-mt-7 sm:p-8 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[40rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-8">
             <div data-auth-header="" className="flex min-h-[44px] items-center gap-4 lg:justify-between">
               <Link
                 href="/"
@@ -112,13 +84,11 @@ export function AuthShell({ children }: { children: ReactNode }) {
               </Link>
             </div>
 
-            <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
-              <div data-auth-card="" className="mx-auto w-full sm:max-w-lg xl:max-w-xl">
+            <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
+              <div data-auth-card="" className="mx-auto w-full max-w-[32.5rem]">
                 {children}
               </div>
             </div>
-
-            <AuthTrustRow />
           </div>
         </main>
       </Container>

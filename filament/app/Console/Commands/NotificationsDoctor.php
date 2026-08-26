@@ -34,6 +34,7 @@ class NotificationsDoctor extends Command
                             {--order= : An order id or numero to render the real messages for}
                             {--send-email= : Send the customer confirmation to THIS address}
                             {--send-sms= : Send the confirmation SMS to THIS number}
+                            {--probe-sms : Verify WinSMS credentials and balance without sending}
                             {--strict : Return a failure code when production notification configuration is incomplete}';
 
     protected $description = 'Report how order emails and SMS are configured, and optionally send a test';
@@ -109,6 +110,20 @@ class NotificationsDoctor extends Command
             $issues[] = 'SMS_API_KEY ou SMS_SENDER_ID est vide';
             $this->error('  SMS_API_KEY ou SMS_SENDER_ID manquant : SmsService s’arrête avant');
             $this->error('  l’appel et écrit un warning dans le log. Aucun client ne reçoit de SMS.');
+        }
+
+        if ($this->option('probe-sms') && $apiKey !== '' && $senderId !== '') {
+            try {
+                $probe = app(SmsService::class)->probe();
+                $balance = $probe['balance'] ?? null;
+                $this->components->info(
+                    'Passerelle WinSMS joignable et authentifiée'
+                    . ($balance !== null ? " · solde: {$balance}" : '')
+                );
+            } catch (\Throwable $e) {
+                $issues[] = 'La sonde WinSMS a échoué';
+                $this->error('  Sonde WinSMS ÉCHOUÉE : '.$e->getMessage());
+            }
         }
 
         $template = optional(Message::getCached())->msg_passez_commande;

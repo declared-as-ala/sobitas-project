@@ -8,6 +8,28 @@ use RuntimeException;
 
 class SmsService
 {
+    private const ENDPOINT = 'https://www.winsmspro.com/sms/sms/api';
+
+    private const ERROR_MESSAGES = [
+        '100' => 'passerelle indisponible',
+        '101' => 'action WinSMS invalide',
+        '102' => 'authentification WinSMS refusée',
+        '103' => 'numéro de téléphone invalide',
+        '105' => 'solde SMS insuffisant',
+        '106' => 'expéditeur SMS invalide',
+        '107' => 'type de SMS invalide',
+        '108' => 'passerelle SMS inactive',
+        '109' => 'programmation SMS invalide',
+        '110' => 'paramètre WinSMS manquant ou invalide',
+        '111' => 'message refusé comme spam',
+        '112' => 'numéro sur liste noire',
+        '113' => 'limite de débit WinSMS atteinte',
+        '429' => 'limite de débit WinSMS atteinte',
+        '555' => 'licence WinSMS expirée',
+        '888' => 'expéditeur SMS indisponible',
+        '999' => 'référence WinSMS invalide',
+    ];
+
     /**
      * ── WHAT ONE SMS COSTS, AND WHY THE ALPHABET DECIDES IT ─────────────────────────────────
      * A GSM-7 message carries 160 characters per segment. A single character outside that
@@ -73,21 +95,9 @@ class SmsService
      * ⚠️ LEGACY CODE — phone formatting is replicated from backend.
      * The original code uses string indexing for prefix detection.
      */
-    public function send_sms(string $tel, string $sms): void
+    public function send_sms(string $tel, string $sms): string
     {
-        $tel = preg_replace('/\D/', '', (string) $tel);
-
-        if (strlen($tel) === 8) {
-            $tel = '216' . $tel;
-        }
-
-        if (strlen($tel) !== 11 || $tel[0] !== '2' || $tel[1] !== '1' || $tel[2] !== '6') {
-            Log::warning('SMS skipped: invalid phone format', [
-                'phone_length' => strlen($tel),
-                'phone_last4'  => strlen($tel) >= 4 ? substr($tel, -4) : '****',
-            ]);
-            throw new RuntimeException('Numéro SMS tunisien invalide.');
-        }
+        $tel = $this->normalizeTunisianPhone($tel);
 
         $apiKey = config('services.sms.api_key');
         $senderId = config('services.sms.sender_id');
@@ -103,16 +113,14 @@ class SmsService
             throw new RuntimeException('Le SMS est vide après normalisation GSM-7.');
         }
 
-        $apiUrl = 'https://www.winsmspro.com/sms/sms/api?' . http_build_query([
-            'action'  => 'send-sms',
-            'api_key' => $apiKey,
-            'to'      => $tel,
-            'from'    => $senderId,
-            'sms'     => $sms,
-        ]);
-
         try {
-            $response = Http::timeout(15)->get($apiUrl);
+            $response = Http::acceptJson()->timeout(15)->get(self::ENDPOINT, [
+                'action'  => 'send-sms',
+                'api_key' => $apiKey,
+                'to'      => $tel,
+                'from'    => $senderId,
+                'sms'     => $sms,
+            ]);
 
             // Do not discard the gateway response. HTTP failures and explicit refusal payloads
             // must reach the queue as exceptions so Laravel can retry and operators can diagnose
@@ -128,20 +136,27 @@ class SmsService
             }
 
             $json = $response->json();
-            $code = is_array($json) ? strtolower((string) ($json['code'] ?? $json['status'] ?? '')) : '';
-            $ok   = $code === ''
-                ? ! preg_match('/error|failed|invalid|insufficient|denied/i', $body)
-                : in_array($code, ['ok', 'success', '0', '200'], true);
-
-            if (! $ok) {
-                throw new RuntimeException('WinSMS a refusé le message: '.mb_substr($body, 0, 180));
+            if (! is_array($json)) {
+                throw new RuntimeException('Réponse WinSMS illisible.');
             }
+
+            $code = strtolower(trim((string) ($json['code'] ?? $json['status'] ?? '')));
+            if (! in_array($code, ['ok', 'success', '0', '200'], true)) {
+                $reason = self::ERROR_MESSAGES[$code]
+                    ?? trim((string) ($json['message'] ?? 'message refusé'));
+                throw new RuntimeException("WinSMS a refusé le message ({$code}): {$reason}");
+            }
+
+            $reference = trim((string) ($json['reference'] ?? $json['ref'] ?? ''));
 
             Log::info('SMS sent', [
                 'phone_last4' => substr($tel, -4),
                 'length'      => mb_strlen($sms),
                 'segments'    => (int) ceil(mb_strlen($sms) / 160),
+                'reference'   => $reference !== '' ? $reference : null,
             ]);
+
+            return $reference;
         } catch (\Exception $e) {
             Log::error('SMS sending failed', [
                 'phone_last4' => substr($tel, -4),
@@ -149,5 +164,64 @@ class SmsService
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Confirm the configured account can reach WinSMS without sending a message.
+     * WinSMS documents a 30-second rate limit for this balance endpoint, so callers
+     * should use it only as an explicit diagnostic (for example during a deploy).
+     */
+    public function probe(): array
+    {
+        $apiKey = (string) config('services.sms.api_key', '');
+        if ($apiKey === '') {
+            throw new RuntimeException('SMS_API_KEY non configuré.');
+        }
+
+        $response = Http::acceptJson()->timeout(15)->get(self::ENDPOINT, [
+            'action' => 'check-balance',
+            'api_key' => $apiKey,
+            'response' => 'json',
+        ]);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('WinSMS est inaccessible (HTTP '.$response->status().').');
+        }
+
+        $json = $response->json();
+        if (! is_array($json)) {
+            throw new RuntimeException('Réponse WinSMS illisible.');
+        }
+
+        $code = strtolower(trim((string) ($json['code'] ?? $json['status'] ?? 'ok')));
+        if (! in_array($code, ['ok', 'success', '0', '200'], true)) {
+            $reason = self::ERROR_MESSAGES[$code]
+                ?? trim((string) ($json['message'] ?? 'connexion refusée'));
+            throw new RuntimeException("Connexion WinSMS refusée ({$code}): {$reason}");
+        }
+
+        return [
+            'balance' => $json['balance'] ?? $json['credit'] ?? null,
+            'license' => $json['license'] ?? $json['licence'] ?? $json['expiration'] ?? null,
+        ];
+    }
+
+    private function normalizeTunisianPhone(string $phone): string
+    {
+        $phone = preg_replace('/\D/', '', $phone) ?? '';
+
+        if (strlen($phone) === 8) {
+            $phone = '216'.$phone;
+        }
+
+        if (! preg_match('/^216\d{8}$/', $phone)) {
+            Log::warning('SMS skipped: invalid phone format', [
+                'phone_length' => strlen($phone),
+                'phone_last4' => strlen($phone) >= 4 ? substr($phone, -4) : '****',
+            ]);
+            throw new RuntimeException('Numéro SMS tunisien invalide.');
+        }
+
+        return $phone;
     }
 }
