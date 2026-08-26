@@ -19,6 +19,7 @@ use App\Services\SmsService;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -93,6 +94,27 @@ class CommandeController extends Controller
 
         $commandeData = $request->commande;
 
+        $idempotencyKey = trim((string) $request->header('Idempotency-Key', ''));
+        if ($idempotencyKey !== '' && ! preg_match('/^[A-Za-z0-9._:-]{16,100}$/', $idempotencyKey)) {
+            return response()->json(['message' => 'Clé de commande invalide.'], 422);
+        }
+        $payloadHash = hash('sha256', (string) json_encode($request->only([
+            'commande', 'panier', 'coupon_code', 'pack_discount', 'points_to_redeem',
+        ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        if ($idempotencyKey !== '') {
+            $existing = Commande::where('checkout_idempotency_key', $idempotencyKey)->first();
+            if ($existing) {
+                if ($existing->checkout_payload_hash && ! hash_equals($existing->checkout_payload_hash, $payloadHash)) {
+                    return response()->json([
+                        'message' => 'Cette clé de commande a déjà été utilisée avec un panier différent.',
+                    ], 409);
+                }
+
+                return $this->orderCreatedResponse($existing, true);
+            }
+        }
+
         // The authenticated token owner (or null for guests). The ONLY identity
         // allowed to earn or spend loyalty points.
         $authUser = $this->resolveTokenUser($request);
@@ -100,7 +122,8 @@ class CommandeController extends Controller
         Log::info('filament.api.add_commande.start', ['payload_keys' => array_keys($commandeData ?? [])]);
 
         $couponService = app(CouponService::class);
-        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser) {
+        try {
+            $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser, $idempotencyKey, $payloadHash) {
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -163,6 +186,10 @@ class CommandeController extends Controller
             $new_facture->livraison_adresse2 = $commandeData['livraison_adresse2'] ?? null;
             $new_facture->etat = Commande::STATUS_NEW;
             $new_facture->order_token = bin2hex(random_bytes(32));
+            if ($idempotencyKey !== '') {
+                $new_facture->checkout_idempotency_key = $idempotencyKey;
+                $new_facture->checkout_payload_hash = $payloadHash;
+            }
 
             // Atomic order number via number_sequences table (lockForUpdate, no race condition)
             $year = (int) date('Y');
@@ -283,6 +310,11 @@ class CommandeController extends Controller
                         response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos points de fidélité.'], 422)
                     );
                 }
+                if (! $authUser->hasVerifiedContact()) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                        response()->json(['message' => 'Vérifiez votre email avant d’utiliser vos points.'], 422)
+                    );
+                }
 
                 $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
                 $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
@@ -338,7 +370,26 @@ class CommandeController extends Controller
             }
 
             return $new_facture;
-        });
+            });
+        } catch (QueryException $e) {
+            // Two concurrent retries can both pass the early lookup. The unique
+            // index chooses one winner; return its order without buying another
+            // SMS, decrementing stock again, or creating another loyalty debit.
+            if ($idempotencyKey !== '') {
+                $existing = Commande::where('checkout_idempotency_key', $idempotencyKey)->first();
+                if ($existing) {
+                    if ($existing->checkout_payload_hash && ! hash_equals($existing->checkout_payload_hash, $payloadHash)) {
+                        return response()->json([
+                            'message' => 'Cette clé de commande a déjà été utilisée avec un panier différent.',
+                        ], 409);
+                    }
+
+                    return $this->orderCreatedResponse($existing, true);
+                }
+            }
+
+            throw $e;
+        }
 
         $commande = $new_facture->fresh(['details.product']);
 
@@ -405,7 +456,11 @@ class CommandeController extends Controller
                 }
 
                 if (! empty(trim($sms))) {
-                    app(SmsService::class)->send_sms($phone, $sms);
+                    app(SmsService::class)->sendOnce(
+                        'order:'.$commande->id.':confirmation',
+                        $phone,
+                        $sms
+                    );
                 }
             }
         } catch (\Exception $e) {
@@ -460,11 +515,18 @@ class CommandeController extends Controller
             ]);
         }
 
+        return $this->orderCreatedResponse($new_facture);
+    }
+
+    private function orderCreatedResponse(Commande $commande, bool $replayed = false): JsonResponse
+    {
         return response()->json([
-            'id'         => $new_facture->id,
-            'message'    => 'Merci pour votre commande',
+            'id' => $commande->id,
+            'numero' => $commande->numero,
+            'message' => 'Merci pour votre commande',
             'alert-type' => 'success',
-        ], 201);
+            'replayed' => $replayed,
+        ], $replayed ? 200 : 201);
     }
 
     /**

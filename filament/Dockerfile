@@ -107,6 +107,13 @@ RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \
 # The public/storage symlink will be created at runtime by docker-entrypoint.sh
 COPY . .
 
+# Fail the image build before publication if any application PHP file has a syntax error.
+# Runtime cache commands are intentionally best-effort in docker-entrypoint.sh, so they cannot
+# serve as the release gate for a production checkout or notification change.
+RUN find app config database routes -type f -name '*.php' -print0 \
+    | xargs -0 -n1 php -l >/tmp/php-lint.log \
+    || { cat /tmp/php-lint.log; exit 1; }
+
 # Re-sync lock file after COPY (COPY overwrites the lock that composer update fixed above).
 # This ensures the image always ships a valid composer.lock matching composer.json.
 RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \

@@ -1417,13 +1417,13 @@ export const getOrderDetails = async (
 const ORDER_429_DELAYS = [400, 900];
 /** Same payload shape for normal checkout and quick order (see lib/orderPayload.ts). */
 /** Uses Idempotency-Key header to prevent duplicate orders on 429 retry (same key for all attempts). */
-export const createOrder = async (orderData: BackendOrderPayload): Promise<{
+export const createOrder = async (orderData: BackendOrderPayload, existingIdempotencyKey?: string): Promise<{
   id: number;
   message: string;
   'alert-type': string;
 }> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
-  const idempotencyKey = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  const idempotencyKey = existingIdempotencyKey ?? (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `order-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
     'Accept': 'application/json',
@@ -1518,13 +1518,17 @@ export const removeCoupon = async (params: {
 };
 
 /** Quick order (commande rapide) – one product, minimal form. Does not modify cart. */
-export const submitQuickOrder = async (payload: QuickOrderPayload): Promise<QuickOrderResponse> => {
+export const submitQuickOrder = async (payload: QuickOrderPayload, existingIdempotencyKey?: string): Promise<QuickOrderResponse> => {
   const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+  const idempotencyKey = existingIdempotencyKey ?? (typeof crypto !== 'undefined' && crypto.randomUUID
+    ? crypto.randomUUID()
+    : `quick-order-${Date.now()}-${Math.random().toString(36).slice(2)}`);
   const response = await fetch('/api/quick-order', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      'Idempotency-Key': idempotencyKey,
       ...(token && { Authorization: `Bearer ${token}` }),
     },
     body: JSON.stringify(payload),
@@ -1598,6 +1602,16 @@ export const getProfile = async (): Promise<User> => {
     user.points_value_dt = Number(pv);
   }
   return user;
+};
+
+export const sendEmailVerificationOtp = async (): Promise<{ message: string }> => {
+  const response = await api.post<{ message: string }>('/email-verification/send');
+  return response.data;
+};
+
+export const verifyEmailOtp = async (code: string): Promise<{ message: string; email_verified: boolean }> => {
+  const response = await api.post<{ message: string; email_verified: boolean }>('/email-verification/verify', { code });
+  return response.data;
 };
 
 /**

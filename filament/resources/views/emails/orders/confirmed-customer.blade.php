@@ -23,7 +23,8 @@
         'cod'  => 'Paiement à la livraison (espèces)',
         'card' => 'Carte bancaire (en ligne)',
         default => $commande->payment_method ?? 'Non précisé',
-     $coordonnee   = \App\Models\Coordinate::getCached();
+    };
+    $coordonnee   = \App\Models\Coordinate::getCached();
     $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@protein.tn';
 @endphp
 <!DOCTYPE html>
@@ -32,7 +33,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light">
-    <title>Votre commande #{{ $commande->numero }} est confirmée ✅</title>
+    <title>Merci pour votre commande #{{ $commande->numero }}</title>
     <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
     <style type="text/css">
         body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
@@ -62,10 +63,10 @@
                 <img src="{{ $logoUrl }}" alt="Protein.tn" width="180" height="auto"
                      style="display:block;max-width:180px;background:rgba(255,255,255,.95);padding:12px 16px;border-radius:14px;margin:0 auto 22px;">
                 <p style="margin:0 0 6px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.02em;" class="h-hero">
-                    Merci, {{ $prenom ?: 'cher client' }} ! 🎉
+                    Merci, {{ $prenom ?: 'cher client' }} !
                 </p>
                 <p style="margin:0;font-size:15px;color:rgba(255,255,255,.9);">
-                    Votre commande est confirmée et en cours de traitement.
+                    Votre commande est bien enregistrée. Notre équipe vous appellera prochainement pour la confirmer avec vous.
                 </p>
             </td>
         </tr>

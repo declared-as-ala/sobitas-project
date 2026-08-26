@@ -521,6 +521,9 @@ export interface User {
   points_balance?: number;
   /** Monetary value of the balance in DT (balance / 20, 3 dp). From GET /profil. */
   points_value_dt?: number;
+  email_verified?: boolean;
+  phone_verified?: boolean;
+  contact_verified?: boolean;
 }
 
 /** Line item returned by POST /pack/quote (server-computed from real product prices). */
@@ -582,6 +585,8 @@ export interface AuthResponse {
   token: string;
   name: string;
   id: number;
+  requires_verification?: boolean;
+  verification_email_sent?: boolean;
 }
 
 // Contact & Newsletter Types

@@ -28,7 +28,7 @@ class OrderConfirmedCustomerMail extends Mailable
         }
 
         return $this
-            ->subject('✅ Votre commande #' . $this->commande->numero . ' est confirmée — Protein.tn')
+            ->subject('Merci pour votre commande #' . $this->commande->numero . ' — Protein.tn')
             ->view('emails.orders.confirmed-customer');
     }
 }

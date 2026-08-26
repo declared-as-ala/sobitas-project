@@ -35,7 +35,7 @@ function normalizeTunisianPhone(value: string): string | null {
 
 export default function RegisterPage() {
   const router = useRouter();
-  const { register, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { register, loginWithGoogle, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,8 +46,8 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace('/');
-  }, [isAuthenticated, authLoading, router]);
+    if (!authLoading && isAuthenticated) router.replace(user?.contact_verified ? '/' : '/verify-email');
+  }, [isAuthenticated, authLoading, router, user?.contact_verified]);
 
   if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
@@ -83,17 +83,19 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      await register({
+      const result = await register({
         name,
         email: formData.email.trim().toLowerCase(),
         phone,
         password: formData.password,
         role_id: 2, // customer; the server sets this itself and never trusts the field
       });
-      toast.success('Compte créé !', {
-        description: 'Bienvenue dans votre espace Protein.tn.',
+      toast.success('Compte créé', {
+        description: result.verification_email_sent === false
+          ? 'Demandez un nouveau code pour vérifier votre email.'
+          : 'Un code de vérification vient de vous être envoyé.',
       });
-      router.replace('/');
+      router.replace('/verify-email');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de l’inscription');
       /* `finally { setIsLoading(false) }` used to run on the SUCCESS path too, so the button

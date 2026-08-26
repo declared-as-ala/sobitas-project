@@ -181,6 +181,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/profil', [ClientController::class, 'profil']);
+    Route::post('/email-verification/send', [ClientController::class, 'sendEmailVerificationOtp'])
+        ->middleware('throttle:5,60');
+    Route::post('/email-verification/verify', [ClientController::class, 'verifyEmailOtp'])
+        ->middleware('throttle:10,1');
     Route::get('/points/history', [PointsController::class, 'history']);
     Route::get('/client_commandes', [ClientController::class, 'client_commandes']);
     Route::post('/update_profile', [ClientController::class, 'update_profile']);

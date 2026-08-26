@@ -43,8 +43,14 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function hasVerifiedContact(): bool
+    {
+        return $this->hasVerifiedEmail() || $this->phone_verified_at !== null;
+    }
 
     public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
     {

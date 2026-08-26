@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\NotificationDelivery;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
@@ -162,6 +164,68 @@ class SmsService
                 'phone_last4' => substr($tel, -4),
                 'error'       => $e->getMessage(),
             ]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Send one billable SMS for one business event.
+     *
+     * The event key is the idempotency boundary, for example
+     * `order:123:confirmation` or `order:123:status:livree`. It is claimed in the
+     * database before WinSMS is contacted, so two HTTP requests, two observers or
+     * two queue workers cannot purchase the same message twice.
+     *
+     * We deliberately do not auto-retry a failed/uncertain delivery. A connection
+     * can drop after WinSMS accepted the message but before its response reached us;
+     * retrying that case saves no customer and can bill a duplicate. Operators can
+     * inspect the delivery row and explicitly send from Filament if truly required.
+     */
+    public function sendOnce(string $eventKey, string $tel, string $sms): ?string
+    {
+        $eventKey = trim($eventKey);
+        if ($eventKey === '' || mb_strlen($eventKey) > 190) {
+            throw new RuntimeException('Clé d’idempotence SMS invalide.');
+        }
+
+        $recipientHash = hash('sha256', $this->normalizeTunisianPhone($tel));
+
+        try {
+            $delivery = NotificationDelivery::create([
+                'event_key' => $eventKey,
+                'channel' => 'sms',
+                'recipient_hash' => $recipientHash,
+                'status' => 'sending',
+                'attempts' => 1,
+            ]);
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = NotificationDelivery::where('event_key', $eventKey)->first();
+            if ($existing) {
+                Log::info('SMS suppressed: business event already claimed', [
+                    'event_key' => $eventKey,
+                    'status' => $existing->status,
+                ]);
+
+                return $existing->status === 'sent' ? (string) ($existing->provider_reference ?? '') : null;
+            }
+
+            throw $e;
+        }
+
+        try {
+            $reference = $this->send_sms($tel, $sms);
+            $delivery->forceFill([
+                'status' => 'sent',
+                'provider_reference' => $reference !== '' ? $reference : null,
+                'sent_at' => now(),
+            ])->save();
+
+            return $reference;
+        } catch (\Throwable $e) {
+            $delivery->forceFill([
+                'status' => $e instanceof ConnectionException ? 'uncertain' : 'failed',
+                'last_error' => mb_substr($e->getMessage(), 0, 2000),
+            ])->save();
             throw $e;
         }
     }

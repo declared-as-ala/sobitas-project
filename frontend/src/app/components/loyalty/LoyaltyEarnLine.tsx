@@ -71,35 +71,35 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
     <div
       title={EARN_TITLE}
       className={cn(
-        'flex items-start gap-2.5 text-[13px] leading-snug text-ink-2',
-        variant === 'pdp' && 'rounded-lg border border-hairline bg-sunken px-3 py-2.5',
+        'flex items-center gap-2 text-[13px] leading-snug text-ink-2',
+        variant === 'pdp' && 'w-fit max-w-full rounded-full border border-brand/20 bg-brand/5 px-3 py-2',
         className
       )}
     >
-      <Coins className="mt-px h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-elevated text-brand">
+        <Coins className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
+      </span>
       <p className="min-w-0">
         {isAuthenticated ? (
           <>
-            Gagnez{' '}
+            <span className="font-semibold text-ink-1">À la livraison :</span>{' '}gagnez{' '}
             <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)}</span>{' '}
-            <span className="tabular-nums">({formatTnd(valueDt)})</span> à la livraison.
+            <span className="tabular-nums">({formatTnd(valueDt)})</span>.
           </>
         ) : (
           <>
             <Link
               href="/register"
-              className="rounded font-semibold text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="-my-2 inline-flex min-h-11 items-center rounded font-semibold text-brand underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Créez un compte
             </Link>{' '}
-            et gagnez{' '}
-            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)}</span> —{' '}
-            <span className="tabular-nums">{formatTnd(valueDt)}</span> de remise sur votre prochaine
-            commande.
+            <span aria-hidden="true"> · </span>
+            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)} pts</span>{' '}
+            <span className="tabular-nums">({formatTnd(valueDt)})</span>
           </>
         )}
       </p>
     </div>
   );
 }
-

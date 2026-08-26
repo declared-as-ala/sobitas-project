@@ -20,6 +20,7 @@ class Commande extends Model
         'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone',
         'livraison_region', 'livraison_ville', 'livraison_code_postale',
         'livraison_adresse1', 'livraison_adresse2', 'sms_sent',
+        'checkout_idempotency_key', 'checkout_payload_hash',
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'discount_ht', 'discount_ttc', 'stock_restored_at',

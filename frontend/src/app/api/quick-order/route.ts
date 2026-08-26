@@ -163,12 +163,14 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
     });
 
     const authHeader = request.headers.get('Authorization');
+    const idempotencyKey = request.headers.get('Idempotency-Key');
     const response = await fetch(`${API_URL}/add_commande`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         ...(authHeader && { Authorization: authHeader }),
+        ...(idempotencyKey && { 'Idempotency-Key': idempotencyKey }),
       },
       body: JSON.stringify(orderPayload),
       signal: AbortSignal.timeout(30000),

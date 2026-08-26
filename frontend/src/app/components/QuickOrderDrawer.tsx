@@ -69,6 +69,7 @@ export function QuickOrderDrawer({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<QuickOrderResponse | null>(null);
   const phoneInputRef = useRef<HTMLInputElement>(null);
+  const orderAttemptRef = useRef<{ payload: string; key: string } | null>(null);
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
@@ -258,7 +259,15 @@ export function QuickOrderDrawer({
     };
 
     try {
-      const res = await submitQuickOrder(payload);
+      const serializedPayload = JSON.stringify(payload);
+      if (orderAttemptRef.current?.payload !== serializedPayload) {
+        orderAttemptRef.current = {
+          payload: serializedPayload,
+          key: crypto.randomUUID?.() ?? `quick-order-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        };
+      }
+      const res = await submitQuickOrder(payload, orderAttemptRef.current.key);
+      orderAttemptRef.current = null;
       setResult(res);
       trackEvent('quick_order_success', { order_id: res.orderId, product_id: product.id });
       onSuccess?.(res);

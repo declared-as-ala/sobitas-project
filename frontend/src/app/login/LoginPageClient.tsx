@@ -20,7 +20,7 @@ import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
 function LoginContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { login, loginWithGoogle, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, loginWithGoogle, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   /* `?email=` is set by the reset-password screen when it hands the customer back here, so they
@@ -39,8 +39,8 @@ function LoginContent() {
   const redirectTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace(redirectTo);
-  }, [isAuthenticated, authLoading, router, redirectTo]);
+    if (!authLoading && isAuthenticated) router.replace(user?.contact_verified ? redirectTo : '/verify-email');
+  }, [isAuthenticated, authLoading, router, redirectTo, user?.contact_verified]);
 
   if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
@@ -48,14 +48,14 @@ function LoginContent() {
     e.preventDefault();
     setIsLoading(true);
     try {
-      await login({
+      const result = await login({
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
       });
       toast.success('Bienvenue !', {
         description: 'Votre espace client est prêt.',
       });
-      router.replace(redirectTo);
+      router.replace(result.requires_verification ? '/verify-email' : redirectTo);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la connexion');
       setIsLoading(false);

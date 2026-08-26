@@ -11,6 +11,7 @@ use App\Models\FactureTva;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\PointsService;
+use App\Services\EmailVerificationOtpService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -98,6 +99,7 @@ class ClientController extends Controller
                 'token' => $accessToken,
                 'name'  => $user->name,
                 'id'    => $user->id,
+                'requires_verification' => ! $user->hasVerifiedContact(),
             ]);
         }
 
@@ -144,11 +146,54 @@ class ClientController extends Controller
 
         $token = $user->createToken('authToken')->plainTextToken;
 
+        $verificationEmailSent = true;
+        try {
+            app(EmailVerificationOtpService::class)->send($user);
+        } catch (\Throwable $e) {
+            $verificationEmailSent = false;
+            Log::error('Registration verification email failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         return response()->json([
             'token' => $token,
             'name'  => $user->name,
             'id'    => $user->id,
+            'requires_verification' => true,
+            'verification_email_sent' => $verificationEmailSent,
         ], 201);
+    }
+
+    public function sendEmailVerificationOtp(Request $request): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        app(EmailVerificationOtpService::class)->send($user);
+
+        return response()->json([
+            'message' => $user->hasVerifiedEmail()
+                ? 'Votre adresse email est déjà vérifiée.'
+                : 'Un nouveau code vient d’être envoyé.',
+        ]);
+    }
+
+    public function verifyEmailOtp(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'code' => ['required', 'digits:6'],
+        ]);
+
+        /** @var User $user */
+        $user = $request->user();
+        app(EmailVerificationOtpService::class)->verify($user, $validated['code']);
+
+        return response()->json([
+            'message' => 'Votre adresse email est vérifiée.',
+            'email_verified' => true,
+            'contact_verified' => true,
+        ]);
     }
 
     /**
@@ -435,8 +480,14 @@ class ClientController extends Controller
             $user->phone = $validated['phone'];
         }
 
+        $emailChanged = false;
         if (isset($validated['email'])) {
-            $user->email = $validated['email'];
+            $normalizedEmail = strtolower(trim($validated['email']));
+            $emailChanged = $normalizedEmail !== strtolower((string) $user->email);
+            $user->email = $normalizedEmail;
+            if ($emailChanged) {
+                $user->email_verified_at = null;
+            }
         }
 
         $passwordChanged = false;
@@ -446,6 +497,17 @@ class ClientController extends Controller
         }
 
         $user->save();
+
+        if ($emailChanged) {
+            try {
+                app(EmailVerificationOtpService::class)->send($user);
+            } catch (\Throwable $e) {
+                Log::error('Profile email verification send failed', [
+                    'user_id' => $user->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
 
         // On a password change, revoke the user's OTHER Sanctum tokens so a leaked/stale
         // token elsewhere cannot survive a credential rotation. Keep the current request
@@ -462,6 +524,9 @@ class ClientController extends Controller
             'name'  => $user->name,
             'email' => $user->email,
             'phone' => $user->phone,
+            'email_verified' => $user->hasVerifiedEmail(),
+            'phone_verified' => $user->phone_verified_at !== null,
+            'contact_verified' => $user->hasVerifiedContact(),
         ]);
     }
 
@@ -480,6 +545,9 @@ class ClientController extends Controller
             'phone'           => $user->phone,
             'points_balance'  => $pointsBalance,
             'points_value_dt' => app(PointsService::class)->pointsToDt($pointsBalance),
+            'email_verified'  => $user->hasVerifiedEmail(),
+            'phone_verified'  => $user->phone_verified_at !== null,
+            'contact_verified' => $user->hasVerifiedContact(),
         ]);
     }
 

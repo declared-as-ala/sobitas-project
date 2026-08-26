@@ -2,14 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
-import type { User, LoginRequest, RegisterRequest, Order } from '@/types';
+import type { User, LoginRequest, RegisterRequest, Order, AuthResponse } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
+  register: (data: RegisterRequest) => Promise<AuthResponse>;
   /** Sign in (or sign up, first time) with a Google ID token from GoogleSignInButton. */
   loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
@@ -87,6 +87,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         name: response.name,
         email: credentials.email,
       });
+      return response;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Connexion impossible. Réessayez.');
     }
@@ -102,6 +103,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: data.email,
         phone: data.phone,
       });
+      return response;
     } catch (error: any) {
       const firstValidationError = Object.values(error.response?.data?.errors ?? {})
         .flat()

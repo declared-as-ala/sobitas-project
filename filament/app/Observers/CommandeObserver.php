@@ -84,6 +84,15 @@ class CommandeObserver
             return;
         }
 
+        if (! in_array((string) $commande->etat, config('customer_notifications.sms_order_statuses', []), true)) {
+            Log::info('Order status SMS suppressed: milestone is not customer-useful', [
+                'commande_id' => $commande->id,
+                'etat' => $commande->etat,
+            ]);
+
+            return;
+        }
+
         $phone = $commande->livraison_phone ?? $commande->phone ?? null;
         if (empty(trim((string) $phone))) {
             return;
@@ -155,7 +164,11 @@ class CommandeObserver
                 . 'Merci pour votre confiance.';
         }
 
-        SendSmsJob::dispatch($phone, $sms);
+        SendSmsJob::dispatch(
+            $phone,
+            $sms,
+            'order:'.$commande->id.':status:'.strtolower((string) $commande->etat)
+        );
 
         Log::info('Order status SMS dispatched', [
             'commande_id' => $commande->id,

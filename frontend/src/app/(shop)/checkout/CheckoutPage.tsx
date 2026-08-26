@@ -41,6 +41,7 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'card'>('cod');
   const [orderData, setOrderData] = useState<{ order: Order; orderDetails: any[] } | null>(null);
   const printRef = useRef<HTMLDivElement>(null);
+  const checkoutAttemptRef = useRef<{ payload: string; key: string } | null>(null);
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [mobileSummaryOpen, setMobileSummaryOpen] = useState(false);
   const keyboardOpen = useKeyboardOpen();
@@ -358,7 +359,14 @@ export default function CheckoutPage() {
         points_to_redeem: effectivePointsToRedeem > 0 ? effectivePointsToRedeem : undefined,
       });
 
-      const response = await createOrder(orderPayload);
+      const serializedPayload = JSON.stringify(orderPayload);
+      if (checkoutAttemptRef.current?.payload !== serializedPayload) {
+        checkoutAttemptRef.current = {
+          payload: serializedPayload,
+          key: crypto.randomUUID?.() ?? `order-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+        };
+      }
+      const response = await createOrder(orderPayload, checkoutAttemptRef.current.key);
       
       // Get order ID from response (could be response.id or response.commande.id)
       const orderId = response.id || (response as any).commande?.id || (response as any).data?.id;
@@ -370,6 +378,7 @@ export default function CheckoutPage() {
       
       // Set flag to prevent cart redirect BEFORE clearing cart
       setIsOrderComplete(true);
+      checkoutAttemptRef.current = null;
       
       // Move to step 3 (confirmation) BEFORE clearing cart and fetching details
       // This ensures the component doesn't return null due to empty cart
