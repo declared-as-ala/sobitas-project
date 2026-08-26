@@ -13,7 +13,6 @@ import { cn } from '@/app/components/ui/utils';
 import { Container } from '@/app/components/layout/Container';
 
 const AUTH_ATHLETE = '/auth/protein-athlete-studio-v3.png';
-const AUTH_MOTION = '/auth/auth-motion-graphic-v1.png';
 
 export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
@@ -24,25 +23,17 @@ export function AuthShell({ children }: { children: ReactNode }) {
       className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
     >
       <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
-        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-[52fr_48fr] lg:border lg:border-hairline">
+        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
           <aside
             className="relative h-56 shrink-0 overflow-hidden bg-brand-50 sm:h-64 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline"
             aria-label="Athlète Protein.tn"
           >
             <Image
-              src={AUTH_MOTION}
-              alt=""
-              fill
-              sizes="(min-width: 1024px) 48vw, 100vw"
-              className="z-0 object-cover opacity-55 lg:object-contain lg:opacity-70"
-              aria-hidden="true"
-            />
-            <Image
               src={AUTH_ATHLETE}
               alt="Athlète tunisienne portant le maillot Protein.tn"
               fill
-              sizes="(min-width: 1024px) 48vw, 100vw"
-              className="z-10 object-cover object-[center_4%] lg:object-contain lg:object-bottom"
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover object-[center_4%] lg:object-[center_12%]"
               priority
             />
 
@@ -85,7 +76,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </div>
 
             <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
-              <div data-auth-card="" className="mx-auto w-full max-w-[32.5rem]">
+              <div data-auth-card="" className="mx-auto w-full max-w-lg">
                 {children}
               </div>
             </div>
@@ -145,7 +136,7 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between gap-3">
-        <Label htmlFor={id} className="text-[13px] font-semibold text-ink-1">
+        <Label htmlFor={id} className="text-sm font-semibold text-ink-1">
           {label}
         </Label>
         {action}
@@ -162,8 +153,9 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
           {...props}
           type={reveal ? (shown ? 'text' : 'password') : props.type}
           className={cn(
-            'h-12 rounded-xl border-hairline bg-sunken ps-10 text-ink-1 placeholder:text-ink-3',
-            'focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-0',
+            'h-12 rounded-xl border-hairline bg-base ps-10 text-ink-1 shadow-sm placeholder:text-ink-3',
+            'transition-[border-color,box-shadow,background-color] hover:border-rule-strong',
+            'focus-visible:border-brand focus-visible:bg-elevated focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-0',
             reveal && 'pe-11',
             className
           )}
@@ -206,7 +198,7 @@ export function AuthSubmit({
       className={cn(
         'inline-flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4',
         'font-display text-[13.5px] font-bold uppercase tracking-[0.08em] text-on-brand',
-        'transition-[background-color,transform] duration-150 hover:bg-brand-hover active:scale-[0.99]',
+        'shadow-sm transition-[background-color,box-shadow,transform] duration-150 hover:bg-brand-hover hover:shadow-md active:scale-[0.99]',
         'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
         'disabled:cursor-not-allowed disabled:opacity-60 disabled:active:scale-100',
         props.className
