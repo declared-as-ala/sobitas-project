@@ -73,7 +73,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
               priority
             />
 
-            <div className="pt-scrim absolute bottom-6 start-6 max-w-xs rounded-xl border border-rule p-5 shadow-card xl:bottom-8 xl:start-8 xl:p-6">
+            <div className="pt-scrim absolute bottom-6 start-6 z-10 max-w-xs rounded-xl border border-rule p-5 shadow-card xl:bottom-8 xl:start-8 xl:p-6">
               <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-brand">
                 Espace client
               </p>
