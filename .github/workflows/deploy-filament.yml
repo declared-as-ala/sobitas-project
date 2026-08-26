@@ -170,15 +170,12 @@ jobs:
             upsert_secret() {
               SECRET_KEY="$1"
               SECRET_VALUE="$2"
-              TMP_ENV="$(mktemp)"
-              awk -v key="$SECRET_KEY" -v value="$SECRET_VALUE" '
-                BEGIN { written = 0 }
-                $0 ~ "^" key "=" { if (!written) print key "=" value; written = 1; next }
-                { print }
-                END { if (!written) print key "=" value }
-              ' .env > "$TMP_ENV"
-              install -m 600 "$TMP_ENV" .env
-              rm -f "$TMP_ENV"
+              if grep -q "^${SECRET_KEY}=" .env; then
+                sed -i "s|^${SECRET_KEY}=.*|${SECRET_KEY}=${SECRET_VALUE}|" .env
+              else
+                printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> .env
+              fi
+              chmod 600 .env
             }
 
             [ -n '${{ secrets.SMS_API_KEY }}' ] || { echo "❌ SMS_API_KEY GitHub secret is missing"; exit 1; }
@@ -357,15 +354,12 @@ jobs:
             upsert_secret() {
               SECRET_KEY="$1"
               SECRET_VALUE="$2"
-              TMP_ENV="$(mktemp)"
-              awk -v key="$SECRET_KEY" -v value="$SECRET_VALUE" '
-                BEGIN { written = 0 }
-                $0 ~ "^" key "=" { if (!written) print key "=" value; written = 1; next }
-                { print }
-                END { if (!written) print key "=" value }
-              ' .env > "$TMP_ENV"
-              install -m 600 "$TMP_ENV" .env
-              rm -f "$TMP_ENV"
+              if grep -q "^${SECRET_KEY}=" .env; then
+                sed -i "s|^${SECRET_KEY}=.*|${SECRET_KEY}=${SECRET_VALUE}|" .env
+              else
+                printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> .env
+              fi
+              chmod 600 .env
             }
 
             [ -n '${{ secrets.SMS_API_KEY }}' ] || { echo "❌ SMS_API_KEY GitHub secret is missing"; exit 1; }
