@@ -49,7 +49,7 @@ import {
  * loadForCache stays on the OUTSIDE for the reason it always has: a transient upstream failure must
  * render empty without that emptiness being baked into the ISR entry for the next ten minutes.
  */
-async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery>) {
+export async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery>) {
   const scoped: ShopQuery = { ...query, ...scope };
 
   /*
@@ -498,16 +498,25 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           '')
           .slice(0, 500)
           .trim() || undefined;
-      const collectionPageSchema = buildCollectionPageSchema(pageTitle, `/${canonicalSlug}`, baseUrl, {
+      const collectionPath = buildShopUrl(
+        { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
+        `/${canonicalSlug}`
+      );
+      const collectionPageSchema = buildCollectionPageSchema(pageTitle, collectionPath, baseUrl, {
         description: collectionDesc,
       });
       validateStructuredData(collectionPageSchema, 'CollectionPage');
-      const productList = (sub.products ?? []).slice(0, 20)
+      // Structured data must describe the CURRENT paginated listing. `sub.products` is always the
+      // API's fixed first page, so using it here made /creatine?page=2 self-canonical but gave it
+      // page 1's ItemList and Product entities. Besides mismatching the visible grid, every page in
+      // a category series then emitted duplicate product schema.
+      const currentPageProducts = (productsData.products ?? []) as any[];
+      const productList = currentPageProducts.slice(0, 20)
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
-      const productSchemas = (sub.products ?? [])
+      const productSchemas = currentPageProducts
         .slice(0, 6)
         .map((p: any) => buildProductSchema(p, baseUrl))
         .filter(Boolean) as object[];
@@ -664,16 +673,23 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           '')
           .slice(0, 500)
           .trim() || undefined;
-      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, `/${canonicalSlug}`, baseUrl, {
+      const collectionPathCat = buildShopUrl(
+        { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
+        `/${canonicalSlug}`
+      );
+      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, collectionPathCat, baseUrl, {
         description: collectionDescCat,
       });
       validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
-      const productListCat = (cat.products ?? []).slice(0, 20)
+      // As in the subcategory branch, schema follows the current page rather than the taxonomy
+      // endpoint's permanently fixed page-1 sample.
+      const currentPageProductsCat = (productsData.products ?? []) as any[];
+      const productListCat = currentPageProductsCat.slice(0, 20)
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
-      const productSchemasCat = (cat.products ?? [])
+      const productSchemasCat = currentPageProductsCat
         .slice(0, 6)
         .map((p: any) => buildProductSchema(p, baseUrl))
         .filter(Boolean) as object[];

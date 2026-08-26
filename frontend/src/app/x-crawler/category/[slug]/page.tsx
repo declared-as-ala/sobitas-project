@@ -36,7 +36,10 @@ import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
 import { getErrorStatus } from '@/util/errorStatus';
 import { retiredSlugDestination } from '@/util/retiredSlug';
-import { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
+import {
+  generateMetadata as generateCategoryMetadata,
+  loadListingPage,
+} from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
@@ -49,11 +52,15 @@ import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
+import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<RawSearchParams>;
+};
 
 function isNotFoundError(error: unknown): boolean {
   if (error instanceof ApiError) return error.status === 404;
@@ -94,7 +101,7 @@ async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
   }
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) {
@@ -103,7 +110,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     if (await hasCategoryOrSubCategory(cleanSlug)) {
       // Reuse the human category page's metadata (same title/description, canonical → /{slug}).
-      return generateCategoryMetadata({ params });
+      return generateCategoryMetadata({ params, searchParams });
     }
     const brand = await findBrandBySlug(cleanSlug);
     if (brand) {
@@ -180,12 +187,13 @@ function ldScript(schema: object, key: string) {
   );
 }
 
-export default async function CrawlerCategoryPage({ params }: PageProps) {
+export default async function CrawlerCategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) notFound();
 
   const baseUrl = getBaseUrl();
+  const listingQuery = parseShopQuery(searchParams ? await searchParams : undefined);
 
   // 1. Category / subcategory listing
   let catResult: Awaited<ReturnType<typeof fetchCategoryOrSubCategory>> | null = null;
@@ -204,7 +212,16 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
     const merged = mergeCategorySeo(seoJson, (data as { seo?: unknown }).seo as never);
     const title = merged.h1?.trim() || entity?.designation_fr || cleanSlug;
     const introHtml = merged.intro?.trim() ? sanitizeProductHtml(merged.intro) : null;
-    const products: Product[] = ((data as { products?: Product[] }).products) ?? [];
+    // The taxonomy endpoint always embeds page 1. Use the same cached listing loader as the human
+    // category route so Googlebot receives the requested ?page=N, not twelve page-1 products at
+    // every paginated URL.
+    const { productsData, serverPagination } = await loadListingPage(
+      listingQuery,
+      isSub
+        ? { subcategories: [cleanSlug], categories: [] }
+        : { categories: [cleanSlug], subcategories: [] }
+    );
+    const products: Product[] = (productsData.products ?? []) as Product[];
     const subCats: CrawlerListLink[] = !isSub
       ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
           .filter((sc) => sc?.slug && sc?.designation_fr)
@@ -239,7 +256,11 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
       .filter((p) => p.url && p.url !== '/shop/');
 
     const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl);
-    const collectionSchema = buildCollectionPageSchema(title, `/${cleanSlug}`, baseUrl, {
+    const collectionPath = buildShopUrl(
+      { ...listingQuery, page: serverPagination.currentPage },
+      `/${cleanSlug}`
+    );
+    const collectionSchema = buildCollectionPageSchema(title, collectionPath, baseUrl, {
       description: merged.metaDescription?.trim() || undefined,
     });
     const itemListSchema = productListItems.length > 0
@@ -269,6 +290,11 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
           products={products}
           subCategories={subCats}
           relatedCategories={relatedCategories}
+          pagination={{
+            currentPage: serverPagination.currentPage,
+            totalPages: serverPagination.totalPages,
+            buildHref: (page) => buildShopUrl({ ...listingQuery, page }, `/${cleanSlug}`),
+          }}
           kind={isSub ? 'subcategory' : 'category'}
         />
       </>

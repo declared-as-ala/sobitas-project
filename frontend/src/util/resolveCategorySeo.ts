@@ -1,4 +1,5 @@
 import type { CategorySeoContent } from '@/types/categorySeo';
+import { isSubstantivelyDuplicateHtml } from '@/util/categorySeoDedup';
 import { sanitizeExtraJsonLd } from '@/util/extraJsonLd';
 
 /** Normalized SEO object from Laravel API (`productsBySubCategoryId` / `productsByCategoryId`). */
@@ -248,7 +249,8 @@ export function mergeCategorySeo(
 
   const h1 = useApi ? (api!.h1 ?? '').trim() || (j.h1 ?? '') : (j.h1 ?? '');
   const intro = richerIntro(useApi ? (api!.short_intro_html ?? '').trim() : '', (j.intro ?? '').trim());
-  const longBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
+  const apiLongBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
+  const longBottomHtml = isSubstantivelyDuplicateHtml(intro, apiLongBottomHtml) ? '' : apiLongBottomHtml;
 
   const howToChooseTitle = ((j.howToChooseTitle ?? '') as string).trim();
   const howToChooseBody = ((j.howToChooseBody ?? '') as string).trim();

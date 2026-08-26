@@ -917,9 +917,16 @@ export async function middleware(request: NextRequest) {
     // so a CMS/404 slug is never mis-served). Reserved routes (/shop, /blog…) are excluded.
     const categoryPath = pathname.match(/^\/([^/]+)\/?$/);
     if (categoryPath && !isReservedRouteSlug(categoryPath[1])) {
-      return NextResponse.rewrite(
-        new URL(`/x-crawler/category/${encodeURIComponent(categoryPath[1])}`, request.url)
+      const crawlerCategory = new URL(
+        `/x-crawler/category/${encodeURIComponent(categoryPath[1])}`,
+        request.url
       );
+      // Category pagination is as crawl-critical as /shop pagination above. Forward only the
+      // bounded page number; facets remain collapsed so they cannot create an unbounded crawl
+      // space or a separate cache entry for every filter combination.
+      const page = searchParams.get('page');
+      if (page && /^\d{1,6}$/.test(page) && page !== '1') crawlerCategory.searchParams.set('page', page);
+      return NextResponse.rewrite(crawlerCategory);
     }
   }
 
