@@ -667,7 +667,7 @@ const taxonomySource: SitemapSource = {
  * did not already emit.
  *
  * Gated on liveCategorySlugs: emitting content-file names blindly previously pushed 404 URLs
- * (/whey-protein), redirecting URLs (/mass-gainer → /gainers-proteines) and mixed-case duplicates
+ * (/whey-protein), redirecting URLs (/mass-gainer → /mass-gainers) and mixed-case duplicates
  * (/Intra-Workout) into the sitemap. Lowercased for the same reason — one content file is
  * capitalised (Intra-Workout.json), and a sitemap URL whose canonical disagrees with it is exactly
  * the "Duplicate, Google chose a different canonical" signal.

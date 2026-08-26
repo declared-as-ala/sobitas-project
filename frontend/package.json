@@ -7,7 +7,7 @@
   },
   "scripts": {
     "dev": "cross-env NODE_ENV=development NODE_OPTIONS=--no-deprecation next dev",
-    "prebuild": "node scripts/check-reserved-routes.mjs && node scripts/check-url-contract.mjs && node scripts/check-sitemap-routes.mjs && node --experimental-strip-types --no-warnings scripts/check-sitemap-crawl.mjs && node --experimental-strip-types --no-warnings scripts/check-category-seo-content.ts",
+    "prebuild": "node scripts/check-reserved-routes.mjs && node scripts/check-url-contract.mjs && node scripts/check-commercial-intent-map.mjs && node scripts/check-sitemap-routes.mjs && node --experimental-strip-types --no-warnings scripts/check-sitemap-crawl.mjs && node --experimental-strip-types --no-warnings scripts/check-category-seo-content.ts",
     "build": "cross-env NODE_OPTIONS=--no-deprecation next build",
     "postbuild": "node scripts/assert-no-dev-bundle.mjs",
     "start": "cross-env NODE_OPTIONS=--no-deprecation next start",

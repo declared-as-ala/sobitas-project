@@ -16,7 +16,7 @@ export const productsData: Product[] = [
     price: 300,
     priceText: "300 DT279 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/mass_gainer_zero_7kg_-_eric_favre.webp",
-    link: "/prise-de-masse/mass-gainer-zero-7kg-eric-favre",
+    link: "/mass-gainers/mass-gainer-zero-7kg-eric-favre",
     category: "Prise de Masse",
     description: null
   },
@@ -26,7 +26,7 @@ export const productsData: Product[] = [
     price: 400,
     priceText: "400 DT380 DT",
     image: "https://admin.protein.tn/storage/produits/January2026/NqjHvc3rQVXZyLwEuNiJ.webp",
-    link: "/prise-de-masse/serious-mass-5-45-kg-optimum-nutrition",
+    link: "/mass-gainers/serious-mass-5-45-kg-optimum-nutrition",
     category: "Prise de Masse",
     description: null
   },
@@ -36,7 +36,7 @@ export const productsData: Product[] = [
     price: 300,
     priceText: "300 DT279 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/levro_legendary_mass_68kg_-_kevin_levrone.webp",
-    link: "/prise-de-masse/levro-legendary-mass-6-8kg-kevin-levrone",
+    link: "/mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone",
     category: "Prise de Masse",
     description: null
   },
@@ -46,7 +46,7 @@ export const productsData: Product[] = [
     price: 280,
     priceText: "280 DT259 DT",
     image: "https://admin.protein.tn/storage/produits/September2023/big_monster_7_kg_-_hx_nutrition.webp",
-    link: "/prise-de-masse/big-monster-7-kg-hx-nutrition",
+    link: "/mass-gainers/big-monster-7-kg-hx-nutrition",
     category: "Prise de Masse",
     description: null
   },
