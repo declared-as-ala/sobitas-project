@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, CreditCard, Eye, EyeOff, Loader2, Star, Truck } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -14,17 +14,74 @@ import { Container } from '@/app/components/layout/Container';
 
 const AUTH_ATHLETE = '/auth/protein-athlete-studio-v3.png';
 
+const AUTH_BENEFITS = [
+  { Icon: Truck, label: 'Livraison 24–48h' },
+  { Icon: CreditCard, label: 'Paiement à la livraison' },
+  { Icon: Star, label: 'Points fidélité' },
+] as const;
+
+function AuthTrustRow() {
+  return (
+    <div
+      data-auth-trust=""
+      className="mt-5 grid grid-cols-3 border-t border-rule pt-4 [@media(max-height:700px)]:hidden [@media(min-width:1024px)_and_(max-height:800px)]:hidden sm:mt-6 sm:pt-5 lg:mt-0"
+    >
+      {AUTH_BENEFITS.map(({ Icon, label }, index) => (
+        <div
+          key={label}
+          className={cn(
+            'flex min-w-0 flex-col items-center gap-1.5 px-2 text-center',
+            index > 0 && 'border-s border-rule'
+          )}
+        >
+          <Icon className="h-5 w-5 text-brand" strokeWidth={1.8} aria-hidden="true" />
+          <span className="text-[10px] font-medium leading-tight text-ink-2 sm:text-xs">{label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function AuthShell({ children }: { children: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
-    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-sunken sm:items-center sm:py-6 lg:py-8">
-      <Container className="flex sm:block">
-        <main className="relative grid w-full overflow-hidden border-0 border-hairline bg-elevated shadow-card sm:min-h-[44rem] sm:rounded-3xl sm:border lg:min-h-[42rem] lg:grid-cols-12">
+    <div className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-8 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2">
+      <Container bleed className="flex">
+        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
           <span className="absolute inset-x-0 top-0 z-20 h-1 bg-brand" aria-hidden="true" />
 
-          <div className="pt-plate relative z-10 flex min-h-dvh flex-col p-4 pt-5 sm:min-h-[44rem] sm:p-6 sm:pt-8 lg:col-span-7 lg:min-h-[42rem] lg:p-10 xl:p-12">
-            <div data-auth-header="" className="flex min-h-[44px] items-center justify-between gap-4">
+          <aside
+            className="relative h-56 shrink-0 overflow-hidden bg-brand-50 sm:h-64 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline"
+            aria-label="Athlète Protein.tn"
+          >
+            <Image
+              src={AUTH_ATHLETE}
+              alt="Athlète tunisienne portant le maillot Protein.tn"
+              fill
+              sizes="(min-width: 1024px) 50vw, 100vw"
+              className="object-cover object-[center_10%] lg:object-[center_24%]"
+              priority
+            />
+
+            <Link
+              href="/"
+              className="pt-plate absolute start-4 top-4 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 shadow-card transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:hidden"
+              aria-label="Retour à la boutique"
+            >
+              <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+            </Link>
+
+            <div className="pt-scrim absolute bottom-8 end-8 z-10 hidden max-w-44 items-center gap-3 rounded-lg border border-rule px-3 py-2 lg:flex">
+              <span className="h-8 w-0.5 shrink-0 bg-brand" aria-hidden="true" />
+              <p className="text-xs font-medium leading-snug text-ink-1">
+                Conçue pour<br />vos objectifs.
+              </p>
+            </div>
+          </aside>
+
+          <div className="pt-plate relative z-10 mx-3 -mt-6 flex flex-col rounded-2xl p-4 shadow-card sm:mx-6 sm:-mt-8 sm:p-6 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[40rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-6">
+            <div data-auth-header="" className="flex min-h-[44px] items-center justify-start gap-4 lg:justify-between">
               <Link
                 href="/"
                 className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
@@ -42,46 +99,24 @@ export function AuthShell({ children }: { children: ReactNode }) {
               </Link>
               <Link
                 href="/"
-                className="group -me-2 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-xs font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:text-sm"
+                className="group -me-2 hidden min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:inline-flex"
               >
                 <ArrowLeft
                   className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
                   aria-hidden="true"
                 />
-                <span className="hidden sm:inline">Retour à la boutique</span>
-                <span className="sm:hidden">Boutique</span>
+                Retour à la boutique
               </Link>
             </div>
 
-            <div data-auth-body="" className="flex flex-1 items-start pb-4 pt-8 sm:items-center sm:py-6 lg:py-8">
-              <div data-auth-card="" className="mx-auto w-full sm:max-w-md">
+            <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
+              <div data-auth-card="" className="mx-auto w-full sm:max-w-lg">
                 {children}
               </div>
             </div>
+
+            <AuthTrustRow />
           </div>
-
-          <aside
-            className="relative hidden min-h-[42rem] overflow-hidden border-s border-hairline bg-brand-50 lg:col-span-5 lg:block"
-            aria-label="Athlète Protein.tn"
-          >
-            <Image
-              src={AUTH_ATHLETE}
-              alt="Athlète tunisienne portant le maillot Protein.tn"
-              fill
-              sizes="(min-width: 1280px) 34vw, 40vw"
-              className="object-cover object-center"
-              priority
-            />
-
-            <div className="pt-scrim absolute bottom-6 start-6 z-10 max-w-xs rounded-xl border border-rule p-5 shadow-card xl:bottom-8 xl:start-8 xl:p-6">
-              <p className="font-display text-[10px] font-bold uppercase tracking-[0.2em] text-brand">
-                Espace client
-              </p>
-              <p className="mt-2 font-display text-2xl font-bold uppercase leading-none tracking-tight text-ink-1 xl:text-3xl">
-                Votre effort.<br />Vos avantages.
-              </p>
-            </div>
-          </aside>
         </main>
       </Container>
     </div>
@@ -104,7 +139,7 @@ export function AuthCardHeader({ kicker, title, subtitle, subtitleDesktopOnly }:
           {kicker}
         </span>
       )}
-      <h1 className="font-display text-[28px] font-bold uppercase leading-[0.98] tracking-tight text-ink-1 sm:text-[34px]">
+      <h1 className="font-display text-[28px] font-bold uppercase leading-[0.98] tracking-tight text-ink-1 sm:text-[36px] lg:text-[40px]">
         {title}
       </h1>
       {subtitle && (
