@@ -58,6 +58,7 @@ on:
           - commerce-status
           - commerce-order-status
           - commerce-email-smoke
+          - mail-provider-keys
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -269,6 +270,13 @@ jobs:
                 exit 1
               fi
               ARGS="notifications:doctor --strict --order=$ORDER_REF --send-email=$EMAIL_RECIPIENT"
+              WRITES=no
+              ;;
+            mail-provider-keys)
+              # Prints variable NAMES only (never values) from the VPS .env so an already
+              # provisioned transactional provider can be selected without exposing secrets.
+              ARGS="mail-provider-keys"
+              MODE=envkeys
               WRITES=no
               ;;
             commerce-flow-tests)
@@ -751,6 +759,13 @@ jobs:
               OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
               echo "$OUT"
               [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
+            elif [ "$MODE" = "envkeys" ]; then
+              echo ""
+              echo "> configured mail-provider variable names (values are never printed)"
+              echo ""
+              sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$APP_DIR/.env" \
+                | grep -Ei '^(MAIL|SMTP|BREVO|SENDINBLUE|SENDGRID|MAILGUN|POSTMARK|RESEND|AWS_)' \
+                | sort -u
             elif [ "$MODE" = "filelog" ]; then
               # A file inside the container, not a container's stdout.
               #
