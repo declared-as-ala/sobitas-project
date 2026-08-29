@@ -501,8 +501,9 @@ jobs:
           echo "Resolved '$TASK' -> php artisan $ARGS   (writes: $WRITES)"
 
       - name: Checkout
-        # Only so research.json is on the runner for the next step.
-        if: startsWith(inputs.task, 'research-')
+        # Required only when a task needs committed files that are intentionally
+        # absent from the production container image.
+        if: startsWith(inputs.task, 'research-') || inputs.task == 'commerce-flow-tests'
         uses: actions/checkout@v5
 
       # Ship research.json to the VPS - for the research tasks only.
@@ -526,6 +527,20 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           source: filament/storage/app/research.json
           target: /root/sobitas-project/inbox
+          strip_components: 3
+          overwrite: true
+
+      - name: Ship isolated commerce tests to the VPS
+        if: inputs.task == 'commerce-flow-tests'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php
+          target: /root/sobitas-project/inbox/commerce-tests
           strip_components: 3
           overwrite: true
 
@@ -659,6 +674,18 @@ jobs:
               echo "[ok] research.json delivered"
             fi
 
+            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php" ]; then
+              docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                mkdir -p /var/www/html/tests/Feature
+              docker cp "$APP_DIR/inbox/commerce-tests/CustomerAuthFlowTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerAuthFlowTest.php
+              docker cp "$APP_DIR/inbox/commerce-tests/CustomerOrderStatusMailerTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php
+              docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                chown -R www-data:www-data /var/www/html/tests
+              echo "[ok] isolated commerce tests delivered"
+            fi
+
             if [ "$WRITES" = "yes" ]; then
               mkdir -p /var/sobitas/backups
               ls -1t /var/sobitas/backups/db-pre-command-*.sql.gz 2>/dev/null | tail -n +20 | xargs -r rm -f || true
@@ -727,6 +754,11 @@ jobs:
                   php artisan --no-interaction $ARGS 2>&1)
               fi
               RC=$?
+              if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
+                docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                  rm -f /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
+                    /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php >/dev/null 2>&1 || true
+              fi
               echo "$OUT"
               echo ""
               if [ "$RC" -ne 0 ]; then
