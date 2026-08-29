@@ -189,7 +189,10 @@ jobs:
             # the current VPS values and let the strict notification doctor report the blocker.
             # This makes adding the GitHub secrets sufficient; no manual VPS edit is required.
             SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
-            if [ "$SMTP_READY" = "true" ]; then
+            # `script_stop` evaluates a false standalone `[` test as fatal before Bash can enter
+            # its `else`. A case statement selects the same branch without emitting status 1.
+            case "$SMTP_READY" in
+            true)
               SMTP_PORT='${{ secrets.MAIL_PORT }}'
               SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
               SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
@@ -210,12 +213,14 @@ jobs:
               upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
               upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
               echo "✓ SMTP credentials installed"
-            else
+              ;;
+            *)
               # A complete authenticated SMTP configuration is preferred. The application image
               # already ships sendmail. Laravel forces the domain-aligned From address for that
               # transport, avoiding a fragile mutation of the VPS .env during deployment.
               echo "✓ Using the image's validated local sendmail fallback"
-            fi
+              ;;
+            esac
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
@@ -405,7 +410,8 @@ jobs:
             # skipped this block entirely, so the retry could deploy the new image while retaining
             # the stale Gmail/Markdown sender that made customer confirmations undeliverable.
             SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
-            if [ "$SMTP_READY" = "true" ]; then
+            case "$SMTP_READY" in
+            true)
               SMTP_PORT='${{ secrets.MAIL_PORT }}'
               SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
               SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
@@ -426,9 +432,11 @@ jobs:
               upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
               upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
               echo "✓ SMTP credentials installed"
-            else
+              ;;
+            *)
               echo "✓ Using the image's validated local sendmail fallback"
-            fi
+              ;;
+            esac
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
