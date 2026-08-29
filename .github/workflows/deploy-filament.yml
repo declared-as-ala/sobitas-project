@@ -215,12 +215,20 @@ jobs:
               # nevertheless ships a local sendmail transport so transactional mail keeps working
               # when those optional secrets are absent. Always repair the public sender fields:
               # production once contained a copied Markdown link here, which Symfony rejects.
-              upsert_secret MAIL_MAILER sendmail
-              upsert_secret MAIL_FROM_ADDRESS contact@protein.tn
-              upsert_secret MAIL_FROM_NAME 'Protein.tn'
-              upsert_secret MAIL_REPLY_TO contact@protein.tn
-              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
-              upsert_secret ADMIN_EMAILS contact@protein.tn
+              # Rewrite the fallback fields atomically. Updating them one by one left production
+              # half-configured when an intermediate command failed: MAIL_MAILER became sendmail,
+              # but the invalid legacy From address survived.
+              MAIL_TMP=".env.mail.$$"
+              grep -Ev '^(MAIL_MAILER|MAIL_FROM_ADDRESS|MAIL_FROM_NAME|MAIL_REPLY_TO|MAIL_REPLY_TO_NAME|ADMIN_EMAILS)=' .env > "$MAIL_TMP" || true
+              printf '%s\n' \
+                'MAIL_MAILER=sendmail' \
+                'MAIL_FROM_ADDRESS=contact@protein.tn' \
+                'MAIL_FROM_NAME=Protein.tn' \
+                'MAIL_REPLY_TO=contact@protein.tn' \
+                'MAIL_REPLY_TO_NAME=Protein.tn' \
+                'ADMIN_EMAILS=contact@protein.tn' >> "$MAIL_TMP"
+              mv "$MAIL_TMP" .env
+              chmod 600 .env
               echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
             fi
 
@@ -434,12 +442,17 @@ jobs:
               upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
               echo "✓ SMTP credentials installed"
             else
-              upsert_secret MAIL_MAILER sendmail
-              upsert_secret MAIL_FROM_ADDRESS contact@protein.tn
-              upsert_secret MAIL_FROM_NAME 'Protein.tn'
-              upsert_secret MAIL_REPLY_TO contact@protein.tn
-              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
-              upsert_secret ADMIN_EMAILS contact@protein.tn
+              MAIL_TMP=".env.mail.$$"
+              grep -Ev '^(MAIL_MAILER|MAIL_FROM_ADDRESS|MAIL_FROM_NAME|MAIL_REPLY_TO|MAIL_REPLY_TO_NAME|ADMIN_EMAILS)=' .env > "$MAIL_TMP" || true
+              printf '%s\n' \
+                'MAIL_MAILER=sendmail' \
+                'MAIL_FROM_ADDRESS=contact@protein.tn' \
+                'MAIL_FROM_NAME=Protein.tn' \
+                'MAIL_REPLY_TO=contact@protein.tn' \
+                'MAIL_REPLY_TO_NAME=Protein.tn' \
+                'ADMIN_EMAILS=contact@protein.tn' >> "$MAIL_TMP"
+              mv "$MAIL_TMP" .env
+              chmod 600 .env
               echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
             fi
 
