@@ -716,8 +716,16 @@ jobs:
               # stderr is folded in because Laravel writes its errors there, and `|| true` keeps
               # the shell alive long enough to print them. The real code is propagated at the end.
               set +e
-              OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
-                php artisan $ARGS --no-interaction 2>&1)
+              # `artisan test` forwards options that follow the command to PHPUnit.
+              # PHPUnit does not understand Laravel's global --no-interaction option,
+              # so place it before normal Artisan commands and omit it for the test runner.
+              if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
+                OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                  php artisan $ARGS 2>&1)
+              else
+                OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                  php artisan --no-interaction $ARGS 2>&1)
+              fi
               RC=$?
               echo "$OUT"
               echo ""
