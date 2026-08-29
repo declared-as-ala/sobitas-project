@@ -969,13 +969,31 @@ jobs:
                   exit 1
                 fi
 
+                # Detail row ids are table-local sequence values, not business identifiers. A
+                # later order may legitimately have reused an id after this order disappeared,
+                # so copying the old primary keys can collide even though commande_id is absent.
+                # Build the shared column list from the snapshot and let production allocate new
+                # ids. The remaining values (order, product, quantity and unit price) are copied
+                # exactly, and the post-check below verifies the complete line count.
+                DETAIL_COLUMNS=$(mysql_query "
+                  SELECT GROUP_CONCAT(CONCAT(CHAR(96), COLUMN_NAME, CHAR(96)) ORDER BY ORDINAL_POSITION SEPARATOR ',')
+                  FROM information_schema.columns
+                  WHERE table_schema='$RECOVERY_DB'
+                    AND table_name='commande_details'
+                    AND column_name <> 'id';
+                ")
+                if [ -z "$DETAIL_COLUMNS" ]; then
+                  echo "[X] recovery precondition failed: no safe detail columns found"
+                  exit 1
+                fi
+
                 echo "[..] restoring one order and $LINE_ITEMS line item(s) in a transaction"
                 if ! mysql_query "
                   START TRANSACTION;
                   INSERT INTO \`$PROD_DB\`.commandes
                     SELECT * FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS;
-                  INSERT INTO \`$PROD_DB\`.commande_details
-                    SELECT * FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
+                  INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
+                    SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
                   UPDATE \`$PROD_DB\`.products AS p
                     JOIN (
                       SELECT produit_id, SUM(qte) AS ordered_qty
