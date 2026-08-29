@@ -17,13 +17,13 @@ import { ArrowLeft, ShoppingCart, Shield, Truck, CheckCircle2, Loader2, CreditCa
 import { toast } from 'sonner';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
 import { REDEEM_POINTS_PER_DT, MAX_REDEEM_FRACTION } from '@/util/loyaltyPoints';
+import { Container } from '@/app/components/layout/Container';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
@@ -789,88 +789,93 @@ export default function CheckoutPage() {
 
   return (
     <div
-      className={`checkout-viewport-root min-h-screen min-h-[100dvh] bg-gray-50 dark:bg-gray-950 flex flex-col ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
+      className={`checkout-viewport-root flex min-h-screen min-h-[100dvh] flex-col bg-canvas ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
       data-keyboard-open={keyboardOpen || undefined}
-      style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.5rem' : '12rem' }}
+      style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.5rem' : '9rem' }}
     >
-      <main className="checkout-main flex-1 max-w-[1160px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12 pb-[var(--checkout-cta-padding,12rem)] lg:pb-12">
-        {/* Progress: mobile = Étape 2/3, desktop = full stepper */}
-        <div className="mb-6 lg:mb-8">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 lg:hidden mb-4">
-            Étape 2 sur 3 — Livraison & Paiement
-          </p>
-          <div className="hidden lg:flex items-center gap-2">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-500 flex items-center justify-center text-sm font-semibold">1</div>
-              <span className="text-sm font-medium text-gray-500">Panier</span>
+      <main className="checkout-main flex-1">
+        <Container>
+          <header className="mb-5 border-b border-rule pb-5 sm:mb-7 sm:pb-6">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => currentStep === 2 ? router.push('/cart') : setCurrentStep(2)}
+                className="-ms-3 min-h-11 rounded-lg px-3 text-sm font-semibold text-ink-2 hover:bg-sunken hover:text-brand focus-visible:ring-focus"
+              >
+                <ArrowLeft className="me-2 h-4 w-4" aria-hidden="true" />
+                {currentStep === 2 ? 'Retour au panier' : 'Retour'}
+              </Button>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3 lg:hidden">
+                Étape 2 sur 3
+              </p>
+              <nav className="hidden items-center gap-2 text-xs font-semibold lg:flex" aria-label="Progression de la commande">
+                <span className="text-ink-3">1&nbsp; Panier</span>
+                <span className="h-px w-8 bg-rule" aria-hidden="true" />
+                <span className="rounded-full bg-brand px-3 py-1.5 text-on-brand">2&nbsp; Livraison</span>
+                <span className="h-px w-8 bg-rule" aria-hidden="true" />
+                <span className="text-ink-3">3&nbsp; Confirmation</span>
+              </nav>
             </div>
-            <div className="flex-1 h-0.5 bg-red-600 mx-2 max-w-[80px]" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-semibold">2</div>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Livraison & Paiement</span>
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+              <div>
+                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Finaliser ma commande</p>
+                <h1 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-4xl">
+                  Livraison &amp; paiement
+                </h1>
+              </div>
+              <p className="max-w-md text-sm leading-relaxed text-ink-2 sm:text-end">
+                Vérifiez vos coordonnées. Vous paierez simplement à la réception.
+              </p>
             </div>
-            <div className="flex-1 h-0.5 bg-gray-300 dark:bg-gray-700 mx-2 max-w-[80px]" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-500 flex items-center justify-center text-sm font-semibold">3</div>
-              <span className="text-sm font-medium text-gray-500">Confirmation</span>
-            </div>
-          </div>
-        </div>
+          </header>
 
-        {/* Back Button */}
-        <div className="mb-6">
-          <Button
-            variant="ghost"
-            onClick={() => currentStep === 2 ? router.push('/cart') : setCurrentStep(2)}
-            className="mb-4"
-          >
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            {currentStep === 2 ? 'Retour au panier' : 'Retour'}
-          </Button>
-        </div>
-
-        <div className="checkout-layout">
+          <div className="checkout-layout">
           {/* Checkout Form */}
           <section className="checkout-form">
             <div>
-              <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 lg:px-8 pb-4">
-                  <CardTitle className="font-display uppercase tracking-tight text-[clamp(1.125rem,2.5vw,1.375rem)] text-gray-900 dark:text-white flex items-center gap-2">
-                    <Truck className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+              <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
+                <CardHeader className="border-b border-rule px-5 pb-5 pt-5 sm:px-7 sm:pt-6 lg:px-8">
+                  <CardTitle className="flex items-center gap-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1 sm:text-2xl">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                      <Truck className="h-5 w-5" aria-hidden="true" />
+                    </span>
                     Adresse de livraison
                   </CardTitle>
-                  <p className="text-sm leading-snug text-gray-500 dark:text-gray-400 mt-1">
-                    Remplissez les champs pour finaliser votre commande
+                  <p className="mt-2 text-sm leading-relaxed text-ink-2">
+                    Les champs marqués d’un astérisque sont nécessaires à la livraison.
                   </p>
                 </CardHeader>
                 <CardContent className="p-4 sm:p-6 lg:p-8">
-                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-6 lg:space-y-8">
+                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-7 lg:space-y-8">
                     {/* Contact */}
                     <div className="space-y-4">
-                      <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Contact</h3>
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">01</span>
+                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Vos coordonnées</h2>
+                      </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_nom" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                            Nom <span className="text-red-600">*</span>
+                          <Label htmlFor="livraison_nom" className="text-sm font-semibold leading-snug text-ink-1">
+                            Nom <span className="text-brand">*</span>
                           </Label>
                           <Input
                             id="livraison_nom"
                             value={formData.livraison_nom}
                             onChange={(e) => handleInputChange('livraison_nom', e.target.value)}
-                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                             placeholder="Votre nom"
                             required
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_prenom" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                            Prénom <span className="text-red-600">*</span>
+                          <Label htmlFor="livraison_prenom" className="text-sm font-semibold leading-snug text-ink-1">
+                            Prénom <span className="text-brand">*</span>
                           </Label>
                           <Input
                             id="livraison_prenom"
                             value={formData.livraison_prenom}
                             onChange={(e) => handleInputChange('livraison_prenom', e.target.value)}
-                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                             placeholder="Votre prénom"
                             required
                           />
@@ -878,8 +883,8 @@ export default function CheckoutPage() {
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_email" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                            Email <span className="text-red-600">*</span>
+                          <Label htmlFor="livraison_email" className="text-sm font-semibold leading-snug text-ink-1">
+                            Email <span className="text-brand">*</span>
                           </Label>
                           <Input
                             id="livraison_email"
@@ -888,14 +893,14 @@ export default function CheckoutPage() {
                             onChange={(e) => handleInputChange('livraison_email', e.target.value)}
                             autoComplete="email"
                             inputMode="email"
-                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                             placeholder="votre@email.com"
                             required
                           />
                         </div>
                         <div className="space-y-1.5">
-                          <Label htmlFor="livraison_phone" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                            Téléphone <span className="text-red-600">*</span>
+                          <Label htmlFor="livraison_phone" className="text-sm font-semibold leading-snug text-ink-1">
+                            Téléphone <span className="text-brand">*</span>
                           </Label>
                           <Input
                             id="livraison_phone"
@@ -904,7 +909,7 @@ export default function CheckoutPage() {
                             onChange={(e) => handleInputChange('livraison_phone', e.target.value)}
                             inputMode="tel"
                             autoComplete="tel"
-                            className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                             placeholder="+216 XX XXX XXX"
                             required
                           />
@@ -917,8 +922,11 @@ export default function CheckoutPage() {
                       </div>
 
                     {/* Adresse */}
-                    <div className="space-y-4 pt-2 border-t border-gray-100 dark:border-gray-800">
-                      <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Adresse</h3>
+                    <div className="space-y-4 border-t border-rule pt-6 lg:pt-8">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">02</span>
+                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Adresse</h2>
+                      </div>
                       <AddressSelector
                         gouvernorat={gouvernorat}
                         delegation={delegation}
@@ -930,14 +938,14 @@ export default function CheckoutPage() {
                         required
                       />
                       <div className="space-y-1.5">
-                        <Label htmlFor="livraison_adresse1" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                          Adresse ligne 1 <span className="text-red-600">*</span>
+                        <Label htmlFor="livraison_adresse1" className="text-sm font-semibold leading-snug text-ink-1">
+                          Rue et numéro <span className="text-brand">*</span>
                         </Label>
                         <Input
                           id="livraison_adresse1"
                           value={formData.livraison_adresse1}
                           onChange={(e) => handleInputChange('livraison_adresse1', e.target.value)}
-                          className="min-h-[48px] sm:min-h-[52px] text-base leading-snug border border-gray-200 dark:border-gray-700 focus:border-red-500 focus:ring-2 focus:ring-red-500/20 rounded-xl transition-all duration-200"
+                          className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                           placeholder="Rue, numéro, bâtiment..."
                           required
                         />
@@ -945,7 +953,7 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setShowOptionalFields(!showOptionalFields)}
-                        className="text-sm leading-snug font-medium text-red-600 dark:text-red-400 hover:underline flex items-center gap-1 min-h-[44px] py-1"
+                        className="flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold leading-snug text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         aria-expanded={showOptionalFields}
                       >
                         {showOptionalFields ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -953,14 +961,14 @@ export default function CheckoutPage() {
                       </button>
                       {showOptionalFields && (
                         <div className="space-y-1.5">
-                            <Label htmlFor="note" className="text-sm leading-snug font-medium text-gray-700 dark:text-gray-300">
-                              Notes de commande <span className="text-gray-400 text-xs">(optionnel)</span>
+                            <Label htmlFor="note" className="text-sm font-semibold leading-snug text-ink-1">
+                              Note de livraison <span className="text-xs font-normal text-ink-3">(optionnel)</span>
                             </Label>
                             <textarea
                               id="note"
                               value={formData.note}
                               onChange={(e) => handleInputChange('note', e.target.value)}
-                              className="w-full min-h-[100px] p-4 text-base leading-snug border border-gray-200 dark:border-gray-700 rounded-xl focus:border-red-500 focus:ring-2 focus:ring-red-500/20 transition-all bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder:text-gray-400 resize-none"
+                              className="min-h-24 w-full resize-none rounded-xl border border-hairline bg-canvas p-3.5 text-base leading-snug text-ink-1 outline-none transition-colors placeholder:text-ink-3 hover:border-rule-strong focus:border-brand focus:ring-2 focus:ring-focus"
                               placeholder="Consignes de livraison, instructions..."
                             />
                         </div>
@@ -968,80 +976,60 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Paiement */}
-                    <div className="pt-6 border-t border-gray-100 dark:border-gray-800">
-                      <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-4">Paiement</h3>
+                    <div className="border-t border-rule pt-6 lg:pt-8">
+                      <div className="mb-4 flex items-center gap-3">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">03</span>
+                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Paiement</h2>
+                      </div>
                       <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'cod' | 'card')}>
                         <div className="space-y-3">
                           {/* Paiement à la livraison */}
                           <label
                             htmlFor="cod"
-                            className={`flex items-start gap-4 p-4 rounded-xl border-2 transition-all duration-200 cursor-pointer min-h-[52px] ${
+                            className={`flex min-h-[72px] cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
                               paymentMethod === 'cod'
-                                ? 'border-red-500 bg-red-50/50 dark:bg-red-950/20 shadow-[0_4px_16px_rgba(0,0,0,0.05)]'
-                                : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
+                                ? 'border-brand bg-brand-50'
+                                : 'border-hairline bg-canvas hover:border-rule-strong'
                             }`}
                           >
-                            <RadioGroupItem value="cod" id="cod" className="mt-1.5 h-5 w-5 shrink-0" />
+                            <RadioGroupItem value="cod" id="cod" className="mt-1 h-5 w-5 shrink-0 border-rule text-brand" />
                             <div className="flex-1">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className={`p-2 rounded-lg ${
-                                  paymentMethod === 'cod'
-                                    ? 'bg-red-50 dark:bg-red-950/40'
-                                    : 'bg-gray-100 dark:bg-gray-700'
-                                }`}>
-                                  <Wallet className={`h-5 w-5 ${
-                                    paymentMethod === 'cod'
-                                      ? 'text-red-600 dark:text-red-400'
-                                      : 'text-gray-600 dark:text-gray-400'
-                                  }`} aria-hidden="true" />
-                                </div>
+                              <div className="flex items-start gap-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated text-brand">
+                                  <Wallet className="h-5 w-5" aria-hidden="true" />
+                                </span>
                                 <div className="flex-1">
-                                  <span className="font-semibold text-gray-900 dark:text-white block">
+                                  <span className="block font-semibold text-ink-1">
                                     Paiement à la livraison
                                   </span>
-                                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                                    Espèces ou chèque
-                                  </span>
+                                  <p className="mt-1 text-sm leading-snug text-ink-2">
+                                    Payez au livreur en espèces ou par chèque, après réception de votre commande.
+                                  </p>
                                 </div>
                               </div>
-                              <p className="text-sm text-gray-600 dark:text-gray-400 ml-11">
-                                Payez directement au livreur lors de la réception de votre commande.
-                              </p>
                             </div>
                           </label>
 
                           {/* Carte Bancaire — bientôt disponible (désactivé) */}
                           <div
                             aria-disabled="true"
-                            className="flex items-start gap-4 p-4 rounded-xl border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 min-h-[52px] opacity-60 cursor-not-allowed"
+                            className="flex min-h-[64px] cursor-not-allowed items-center gap-3 rounded-xl border border-hairline bg-sunken p-4 opacity-60"
                           >
-                            <RadioGroupItem value="card" id="card" disabled className="mt-1.5 h-5 w-5 shrink-0" />
+                            <RadioGroupItem value="card" id="card" disabled className="h-5 w-5 shrink-0" />
                             <div className="flex-1 w-full min-w-0">
-                              <div className="flex items-center gap-3 mb-2">
-                                <div className="p-2 rounded-lg shrink-0 bg-gray-100 dark:bg-gray-700">
-                                  <CreditCard className="h-5 w-5 text-gray-600 dark:text-gray-400" aria-hidden="true" />
-                                </div>
+                              <div className="flex items-center gap-3">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-elevated text-ink-3">
+                                  <CreditCard className="h-5 w-5" aria-hidden="true" />
+                                </span>
                                 <div className="flex-1 min-w-0">
-                                  <span className="font-semibold text-gray-900 dark:text-white flex flex-wrap items-center gap-2">
+                                  <span className="flex flex-wrap items-center gap-2 font-semibold text-ink-1">
                                     Carte Bancaire
-                                    <span className="inline-flex items-center rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 font-display uppercase tracking-wide text-[10px] font-semibold text-gray-500 dark:text-gray-400">
+                                    <span className="inline-flex items-center rounded-full border border-hairline bg-elevated px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">
                                       Bientôt disponible
                                     </span>
                                   </span>
-                                  <span className="text-sm leading-snug text-gray-500 dark:text-gray-400">
-                                    Paiement sécurisé SSL
-                                  </span>
+                                  <span className="text-xs leading-snug text-ink-3">Paiement en ligne</span>
                                 </div>
-                              </div>
-                              <div className="flex items-center justify-start gap-2 mt-2 overflow-x-auto">
-                                <Image
-                                  src="/payment card.png"
-                                  alt="Cartes acceptées"
-                                  width={200}
-                                  height={40}
-                                  className="h-8 w-auto object-contain"
-                                  priority={false}
-                                />
                               </div>
                             </div>
                           </div>
@@ -1053,7 +1041,7 @@ export default function CheckoutPage() {
                     <Button
                       type="submit"
                       size="lg"
-                      className="w-full hidden lg:flex min-h-[52px] text-base font-display uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white rounded-xl transition-all duration-200 disabled:opacity-50"
+                      className="hidden h-12 w-full rounded-xl bg-brand font-display text-base font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50 lg:flex"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -1077,19 +1065,19 @@ export default function CheckoutPage() {
           {/* Order Summary */}
           <aside className="checkout-summary" aria-label="Récapitulatif de la commande">
             <div className="checkout-summary-inner">
-              <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800 px-4 sm:px-6 pb-4">
-                  <CardTitle className="flex items-center gap-3 font-display uppercase tracking-tight text-xl text-gray-900 dark:text-white">
-                    <ShoppingCart className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+              <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
+                <CardHeader className="border-b border-rule px-6 pb-5 pt-6">
+                  <CardTitle className="flex items-center gap-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">
+                    <ShoppingCart className="h-5 w-5 text-brand" aria-hidden="true" />
                     Récapitulatif
                   </CardTitle>
-                  <p className="text-sm leading-snug text-gray-500 dark:text-gray-400 mt-1">
+                  <p className="mt-1 text-sm leading-snug text-ink-3">
                     {items.length} {items.length === 1 ? 'article' : 'articles'}
                   </p>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-6">
+                <CardContent className="space-y-5 p-6">
                   {/* Items */}
-                  <div className="space-y-3 max-h-none overflow-visible pr-0 lg:max-h-80 lg:overflow-y-auto lg:pr-2 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-700">
+                  <div className="max-h-80 divide-y divide-hairline overflow-y-auto pe-1">
                     {items.map((item) => {
                       const price = getEffectivePrice(item.product);
                       const productName = (item.product as any).designation_fr || (item.product as any).name;
@@ -1097,9 +1085,9 @@ export default function CheckoutPage() {
                         ? getStorageUrl((item.product as any).cover) 
                         : null;
                       return (
-                        <div key={item.product.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800 transition-shadow hover:shadow-sm">
+                        <div key={item.product.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
                           {productImage && (
-                            <div className="relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700 border border-gray-100 dark:border-gray-700">
+                            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-hairline bg-sunken">
                               <Image
                                 src={productImage}
                                 alt={productName}
@@ -1111,14 +1099,14 @@ export default function CheckoutPage() {
                             </div>
                           )}
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-gray-900 dark:text-white line-clamp-2 mb-1">
+                            <p className="mb-1 line-clamp-2 text-sm font-semibold leading-snug text-ink-1">
                               {productName}
                             </p>
                             <div className="flex items-center justify-between">
-                              <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <p className="text-xs text-ink-3">
                                 Qté: {item.quantity}
                               </p>
-                              <p className="text-sm font-display font-bold tracking-tight tabular-nums text-red-600 dark:text-red-400">
+                              <p className="font-display text-sm font-bold tracking-tight tabular-nums text-brand">
                                 {(price * item.quantity).toFixed(2)} DT
                               </p>
                             </div>
@@ -1129,21 +1117,21 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Code promo (summary column) */}
-                  <section className="checkout-coupon pt-4 border-t border-gray-200 dark:border-gray-800" aria-labelledby="checkout-coupon-title">
+                  <section className="checkout-coupon border-t border-rule pt-5" aria-labelledby="checkout-coupon-title">
                     <h3
                       id="checkout-coupon-title"
-                      className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white flex items-center gap-2 mb-2"
+                      className="mb-3 flex items-center gap-2 font-display text-base font-extrabold uppercase tracking-tight text-ink-1"
                     >
-                      <Tag className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                      <Tag className="h-4 w-4 text-brand" aria-hidden="true" />
                       Code promo
                     </h3>
                     {appliedCoupon ? (
-                      <div className="flex flex-col gap-2 p-3 rounded-xl bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800">
+                      <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-sunken p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-green-800 dark:text-green-200">
+                          <span className="font-medium text-ok">
                             {appliedCoupon.code} appliqué
                             {appliedCoupon.discount_ht > 0 && (
-                              <span className="text-green-600 dark:text-green-400 ml-1">
+                              <span className="ms-1 text-ok">
                                 (-{appliedCoupon.discount_ttc.toFixed(2)} DT)
                               </span>
                             )}
@@ -1152,7 +1140,7 @@ export default function CheckoutPage() {
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="min-h-[44px] shrink-0 text-green-700 dark:text-green-300 hover:bg-green-100 dark:hover:bg-green-900/30"
+                            className="min-h-11 shrink-0 rounded-lg text-ok hover:bg-elevated focus-visible:ring-focus"
                             onClick={handleRemoveCoupon}
                           >
                             <X className="h-4 w-4 mr-1" aria-hidden="true" /> Retirer
@@ -1162,8 +1150,8 @@ export default function CheckoutPage() {
                           <p
                             className={`checkout-coupon-message text-xs ${
                               couponMessageType === 'error'
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-green-700 dark:text-green-300'
+                                ? 'text-destructive'
+                                : 'text-ok'
                             }`}
                           >
                             {couponMessage}
@@ -1181,13 +1169,13 @@ export default function CheckoutPage() {
                             value={couponInput}
                             onChange={(e) => setCouponInput(e.target.value)}
                             placeholder="Ex: SOBI10"
-                            className="checkout-coupon-input min-h-[48px] rounded-xl"
+                            className="checkout-coupon-input h-12 rounded-xl border-hairline bg-canvas text-ink-1 focus-visible:ring-focus focus-visible:ring-offset-0"
                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
                           />
                           <Button
                             type="button"
                             variant="outline"
-                            className="checkout-coupon-button rounded-xl min-h-[48px] border-red-200 dark:border-red-900 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
+                            className="checkout-coupon-button min-h-12 rounded-xl border-rule bg-elevated font-semibold text-brand hover:border-brand hover:bg-brand-50 focus-visible:ring-focus"
                             onClick={handleApplyCoupon}
                             disabled={isApplyingCoupon || !couponInput.trim()}
                           >
@@ -1198,8 +1186,8 @@ export default function CheckoutPage() {
                           <p
                             className={`checkout-coupon-message text-xs ${
                               couponMessageType === 'error'
-                                ? 'text-red-600 dark:text-red-400'
-                                : 'text-green-700 dark:text-green-300'
+                                ? 'text-destructive'
+                                : 'text-ok'
                             }`}
                           >
                             {couponMessage}
@@ -1211,23 +1199,23 @@ export default function CheckoutPage() {
 
                   {/* Points de fidélité (utilisateurs connectés avec un solde) */}
                   {isAuthenticated && pointsBalance > 0 && (
-                    <section className="pt-4 border-t border-gray-200 dark:border-gray-800" aria-labelledby="checkout-points-title">
+                    <section className="border-t border-rule pt-5" aria-labelledby="checkout-points-title">
                       <h3
                         id="checkout-points-title"
-                        className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white flex items-center gap-2 mb-1"
+                        className="mb-1 flex items-center gap-2 font-display text-base font-extrabold uppercase tracking-tight text-ink-1"
                       >
-                        <Gift className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                        <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
                         Utiliser mes points de fidélité
                       </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">
-                        Solde : <span className="font-semibold text-gray-900 dark:text-white tabular-nums">{pointsBalance}</span> points
+                      <p className="mb-3 text-xs text-ink-3">
+                        Solde : <span className="font-semibold tabular-nums text-ink-1">{pointsBalance}</span> points
                         {user?.points_value_dt != null && (
                           <> (~{user.points_value_dt.toFixed(2)} DT)</>
                         )}
                         {' '}· 20 points = 1 DT
                       </p>
                       {maxRedeemablePoints > 0 ? (
-                        <div className="space-y-3 p-3 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
+                        <div className="space-y-3 rounded-xl border border-hairline bg-sunken p-3">
                           <div className="flex items-center gap-3">
                             <input
                               type="range"
@@ -1252,14 +1240,14 @@ export default function CheckoutPage() {
                                 className="w-20 h-10 text-center rounded-lg tabular-nums"
                                 aria-label="Nombre de points à utiliser"
                               />
-                              <span className="text-xs text-gray-500 dark:text-gray-400">pts</span>
+                              <span className="text-xs text-ink-3">pts</span>
                             </div>
                           </div>
                           <div className="flex items-center justify-between text-sm">
-                            <span className="text-gray-600 dark:text-gray-400">
-                              Remise fidélité <span className="text-xs text-gray-400">(estimée)</span>
+                            <span className="text-ink-2">
+                              Remise fidélité <span className="text-xs text-ink-3">(estimée)</span>
                             </span>
-                            <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                            <span className="font-display font-semibold tabular-nums text-ok">
                               -{pointsDiscountDt.toFixed(2)} DT
                             </span>
                           </div>
@@ -1267,7 +1255,7 @@ export default function CheckoutPage() {
                             <button
                               type="button"
                               onClick={() => setPointsToRedeem(maxRedeemablePoints)}
-                              className="text-xs font-medium text-red-600 dark:text-red-400 hover:underline min-h-[36px]"
+                              className="min-h-11 rounded text-xs font-semibold text-brand hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                             >
                               Utiliser le maximum ({maxRedeemablePoints} pts)
                             </button>
@@ -1275,18 +1263,18 @@ export default function CheckoutPage() {
                               <button
                                 type="button"
                                 onClick={() => setPointsToRedeem(0)}
-                                className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:underline min-h-[36px]"
+                                className="min-h-11 rounded text-xs font-semibold text-ink-3 hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               >
                                 Réinitialiser
                               </button>
                             )}
                           </div>
-                          <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-500">
+                          <p className="text-[11px] leading-snug text-ink-3">
                             Les points couvrent au maximum 50% du sous-total. Le décompte final est confirmé par le serveur.
                           </p>
                         </div>
                       ) : (
-                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                        <p className="text-xs text-ink-3">
                           Ajoutez des articles pour pouvoir utiliser vos points sur cette commande.
                         </p>
                       )}
@@ -1294,44 +1282,44 @@ export default function CheckoutPage() {
                   )}
 
                   {/* Summary */}
-                  <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-3">
+                  <div className="space-y-3 border-t border-rule pt-5 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                      <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{totalPrice.toFixed(2)} DT</span>
+                      <span className="text-ink-2">Sous-total</span>
+                      <span className="font-display font-semibold tabular-nums text-ink-1">{totalPrice.toFixed(2)} DT</span>
                     </div>
                     {appliedCoupon && appliedCoupon.discount_ht > 0 && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400">Remise ({appliedCoupon.code})</span>
-                        <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                        <span className="text-ink-2">Remise ({appliedCoupon.code})</span>
+                        <span className="font-display font-semibold tabular-nums text-ok">
                           -{appliedCoupon.discount_ttc.toFixed(2)} DT
                         </span>
                       </div>
                     )}
                     {packDiscountAmount > 0 && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                          <Percent className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
+                        <span className="flex items-center gap-1.5 text-ink-2">
+                          <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
                           Remise pack{packQuoteData?.tier_label ? ` (${packQuoteData.tier_label})` : ''}
                         </span>
-                        <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                        <span className="font-display font-semibold tabular-nums text-ok">
                           -{packDiscountAmount.toFixed(2)} DT
                         </span>
                       </div>
                     )}
                     {pointsDiscountDt > 0 && (
                       <div className="flex justify-between items-center">
-                        <span className="text-gray-600 dark:text-gray-400 flex items-center gap-1.5">
-                          <Gift className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
-                          Remise fidélité <span className="text-xs text-gray-400">(estimée)</span>
+                        <span className="flex items-center gap-1.5 text-ink-2">
+                          <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
+                          Remise fidélité <span className="text-xs text-ink-3">(estimée)</span>
                         </span>
-                        <span className="font-display font-semibold tabular-nums text-green-600 dark:text-green-400">
+                        <span className="font-display font-semibold tabular-nums text-ok">
                           -{pointsDiscountDt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center">
-                      <span className="text-gray-600 dark:text-gray-400">Expédition</span>
-                      <span className={`font-display font-semibold tabular-nums ${(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? 'text-green-600 dark:text-green-400' : 'text-gray-900 dark:text-white'}`}>
+                      <span className="text-ink-2">Expédition</span>
+                      <span className={`font-display font-semibold tabular-nums ${(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? 'text-ok' : 'text-ink-1'}`}>
                         {(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? (
                           <span className="flex items-center gap-1">
                             <Truck className="h-4 w-4" aria-hidden="true" />
@@ -1343,21 +1331,21 @@ export default function CheckoutPage() {
                       </span>
                     </div>
                     {totalPrice < FREE_SHIPPING_THRESHOLD && shippingCost > 0 && (
-                      <div className="flex items-start gap-2 p-3 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
-                        <Truck className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
-                        <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                      <div className="flex items-start gap-2 rounded-xl border border-hairline bg-brand-50 p-3">
+                        <Truck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                        <p className="text-xs font-medium text-ink-2">
                           Ajoutez {(FREE_SHIPPING_THRESHOLD - totalPrice).toFixed(2)} DT pour la livraison gratuite !
                         </p>
                       </div>
                     )}
-                    <div className="border-t border-gray-100 dark:border-gray-800 pt-3 flex justify-between items-baseline">
-                      <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
-                      <span className="font-display font-bold tracking-tight tabular-nums text-2xl text-red-600 dark:text-red-400">
+                    <div className="flex items-baseline justify-between border-t border-rule pt-4">
+                      <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
+                      <span className="font-display text-2xl font-extrabold tracking-tight tabular-nums text-brand">
                         {finalTotal.toFixed(2)} DT
                       </span>
                     </div>
                     {(packDiscountAmount > 0 || pointsDiscountDt > 0) && (
-                      <p className="text-[11px] leading-snug text-gray-400 dark:text-gray-500 text-right">
+                      <p className="text-end text-[11px] leading-snug text-ink-3">
                         Total estimé — le montant définitif est confirmé sur la page de confirmation.
                       </p>
                     )}
@@ -1382,32 +1370,12 @@ export default function CheckoutPage() {
                     />
                   </div>
 
-                  {/* Trust Badges — compact 3-up row */}
-                  <div className="pt-4 border-t border-gray-100 dark:border-gray-800 grid grid-cols-3 gap-2">
-                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
-                        <Shield className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-                      </span>
-                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Paiement sécurisé</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
-                        <Truck className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-                      </span>
-                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Livraison rapide</p>
-                    </div>
-                    <div className="flex flex-col items-center text-center gap-1.5 p-2.5 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40">
-                        <CheckCircle2 className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-                      </span>
-                      <p className="text-[11px] leading-tight font-medium text-gray-700 dark:text-gray-300">Garantie qualité</p>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>
           </aside>
         </div>
+        </Container>
       </main>
 
       <CheckoutFooterCTA
@@ -1415,7 +1383,7 @@ export default function CheckoutPage() {
         isSubmitting={isSubmitting}
         finalTotal={finalTotal}
         totalPrice={totalPrice}
-        shippingCost={shippingCost}
+        shippingCost={appliedCoupon?.free_shipping ? 0 : shippingCost}
         items={items}
         getEffectivePrice={getEffectivePrice}
         mobileSummaryOpen={mobileSummaryOpen}

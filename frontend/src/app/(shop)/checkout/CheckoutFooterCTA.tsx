@@ -2,11 +2,12 @@
 
 import Image from 'next/image';
 import { Button } from '@/app/components/ui/button';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
-import { Shield, Truck, Loader2, Phone, MessageCircle } from 'lucide-react';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
+import { ChevronUp, Loader2, Shield } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
+import { Container } from '@/app/components/layout/Container';
 
-export const CHECKOUT_CTA_HEIGHT_REM = 12; // 12rem = 192px, reserved as padding-bottom for form container on mobile when CTA visible
+export const CHECKOUT_CTA_HEIGHT_REM = 9;
 
 interface CheckoutFooterCTAProps {
   keyboardOpen?: boolean;
@@ -35,65 +36,67 @@ export function CheckoutFooterCTA({
 }: CheckoutFooterCTAProps) {
   return (
     <footer
-      className={`checkout-cta-footer lg:hidden fixed left-0 right-0 bottom-0 z-50 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.2)] transition-transform duration-200 ease-out ${keyboardOpen ? 'checkout-cta-footer--keyboard-open' : ''}`}
+      className={`checkout-cta-footer fixed inset-x-0 bottom-0 z-50 border-t border-rule bg-elevated shadow-card transition-transform duration-200 ease-out lg:hidden ${keyboardOpen ? 'checkout-cta-footer--keyboard-open' : ''}`}
       style={{
         paddingBottom: 'calc(12px + env(safe-area-inset-bottom, 0px))',
       }}
       aria-label="Passer la commande"
       aria-hidden={keyboardOpen}
     >
-      <div className="max-w-[1160px] mx-auto px-4 py-3 min-h-[72px] flex flex-col justify-center">
-        <div className="flex items-center justify-between gap-3 mb-3">
+      <Container className="flex flex-col justify-center py-2.5">
+        <div className="mb-2 flex items-center justify-between gap-3">
           <div className="min-w-0">
-            <p className="text-[13px] text-gray-500 dark:text-gray-400">Total</p>
-            <p className="font-display font-bold tracking-tight tabular-nums text-xl text-gray-900 dark:text-white truncate">{finalTotal.toFixed(2)} DT</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">Total à payer</p>
+            <p className="truncate font-display text-xl font-extrabold tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</p>
           </div>
           <Sheet open={mobileSummaryOpen} onOpenChange={onMobileSummaryOpenChange}>
             <SheetTrigger asChild>
-              <Button type="button" variant="outline" size="sm" className="text-[13px] shrink-0 min-h-[44px]">
-                Voir le récapitulatif
+              <Button type="button" variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-lg px-3 text-[13px] font-semibold text-brand hover:bg-brand-50 focus-visible:ring-focus">
+                Détails
+                <ChevronUp className="ms-1 h-4 w-4" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="rounded-t-2xl max-h-[85dvh] overflow-hidden flex flex-col bg-white dark:bg-gray-900">
+            <SheetContent side="bottom" className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-hairline bg-elevated">
               <SheetHeader className="sr-only">
                 <SheetTitle>Récapitulatif de la commande</SheetTitle>
+                <SheetDescription>Articles, expédition et total de votre commande.</SheetDescription>
               </SheetHeader>
-              <div className="flex-1 overflow-y-auto p-4 pb-8">
-                <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-4">Récapitulatif</h3>
+              <div className="flex-1 overflow-y-auto p-5 pb-8">
+                <h3 className="mb-4 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">Votre commande</h3>
                 <div className="space-y-3 mb-6">
                   {items.map((item) => {
                     const price = getEffectivePrice(item.product);
                     const productName = (item.product as any).designation_fr || (item.product as any).name;
                     const productImage = (item.product as any).cover ? getStorageUrl((item.product as any).cover) : null;
                     return (
-                      <div key={item.product.id} className="flex items-center gap-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
+                      <div key={item.product.id} className="flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-3">
                         {productImage && (
-                          <div className="relative w-12 h-12 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
+                          <div className="relative h-12 w-12 flex-shrink-0 overflow-hidden rounded-lg bg-elevated">
                             <Image src={productImage} alt={productName} fill className="object-contain p-1" sizes="48px" unoptimized />
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{productName}</p>
-                          <p className="text-xs text-gray-500">Qté: {item.quantity} · {(price * item.quantity).toFixed(2)} DT</p>
+                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1">{productName}</p>
+                          <p className="text-xs text-ink-3">Qté&nbsp;: {item.quantity} · {(price * item.quantity).toFixed(2)} DT</p>
                         </div>
                       </div>
                     );
                   })}
                 </div>
-                <div className="border-t border-gray-200 dark:border-gray-700 pt-4 space-y-2">
+                <div className="space-y-2 border-t border-rule pt-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Sous-total</span>
-                    <span className="font-medium text-gray-900 dark:text-white">{totalPrice.toFixed(2)} DT</span>
+                    <span className="text-ink-2">Sous-total</span>
+                    <span className="font-semibold text-ink-1">{totalPrice.toFixed(2)} DT</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600 dark:text-gray-400">Expédition</span>
-                    <span className={shippingCost === 0 ? 'text-green-600 dark:text-green-400 font-medium' : 'font-medium text-gray-900 dark:text-white'}>
+                    <span className="text-ink-2">Expédition</span>
+                    <span className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>
                       {shippingCost === 0 ? 'Gratuite' : `${shippingCost} DT`}
                     </span>
                   </div>
-                  <div className="flex justify-between items-baseline pt-2 border-t border-gray-100 dark:border-gray-800">
-                    <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
-                    <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">{finalTotal.toFixed(2)} DT</span>
+                  <div className="flex items-baseline justify-between border-t border-rule pt-3">
+                    <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
+                    <span className="font-display text-xl font-extrabold tracking-tight tabular-nums text-brand">{finalTotal.toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>
@@ -105,7 +108,7 @@ export function CheckoutFooterCTA({
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="checkout-cta-button w-full min-h-[52px] max-h-[56px] text-base font-display uppercase tracking-wide bg-red-600 hover:bg-red-700 text-white rounded-xl shadow-sm transition-all duration-200 disabled:opacity-50 flex items-center justify-center gap-2 whitespace-nowrap"
+          className="checkout-cta-button flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand font-display text-base font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
@@ -120,20 +123,7 @@ export function CheckoutFooterCTA({
           )}
         </Button>
 
-        <p className="text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-3 text-center flex items-center justify-center gap-2 flex-wrap">
-          <span className="inline-flex items-center gap-1"><Shield className="h-3 w-3 shrink-0" /> Paiement sécurisé</span>
-          <span aria-hidden>·</span>
-          <span className="inline-flex items-center gap-1"><Truck className="h-3 w-3 shrink-0" /> Livraison</span>
-          <span aria-hidden>·</span>
-          <a href="tel:+21627612500" className="inline-flex items-center gap-1 hover:text-red-600 dark:hover:text-red-400">
-            <Phone className="h-3 w-3 shrink-0" /> 27 612 500
-          </a>
-          <span aria-hidden>·</span>
-          <a href="https://wa.me/21627612500" target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 hover:text-red-600 dark:hover:text-red-400">
-            <MessageCircle className="h-3 w-3 shrink-0" aria-hidden="true" /> WhatsApp
-          </a>
-        </p>
-      </div>
+      </Container>
     </footer>
   );
 }

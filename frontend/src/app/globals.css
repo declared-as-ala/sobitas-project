@@ -1222,6 +1222,36 @@ input[type="search"]::-webkit-search-results-decoration {
   position: static;
 }
 
+.checkout-main {
+  padding-top: 1.5rem;
+  padding-bottom: var(--checkout-cta-padding, 9rem);
+}
+
+@media (min-width: 640px) {
+  .checkout-main {
+    padding-top: 2rem;
+  }
+}
+
+/* Checkout owns the presentation of the shared address picker without changing its data flow. */
+.checkout-form [data-slot="select-trigger"],
+.checkout-form #code_postal {
+  min-height: 3rem;
+  border-color: rgb(var(--c-hairline));
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink-1));
+  box-shadow: none;
+}
+
+.checkout-form [data-slot="select-trigger"]:hover {
+  border-color: rgb(var(--c-rule-strong));
+}
+
+.checkout-form [data-slot="select-trigger"]:focus-visible {
+  border-color: rgb(var(--c-brand));
+  box-shadow: 0 0 0 2px rgb(var(--c-focus) / 0.35);
+}
+
 @media (min-width: 1024px) {
   .checkout-layout {
     grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
@@ -1232,9 +1262,14 @@ input[type="search"]::-webkit-search-results-decoration {
     position: sticky;
     top: 1rem;
   }
+
+  .checkout-main {
+    padding-top: 2.5rem;
+    padding-bottom: 3.5rem;
+  }
 }
 
-/* Checkout CTA footer: fixed bottom, safe-area, 72–88px height, button 52–56px. */
+/* Checkout CTA footer: compact fixed action with a safe-area reserve. */
 .checkout-cta-footer {
   /* position, left, right, bottom, z-index in component */
 }
