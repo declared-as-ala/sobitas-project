@@ -185,42 +185,12 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # Install SMTP only when the complete credential set exists. Until then, preserve
-            # the current VPS values and let the strict notification doctor report the blocker.
-            # This makes adding the GitHub secrets sufficient; no manual VPS edit is required.
-            SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
-            # `script_stop` evaluates a false standalone `[` test as fatal before Bash can enter
-            # its `else`. A case statement selects the same branch without emitting status 1.
-            case "$SMTP_READY" in
-            true)
-              SMTP_PORT='${{ secrets.MAIL_PORT }}'
-              SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
-              SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
-              SMTP_ADMINS='${{ secrets.ADMIN_EMAILS }}'
-              [ -n "$SMTP_PORT" ] || SMTP_PORT=587
-              [ -n "$SMTP_ENCRYPTION" ] || SMTP_ENCRYPTION=tls
-              [ -n "$SMTP_FROM" ] || SMTP_FROM='${{ secrets.MAIL_USERNAME }}'
-              [ -n "$SMTP_ADMINS" ] || SMTP_ADMINS=contact@protein.tn
-              upsert_secret MAIL_MAILER smtp
-              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
-              upsert_secret MAIL_PORT "$SMTP_PORT"
-              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
-              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
-              upsert_secret MAIL_ENCRYPTION "$SMTP_ENCRYPTION"
-              upsert_secret MAIL_FROM_ADDRESS "$SMTP_FROM"
-              upsert_secret MAIL_FROM_NAME 'Protein.tn'
-              upsert_secret MAIL_REPLY_TO "$SMTP_FROM"
-              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
-              upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
-              echo "✓ SMTP credentials installed"
-              ;;
-            *)
-              # A complete authenticated SMTP configuration is preferred. The application image
-              # already ships sendmail. Laravel forces the domain-aligned From address for that
-              # transport, avoiding a fragile mutation of the VPS .env during deployment.
-              echo "✓ Using the image's validated local sendmail fallback"
-              ;;
-            esac
+            # The application image contains a validated sendmail transport. Laravel normalizes
+            # its From/Reply-To address to contact@protein.tn, so stale VPS sender values cannot
+            # break order confirmation serialization. Keep this block branch-free because
+            # appleboy/ssh-action's script_stop rewriting is not compatible with shell case/if
+            # compound statements.
+            echo "✓ Using the image's validated local sendmail fallback"
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
@@ -406,37 +376,9 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # Keep the retry behavior identical to attempt 1. Previously, a transient SSH failure
-            # skipped this block entirely, so the retry could deploy the new image while retaining
-            # the stale Gmail/Markdown sender that made customer confirmations undeliverable.
-            SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
-            case "$SMTP_READY" in
-            true)
-              SMTP_PORT='${{ secrets.MAIL_PORT }}'
-              SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
-              SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
-              SMTP_ADMINS='${{ secrets.ADMIN_EMAILS }}'
-              [ -n "$SMTP_PORT" ] || SMTP_PORT=587
-              [ -n "$SMTP_ENCRYPTION" ] || SMTP_ENCRYPTION=tls
-              [ -n "$SMTP_FROM" ] || SMTP_FROM='${{ secrets.MAIL_USERNAME }}'
-              [ -n "$SMTP_ADMINS" ] || SMTP_ADMINS=contact@protein.tn
-              upsert_secret MAIL_MAILER smtp
-              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
-              upsert_secret MAIL_PORT "$SMTP_PORT"
-              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
-              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
-              upsert_secret MAIL_ENCRYPTION "$SMTP_ENCRYPTION"
-              upsert_secret MAIL_FROM_ADDRESS "$SMTP_FROM"
-              upsert_secret MAIL_FROM_NAME 'Protein.tn'
-              upsert_secret MAIL_REPLY_TO "$SMTP_FROM"
-              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
-              upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
-              echo "✓ SMTP credentials installed"
-              ;;
-            *)
-              echo "✓ Using the image's validated local sendmail fallback"
-              ;;
-            esac
+            # Keep the retry path identical to attempt 1 without shell compound statements;
+            # script_stop injects a status guard after each source line.
+            echo "✓ Using the image's validated local sendmail fallback"
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
