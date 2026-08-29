@@ -926,6 +926,7 @@ jobs:
 
               ORDER_SOURCE=$(table_rows commandes "id=$ARGS")
               ORDER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commandes WHERE id=$ARGS;")
+              LINE_ITEMS_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;")
               USER_ID=$(mysql_query "SELECT COALESCE(user_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
               CLIENT_ID=$(mysql_query "SELECT COALESCE(client_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
               USER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.users WHERE id=$USER_ID;")
@@ -933,6 +934,7 @@ jobs:
 
               echo "order-source: $ORDER_SOURCE"
               echo "order-current: $ORDER_CURRENT"
+              echo "line-items-current: $LINE_ITEMS_CURRENT"
               echo "account-reference-present-current: $USER_CURRENT"
               echo "client-reference-present-current: $CLIENT_CURRENT"
               echo "line-items-source: $(table_rows commande_details "commande_id=$ARGS")"
@@ -952,7 +954,7 @@ jobs:
                 TICKETS=$(table_rows tickets "commande_id=$ARGS")
                 PAYMENTS=$(table_rows payments "commande_id=$ARGS")
 
-                if [ "$ORDER_SOURCE" != "1" ] || [ "$ORDER_CURRENT" != "0" ]; then
+                if [ "$ORDER_SOURCE" != "1" ] || { [ "$ORDER_CURRENT" != "0" ] && [ "$ORDER_CURRENT" != "1" ]; }; then
                   echo "[X] recovery precondition failed: source=$ORDER_SOURCE current=$ORDER_CURRENT"
                   exit 1
                 fi
@@ -987,25 +989,62 @@ jobs:
                   exit 1
                 fi
 
-                echo "[..] restoring one order and $LINE_ITEMS line item(s) in a transaction"
-                if ! mysql_query "
-                  START TRANSACTION;
-                  INSERT INTO \`$PROD_DB\`.commandes
-                    SELECT * FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS;
-                  INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
-                    SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
-                  UPDATE \`$PROD_DB\`.products AS p
-                    JOIN (
-                      SELECT produit_id, SUM(qte) AS ordered_qty
-                      FROM \`$RECOVERY_DB\`.commande_details
-                      WHERE commande_id=$ARGS
-                      GROUP BY produit_id
-                    ) AS recovered ON recovered.produit_id=p.id
-                    SET p.qte=GREATEST(0, p.qte-recovered.ordered_qty);
-                  COMMIT;
-                " >/dev/null; then
-                  echo "[X] transactional order recovery failed"
-                  exit 1
+                if [ "$ORDER_CURRENT" = "1" ]; then
+                  ORDER_IDENTITY_MATCH=$(mysql_query "
+                    SELECT COUNT(*)
+                    FROM \`$PROD_DB\`.commandes AS current_order
+                    JOIN \`$RECOVERY_DB\`.commandes AS source_order ON source_order.id=current_order.id
+                    WHERE current_order.id=$ARGS
+                      AND current_order.numero <=> source_order.numero
+                      AND current_order.user_id <=> source_order.user_id
+                      AND current_order.client_id <=> source_order.client_id
+                      AND current_order.email <=> source_order.email
+                      AND current_order.phone <=> source_order.phone
+                      AND current_order.prix_ttc <=> source_order.prix_ttc
+                      AND current_order.created_at <=> source_order.created_at;
+                  ")
+                  if [ "$ORDER_IDENTITY_MATCH" != "1" ]; then
+                    echo "[X] recovery refused: current order id belongs to a different identity"
+                    exit 1
+                  fi
+
+                  if [ "$LINE_ITEMS_CURRENT" = "$LINE_ITEMS" ]; then
+                    echo "[ok] order already restored with the expected line count; no database change"
+                  else
+                    echo "[..] repairing the restored order's line items without changing stock"
+                    if ! mysql_query "
+                      START TRANSACTION;
+                      DELETE FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;
+                      INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
+                        SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
+                      COMMIT;
+                    " >/dev/null; then
+                      echo "[X] transactional line-item repair failed"
+                      exit 1
+                    fi
+                  fi
+                else
+                  echo "[..] restoring one order and $LINE_ITEMS line item(s) in a transaction"
+                  if ! mysql_query "
+                    START TRANSACTION;
+                    DELETE FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;
+                    INSERT INTO \`$PROD_DB\`.commandes
+                      SELECT * FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS;
+                    INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
+                      SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
+                    UPDATE \`$PROD_DB\`.products AS p
+                      JOIN (
+                        SELECT produit_id, SUM(qte) AS ordered_qty
+                        FROM \`$RECOVERY_DB\`.commande_details
+                        WHERE commande_id=$ARGS
+                        GROUP BY produit_id
+                      ) AS recovered ON recovered.produit_id=p.id
+                      SET p.qte=GREATEST(0, p.qte-recovered.ordered_qty);
+                    COMMIT;
+                  " >/dev/null; then
+                    echo "[X] transactional order recovery failed"
+                    exit 1
+                  fi
                 fi
 
                 RESTORED_ORDER=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commandes WHERE id=$ARGS;")
