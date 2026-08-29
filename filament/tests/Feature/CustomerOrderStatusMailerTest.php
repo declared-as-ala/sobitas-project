@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\Facture;
 use App\Services\CustomerOrderStatusMailer;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -26,6 +27,15 @@ class CustomerOrderStatusMailerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config()->set('database.default', 'sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+        config()->set('customer_notifications.email_order_statuses', [
+            'en_cours_de_livraison', 'expidee', 'livree',
+        ]);
+        config()->set('aramex.status_sms_max_age_days', 3);
+        DB::purge('sqlite');
+        DB::setDefaultConnection('sqlite');
 
         Schema::create('commandes', function (Blueprint $table): void {
             $table->id();

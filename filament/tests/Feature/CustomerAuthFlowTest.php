@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Mail\EmailVerificationOtpMail;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -21,6 +22,13 @@ class CustomerAuthFlowTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        config()->set('database.default', 'sqlite');
+        config()->set('database.connections.sqlite.database', ':memory:');
+        config()->set('mail.admin_emails', []);
+        config()->set('cache.default', 'array');
+        DB::purge('sqlite');
+        DB::setDefaultConnection('sqlite');
 
         Schema::create('users', function (Blueprint $table): void {
             $table->id();
