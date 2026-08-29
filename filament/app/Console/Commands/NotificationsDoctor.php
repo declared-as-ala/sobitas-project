@@ -51,6 +51,7 @@ class NotificationsDoctor extends Command
         $mailer = (string) config('mail.default');
         $host   = (string) config("mail.mailers.{$mailer}.host", '—');
         $user   = (string) config("mail.mailers.{$mailer}.username", '');
+        $smtpSecretLength = mb_strlen((string) config('mail.mailers.smtp.password', ''));
         $from   = (string) config('mail.from.address', '');
         $admins = (array) config('mail.admin_emails', []);
 
@@ -61,7 +62,10 @@ class NotificationsDoctor extends Command
             ['from', $from . ' (' . config('mail.from.name') . ')'],
             ['admin_emails', $admins ? implode(', ', $admins) : '(aucun)'],
             ['queue', config('queue.default')],
-            ['authenticated smtp ready', config('mail.smtp_ready') ? 'oui' : 'non'],
+            ['smtp credentials present', config('mail.smtp_ready') ? 'oui' : 'non'],
+            ['gmail app-password shape', str_contains(strtolower($host), 'gmail')
+                ? ($smtpSecretLength === 16 ? 'oui (16 caractères)' : "non ({$smtpSecretLength} caractères)")
+                : 'non applicable'],
         ]);
 
         if ($mailer === 'smtp') {

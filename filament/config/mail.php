@@ -17,8 +17,14 @@ $emailAddress = static function (mixed $value, string $fallback = ''): string {
 
 $requestedMailer = strtolower(trim((string) env('MAIL_MAILER', 'log')));
 $smtpHost = trim((string) env('MAIL_HOST', ''));
+$smtpIsGmail = str_contains(strtolower($smtpHost), 'gmail');
 $smtpUsername = $emailAddress(env('MAIL_USERNAME'));
-$smtpPassword = trim((string) env('MAIL_PASSWORD', ''));
+$rawSmtpPassword = trim((string) env('MAIL_PASSWORD', ''));
+// Google displays 16-character app passwords in four groups. Those visual spaces are not part of
+// the credential, but copying the displayed value into .env preserves them and Gmail answers 535.
+$smtpPassword = $smtpIsGmail
+    ? (preg_replace('/\s+/', '', $rawSmtpPassword) ?? '')
+    : $rawSmtpPassword;
 $smtpReady = $smtpHost !== ''
     && ! in_array(strtolower($smtpHost), ['127.0.0.1', 'localhost', 'mailpit', 'example.com'], true)
     && $smtpUsername !== ''
@@ -33,7 +39,6 @@ $defaultMailer = $smtpReady && in_array($requestedMailer, ['sendmail', 'log', 'f
     ? 'smtp'
     : $requestedMailer;
 
-$smtpIsGmail = str_contains(strtolower($smtpHost), 'gmail');
 $fromAddress = $defaultMailer === 'sendmail'
     ? 'contact@protein.tn'
     : ($smtpIsGmail && $smtpUsername !== ''
