@@ -15,17 +15,18 @@ use Tests\TestCase;
 
 class OrderIdentityAndNotificationTest extends TestCase
 {
-    protected function defineEnvironment($app): void
-    {
-        $app['config']->set('database.default', 'sqlite');
-        $app['config']->set('database.connections.sqlite.database', ':memory:');
-        $app['config']->set('cache.default', 'array');
-        $app['config']->set('queue.default', 'sync');
-    }
-
     protected function setUp(): void
     {
         parent::setUp();
+
+        // This suite extends the application's normal Laravel TestCase rather than
+        // Orchestra Testbench, so defineEnvironment() is never invoked. Configure the
+        // isolated connection explicitly before purging it; otherwise a cached
+        // DB_DATABASE value ("protein_db" in production) leaks into SQLite.
+        $this->app['config']->set('database.default', 'sqlite');
+        $this->app['config']->set('database.connections.sqlite.database', ':memory:');
+        $this->app['config']->set('cache.default', 'array');
+        $this->app['config']->set('queue.default', 'sync');
 
         DB::purge('sqlite');
         DB::setDefaultConnection('sqlite');
