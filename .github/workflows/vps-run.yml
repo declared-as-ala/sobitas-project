@@ -692,29 +692,6 @@ jobs:
           # action input that overrides them invisibly.
           script_stop: false
           script: |
-            # ── NO `set -e`, AND THAT IS THE WHOLE POINT ──────────────────────────────────
-            # `set -e` plus `script_stop: true` plus appleboy's discard-stdout-on-non-zero is a
-            # three-part trap, and on 14/08 it sprang for the SIXTH time. The artisan block below
-            # was already rewritten to survive it. The PREAMBLE was not, so `content-status` still
-            # returned:
-            #
-            #     2026/08/14 15:41:33 Process exited with status 1
-            #
-            # and nothing else — three seconds after connecting, with the resolve step having
-            # correctly produced `php artisan catalog:iherb:content --status`, and with VPS Doctor
-            # having logged in with the key fifty seconds earlier. Every candidate (a missing
-            # APP_DIR, a stopped container, a bad compose file) produces exactly that same empty
-            # report, which is the definition of a useless diagnostic.
-            #
-            # `set -e` is the wrong tool for a script whose entire product is its output: it turns
-            # every failure into silence at precisely the moment the failure is the thing you want
-            # to read. Each command that genuinely must stop the run is guarded EXPLICITLY below
-            # (the backup before a writing task is the one that matters), which works the same
-            # without `-e` and reads better with it gone.
-            #
-            # `-u` and `pipefail` stay. They catch typos and hide nothing. `+e` is explicit
-            # rather than merely absent, because `script_stop` above has injected `-e` before now
-            # and this is the line that has to survive someone flipping it back.
             set +e
             set -uo pipefail
 
@@ -725,7 +702,6 @@ jobs:
             MODE="${{ steps.resolve.outputs.mode }}"
             SVC="${{ steps.resolve.outputs.svc }}"
 
-            # Announce BEFORE anything can fail, so a run always proves it got this far.
             echo "[..] connected. task mode=$MODE svc=$SVC writes=$WRITES"
             echo "[..] args: $ARGS"
 
@@ -746,20 +722,6 @@ jobs:
             fi
             echo "[ok] $COMPOSE_FILE present"
 
-            # Retried, and its failure is REPORTED rather than propagated.
-            #
-            # This single line ate five diagnostic runs on 14/08. It is the only `exit 1` before
-            # the task itself, and appleboy discards remote stdout on a non-zero exit - so a run
-            # that tripped here printed "Process exited with status 1" and NOTHING else, which is
-            # indistinguishable from the artisan command failing. Everything below was rewritten
-            # to preserve output; this was still throwing it away.
-            #
-            # Three attempts because the box is genuinely slow right now: /api/catalog_health takes
-            # 6 s, one SSH dispatch died with `dial tcp: i/o timeout`, and the content pass is
-            # dispatching 900 no-op jobs every five minutes on top of the real load.
-            # stderr is CAPTURED, not discarded. It was `2>/dev/null`, which threw away the one
-            # sentence that distinguishes "the container is still booting" from "there is no such
-            # service" from "the docker socket is not readable by this user".
             READY=no
             for attempt in 1 2 3; do
               PROBE=$(docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>&1)
@@ -819,14 +781,9 @@ jobs:
             fi
 
             if [ "$MODE" = "logs" ]; then
-              # Container logs, not artisan. A job that dies between claim() and the write leaves
-              # NOTHING on its staging row - the exception only exists in the worker's log, so
-              # without this task the one place the answer lives is unreachable from here.
               echo ""
               echo "> docker compose logs --tail=200 $ARGS"
               echo ""
-              # Captured, like the artisan branch. A failure here used to end the shell and take
-              # the whole log with it — on a task whose only product IS a log.
               OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
               echo "$OUT"
               [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
@@ -971,12 +928,6 @@ jobs:
                   exit 1
                 fi
 
-                # Detail row ids are table-local sequence values, not business identifiers. A
-                # later order may legitimately have reused an id after this order disappeared,
-                # so copying the old primary keys can collide even though commande_id is absent.
-                # Build the shared column list from the snapshot and let production allocate new
-                # ids. The remaining values (order, product, quantity and unit price) are copied
-                # exactly, and the post-check below verifies the complete line count.
                 DETAIL_COLUMNS=$(mysql_query "
                   SELECT GROUP_CONCAT(CONCAT(CHAR(96), COLUMN_NAME, CHAR(96)) ORDER BY ORDINAL_POSITION SEPARATOR ',')
                   FROM information_schema.columns
@@ -1067,16 +1018,6 @@ jobs:
                 | grep -Ei '^(MAIL|SMTP|BREVO|SENDINBLUE|SENDGRID|MAILGUN|POSTMARK|RESEND|AWS_)' \
                 | sort -u
             elif [ "$MODE" = "filelog" ]; then
-              # A file inside the container, not a container's stdout.
-              #
-              # The scheduler redirects each pass to its own file:
-              #   catalog:iherb:content  >> storage/logs/catalog-content.log
-              #   catalog:iherb:promote  >> storage/logs/catalog-promote.log
-              # so `docker compose logs backend-v2-scheduler` shows only that the command RAN and
-              # for how long - never what it decided. On 14/08 that distinction was the whole
-              # problem: the content pass fires every five minutes, reports DONE in 2 seconds, and
-              # has fetched nothing since 11/08. The reason exists in exactly one place, and until
-              # now that place needed a shell.
               echo ""
               echo "> [$SVC] tail -n 300 storage/logs/$ARGS"
               echo ""
@@ -1088,20 +1029,7 @@ jobs:
               echo ""
               echo "> php artisan $ARGS"
               echo ""
-              # Capture instead of streaming, and print unconditionally.
-              #
-              # With `script_stop: true` a non-zero exit ends the remote shell immediately and
-              # appleboy does not surface what was written before it. On 14/08 both catalog-status
-              # and content-status failed this way: "Process exited with status 1" and not one line
-              # of output, which is the least useful possible report from a diagnostic tool - it
-              # cannot even distinguish a broken command from a container that is not running.
-              #
-              # stderr is folded in because Laravel writes its errors there, and `|| true` keeps
-              # the shell alive long enough to print them. The real code is propagated at the end.
               set +e
-              # `artisan test` forwards options that follow the command to PHPUnit.
-              # PHPUnit does not understand Laravel's global --no-interaction option,
-              # so place it before normal Artisan commands and omit it for the test runner.
               if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
                 OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
                   php artisan $ARGS 2>&1)
@@ -1124,20 +1052,6 @@ jobs:
                 echo "================================================================"
                 echo "[X] COMMAND FAILED - artisan exited $RC. Its output is above."
                 echo "================================================================"
-                # Deliberately NOT propagating $RC.
-                #
-                # appleboy/ssh-action relays the remote stdout to the runner only when the remote
-                # script exits ZERO; on a non-zero exit it prints "Process exited with status N"
-                # and DISCARDS everything the script wrote. Verified on 14/08: catalog-status and
-                # content-status both failed with not one line of output, twice each, including
-                # after the output was captured and echoed explicitly.
-                #
-                # So propagating the code destroys the only thing worth having. A green run whose
-                # log says COMMAND FAILED in a banner is strictly more useful than a red run that
-                # says nothing at all, and this workflow's entire product is its log.
-                #
-                # Infrastructure failures above - unreachable host, container not running, backup
-                # refused - still exit non-zero, because those produce no output worth saving.
                 exit 0
               fi
             fi
