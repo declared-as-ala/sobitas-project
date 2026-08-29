@@ -240,7 +240,7 @@ jobs:
             commerce-flow-tests)
               # Runs only the isolated commerce lifecycle regression suite. The test
               # defines its own in-memory SQLite schema and never touches production data.
-              ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php"
+              ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php"
               WRITES=no
               ;;
             notifications-status)
@@ -540,7 +540,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           timeout: 120s
-          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php
+          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php,filament/tests/Feature/OrderIdentityAndNotificationTest.php
           target: /root/sobitas-project/inbox/commerce-tests
           strip_components: 2
           overwrite: true
@@ -675,7 +675,7 @@ jobs:
               echo "[ok] research.json delivered"
             fi
 
-            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php" ]; then
+            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php" ]; then
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 mkdir -p /var/www/html/tests/Feature
               docker cp "$APP_DIR/inbox/commerce-tests/TestCase.php" \
@@ -686,6 +686,8 @@ jobs:
                 sobitas-backend-v2:/var/www/html/tests/Feature/CustomerAuthFlowTest.php
               docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerOrderStatusMailerTest.php" \
                 sobitas-backend-v2:/var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/OrderIdentityAndNotificationTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 chown -R www-data:www-data /var/www/html/tests
               echo "[ok] isolated commerce tests delivered"
@@ -764,7 +766,8 @@ jobs:
                   rm -f /var/www/html/tests/TestCase.php \
                     /var/www/html/tests/CreatesApplication.php \
                     /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
-                    /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php >/dev/null 2>&1 || true
+                    /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php \
+                    /var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php >/dev/null 2>&1 || true
               fi
               echo "$OUT"
               echo ""

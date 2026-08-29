@@ -408,6 +408,41 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
+            # Keep the retry behavior identical to attempt 1. Previously, a transient SSH failure
+            # skipped this block entirely, so the retry could deploy the new image while retaining
+            # the stale Gmail/Markdown sender that made customer confirmations undeliverable.
+            SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
+            if [ "$SMTP_READY" = "true" ]; then
+              SMTP_PORT='${{ secrets.MAIL_PORT }}'
+              SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
+              SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
+              SMTP_ADMINS='${{ secrets.ADMIN_EMAILS }}'
+              [ -n "$SMTP_PORT" ] || SMTP_PORT=587
+              [ -n "$SMTP_ENCRYPTION" ] || SMTP_ENCRYPTION=tls
+              [ -n "$SMTP_FROM" ] || SMTP_FROM='${{ secrets.MAIL_USERNAME }}'
+              [ -n "$SMTP_ADMINS" ] || SMTP_ADMINS=contact@protein.tn
+              upsert_secret MAIL_MAILER smtp
+              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
+              upsert_secret MAIL_PORT "$SMTP_PORT"
+              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
+              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
+              upsert_secret MAIL_ENCRYPTION "$SMTP_ENCRYPTION"
+              upsert_secret MAIL_FROM_ADDRESS "$SMTP_FROM"
+              upsert_secret MAIL_FROM_NAME 'Protein.tn'
+              upsert_secret MAIL_REPLY_TO "$SMTP_FROM"
+              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
+              upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
+              echo "✓ SMTP credentials installed"
+            else
+              upsert_secret MAIL_MAILER sendmail
+              upsert_secret MAIL_FROM_ADDRESS contact@protein.tn
+              upsert_secret MAIL_FROM_NAME 'Protein.tn'
+              upsert_secret MAIL_REPLY_TO contact@protein.tn
+              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
+              upsert_secret ADMIN_EMAILS contact@protein.tn
+              echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
+            fi
+
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
 
