@@ -34,6 +34,7 @@ class NotificationsDoctor extends Command
                             {--order= : An order id or numero to render the real messages for}
                             {--send-email= : Send the customer confirmation to THIS address}
                             {--send-sms= : Send the confirmation SMS to THIS number}
+                            {--recent=0 : Show this many recent orders/users and notification table health}
                             {--probe-sms : Verify WinSMS credentials and balance without sending}
                             {--strict : Return a failure code when production notification configuration is incomplete}';
 
@@ -128,6 +129,11 @@ class NotificationsDoctor extends Command
 
         $template = optional(Message::getCached())->msg_passez_commande;
         $this->line('  Modèle admin « msg_passez_commande » : ' . (trim((string) $template) !== '' ? 'défini' : 'vide (le texte par défaut du code est utilisé)'));
+
+        $recent = max(0, min(25, (int) $this->option('recent')));
+        if ($recent > 0) {
+            $this->renderCommerceHealth($recent);
+        }
 
         // ── The real messages for a real order ────────────────────────────────────────────
         $orderRef = $this->option('order');
@@ -240,6 +246,50 @@ class NotificationsDoctor extends Command
         }
 
         return SmsService::toGsm7($sms);
+    }
+
+    private function renderCommerceHealth(int $limit): void
+    {
+        $this->line('');
+        $this->components->info('COMMERCE / BASE DE DONNÉES (lecture seule)');
+
+        $this->table(['Vérification', 'État'], [
+            ['commandes.checkout_idempotency_key', \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'checkout_idempotency_key') ? 'présente' : 'ABSENTE'],
+            ['notification_deliveries', \Illuminate\Support\Facades\Schema::hasTable('notification_deliveries') ? 'présente' : 'ABSENTE'],
+            ['email_verification_otps', \Illuminate\Support\Facades\Schema::hasTable('email_verification_otps') ? 'présente' : 'ABSENTE'],
+            ['users.phone_verified_at', \Illuminate\Support\Facades\Schema::hasColumn('users', 'phone_verified_at') ? 'présente' : 'ABSENTE'],
+            ['failed_jobs', \Illuminate\Support\Facades\Schema::hasTable('failed_jobs') ? (string) \Illuminate\Support\Facades\DB::table('failed_jobs')->count() : 'table absente'],
+        ]);
+
+        $orders = Commande::query()
+            ->latest('id')
+            ->limit($limit)
+            ->get(['id', 'numero', 'etat', 'prix_ttc', 'email', 'livraison_email', 'created_at']);
+
+        $this->line('');
+        $this->line("  {$orders->count()} commande(s) la/les plus récente(s) :");
+        $this->table(['id', 'numero', 'etat', 'total', 'email?', 'créée'], $orders->map(fn (Commande $order): array => [
+            $order->id,
+            $order->numero ?: '—',
+            $order->etat ?: '—',
+            number_format((float) $order->prix_ttc, 3, '.', ' '),
+            filter_var($order->livraison_email ?: $order->email, FILTER_VALIDATE_EMAIL) ? 'oui' : 'non',
+            optional($order->created_at)->toDateTimeString() ?: '—',
+        ])->all());
+
+        $users = \App\Models\User::query()
+            ->latest('id')
+            ->limit($limit)
+            ->get(['id', 'role_id', 'email_verified_at', 'created_at']);
+
+        $this->line('');
+        $this->line("  {$users->count()} utilisateur(s) le(s) plus récent(s) :");
+        $this->table(['id', 'role', 'email vérifié?', 'créé'], $users->map(fn (\App\Models\User $user): array => [
+            $user->id,
+            $user->role_id,
+            $user->email_verified_at ? 'oui' : 'non',
+            optional($user->created_at)->toDateTimeString() ?: '—',
+        ])->all());
     }
 
     private function mask(string $value): string

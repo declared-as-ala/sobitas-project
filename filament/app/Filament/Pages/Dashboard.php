@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Filament\Widgets\ClientHistoriqueSearchWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
+use App\Filament\Widgets\LatestCommandes;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
@@ -67,6 +68,7 @@ class Dashboard extends BaseDashboard
             StatsOverview::class,               // sort=4    — 4 KPI cards (span=2 of 3 cols)
             RevenueBySourcePieChart::class,     // sort=5    — Répartition HT (span=1, same row)
             RevenueChart::class,                // sort=6    — Évolution des ventes (full-width)
+            LatestCommandes::class,             // sort=4    — Latest orders, visible without opening the resource
             TopProductsWidget::class,           // sort=8    — Top Produits table (full-width)
             TopRegionsWidget::class,            // sort=9    — Top Régions + Top Clients (full-width)
         ];

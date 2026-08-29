@@ -133,6 +133,15 @@ jobs:
         id: deploy_attempt_1
         continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          DEPLOY_MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          DEPLOY_MAIL_ENCRYPTION: ${{ secrets.MAIL_ENCRYPTION }}
+          DEPLOY_MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          DEPLOY_MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          DEPLOY_MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
+          DEPLOY_MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          DEPLOY_ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -152,6 +161,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           timeout: 120s
           command_timeout: 1200s
+          envs: DEPLOY_MAIL_HOST,DEPLOY_MAIL_PORT,DEPLOY_MAIL_ENCRYPTION,DEPLOY_MAIL_USERNAME,DEPLOY_MAIL_PASSWORD,DEPLOY_MAIL_FROM_ADDRESS,DEPLOY_MAIL_FROM_NAME,DEPLOY_ADMIN_EMAILS
           script_stop: true
           script: |
             set -euo pipefail
@@ -183,6 +193,28 @@ jobs:
             upsert_secret SMS_API_KEY '${{ secrets.SMS_API_KEY }}'
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
+
+            # SMTP is installed only when the secret set is present. This preserves a manually
+            # configured VPS during migration, while making GitHub Actions the durable source of
+            # truth once SMTP secrets are added. Never silently switch to the log mailer.
+            if [ -n "${DEPLOY_MAIL_HOST:-}" ]; then
+              [ -n "${DEPLOY_MAIL_USERNAME:-}" ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_MAIL_PASSWORD:-}" ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_MAIL_FROM_ADDRESS:-}" ] || { echo "❌ MAIL_FROM_ADDRESS GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_ADMIN_EMAILS:-}" ] || { echo "❌ ADMIN_EMAILS GitHub secret is missing"; exit 1; }
+              upsert_secret MAIL_MAILER smtp
+              upsert_secret MAIL_HOST "$DEPLOY_MAIL_HOST"
+              upsert_secret MAIL_PORT "${DEPLOY_MAIL_PORT:-587}"
+              upsert_secret MAIL_ENCRYPTION "${DEPLOY_MAIL_ENCRYPTION:-tls}"
+              upsert_secret MAIL_USERNAME "$DEPLOY_MAIL_USERNAME"
+              upsert_secret MAIL_PASSWORD "$DEPLOY_MAIL_PASSWORD"
+              upsert_secret MAIL_FROM_ADDRESS "$DEPLOY_MAIL_FROM_ADDRESS"
+              upsert_secret MAIL_FROM_NAME "${DEPLOY_MAIL_FROM_NAME:-Protein.tn}"
+              upsert_secret ADMIN_EMAILS "$DEPLOY_ADMIN_EMAILS"
+              echo "✓ SMTP configuration installed"
+            else
+              echo "⚠️  MAIL_HOST GitHub secret is absent; preserving the existing VPS mail configuration"
+            fi
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
@@ -320,6 +352,15 @@ jobs:
         # whether a broken deploy is reported as broken.
         continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          DEPLOY_MAIL_HOST: ${{ secrets.MAIL_HOST }}
+          DEPLOY_MAIL_PORT: ${{ secrets.MAIL_PORT }}
+          DEPLOY_MAIL_ENCRYPTION: ${{ secrets.MAIL_ENCRYPTION }}
+          DEPLOY_MAIL_USERNAME: ${{ secrets.MAIL_USERNAME }}
+          DEPLOY_MAIL_PASSWORD: ${{ secrets.MAIL_PASSWORD }}
+          DEPLOY_MAIL_FROM_ADDRESS: ${{ secrets.MAIL_FROM_ADDRESS }}
+          DEPLOY_MAIL_FROM_NAME: ${{ secrets.MAIL_FROM_NAME }}
+          DEPLOY_ADMIN_EMAILS: ${{ secrets.ADMIN_EMAILS }}
         with:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
@@ -339,6 +380,7 @@ jobs:
           port: ${{ secrets.VPS_PORT }}
           timeout: 120s
           command_timeout: 1200s
+          envs: DEPLOY_MAIL_HOST,DEPLOY_MAIL_PORT,DEPLOY_MAIL_ENCRYPTION,DEPLOY_MAIL_USERNAME,DEPLOY_MAIL_PASSWORD,DEPLOY_MAIL_FROM_ADDRESS,DEPLOY_MAIL_FROM_NAME,DEPLOY_ADMIN_EMAILS
           script_stop: true
           script: |
             set -euo pipefail
@@ -367,6 +409,25 @@ jobs:
             upsert_secret SMS_API_KEY '${{ secrets.SMS_API_KEY }}'
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
+
+            if [ -n "${DEPLOY_MAIL_HOST:-}" ]; then
+              [ -n "${DEPLOY_MAIL_USERNAME:-}" ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_MAIL_PASSWORD:-}" ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_MAIL_FROM_ADDRESS:-}" ] || { echo "❌ MAIL_FROM_ADDRESS GitHub secret is missing"; exit 1; }
+              [ -n "${DEPLOY_ADMIN_EMAILS:-}" ] || { echo "❌ ADMIN_EMAILS GitHub secret is missing"; exit 1; }
+              upsert_secret MAIL_MAILER smtp
+              upsert_secret MAIL_HOST "$DEPLOY_MAIL_HOST"
+              upsert_secret MAIL_PORT "${DEPLOY_MAIL_PORT:-587}"
+              upsert_secret MAIL_ENCRYPTION "${DEPLOY_MAIL_ENCRYPTION:-tls}"
+              upsert_secret MAIL_USERNAME "$DEPLOY_MAIL_USERNAME"
+              upsert_secret MAIL_PASSWORD "$DEPLOY_MAIL_PASSWORD"
+              upsert_secret MAIL_FROM_ADDRESS "$DEPLOY_MAIL_FROM_ADDRESS"
+              upsert_secret MAIL_FROM_NAME "${DEPLOY_MAIL_FROM_NAME:-Protein.tn}"
+              upsert_secret ADMIN_EMAILS "$DEPLOY_ADMIN_EMAILS"
+              echo "✓ SMTP configuration installed"
+            else
+              echo "⚠️  MAIL_HOST GitHub secret is absent; preserving the existing VPS mail configuration"
+            fi
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
