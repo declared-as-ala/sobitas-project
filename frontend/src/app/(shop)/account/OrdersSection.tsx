@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
@@ -15,15 +15,16 @@ import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 export function OrdersSection() {
   const router = useRouter();
   const { orders, fetchOrders, isLoading, ordersLoading, ordersError } = useAuth();
+  const hasRequestedOrders = useRef(false);
 
   const safeOrders = Array.isArray(orders) ? orders : [];
 
   useEffect(() => {
-    if (!isLoading && safeOrders.length === 0 && !ordersLoading && !ordersError) {
-      fetchOrders();
+    if (!isLoading && !hasRequestedOrders.current && safeOrders.length === 0 && !ordersLoading && !ordersError) {
+      hasRequestedOrders.current = true;
+      void fetchOrders();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchOrders, isLoading, ordersError, ordersLoading, safeOrders.length]);
 
   const getStatusBadge = (status: string) => {
     const green = 'border border-ok/40 bg-elevated text-ok';

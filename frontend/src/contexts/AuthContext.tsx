@@ -190,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const getOrderDetails = async (id: number) => {
+  const getOrderDetails = useCallback(async (id: number) => {
     try {
       const details = await getOrderDetail(id);
       return details;
@@ -198,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error fetching order details:', error);
       throw error;
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

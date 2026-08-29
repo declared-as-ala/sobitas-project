@@ -1,5 +1,27 @@
 <?php
 
+/*
+ * Environment values are edited through multiple deployment surfaces. A copied Markdown link
+ * such as `[contact@protein.tn](mailto:contact@protein.tn)` used to reach Symfony unchanged and
+ * made every mail fail RFC validation before the transport was even called. Accept the address
+ * portion defensively, while rejecting anything that still is not an actual mailbox.
+ */
+$emailAddress = static function (mixed $value, string $fallback = ''): string {
+    $candidate = trim((string) $value);
+    if (preg_match('/mailto:([^\s)>]+)/i', $candidate, $match)) {
+        $candidate = trim($match[1], " <>[]()\t\n\r\0\x0B");
+    }
+
+    return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : $fallback;
+};
+
+$fromAddress = $emailAddress(env('MAIL_FROM_ADDRESS'), 'contact@protein.tn');
+$replyToAddress = $emailAddress(env('MAIL_REPLY_TO'), $fromAddress);
+$adminEmails = array_values(array_unique(array_filter(array_map(
+    static fn (string $value): string => $emailAddress($value),
+    array_map('trim', explode(',', (string) env('ADMIN_EMAILS', 'contact@protein.tn')))
+))));
+
 return [
 
     /*
@@ -83,7 +105,7 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+        'address' => $fromAddress,
         'name'    => env('MAIL_FROM_NAME', 'Protein.tn'),
     ],
 
@@ -93,7 +115,7 @@ return [
     |--------------------------------------------------------------------------
     */
     'reply_to' => [
-        'address' => env('MAIL_REPLY_TO', env('MAIL_FROM_ADDRESS', 'contact@protein.tn')),
+        'address' => $replyToAddress,
         'name' => env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Protein.TN')),
     ],
 
@@ -126,6 +148,6 @@ return [
     |
     */
 
-    'admin_emails' => array_values(array_filter(array_map('trim', explode(',', env('ADMIN_EMAILS', ''))))),
+    'admin_emails' => $adminEmails,
 
 ];

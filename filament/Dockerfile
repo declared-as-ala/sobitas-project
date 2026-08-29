@@ -3,6 +3,8 @@
 # ----------------------------------------
 FROM php:8.3-fpm
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies (including Node.js for asset building)
 # gosu: for HIGH-06 — run PHP-FPM as www-data instead of root
 RUN apt-get update && apt-get install -y \
@@ -17,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libicu-dev \
     libhiredis-dev \
+    sendmail \
     zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -225,10 +226,35 @@ class Commande extends Model
 
     // ── Relationships ──────────────────────────────────
 
-    /** Client linked to this order. Prefer client_id when set; otherwise user_id (legacy). */
+    /** Back-office customer linked through commandes.client_id. */
     public function client(): BelongsTo
     {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    /** Historical orders stored a Client id in user_id before client_id existed. */
+    public function legacyClient(): BelongsTo
+    {
         return $this->belongsTo(Client::class, 'user_id');
+    }
+
+    /**
+     * Orders visible to an authenticated storefront account.
+     *
+     * Exact email matching restores guest/legacy purchases made with the account's verified login
+     * address while keeping unrelated numeric Client/User ids from leaking another customer's order.
+     */
+    public function scopeVisibleToStorefrontUser(Builder $query, User $user): Builder
+    {
+        $email = strtolower(trim((string) $user->email));
+
+        return $query->where(function (Builder $orders) use ($user, $email): void {
+            $orders->where('user_id', $user->getKey());
+            if ($email !== '') {
+                $orders->orWhereRaw('LOWER(TRIM(email)) = ?', [$email])
+                    ->orWhereRaw('LOWER(TRIM(livraison_email)) = ?', [$email]);
+            }
+        });
     }
 
     public function quotation(): BelongsTo

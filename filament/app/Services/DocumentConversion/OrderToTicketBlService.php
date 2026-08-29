@@ -29,7 +29,7 @@ class OrderToTicketBlService
             $bl = new Ticket();
             $bl->type = Ticket::TYPE_BON_LIVRAISON;
             $bl->commande_id = $order->id;
-            $bl->client_id = $order->user_id ?? null;
+            $bl->client_id = $order->client_id ?? $order->user_id;
             $year = date('Y');
             $nb = Ticket::whereYear('created_at', $year)->count() + 1;
             $bl->numero = $year . '/' . str_pad((string) $nb, 4, '0', STR_PAD_LEFT);

@@ -63,8 +63,8 @@ class EditCommande extends EditRecord
             Actions\Action::make('viewClient')
                 ->label('Voir client')
                 ->icon('heroicon-o-user')
-                ->visible(fn () => (bool) $this->record->user_id)
-                ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->user_id]))
+                ->visible(fn () => (bool) ($this->record->client_id ?? $this->record->user_id))
+                ->url(fn () => ClientResource::getUrl('edit', ['record' => $this->record->client_id ?? $this->record->user_id]))
                 ->openUrlInNewTab(),
             Actions\Action::make('createBl')
                 ->label('Convertir en bon de livraison')

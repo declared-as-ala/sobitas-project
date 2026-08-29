@@ -211,7 +211,17 @@ jobs:
               upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
               echo "✓ SMTP credentials installed"
             else
-              echo "⚠ SMTP secrets incomplete; preserving the current VPS mail configuration"
+              # A complete authenticated SMTP configuration is preferred. The application image
+              # nevertheless ships a local sendmail transport so transactional mail keeps working
+              # when those optional secrets are absent. Always repair the public sender fields:
+              # production once contained a copied Markdown link here, which Symfony rejects.
+              upsert_secret MAIL_MAILER sendmail
+              upsert_secret MAIL_FROM_ADDRESS contact@protein.tn
+              upsert_secret MAIL_FROM_NAME 'Protein.tn'
+              upsert_secret MAIL_REPLY_TO contact@protein.tn
+              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
+              upsert_secret ADMIN_EMAILS contact@protein.tn
+              echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
             fi
 
             echo "🔐 Logging in to GHCR..."

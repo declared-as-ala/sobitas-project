@@ -12,7 +12,7 @@ class BackfillBlNoTvaAndClient extends Command
                             {--tva-only : Only set TVA to 0 and recalculate totals}
                             {--client-only : Only backfill client_id from commande}';
 
-    protected $description = 'Backfill BL: set TVA=0 and recalculate net_a_payer (HT+timbre); fill client_id from commande (user_id ?? client_id) when missing.';
+    protected $description = 'Backfill BL: set TVA=0 and recalculate net_a_payer (HT+timbre); fill client_id from commande (client_id, then legacy user_id) when missing.';
 
     public function handle(): int
     {
@@ -61,7 +61,7 @@ class BackfillBlNoTvaAndClient extends Command
             if (! $tvaOnly && $facture->client_id === null && $facture->commande_id !== null) {
                 $commande = $facture->commande;
                 if ($commande) {
-                    $clientId = $commande->user_id ?? $commande->client_id;
+                    $clientId = $commande->client_id ?? $commande->user_id;
                     if ($clientId !== null) {
                         $facture->update(['client_id' => $clientId]);
                         $countClient++;

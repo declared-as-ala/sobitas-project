@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\OrderConfirmedAdminMail;
-use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
-use App\Models\Message;
 use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Models\User;
@@ -15,14 +12,13 @@ use App\Services\ClientService;
 use App\Services\CouponService;
 use App\Services\PackDiscountService;
 use App\Services\PointsService;
-use App\Services\SmsService;
+use App\Services\OrderConfirmationDispatcher;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class CommandeController extends Controller
@@ -59,19 +55,9 @@ class CommandeController extends Controller
      *   AdminCommandeController::storeCommandeApi() in the backend project.
      *   Price calculation logic preserved as-is.
      *
-     * ── THE NOTIFICATIONS ARE SYNCHRONOUS, WHATEVER THE COMMENT USED TO SAY ─────────────────
-     * This docblock claimed "SMS and email are now dispatched to queue for better response time".
-     * They are not, and never were on this path: the SMS calls SmsService directly (not
-     * SendSmsJob) and the mails are `Mail::to()->send()`, not `->queue()`. So a customer pressing
-     * "commander" waits for one WinSMS request plus one SMTP handshake per recipient — with
-     * ADMIN_EMAILS holding two addresses that is three SMTP conversations on the request thread.
-     *
-     * Left synchronous deliberately, and the comment corrected instead. `QUEUE_CONNECTION` is
-     * `sync` in .env.example, so "queueing" these would change nothing except in an environment
-     * where a worker is running — and if that worker is ever down, a queued order confirmation
-     * disappears with no trace and nobody finds out for days. For a shop this size, an order
-     * confirmation that is slow is strictly better than one that is silently lost. Revisit only
-     * together with a supervised worker and an alert on the failed_jobs table.
+     * Customer/admin email and SMS are dispatched only after the transaction commits. Production
+     * has a supervised Redis worker, so checkout latency is no longer coupled to WinSMS or SMTP.
+     * Each notification job owns an idempotency key in notification_deliveries.
      */
     public function storeCommandeApi(Request $request): JsonResponse
     {
@@ -147,32 +133,27 @@ class CommandeController extends Controller
             // user_id (that would be an IDOR: attaching an order, and any points
             // side-effects, to an arbitrary account).
             $hasClientIdColumn = Schema::hasColumn($new_facture->getTable(), 'client_id');
+            $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData);
+
+            if ($client && $hasClientIdColumn) {
+                $new_facture->client_id = $client->id;
+                Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id]);
+            }
+
             if ($authUser) {
+                // user_id is the authenticated storefront User. client_id is the matching
+                // back-office Client. They are different tables and their numeric ids must
+                // never be copied into one another.
                 $new_facture->user_id = $authUser->id;
-                if ($hasClientIdColumn) {
-                    $new_facture->client_id = $authUser->id;
-                }
-            } elseif (! empty($commandeData['user_id'])) {
-                // Legacy attribution only (guest checkout that carried an id). No
-                // loyalty points can be earned or spent on this unauthenticated path.
-                $new_facture->user_id = $commandeData['user_id'];
-                if ($hasClientIdColumn) {
-                    $new_facture->client_id = $commandeData['user_id'];
-                }
+            } elseif ($client) {
+                // Preserve the historic back-office convention for guest orders only. Never trust
+                // commande.user_id from the browser: it could attach an order to another account.
+                $new_facture->user_id = $client->id;
             } else {
-                $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData);
-                if ($client) {
-                    Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id]);
-                    $new_facture->user_id = $client->id;
-                    if ($hasClientIdColumn) {
-                        $new_facture->client_id = $client->id;
-                    }
-                } else {
-                    Log::warning('filament.api.add_commande.no_client_created', [
-                        'has_phone' => ! empty($commandeData['livraison_phone'] ?? $commandeData['phone'] ?? null),
-                        'has_email' => ! empty($commandeData['livraison_email'] ?? $commandeData['email'] ?? null),
-                    ]);
-                }
+                Log::warning('filament.api.add_commande.no_client_created', [
+                    'has_phone' => ! empty($commandeData['livraison_phone'] ?? $commandeData['phone'] ?? null),
+                    'has_email' => ! empty($commandeData['livraison_email'] ?? $commandeData['email'] ?? null),
+                ]);
             }
 
             $new_facture->livraison_nom = $commandeData['livraison_nom'] ?? null;
@@ -391,8 +372,6 @@ class CommandeController extends Controller
             throw $e;
         }
 
-        $commande = $new_facture->fresh(['details.product']);
-
         // NOTE: loyalty points are EARNED on delivery (when etat becomes "livree"),
         // not at order creation — these are cash-on-delivery orders, so crediting
         // points before the customer has paid/received would let a place-then-cancel
@@ -400,118 +379,13 @@ class CommandeController extends Controller
         // PointsService::syncOnStatusChange(). Redeemed points are refunded there
         // too if the order is later cancelled/returned.
 
-        // ── Send SMS ──────────────────────────────────────────────────────────────
         try {
-            $phone = $commande->phone ?? $commande->livraison_phone ?? null;
-            if ($phone && ! empty(trim((string) $phone))) {
-                $nom    = trim(($commande->nom ?: $commande->livraison_nom ?: ''));
-                $prenom = trim(($commande->prenom ?: $commande->livraison_prenom ?: ''));
-                $numero = (string) ($commande->numero ?? '');
-                $total  = number_format((float) ($commande->prix_ttc ?? 0), 3, '.', ' ');
-
-                $msg = Message::getCached();
-                $template = $msg ? trim((string) ($msg->msg_passez_commande ?? '')) : '';
-
-                $commande->loadMissing('details.product:id,designation_fr');
-                $products = $commande->details
-                    ->take(4)
-                    ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-                    ->filter()
-                    ->implode(', ');
-                $more = $commande->details->count() > 4
-                    ? ' (+' . ($commande->details->count() - 4) . ')'
-                    : '';
-                $productsText = trim($products . $more);
-                $etatLabel = Commande::getStatusLabel((string) ($commande->etat ?? 'nouvelle_commande'));
-
-                if ($template !== '') {
-                    // Admin template: [nom], [prenom], [num_commande], [etat], [produits], [total]
-                    $sms = str_replace(
-                        ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
-                        [$nom, $prenom, $numero, $etatLabel, $productsText, $total],
-                        $template
-                    );
-                } else {
-                    // Built-in rich fallback
-                    $productNames = $commande->details
-                        ->take(3)
-                        ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-                        ->implode(', ');
-                    $hasMore = $commande->details->count() > 3
-                        ? ' (+' . ($commande->details->count() - 3) . ')'
-                        : '';
-
-                    /*
-                     * No emoji. One character outside GSM-7 switches the whole message to UCS-2,
-                     * where a segment is 70 characters instead of 160 — so the tick and the
-                     * praying hands that used to be here turned a one-segment confirmation into
-                     * three, on every order. SmsService::toGsm7() strips them at the gateway now;
-                     * they should not be written in the first place.
-                     */
-                    $greeting = $nom ? "Bonjour {$nom}" : 'Bonjour';
-                    $sms  = "{$greeting}, votre commande #{$numero} est confirmée.\n";
-                    $sms .= "Produits: {$productNames}{$hasMore}\n";
-                    $sms .= "Total: {$total} TND. Paiement à la livraison.\n";
-                    $sms .= "Nous vous appelons pour confirmer. Protein.tn";
-                }
-
-                if (! empty(trim($sms))) {
-                    app(SmsService::class)->sendOnce(
-                        'order:'.$commande->id.':confirmation',
-                        $phone,
-                        $sms
-                    );
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send order SMS', [
-                'commande_id' => $commande->id,
-                'error'       => $e->getMessage(),
-            ]);
-        }
-
-        // Each recipient is isolated: one broken admin address must never suppress the
-        // customer's confirmation or the other admin recipients.
-        $adminEmails = array_values(array_filter((array) config('mail.admin_emails', [])));
-        if ($adminEmails === []) {
-            Log::error('Order admin email skipped: ADMIN_EMAILS is not configured', [
-                'commande_id' => $commande->id,
-            ]);
-        }
-        foreach ($adminEmails as $adminEmail) {
-            try {
-                Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
-                Log::info('Order admin email sent', [
-                    'commande_id' => $commande->id,
-                    'recipient' => $adminEmail,
-                ]);
-            } catch (\Throwable $e) {
-                Log::error('Order admin email failed', [
-                    'commande_id' => $commande->id,
-                    'recipient' => $adminEmail,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        }
-
-        $clientEmail = $commande->email ?? $commande->livraison_email ?? null;
-        if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
-            try {
-                Mail::to($clientEmail)->send(new OrderConfirmedCustomerMail($commande));
-                Log::info('Order customer email sent', [
-                    'commande_id' => $commande->id,
-                    'recipient' => $clientEmail,
-                ]);
-            } catch (\Throwable $e) {
-                Log::error('Order customer email failed', [
-                    'commande_id' => $commande->id,
-                    'recipient' => $clientEmail,
-                    'error' => $e->getMessage(),
-                ]);
-            }
-        } else {
-            Log::warning('Order customer email skipped: invalid or missing address', [
-                'commande_id' => $commande->id,
+            app(OrderConfirmationDispatcher::class)->dispatch($new_facture->id);
+        } catch (\Throwable $e) {
+            // The order is committed and must be returned even if Redis is momentarily unavailable.
+            Log::critical('Order confirmation jobs could not be dispatched', [
+                'commande_id' => $new_facture->id,
+                'error' => $e->getMessage(),
             ]);
         }
 
@@ -549,8 +423,14 @@ class CommandeController extends Controller
         $authorized = false;
 
         if ($request->user()) {
-            $userId = $request->user()->id;
-            $authorized = $facture->user_id == $userId || $facture->client_id == $userId;
+            $user = $request->user();
+            $userEmail = strtolower(trim((string) $user->email));
+            $orderEmails = array_map(
+                static fn ($email): string => strtolower(trim((string) $email)),
+                [$facture->email, $facture->livraison_email]
+            );
+            $authorized = $facture->user_id == $user->id
+                || ($userEmail !== '' && in_array($userEmail, $orderEmails, true));
         }
 
         if (! $authorized) {

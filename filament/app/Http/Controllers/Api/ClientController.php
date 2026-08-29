@@ -561,8 +561,10 @@ class ClientController extends Controller
     {
         $perPage = $this->resolvePerPage($request);
 
-        $commandes = Commande::where('user_id', Auth::id())
-            ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region')
+        $user = $request->user();
+        $commandes = Commande::query()
+            ->visibleToStorefrontUser($user)
+            ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region', 'ville')
             ->with('latestShipment:id,commande_id,aramex_hawb,aramex_status,aramex_pushed_at,aramex_delivered_at')
             ->latest()
             ->paginate($perPage);
@@ -572,10 +574,10 @@ class ClientController extends Controller
         return $this->paginatedResponse($commandes);
     }
 
-    public function detail_commande(int $id): JsonResponse
+    public function detail_commande(Request $request, int $id): JsonResponse
     {
         $commande = Commande::where('id', $id)
-            ->where('user_id', Auth::id())
+            ->visibleToStorefrontUser($request->user())
             ->select(
                 'id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville',
                 'code_postale', 'adresse1', 'adresse2', 'livraison_nom', 'livraison_prenom',

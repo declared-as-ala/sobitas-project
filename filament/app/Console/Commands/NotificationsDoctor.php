@@ -62,23 +62,31 @@ class NotificationsDoctor extends Command
             ['queue', config('queue.default')],
         ]);
 
-        if ($mailer !== 'smtp') {
-            $issues[] = "MAIL_MAILER={$mailer} (smtp attendu en production)";
-        }
-        foreach ([
-            'MAIL_HOST' => $host,
-            'MAIL_USERNAME' => $user,
-            'MAIL_FROM_ADDRESS' => $from,
-        ] as $key => $value) {
-            if (trim($value) === '' || str_ends_with(strtolower($value), '@example.com')) {
-                $issues[] = "{$key} est vide ou utilise une valeur d’exemple";
+        if ($mailer === 'smtp') {
+            foreach (['MAIL_HOST' => $host, 'MAIL_USERNAME' => $user] as $key => $value) {
+                if (trim($value) === '' || str_ends_with(strtolower($value), '@example.com')) {
+                    $issues[] = "{$key} est vide ou utilise une valeur d’exemple";
+                }
             }
+            if ((string) config('mail.mailers.smtp.password', '') === '') {
+                $issues[] = 'MAIL_PASSWORD est vide';
+            }
+        } elseif ($mailer === 'sendmail') {
+            $sendmailPath = trim((string) config('mail.mailers.sendmail.path', ''));
+            $sendmailBinary = preg_split('/\s+/', $sendmailPath)[0] ?? '';
+            if ($sendmailBinary === '' || ! is_executable($sendmailBinary)) {
+                $issues[] = "Transport sendmail introuvable: {$sendmailBinary}";
+            }
+        } else {
+            $issues[] = "MAIL_MAILER={$mailer} n’envoie pas d’emails transactionnels";
         }
-        if ((string) config("mail.mailers.{$mailer}.password", '') === '') {
-            $issues[] = 'MAIL_PASSWORD est vide';
+        if (! filter_var($from, FILTER_VALIDATE_EMAIL)) {
+            $issues[] = 'MAIL_FROM_ADDRESS est invalide';
         }
         if ($admins === []) {
             $issues[] = 'ADMIN_EMAILS est vide';
+        } elseif (array_filter($admins, static fn ($email): bool => ! filter_var($email, FILTER_VALIDATE_EMAIL))) {
+            $issues[] = 'ADMIN_EMAILS contient une adresse invalide';
         }
 
         /*

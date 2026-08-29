@@ -115,7 +115,7 @@ class CommandeResource extends Resource
                 if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', 'client_id')) {
                     $columns[] = 'client_id';
                 }
-                return $query->with('client:id,name,phone_1')->select($columns);
+                return $query->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1'])->select($columns);
             })
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
@@ -125,10 +125,12 @@ class CommandeResource extends Resource
                 Tables\Columns\TextColumn::make('client_display')
                     ->label('Client')
                     ->getStateUsing(function (Commande $record): string {
-                        // Prefer linked client name, then commande client fields, then livraison fallback
-                        $name = $record->client?->full_name
+                        // The order snapshot is authoritative: a delivery recipient may differ from
+                        // the customer record, and old numeric user/client ids can collide.
+                        $name = trim(($record->livraison_nom ?? '') . ' ' . ($record->livraison_prenom ?? ''))
                             ?: trim(($record->nom ?? '') . ' ' . ($record->prenom ?? ''))
-                            ?: trim(($record->livraison_nom ?? '') . ' ' . ($record->livraison_prenom ?? ''));
+                            ?: ($record->client?->full_name ?? '')
+                            ?: ($record->legacyClient?->full_name ?? '');
 
                         return $name !== '' ? $name : '—';
                     })
@@ -143,9 +145,10 @@ class CommandeResource extends Resource
                 Tables\Columns\TextColumn::make('phone_display')
                     ->label('Tél.')
                     ->getStateUsing(function (Commande $record): string {
-                        $phone = $record->client?->phone_1
+                        $phone = ($record->livraison_phone ?? '')
                             ?: ($record->phone ?? '')
-                            ?: ($record->livraison_phone ?? '');
+                            ?: ($record->client?->phone_1 ?? '')
+                            ?: ($record->legacyClient?->phone_1 ?? '');
 
                         return $phone !== '' ? $phone : '—';
                     })
