@@ -60,7 +60,7 @@ on:
           - commerce-email-smoke
           - commerce-ses-email-smoke
           - mail-provider-keys
-          - mail-server-log
+          - mail-server-summary
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -293,9 +293,9 @@ jobs:
               MODE=envkeys
               WRITES=no
               ;;
-            mail-server-log)
-              ARGS="mail-server-log"
-              MODE=hostmail
+            mail-server-summary)
+              ARGS="mail-server-summary"
+              MODE=hostmailsummary
               WRITES=no
               ;;
             commerce-flow-tests)
@@ -778,17 +778,26 @@ jobs:
               OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
               echo "$OUT"
               [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
-            elif [ "$MODE" = "hostmail" ]; then
+            elif [ "$MODE" = "hostmailsummary" ]; then
               echo ""
-              echo "> local MTA delivery log (last 250 lines; secrets are not read)"
+              echo "> local MTA delivery summary (aggregate counters only)"
               echo ""
               if [ -f /var/log/mail.log ]; then
-                tail -n 250 /var/log/mail.log
+                MAIL_SAMPLE=$(tail -n 5000 /var/log/mail.log)
               elif [ -f /var/log/maillog ]; then
-                tail -n 250 /var/log/maillog
+                MAIL_SAMPLE=$(tail -n 5000 /var/log/maillog)
               else
-                journalctl --no-pager -u postfix -u sendmail --since '48 hours ago' -n 250 2>&1
+                MAIL_SAMPLE=$(journalctl --no-pager -u postfix -u sendmail --since '48 hours ago' -n 5000 2>&1)
               fi
+              printf 'accepted/sent: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=sent|stat=sent|250[ -]2\.[0-9]\.[0-9]')"
+              printf 'bounced/rejected: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=bounced|stat=bounced|reject:| 5[0-9]{2}[ -][45]\.')"
+              printf 'deferred/timeout: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=deferred|stat=deferred|timed? out|network is unreachable')"
+              printf 'authentication failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'authentication failed|badcredentials|535[ -]5\.7\.8')"
+              printf 'spf failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'spf.*(fail|reject)|sender policy framework.*(fail|reject)')"
+              printf 'dkim failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'dkim.*(fail|reject)')"
+              printf 'dmarc failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'dmarc.*(fail|reject)')"
+              printf 'ptr/reputation failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'ptr record|reverse dns|reputation|spam source|blocklist')"
+              unset MAIL_SAMPLE
             elif [ "$MODE" = "envkeys" ]; then
               echo ""
               echo "> configured mail-provider variable names (values are never printed)"
