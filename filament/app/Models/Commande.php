@@ -246,6 +246,15 @@ class Commande extends Model
         return $this->hasMany(Facture::class, 'commande_id');
     }
 
+    /** Latest Aramex shipment created for this order, when one exists. */
+    public function latestShipment(): HasOne
+    {
+        return $this->hasOne(Facture::class, 'commande_id')
+            ->ofMany('id', 'max', function ($query): void {
+                $query->whereNotNull('aramex_hawb')->where('aramex_hawb', '!=', '');
+            });
+    }
+
     /** Tickets used as BL (bon de livraison) for this order. */
     public function ticketsBl(): HasMany
     {

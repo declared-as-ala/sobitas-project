@@ -560,8 +560,11 @@ class ClientController extends Controller
 
         $commandes = Commande::where('user_id', Auth::id())
             ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region')
+            ->with('latestShipment:id,commande_id,aramex_hawb,aramex_status,aramex_pushed_at,aramex_delivered_at')
             ->latest()
             ->paginate($perPage);
+
+        $commandes->getCollection()->transform(fn (Commande $commande) => $this->withCustomerTracking($commande));
 
         return $this->paginatedResponse($commandes);
     }
@@ -570,7 +573,14 @@ class ClientController extends Controller
     {
         $commande = Commande::where('id', $id)
             ->where('user_id', Auth::id())
-            ->select('id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville', 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at')
+            ->select(
+                'id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville',
+                'code_postale', 'adresse1', 'adresse2', 'livraison_nom', 'livraison_prenom',
+                'livraison_email', 'livraison_phone', 'livraison_region', 'livraison_ville',
+                'livraison_code_postale', 'livraison_adresse1', 'livraison_adresse2', 'note',
+                'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at'
+            )
+            ->with('latestShipment:id,commande_id,aramex_hawb,aramex_status,aramex_pushed_at,aramex_delivered_at')
             ->first();
 
         if (! $commande) {
@@ -582,7 +592,27 @@ class ClientController extends Controller
             ->with('product:id,designation_fr,cover,prix,promo')
             ->get();
 
-        return response()->json(['commande' => $commande, 'details' => $details]);
+        return response()->json(['commande' => $this->withCustomerTracking($commande), 'details' => $details]);
+    }
+
+    /**
+     * Expose a stable, customer-safe tracking object instead of leaking the BL model.
+     */
+    private function withCustomerTracking(Commande $commande): Commande
+    {
+        $shipment = $commande->latestShipment;
+
+        $commande->setAttribute('tracking', $shipment ? [
+            'carrier' => 'Aramex',
+            'number' => (string) $shipment->aramex_hawb,
+            'status' => $shipment->aramex_status ?: null,
+            'shipped_at' => $shipment->aramex_pushed_at?->toIso8601String(),
+            'delivered_at' => $shipment->aramex_delivered_at?->toIso8601String(),
+            'url' => 'https://www.aramex.com/tn/en/track/track-results-new?ShipmentNumber=' . rawurlencode((string) $shipment->aramex_hawb),
+        ] : null);
+        $commande->makeHidden('latestShipment');
+
+        return $commande;
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\PointsService;
+use App\Services\CustomerOrderStatusMailer;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +20,10 @@ use Illuminate\Support\Facades\Schema;
 
 class CommandeObserver
 {
-    /**
-     * Notify all panel users when a new commande is created.
-     */
+    /** Notify only panel administrators when a new order is created. */
     public function created(Commande $commande): void
     {
-        $recipients = User::all();
+        $recipients = User::whereIn('role_id', config('partners.admin_role_ids', [1, 3]))->get();
         if ($recipients->isEmpty()) {
             return;
         }
@@ -75,6 +74,18 @@ class CommandeObserver
             Log::error('Review request email failed', [
                 'commande_id' => $commande->id,
                 'error'       => $e->getMessage(),
+            ]);
+        }
+
+        // Delivery/tracking email is independent from SMS. A mail outage must not
+        // prevent the status update, points credit or stock transition.
+        try {
+            app(CustomerOrderStatusMailer::class)->sendOnce($commande);
+        } catch (\Throwable $e) {
+            Log::error('Order status customer email failed', [
+                'commande_id' => $commande->id,
+                'etat' => $commande->etat,
+                'error' => $e->getMessage(),
             ]);
         }
 

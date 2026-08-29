@@ -7,12 +7,12 @@ import { Button } from '@/app/components/ui/button';
 import { Section } from '@/app/components/layout/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { ArrowLeft, Calendar, MapPin, Phone, Mail } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Phone, Mail, Truck, ExternalLink } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Image from 'next/image';
 import { getStorageUrl } from '@/services/api';
-import type { OrderDetail } from '@/types';
+import type { Order, OrderDetail } from '@/types';
 import { PageHeader } from '@/app/components/PageHeader';
 import { OrderDetailSkeleton } from '../../AccountSkeletons';
 
@@ -20,8 +20,7 @@ export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { getOrderDetails } = useAuth();
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const [order, setOrder] = useState<any>(null);
+  const [order, setOrder] = useState<Order | null>(null);
   const [details, setDetails] = useState<OrderDetail[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -163,6 +162,37 @@ export default function OrderDetailPage() {
 
           {/* Order Summary */}
           <div className="space-y-6">
+            <Card className="rounded-xl border border-brand/20 bg-elevated shadow-sm">
+              <CardContent className="p-5 sm:p-6">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
+                    <Truck className="h-5 w-5" aria-hidden="true" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-display text-sm uppercase tracking-wide text-ink-1">Suivi de livraison</p>
+                    {order.tracking?.number ? (
+                      <>
+                        <p className="mt-1 text-sm text-ink-2">Transporteur {order.tracking.carrier}</p>
+                        <p className="mt-2 break-all font-mono text-sm font-semibold tracking-wide text-ink-1">
+                          {order.tracking.number}
+                        </p>
+                        <Button asChild className="mt-4 min-h-[44px] w-full rounded-xl bg-brand font-display uppercase tracking-wide text-on-brand hover:bg-brand-hover">
+                          <a href={order.tracking.url} target="_blank" rel="noopener noreferrer">
+                            Suivre chez Aramex
+                            <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
+                          </a>
+                        </Button>
+                      </>
+                    ) : (
+                      <p className="mt-1 text-sm leading-relaxed text-ink-2">
+                        Le numéro de suivi apparaîtra ici dès la remise de votre colis au transporteur.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
             <Card className="rounded-xl border border-hairline bg-elevated shadow-sm">
               <CardHeader className="border-b border-hairline">
                 <CardTitle className="font-display uppercase tracking-tight text-lg text-ink-1">Résumé</CardTitle>
@@ -199,13 +229,13 @@ export default function OrderDetailPage() {
                   {order.livraison_nom || order.nom} {order.livraison_prenom || order.prenom}
                 </p>
                 <p>{order.livraison_adresse1 || order.adresse1}</p>
-                {order.livraison_adresse2 || order.adresse2 && (
+                {(order.livraison_adresse2 || order.adresse2) && (
                   <p>{order.livraison_adresse2 || order.adresse2}</p>
                 )}
                 <p>
                   {order.livraison_ville || order.ville}, {order.livraison_region || order.region}
                 </p>
-                {order.livraison_code_postale || order.code_postale && (
+                {(order.livraison_code_postale || order.code_postale) && (
                   <p>{order.livraison_code_postale || order.code_postale}</p>
                 )}
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-hairline">

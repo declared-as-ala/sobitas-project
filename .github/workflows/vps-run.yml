@@ -56,6 +56,7 @@ on:
           - backend-log
           - scheduler-log
           - commerce-status
+          - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
           # these, a pass that runs and decides to do nothing is indistinguishable from a pass
@@ -234,6 +235,12 @@ jobs:
               # Mail/SMS configuration, migration health and the newest orders/users. Read-only;
               # sends no message and masks credentials/recipient identities.
               ARGS="notifications:doctor --strict --probe-sms --recent=10"
+              WRITES=no
+              ;;
+            commerce-flow-tests)
+              # Runs only the isolated commerce lifecycle regression suite. The test
+              # defines its own in-memory SQLite schema and never touches production data.
+              ARGS="test --filter=Customer"
               WRITES=no
               ;;
             notifications-status)

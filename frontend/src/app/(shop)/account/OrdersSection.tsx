@@ -6,7 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { Package, Eye, Calendar } from 'lucide-react';
+import { Package, Eye, Calendar, Truck } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Link from 'next/link';
@@ -148,6 +148,12 @@ export function OrdersSection() {
                 <p className="font-display font-bold tracking-tight tabular-nums text-2xl text-brand">
                   {order.prix_ttc?.toFixed(2) || 0} DT
                 </p>
+                {order.tracking?.number && (
+                  <p className="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-ink-2">
+                    <Truck className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+                    Suivi Aramex disponible
+                  </p>
+                )}
               </div>
               <Button
                 variant="outline"

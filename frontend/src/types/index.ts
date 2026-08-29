@@ -424,6 +424,16 @@ export interface Order {
   livraison_code_postale?: string;
   livraison_adresse1?: string;
   livraison_adresse2?: string;
+  tracking?: OrderTracking | null;
+}
+
+export interface OrderTracking {
+  carrier: 'Aramex';
+  number: string;
+  status?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+  url: string;
 }
 
 export interface OrderDetail {

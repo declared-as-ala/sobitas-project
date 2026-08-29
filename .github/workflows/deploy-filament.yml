@@ -170,11 +170,12 @@ jobs:
             upsert_secret() {
               SECRET_KEY="$1"
               SECRET_VALUE="$2"
-              if grep -q "^${SECRET_KEY}=" .env; then
-                sed -i "s|^${SECRET_KEY}=.*|${SECRET_KEY}=${SECRET_VALUE}|" .env
-              else
-                printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> .env
-              fi
+              SECRET_TMP=".env.tmp.$$"
+              # Do not place a secret in sed replacement syntax: `&`, `|` and `\`
+              # have special meanings there and can silently corrupt SMTP passwords.
+              grep -v "^${SECRET_KEY}=" .env > "$SECRET_TMP" || true
+              printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> "$SECRET_TMP"
+              mv "$SECRET_TMP" .env
               chmod 600 .env
             }
 
@@ -184,10 +185,34 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # SMTP credentials are intentionally not invented or overwritten here. The strict
-            # notification doctor below reports the absent credential set without blocking an
-            # unrelated release. Add the MAIL_* and ADMIN_EMAILS secrets before wiring them into
-            # this persistent environment.
+            # Install SMTP only when the complete credential set exists. Until then, preserve
+            # the current VPS values and let the strict notification doctor report the blocker.
+            # This makes adding the GitHub secrets sufficient; no manual VPS edit is required.
+            SMTP_READY='${{ secrets.MAIL_HOST != '' && secrets.MAIL_USERNAME != '' && secrets.MAIL_PASSWORD != '' }}'
+            if [ "$SMTP_READY" = "true" ]; then
+              SMTP_PORT='${{ secrets.MAIL_PORT }}'
+              SMTP_ENCRYPTION='${{ secrets.MAIL_ENCRYPTION }}'
+              SMTP_FROM='${{ secrets.MAIL_FROM_ADDRESS }}'
+              SMTP_ADMINS='${{ secrets.ADMIN_EMAILS }}'
+              [ -n "$SMTP_PORT" ] || SMTP_PORT=587
+              [ -n "$SMTP_ENCRYPTION" ] || SMTP_ENCRYPTION=tls
+              [ -n "$SMTP_FROM" ] || SMTP_FROM='${{ secrets.MAIL_USERNAME }}'
+              [ -n "$SMTP_ADMINS" ] || SMTP_ADMINS=contact@protein.tn
+              upsert_secret MAIL_MAILER smtp
+              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
+              upsert_secret MAIL_PORT "$SMTP_PORT"
+              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
+              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
+              upsert_secret MAIL_ENCRYPTION "$SMTP_ENCRYPTION"
+              upsert_secret MAIL_FROM_ADDRESS "$SMTP_FROM"
+              upsert_secret MAIL_FROM_NAME 'Protein.tn'
+              upsert_secret MAIL_REPLY_TO "$SMTP_FROM"
+              upsert_secret MAIL_REPLY_TO_NAME 'Protein.tn'
+              upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
+              echo "✓ SMTP credentials installed"
+            else
+              echo "⚠ SMTP secrets incomplete; preserving the current VPS mail configuration"
+            fi
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
