@@ -3,9 +3,11 @@
 namespace App\Console\Commands;
 
 use App\Mail\OrderConfirmedCustomerMail;
+use App\Models\Client;
 use App\Models\Commande;
 use App\Models\Message;
 use App\Models\NotificationDelivery;
+use App\Models\User;
 use App\Services\SmsService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -194,6 +196,45 @@ class NotificationsDoctor extends Command
             ['review_request_sent_at', $order->review_request_sent_at ?: '—'],
         ]);
 
+        // Exercise the same scoped query and latestShipment eager load used by /api/client_commandes
+        // against the live database. This catches both classes of production-only failure we have
+        // seen here: User/Client numeric-id collisions and MySQL's ambiguous ofMany projection.
+        $account = $order->user_id ? User::query()->find($order->user_id) : null;
+        if ($account) {
+            try {
+                $mappedClientId = Client::query()->where('user_id', $account->id)->value('id');
+                $visibleOrders = Commande::query()->visibleToStorefrontUser($account);
+                $visibleTarget = (clone $visibleOrders)
+                    ->with('latestShipment')
+                    ->whereKey($order->id)
+                    ->first();
+
+                $this->line('');
+                $this->components->info('VISIBILITÉ DANS LE COMPTE CLIENT');
+                $this->table(['Contrôle', 'Valeur'], [
+                    ['compte', '#' . $account->id . ' · ' . $this->mask((string) $account->email)],
+                    ['client Filament lié', $mappedClientId ?: '—'],
+                    ['commande visible', $visibleTarget ? 'oui' : 'NON'],
+                    ['commandes visibles', (clone $visibleOrders)->count()],
+                    ['chargement suivi', $visibleTarget ? 'ok' : 'non testé'],
+                ]);
+
+                $accountEmail = strtolower(trim((string) $account->email));
+                $orderEmails = array_filter([
+                    strtolower(trim((string) $order->email)),
+                    strtolower(trim((string) $order->livraison_email)),
+                ]);
+                $isStorefrontOrder = (int) $mappedClientId === (int) $order->client_id
+                    || in_array($accountEmail, $orderEmails, true);
+                if ($isStorefrontOrder && ! $visibleTarget) {
+                    $issues[] = 'La commande liée au compte est absente de /api/client_commandes';
+                }
+            } catch (\Throwable $e) {
+                $issues[] = 'La requête /api/client_commandes échoue: ' . $e->getMessage();
+                $this->error('  Vérification du compte ÉCHOUÉE : ' . $e->getMessage());
+            }
+        }
+
         if (\Illuminate\Support\Facades\Schema::hasTable('notification_deliveries')) {
             $deliveries = NotificationDelivery::query()
                 ->where('event_key', 'like', '%order:' . $order->id . ':%')
@@ -245,7 +286,7 @@ class NotificationsDoctor extends Command
             }
             try {
                 $mailable = new OrderConfirmedCustomerMail($order);
-                if ($testMailer === 'ses-smtp') {
+                if (in_array($testMailer, ['ses-smtp', 'sendmail'], true)) {
                     $mailable->from('contact@protein.tn', 'Protein.tn');
                 }
                 Mail::mailer($testMailer)->to($to)->send($mailable);

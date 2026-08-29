@@ -46,14 +46,10 @@ if ($sesSmtpReady) {
     $sesSmtpPassword = base64_encode(chr(0x04).$signature);
 }
 
-// The VPS retained the authenticated SMTP credentials that successfully delivered mail before
-// MAIL_MAILER was changed to local sendmail. A local MTA accepting a message only proves queueing;
-// Gmail may still reject it later because this VPS has no trusted outbound-mail reputation. Prefer
-// authenticated SMTP whenever its complete configuration is present, while keeping array/log in
-// tests explicit and untouched.
-$defaultMailer = $smtpReady && in_array($requestedMailer, ['sendmail', 'log', 'failover'], true)
-    ? 'smtp'
-    : $requestedMailer;
+// Presence is not validity. The retained Gmail app password is structurally complete but the live
+// SMTP probe can still reject it (535). Honour the explicit deployment choice so a stale credential
+// cannot silently override the local transport and make every queued job exhaust its retries.
+$defaultMailer = $requestedMailer;
 
 $fromAddress = $defaultMailer === 'sendmail'
     ? 'contact@protein.tn'

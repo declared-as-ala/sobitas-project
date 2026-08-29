@@ -58,6 +58,7 @@ on:
           - commerce-status
           - commerce-order-status
           - commerce-email-smoke
+          - commerce-sendmail-email-smoke
           - commerce-ses-email-smoke
           - mail-provider-keys
           - mail-server-summary
@@ -272,6 +273,21 @@ jobs:
                 exit 1
               fi
               ARGS="notifications:doctor --strict --order=$ORDER_REF --send-email=$EMAIL_RECIPIENT"
+              WRITES=no
+              ;;
+            commerce-sendmail-email-smoke)
+              # Force the local MTA even if the deployment default changes later. This keeps the
+              # production probe independent from the retained Gmail credential, which Gmail has
+              # already rejected with 535 BadCredentials.
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              if [[ ! "$EMAIL_RECIPIENT" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+                echo "::error::email_recipient is not a valid safe email address"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF --mailer=sendmail --send-email=$EMAIL_RECIPIENT"
               WRITES=no
               ;;
             commerce-ses-email-smoke)
