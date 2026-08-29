@@ -60,6 +60,7 @@ on:
           - commerce-email-smoke
           - commerce-ses-email-smoke
           - mail-provider-keys
+          - mail-server-log
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -290,6 +291,11 @@ jobs:
               # provisioned transactional provider can be selected without exposing secrets.
               ARGS="mail-provider-keys"
               MODE=envkeys
+              WRITES=no
+              ;;
+            mail-server-log)
+              ARGS="mail-server-log"
+              MODE=hostmail
               WRITES=no
               ;;
             commerce-flow-tests)
@@ -772,6 +778,17 @@ jobs:
               OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
               echo "$OUT"
               [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
+            elif [ "$MODE" = "hostmail" ]; then
+              echo ""
+              echo "> local MTA delivery log (last 250 lines; secrets are not read)"
+              echo ""
+              if [ -f /var/log/mail.log ]; then
+                tail -n 250 /var/log/mail.log
+              elif [ -f /var/log/maillog ]; then
+                tail -n 250 /var/log/maillog
+              else
+                journalctl --no-pager -u postfix -u sendmail --since '48 hours ago' -n 250 2>&1
+              fi
             elif [ "$MODE" = "envkeys" ]; then
               echo ""
               echo "> configured mail-provider variable names (values are never printed)"
