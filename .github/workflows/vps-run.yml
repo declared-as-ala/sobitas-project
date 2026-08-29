@@ -62,6 +62,7 @@ on:
           - commerce-ses-email-smoke
           - mail-provider-keys
           - mail-server-summary
+          - commerce-backup-summary
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -312,6 +313,17 @@ jobs:
             mail-server-summary)
               ARGS="mail-server-summary"
               MODE=hostmailsummary
+              WRITES=no
+              ;;
+            commerce-backup-summary)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              # The host-side reader prints only backup metadata and whether the requested order
+              # id occurs in that backup's commandes INSERT block. No customer row is exported.
+              ARGS="$ORDER_REF"
+              MODE=hostbackupsummary
               WRITES=no
               ;;
             commerce-flow-tests)
@@ -814,6 +826,26 @@ jobs:
               printf 'dmarc failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'dmarc.*(fail|reject)')"
               printf 'ptr/reputation failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'ptr record|reverse dns|reputation|spam source|blocklist')"
               unset MAIL_SAMPLE
+            elif [ "$MODE" = "hostbackupsummary" ]; then
+              echo ""
+              echo "> recent database backups containing order id $ARGS (metadata only)"
+              echo ""
+              printf '%-42s %12s %s\n' 'backup' 'bytes' 'contains-order'
+              FOUND=0
+              for BACKUP_FILE in $(ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | head -20); do
+                BACKUP_NAME=$(basename "$BACKUP_FILE")
+                BACKUP_SIZE=$(stat -c %s "$BACKUP_FILE" 2>/dev/null || echo 0)
+                if gzip -cd "$BACKUP_FILE" 2>/dev/null \
+                  | awk '/^LOCK TABLES `commandes` WRITE/{inside=1} inside{print} inside && /^UNLOCK TABLES/{exit}' \
+                  | grep -Eq "\\($ARGS,"; then
+                  CONTAINS=yes
+                  FOUND=$((FOUND + 1))
+                else
+                  CONTAINS=no
+                fi
+                printf '%-42s %12s %s\n' "$BACKUP_NAME" "$BACKUP_SIZE" "$CONTAINS"
+              done
+              echo "matching-backups: $FOUND"
             elif [ "$MODE" = "envkeys" ]; then
               echo ""
               echo "> configured mail-provider variable names (values are never printed)"
