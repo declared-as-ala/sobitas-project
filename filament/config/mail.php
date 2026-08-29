@@ -15,12 +15,30 @@ $emailAddress = static function (mixed $value, string $fallback = ''): string {
     return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : $fallback;
 };
 
-$defaultMailer = (string) env('MAIL_MAILER', 'log');
-// The local transport must use the shop domain. A legacy Gmail value in the VPS environment
-// cannot be allowed to break SPF/DMARC alignment or make transactional mail look untrusted.
+$requestedMailer = strtolower(trim((string) env('MAIL_MAILER', 'log')));
+$smtpHost = trim((string) env('MAIL_HOST', ''));
+$smtpUsername = $emailAddress(env('MAIL_USERNAME'));
+$smtpPassword = trim((string) env('MAIL_PASSWORD', ''));
+$smtpReady = $smtpHost !== ''
+    && ! in_array(strtolower($smtpHost), ['127.0.0.1', 'localhost', 'mailpit', 'example.com'], true)
+    && $smtpUsername !== ''
+    && $smtpPassword !== '';
+
+// The VPS retained the authenticated SMTP credentials that successfully delivered mail before
+// MAIL_MAILER was changed to local sendmail. A local MTA accepting a message only proves queueing;
+// Gmail may still reject it later because this VPS has no trusted outbound-mail reputation. Prefer
+// authenticated SMTP whenever its complete configuration is present, while keeping array/log in
+// tests explicit and untouched.
+$defaultMailer = $smtpReady && in_array($requestedMailer, ['sendmail', 'log', 'failover'], true)
+    ? 'smtp'
+    : $requestedMailer;
+
+$smtpIsGmail = str_contains(strtolower($smtpHost), 'gmail');
 $fromAddress = $defaultMailer === 'sendmail'
     ? 'contact@protein.tn'
-    : $emailAddress(env('MAIL_FROM_ADDRESS'), 'contact@protein.tn');
+    : ($smtpIsGmail && $smtpUsername !== ''
+        ? $smtpUsername
+        : $emailAddress(env('MAIL_FROM_ADDRESS'), $smtpUsername ?: 'contact@protein.tn'));
 $fromName = $defaultMailer === 'sendmail' ? 'Protein.tn' : env('MAIL_FROM_NAME', 'Protein.tn');
 $replyToAddress = $defaultMailer === 'sendmail'
     ? 'contact@protein.tn'
@@ -58,11 +76,11 @@ return [
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST', '127.0.0.1'),
+            'host' => $smtpHost !== '' ? $smtpHost : '127.0.0.1',
             'port' => (int) env('MAIL_PORT', 2525),
             'encryption' => env('MAIL_ENCRYPTION'),
-            'username' => env('MAIL_USERNAME'),
-            'password' => env('MAIL_PASSWORD'),
+            'username' => $smtpUsername ?: null,
+            'password' => $smtpPassword !== '' ? $smtpPassword : null,
             'timeout' => null,
             'auth_mode' => null,
         ],
@@ -97,6 +115,7 @@ return [
             'transport' => 'failover',
             'mailers' => [
                 'smtp',
+                'sendmail',
                 'log',
             ],
         ],
@@ -159,5 +178,8 @@ return [
     */
 
     'admin_emails' => $adminEmails,
+
+    // Safe diagnostic flag: confirms all three SMTP values exist without exposing the password.
+    'smtp_ready' => $smtpReady,
 
 ];

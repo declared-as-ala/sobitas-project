@@ -57,6 +57,11 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         return $this->hasOne(Partner::class, 'user_id');
     }
 
+    public function client(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Client::class, 'user_id');
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'admin') {

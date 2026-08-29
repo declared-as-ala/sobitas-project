@@ -565,7 +565,10 @@ class ClientController extends Controller
         $commandes = Commande::query()
             ->visibleToStorefrontUser($user)
             ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region', 'ville')
-            ->with('latestShipment:id,commande_id,aramex_hawb,aramex_status,aramex_pushed_at,aramex_delivered_at')
+            // latestShipment is an ofMany relation. A relation-level column projection makes
+            // MySQL generate an unqualified `commande_id` beside the ofMany subquery join and
+            // crashes the whole account page with "Column commande_id is ambiguous".
+            ->with('latestShipment')
             ->latest()
             ->paginate($perPage);
 
@@ -585,7 +588,7 @@ class ClientController extends Controller
                 'livraison_code_postale', 'livraison_adresse1', 'livraison_adresse2', 'note',
                 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at'
             )
-            ->with('latestShipment:id,commande_id,aramex_hawb,aramex_status,aramex_pushed_at,aramex_delivered_at')
+            ->with('latestShipment')
             ->first();
 
         if (! $commande) {

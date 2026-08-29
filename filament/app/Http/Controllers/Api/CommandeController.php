@@ -133,7 +133,7 @@ class CommandeController extends Controller
             // user_id (that would be an IDOR: attaching an order, and any points
             // side-effects, to an arbitrary account).
             $hasClientIdColumn = Schema::hasColumn($new_facture->getTable(), 'client_id');
-            $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData);
+            $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData, $authUser);
 
             if ($client && $hasClientIdColumn) {
                 $new_facture->client_id = $client->id;
@@ -423,14 +423,12 @@ class CommandeController extends Controller
         $authorized = false;
 
         if ($request->user()) {
-            $user = $request->user();
-            $userEmail = strtolower(trim((string) $user->email));
-            $orderEmails = array_map(
-                static fn ($email): string => strtolower(trim((string) $email)),
-                [$facture->email, $facture->livraison_email]
-            );
-            $authorized = $facture->user_id == $user->id
-                || ($userEmail !== '' && in_array($userEmail, $orderEmails, true));
+            // Reuse the collision-safe account scope. A raw comparison between commandes.user_id
+            // and users.id leaks legacy orders because user_id previously stored Client ids.
+            $authorized = Commande::query()
+                ->visibleToStorefrontUser($request->user())
+                ->whereKey($facture->id)
+                ->exists();
         }
 
         if (! $authorized) {

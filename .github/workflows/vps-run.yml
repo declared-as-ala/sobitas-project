@@ -56,6 +56,8 @@ on:
           - backend-log
           - scheduler-log
           - commerce-status
+          - commerce-order-status
+          - commerce-email-smoke
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -131,6 +133,14 @@ on:
         description: "Writing tasks only (aramex-sync-apply, reviews-rescore-apply, research-import-apply, catalog-promote, catalog-publish-wave-500, seo-robots-fix, catalog-reindex): type APPLY"
         required: false
         default: ""
+      order_ref:
+        description: "Commerce diagnostics only: numeric order database id"
+        required: false
+        default: ""
+      email_recipient:
+        description: "commerce-email-smoke only: address that receives the real test"
+        required: false
+        default: ""
 
 # Serialise every run. Two artisan writes against the same tables at once is a problem nobody
 # would enjoy diagnosing from a phone. cancel-in-progress is false for the same reason as in
@@ -153,6 +163,8 @@ jobs:
         env:
           TASK: ${{ inputs.task }}
           CONFIRM: ${{ inputs.confirm }}
+          ORDER_REF: ${{ inputs.order_ref }}
+          EMAIL_RECIPIENT: ${{ inputs.email_recipient }}
         run: |
           set -euo pipefail
 
@@ -235,6 +247,28 @@ jobs:
               # Mail/SMS configuration, migration health and the newest orders/users. Read-only;
               # sends no message and masks credentials/recipient identities.
               ARGS="notifications:doctor --strict --probe-sms --recent=10"
+              WRITES=no
+              ;;
+            commerce-order-status)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF"
+              WRITES=no
+              ;;
+            commerce-email-smoke)
+              # These restricted alphabets make both values safe to interpolate into the fixed
+              # remote argv below. Unlike task/confirm, no unchecked operator text crosses SSH.
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              if [[ ! "$EMAIL_RECIPIENT" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+                echo "::error::email_recipient is not a valid safe email address"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF --send-email=$EMAIL_RECIPIENT"
               WRITES=no
               ;;
             commerce-flow-tests)

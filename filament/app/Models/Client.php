@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Client extends Model
 {
@@ -12,6 +13,7 @@ class Client extends Model
 
     protected $fillable = [
         'name',
+        'user_id',
         'email',
         'phone_1',
         'phone_2',
@@ -39,11 +41,17 @@ class Client extends Model
         'sms'                    => 'boolean',
         'loyalty_enabled'        => 'boolean',
         'loyalty_points_balance' => 'integer',
+        'user_id'                 => 'integer',
         'email_unsubscribed_at'  => 'datetime',
         'sms_unsubscribed_at'    => 'datetime',
     ];
 
     // ── Relationships ──────────────────────────────────
+
+    public function storefrontUser(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
 
     public function commandes(): HasMany
     {

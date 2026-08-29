@@ -7,6 +7,7 @@ use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Client;
 use App\Models\Commande;
 use App\Models\User;
+use App\Services\ClientService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -40,9 +41,17 @@ class OrderIdentityAndNotificationTest extends TestCase
         });
         Schema::create('clients', function (Blueprint $table): void {
             $table->id();
+            $table->unsignedBigInteger('user_id')->nullable()->unique();
             $table->string('name')->nullable();
             $table->string('email')->nullable();
             $table->string('phone_1')->nullable();
+            $table->string('phone_2')->nullable();
+            $table->string('adresse')->nullable();
+            $table->string('region')->nullable();
+            $table->string('ville')->nullable();
+            $table->string('code_postale')->nullable();
+            $table->string('source')->nullable();
+            $table->boolean('sms')->default(false);
             $table->timestamps();
         });
         Schema::create('commandes', function (Blueprint $table): void {
@@ -62,6 +71,15 @@ class OrderIdentityAndNotificationTest extends TestCase
             $table->unsignedBigInteger('produit_id')->nullable();
             $table->unsignedInteger('qte')->default(1);
             $table->decimal('prix_unitaire', 12, 3)->default(0);
+            $table->timestamps();
+        });
+        Schema::create('factures', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('commande_id')->nullable();
+            $table->string('aramex_hawb')->nullable();
+            $table->string('aramex_status')->nullable();
+            $table->timestamp('aramex_pushed_at')->nullable();
+            $table->timestamp('aramex_delivered_at')->nullable();
             $table->timestamps();
         });
         Schema::create('notification_deliveries', function (Blueprint $table): void {
@@ -100,15 +118,56 @@ class OrderIdentityAndNotificationTest extends TestCase
     public function test_account_history_includes_owned_and_exact_email_legacy_orders_only(): void
     {
         $user = $this->insertUser('Koussay', 'Koussay@example.test');
-        $owned = $this->insertOrder(['user_id' => $user->id, 'email' => 'other@example.test']);
+        $client = Client::create(['user_id' => $user->id, 'name' => 'Koussay']);
+        $owned = $this->insertOrder(['user_id' => $user->id, 'client_id' => $client->id, 'email' => 'other@example.test']);
         $legacy = $this->insertOrder(['user_id' => 9999, 'livraison_email' => 'koussay@example.test']);
         $unrelated = $this->insertOrder(['user_id' => 9999, 'email' => 'someone@example.test']);
+        $numericCollision = $this->insertOrder(['user_id' => $user->id, 'client_id' => null, 'email' => 'collision@example.test']);
 
         $visible = Commande::visibleToStorefrontUser($user)->pluck('id')->all();
 
         $this->assertContains($owned, $visible);
         $this->assertContains($legacy, $visible);
         $this->assertNotContains($unrelated, $visible);
+        $this->assertNotContains($numericCollision, $visible);
+    }
+
+    public function test_authenticated_account_never_reuses_another_client_by_phone(): void
+    {
+        $wrong = Client::create([
+            'name' => 'Other customer',
+            'email' => 'other@example.test',
+            'phone_2' => '98 158 160',
+        ]);
+        $user = $this->insertUser('Koussay Jebali', 'koussay@example.test');
+
+        $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo([
+            'livraison_nom' => 'Koussay',
+            'livraison_prenom' => 'Jebali',
+            'livraison_email' => 'different-form-value@example.test',
+            'livraison_phone' => '+216 98 158 160',
+        ], $user);
+
+        $this->assertNotNull($client);
+        $this->assertNotSame($wrong->id, $client->id);
+        $this->assertSame($user->id, $client->user_id);
+        $this->assertSame('koussay@example.test', $client->email);
+        $this->assertNull($client->phone_1);
+    }
+
+    public function test_account_order_query_can_eager_load_latest_shipment_without_ambiguous_columns(): void
+    {
+        $orderId = $this->insertOrder(['numero' => '2026/TRACK']);
+        DB::table('factures')->insert([
+            'commande_id' => $orderId,
+            'aramex_hawb' => 'TRACK-001',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $order = Commande::query()->with('latestShipment')->findOrFail($orderId);
+
+        $this->assertSame('TRACK-001', $order->latestShipment?->aramex_hawb);
     }
 
     public function test_confirmation_email_job_is_idempotent(): void

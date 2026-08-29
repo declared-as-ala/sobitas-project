@@ -65,6 +65,7 @@ class CommandeResource extends Resource
 
             // Hidden fields to capture State pushed from Javascript
             Forms\Components\Hidden::make('details')->default([]),
+            Forms\Components\Hidden::make('client_id'),
             Forms\Components\Hidden::make('user_id'),
             Forms\Components\Hidden::make('nom'),
             Forms\Components\Hidden::make('prenom'),

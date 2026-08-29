@@ -247,11 +247,22 @@ class Commande extends Model
     public function scopeVisibleToStorefrontUser(Builder $query, User $user): Builder
     {
         $email = strtolower(trim((string) $user->email));
+        $mappedClientId = \Illuminate\Support\Facades\Schema::hasColumn('clients', 'user_id')
+            ? Client::query()->where('user_id', $user->getKey())->value('id')
+            : null;
 
-        return $query->where(function (Builder $orders) use ($user, $email): void {
-            $orders->where('user_id', $user->getKey());
+        return $query->where(function (Builder $orders) use ($user, $email, $mappedClientId): void {
+            // `commandes.user_id` historically stored a Client id. It is safe as an account
+            // identity only when the same order is linked to the Client explicitly mapped to
+            // this User; otherwise equal integers from different tables could leak an order.
+            if ($mappedClientId) {
+                $orders->where(function (Builder $owned) use ($user, $mappedClientId): void {
+                    $owned->where('user_id', $user->getKey())->where('client_id', $mappedClientId);
+                });
+            }
             if ($email !== '') {
-                $orders->orWhereRaw('LOWER(TRIM(email)) = ?', [$email])
+                $method = $mappedClientId ? 'orWhereRaw' : 'whereRaw';
+                $orders->{$method}('LOWER(TRIM(email)) = ?', [$email])
                     ->orWhereRaw('LOWER(TRIM(livraison_email)) = ?', [$email]);
             }
         });

@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Commande;
 use App\Models\Message;
+use App\Models\NotificationDelivery;
 use App\Services\SmsService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
@@ -60,6 +61,7 @@ class NotificationsDoctor extends Command
             ['from', $from . ' (' . config('mail.from.name') . ')'],
             ['admin_emails', $admins ? implode(', ', $admins) : '(aucun)'],
             ['queue', config('queue.default')],
+            ['authenticated smtp ready', config('mail.smtp_ready') ? 'oui' : 'non'],
         ]);
 
         if ($mailer === 'smtp') {
@@ -176,6 +178,8 @@ class NotificationsDoctor extends Command
         $this->line('');
         $this->components->info('COMMANDE ' . ($order->numero ?? $order->id));
         $this->table(['Champ', 'Valeur'], [
+            ['user_id (compte)', $order->user_id ?: '—'],
+            ['client_id (Filament)', $order->client_id ?: '—'],
             ['etat', $order->etat],
             ['email client', $order->email ?: ($order->livraison_email ?: '(aucun — aucun e-mail ne partira)')],
             ['téléphone', $order->phone ?: ($order->livraison_phone ?: '(aucun — aucun SMS ne partira)')],
@@ -183,6 +187,30 @@ class NotificationsDoctor extends Command
             ['delivered_at', $order->delivered_at ?: '—'],
             ['review_request_sent_at', $order->review_request_sent_at ?: '—'],
         ]);
+
+        if (\Illuminate\Support\Facades\Schema::hasTable('notification_deliveries')) {
+            $deliveries = NotificationDelivery::query()
+                ->where('event_key', 'like', '%order:' . $order->id . ':%')
+                ->latest('id')
+                ->get(['channel', 'event_key', 'status', 'attempts', 'last_error', 'sent_at']);
+
+            $this->line('');
+            $this->components->info('LIVRAISONS DE NOTIFICATIONS ENREGISTRÉES');
+            if ($deliveries->isEmpty()) {
+                $this->warn('  Aucune tentative enregistrée pour cette commande.');
+            } else {
+                $this->table(['canal', 'événement', 'état', 'essais', 'envoyé', 'erreur'], $deliveries->map(
+                    fn (NotificationDelivery $delivery): array => [
+                        $delivery->channel,
+                        $delivery->event_key,
+                        $delivery->status,
+                        $delivery->attempts,
+                        optional($delivery->sent_at)->toDateTimeString() ?: '—',
+                        $delivery->last_error ? mb_substr($delivery->last_error, 0, 180) : '—',
+                    ]
+                )->all());
+            }
+        }
 
         // What the SMS would look like, AFTER the GSM-7 pass — including the segment count, which
         // is what the invoice from WinSMS is actually counting.
@@ -272,13 +300,15 @@ class NotificationsDoctor extends Command
         $orders = Commande::query()
             ->latest('id')
             ->limit($limit)
-            ->get(['id', 'numero', 'etat', 'prix_ttc', 'email', 'livraison_email', 'created_at']);
+            ->get(['id', 'numero', 'user_id', 'client_id', 'etat', 'prix_ttc', 'email', 'livraison_email', 'created_at']);
 
         $this->line('');
         $this->line("  {$orders->count()} commande(s) la/les plus récente(s) :");
-        $this->table(['id', 'numero', 'etat', 'total', 'email?', 'créée'], $orders->map(fn (Commande $order): array => [
+        $this->table(['id', 'numero', 'user', 'client', 'etat', 'total', 'email?', 'créée'], $orders->map(fn (Commande $order): array => [
             $order->id,
             $order->numero ?: '—',
+            $order->user_id ?: '—',
+            $order->client_id ?: '—',
             $order->etat ?: '—',
             number_format((float) $order->prix_ttc, 3, '.', ' '),
             filter_var($order->livraison_email ?: $order->email, FILTER_VALIDATE_EMAIL) ? 'oui' : 'non',
