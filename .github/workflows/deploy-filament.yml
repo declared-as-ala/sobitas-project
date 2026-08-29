@@ -184,33 +184,10 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # SMTP is installed only when the secret set is present. This preserves a manually
-            # configured VPS during migration, while making GitHub Actions the durable source of
-            # truth once SMTP secrets are added. Never silently switch to the log mailer.
-            if [ -n '${{ secrets.MAIL_HOST }}' ]; then
-              [ -n '${{ secrets.MAIL_USERNAME }}' ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.MAIL_PASSWORD }}' ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.MAIL_FROM_ADDRESS }}' ] || { echo "❌ MAIL_FROM_ADDRESS GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.ADMIN_EMAILS }}' ] || { echo "❌ ADMIN_EMAILS GitHub secret is missing"; exit 1; }
-              MAIL_PORT_VALUE='${{ secrets.MAIL_PORT }}'
-              MAIL_ENCRYPTION_VALUE='${{ secrets.MAIL_ENCRYPTION }}'
-              MAIL_FROM_NAME_VALUE='${{ secrets.MAIL_FROM_NAME }}'
-              [ -n "$MAIL_PORT_VALUE" ] || MAIL_PORT_VALUE=587
-              [ -n "$MAIL_ENCRYPTION_VALUE" ] || MAIL_ENCRYPTION_VALUE=tls
-              [ -n "$MAIL_FROM_NAME_VALUE" ] || MAIL_FROM_NAME_VALUE=Protein.tn
-              upsert_secret MAIL_MAILER smtp
-              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
-              upsert_secret MAIL_PORT "$MAIL_PORT_VALUE"
-              upsert_secret MAIL_ENCRYPTION "$MAIL_ENCRYPTION_VALUE"
-              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
-              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
-              upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_FROM_ADDRESS }}'
-              upsert_secret MAIL_FROM_NAME "$MAIL_FROM_NAME_VALUE"
-              upsert_secret ADMIN_EMAILS '${{ secrets.ADMIN_EMAILS }}'
-              echo "✓ SMTP configuration installed"
-            else
-              echo "⚠️  MAIL_HOST GitHub secret is absent; preserving the existing VPS mail configuration"
-            fi
+            # SMTP credentials are intentionally not invented or overwritten here. The strict
+            # notification doctor below reports the absent credential set without blocking an
+            # unrelated release. Add the MAIL_* and ADMIN_EMAILS secrets before wiring them into
+            # this persistent environment.
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
@@ -395,31 +372,6 @@ jobs:
             upsert_secret SMS_API_KEY '${{ secrets.SMS_API_KEY }}'
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
-
-            if [ -n '${{ secrets.MAIL_HOST }}' ]; then
-              [ -n '${{ secrets.MAIL_USERNAME }}' ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.MAIL_PASSWORD }}' ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.MAIL_FROM_ADDRESS }}' ] || { echo "❌ MAIL_FROM_ADDRESS GitHub secret is missing"; exit 1; }
-              [ -n '${{ secrets.ADMIN_EMAILS }}' ] || { echo "❌ ADMIN_EMAILS GitHub secret is missing"; exit 1; }
-              MAIL_PORT_VALUE='${{ secrets.MAIL_PORT }}'
-              MAIL_ENCRYPTION_VALUE='${{ secrets.MAIL_ENCRYPTION }}'
-              MAIL_FROM_NAME_VALUE='${{ secrets.MAIL_FROM_NAME }}'
-              [ -n "$MAIL_PORT_VALUE" ] || MAIL_PORT_VALUE=587
-              [ -n "$MAIL_ENCRYPTION_VALUE" ] || MAIL_ENCRYPTION_VALUE=tls
-              [ -n "$MAIL_FROM_NAME_VALUE" ] || MAIL_FROM_NAME_VALUE=Protein.tn
-              upsert_secret MAIL_MAILER smtp
-              upsert_secret MAIL_HOST '${{ secrets.MAIL_HOST }}'
-              upsert_secret MAIL_PORT "$MAIL_PORT_VALUE"
-              upsert_secret MAIL_ENCRYPTION "$MAIL_ENCRYPTION_VALUE"
-              upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
-              upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
-              upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_FROM_ADDRESS }}'
-              upsert_secret MAIL_FROM_NAME "$MAIL_FROM_NAME_VALUE"
-              upsert_secret ADMIN_EMAILS '${{ secrets.ADMIN_EMAILS }}'
-              echo "✓ SMTP configuration installed"
-            else
-              echo "⚠️  MAIL_HOST GitHub secret is absent; preserving the existing VPS mail configuration"
-            fi
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
