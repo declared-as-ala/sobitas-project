@@ -63,6 +63,7 @@ on:
           - mail-provider-keys
           - mail-server-summary
           - commerce-backup-summary
+          - commerce-order-recovery-dry-run
           - commerce-flow-tests
           - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
@@ -324,6 +325,17 @@ jobs:
               # id occurs in that backup's commandes INSERT block. No customer row is exported.
               ARGS="$ORDER_REF"
               MODE=hostbackupsummary
+              WRITES=no
+              ;;
+            commerce-order-recovery-dry-run)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              # Imports the newest matching backup into a disposable database, reports aggregate
+              # dependency counts, then drops it. The production database is never selected.
+              ARGS="$ORDER_REF"
+              MODE=hostorderrecoverydry
               WRITES=no
               ;;
             commerce-flow-tests)
@@ -847,6 +859,79 @@ jobs:
                 printf '%-42s %12s %8s %s\n' "$BACKUP_NAME" "$BACKUP_SIZE" "$INSERT_LINES" "$CONTAINS"
               done
               echo "matching-backups: $FOUND"
+            elif [ "$MODE" = "hostorderrecoverydry" ]; then
+              echo ""
+              echo "> isolated recovery rehearsal for order id $ARGS"
+              echo ""
+
+              SOURCE_BACKUP=""
+              for CANDIDATE in $(ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | head -20); do
+                if gzip -cd "$CANDIDATE" 2>/dev/null \
+                  | grep -F 'INSERT INTO `commandes`' \
+                  | grep -Eq "\\($ARGS,"; then
+                  SOURCE_BACKUP="$CANDIDATE"
+                  break
+                fi
+              done
+              if [ -z "$SOURCE_BACKUP" ]; then
+                echo "[X] no recent backup contains order $ARGS"
+                exit 1
+              fi
+
+              PROD_DB=$(docker exec sobitas-mysql sh -c 'printf %s "$MYSQL_DATABASE"')
+              if ! printf '%s' "$PROD_DB" | grep -Eq '^[A-Za-z0-9_]+$'; then
+                echo "[X] production database name is unsafe or empty"
+                exit 1
+              fi
+              RECOVERY_DB="sobitas_recovery_${ARGS}_$$"
+              mysql_query() {
+                docker exec sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B -e "$1"' sh "$1"
+              }
+              cleanup_recovery() {
+                mysql_query "DROP DATABASE IF EXISTS \`$RECOVERY_DB\`;" >/dev/null 2>&1 || true
+              }
+              trap cleanup_recovery EXIT
+
+              echo "source-backup: $(basename "$SOURCE_BACKUP")"
+              echo "[..] loading snapshot into disposable database"
+              if ! gzip -cd "$SOURCE_BACKUP" 2>/dev/null \
+                | sed "s/\`$PROD_DB\`/\`$RECOVERY_DB\`/g" \
+                | docker exec -i sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' >/dev/null 2>&1; then
+                echo "[X] disposable database import failed"
+                exit 1
+              fi
+
+              table_rows() {
+                TABLE_NAME="$1"
+                PREDICATE="$2"
+                TABLE_EXISTS=$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$RECOVERY_DB' AND table_name='$TABLE_NAME';")
+                if [ "$TABLE_EXISTS" = "1" ]; then
+                  mysql_query "SELECT COUNT(*) FROM \`$RECOVERY_DB\`.\`$TABLE_NAME\` WHERE $PREDICATE;"
+                else
+                  echo 0
+                fi
+              }
+
+              ORDER_SOURCE=$(table_rows commandes "id=$ARGS")
+              ORDER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commandes WHERE id=$ARGS;")
+              USER_ID=$(mysql_query "SELECT COALESCE(user_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
+              CLIENT_ID=$(mysql_query "SELECT COALESCE(client_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
+              USER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.users WHERE id=$USER_ID;")
+              CLIENT_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.clients WHERE id=$CLIENT_ID;")
+
+              echo "order-source: $ORDER_SOURCE"
+              echo "order-current: $ORDER_CURRENT"
+              echo "account-reference-present-current: $USER_CURRENT"
+              echo "client-reference-present-current: $CLIENT_CURRENT"
+              echo "line-items-source: $(table_rows commande_details "commande_id=$ARGS")"
+              echo "coupon-redemptions-source: $(table_rows coupon_redemptions "order_id=$ARGS")"
+              echo "point-transactions-source: $(table_rows user_point_transactions "commande_id=$ARGS")"
+              echo "shipments-source: $(table_rows factures "commande_id=$ARGS")"
+              echo "tickets-source: $(table_rows tickets "commande_id=$ARGS")"
+              echo "payments-source: $(table_rows payments "commande_id=$ARGS")"
+              echo "notification-records-source: $(table_rows notification_deliveries "event_key LIKE '%order:$ARGS:%'")"
+              echo "stock-units-to-reapply: $(mysql_query "SELECT COALESCE(SUM(qte),0) FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;")"
+              echo "[ok] rehearsal complete; disposable database will now be dropped"
             elif [ "$MODE" = "envkeys" ]; then
               echo ""
               echo "> configured mail-provider variable names (values are never printed)"
