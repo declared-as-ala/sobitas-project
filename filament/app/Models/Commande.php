@@ -250,7 +250,7 @@ class Commande extends Model
     public function latestShipment(): HasOne
     {
         return $this->hasOne(Facture::class, 'commande_id')
-            ->ofMany('id', 'max', function ($query): void {
+            ->ofMany(['id' => 'max'], function ($query): void {
                 $query->whereNotNull('aramex_hawb')->where('aramex_hawb', '!=', '');
             });
     }

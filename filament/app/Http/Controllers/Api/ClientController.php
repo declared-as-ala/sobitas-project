@@ -91,8 +91,11 @@ class ClientController extends Controller
             'password' => ['required'],
         ]);
 
-        if (Auth::attempt($validated)) {
-            $user = Auth::user();
+        // This is a token API endpoint, not a browser session login. Using
+        // Auth::attempt() couples it to the configured session driver and can
+        // fail before the Sanctum token is issued when session storage is unavailable.
+        $user = User::query()->where('email', $validated['email'])->first();
+        if ($user !== null && Hash::check($validated['password'], $user->password)) {
             $accessToken = $user->createToken('authToken')->plainTextToken;
 
             return response()->json([
