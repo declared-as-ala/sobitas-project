@@ -228,6 +228,41 @@ function deriveIntroDataFromProducts(
 /** CTR-optimized meta title: 55–65 chars, keyword + Tunisia + brand. */
 const META_TITLE_MAX_LEN = 65;
 
+/**
+ * Search Console exposed two high-impression, zero-click query clusters whose reviewed copy lives
+ * in `content/categories/*.json`. Filament also contains older metadata for those same categories,
+ * and the normal API-first merge kept silently replacing the reviewed title, description and H1
+ * in production. Keep the global admin-first policy; only these measured, explicitly curated
+ * opportunities take their checked-in copy as the source of truth.
+ */
+const SEARCH_CONSOLE_CURATED_SLUGS = new Set(['omega-3', 'pre-workout']);
+
+function mergeCategorySeoForSlug(
+  slug: string,
+  json: Awaited<ReturnType<typeof getCategorySeoContent>>,
+  api: CategorySeoFromApi | undefined
+): MergedCategorySeo {
+  const merged = mergeCategorySeo(json, api);
+  if (!SEARCH_CONSOLE_CURATED_SLUGS.has(slug) || !json) return merged;
+
+  const h1 = json.h1?.trim() || merged.h1;
+  const metaTitle = json.metaTitle?.trim() || merged.metaTitle;
+  const metaDescription = json.metaDescription?.trim() || merged.metaDescription;
+
+  return {
+    ...merged,
+    h1,
+    metaTitle,
+    metaDescription,
+    // Social previews must say the same thing as the SERP; keeping the stale API OG/Twitter text
+    // would produce two competing titles for one canonical page.
+    ogTitle: metaTitle,
+    ogDescription: metaDescription,
+    twitterTitle: metaTitle,
+    twitterDescription: metaDescription,
+  };
+}
+
 function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined, slug?: string): string {
   if (seoH1?.trim()) {
     const trimmed = seoH1.trim();
@@ -265,7 +300,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         : (data as any).category?.designation_fr;
     const apiSeo = (data as any).seo as CategorySeoFromApi | undefined;
     const seoJson = await getCategorySeoContent(canonicalSlug);
-    const merged = mergeCategorySeo(seoJson, apiSeo);
+    const merged = mergeCategorySeoForSlug(canonicalSlug, seoJson, apiSeo);
     let metaTitle =
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
@@ -474,7 +509,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const parentCat = sub.sous_category?.categorie;
       const seoJson = await getCategorySeoContent(canonicalSlug);
       const apiSeoSub = (sub as { seo?: CategorySeoFromApi }).seo;
-      const merged = mergeCategorySeo(seoJson, apiSeoSub);
+      const merged = mergeCategorySeoForSlug(canonicalSlug, seoJson, apiSeoSub);
       const subCrumbName =
         merged.breadcrumbLabel ||
         merged.h1?.trim() ||
@@ -658,7 +693,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const seoJsonCat = await getCategorySeoContent(canonicalSlug);
       const apiSeoCat = (cat as { seo?: CategorySeoFromApi }).seo;
-      const mergedCat = mergeCategorySeo(seoJsonCat, apiSeoCat);
+      const mergedCat = mergeCategorySeoForSlug(canonicalSlug, seoJsonCat, apiSeoCat);
       const catCrumbName = mergedCat.breadcrumbLabel || mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
