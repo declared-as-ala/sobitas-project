@@ -539,9 +539,9 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php
+          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php
           target: /root/sobitas-project/inbox/commerce-tests
-          strip_components: 3
+          strip_components: 2
           overwrite: true
 
       - name: Run the task
@@ -677,9 +677,13 @@ jobs:
             if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php" ]; then
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 mkdir -p /var/www/html/tests/Feature
-              docker cp "$APP_DIR/inbox/commerce-tests/CustomerAuthFlowTest.php" \
+              docker cp "$APP_DIR/inbox/commerce-tests/TestCase.php" \
+                sobitas-backend-v2:/var/www/html/tests/TestCase.php
+              docker cp "$APP_DIR/inbox/commerce-tests/CreatesApplication.php" \
+                sobitas-backend-v2:/var/www/html/tests/CreatesApplication.php
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerAuthFlowTest.php" \
                 sobitas-backend-v2:/var/www/html/tests/Feature/CustomerAuthFlowTest.php
-              docker cp "$APP_DIR/inbox/commerce-tests/CustomerOrderStatusMailerTest.php" \
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerOrderStatusMailerTest.php" \
                 sobitas-backend-v2:/var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 chown -R www-data:www-data /var/www/html/tests
@@ -756,7 +760,9 @@ jobs:
               RC=$?
               if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
                 docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
-                  rm -f /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
+                  rm -f /var/www/html/tests/TestCase.php \
+                    /var/www/html/tests/CreatesApplication.php \
+                    /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
                     /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php >/dev/null 2>&1 || true
               fi
               echo "$OUT"
