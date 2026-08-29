@@ -539,6 +539,7 @@ jobs:
           password: ${{ secrets.VPS_PASSWORD }}
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
+          timeout: 120s
           source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php
           target: /root/sobitas-project/inbox/commerce-tests
           strip_components: 2
