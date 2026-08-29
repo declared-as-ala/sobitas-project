@@ -30,6 +30,22 @@ $smtpReady = $smtpHost !== ''
     && $smtpUsername !== ''
     && $smtpPassword !== '';
 
+$awsAccessKey = trim((string) env('AWS_ACCESS_KEY_ID', ''));
+$awsSecretKey = trim((string) env('AWS_SECRET_ACCESS_KEY', ''));
+$awsRegion = trim((string) env('AWS_DEFAULT_REGION', 'us-east-1')) ?: 'us-east-1';
+$sesSmtpReady = $awsAccessKey !== '' && $awsSecretKey !== '';
+$sesSmtpPassword = null;
+if ($sesSmtpReady) {
+    // AWS SES SMTP credentials use the IAM access-key id as username and a deterministic
+    // Signature-v4 conversion of the secret access key as password.
+    $dateKey = hash_hmac('sha256', '11111111', 'AWS4'.$awsSecretKey, true);
+    $regionKey = hash_hmac('sha256', $awsRegion, $dateKey, true);
+    $serviceKey = hash_hmac('sha256', 'ses', $regionKey, true);
+    $terminalKey = hash_hmac('sha256', 'aws4_request', $serviceKey, true);
+    $signature = hash_hmac('sha256', 'SendRawEmail', $terminalKey, true);
+    $sesSmtpPassword = base64_encode(chr(0x04).$signature);
+}
+
 // The VPS retained the authenticated SMTP credentials that successfully delivered mail before
 // MAIL_MAILER was changed to local sendmail. A local MTA accepting a message only proves queueing;
 // Gmail may still reject it later because this VPS has no trusted outbound-mail reputation. Prefer
@@ -86,7 +102,18 @@ return [
             'encryption' => env('MAIL_ENCRYPTION'),
             'username' => $smtpUsername ?: null,
             'password' => $smtpPassword !== '' ? $smtpPassword : null,
-            'timeout' => null,
+            'timeout' => 15,
+            'auth_mode' => null,
+        ],
+
+        'ses-smtp' => [
+            'transport' => 'smtp',
+            'host' => 'email-smtp.'.$awsRegion.'.amazonaws.com',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => $sesSmtpReady ? $awsAccessKey : null,
+            'password' => $sesSmtpPassword,
+            'timeout' => 15,
             'auth_mode' => null,
         ],
 
@@ -186,5 +213,6 @@ return [
 
     // Safe diagnostic flag: confirms all three SMTP values exist without exposing the password.
     'smtp_ready' => $smtpReady,
+    'ses_smtp_ready' => $sesSmtpReady,
 
 ];

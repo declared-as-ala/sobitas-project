@@ -34,6 +34,7 @@ class NotificationsDoctor extends Command
     protected $signature = 'notifications:doctor
                             {--order= : An order id or numero to render the real messages for}
                             {--send-email= : Send the customer confirmation to THIS address}
+                            {--mailer= : Use this configured mailer for the explicit test email}
                             {--send-sms= : Send the confirmation SMS to THIS number}
                             {--recent=0 : Show this many recent orders/users and notification table health}
                             {--probe-sms : Verify WinSMS credentials and balance without sending}
@@ -66,6 +67,7 @@ class NotificationsDoctor extends Command
             ['gmail app-password shape', str_contains(strtolower($host), 'gmail')
                 ? ($smtpSecretLength === 16 ? 'oui (16 caractères)' : "non ({$smtpSecretLength} caractères)")
                 : 'non applicable'],
+            ['aws ses smtp credentials', config('mail.ses_smtp_ready') ? 'présentes' : 'absentes'],
         ]);
 
         if ($mailer === 'smtp') {
@@ -230,9 +232,24 @@ class NotificationsDoctor extends Command
         ));
 
         if ($to = $this->option('send-email')) {
+            $testMailer = trim((string) $this->option('mailer')) ?: $mailer;
+            if (! array_key_exists($testMailer, (array) config('mail.mailers'))) {
+                $this->error("Mailer de test inconnu : {$testMailer}");
+
+                return self::FAILURE;
+            }
+            if ($testMailer === 'ses-smtp' && ! config('mail.ses_smtp_ready')) {
+                $this->error('Les identifiants AWS requis pour SES SMTP sont absents.');
+
+                return self::FAILURE;
+            }
             try {
-                Mail::to($to)->send(new OrderConfirmedCustomerMail($order));
-                $this->components->info("E-mail de test envoyé à {$to}.");
+                $mailable = new OrderConfirmedCustomerMail($order);
+                if ($testMailer === 'ses-smtp') {
+                    $mailable->from('contact@protein.tn', 'Protein.tn');
+                }
+                Mail::mailer($testMailer)->to($to)->send($mailable);
+                $this->components->info("E-mail de test envoyé à {$to} via {$testMailer}.");
             } catch (\Throwable $e) {
                 $this->error('Envoi e-mail ÉCHOUÉ : ' . $e->getMessage());
 
