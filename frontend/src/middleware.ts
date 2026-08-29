@@ -89,6 +89,10 @@ const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
   'citrulline-synergy-240-g',
   'king-real-preworkout-500gr-real-pharm',
   'ring-de-boxe',
+  // The same retired product was published with its legacy numeric id appended. GSC still crawls
+  // that exact address; the canonical slug above is already confirmed gone, so this variant must
+  // be terminal too instead of falling through to a repeatable route-level 404.
+  'ring-de-boxe-40',
 ]);
 
 const CONFIRMED_RETIRED_ASSETS = new Set([

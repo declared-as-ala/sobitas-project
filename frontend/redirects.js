@@ -30,6 +30,34 @@ function buildRedirects() {
   const p = (source, destination) => ({ source, destination, permanent: true });
 
   return [
+    /*
+     * ── GSC 21/08/2026: WWW LEGACY URLS MUST LAND ON THE FINAL APEX URL ────────────────
+     *
+     * The generic www rule below correctly canonicalises the hostname, but these three old
+     * WordPress URLs then needed one or two more redirects to reach the surviving page. Google
+     * follows that chain, but every extra hop delays consolidation and keeps the old URL in the
+     * coverage report longer. They are exact, verified mappings, so resolve host + path in one
+     * response. A trailing slash still receives Next's unavoidable slash-normalisation hop first.
+     */
+    {
+      source: '/boutique/proteine-gain-musculaire/syntha-6-isolate',
+      has: [{ type: 'host', value: 'www.protein.tn' }],
+      destination: 'https://protein.tn/whey-isolate',
+      permanent: true,
+    },
+    {
+      source: '/boutique/acides-amines-tunisie/bcaa-xplode-olimp',
+      has: [{ type: 'host', value: 'www.protein.tn' }],
+      destination: 'https://protein.tn/bcaa',
+      permanent: true,
+    },
+    {
+      source: '/produit/gants-de-musculation',
+      has: [{ type: 'host', value: 'www.protein.tn' }],
+      destination: 'https://protein.tn/accessoires/gants-de-musculation',
+      permanent: true,
+    },
+
     // ── www → non-www (host-conditional, must stay first) ─────────────────
     {
       source: '/:path*',
@@ -76,6 +104,10 @@ function buildRedirects() {
     // ── Locale prefix ─────────────────────────────────────────────────────
     p('/en', '/'),
     p('/en/', '/'),
+    // Exact legacy locale URLs from the current GSC examples. Point at the FINAL destination so
+    // locale removal and product retirement do not become separate hops.
+    p('/en/shop/gainer-xtreme-54-kg', '/mass-gainers'),
+    p('/ar/shop/animal-pak-30-packs-universal-nutrition', '/vitamines/animal-pak-30-packs'),
 
     // ── Legacy alias ──────────────────────────────────────────────────────
     p('/about', '/qui-sommes-nous'),
@@ -181,6 +213,10 @@ function buildRedirects() {
     p('/contact-us/', '/contact'),
 
     // ── Products / shop (generic) ─────────────────────────────────────────
+    // These two old `/boutique/{taxonomy}/{product}` URLs otherwise strip `/boutique` first and
+    // only then resolve the retired product. Collapse both to one verified, relevant target.
+    p('/boutique/proteine-gain-musculaire/syntha-6-isolate', '/whey-isolate'),
+    p('/boutique/acides-amines-tunisie/bcaa-xplode-olimp', '/bcaa'),
     // IMPORTANT: Do NOT add catch-alls for `/product/:path*` or `/products/:path*`
     // here. next.config redirects run BEFORE middleware and the filesystem routes,
     // so a catch-all would shadow the single-hop resolver pages

@@ -218,10 +218,10 @@ export const tunisiaCategoryKeywords: Record<string, TunisiaCategoryKeywords> = 
       { question: 'Quel magnesium pour les sportifs ?', answer: 'Le magnesium glycinate ou citrate est mieux absorbé. Important pour les cramps et le sommeil.' },
     ],
   },
-  omega3: {
-    primary: 'Omega 3 Tunisie',
-    variations: ['omega 3 tunisie', 'omega-3 tunisie', 'poisson gras tunisie', 'dha epa tunisie'],
-    description: 'Oméga 3 pour la santé cardiovasculaire et inflammatoire en Tunisie.',
+  'omega-3': {
+    primary: 'Omega 3 Fish Oil Tunisie',
+    variations: ['omega 3 fish oil', 'omega 3 tunisie', 'omega-3 tunisie', 'huile de poisson tunisie', 'dha epa tunisie'],
+    description: 'Comparez les oméga 3 fish oil disponibles en Tunisie : dosage EPA/DHA, quantité, prix en dinars, stock réel et livraison nationale.',
     faqQuestions: [
       { question: 'Oméga 3 pour les sportifs ?', answer: 'Les oméga 3 réduisent l\'inflammation et aident à la récupération après l\'entraînement.' },
     ],
