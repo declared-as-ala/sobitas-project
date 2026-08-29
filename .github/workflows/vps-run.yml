@@ -53,6 +53,7 @@ on:
           - research-import-dry-run
           - seo-ctr-pass-dry-run
           - queue-log
+          - backend-log
           - scheduler-log
           - commerce-status
           - notifications-status
@@ -216,6 +217,11 @@ jobs:
               # only records what the job managed to write before it died, which for a crash
               # between claim and store is nothing at all.
               ARGS="backend-v2-queue"
+              MODE=logs
+              WRITES=no
+              ;;
+            backend-log)
+              ARGS="backend-v2"
               MODE=logs
               WRITES=no
               ;;
