@@ -202,7 +202,11 @@ jobs:
             docker pull "$IMAGE"
 
             echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
+            # A backend image release must never recreate stateful dependencies. On 29/08 three
+            # newly committed orders disappeared during this exact deploy window while only app
+            # code was changing. The existing healthy DB/Redis containers are dependencies, not
+            # release artifacts; migrations run from backend-v2 after it is recreated below.
+            docker compose -f "$COMPOSE_FILE" up -d --no-recreate mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
             # A safety net must never become a gate. On 2026-07-28 this block killed three
@@ -390,7 +394,8 @@ jobs:
             docker pull "$IMAGE"
 
             echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
+            # Retry path must carry the same stateful-container guard as attempt 1.
+            docker compose -f "$COMPOSE_FILE" up -d --no-recreate mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
             # A safety net must never become a gate. On 2026-07-28 this block killed three
