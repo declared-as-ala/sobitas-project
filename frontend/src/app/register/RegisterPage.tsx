@@ -90,6 +90,10 @@ export default function RegisterPage() {
         password: formData.password,
         role_id: 2, // customer; the server sets this itself and never trusts the field
       });
+      sessionStorage.setItem(
+        'protein:verification-email-delivery',
+        result.verification_email_sent === false ? 'failed' : 'sent',
+      );
       toast.success('Compte créé', {
         description: result.verification_email_sent === false
           ? 'Demandez un nouveau code pour vérifier votre email.'

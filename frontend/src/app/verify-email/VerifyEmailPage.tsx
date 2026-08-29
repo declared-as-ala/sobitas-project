@@ -31,11 +31,17 @@ export default function VerifyEmailPage() {
   const [code, setCode] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [resending, setResending] = useState(false);
+  const [deliveryState, setDeliveryState] = useState<'unknown' | 'sent' | 'failed'>('unknown');
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
     if (!isLoading && user?.contact_verified) router.replace('/');
   }, [isAuthenticated, isLoading, router, user?.contact_verified]);
+
+  useEffect(() => {
+    const state = sessionStorage.getItem('protein:verification-email-delivery');
+    setDeliveryState(state === 'sent' || state === 'failed' ? state : 'unknown');
+  }, []);
 
   if (isLoading || !isAuthenticated) return <LoadingSpinner />;
 
@@ -48,6 +54,7 @@ export default function VerifyEmailPage() {
     setSubmitting(true);
     try {
       const result = await verifyEmailOtp(code);
+      sessionStorage.removeItem('protein:verification-email-delivery');
       await refreshProfile();
       toast.success(result.message);
       router.replace('/');
@@ -61,8 +68,12 @@ export default function VerifyEmailPage() {
     setResending(true);
     try {
       const result = await sendEmailVerificationOtp();
+      sessionStorage.setItem('protein:verification-email-delivery', 'sent');
+      setDeliveryState('sent');
       toast.success(result.message);
     } catch (error: unknown) {
+      sessionStorage.setItem('protein:verification-email-delivery', 'failed');
+      setDeliveryState('failed');
       toast.error(verificationError(error, 'email', 'Envoi impossible. Réessayez.'));
     } finally {
       setResending(false);
@@ -73,7 +84,11 @@ export default function VerifyEmailPage() {
     <AuthShell>
       <AuthCardHeader
         title="Vérifiez votre email"
-        subtitle={`Code envoyé à ${user?.email ?? 'votre adresse email'}`}
+        subtitle={deliveryState === 'sent'
+          ? `Code envoyé à ${user?.email ?? 'votre adresse email'}`
+          : deliveryState === 'failed'
+            ? 'L’envoi a échoué. Demandez un nouveau code.'
+            : 'Saisissez le code reçu ou demandez un nouvel envoi.'}
       />
       <form onSubmit={submit} className="space-y-4">
         <AuthField
@@ -96,7 +111,15 @@ export default function VerifyEmailPage() {
         <button type="button" onClick={resend} disabled={resending} className="min-h-11 rounded px-2 font-semibold text-brand disabled:opacity-50">
           {resending ? 'Envoi…' : 'Renvoyer le code'}
         </button>
-        <button type="button" onClick={() => { logout(); router.replace('/login'); }} className="min-h-11 rounded px-2 hover:text-ink-1">
+        <button
+          type="button"
+          onClick={() => {
+            sessionStorage.removeItem('protein:verification-email-delivery');
+            logout();
+            router.replace('/login');
+          }}
+          className="min-h-11 rounded px-2 hover:text-ink-1"
+        >
           Changer de compte
         </button>
       </div>
