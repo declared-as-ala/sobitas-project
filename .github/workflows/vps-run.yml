@@ -55,6 +55,7 @@ on:
           - queue-log
           - scheduler-log
           - commerce-status
+          - notifications-status
           # The three logs the scheduler redirects away from the container's stdout. Without
           # these, a pass that runs and decides to do nothing is indistinguishable from a pass
           # that is working.
@@ -227,6 +228,11 @@ jobs:
               # Mail/SMS configuration, migration health and the newest orders/users. Read-only;
               # sends no message and masks credentials/recipient identities.
               ARGS="notifications:doctor --strict --probe-sms --recent=10"
+              WRITES=no
+              ;;
+            notifications-status)
+              # Backward-compatible with backend images deployed before --recent was added.
+              ARGS="notifications:doctor --strict --probe-sms"
               WRITES=no
               ;;
             content-status)
