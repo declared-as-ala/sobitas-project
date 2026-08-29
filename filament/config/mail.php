@@ -15,8 +15,16 @@ $emailAddress = static function (mixed $value, string $fallback = ''): string {
     return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : $fallback;
 };
 
-$fromAddress = $emailAddress(env('MAIL_FROM_ADDRESS'), 'contact@protein.tn');
-$replyToAddress = $emailAddress(env('MAIL_REPLY_TO'), $fromAddress);
+$defaultMailer = (string) env('MAIL_MAILER', 'log');
+// The local transport must use the shop domain. A legacy Gmail value in the VPS environment
+// cannot be allowed to break SPF/DMARC alignment or make transactional mail look untrusted.
+$fromAddress = $defaultMailer === 'sendmail'
+    ? 'contact@protein.tn'
+    : $emailAddress(env('MAIL_FROM_ADDRESS'), 'contact@protein.tn');
+$fromName = $defaultMailer === 'sendmail' ? 'Protein.tn' : env('MAIL_FROM_NAME', 'Protein.tn');
+$replyToAddress = $defaultMailer === 'sendmail'
+    ? 'contact@protein.tn'
+    : $emailAddress(env('MAIL_REPLY_TO'), $fromAddress);
 $adminEmails = array_values(array_unique(array_filter(array_map(
     static fn (string $value): string => $emailAddress($value),
     array_map('trim', explode(',', (string) env('ADMIN_EMAILS', 'contact@protein.tn')))
@@ -35,7 +43,7 @@ return [
     |
     */
 
-    'default' => env('MAIL_MAILER', 'log'),
+    'default' => $defaultMailer,
 
     /*
     |--------------------------------------------------------------------------
@@ -106,7 +114,7 @@ return [
 
     'from' => [
         'address' => $fromAddress,
-        'name'    => env('MAIL_FROM_NAME', 'Protein.tn'),
+        'name'    => $fromName,
     ],
 
     /*
@@ -116,7 +124,9 @@ return [
     */
     'reply_to' => [
         'address' => $replyToAddress,
-        'name' => env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Protein.TN')),
+        'name' => $defaultMailer === 'sendmail'
+            ? 'Protein.tn'
+            : env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Protein.TN')),
     ],
 
     /*

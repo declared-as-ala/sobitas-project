@@ -212,29 +212,9 @@ jobs:
               echo "✓ SMTP credentials installed"
             else
               # A complete authenticated SMTP configuration is preferred. The application image
-              # nevertheless ships a local sendmail transport so transactional mail keeps working
-              # when those optional secrets are absent. Always repair the public sender fields:
-              # production once contained a copied Markdown link here, which Symfony rejects.
-              # Rewrite the fallback fields atomically. Updating them one by one left production
-              # half-configured when an intermediate command failed: MAIL_MAILER became sendmail,
-              # but the invalid legacy From address survived.
-              configure_sendmail_fallback() {
-                MAIL_TMP=$(mktemp ./.env.mail.XXXXXX) || { echo "❌ Cannot create temporary mail environment file"; return 1; }
-                GREP_RC=0
-                grep -Ev '^(MAIL_MAILER|MAIL_FROM_ADDRESS|MAIL_FROM_NAME|MAIL_REPLY_TO|MAIL_REPLY_TO_NAME|ADMIN_EMAILS)=' .env > "$MAIL_TMP" || GREP_RC=$?
-                [ "$GREP_RC" -le 1 ] || { echo "❌ Cannot read the VPS environment file"; rm -f "$MAIL_TMP"; return 1; }
-                printf '%s\n' \
-                  'MAIL_MAILER=sendmail' \
-                  'MAIL_FROM_ADDRESS=contact@protein.tn' \
-                  'MAIL_FROM_NAME=Protein.tn' \
-                  'MAIL_REPLY_TO=contact@protein.tn' \
-                  'MAIL_REPLY_TO_NAME=Protein.tn' \
-                  'ADMIN_EMAILS=contact@protein.tn' >> "$MAIL_TMP" || { echo "❌ Cannot append mail settings"; rm -f "$MAIL_TMP"; return 1; }
-                mv "$MAIL_TMP" .env || { echo "❌ Cannot replace the VPS environment file"; rm -f "$MAIL_TMP"; return 1; }
-                chmod 600 .env || { echo "❌ Cannot secure the VPS environment file"; return 1; }
-              }
-              configure_sendmail_fallback || exit 1
-              echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
+              # already ships sendmail. Laravel forces the domain-aligned From address for that
+              # transport, avoiding a fragile mutation of the VPS .env during deployment.
+              echo "✓ Using the image's validated local sendmail fallback"
             fi
 
             echo "🔐 Logging in to GHCR..."
@@ -447,23 +427,7 @@ jobs:
               upsert_secret ADMIN_EMAILS "$SMTP_ADMINS"
               echo "✓ SMTP credentials installed"
             else
-              configure_sendmail_fallback() {
-                MAIL_TMP=$(mktemp ./.env.mail.XXXXXX) || { echo "❌ Cannot create temporary mail environment file"; return 1; }
-                GREP_RC=0
-                grep -Ev '^(MAIL_MAILER|MAIL_FROM_ADDRESS|MAIL_FROM_NAME|MAIL_REPLY_TO|MAIL_REPLY_TO_NAME|ADMIN_EMAILS)=' .env > "$MAIL_TMP" || GREP_RC=$?
-                [ "$GREP_RC" -le 1 ] || { echo "❌ Cannot read the VPS environment file"; rm -f "$MAIL_TMP"; return 1; }
-                printf '%s\n' \
-                  'MAIL_MAILER=sendmail' \
-                  'MAIL_FROM_ADDRESS=contact@protein.tn' \
-                  'MAIL_FROM_NAME=Protein.tn' \
-                  'MAIL_REPLY_TO=contact@protein.tn' \
-                  'MAIL_REPLY_TO_NAME=Protein.tn' \
-                  'ADMIN_EMAILS=contact@protein.tn' >> "$MAIL_TMP" || { echo "❌ Cannot append mail settings"; rm -f "$MAIL_TMP"; return 1; }
-                mv "$MAIL_TMP" .env || { echo "❌ Cannot replace the VPS environment file"; rm -f "$MAIL_TMP"; return 1; }
-                chmod 600 .env || { echo "❌ Cannot secure the VPS environment file"; return 1; }
-              }
-              configure_sendmail_fallback || exit 1
-              echo "✓ Local sendmail fallback configured with validated Protein.tn addresses"
+              echo "✓ Using the image's validated local sendmail fallback"
             fi
 
             echo "🔐 Logging in to GHCR..."
