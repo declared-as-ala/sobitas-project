@@ -52,6 +52,7 @@ import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
+import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
@@ -330,21 +331,29 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const itemListSchema = productListItems.length > 0
       ? buildItemListSchema(productListItems, baseUrl, { name: title })
       : null;
+    const brandSeo = getBrandSeoEntry(cleanSlug);
+    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
 
     return (
       <>
         {ldScript(breadcrumbSchema, 'bc')}
         {ldScript(collectionSchema, 'cp')}
         {itemListSchema && ldScript(itemListSchema, 'il')}
+        {faqSchema && ldScript(faqSchema, 'faq')}
         <CrawlerCategoryView
           title={title}
+          headingOverride={brandSeo?.h1}
           // Factual intro from the brand's own catalogue. These 55 pages were a median of 39
           // words for Googlebot — an H1, a breadcrumb and a bare product list — which is the thin,
           // near-identical "scaled content" pattern Google discounts, on exactly the brand+geo
           // queries ("dymatize tunisie") they exist to win.
-          introHtml={buildBrandIntroHtml(title, products)}
+          introHtml={brandSeo?.introHtml ?? buildBrandIntroHtml(title, products)}
+          howToChooseTitle={brandSeo?.howToChooseTitle ?? null}
+          howToChooseBody={brandSeo?.howToChooseBody ?? null}
+          faqs={brandSeo?.faqs ?? []}
           breadcrumbs={breadcrumbs}
           products={products}
+          relatedCategories={brandSeo?.relatedCategories.map((item) => ({ name: item.name, url: item.url })) ?? []}
           kind="brand"
         />
       </>

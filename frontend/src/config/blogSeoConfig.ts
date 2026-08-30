@@ -5,6 +5,16 @@
  */
 ///dd
 export interface BlogSeoEntry {
+  /** Optional visible H1/title refresh. The URL remains unchanged to preserve accumulated signals. */
+  headline?: string;
+  /** Optional search snippet aligned with the refreshed article. */
+  metaDescription?: string;
+  /** ISO date for a substantive editorial refresh reflected in Article schema. */
+  dateModified?: string;
+  /** Localized labels for non-French articles. */
+  faqHeading?: string;
+  linksHeading?: string;
+  lang?: 'fr' | 'ar';
   /** FAQ for FAQPage schema and on-page accordion */
   faqs: Array<{ question: string; answer: string }>;
   /** Internal links to categories (anchor text = keyword for SEO) */
@@ -13,6 +23,77 @@ export interface BlogSeoEntry {
 
 /** Slug (from URL) → SEO config. Use normalized slug (lowercase, no accents). */
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
+  'mass-gainer-prix-tunisie-guide-complet-pour-2025': {
+    headline: 'Mass Gainer Prix Tunisie : guide d’achat 2026',
+    metaDescription:
+      'Prix des mass gainers en Tunisie, formats, calories et marques : comparez les critères utiles pour choisir selon votre objectif et votre budget en 2026.',
+    dateModified: '2026-08-30',
+    lang: 'fr',
+    faqs: [
+      {
+        question: 'Quel est le prix d’un mass gainer en Tunisie en 2026 ?',
+        answer: 'Le prix varie selon la marque, le poids du pot, le nombre de portions et les promotions. Pour comparer correctement, regardez le prix au kilogramme et le coût par portion sur les fiches des gainers actuellement disponibles.',
+      },
+      {
+        question: 'Comment choisir un mass gainer sans payer seulement pour du sucre ?',
+        answer: 'Comparez les calories, les protéines, les glucides et les sucres par portion. Vérifiez aussi la taille réelle d’une portion : deux pots de même poids peuvent fournir un nombre de prises très différent.',
+      },
+      {
+        question: 'Mass gainer ou whey pour prendre de la masse ?',
+        answer: 'La whey aide surtout à compléter l’apport en protéines. Un mass gainer ajoute aussi beaucoup de glucides et de calories. Choisissez le gainer si vous peinez à atteindre votre besoin calorique avec l’alimentation ; sinon une whey peut suffire.',
+      },
+      {
+        question: 'Quand prendre un mass gainer ?',
+        answer: 'Il peut être pris entre les repas ou après l’entraînement selon votre organisation alimentaire. La quantité totale de calories et de protéines sur la journée compte davantage que l’heure précise de la prise.',
+      },
+      {
+        question: 'Peut-on commander un mass gainer avec livraison en Tunisie ?',
+        answer: 'Oui. Protein.tn affiche les références disponibles et livre dans tous les gouvernorats, généralement sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'comparer les mass gainers en Tunisie', href: '/gainers-proteines' },
+      { anchor: 'protéines et whey en Tunisie', href: '/proteines' },
+      { anchor: 'créatine pour la prise de masse', href: '/creatine' },
+      { anchor: 'produits Dymatize en Tunisie', href: '/dymatize' },
+    ],
+  },
+  'أفضل مكملات البروتين في تونس: كيف تختار المنتج المناسب لهدفك الرياضي؟': {
+    metaDescription:
+      'دليل اختيار أفضل مكمل بروتين في تونس حسب هدفك: زيادة الكتلة، التنشيف أو التغذية اليومية، مع مقارنة الواي، الأيزوليت والكازين والأسعار الحالية.',
+    dateModified: '2026-08-30',
+    lang: 'ar',
+    faqHeading: 'أسئلة شائعة عن مكملات البروتين في تونس',
+    linksHeading: 'دليلك لاختيار وشراء البروتين',
+    faqs: [
+      {
+        question: 'ما أفضل بروتين لزيادة الكتلة العضلية؟',
+        answer: 'يمكن أن يكون الواي بروتين خيارًا عمليًا لإكمال احتياجك اليومي من البروتين. إذا كنت لا تحصل على سعرات كافية من الطعام، يمكن التفكير في ماس غاينر بعد مقارنة كمية البروتين والسكريات والسعرات في الحصة.',
+      },
+      {
+        question: 'ما الفرق بين Whey Protein وWhey Isolate؟',
+        answer: 'الواي المركز عادة أقل سعرًا ويحتوي على نسبة جيدة من البروتين. الأيزوليت يخضع لترشيح أكبر ويحتوي غالبًا على دهون وسكريات ولاكتوز أقل، لذلك يناسب فترة التنشيف أو من لديهم حساسية تجاه اللاكتوز.',
+      },
+      {
+        question: 'كم سعر البروتين في تونس؟',
+        answer: 'السعر يتغير حسب النوع والعلامة والوزن والعروض. قارن السعر لكل كيلو أو لكل حصة بدل الاعتماد على سعر العلبة فقط، وراجع السعر والمخزون الحاليين في صفحة البروتين.',
+      },
+      {
+        question: 'كيف أتأكد أن مكمل البروتين أصلي؟',
+        answer: 'اشترِ من متجر معروف، وتحقق من سلامة الغطاء ورقم التشغيلة وتاريخ الصلاحية وبيانات المستورد أو الموزع على العبوة. تجنب المنتجات المفتوحة أو ذات السعر المنخفض بشكل غير منطقي.',
+      },
+      {
+        question: 'هل مكمل البروتين مناسب للجميع؟',
+        answer: 'هو غذاء مكمل وليس بديلًا عن الوجبات. يحتاج الاختيار إلى مراعاة نظامك الغذائي وتحملك للاكتوز وأي حالة صحية. استشر طبيبًا أو مختص تغذية إذا كنت تعاني من مرض مزمن أو مشكلة كلوية أو لديك حساسية غذائية.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'واي أيزوليت', href: '/whey-isolate' },
+      { anchor: 'ماس غاينر لزيادة الوزن', href: '/gainers-proteines' },
+    ],
+  },
   'quest-ce-que-la-whey': {
     faqs: [
       { question: "Qu'est-ce que la whey protein ?", answer: "La whey (lactosérum) est la fraction protéique soluble du lait. Elle est absorbée rapidement et constitue une source de protéines complètes idéale pour la récupération et la prise de masse." },

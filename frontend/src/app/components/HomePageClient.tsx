@@ -29,8 +29,10 @@ interface HomePageClientProps {
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
+  { href: '/proteines', label: 'Protéines en Tunisie' },
   { href: '/creatine', label: 'Créatine Tunisie' },
   { href: '/whey-proteine', label: 'Whey protein Tunisie' },
+  { href: '/dymatize', label: 'Dymatize Tunisie' },
   { href: '/bcaa', label: 'BCAA Tunisie' },
   { href: '/glutamine', label: 'Glutamine Tunisie' },
   { href: '/pre-workout', label: 'Pre workout Tunisie' },

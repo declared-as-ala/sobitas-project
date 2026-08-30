@@ -18,10 +18,12 @@ import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/cano
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
 import { retiredSlugDestination } from '@/util/retiredSlug';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
-import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema, buildFAQPageSchemaFromQA } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
+import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
 
 export type RootSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -191,8 +193,9 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
     // a bare BreadcrumbList was emitted, so brand pages (a primary ranking surface) were nearly
     // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
     const baseUrl = getBaseUrl();
+    const brandSeo = getBrandSeoEntry(cleanSlug);
     const brandTitle = buildBrandMetaTitle(brand.designation_fr);
-    const brandDesc = `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
+    const brandDesc = brandSeo?.metaDescription || `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
         { name: 'Accueil', url: '/' },
@@ -210,6 +213,7 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
           { name: `Produits ${brand.designation_fr}` }
         )
       : null;
+    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
 
     return (
       <>
@@ -218,11 +222,16 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
         {itemListSchema && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
         )}
+        {faqSchema && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+        )}
         <ShopPageClient
           productsData={productsData}
           categories={categories}
           brands={result.brands}
           initialBrand={brand.id}
+          categorySeoLanding={brandSeo ? <BrandSeoHeader entry={brandSeo} /> : undefined}
+          categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : undefined}
         />
       </>
     );

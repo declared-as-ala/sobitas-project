@@ -22,6 +22,7 @@ export type CrawlerListLink = { name: string; url: string };
 
 export function CrawlerCategoryView({
   title,
+  headingOverride,
   introHtml,
   howToChooseTitle = null,
   howToChooseBody = null,
@@ -35,6 +36,8 @@ export function CrawlerCategoryView({
   kind,
 }: {
   title: string;
+  /** Optional editorial H1 for a measured landing page; `title` still names the taxonomy. */
+  headingOverride?: string;
   introHtml?: string | null;
   /** Buying guide + FAQ, mirroring the human category page. Omitting these handed Googlebot
    *  roughly a tenth of the page's real content — see the note at the render site below. */
@@ -68,10 +71,10 @@ export function CrawlerCategoryView({
     .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
     .filter((p) => p.url && p.url !== '/shop/');
 
-  const heading =
-    kind === 'brand'
+  const heading = headingOverride ||
+    (kind === 'brand'
       ? `Produits ${title}`
-      : title;
+      : title);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">

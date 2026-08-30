@@ -12,10 +12,16 @@
  * the title that ranks was the one nobody was reviewing. Dynamic rendering is only defensible
  * while both views say the SAME thing — divergence is what separates it from cloaking.
  */
+import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+
 export function buildBrandMetaTitle(brandName: string): string {
+  const configured = getBrandSeoEntry(brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  if (configured) return configured.metaTitle;
   return `${brandName} — Protéines & Compléments en Tunisie | Protéine Tunisie`;
 }
 
 export function buildBrandMetaDescription(brandName: string): string {
+  const configured = getBrandSeoEntry(brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
+  if (configured) return configured.metaDescription;
   return `Découvrez tous les produits ${brandName} en Tunisie : qualité premium, produits 100% authentiques, livraison rapide.`;
 }

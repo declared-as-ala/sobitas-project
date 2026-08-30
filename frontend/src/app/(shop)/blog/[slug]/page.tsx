@@ -14,6 +14,7 @@ import { resolveArticleLanguage, buildArticleTitle, localityHint } from '@/util/
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
+import { getBlogSeoEntry } from '@/config/blogSeoConfig';
 import { ArticleDetailClient } from './ArticleDetailClient';
 
 interface ArticlePageProps {
@@ -103,6 +104,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   const { slug } = await params;
   try {
     const article = await getArticleDetails(slug);
+    const seoOverlay = getBlogSeoEntry(slug);
     const imageUrl =
       article.seo?.open_graph?.image ||
       article.seo?.twitter?.image ||
@@ -113,7 +115,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // it — an article body opens with its own headline, so stripping tags leaves the title
     // restated as the first words of the snippet.
     const storedHeadline =
-      article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+      seoOverlay?.headline || article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
     const articleHeadline = topicAlignedArticleHeadline(
       storedHeadline,
       article.designation_fr || storedHeadline
@@ -123,7 +125,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // meta_description_fr are CMS fields and carry the same raw entities AND the same repeated
     // headline. It decodes, drops that repetition, and truncates on a word boundary.
     const storedDescription =
-      article.seo?.description || article.seo_description || article.meta_description_fr || '';
+      seoOverlay?.metaDescription || article.seo?.description || article.seo_description || article.meta_description_fr || '';
     const alignedDescription = topicAlignedArticleDescription(
       storedDescription,
       description,
@@ -224,6 +226,23 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       notFound();
     }
 
+    const seoOverlay = getBlogSeoEntry(slug);
+    const displayArticle = seoOverlay
+      ? {
+          ...article,
+          designation_fr: seoOverlay.headline || article.designation_fr,
+          description_fr: seoOverlay.headline ? article.description_fr?.replace(/2025/g, '2026') : article.description_fr,
+          description: seoOverlay.headline ? article.description?.replace(/2025/g, '2026') : article.description,
+          updated_at: seoOverlay.dateModified || article.updated_at,
+          schema: {
+            ...article.schema,
+            headline: seoOverlay.headline || article.schema?.headline || article.designation_fr,
+            description: seoOverlay.metaDescription || article.schema?.description,
+            date_modified: seoOverlay.dateModified || article.schema?.date_modified,
+          },
+        }
+      : article;
+
     /*
      * ── LINK TARGETS FOR IN-CONTENT LINKS ────────────────────────────────────────────────────
      * Built on the server so the anchors are in the initial HTML. That is the whole point: the
@@ -251,18 +270,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
      */
     const pool = articlePool.length > 0 ? articlePool : latestArticles;
     const filteredRelated = pickRelatedArticles(
-      { slug: article.slug ?? slug, designation_fr: article.designation_fr },
+      { slug: displayArticle.slug ?? slug, designation_fr: displayArticle.designation_fr },
       pool,
       6
     );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-    const articleImageUrl = article.cover ? getStorageUrl(article.cover) : undefined;
-    const articleSchema = buildArticleSchema(article, baseUrl, articleImageUrl);
+    const articleImageUrl = displayArticle.cover ? getStorageUrl(displayArticle.cover) : undefined;
+    const articleSchema = buildArticleSchema(displayArticle, baseUrl, articleImageUrl);
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
         { name: 'Accueil', url: '/' },
         { name: 'Blog', url: '/blog' },
-        { name: article.designation_fr || article.slug || 'Article', url: blogHref(article.slug || slug) },
+        { name: displayArticle.designation_fr || displayArticle.slug || 'Article', url: blogHref(displayArticle.slug || slug) },
       ],
       baseUrl
     );
@@ -271,7 +290,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-        <ArticleDetailClient article={article} relatedArticles={filteredRelated} linkTargets={linkTargets}>
+        <ArticleDetailClient article={displayArticle} relatedArticles={filteredRelated} linkTargets={linkTargets}>
           <BlogSeoBlock slug={slug} />
         </ArticleDetailClient>
       </>
