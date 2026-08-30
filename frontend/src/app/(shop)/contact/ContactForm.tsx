@@ -6,7 +6,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Textarea } from '@/app/components/ui/textarea';
 import { sendContact } from '@/services/api';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 /**
  * The only client island on /contact.

@@ -5,7 +5,7 @@ import { useId, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, CircleDollarSign, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
@@ -80,6 +80,26 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 {children}
               </div>
             </div>
+
+            {/* One purposeful promotion closes the unused lower-left area without turning auth
+                into a dashboard of generic trust badges. It explains the real value of signing
+                in, uses the same sand/brand language as the shop, and disappears on short laptop
+                viewports where the registration form needs every vertical pixel. */}
+            <aside
+              data-auth-benefit=""
+              className="hidden items-center gap-4 rounded-2xl border border-hairline bg-sunken px-5 py-4 lg:flex [@media(min-width:1024px)_and_(max-height:800px)]:hidden"
+              aria-label="Programme fidélité Protein.tn"
+            >
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                <CircleDollarSign className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <span className="min-w-0">
+                <span className="pt-kicker block text-brand">Programme fidélité</span>
+                <span className="mt-1 block text-sm leading-snug text-ink-2">
+                  Chaque commande livrée vous rapporte <strong className="text-ink-1">5% en points</strong> à utiliser sur la suivante.
+                </span>
+              </span>
+            </aside>
           </div>
         </main>
       </Container>

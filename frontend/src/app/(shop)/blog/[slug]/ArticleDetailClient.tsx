@@ -15,7 +15,7 @@ import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 interface ArticleDetailClientProps {
   article: Article;

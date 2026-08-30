@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Heart, ShoppingCart, Trash2 } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { PageHeader } from '@/app/components/PageHeader';

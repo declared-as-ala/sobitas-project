@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import {
   AuthShell,

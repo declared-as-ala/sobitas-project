@@ -102,6 +102,10 @@ export function ProductsDropdown({
     slug: string;
     designation_fr: string;
   }>;
+  /* Short rayons need a different rhythm from a 21-link taxonomy. Four destinations or fewer
+     become larger cards and share the pane with a useful rayon overview; longer lists keep the
+     compact scan pattern. The threshold is presentational only: every link remains visible. */
+  const hasSparseSubcategories = activeSubs.length <= 4;
   /* The whole highlight list, not `[0]`. The strip shows three; the previous single-card
      aside used one and threw the other three away. */
   const feature = activeRayon ? (highlights[activeRayon.id] ?? []) : [];
@@ -424,6 +428,85 @@ export function ProductsDropdown({
                 {Array.from({ length: 12 }).map((_, i) => (
                   <Skeleton key={i} className="h-4 w-24" />
                 ))}
+              </div>
+            ) : hasSparseSubcategories && activeRayon ? (
+              <div className="flex min-h-0 flex-1 flex-col py-4">
+                {activeSubs.length > 0 && (
+                  <ul
+                    className={cn(
+                      'grid content-start gap-3',
+                      activeSubs.length === 1 && 'grid-cols-1',
+                      activeSubs.length === 2 && 'grid-cols-2',
+                      activeSubs.length === 3 && 'grid-cols-3',
+                      activeSubs.length === 4 && 'grid-cols-2'
+                    )}
+                  >
+                    {activeSubs.map((sub) => (
+                      <li key={sub.id}>
+                        <LinkWithLoading
+                          href={`/${sub.slug}`}
+                          className="group flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-hairline bg-sunken px-4 py-3 transition-colors hover:border-brand hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          loadingMessage="Chargement..."
+                          onClick={close}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-display text-[15px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
+                              {sub.designation_fr}
+                            </span>
+                            <span className="mt-1 block text-[11.5px] leading-none text-ink-3">
+                              Découvrir
+                            </span>
+                          </span>
+                          <ArrowRight
+                            className="h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand"
+                            aria-hidden="true"
+                          />
+                        </LinkWithLoading>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+
+                <LinkWithLoading
+                  href={`/${activeRayon.slug}`}
+                  className={cn(
+                    'group flex min-h-[104px] flex-1 overflow-hidden rounded-xl border border-hairline bg-elevated transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
+                    activeSubs.length > 0 && 'mt-4'
+                  )}
+                  loadingMessage="Chargement..."
+                  onClick={close}
+                  aria-label={`Voir tous les produits ${activeRayon.designation_fr}`}
+                >
+                  <span className="flex min-w-0 flex-1 items-center justify-between gap-5 p-5">
+                    <span className="min-w-0">
+                      <span className="block font-display text-[10px] font-bold uppercase tracking-[0.2em] text-brand">
+                        Tout le rayon
+                      </span>
+                      <span className="mt-2 block font-display text-xl font-bold uppercase leading-tight text-ink-1">
+                        {activeRayon.designation_fr}
+                      </span>
+                      <span className="mt-2 inline-flex items-center gap-2 text-[12.5px] font-semibold text-ink-2 transition-colors group-hover:text-brand">
+                        Voir tous les produits
+                        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                      </span>
+                    </span>
+                  </span>
+                  <span className="relative w-52 shrink-0 overflow-hidden bg-sunken xl:w-64">
+                    {activeRayon.cover ? (
+                      <Image
+                        src={getStorageUrl(activeRayon.cover)}
+                        alt=""
+                        fill
+                        sizes="(min-width: 1280px) 256px, 208px"
+                        className="object-cover transition-transform duration-200 group-hover:scale-[1.03]"
+                      />
+                    ) : (
+                      <span className="flex h-full w-full items-center justify-center font-display text-4xl font-bold text-ink-3" aria-hidden="true">
+                        {activeRayon.designation_fr.trim().charAt(0)}
+                      </span>
+                    )}
+                  </span>
+                </LinkWithLoading>
               </div>
             ) : (
               <ul className="grid grid-cols-2 content-start gap-x-4 pt-2 lg:grid-cols-3 2xl:grid-cols-4">

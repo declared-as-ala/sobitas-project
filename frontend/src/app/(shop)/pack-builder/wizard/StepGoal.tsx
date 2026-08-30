@@ -76,9 +76,10 @@ export interface StepGoalProps {
   onSelect: (goal: Goal) => void;
   onSkip: () => void;
   calm: boolean;
+  showHeader?: boolean;
 }
 
-export function StepGoal({ goal, covers, onSelect, onSkip, calm }: StepGoalProps) {
+export function StepGoal({ goal, covers, onSelect, onSkip, calm, showHeader = true }: StepGoalProps) {
   const child = childVariants(calm);
 
   return (
@@ -96,13 +97,15 @@ export function StepGoal({ goal, covers, onSelect, onSkip, calm }: StepGoalProps
           Left-aligned, where it used to be centred. Centring was inherited from a narrower column;
           the fused tile block below it is a left-aligned grid, and a centred heading over
           left-aligned content is the thing that makes a page look like a template. */}
-      <m.div variants={child}>
-        <SectionHeader
-          title="Quel est votre objectif ?"
-          subtitle="Vous gardez accès à toutes les catégories."
-          scale="2"
-        />
-      </m.div>
+      {showHeader && (
+        <m.div variants={child}>
+          <SectionHeader
+            title="Quel est votre objectif ?"
+            subtitle="Vous gardez accès à toutes les catégories."
+            scale="2"
+          />
+        </m.div>
+      )}
 
       {/* ONE OBJECT, NOT FOUR CARDS — the rail's construction, for the reason stated there: four
           separately-bordered rounded cards is the WordPress category widget. The 1px `bg-rule`

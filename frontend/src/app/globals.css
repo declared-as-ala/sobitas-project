@@ -762,35 +762,28 @@ body[data-page='product'] {
   animation: pt-tier-hit 620ms ease-out;
 }
 
+/* The product grid must be allowed to shrink beside the fixed-width pack summary. Keeping this
+   geometry in one named rule also prevents an ungenerated arbitrary grid class from collapsing
+   both columns to a single 1fr track in production. */
+@media (min-width: 1024px) {
+  .pt-pack-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+    gap: 2rem;
+  }
+}
+
 /* --------------------------------------------------------------------------
    STICKY PACK BAR (pack builder, below lg)
    --------------------------------------------------------------------------
-   Sits directly ON TOP of the mobile tab bar rather than under it. Both are fixed, so without
-   this the pack total and its CTA are covered by Accueil/Favoris/Boutique — on exactly the screen
-   where the summary matters most.
-
-   Uses the same `--tabbar-h` knob every other bottom-anchored element reads. Reading the shared
-   variable rather than hardcoding 56px is what keeps this correct the day the tab bar's height
-   changes.
-
-   THE SAFE-AREA INSET IS NOT ADDED HERE, AND THAT IS A FIX. `--tabbar-h` already contains it —
-   tokens.css sets it to `calc(56px + env(safe-area-inset-bottom, 0px))` under 768px — so the
-   original `calc(var(--tabbar-h) + env(...))` counted the inset TWICE. On any notched iPhone that
-   floated the pack bar 34px above the tab bar, and page content scrolled through the gap between
-   them: two fixed bars with a moving stripe of products in between, which reads as a rendering
-   fault rather than as a layout.
-
-   Above 767px `--tabbar-h` is 0 and there is no tab bar underneath to supply the inset, so the bar
-   pads itself — otherwise on an iPad in portrait the action row sits on the home indicator.
+   The focused builder removes the storefront tab bar, so this summary anchors directly to the
+   viewport edge. The safe-area padding keeps its action clear of the iOS home indicator without
+   creating an empty strip on ordinary screens.
    -------------------------------------------------------------------------- */
 .pt-packbar {
-  bottom: var(--tabbar-h);
-}
-
-@media (min-width: 768px) {
-  .pt-packbar {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .pt-hero {
@@ -1081,30 +1074,20 @@ body[data-page='product'] {
  * Sonner owns stacking and swipe behaviour; this layer owns only the Protein.tn visual system.
  */
 .sonner-toaster {
-  --width: 23rem;
+  --width: 22rem;
 }
 
 .sonner-toaster [data-sonner-toast].pt-toast {
   --pt-toast-status: var(--c-brand);
   position: relative;
-  min-height: 4rem;
-  overflow: hidden;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem 0.75rem 0.875rem;
+  min-height: 3.75rem;
+  gap: 0.625rem;
+  padding: 0.625rem 3rem 0.625rem 0.625rem;
   border: 1px solid rgb(var(--c-hairline));
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: rgb(var(--c-elevated));
   color: rgb(var(--c-ink-1));
-}
-
-.sonner-toaster [data-sonner-toast].pt-toast::before {
-  position: absolute;
-  inset-block: 0.75rem;
-  inset-inline-start: 0;
-  width: 0.1875rem;
-  border-radius: 999px;
-  background: rgb(var(--pt-toast-status));
-  content: '';
+  box-shadow: var(--shadow-card);
 }
 
 .sonner-toaster [data-sonner-toast][data-type='success'] {
@@ -1121,12 +1104,13 @@ body[data-page='product'] {
 
 .sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon {
   display: grid;
-  width: 2.25rem;
-  height: 2.25rem;
-  flex: 0 0 2.25rem;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
   place-items: center;
-  border-radius: 0.75rem;
-  background: rgb(var(--pt-toast-status) / 0.1);
+  border: 1px solid rgb(var(--pt-toast-status) / 0.36);
+  border-radius: 0.625rem;
+  background: rgb(var(--c-elevated));
   color: rgb(var(--pt-toast-status));
 }
 
@@ -1137,26 +1121,35 @@ body[data-page='product'] {
 }
 
 .sonner-toaster [data-sonner-toast].pt-toast .pt-toast__content {
+  min-width: 0;
   gap: 0.125rem;
 }
 
 .sonner-toaster .pt-toast__title {
+  display: -webkit-box;
+  overflow: hidden;
   font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
   font-size: 0.875rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.25;
   color: rgb(var(--c-ink-1));
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .sonner-toaster .pt-toast__description {
-  font-size: 0.75rem;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.78125rem;
   line-height: 1.4;
   color: rgb(var(--c-ink-2));
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .sonner-toaster .pt-toast__action,
 .sonner-toaster .pt-toast__cancel {
-  min-height: 2.25rem;
+  min-height: 2.75rem;
   border-radius: 0.625rem;
   padding-inline: 0.75rem;
   font-size: 0.75rem;
@@ -1173,10 +1166,38 @@ body[data-page='product'] {
   color: rgb(var(--c-ink-2));
 }
 
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close {
+  inset-block-start: 50% !important;
+  inset-inline-start: auto !important;
+  inset-inline-end: 0.125rem !important;
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  transform: translateY(-50%) !important;
+  border: 0 !important;
+  border-radius: 0.625rem !important;
+  background: transparent !important;
+  color: rgb(var(--c-ink-3)) !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close:hover {
+  background: rgb(var(--c-sunken)) !important;
+  color: rgb(var(--c-ink-1)) !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close:focus-visible {
+  outline: 2px solid rgb(var(--c-focus)) !important;
+  outline-offset: -4px !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 @media (max-width: 640px) {
   .sonner-toaster [data-sonner-toast] {
-    width: calc(100vw - 1.5rem) !important;
-    max-width: 23rem !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: 22rem !important;
   }
 }
 
@@ -1209,7 +1230,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .checkout-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: flex-start;
 }
 
@@ -1228,6 +1249,10 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 @media (min-width: 640px) {
+  .checkout-layout {
+    gap: 1.5rem;
+  }
+
   .checkout-main {
     padding-top: 2rem;
   }
@@ -1254,8 +1279,8 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (min-width: 1024px) {
   .checkout-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
-    gap: 2rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 400px);
+    gap: 1.5rem;
   }
 
   .checkout-summary-inner {
@@ -1266,6 +1291,13 @@ input[type="search"]::-webkit-search-results-decoration {
   .checkout-main {
     padding-top: 2.5rem;
     padding-bottom: 3.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1.65fr) minmax(400px, 440px);
+    gap: 2rem;
   }
 }
 

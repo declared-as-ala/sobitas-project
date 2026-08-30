@@ -13,7 +13,7 @@ import React, {
 } from 'react';
 import type { Product as DataProduct } from '@/data/products';
 import type { Product as ApiProduct } from '@/types';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { getEffectivePrice as getEffectivePriceUtil } from '@/util/productPrice';
 import { getStockDisponible, getCartQty } from '@/util/cartStock';
 

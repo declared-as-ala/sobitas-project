@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { KeyRound } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { useAuth } from '@/contexts/AuthContext';
 import { sendEmailVerificationOtp, verifyEmailOtp } from '@/services/api';
 import { AuthCardHeader, AuthField, AuthShell, AuthSubmit } from '@/app/components/AuthShell';

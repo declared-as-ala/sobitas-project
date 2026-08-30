@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import dynamic from 'next/dynamic';
-import { CircleCheck, CircleX, Info, LoaderCircle, TriangleAlert } from 'lucide-react';
+import { CircleCheck, CircleX, Info, LoaderCircle, TriangleAlert, X } from 'lucide-react';
 
 const Toaster = dynamic(
   () => import('sonner').then((mod) => mod.Toaster),
@@ -15,6 +15,15 @@ const Toaster = dynamic(
  */
 export function DeferredToaster() {
   const [mounted, setMounted] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 768px)');
+    const updatePosition = () => setIsDesktop(mediaQuery.matches);
+    updatePosition();
+    mediaQuery.addEventListener('change', updatePosition);
+    return () => mediaQuery.removeEventListener('change', updatePosition);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -39,14 +48,17 @@ export function DeferredToaster() {
   if (!mounted) return null;
   return (
     <Toaster
-      position="top-center"
+      position={isDesktop ? 'top-right' : 'top-center'}
       dir="ltr"
       className="sonner-toaster"
-      duration={4200}
+      duration={4400}
       gap={8}
-      visibleToasts={3}
-      offset={{ top: 16 }}
-      mobileOffset={{ top: 12, left: 12, right: 12 }}
+      visibleToasts={2}
+      expand={false}
+      closeButton
+      offset={{ top: 20, right: 20 }}
+      mobileOffset={{ top: 10, left: 8, right: 8 }}
+      swipeDirections={isDesktop ? ['right'] : ['left', 'right']}
       toastOptions={{
         classNames: {
           toast: 'pt-toast shadow-card',
@@ -56,6 +68,7 @@ export function DeferredToaster() {
           description: 'pt-toast__description',
           actionButton: 'pt-toast__action',
           cancelButton: 'pt-toast__cancel',
+          closeButton: 'pt-toast__close',
         },
       }}
       icons={{
@@ -64,8 +77,9 @@ export function DeferredToaster() {
         warning: <TriangleAlert aria-hidden="true" />,
         info: <Info aria-hidden="true" />,
         loading: <LoaderCircle className="animate-spin" aria-hidden="true" />,
+        close: <X aria-hidden="true" />,
       }}
-      containerAriaLabel="Notifications"
+      containerAriaLabel="Notifications Protein.tn"
     />
   );
 }

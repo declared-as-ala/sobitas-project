@@ -9,7 +9,7 @@ import type { Product as ApiProduct } from '@/types';
 import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
 import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext';
 import { getStorageUrl } from '@/services/api';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { getPriceDisplay } from '@/util/productPrice';
 import { getStockDisponible, getProductStockStatus } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';

@@ -9,7 +9,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/services/api';
 import type { Order } from '@/types';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 
 interface OrderDetail {

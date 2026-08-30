@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Star, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import {
   getOrderForReview,
   submitReviewByToken,

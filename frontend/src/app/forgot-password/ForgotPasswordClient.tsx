@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Mail, ArrowLeft, MailCheck } from 'lucide-react';
 import { requestPasswordReset } from '@/services/api';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { AuthShell, AuthCardHeader, AuthField, AuthSubmit } from '@/app/components/AuthShell';
 
 export default function ForgotPasswordClient() {

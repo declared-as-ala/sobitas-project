@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Lock, ShieldAlert, CheckCircle2 } from 'lucide-react';
 import { resetPasswordWithToken } from '@/services/api';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { AuthShell, AuthCardHeader, AuthField, AuthSubmit } from '@/app/components/AuthShell';
 
 /** The backend rule, mirrored. It said "minimum 6 caractères" on this screen while /register and

@@ -51,7 +51,7 @@
  * button cannot fire is worse than no bundle builder, so the whole block requires the current
  * product AND at least two companions to be genuinely addable.
  */
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ShoppingCart } from 'lucide-react';
@@ -125,16 +125,16 @@ export function FrequentlyBoughtTogether({
         doing real work: without it the block reads as an advert, and with it the reader knows the
         checkboxes are theirs to change before anything is added.
       */}
-      <div className="border-b border-hairline px-4 py-5 text-center sm:px-6">
+      <div className="border-b border-hairline px-3 py-4 text-center sm:px-6 sm:py-5">
         <h2 className="font-display text-xl font-bold uppercase leading-tight tracking-tight text-ink-1 sm:text-2xl">
           Complétez votre commande
         </h2>
         <p className="mt-1.5 text-sm text-ink-2">
-          Décochez ce dont vous n&apos;avez pas besoin — le total se met à jour.
+          Choisissez les produits à ajouter.
         </p>
       </div>
 
-      <ul className="divide-y divide-hairline px-4 sm:px-6">
+      <ul className="divide-y divide-hairline px-3 sm:px-6">
         {items.map((item) => {
           const isCurrent = item.id === product.id;
           const ticked = selected.has(item.id);
@@ -142,7 +142,14 @@ export function FrequentlyBoughtTogether({
           const image = imageFor(item);
 
           return (
-            <li key={item.id} className={cn('flex items-center gap-2 py-3 sm:gap-3', !ticked && 'opacity-55')}>
+            <li
+              key={item.id}
+              style={{ gridTemplateColumns: '44px 48px minmax(0, 1fr)' }}
+              className={cn(
+                'grid items-center gap-x-2 py-3 sm:flex sm:gap-3',
+                !ticked && 'opacity-55'
+              )}
+            >
               {/*
                 The <label> wraps ONLY the checkbox, never the row. A label containing the product
                 link makes a tap near the name ambiguous between "follow" and "toggle", and browsers
@@ -153,6 +160,7 @@ export function FrequentlyBoughtTogether({
                 that is the size a checkbox should look; the LABEL is the target.
               */}
               <label
+                style={{ gridRow: 'span 2' }}
                 className={cn(
                   'flex min-h-[44px] min-w-[44px] shrink-0 items-center justify-center',
                   isCurrent ? 'cursor-default' : 'cursor-pointer'
@@ -176,10 +184,11 @@ export function FrequentlyBoughtTogether({
                   NAME at `text-xs`, which measured 16px tall on a laptop — a navigation target
                   thinner than a finger. */}
               {isCurrent ? (
-                <Thumb image={image} />
+                <Thumb image={image} style={{ gridRow: 'span 2' }} />
               ) : (
                 <Link
                   href={getProductLink(item)}
+                  style={{ gridRow: 'span 2' }}
                   className="shrink-0 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   aria-label={item.designation_fr || 'Voir le produit'}
                 >
@@ -224,12 +233,15 @@ export function FrequentlyBoughtTogether({
                 )}
               </div>
 
-              <div className="shrink-0 text-end">
-                <span className="block font-display text-sm font-bold tabular-nums text-ink-1">
+              <div
+                style={{ gridColumn: '3' }}
+                className="mt-1 flex shrink-0 items-baseline gap-2 text-start sm:mt-0 sm:block sm:text-end"
+              >
+                <span className="font-display text-sm font-bold tabular-nums text-ink-1 sm:block">
                   {finalPrice.toFixed(2)} DT
                 </span>
                 {hasPromo && oldPrice != null && oldPrice > finalPrice && (
-                  <span className="block text-xs tabular-nums text-ink-3 line-through">{oldPrice.toFixed(2)} DT</span>
+                  <span className="text-xs tabular-nums text-ink-3 line-through sm:block">{oldPrice.toFixed(2)} DT</span>
                 )}
               </div>
             </li>
@@ -237,7 +249,7 @@ export function FrequentlyBoughtTogether({
         })}
       </ul>
 
-      <div className="flex flex-col items-center gap-3 border-t border-hairline px-4 py-5 sm:px-6">
+      <div className="flex flex-col items-center gap-3 border-t border-hairline px-3 py-4 sm:px-6 sm:py-5">
         <p className="text-sm text-ink-2">
           Total pour {chosen.length} article{chosen.length > 1 ? 's' : ''} :{' '}
           <span className="font-display text-xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span>
@@ -265,9 +277,12 @@ export function FrequentlyBoughtTogether({
  * thumbnail, and the link around it already carries an aria-label; a third announcement of the
  * same string is noise, so the image is marked decorative and the text carries the meaning.
  */
-function Thumb({ image }: { image: string }) {
+function Thumb({ image, className, style }: { image: string; className?: string; style?: CSSProperties }) {
   return (
-    <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated sm:h-16 sm:w-16">
+    <div
+      style={style}
+      className={cn('relative h-12 w-12 shrink-0 overflow-hidden rounded-xl border border-hairline bg-elevated sm:h-16 sm:w-16', className)}
+    >
       {image ? (
         <Image src={image} alt="" fill loading="lazy" sizes="64px" className="object-contain p-1" />
       ) : null}

@@ -14,7 +14,7 @@ import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { getPriceDisplay } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { Loader2, CheckCircle2, Zap, X, Minus, Plus, Tag } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { cn } from '@/app/components/ui/utils';
 
 const WHATSAPP_NUMBER = '21627612500';

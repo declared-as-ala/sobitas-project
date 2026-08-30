@@ -43,7 +43,7 @@
 import { memo, useCallback, useState } from 'react';
 import Image from 'next/image';
 import { ShoppingCart, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';

@@ -72,19 +72,19 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
       title={EARN_TITLE}
       className={cn(
         'flex items-center gap-2 text-[13px] leading-snug text-ink-2',
-        variant === 'pdp' && 'w-fit max-w-full rounded-full border border-brand/20 bg-brand/5 px-3 py-2',
+        variant === 'pdp' && 'w-full max-w-full rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 sm:w-fit',
         className
       )}
     >
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-elevated text-brand">
+      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-elevated text-brand">
         <Coins className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
       </span>
       <p className="min-w-0">
         {isAuthenticated ? (
           <>
-            <span className="font-semibold text-ink-1">À la livraison :</span>{' '}gagnez{' '}
-            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)}</span>{' '}
-            <span className="tabular-nums">({formatTnd(valueDt)})</span>.
+            <span className="font-semibold text-ink-1">Gagnez {formatPoints(points)}</span>{' '}
+            <span aria-hidden="true">·</span>{' '}
+            <span className="tabular-nums">{formatTnd(valueDt)}</span>
           </>
         ) : (
           <>
@@ -95,8 +95,9 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
               Créez un compte
             </Link>{' '}
             <span aria-hidden="true"> · </span>
-            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)} pts</span>{' '}
-            <span className="tabular-nums">({formatTnd(valueDt)})</span>
+            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)}</span>{' '}
+            <span aria-hidden="true">·</span>{' '}
+            <span className="tabular-nums">{formatTnd(valueDt)}</span>
           </>
         )}
       </p>

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { BookOpen, ChevronDown } from 'lucide-react';
 import { Hero } from '@/app/components/Hero';
 import { CategoryRail } from '@/app/components/CategoryRail';
 import { Section } from '@/app/components/layout/Section';
@@ -410,48 +411,75 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           last
           aria-label="Informations sur la protéine en Tunisie"
         >
-          {/* TWO COLUMNS at lg: prose left, the internal-link chips right. That halves the height
-              without deleting a single crawlable word — these are real internal ranking links and
-              the prose is the page's only long-form copy. The `border-t` is gone because the
-              automatic band seam draws it now. */}
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12">
-            <div className="max-w-[62ch]">
-            {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
-                so this crawlable block leads with a keyword-rich h2. */}
-            <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mb-4 lg:text-[2.5rem]">
-              Nutrition sportive Tunisie : protéine, whey et créatine de qualité
-            </h2>
-            <p className="text-sm sm:text-base text-ink-2 leading-relaxed mb-4">
-              Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
-              <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
-              <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
-              prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
-              rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
-            </p>
-            <h2 className="font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mt-8 mb-3 lg:text-[1.75rem]">
-              Livraison en Tunisie & avis clients
-            </h2>
-            <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
-              Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
-              délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
-              sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
-              protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
-              confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
-            </p>
+          {/* The old presentation exposed two long essays at once. The words are useful, but the
+              wall was not. Native <details> keeps every word in the SSR HTML and makes it honestly
+              available to visitors — unlike bot-only content, which would be cloaking — while the
+              default state stays compact and task-oriented. */}
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+            <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(30rem,0.9fr)] lg:items-center lg:gap-10 lg:p-8">
+              <div className="min-w-0">
+                <span className="pt-kicker mb-2 inline-flex items-center gap-2 text-brand">
+                  <span className="h-px w-6 bg-brand" aria-hidden="true" />
+                  Guide Protein.tn
+                </span>
+                {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top. */}
+                <h2 className="max-w-[24ch] font-display font-compressed text-[1.75rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 sm:text-[2rem] lg:text-[2.5rem]">
+                  Nutrition sportive Tunisie : protéine, whey et créatine de qualité
+                </h2>
+              </div>
+
+              {/* High-intent internal links remain visible and crawlable. On a phone they form a
+                  deliberate horizontal rail instead of wrapping into a tall keyword cloud. */}
+              <nav
+                aria-label="Catégories compléments populaires"
+                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden"
+              >
+                {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-canvas px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
             </div>
 
-            {/* Right column: the six high-intent internal links. */}
-            <nav aria-label="Catégories compléments populaires" className="flex flex-wrap gap-2 lg:content-start">
-              {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-hairline bg-elevated px-4 text-xs sm:text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
+            <details className="group border-t border-rule bg-canvas">
+              <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-5 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:px-6 lg:px-8 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                  <BookOpen className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-base font-bold text-ink-1">Conseils, livraison et avis clients</span>
+                  <span className="mt-0.5 block text-xs text-ink-3 sm:text-sm">Lire le guide complet</span>
+                </span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+              </summary>
+
+              <div className="grid gap-6 border-t border-hairline px-5 py-5 sm:px-6 sm:py-6 lg:grid-cols-2 lg:gap-10 lg:px-8 lg:py-8">
+                <p className="text-sm leading-relaxed text-ink-2 sm:text-base">
+                  Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
+                  <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
+                  <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
+                  prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
+                  rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
+                </p>
+                <div>
+                  <h3 className="mb-3 font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 lg:text-[1.625rem]">
+                    Livraison en Tunisie & avis clients
+                  </h3>
+                  <p className="text-sm leading-relaxed text-ink-2 sm:text-base">
+                    Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
+                    délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
+                    sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
+                    protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
+                    confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
+                  </p>
+                </div>
+              </div>
+            </details>
           </div>
         </Section>
       </main>

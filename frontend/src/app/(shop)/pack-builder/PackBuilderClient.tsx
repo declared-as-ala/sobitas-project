@@ -20,13 +20,15 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { EmptyState } from '@/app/components/EmptyState';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCart } from '@/app/contexts/CartContext';
 import { packQuote } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { GOAL_CATEGORY_EMPHASIS, type Goal } from '@/util/nutritionTargets';
 import { flyToPack, pulseTierUnlocked } from './packMotion';
 import { PackWizard } from './wizard/PackWizard';
@@ -52,6 +54,22 @@ const PACK_TIERS: { min: number; percent: number }[] = [
   { min: 350, percent: 8 },
   { min: 500, percent: 12 },
 ];
+
+function FocusedBuilderHeader() {
+  return (
+    <header className="border-b border-hairline bg-elevated">
+      <div className="max-w-site mx-auto flex min-h-[72px] items-center px-4 sm:px-6 lg:px-8">
+        <LinkWithLoading
+          href="/"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Retour à la boutique
+        </LinkWithLoading>
+      </div>
+    </header>
+  );
+}
 
 export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps) {
   const router = useRouter();
@@ -116,13 +134,7 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
     });
   }, []);
 
-  /**
-   * Add one, and throw the thumbnail at the footer total.
-   *
-   * The flight is the reason this is not just `setQty`. On a phone the footer sits under the thumb,
-   * so adding an item changes numbers the hand is covering — the tap reads as "nothing happened",
-   * which is how people tap twice and end up with a quantity they did not choose.
-   */
+  /** Add one and aim the confirmation motion at whichever pack summary is currently visible. */
   const addOne = useCallback(
     (product: Product, img: HTMLElement | null) => {
       const stock = getStockDisponible(product as never);
@@ -133,7 +145,9 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
       const current = pack[product.id] ?? 0;
       if (current >= stock) return;
       setQty(product, current + 1);
-      flyToPack(img, footerRef.current);
+      const visibleTarget = Array.from(document.querySelectorAll<HTMLElement>('[data-pack-target]'))
+        .find((element) => element.getClientRects().length > 0);
+      flyToPack(img, visibleTarget ?? footerRef.current);
     },
     [pack, setQty]
   );
@@ -275,7 +289,8 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
 
   if (groups.length === 0) {
     return (
-      <div className="min-h-screen bg-canvas">
+      <div className="pt-no-chrome min-h-screen bg-canvas">
+        <FocusedBuilderHeader />
         <main className="max-w-site mx-auto px-4 pb-16 pt-10 sm:px-6 lg:px-8">
           {/* The H1 still renders when the catalogue is unavailable. The page must not become
               heading-less because an upstream fetch failed — that is a permanent SEO loss caused by
@@ -299,18 +314,9 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
        so every card on it was white-on-white and the plates had to be drawn with borders alone.
        On sand the same cards read as objects, exactly as they do on the homepage, and the borders
        become an edge rather than the only thing defining a card. */
-    <div className="min-h-screen bg-sunken">
-      {/* THE BOTTOM RESERVE, AND WHY IT NO LONGER STEPS DOWN AT `md`.
-          Two fixed things stack at the bottom: the step bar and MobileTabBar (56px + safe area).
-          Only the TAB BAR is `md:hidden`. The step bar has no breakpoint gate at all — it renders
-          at every width — and it measures ~93px whenever a tier nudge is showing (3px track + a
-          24px nudge line + a 66px action row).
-          The old `md:pb-16 lg:pb-20` reserved 64/80px against that 93px bar, so from 768px up the
-          last ~30px of the page sat behind it. That was survivable while the bar was optional and
-          the step's own Continuer lived in the flow; now that the bar IS the way forward and the
-          grid runs right up to it, the bottom row of products would be clipped on every laptop.
-          128px from `md` clears the bar at every width with the same margin phones get. */}
-      <main className="max-w-site mx-auto px-4 pb-36 pt-6 sm:px-6 sm:pt-10 md:pb-32 lg:px-8">
+    <div className="pt-no-chrome min-h-screen bg-sunken">
+      <FocusedBuilderHeader />
+      <main className="max-w-site mx-auto px-4 pb-32 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-16">
         <PackWizard
           groups={groups}
           goalCovers={goalCovers}

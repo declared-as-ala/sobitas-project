@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { Mail, Lock, User, Phone } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import {
   AuthShell,

@@ -7,7 +7,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Loader2, Save, User, Mail, Phone } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 export function ProfileSection() {
   const { user, updateProfile } = useAuth();

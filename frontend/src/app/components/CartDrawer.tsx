@@ -18,7 +18,7 @@ import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { getPriceDisplay } from '@/util/productPrice';
 import { useScrollLock } from '@/util/useScrollLock';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedName } from '@/i18n/content';
 

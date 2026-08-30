@@ -14,7 +14,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { ArrowLeft, ShoppingCart, Shield, Truck, CheckCircle2, Loader2, CreditCard, Wallet, Printer, List, ArrowRight, Package, Tag, X, Gift, Percent } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { RadioGroup, RadioGroupItem } from '@/app/components/ui/radio-group';
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -794,7 +794,10 @@ export default function CheckoutPage() {
       style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.5rem' : '9rem' }}
     >
       <main className="checkout-main flex-1">
-        <Container>
+        {/* Checkout is a primary task, so it uses the same 1600px site rail as the catalogue
+            rather than the 1280px editorial rail. The form grows; the summary keeps a readable
+            fixed range and remains sticky. */}
+        <Container width="wide">
           <header className="mb-5 border-b border-rule pb-5 sm:mb-7 sm:pb-6">
             <div className="mb-5 flex items-center justify-between gap-4">
               <Button

@@ -22,6 +22,7 @@ import { ProductComparisonTable } from '@/app/components/product/ProductComparis
 import { FrequentlyBoughtTogether } from '@/app/components/product/FrequentlyBoughtTogether';
 import { RelatedProductsRail } from '@/app/components/product/RelatedProductsRail';
 import { ProductQualityPanel } from '@/app/components/product/ProductQualityPanel';
+import { AromaSelect } from '@/app/components/product/AromaSelect';
 import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
@@ -48,7 +49,7 @@ import {
   splitPackshotsFromLabels,
 } from '@/util/productSourceFacts';
 import { useAuth } from '@/contexts/AuthContext';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import {
   getStockDisponible,
   getMaxAddable,
@@ -859,7 +860,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         at 1280 — a 160px step in on each side, which is exactly the defect that comment was written
         about. Measured: the gallery goes 687 -> 880px and the buy column 496 -> 620px.
       */}
-      <main className="mx-auto w-full max-w-site px-4 py-3 pb-36 sm:px-6 sm:py-6 sm:pb-36 lg:px-8 lg:pb-12 lg:pt-8">
+      <main className="mx-auto w-full max-w-site px-4 py-3 pb-6 sm:px-6 sm:py-6 sm:pb-8 lg:px-8 lg:pb-12 lg:pt-8">
         {/*
           ── THE TRAIL, AND A WAY BACK ────────────────────────────────────────────────────────
           Owner, 17/08/2026: *"for the url track make it to the left and in a good designed way"*.
@@ -1070,33 +1071,35 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               the brand pages, which are pages this site is trying to rank.
             */}
             <div className="flex flex-wrap items-center gap-2">
-              {product.brand?.designation_fr && (
-                <Link
-                  href={`/${nameToSlug(product.brand.designation_fr)}`}
-                  className="group inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-elevated px-3 py-1.5 transition-colors hover:border-brand"
-                >
-                  <span className="text-[10px] font-semibold uppercase leading-none tracking-wider text-ink-3">
-                    Marque
-                  </span>
-                  <span className="text-sm font-bold leading-none text-ink-1 transition-colors group-hover:text-brand">
-                    {product.brand.designation_fr}
-                  </span>
-                  <ArrowUpRight
-                    className="h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand"
-                    aria-hidden="true"
-                  />
-                </Link>
-              )}
+              <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+                {product.brand?.designation_fr && (
+                  <Link
+                    href={`/${nameToSlug(product.brand.designation_fr)}`}
+                    className="group inline-flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5 rounded-xl border border-hairline bg-elevated px-2 py-1.5 transition-colors hover:border-brand sm:flex-none sm:gap-2 sm:px-3"
+                  >
+                    <span className="text-[10px] font-semibold uppercase leading-none tracking-wide text-ink-3">
+                      Marque
+                    </span>
+                    <span className="truncate text-[11px] font-bold leading-none text-ink-1 transition-colors group-hover:text-brand sm:text-sm">
+                      {product.brand.designation_fr}
+                    </span>
+                    <ArrowUpRight
+                      className="h-3.5 w-3.5 shrink-0 text-ink-3 transition-colors group-hover:text-brand sm:h-4 sm:w-4"
+                      aria-hidden="true"
+                    />
+                  </Link>
+                )}
 
-              {/*
-                The shop's OWN guarantee, stated as the shop. Not a third-party verification badge
-                and not a rating: importing either would be a claim we cannot substantiate on a page
-                Google reads.
-              */}
-              <span className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-sunken px-3 py-1.5">
-                <ShieldCheck className="h-[18px] w-[18px] shrink-0 text-ok" strokeWidth={2} aria-hidden="true" />
-                <span className="text-sm font-semibold leading-none text-ink-1">100% authentique</span>
-              </span>
+                {/*
+                  The shop's OWN guarantee, stated as the shop. Not a third-party verification badge
+                  and not a rating: importing either would be a claim we cannot substantiate on a page
+                  Google reads.
+                */}
+                <span className="inline-flex min-h-[44px] min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-hairline bg-sunken px-2 py-1.5 sm:flex-none sm:gap-2 sm:px-3">
+                  <ShieldCheck className="h-4 w-4 shrink-0 text-ok sm:h-[18px] sm:w-[18px]" strokeWidth={2} aria-hidden="true" />
+                  <span className="whitespace-nowrap text-xs font-semibold leading-none text-ink-1 sm:text-sm">100% authentique</span>
+                </span>
+              </div>
 
               {/*
                 ZERO REVIEWS MUST NOT LOOK LIKE A ZERO SCORE.
@@ -1110,7 +1113,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <button
                   type="button"
                   onClick={() => document.getElementById('reviews')?.scrollIntoView({ behavior: 'smooth' })}
-                  className="group inline-flex min-h-[44px] items-center gap-1.5"
+                  className="group inline-flex min-h-[44px] w-full items-center justify-start gap-1.5 rounded-xl border border-hairline bg-sunken px-3 sm:w-auto sm:border-0 sm:bg-transparent sm:px-0"
                 >
                   <StarRating rating={rating} size="md" />
                   <span className="text-sm font-medium tabular-nums text-ink-2 transition-colors group-hover:text-brand">
@@ -1254,27 +1257,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               {product.aromes && product.aromes.length > 0 && (
                 <div className="mt-4">
                   <p className="mb-2 text-sm font-semibold text-ink-1">Arôme</p>
-                  <div className="flex flex-wrap gap-2">
-                    {product.aromes.map((arome) => {
-                      const isSelected = selectedAromaId === arome.id;
-                      return (
-                        <button
-                          key={arome.id}
-                          type="button"
-                          onClick={() => setSelectedAromaId(arome.id)}
-                          aria-pressed={isSelected}
-                          className={cn(
-                            'min-h-[44px] rounded-xl border px-4 py-2 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
-                            isSelected
-                              ? 'border-brand bg-brand text-on-brand'
-                              : 'border-hairline bg-elevated text-ink-1 hover:border-brand hover:text-brand'
-                          )}
-                        >
-                          {arome.designation_fr}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <AromaSelect
+                    aromas={product.aromes}
+                    selectedId={selectedAromaId}
+                    onChange={setSelectedAromaId}
+                  />
                 </div>
               )}
 

@@ -2,7 +2,7 @@
 
 import { useCallback, useId, useState } from 'react';
 import { MessageSquare, CornerDownRight, Loader2, ShieldCheck, Clock } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import { useAuth } from '@/contexts/AuthContext';
 import { getReviewReplies, addReviewReply } from '@/services/api';
 import type { ReviewReply } from '@/types';

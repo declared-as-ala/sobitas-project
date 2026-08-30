@@ -51,7 +51,7 @@ import { cn } from '@/app/components/ui/utils';
  * "CRÉER MON COMPTE" button on the register page — measured at 390px, the banner sat exactly over
  * the submit. Two copies of a route list drift; one does not.
  */
-export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password'];
+export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-email', '/forgot-password', '/reset-password', '/pack-builder'];
 
 /** True when `pathname` is one of those routes, or a child of one. */
 export function isChromeFreeRoute(pathname: string): boolean {

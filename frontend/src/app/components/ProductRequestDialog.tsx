@@ -36,7 +36,7 @@
 
 import { useCallback, useState } from 'react';
 import { Mail, Loader2, Check, Phone, User, MessageSquare } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import {
   Sheet,
   SheetContent,

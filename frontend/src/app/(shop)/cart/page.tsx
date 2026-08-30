@@ -12,7 +12,7 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 

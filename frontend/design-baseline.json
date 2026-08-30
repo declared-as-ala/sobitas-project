@@ -97,21 +97,12 @@
   "src/app/(shop)/category/[slug]/page.tsx": {
     "DS007": 2
   },
-  "src/app/(shop)/checkout/CheckoutFooterCTA.tsx": {
-    "DS001": 8,
-    "DS002": 19,
-    "DS003": 15,
-    "DS004": 6,
-    "DS005": 2,
-    "DS011": 8
-  },
   "src/app/(shop)/checkout/CheckoutPage.tsx": {
-    "DS001": 48,
-    "DS002": 170,
-    "DS003": 127,
-    "DS004": 58,
-    "DS005": 1,
-    "DS011": 90
+    "DS001": 14,
+    "DS002": 44,
+    "DS003": 39,
+    "DS004": 14,
+    "DS011": 10
   },
   "src/app/(shop)/faqs/FAQsPageClient.tsx": {
     "DS001": 6,

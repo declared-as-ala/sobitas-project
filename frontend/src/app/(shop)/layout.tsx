@@ -1,5 +1,5 @@
-import { Header } from '@/app/components/Header';
-import { Footer } from '@/app/components/Footer';
+import { ShopHeader } from '@/app/components/ShopHeader';
+import { ShopFooter } from '@/app/components/ShopFooter';
 
 /**
  * Shared chrome for the storefront.
@@ -19,9 +19,9 @@ import { Footer } from '@/app/components/Footer';
 export default function ShopLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      <Header />
+      <ShopHeader />
       {children}
-      <Footer />
+      <ShopFooter />
     </>
   );
 }

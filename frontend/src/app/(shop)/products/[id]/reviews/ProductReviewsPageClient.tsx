@@ -18,7 +18,7 @@ import type { Product, Review } from '@/types';
 import { addReview } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildProductUrlPath } from '@/util/productUrl';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 
 interface ProductReviewsPageClientProps {

@@ -3,7 +3,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FolderOpen, ListFilter, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { PageHeader } from '@/app/components/PageHeader';
 import { SectionHeader } from '@/app/components/SectionHeader';
@@ -309,34 +309,47 @@ export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageC
             title="Blog nutrition sportive & compléments en Tunisie"
             subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
           >
-            <div className="rounded-2xl border border-hairline bg-elevated p-3 sm:p-4">
-              {/* Category filters – client-side filtering, presented as a compact horizontal rail. */}
-              <nav
-                className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-                aria-label="Catégories du blog"
-              >
-                {BLOG_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat.id}
-                    onClick={() => setActiveCategory(cat.id)}
-                    aria-pressed={activeCategory === cat.id}
-                    aria-controls="blog-articles"
-                    className={`inline-flex min-h-11 shrink-0 items-center rounded-full border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-                      activeCategory === cat.id
-                        ? 'border-brand bg-brand text-on-brand'
-                        : 'border-hairline bg-canvas text-ink-2 hover:border-brand/40 hover:text-brand'
-                    }`}
-                  >
-                    {cat.label}
-                  </button>
-                ))}
-              </nav>
+            <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+              <div className="flex items-center gap-4 p-3 sm:p-4">
+                <div className="hidden shrink-0 items-center gap-3 border-e border-rule pe-4 lg:flex">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                    <ListFilter className="h-5 w-5" aria-hidden="true" />
+                  </span>
+                  <span>
+                    <span className="pt-kicker block text-brand">Explorer</span>
+                    <span className="mt-0.5 block text-sm font-semibold text-ink-1">Choisir un thème</span>
+                  </span>
+                </div>
+
+                {/* Category filters – client-side filtering, presented as the same compact control
+                    rail used by the shop instead of a detached row of oversized pills. */}
+                <nav
+                  className="flex min-w-0 flex-1 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                  aria-label="Catégories du blog"
+                >
+                  {BLOG_CATEGORIES.map((cat) => (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      aria-pressed={activeCategory === cat.id}
+                      aria-controls="blog-articles"
+                      className={`inline-flex min-h-11 shrink-0 items-center rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                        activeCategory === cat.id
+                          ? 'border-brand bg-brand text-on-brand'
+                          : 'border-hairline bg-canvas text-ink-2 hover:border-brand/40 hover:text-brand'
+                      }`}
+                    >
+                      {cat.label}
+                    </button>
+                  ))}
+                </nav>
+              </div>
 
               {/* Crawlable taxonomy navigation → real /blog/category & /blog/tag pages.
                   Real <Link href> (unlike the client filter buttons above) so search engines
                   can discover and index the taxonomy pages. */}
               {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
-                <div className="mt-4 grid gap-4 border-t border-hairline pt-4 lg:grid-cols-2">
+                <div className="grid gap-4 border-t border-hairline px-4 pb-4 pt-4 lg:grid-cols-2">
                   {blogCategoryLinks.length > 0 && (
                     <nav className="min-w-0" aria-label="Parcourir les catégories du blog">
                       <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">

@@ -12,7 +12,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { cn } from '@/app/components/ui/utils';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import type { CmsPage } from '@/services/api';
 
 interface FooterClientProps {
