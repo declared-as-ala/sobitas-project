@@ -291,9 +291,19 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 };
 
-/** Normalize slug for lookup (lowercase, trim). */
+/** Normalize slug for lookup (decoded, Unicode-normalized, lowercase, trim). */
 export function getBlogSeoEntry(slug: string | undefined): BlogSeoEntry | null {
   if (!slug?.trim()) return null;
-  const key = slug.trim().toLowerCase();
+  // Depending on how the route was reached, Next can expose a Unicode path segment either as
+  // decoded text or as its percent-encoded representation. French slugs hide this distinction;
+  // Arabic slugs do not. Decode defensively and normalize Unicode so the same article always
+  // reaches its SEO overlay, FAQ schema and internal links.
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    // A malformed escape should not take the article page down; use the original value instead.
+  }
+  const key = decodedSlug.trim().normalize('NFC').toLowerCase();
   return BLOG_SEO_CONFIG[key] ?? null;
 }
