@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
+import { GoogleReviewsSection } from '@/app/components/GoogleReviewsSection';
 import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { splitCmsBody } from '@/util/cmsSections';
@@ -93,7 +94,7 @@ const FIGURES = [
   {
     value: GOOGLE_PROFILE.ratingValue.toLocaleString('fr-FR', { minimumFractionDigits: 1 }),
     label: 'Note Google',
-    sub: 'sur 5',
+    sub: `${GOOGLE_PROFILE.reviewCountLabel} avis`,
     href: GOOGLE_PROFILE.url,
   },
 ] as const;
@@ -222,7 +223,7 @@ export default function AboutPageContent({
                     <strong className="font-semibold tabular-nums text-ink-1">
                       {GOOGLE_PROFILE.ratingValue.toLocaleString('fr-FR', { minimumFractionDigits: 1 })} / 5
                     </strong>{' '}
-                    sur Google
+                    sur Google · {GOOGLE_PROFILE.reviewCountLabel} avis
                   </span>
                 </span>
                 <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />
@@ -436,8 +437,10 @@ export default function AboutPageContent({
           </ul>
         </Section>
 
+        <GoogleReviewsSection surface="sunken" context="about" />
+
         {/* ── WHERE THE SHOP IS ─────────────────────────────────────────────────────────── */}
-        <Section surface="sunken" spacing="default" width="wide" aria-labelledby="about-store">
+        <Section spacing="default" width="wide" aria-labelledby="about-store">
           <SectionHeader
             id="about-store"
             scale="2"
@@ -495,7 +498,7 @@ export default function AboutPageContent({
         {/* `default`, not `feature`. Section.tsx: "At most ONE per page: two dominant bands is zero
           dominant bands." The hero above already holds this page's one feature step, and a closing
           CTA competing with the page's own opening is what makes a document read as two documents. */}
-      <Section spacing="default" width="wide" last>
+      <Section surface="sunken" spacing="default" width="wide" last>
           <div className="mx-auto max-w-3xl text-center">
             <span className="pt-kicker mb-3 inline-flex items-center gap-2.5 text-brand">
               <span className="h-px w-5 bg-brand" aria-hidden="true" />

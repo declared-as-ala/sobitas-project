@@ -29,10 +29,8 @@ import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
 import { notify as toast } from '@/lib/notify';
-import { GOAL_CATEGORY_EMPHASIS, type Goal } from '@/util/nutritionTargets';
 import { flyToPack, pulseTierUnlocked } from './packMotion';
 import { PackWizard } from './wizard/PackWizard';
-import type { GoalCovers } from './wizard/goalCovers';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -44,8 +42,6 @@ export interface PackBuilderGroup {
 
 interface PackBuilderClientProps {
   groups: PackBuilderGroup[];
-  /** Landing-page category photographs, one per goal. Decorative — may be empty. */
-  goalCovers: GoalCovers;
 }
 
 /** Display-only mirror of the backend PackDiscountService tiers. See the header note. */
@@ -71,15 +67,13 @@ function FocusedBuilderHeader() {
   );
 }
 
-export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps) {
+export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const router = useRouter();
   const { addToCart, setPackDiscount, setCartDrawerOpen } = useCart();
 
   const [pack, setPack] = useState<Record<number, number>>({});
   const [quote, setQuote] = useState<PackQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   /** Where a flying product thumbnail lands — the wizard's footer total. */
@@ -101,11 +95,6 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
    * masse, il manque Gainers" on the recap — the page telling the customer they had not done the
    * thing they had just done.
    */
-  const coveredSlugs = useMemo(
-    () => groups.filter((g) => g.products.some((p) => (pack[p.id] ?? 0) > 0)).map((g) => g.slug),
-    [groups, pack]
-  );
-
   const entries = useMemo(
     () =>
       Object.entries(pack)
@@ -241,20 +230,6 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
   }, [discountPercent]);
 
   /**
-   * The goal REORDERS the category steps; it never filters. Someone losing weight can still want a
-   * pre-workout, and a recommendation that removes options is one people learn to distrust.
-   */
-  const availableSlugs = useMemo(() => groups.map((g) => g.slug), [groups]);
-  const handleSelectGoal = useCallback(
-    (g: Goal) => {
-      const emphasis = GOAL_CATEGORY_EMPHASIS[g].filter((s) => availableSlugs.includes(s));
-      setGoal(g);
-      setCategoryOrder([...emphasis, ...availableSlugs.filter((s) => !emphasis.includes(s))]);
-    },
-    [availableSlugs]
-  );
-
-  /**
    * Commit the pack to the cart and leave.
    *
    * `submitting` is never reset on the success path, and that is deliberate rather than a leak: the
@@ -316,12 +291,9 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
        become an edge rather than the only thing defining a card. */
     <div className="pt-no-chrome min-h-screen bg-sunken">
       <FocusedBuilderHeader />
-      <main className="max-w-site mx-auto px-4 pb-32 pt-6 sm:px-6 sm:pt-8 lg:px-8 lg:pb-16">
+      <main className="max-w-site mx-auto px-4 pb-32 pt-4 sm:px-6 sm:pt-6 lg:h-[calc(100dvh-72px)] lg:overflow-hidden lg:px-8 lg:pb-5 lg:pt-5">
         <PackWizard
           groups={groups}
-          goalCovers={goalCovers}
-          categoryOrder={categoryOrder}
-          goal={goal}
           pack={pack}
           entries={entries}
           itemCount={itemCount}
@@ -332,11 +304,8 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
           tierLabel={quote?.tier_label ?? null}
           nextTier={nextTier}
           quoteLoading={quoteLoading}
-          hasQuote={quote !== null}
           submitting={submitting}
           tiers={PACK_TIERS}
-          coveredSlugs={coveredSlugs}
-          onSelectGoal={handleSelectGoal}
           onAdd={addOne}
           onSetQty={setQty}
           onRemove={removeProduct}

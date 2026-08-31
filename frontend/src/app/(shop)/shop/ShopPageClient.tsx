@@ -16,19 +16,12 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { ArrowDownUp, Filter, Search, X, CircleAlert, Check, SlidersHorizontal } from 'lucide-react';
+import { ArrowDownUp, Filter, Search, X, CircleAlert, Check, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Pagination } from '@/app/components/ui/pagination';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select';
 import type { Product, Category, Brand } from '@/types';
 import { searchProducts, getProductsByCategory, getProductsBySubCategory, getProductsByBrand } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
@@ -203,6 +196,11 @@ function ShopContent({
   const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>(initialPriceRange);
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
+  const [mobileFiltersReady, setMobileFiltersReady] = useState(false);
+
+  useEffect(() => {
+    setMobileFiltersReady(true);
+  }, []);
 
   // Sorting and sub-filters states
   const [sortBy, setSortBy] = useState<string>(serverQuery?.sort ?? 'popularity');
@@ -1414,22 +1412,27 @@ function ShopContent({
         {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
         {topCategorySubcategories.length > 0 && (
           <nav aria-label="Sous-catégories" className="mb-6 sm:mb-8">
-            <h2 className="text-xs font-display font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-3">
-              Sous-catégories
-            </h2>
-            <ul className="flex flex-wrap gap-2">
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <h2 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+                Explorer ce rayon
+              </h2>
+              <span className="text-xs tabular-nums text-ink-3">{topCategorySubcategories.length} catégories</span>
+            </div>
+            <ul
+              className={
+                topCategorySubcategories.length <= 6
+                  ? 'grid grid-cols-2 gap-2 sm:grid-cols-3'
+                  : '-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden'
+              }
+            >
               {topCategorySubcategories.map((sub) => (
-                <li key={sub.slug}>
+                <li key={sub.slug} className={topCategorySubcategories.length > 6 ? 'w-[11.25rem] shrink-0 snap-start sm:w-[12.5rem]' : undefined}>
                   <Link
                     href={`/${sub.slug}`}
-                    /* min-h-[44px] only. The hardcoded grey and red literals on this line are
-                       enumerated accepted debt in design-baseline.json; migrating half of them
-                       would raise the baseline's noise without lowering its count, which is the
-                       failure mode that file exists to prevent. Tap target first; tokens when this
-                       file gets its own migration pass. */
-                    className="inline-flex min-h-[44px] items-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2.5 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:border-red-500 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400"
+                    className="group flex min-h-[50px] w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-elevated px-3.5 py-2.5 text-[13px] font-semibold leading-tight text-ink-2 shadow-sm transition-[border-color,color,transform] hover:-translate-y-0.5 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   >
-                    {sub.designation_fr}
+                    <span className="line-clamp-2">{sub.designation_fr}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -1579,26 +1582,28 @@ function ShopContent({
                   listbox and the keyboard behaviour, only the label is dropped. `sortIsDefault`
                   drives the brand outline, so a phone still shows that a sort is APPLIED even
                   though it cannot show which one until the sheet opens. */}
-              <Select value={sortBy} onValueChange={handleSortChange}>
-                <SelectTrigger
+              <div className="relative shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(event) => handleSortChange(event.target.value as ShopSort)}
                   aria-label={`Trier — ${SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Popularité'}`}
-                  className={`h-11 w-11 justify-center rounded-xl bg-elevated px-0 text-[13.5px] text-ink-1 sm:w-44 sm:justify-between sm:px-3 lg:w-52 [&>svg:last-child]:hidden sm:[&>svg:last-child]:block ${
-                    sortIsDefault ? 'border-hairline' : 'border-brand text-brand'
+                  className={`h-11 w-11 cursor-pointer rounded-xl border bg-elevated px-0 text-transparent outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-focus/15 sm:w-44 sm:px-3 sm:text-[13.5px] lg:w-52 ${
+                    sortIsDefault ? 'border-hairline sm:text-ink-1' : 'border-brand sm:text-brand'
                   }`}
                 >
-                  <ArrowDownUp className="h-4 w-4 shrink-0 sm:hidden" aria-hidden="true" />
-                  <span className="hidden truncate sm:block">
-                    <SelectValue placeholder="Trier par" />
-                  </span>
-                </SelectTrigger>
-                <SelectContent>
-                  {SORT_OPTIONS.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value} className="text-ink-1">
+                      {option.label}
+                    </option>
                   ))}
-                </SelectContent>
-              </Select>
+                </select>
+                <ArrowDownUp
+                  className={`pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 sm:hidden ${
+                    sortIsDefault ? 'text-ink-1' : 'text-brand'
+                  }`}
+                  aria-hidden="true"
+                />
+              </div>
 
               {/* Desktop: collapse the rail. It stays OPEN by default now — a filter rail that
                   has to be summoned is a filter rail nobody uses, and this page has 577 brands
@@ -1619,6 +1624,7 @@ function ShopContent({
               </button>
 
               {/* Phone: the same rail in a bottom sheet. */}
+              {mobileFiltersReady ? (
               <Sheet open={showFilters} onOpenChange={setShowFilters}>
                 <SheetTrigger asChild>
                   <button
@@ -1698,6 +1704,17 @@ function ShopContent({
                   </div>
                 </SheetContent>
               </Sheet>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  aria-label="Chargement des filtres"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-hairline bg-elevated px-3.5 text-[13.5px] font-semibold text-ink-1 sm:px-4 lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                  Filtres
+                </button>
+              )}
             </div>
           </div>
 

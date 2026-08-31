@@ -52,6 +52,22 @@ interface CategoryRailProps {
   categories?: Category[];
 }
 
+/**
+ * Approved Protein.tn category artwork (30/08/2026).
+ *
+ * Keep this keyed by the public slug rather than an API id: ids differ between local, staging and
+ * production, while these route slugs are the storefront contract. The backend cover remains the
+ * fallback for new categories and for any future slug that is not part of this six-card set.
+ */
+const CATEGORY_COVER_OVERRIDES: Readonly<Record<string, string>> = {
+  'sante-vitalite': '/media/category-art/sante-vitalite.png',
+  'perte-de-poids': '/media/category-art/perte-de-poids.png',
+  proteines: '/media/category-art/proteines.png',
+  performance: '/media/category-art/performance.png',
+  equipement: '/media/category-art/equipement.png',
+  'prise-de-masse': '/media/category-art/prise-de-masse.png',
+};
+
 export function CategoryRail({ categories = [] }: CategoryRailProps) {
   if (!Array.isArray(categories) || categories.length === 0) return null;
 
@@ -171,6 +187,8 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
+          const localCover = CATEGORY_COVER_OVERRIDES[(category.slug || '').trim().toLowerCase()];
+          const coverSrc = localCover || (category.cover ? getStorageUrl(category.cover) : null);
 
           return (
             <li key={category.id}>
@@ -232,9 +250,9 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     besides: the source photography is 4:3 (1.333), so a square box cropped 25% off
                     the sides of every category cover. 5:4 (1.25) crops 6%. */}
                 <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken sm:aspect-[5/4]">
-                  {category.cover ? (
+                  {coverSrc ? (
                     <Image
-                      src={getStorageUrl(category.cover)}
+                      src={coverSrc}
                       alt={buildCategoryAlt(label)}
                       fill
                       /* Re-derived for the full-bleed-on-mobile grid. Gaps are 1px (`gap-px`);
@@ -274,7 +292,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                       /* Stays lazy on purpose: these sit just under the hero, and letting six
                          tiles compete with the preloaded hero image is how you lose LCP. */
                       loading="lazy"
-                      className="object-cover object-center transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                      className={`${localCover ? 'object-contain p-1.5 sm:p-2' : 'object-cover'} object-center transition-transform duration-500 ease-out group-hover:scale-[1.04] motion-reduce:transition-none motion-reduce:group-hover:scale-100`}
                     />
                   ) : (
                     /* Branded fallback, not an empty box. A category with no cover sits in the

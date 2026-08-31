@@ -1,6 +1,6 @@
 {
- "generated_for": 14,
- "usable": 14,
+ "generated_for": 21,
+ "usable": 21,
  "no_source": 0,
  "nutrition_rejected": 0,
  "faq_dropped": 16,
@@ -2206,6 +2206,348 @@
     "ENERGY ROW: OFF's per-serving cell literally reads '? kcal (135 kcal)' — the kJ value is absent. Publish 135 kcal only; do not derive kJ.",
     "percent_basis is empty — no %DV or NRV on the cited page. Do not let any template infer daily values.",
     "SEO DEFECT (from research notes, worth escalating separately): a bad slug on protein.tn returns HTTP 200 with a DIFFERENT product's content and canonical instead of a 404. That is a duplicate-content and wrong-product-served bug independent of this page."
+   ]
+  },
+  {
+   "slug": "nitrotech-whey-protein-1-81-kg-muscletech",
+   "product_name": "NITROTECH WHEY PROTEIN 1.81 KG MUSCLETECH",
+   "brand": "MuscleTech",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://www.muscletech.com/products/nitro-tech?variant=41079718183008",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/nitrotech-whey-protein-1-81-kg-muscletech",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.muscletech.com/products/nitro-tech?variant=41079718183008",
+    "serving_quantity": null,
+    "serving_unit": "",
+    "serving_note": "Valeurs communes aux arômes du format 4 lb ; le poids de la portion et les macronutriments secondaires varient selon l'arôme.",
+    "servings_per_container": "",
+    "net_quantity": 1.81,
+    "net_unit": "kg",
+    "percent_basis": "us",
+    "rows": [
+     {"name": "Protéines", "kind": "value", "quantity": 30, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "L-leucine", "kind": "value", "quantity": 3.2, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "L-valine", "kind": "value", "quantity": 1.7, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "L-isoleucine", "kind": "value", "quantity": 1.7, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Créatine monohydrate", "kind": "value", "quantity": 3, "unit": "g", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "La liste d'ingrédients varie selon l'arôme. Consulter l'étiquette du pot livré.",
+    "allergens": "Contient du lait et du soja. Fabriqué dans un établissement manipulant également blé, œuf, fruits à coque, arachide, poisson, crustacés et sésame.",
+    "warnings": "Vérifier l'étiquette de l'arôme reçu avant consommation.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "La formule Nitro-Tech contient-elle de la créatine ?",
+     "a": "Oui. Le fabricant déclare de la créatine monohydrate dans le tableau nutritionnel de chaque arôme."
+    },
+    {
+     "q": "Les valeurs sont-elles identiques pour tous les arômes ?",
+     "a": "Les protéines, les acides aminés listés et la créatine sont communs, mais les calories, lipides et glucides peuvent varier. Consultez l'étiquette de l'arôme choisi."
+    }
+   ]
+  },
+  {
+   "slug": "creatine-real-pharm-300g",
+   "product_name": "CREATINE REAL PHARM - 300G",
+   "brand": "Real Pharm",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://realpharm.eu/en/products/real-pharm-monohydrat-kreatyny-creatine-monohydrate-300g-cola-lemon-1030.html",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/creatine-real-pharm-300g",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://realpharm.eu/en/products/real-pharm-monohydrat-kreatyny-creatine-monohydrate-300g-cola-lemon-1030.html",
+    "serving_quantity": 5,
+    "serving_unit": "g",
+    "serving_note": "Valeur active par portion indiquée par Real Pharm ; la formule peut légèrement varier selon l'arôme.",
+    "servings_per_container": "60",
+    "net_quantity": 300,
+    "net_unit": "g",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Créatine monohydrate", "kind": "value", "quantity": 4300, "unit": "mg", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "Les arômes et ingrédients secondaires varient selon la variante. Consulter l'étiquette du pot livré.",
+    "allergens": "Consulter l'étiquette de l'arôme reçu pour les allergènes et traces éventuelles.",
+    "warnings": "Complément alimentaire réservé aux adultes. Tenir hors de portée des enfants et suivre les indications de l'emballage.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quelle forme de créatine contient ce produit ?",
+     "a": "La fiche officielle Real Pharm indique de la créatine monohydrate."
+    },
+    {
+     "q": "La composition change-t-elle selon l'arôme ?",
+     "a": "Les ingrédients secondaires et certains détails de la formule peuvent varier selon l'arôme. L'étiquette du pot reçu reste la référence."
+    }
+   ]
+  },
+  {
+   "slug": "micronised-creatine-optimum-nutrition-317g",
+   "product_name": "MICRONISED CREATINE OPTIMUM NUTRITION - 317G",
+   "brand": "Optimum Nutrition",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://www.optimumnutrition.com/fr-fr/products/micronised-creatine-powder?variant=52105826042123",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/micronised-creatine-optimum-nutrition-317g",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.optimumnutrition.com/fr-fr/products/micronised-creatine-powder?variant=52105826042123",
+    "serving_quantity": 3.6,
+    "serving_unit": "g",
+    "serving_note": "Composition officielle de la variante sans arôme ; la page fabricant affiche deux décomptes de portions différents, donc aucun total n'est repris ici.",
+    "servings_per_container": "",
+    "net_quantity": 317,
+    "net_unit": "g",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Créatine monohydrate", "kind": "value", "quantity": 3.4, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont créatine", "kind": "value", "quantity": 3, "unit": "g", "percent_dv": null, "depth": 1}
+    ],
+    "other_ingredients": "Créatine monohydrate pour la variante sans arôme.",
+    "allergens": "Peut contenir des traces de lait, soja, gluten, œuf, fruits à coque et arachides.",
+    "warnings": "Complément alimentaire non adapté aux mineurs. Conserver au frais, au sec et hors de portée des enfants. Suivre l'étiquette du produit.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel ingrédient contient la version sans arôme ?",
+     "a": "La fiche officielle indique uniquement de la créatine monohydrate pour cette variante."
+    },
+    {
+     "q": "Pourquoi le nombre de portions n'est-il pas affiché ici ?",
+     "a": "La page officielle présente des décomptes contradictoires. Protein.tn affiche donc le contenu net et la composition vérifiée sans inventer de total."
+    }
+   ]
+  },
+  {
+   "slug": "mass-gainer-creatine-eric-favre-7-kg",
+   "product_name": "Mass Gainer Créatine - Eric Favre | 7 kg",
+   "brand": "Eric Favre",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://www.ericfavre.com/en/gainers/mass-gainer-creatine-cookie-7kg-p-1006-o-2012.htm",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/mass-gainer-creatine-eric-favre-7-kg",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.ericfavre.com/en/gainers/mass-gainer-creatine-cookie-7kg-p-1006-o-2012.htm",
+    "serving_quantity": 140,
+    "serving_unit": "g",
+    "serving_note": "Valeurs officielles de l'arôme Cookie par portion.",
+    "servings_per_container": "50",
+    "net_quantity": 7,
+    "net_unit": "kg",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Énergie", "kind": "value", "quantity": 549, "unit": "kcal", "percent_dv": 27, "depth": 0},
+     {"name": "Lipides", "kind": "value", "quantity": 3.8, "unit": "g", "percent_dv": 5, "depth": 0},
+     {"name": "dont acides gras saturés", "kind": "value", "quantity": 2.2, "unit": "g", "percent_dv": 11, "depth": 1},
+     {"name": "Glucides", "kind": "value", "quantity": 98, "unit": "g", "percent_dv": 38, "depth": 0},
+     {"name": "dont sucres", "kind": "value", "quantity": 64, "unit": "g", "percent_dv": 72, "depth": 1},
+     {"name": "Protéines", "kind": "value", "quantity": 31, "unit": "g", "percent_dv": 62, "depth": 0},
+     {"name": "Sel", "kind": "value", "quantity": 0.3, "unit": "g", "percent_dv": 5, "depth": 0},
+     {"name": "Créatine", "kind": "value", "quantity": 2.5, "unit": "g", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "Babeurre (lait), maltodextrine (lait), glucose, concentré de protéines de whey (lait, lécithine de tournesol), créatine monohydrate, arôme, carboxyméthylcellulose de sodium, gomme guar, complexes cuivriques de chlorophyllines, sucralose, acésulfame K, sel.",
+    "allergens": "Contient du lait. Peut contenir des traces de gluten, œufs, sésame, fruits à coque, céleri et sulfites.",
+    "warnings": "Ne pas dépasser les indications de l'emballage. Tenir hors de portée des jeunes enfants. À utiliser dans le cadre d'une alimentation variée et d'un mode de vie sain.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quel arôme cette fiche documente-t-elle ?",
+     "a": "Les valeurs et la liste d'ingrédients proviennent de la fiche officielle Eric Favre pour l'arôme Cookie."
+    },
+    {
+     "q": "Quels allergènes sont signalés ?",
+     "a": "Le fabricant signale le lait et des traces possibles de gluten, œufs, sésame, fruits à coque, céleri et sulfites."
+    }
+   ]
+  },
+  {
+   "slug": "hydro-whey-1-59-kg",
+   "product_name": "HYDRO WHEY -1,59 KG",
+   "brand": "Optimum Nutrition",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://www.optimumnutrition.com/en-gb/products/platinum-hydrowhey-hydrolysed-whey-protein-powder-eu?variant=52105829679371",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/hydro-whey-1-59-kg",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://www.optimumnutrition.com/en-gb/products/platinum-hydrowhey-hydrolysed-whey-protein-powder-eu?variant=52105829679371",
+    "serving_quantity": 40,
+    "serving_unit": "g",
+    "serving_note": "Valeurs officielles de Platinum HydroWhey Vanilla Bean ; le format fabricant est indiqué 1,6 kg, équivalent commercial du format 1,59 kg référencé.",
+    "servings_per_container": "40",
+    "net_quantity": 1.6,
+    "net_unit": "kg",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Énergie", "kind": "value", "quantity": 142, "unit": "kcal", "percent_dv": null, "depth": 0},
+     {"name": "Lipides", "kind": "value", "quantity": 0.4, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont acides gras saturés", "kind": "value", "quantity": 0.1, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Glucides", "kind": "value", "quantity": 1.8, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont sucres", "kind": "value", "quantity": 1, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Fibres", "kind": "value", "quantity": 1, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Protéines", "kind": "value", "quantity": 30, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Sel", "kind": "value", "quantity": 0.4, "unit": "g", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "Isolat de protéine de whey hydrolysé (lait, lécithine de soja), mélange de BCAA (L-leucine, L-isoleucine, L-valine, lécithine de tournesol), carraghénane, arômes, sucralose, acésulfame K, huile de tournesol en poudre (lait), chlorure de sodium.",
+    "allergens": "Contient du lait et du soja. Peut contenir des traces de gluten, œuf et fruits à coque.",
+    "warnings": "Conserver au frais et au sec. Vérifier l'étiquette du pot livré avant consommation.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Quelle variante est documentée ?",
+     "a": "Le tableau correspond à la variante Vanilla Bean publiée par Optimum Nutrition."
+    },
+    {
+     "q": "Quelle est la source de protéines ?",
+     "a": "La liste officielle indique un isolat de protéine de whey hydrolysé, avec du lait et de la lécithine de soja."
+    }
+   ]
+  },
+  {
+   "slug": "real-isolate-1-8-kg",
+   "product_name": "REAL ISOLATE - 1,8 KG",
+   "brand": "Real Pharm",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://realpharm.eu/en/products/real-pharm-real-isolate-100-1800g-can-1395.html?selected_size=onesize",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/real-isolate-1-8-kg",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://realpharm.eu/en/products/real-pharm-real-isolate-100-1800g-can-1395.html?selected_size=onesize",
+    "serving_quantity": 30,
+    "serving_unit": "g",
+    "serving_note": "Valeurs officielles par portion pour les arômes hors chocolat, dont Vanille.",
+    "servings_per_container": "60",
+    "net_quantity": 1.8,
+    "net_unit": "kg",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Énergie", "kind": "value", "quantity": 106, "unit": "kcal", "percent_dv": null, "depth": 0},
+     {"name": "Lipides", "kind": "value", "quantity": 0.09, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont acides gras saturés", "kind": "value", "quantity": 0.02, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Glucides", "kind": "value", "quantity": 0.3, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont sucres", "kind": "value", "quantity": 0.3, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Fibres", "kind": "value", "quantity": 0.24, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Protéines", "kind": "value", "quantity": 25.8, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Sel", "kind": "value", "quantity": 0.15, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Isolat de whey", "kind": "value", "quantity": 28.8, "unit": "g", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "Isolat de protéine de whey (lait), arôme, épaississant (carboxyméthylcellulose de sodium), édulcorants (sucralose, acésulfame K) et carotènes pour les variantes vanille.",
+    "allergens": "Contient du lait. Vérifier l'étiquette pour les traces éventuelles liées au site de fabrication.",
+    "warnings": "Produit destiné aux adultes en bonne santé. Tenir hors de portée des jeunes enfants et suivre l'étiquette du produit.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "Le tableau correspond-il à l'arôme Vanille ?",
+     "a": "Oui. Le fabricant regroupe Vanille avec les arômes hors chocolat pour ce tableau nutritionnel."
+    },
+    {
+     "q": "Quelle protéine est utilisée ?",
+     "a": "La fiche officielle déclare un isolat de protéine de whey issu du lait."
+    }
+   ]
+  },
+  {
+   "slug": "real-mass-6-8-kg-real-pharm",
+   "product_name": "REAL MASS 6.8 KG - REAL PHARM",
+   "brand": "Real Pharm",
+   "gtin": null,
+   "sources": [
+    {
+     "url": "https://realpharm.eu/en/products/real-pharm-real-mass-gainer-6800g-chocolate-2980.html",
+     "kind": "manufacturer"
+    },
+    {
+     "url": "https://protein.tn/real-mass-6-8-kg-real-pharm",
+     "kind": "retailer"
+    }
+   ],
+   "nutrition": {
+    "source_url": "https://realpharm.eu/en/products/real-pharm-real-mass-gainer-6800g-chocolate-2980.html",
+    "serving_quantity": 75,
+    "serving_unit": "g",
+    "serving_note": "Valeurs officielles par portion ; les ingrédients aromatiques peuvent varier selon la saveur du pot.",
+    "servings_per_container": "90",
+    "net_quantity": 6.8,
+    "net_unit": "kg",
+    "percent_basis": "eu",
+    "rows": [
+     {"name": "Énergie", "kind": "value", "quantity": 283, "unit": "kcal", "percent_dv": null, "depth": 0},
+     {"name": "Lipides", "kind": "value", "quantity": 1.9, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont acides gras saturés", "kind": "value", "quantity": 1.2, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Glucides", "kind": "value", "quantity": 51, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "dont sucres", "kind": "value", "quantity": 7.5, "unit": "g", "percent_dv": null, "depth": 1},
+     {"name": "Fibres", "kind": "value", "quantity": 0.75, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Protéines", "kind": "value", "quantity": 15, "unit": "g", "percent_dv": null, "depth": 0},
+     {"name": "Sel", "kind": "value", "quantity": 0.19, "unit": "g", "percent_dv": null, "depth": 0}
+    ],
+    "other_ingredients": "Maltodextrine, dextrose micronisé, concentré de whey (lait), amidon de riz, fructose, isolat de whey (lait), hydrolysat de whey (lait), caséine micellaire (lait), gomme xanthane, arômes et colorants variables selon la saveur.",
+    "allergens": "Contient du lait. Consulter l'étiquette de la saveur reçue pour les autres allergènes et traces.",
+    "warnings": "Complément alimentaire destiné aux adultes en bonne santé. Tenir hors de portée des enfants, conserver au sec et suivre les indications de l'emballage.",
+    "claims": ""
+   },
+   "video": null,
+   "faq": [
+    {
+     "q": "La liste d'ingrédients dépend-elle de la saveur ?",
+     "a": "Oui. La base protéique et glucidique reste indiquée par Real Pharm, tandis que certains arômes et colorants changent selon la variante."
+    },
+    {
+     "q": "Quels allergènes sont clairement déclarés ?",
+     "a": "La formule officielle contient plusieurs ingrédients issus du lait. L'étiquette de la saveur livrée doit être vérifiée pour les autres traces."
+    }
    ]
   }
  ]

@@ -44,12 +44,9 @@ export const LEGAL_IDENTITY = {
  * whose penalty is a sitewide manual action. The visible, attributed, linked form is the
  * legitimate way to show it, and it is what every serious retailer does.
  *
- * `ratingValue` was read from the profile on 19/08/2026 and is a point-in-time snapshot, which
- * is why it is a constant with a date rather than something pretending to be live. No review
- * COUNT is published: Google renders it client-side and the endpoint that serves it plainly
- * answers a scripted request with a CAPTCHA, so there is no honest number to put here. A rating
- * without a count is worth less than one with it — that is a real cost, and it is the correct
- * trade against publishing a figure nobody verified.
+ * `ratingValue` and `reviewCount` are point-in-time snapshots, not values pretending to be live.
+ * They were re-checked in the public Google Maps UI on 31/08/2026. Consumer-facing copy uses the
+ * conservative `reviewCountLabel` ("1 290+") so a changing total does not make the site stale.
  */
 /**
  * When the shop is open, in ONE place.
@@ -94,7 +91,9 @@ export const GOOGLE_PROFILE = {
   /** The name on the profile, which differs from the site's own H1s. */
   name: 'PROTEIN.TN - PROTEINE TUNISIE',
   ratingValue: 4.9,
-  ratingCheckedOn: '2026-08-19',
+  reviewCount: 1292,
+  reviewCountLabel: '1 290+',
+  ratingCheckedOn: '2026-08-31',
   /** The short link on the profile; resolves to the place page with the same place id. */
   url: 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6',
   placeId: 'ChIJsZHosBsTAhMRDLJJWPLg2lE',

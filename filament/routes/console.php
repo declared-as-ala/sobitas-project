@@ -373,6 +373,14 @@ Schedule::command('products:enrich-dsld --limit=300 --apply')
     ->withoutOverlapping(90)
     ->appendOutputTo(storage_path('logs/catalog-dsld.log'));
 
+// The storefront promotes a small, changing subset of the catalogue. Audit that exact commercial
+// surface daily so a newly promoted product cannot quietly arrive without its core product-page
+// data. Editorial enhancements remain warnings; only `--strict` makes missing core data fail CI.
+Schedule::command('products:homepage-rich-audit')
+    ->dailyAt('05:10')
+    ->withoutOverlapping(15)
+    ->appendOutputTo(storage_path('logs/homepage-rich-audit.log'));
+
 /*
 |--------------------------------------------------------------------------
 | Land the harvested iHerb product content that ships with the image
@@ -548,7 +556,8 @@ Schedule::command('catalog:iherb:import-content')
 | block above says.
 */
 $researchFile = storage_path('app/research.json');
-$researchImportedKey = 'research.import.completed';
+$researchFileHash = is_file($researchFile) ? sha1_file($researchFile) : false;
+$researchImportedKey = 'research.import.completed.'.($researchFileHash ?: 'missing');
 
 /**
  * Slugs in research.json that resolve to no product row.
@@ -662,8 +671,8 @@ Schedule::command('products:import-research storage/app/research.json --apply')
         \Illuminate\Support\Facades\Log::info(
             'products:import-research ran, every slug in research.json resolved to a product, and the '
             .'entry is now disabled. Output: storage/logs/research-import.log. '
-            ."To run it again, forget the cache key [{$researchImportedKey}] — the "
-            .'"research-import-rearm" task in the "Run pipeline task on VPS" workflow does exactly that.',
+            ."To run this exact artifact again, forget the cache key [{$researchImportedKey}]. "
+            .'Changing research.json creates a new content-hash key and rearms the importer automatically.',
         );
     })
     ->onFailure(function (): void {

@@ -263,7 +263,8 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               promo strip     ORANGE          the one saturated band
               blog            canvas
               marques         sunken
-              bloc SEO        canvas
+              avis Google     canvas
+              bloc SEO        sunken
 
           TWO INVARIANTS, both asserted by scripts/measure-bands.mjs:
             1. No two adjacent bands share a surface, so the automatic 1px seam always has a
@@ -404,6 +405,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             the server-rendered HTML, which is what Googlebot reads. Asserted in verification. */}
         <Section
           spacing="tight"
+          surface="sunken"
           width="wide"
           defer
           /* The page's last band. Below `sm` every band is `pb-0` so it reads as connected to its

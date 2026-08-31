@@ -271,24 +271,16 @@ const Tile = memo(function Tile({
 });
 
 export function ProductPicker({ products, pack, onAdd, onSetQty, calm }: ProductPickerProps) {
-  /**
-   * Buyable products first.
-   *
-   * The catalogue order put a "Rupture" tile in the very first slot of the Gainers step — the first
-   * thing the visitor saw after answering the goal question was something they could not buy. This
-   * is a stable partition, not a re-rank: within each half the catalogue's own order is preserved,
-   * so merchandising decisions made in the admin still hold.
-   */
-  const ordered = useMemo(() => {
-    const inStock: Product[] = [];
-    const out: Product[] = [];
-    for (const p of products) (getStockDisponible(p as never) > 0 ? inStock : out).push(p);
-    return [...inStock, ...out];
-  }, [products]);
+  // Stock can change after the server-rendered catalogue is cached. Filter again in the browser so
+  // a stale category response never presents an unavailable product as a pack choice.
+  const available = useMemo(
+    () => products.filter((product) => getStockDisponible(product as never) > 0),
+    [products]
+  );
 
   return (
     <div data-pack-grid className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
-      {ordered.map((product) => (
+      {available.map((product) => (
         <Tile
           key={product.id}
           product={product}

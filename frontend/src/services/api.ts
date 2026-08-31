@@ -882,6 +882,53 @@ export async function fetchCategoryOrSubCategory(slug: string): Promise<
   throw new ApiError('Category not found', 404);
 }
 
+/**
+ * Resolve only the taxonomy + SEO envelope for a category route.
+ *
+ * The route obtains its visible products from the paginated shop endpoint. Reusing the legacy
+ * resolver there downloaded up to 100 complete product rows a second time, increasing TTFB and the
+ * RSC payload while none of those rows were rendered. The API keeps the original endpoint shape so
+ * the pack builder and other catalogue consumers remain unchanged.
+ */
+export async function fetchCategoryOrSubCategoryMetadata(
+  slug: string
+): Promise<Awaited<ReturnType<typeof fetchCategoryOrSubCategory>>> {
+  const cleanSlug = (slug || '').trim();
+  if (!cleanSlug) throw new ApiError('Not found', 404);
+
+  try {
+    const sub = await apiFetch<any>(
+      `productsBySubCategoryId/${encodeURIComponent(cleanSlug)}?meta_only=1`
+    );
+    if (sub?.sous_category?.id) {
+      return {
+        type: 'subcategory',
+        data: {
+          ...sub,
+          seo: withCategorySeoEntityFallbacks(sub.seo, sub.sous_category),
+        },
+      };
+    }
+  } catch (error) {
+    if (!(error instanceof ApiError && error.status === 404)) throw error;
+  }
+
+  const category = await apiFetch<any>(
+    `productsByCategoryId/${encodeURIComponent(cleanSlug)}?meta_only=1`
+  );
+  if (category?.category?.id) {
+    return {
+      type: 'category',
+      data: {
+        ...category,
+        seo: withCategorySeoEntityFallbacks(category.seo, category.category),
+      },
+    };
+  }
+
+  throw new ApiError('Category not found', 404);
+}
+
 export const getProductsByCategory = async (slug: string): Promise<{
   category: Category;
   sous_categories: any[];

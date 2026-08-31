@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Models\Product;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * SEO health scanner — the monitoring half of the "keeps ranking automatically" system.
@@ -18,24 +19,49 @@ class SeoHealthReport extends Command
 {
     protected $signature = 'seo:health-report {--limit=10 : Offenders to list per issue}';
 
-    protected $description = 'Scan published products for missing SEO data (gtin, brand, description, image, alt)';
+    protected $description = 'Scan in-stock products for missing SEO and rich product data';
 
     public function handle(): int
     {
         $limit = max(1, (int) $this->option('limit'));
-        $base = fn () => Product::query()->where('publier', 1);
-        $total = $base()->count();
+        $published = fn () => Product::query()->where('publier', 1);
+        $inStock = function () {
+            $query = Product::query()->where('publier', 1)->where('qte', '>', 0);
+
+            if (Schema::hasColumn('products', 'rupture')) {
+                $query->where('rupture', 0);
+            }
+            if (Schema::hasColumn('products', 'force_out_of_stock')) {
+                $query->where('force_out_of_stock', 0);
+            }
+
+            return $query;
+        };
+
+        $publishedTotal = $published()->count();
+        $total = $inStock()->count();
 
         $issues = [
-            'sans GTIN (identifiant global)' => $base()->where(fn ($q) => $q->whereNull('gtin')->orWhere('gtin', '')),
-            'sans marque (brand_id)' => $base()->whereNull('brand_id'),
-            'sans description' => $base()->where(fn ($q) => $q->whereNull('description_fr')->orWhere('description_fr', '')),
-            'sans image (cover)' => $base()->where(fn ($q) => $q->whereNull('cover')->orWhere('cover', '')),
-            'sans alt image' => $base()->where(fn ($q) => $q->whereNull('alt_cover')->orWhere('alt_cover', '')),
-            'sans valeurs nutritionnelles' => $base()->where(fn ($q) => $q->whereNull('nutrition_values')->orWhere('nutrition_values', '')),
+            'sans GTIN (identifiant global)' => $inStock()->where(fn ($q) => $q->whereNull('gtin')->orWhere('gtin', '')),
+            'sans marque (brand_id)' => $inStock()->whereNull('brand_id'),
+            'sans description' => $inStock()->where(fn ($q) => $q->whereNull('description_fr')->orWhere('description_fr', '')),
+            'sans image (cover)' => $inStock()->where(fn ($q) => $q->whereNull('cover')->orWhere('cover', '')),
+            'sans alt image' => $inStock()->where(fn ($q) => $q->whereNull('alt_cover')->orWhere('alt_cover', '')),
+            'sans valeurs nutritionnelles' => $inStock()->where(fn ($q) => $q->whereNull('nutrition_values')->orWhere('nutrition_values', '')),
         ];
 
-        $this->info("SEO Health — {$total} produits publiés");
+        if (Schema::hasColumn('products', 'nutrition_facts')) {
+            $issues['sans panneau nutritionnel structuré'] = $inStock()->where(fn ($q) => $q
+                ->whereNull('nutrition_facts')
+                ->orWhereRaw('JSON_LENGTH(nutrition_facts) = 0'));
+        }
+        if (Schema::hasColumn('products', 'faq')) {
+            $issues['sans FAQ produit'] = $inStock()->where(fn ($q) => $q
+                ->whereNull('faq')
+                ->orWhereRaw('JSON_LENGTH(faq) = 0'));
+        }
+
+        $this->info("SEO Health — {$total} produits réellement en stock ({$publishedTotal} publiés au total)");
         $summary = [];
         foreach ($issues as $label => $query) {
             $count = (clone $query)->count();
@@ -49,9 +75,35 @@ class SeoHealthReport extends Command
             }
         }
 
-        Log::info('seo:health-report', ['total_published' => $total] + $summary);
+        if (Schema::hasColumn('products', 'nutrition_facts')) {
+            $priorityMissing = $inStock()
+                ->where(fn ($q) => $q
+                    ->where('best_seller', 1)
+                    ->orWhere('new_product', 1)
+                    ->orWhere(fn ($promo) => $promo->whereNotNull('promo')->where('promo', '>', 0)))
+                ->where(fn ($q) => $q
+                    ->whereNull('nutrition_facts')
+                    ->orWhereRaw('JSON_LENGTH(nutrition_facts) = 0'))
+                ->orderByDesc('best_seller')
+                ->orderByDesc('new_product')
+                ->orderByDesc('id')
+                ->limit($limit)
+                ->pluck('slug')
+                ->all();
+
+            $this->newLine();
+            $this->info('Priorité landing / commerciale sans panneau structuré');
+            $this->line($priorityMissing === []
+                ? '  aucune lacune prioritaire'
+                : '  → '.implode(', ', $priorityMissing));
+        }
+
+        Log::info('seo:health-report', [
+            'total_published' => $publishedTotal,
+            'total_in_stock' => $total,
+        ] + $summary);
         $this->newLine();
-        $this->info('Corrections: GTIN/marque/description dans Filament → Produits; alt/meta se remplissent automatiquement à la sauvegarde; nutrition via seo:enrich-nutrition.');
+        $this->info('Corrections: GTIN/marque/description dans Filament → Produits; alt/meta à la sauvegarde; panneaux vérifiés via products:import-research.');
 
         return self::SUCCESS;
     }

@@ -1299,13 +1299,42 @@ class ApisController extends Controller
      */
     public function productsByCategoryId(Request $request, string $slug): JsonResponse
     {
-        $perPage = $this->resolvePerPage($request);
-
         $category = Categ::where('slug', $slug)->first();
 
         if (! $category) {
             return response()->json(['error' => 'Category not found'], 404);
         }
+
+        /*
+         * Category pages need two different things: a tiny taxonomy/SEO envelope and one
+         * independently filtered product page. Historically the storefront downloaded up to 100
+         * full product records here merely to learn the category name, then downloaded the real
+         * 24-card page from /shop immediately afterwards. `meta_only` removes that duplicate query
+         * and payload without changing the public response used by older callers.
+         */
+        if ($request->boolean('meta_only')) {
+            $sousCategories = SousCategory::where('categorie_id', $category->id)
+                ->select('id', 'slug', 'designation_fr', 'categorie_id')
+                ->orderBy('designation_fr')
+                ->get();
+
+            $category->cover = ImagePath::normalize($category->cover);
+            $frontendBase = StorefrontUrl::base();
+
+            return response()->json([
+                'category' => $category,
+                'seo' => CategorySeoEnvelope::forCateg($category, $frontendBase),
+                'breadcrumb' => [
+                    ['name' => 'Accueil', 'url' => $frontendBase.'/'],
+                    ['name' => $category->designation_fr, 'url' => $frontendBase.'/'.rawurlencode((string) $category->slug)],
+                ],
+                'sous_categories' => $sousCategories,
+                'products' => [],
+                'brands' => [],
+            ]);
+        }
+
+        $perPage = $this->resolvePerPage($request);
 
         $sousCategoriesPaginator = SousCategory::where('categorie_id', $category->id)
             ->select('id', 'slug', 'designation_fr', 'categorie_id')
@@ -1428,6 +1457,22 @@ class ApisController extends Controller
             'name' => ($seo['breadcrumb_label'] ?? '') !== '' ? (string) $seo['breadcrumb_label'] : $sous_category->designation_fr,
             'url' => $frontendBase.'/'.rawurlencode((string) $sous_category->slug),
         ];
+
+        if ($request->boolean('meta_only')) {
+            $sousCategories = SousCategory::where('categorie_id', $sous_category->categorie_id)
+                ->select('id', 'slug', 'designation_fr', 'categorie_id')
+                ->orderBy('designation_fr')
+                ->get();
+
+            return response()->json([
+                'sous_category' => $sous_category,
+                'seo' => $seo,
+                'breadcrumb' => $breadcrumb,
+                'products' => [],
+                'brands' => [],
+                'sous_categories' => $sousCategories,
+            ]);
+        }
 
         /*
          * ── THE TWENTY-SECOND QUERY ──────────────────────────────────────────────────────────

@@ -80,13 +80,6 @@
     "DS008": 1,
     "DS011": 39
   },
-  "src/app/(shop)/category/CategorySeoLanding.tsx": {
-    "DS001": 32,
-    "DS002": 78,
-    "DS003": 41,
-    "DS004": 30,
-    "DS011": 84
-  },
   "src/app/(shop)/category/CategorySeoLandingExpandable.tsx": {
     "DS002": 1,
     "DS011": 4
@@ -189,11 +182,11 @@
     "DS011": 8
   },
   "src/app/(shop)/shop/ShopPageClient.tsx": {
-    "DS001": 6,
-    "DS002": 13,
-    "DS003": 7,
-    "DS004": 8,
-    "DS011": 10
+    "DS001": 4,
+    "DS002": 9,
+    "DS003": 5,
+    "DS004": 6,
+    "DS011": 4
   },
   "src/app/(shop)/shop/SubCategoryFallbackClient.tsx": {
     "DS002": 3,

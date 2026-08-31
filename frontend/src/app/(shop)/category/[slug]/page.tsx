@@ -7,7 +7,7 @@ import { getCategories } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
 // no canonical — the exact shell measured under crawl load).
-import { getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory } from '@/services/getCachedProductDetails';
+import { getCachedCategoryOrSubCategoryMetadata as fetchCategoryOrSubCategory } from '@/services/getCachedProductDetails';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
@@ -229,13 +229,19 @@ function deriveIntroDataFromProducts(
 const META_TITLE_MAX_LEN = 65;
 
 /**
- * Search Console exposed two high-impression, zero-click query clusters whose reviewed copy lives
+ * Search Console exposed high-impression, low-click query clusters whose reviewed copy lives
  * in `content/categories/*.json`. Filament also contains older metadata for those same categories,
  * and the normal API-first merge kept silently replacing the reviewed title, description and H1
  * in production. Keep the global admin-first policy; only these measured, explicitly curated
  * opportunities take their checked-in copy as the source of truth.
  */
-const SEARCH_CONSOLE_CURATED_SLUGS = new Set(['omega-3', 'pre-workout']);
+const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
+  'proteines',
+  'creatine',
+  'whey-isolate',
+  'omega-3',
+  'pre-workout',
+]);
 
 function mergeCategorySeoForSlug(
   slug: string,
@@ -573,7 +579,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const relatedCategories = resolveRelatedCategories(relatedSlugsSub, categories);
       // Unique intro fallback (thin-content): when there is no admin/content-file intro, synthesize a
       // distinct paragraph from this page's real product data so every indexed subcategory has copy.
-      const introDataSub = deriveIntroDataFromProducts(sub.products ?? []);
+      const introDataSub = deriveIntroDataFromProducts(productsData.products ?? []);
       const introForLandingSub = merged.intro?.trim()
         ? merged.intro
         : generateCategoryIntroFallback({
@@ -591,6 +597,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
+          slug={canonicalSlug}
           banners={merged.banners}
           intro={introForLandingSub}
           longBottomHtml={null}
@@ -615,6 +622,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const categorySeoLandingBottom = hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
+          slug={canonicalSlug}
           intro={introForLandingSub}
           longBottomHtml={merged.longBottomHtml?.trim() ? merged.longBottomHtml : null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
@@ -660,7 +668,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             <ShopPageClient
               productsData={productsData}
               categories={categories}
-              brands={sub.brands ?? []}
+              brands={productsData.brands ?? []}
               initialCategory={canonicalSlug}
               isSubcategory
               serverQuery={serverQuery}
@@ -733,7 +741,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       // Unique intro fallback (thin-content): when there is no admin/content-file intro, synthesize a
       // distinct paragraph from this category's real product data (count, brands, price) + its own
       // subcategory names so every indexed category carries non-duplicate copy.
-      const introDataCat = deriveIntroDataFromProducts(cat.products ?? []);
+      const introDataCat = deriveIntroDataFromProducts(productsData.products ?? []);
       const subcategoryNamesCat = (cat.sous_categories ?? [])
         .map((s: any) => s?.designation_fr)
         .filter((n: unknown): n is string => typeof n === 'string' && n.trim().length > 0);
@@ -759,6 +767,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
+          slug={canonicalSlug}
           banners={mergedCat.banners}
           intro={introForLandingCat}
           longBottomHtml={null}
@@ -783,6 +792,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const categorySeoLandingBottom = hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
+          slug={canonicalSlug}
           intro={introForLandingCat}
           longBottomHtml={mergedCat.longBottomHtml?.trim() ? mergedCat.longBottomHtml : null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
@@ -827,7 +837,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             <ShopPageClient
               productsData={productsData}
               categories={categories}
-              brands={cat.brands ?? []}
+              brands={productsData.brands ?? []}
               initialCategory={canonicalSlug}
               serverQuery={serverQuery}
               serverPagination={serverPagination}

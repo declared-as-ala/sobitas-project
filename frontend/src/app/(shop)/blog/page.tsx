@@ -3,13 +3,17 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ArrowUpRight, BookOpen, ChevronDown } from 'lucide-react';
 import { Section } from '@/app/components/layout/Section';
+import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
+import { getLatestSportsNutritionResearch } from '@/services/pubmed';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { decodeHtmlEntities } from '@/util/htmlEntities';
 import { loadForCache } from '@/util/loadForCache';
+import { toBlogIndexArticle } from '@/util/blogIndex';
 import { BlogPageClient } from './BlogPageClient';
 import { BlogListSkeleton } from './BlogListSkeleton';
+import { BlogResearchSection } from './BlogResearchSection';
 
 const ARTICLES_PER_PAGE = 9;
 
@@ -26,16 +30,16 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
   const { prev, next } = getBlogPrevNext(path, search, pageNum, totalPages);
 
   return {
-    title: { absolute: 'Blog Nutrition Sportive & Compléments | Protéine Tunisie' },
-    description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
+    title: { absolute: 'Blog Nutrition Sportive Tunisie | Whey & Créatine' },
+    description: 'Guides pratiques en Tunisie sur la whey, la créatine, la prise de masse, la récupération et les compléments. Conseils clairs par objectif.',
     alternates: {
       canonical,
       ...(prev && { prev }),
       ...(next && { next }),
     },
     openGraph: {
-      title: { absolute: 'Blog Nutrition Sportive & Compléments | Protéine Tunisie' },
-      description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
+      title: { absolute: 'Blog Nutrition Sportive Tunisie | Whey & Créatine' },
+      description: 'Guides pratiques sur la whey, la créatine, la nutrition et les compléments en Tunisie.',
       type: 'website',
       url: canonical,
       images: [{ url: '/og-banner.jpg', width: 1200, height: 630, alt: 'Blog Nutrition Sportive | Protéine Tunisie' }],
@@ -118,10 +122,19 @@ async function getBlogData() {
   );
 }
 
-export default async function BlogPage() {
-  const { articles, blogCategories, blogTags } = await getBlogData();
+export default async function BlogPage(props: { searchParams?: BlogSearchParams }) {
+  const [{ articles, blogCategories, blogTags }, researchFeed] = await Promise.all([
+    getBlogData(),
+    getLatestSportsNutritionResearch(),
+  ]);
   const baseUrl = getBaseUrl();
   const list = Array.isArray(articles) ? articles : [];
+  const indexArticles = list.map(toBlogIndexArticle);
+  const searchParams = props.searchParams ? await props.searchParams : {};
+  const initialPage = Math.max(
+    1,
+    Number.parseInt(String(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page || '1'), 10) || 1
+  );
 
   const collectionSchema = buildCollectionPageSchema(
     'Blog Nutrition Sportive & Compléments Alimentaires en Tunisie',
@@ -151,9 +164,17 @@ export default async function BlogPage() {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <Suspense fallback={<BlogListSkeleton />}>
-        <BlogPageClient articles={articles} blogCategories={blogCategories} blogTags={blogTags} />
-      </Suspense>
+      <main className="min-h-screen bg-canvas">
+        <Suspense fallback={<BlogListSkeleton />}>
+          <BlogPageClient
+            articles={indexArticles}
+            blogCategories={blogCategories}
+            blogTags={blogTags}
+            initialPage={initialPage}
+          />
+        </Suspense>
+
+        <BlogResearchSection feed={researchFeed} />
 
       {/*
         Server-rendered archive index.
@@ -215,6 +236,8 @@ export default async function BlogPage() {
           </nav>
         </Section>
       )}
+      </main>
+      <ScrollToTop />
     </>
   );
 }

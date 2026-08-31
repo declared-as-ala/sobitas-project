@@ -15,6 +15,8 @@ interface SafeImageProps {
   priority?: boolean;
   fallbackSrc?: string;
   placeholder?: 'blur' | 'empty';
+  /** Disable retries for dense listings where a fast branded fallback is preferable. */
+  retryOnError?: boolean;
   onLoad?: () => void;
   onError?: () => void;
 }
@@ -35,6 +37,7 @@ export function SafeImage({
   priority = false,
   fallbackSrc,
   placeholder = 'empty',
+  retryOnError = true,
   onLoad,
   onError,
 }: SafeImageProps) {
@@ -72,7 +75,7 @@ export function SafeImage({
     if (!mountedRef.current) return;
 
     const currentRetry = retryCountRef.current;
-    if (currentRetry < MAX_RETRIES) {
+    if (retryOnError && currentRetry < MAX_RETRIES) {
       retryCountRef.current = currentRetry + 1;
       const delay = RETRY_DELAY_MS * (currentRetry + 1); // increasing backoff
 
@@ -94,7 +97,7 @@ export function SafeImage({
       setHasError(true);
       onError?.();
     }
-  }, [onError]); // no dependency on imageSrc/retryCount → uses refs
+  }, [onError, retryOnError]); // no dependency on imageSrc/retryCount → uses refs
 
   const handleLoad = useCallback(() => {
     if (mountedRef.current) {

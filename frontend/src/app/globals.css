@@ -769,8 +769,18 @@ body[data-page='product'] {
   .pt-pack-workspace {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 20rem;
-    align-items: start;
-    gap: 2rem;
+    align-items: stretch;
+    gap: 1.5rem;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .pt-pack-products-scroll {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding-inline-end: 0.5rem;
+    scrollbar-gutter: stable;
   }
 }
 

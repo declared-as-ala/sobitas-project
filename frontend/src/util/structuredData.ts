@@ -845,6 +845,10 @@ export function buildOrganizationSchema(
     alternateName: ['SOBITAS', 'Sobitas'],
     url: base,
     logo: `${base}/logo.png`,
+    // Search Console recommends a store-level return policy in addition to the policy carried
+    // by each Product Offer. Keeping both tied to the same constant prevents the organization
+    // and product graphs from drifting into contradictory commercial terms.
+    hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
     description:
       'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
     ...(rating
