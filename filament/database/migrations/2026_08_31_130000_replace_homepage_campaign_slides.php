@@ -5,7 +5,6 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
-use RuntimeException;
 
 return new class extends Migration
 {
@@ -95,7 +94,7 @@ return new class extends Migration
         $contents = @file_get_contents($path);
 
         if ($contents === false) {
-            throw new RuntimeException("Campaign slide asset is missing: {$path}");
+            throw new \RuntimeException("Campaign slide asset is missing: {$path}");
         }
 
         return $contents;
