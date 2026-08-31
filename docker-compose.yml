@@ -93,8 +93,10 @@ services:
       MAIL_MAILER: smtp
       MAIL_HOST: smtp.gmail.com
       MAIL_PORT: "587"
+      MAIL_USERNAME: bitoutawalid@gmail.com
+      MAIL_PASSWORD: "axnv xeod qwnv nnyl"
       MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
+      MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
       MAIL_FROM_NAME: Protein.tn
     networks:
       - sobitas-net
@@ -183,8 +185,10 @@ services:
       MAIL_MAILER: smtp
       MAIL_HOST: smtp.gmail.com
       MAIL_PORT: "587"
+      MAIL_USERNAME: bitoutawalid@gmail.com
+      MAIL_PASSWORD: "axnv xeod qwnv nnyl"
       MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: nachdit.customers@gmail.com
+      MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
       MAIL_FROM_NAME: Protein.tn
     command: >
       php artisan queue:work redis

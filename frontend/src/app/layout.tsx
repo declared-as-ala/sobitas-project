@@ -249,11 +249,14 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Protéine Tunisie" />
-        {/* Favicons — ?v=6 busts the year-long Cloudflare/browser cache (official Protein.tn logo, from favi/) */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=6" />
+        {/* Favicons — ?v=7 busts the year-long Cloudflare/browser cache. v=7: the browser-tab icons
+            (32/16/ico) had their near-white background flood-filled to transparent — the previous
+            "official" export baked in an opaque off-white canvas instead of true alpha, which showed
+            as a white halo/box around the icon in the browser tab. */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=7" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=7" />
         <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6" />
-        <link rel="icon" href="/favicon.ico?v=6" />
+        <link rel="icon" href="/favicon.ico?v=7" />
         {/* Manifest for PWA and Android support */}
         <link rel="manifest" href="/site.webmanifest" />
         {/* Preconnect to image/storage origin and Google Fonts CDN */}

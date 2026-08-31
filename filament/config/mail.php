@@ -28,11 +28,11 @@ return [
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'host' => 'smtp.gmail.com',
-            'port' => 587,
-            'encryption' => 'tls',
-            'username' => 'bitoutawalid@gmail.com',
-            'password' => 'xwpfxykujdlorutz',
+            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
+            'port' => env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
+            'username' => env('MAIL_USERNAME', 'bitoutawalid@gmail.com'),
+            'password' => env('MAIL_PASSWORD', 'axnvxeodqwnvnnyl'),
             'timeout' => null,
             'auth_mode' => null,
         ],
