@@ -41,13 +41,19 @@ const BUILDER_CATEGORIES: { slug: string; label: string }[] = [
   { slug: 'pre-workout', label: 'Pre-workout' },
 ];
 
+/** The builder combines individual products; pre-built bundles must never appear as ingredients. */
+function isPackBuilderProduct(product: Product): boolean {
+  const isMarkedPack = Number(product.pack ?? 0) === 1;
+  const hasLegacyPackName = /^\s*pack(?:\s|[-–—_:])/i.test(product.designation_fr ?? '');
+
+  return !isMarkedPack && !hasLegacyPackName && getStockDisponible(product as never) > 0;
+}
+
 async function getGroups(): Promise<PackBuilderGroup[]> {
   const results = await Promise.allSettled(
     BUILDER_CATEGORIES.map(async ({ slug, label }) => {
       const res = await fetchCategoryOrSubCategory(slug);
-      const products = ((res.data.products ?? []) as Product[]).filter(
-        (product) => getStockDisponible(product as never) > 0
-      );
+      const products = ((res.data.products ?? []) as Product[]).filter(isPackBuilderProduct);
 
       /**
        * The category's OWN photograph, if the admin has one.

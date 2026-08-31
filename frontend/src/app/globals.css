@@ -770,7 +770,7 @@ body[data-page='product'] {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 20rem;
     align-items: start;
-    gap: 1.5rem;
+    gap: 1rem;
     min-height: 0;
     overflow: visible;
   }
@@ -788,7 +788,7 @@ body[data-page='product'] {
   }
 
   .pt-pack-summary {
-    top: 9.75rem;
+    top: 7.75rem;
   }
 
   /* The catalog uses the document scroller. A previous fixed-height workspace trapped the wheel

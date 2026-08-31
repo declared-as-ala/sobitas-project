@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Loader2, Package, Percent, ShoppingBag, X } from 'lucide-react';
+import { Loader2, Package, Percent, X } from 'lucide-react';
 import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import type { Product } from '@/types';
@@ -138,13 +138,11 @@ export function PackSummary({
     <>
       <aside className="pt-pack-summary hidden lg:sticky lg:block lg:self-start" aria-label="Résumé du pack">
         <div data-pack-target className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
-          <div className="border-b border-hairline p-5">
+          <div className="border-b border-hairline p-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <p className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Votre pack</p>
-                <p className="mt-0.5 text-xs text-ink-3">
-                  {hasItems ? `${itemCount} article${itemCount !== 1 ? 's' : ''}` : 'Prêt à être composé'}
-                </p>
+                {hasItems && <p className="mt-0.5 text-xs text-ink-3">{itemCount} article{itemCount !== 1 ? 's' : ''}</p>}
               </div>
               {discountPercent > 0 && (
                 <span className="inline-flex min-h-[44px] items-center rounded-full border border-brand px-3 text-xs font-bold text-brand">
@@ -152,7 +150,7 @@ export function PackSummary({
                 </span>
               )}
             </div>
-            <div className="mt-4">
+            <div className="mt-3">
               <TierProgress
                 subtotal={subtotal}
                 discountPercent={discountPercent}
@@ -163,7 +161,7 @@ export function PackSummary({
             </div>
           </div>
 
-          <div className="p-5">
+          <div className="p-4">
             {hasItems ? (
               <ul className="divide-y divide-hairline">
                 {entries.slice(0, 4).map(({ product, qty }) => (
@@ -171,18 +169,14 @@ export function PackSummary({
                 ))}
               </ul>
             ) : (
-              <div className="rounded-xl bg-sunken p-4 text-center">
-                <ShoppingBag className="mx-auto h-6 w-6 text-ink-3" aria-hidden="true" />
-                <p className="mt-2 text-sm font-semibold text-ink-1">Commencez par un produit</p>
-                <p className="mt-1 text-xs leading-relaxed text-ink-2">Vous pouvez changer de catégorie à tout moment.</p>
-              </div>
+              <p className="py-2 text-sm text-ink-2">Ajoutez un produit pour commencer.</p>
             )}
 
             {entries.length > 4 && (
               <p className="mt-3 text-xs font-medium text-ink-3">+ {entries.length - 4} autre{entries.length - 4 > 1 ? 's' : ''}</p>
             )}
 
-            <div className="mt-5 space-y-2 border-t border-hairline pt-4 text-sm">
+            <div className="mt-3 space-y-2 border-t border-hairline pt-3 text-sm">
               <div className="flex justify-between gap-4 text-ink-2">
                 <span>Sous-total</span>
                 <span className="font-semibold tabular-nums text-ink-1">{subtotal.toFixed(2)} DT</span>
@@ -208,7 +202,7 @@ export function PackSummary({
               type="button"
               onClick={onReview}
               disabled={!hasItems}
-              className="mt-5 inline-flex min-h-[52px] w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-sm font-bold uppercase tracking-wide text-on-brand transition-colors disabled:cursor-not-allowed disabled:opacity-50 [@media(hover:hover)]:hover:bg-brand-hover"
+              className="mt-4 inline-flex min-h-[48px] w-full items-center justify-center rounded-xl bg-brand px-5 font-display text-sm font-bold uppercase tracking-wide text-on-brand transition-colors disabled:cursor-not-allowed disabled:opacity-50 [@media(hover:hover)]:hover:bg-brand-hover"
             >
               Vérifier mon pack
             </button>

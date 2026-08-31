@@ -90,10 +90,10 @@ function StageNav({ stage, hasItems, onChange }: { stage: Stage; hasItems: boole
 
 function DiscountSteps({ tiers }: { tiers: { min: number; percent: number }[] }) {
   return (
-    <div className="flex min-w-max items-center gap-2" aria-label="Paliers de remise">
+    <div className="flex min-w-max items-center gap-1.5" aria-label="Paliers de remise">
       {tiers.map((tier) => (
-        <span key={tier.min} className="inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-hairline bg-elevated px-3 text-xs text-ink-2">
-          <strong className="font-display text-base font-extrabold text-brand">−{tier.percent}%</strong>
+        <span key={tier.min} className="inline-flex min-h-[36px] items-center gap-1 rounded-lg border border-hairline bg-elevated px-2.5 text-[11px] text-ink-2 sm:text-xs">
+          <strong className="font-display text-sm font-extrabold text-brand sm:text-base">−{tier.percent}%</strong>
           dès {tier.min} DT
         </span>
       ))}
@@ -157,22 +157,20 @@ export function PackWizard(props: PackWizardProps) {
             >
               {stage === 'build' && activeGroup && (
                 <section aria-labelledby="pack-products-title" className="flex min-h-0 flex-col">
-                  <div className="pt-pack-controls shrink-0 lg:sticky lg:top-0 lg:z-30 lg:bg-sunken lg:pb-3">
-                    <div className="mb-3 lg:flex lg:items-end lg:justify-between lg:gap-6">
-                      <div>
-                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Pack sur mesure</p>
-                        <h1 id="pack-products-title" className="mt-1 font-display text-3xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-4xl">
+                  <div className="pt-pack-controls shrink-0 lg:sticky lg:top-0 lg:z-30 lg:bg-sunken lg:pb-2.5">
+                    <div className="mb-2.5 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                      <div className="flex min-w-0 items-center gap-3">
+                        <h1 id="pack-products-title" className="font-display text-2xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-3xl">
                           Composez votre pack
                         </h1>
-                        <p className="mt-1.5 text-sm text-ink-2">Ajoutez, comparez, économisez. La remise se calcule toute seule.</p>
                       </div>
-                      <div className="scrollbar-hide -mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:mt-0 lg:px-0">
+                      <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0">
                         <DiscountSteps tiers={tiers} />
                       </div>
                     </div>
 
-                    <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-                      <div className="flex min-w-max snap-x snap-mandatory gap-2" role="tablist" aria-label="Catégories du pack">
+                    <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 pb-0.5 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+                      <div className="flex min-w-max snap-x snap-mandatory gap-1.5" role="tablist" aria-label="Catégories du pack">
                         {groups.map((group) => {
                           const active = group.slug === activeGroup.slug;
                           const selected = selectedByGroup[group.slug] ?? 0;
@@ -184,13 +182,13 @@ export function PackWizard(props: PackWizardProps) {
                               role="tab"
                               aria-selected={active}
                               onClick={() => setActiveSlug(group.slug)}
-                              className={`inline-flex min-h-[50px] snap-start items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-3 text-sm font-semibold transition-[border-color,background-color,color,transform] active:scale-[0.98] ${
+                              className={`inline-flex min-h-[44px] snap-start items-center gap-1.5 rounded-xl border py-1 pl-1 pr-2.5 text-xs font-semibold transition-[border-color,background-color,color,transform] active:scale-[0.98] sm:text-sm ${
                                 active ? 'border-brand bg-brand text-on-brand shadow-sm' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand/60 [@media(hover:hover)]:hover:text-brand'
                               }`}
                             >
                               {art && (
-                                <span className={`relative h-9 w-9 shrink-0 rounded-lg ${active ? 'bg-elevated/95' : 'bg-sunken'}`} aria-hidden="true">
-                                  <Image src={art} alt="" fill sizes="36px" className="object-contain p-0.5" />
+                                <span className={`relative h-8 w-8 shrink-0 rounded-lg ${active ? 'bg-elevated/95' : 'bg-sunken'}`} aria-hidden="true">
+                                  <Image src={art} alt="" fill sizes="32px" className="object-contain p-0.5" />
                                 </span>
                               )}
                               <span>{group.label}</span>
@@ -206,14 +204,8 @@ export function PackWizard(props: PackWizardProps) {
                     </div>
                   </div>
 
-                  <div className="pt-pack-workspace min-h-0 flex-1 pt-1">
+                  <div className="pt-pack-workspace min-h-0 flex-1 pt-2">
                     <div role="tabpanel" aria-label={activeGroup.label} className="pt-pack-products-scroll min-w-0">
-                      <div className="mb-3 flex items-end justify-between gap-4">
-                        <div>
-                          <h2 className="font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">{activeGroup.label}</h2>
-                          <p className="mt-0.5 text-xs text-ink-3">{activeGroup.products.length} produits en stock</p>
-                        </div>
-                      </div>
                       <ProductPicker products={activeGroup.products} pack={pack} onAdd={onAdd} onSetQty={onSetQty} calm={calm} />
                     </div>
                     <PackSummary

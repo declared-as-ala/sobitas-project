@@ -142,7 +142,7 @@ const Tile = memo(function Tile({
         selected ? 'border-brand bg-brand/5' : 'border-hairline bg-elevated'
       }`}
     >
-      <div ref={frameRef} className="relative aspect-square w-full bg-sunken">
+      <div ref={frameRef} className="relative aspect-[4/3] w-full bg-sunken sm:aspect-square">
         {image ? (
           <ProductImage src={image} alt={product.designation_fr} unoptimized={isStorageImageUrl(image)} />
         ) : (
@@ -172,7 +172,7 @@ const Tile = memo(function Tile({
         )}
       </div>
 
-      <div className="flex flex-1 flex-col p-3">
+      <div className="flex flex-1 flex-col p-2.5 sm:p-3">
         <h3
           title={product.designation_fr}
           className="line-clamp-2 min-h-[2.2rem] text-xs font-semibold leading-snug text-ink-1"
@@ -205,7 +205,7 @@ const Tile = memo(function Tile({
           <span className={`text-xs font-semibold ${selected ? 'text-ink-2' : 'text-ink-3'}`}>DT</span>
         </p>
 
-        <div className="mt-2.5">
+        <div className="mt-2">
           {outOfStock ? (
             <span className="flex min-h-[44px] items-center justify-center rounded-lg bg-sunken text-xs font-semibold text-ink-3">
               Indisponible
@@ -279,7 +279,7 @@ export function ProductPicker({ products, pack, onAdd, onSetQty, calm }: Product
   );
 
   return (
-    <div data-pack-grid className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+    <div data-pack-grid className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       {available.map((product) => (
         <Tile
           key={product.id}
