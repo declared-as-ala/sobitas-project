@@ -43,6 +43,29 @@ function getErrorStatus(e: unknown): number | null {
 
 /** CTR-optimized product title for Tunisia SERP. */
 function productTitle(product: Product): string {
+  /*
+   * Search Console opportunity titles (3-month export, 31/08/2026).
+   *
+   * These are deliberately limited to products with meaningful impressions where the imported
+   * catalogue title does not answer the actual query.  They do not invent discounts, stock or
+   * delivery promises; price and availability remain in Product/Offer structured data.  Keeping
+   * this as a small reviewed map also avoids turning every PDP into the same keyword template.
+   */
+  const searchOpportunityTitles: Record<string, string> = {
+    'omega-3-fish-oil-240-softgel-weightworld':
+      'Omega 3 Fish Oil WeightWorld 240 capsules – Prix Tunisie',
+    '100-whey-gold-standard-2-27kg':
+      'Gold Standard Whey 2,27 kg – Prix Tunisie | Protein.tn',
+    'anabolic-whey-80-2-25kg-proactive':
+      'Anabolic Whey 80 ProActive 2,25 kg – Prix Tunisie',
+    'serious-mass-2-7-kg':
+      'Serious Mass 2,7 kg – Prix Tunisie | Optimum Nutrition',
+    'serious-mass-5-45-kg-optimum-nutrition':
+      'Serious Mass 5,45 kg – Prix Tunisie | Optimum Nutrition',
+  };
+  const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
+  if (opportunityTitle) return opportunityTitle;
+
   const explicit = product.seo?.title || product.seo_title || product.meta_title;
   if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';

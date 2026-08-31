@@ -78,6 +78,7 @@ import { DeferredInstallBanner } from "@/app/components/DeferredInstallBanner";
 import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { ReferralCapture } from "@/app/components/ReferralCapture";
+import { WebVitalsReporter } from "@/app/components/WebVitalsReporter";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
 const inter = localFont({
@@ -296,11 +297,11 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Protéine Tunisie" />
-        {/* Favicons — ?v=6 busts the year-long Cloudflare/browser cache (official Protein.tn logo, from favi/) */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=6" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=6" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6" />
-        <link rel="icon" href="/favicon.ico?v=6" />
+        {/* Favicons — ?v=7 publishes the crisp, genuinely transparent Protein.tn mark. */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=7" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=7" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=7" />
+        <link rel="icon" href="/favicon.ico?v=7" />
         {/* Manifest for PWA and Android support */}
         <link rel="manifest" href="/site.webmanifest" />
         {/* Preconnect to image/storage origin and Google Fonts CDN */}
@@ -332,6 +333,7 @@ export default async function RootLayout({
         <Script id="gtag-init" strategy="lazyOnload">
           {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });`}
         </Script>
+        <WebVitalsReporter />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <Providers navigation={navigation} navCategories={navCategories} cmsPages={footer.cmsPages} coordinates={footer.coordinates}>
             <Suspense fallback={null}>

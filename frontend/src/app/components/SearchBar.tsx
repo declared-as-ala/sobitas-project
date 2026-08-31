@@ -207,16 +207,24 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
   const [headerBottom, setHeaderBottom] = useState(0);
   useEffect(() => {
     if (!open) return;
+    let frame = 0;
     const measure = () => {
+      frame = 0;
       const header = document.querySelector('header');
-      setHeaderBottom(header ? Math.round(header.getBoundingClientRect().bottom) : 64);
+      const next = header ? Math.round(header.getBoundingClientRect().bottom) : 64;
+      setHeaderBottom((current) => (current === next ? current : next));
+    };
+    const scheduleMeasure = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(measure);
     };
     measure();
-    window.addEventListener('resize', measure, { passive: true });
-    window.addEventListener('scroll', measure, { passive: true });
+    window.addEventListener('resize', scheduleMeasure, { passive: true });
+    window.addEventListener('scroll', scheduleMeasure, { passive: true });
     return () => {
-      window.removeEventListener('resize', measure);
-      window.removeEventListener('scroll', measure);
+      window.removeEventListener('resize', scheduleMeasure);
+      window.removeEventListener('scroll', scheduleMeasure);
+      if (frame) window.cancelAnimationFrame(frame);
     };
   }, [open]);
 
