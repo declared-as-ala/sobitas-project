@@ -3,7 +3,7 @@ import { getPageBySlug, getCoordinates } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
-import AboutPageClient from './AboutPageClient';
+import AboutPageContent from './AboutPageContent';
 
 /**
  * THE ONE PAGE WHERE THE LEGAL NAME BELONGS IN THE TITLE.
@@ -20,8 +20,16 @@ import AboutPageClient from './AboutPageClient';
  * more in truncation than it wins in recognition.
  */
 const ABOUT_TITLE = 'À propos de SOBITAS — Protein.tn | Protéine Tunisie';
+/*
+ * 154 characters, and both halves of that matter.
+ *
+ * The previous one was 161 — past the point Google truncates a desktop snippet, so the last words
+ * were being cut. It also ended "créatine depuis des années en Tunisie", a vagueness the page
+ * itself contradicts: company.ts and the CMS excerpt both say 2010, and a founding year is the
+ * single most credible thing an About description can carry.
+ */
 const ABOUT_DESCRIPTION =
-  'SOBITAS, aujourd’hui Protein.tn : distributeur de compléments alimentaires et matériel de sport à Sousse. Protéines, whey, créatine depuis des années en Tunisie.';
+  'SOBITAS, aujourd’hui Protein.tn : compléments alimentaires et matériel de sport à Sousse depuis 2010. Whey, créatine, vitamines livrés partout en Tunisie.';
 
 export const metadata: Metadata = {
   title: { absolute: ABOUT_TITLE },
@@ -75,7 +83,7 @@ export default async function QuiSommesNousPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <AboutPageClient initialPage={page} initialCoordinates={coordinates} />
+      <AboutPageContent page={page} coordinates={coordinates} />
     </>
   );
 }

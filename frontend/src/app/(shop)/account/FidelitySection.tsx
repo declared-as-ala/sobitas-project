@@ -1,8 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { getPointsHistory } from '@/services/api';
+import { EARN_RATE, REDEEM_POINTS_PER_DT, CASHBACK_PERCENT } from '@/util/loyaltyPoints';
 import type { PointsHistory, PointsTransaction } from '@/types';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
@@ -18,22 +18,22 @@ const TYPE_META: Record<
   earn: {
     label: 'Gagnés',
     className:
-      'bg-green-50 text-green-700 border-green-200 dark:bg-green-950/40 dark:text-green-400 dark:border-green-900',
+      'border border-ok/40 bg-elevated text-ok',
   },
   redeem: {
     label: 'Utilisés',
     className:
-      'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-400 dark:border-red-900',
+      'border border-destructive/40 bg-elevated text-destructive',
   },
   adjustment: {
     label: 'Ajustement',
     className:
-      'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700',
+      'border border-rule bg-elevated text-ink-2',
   },
   expiry: {
     label: 'Expirés',
     className:
-      'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-900',
+      'border border-warn/40 bg-elevated text-warn',
   },
 };
 
@@ -46,7 +46,6 @@ function formatDate(value: string): string {
 }
 
 export function FidelitySection() {
-  const { user } = useAuth();
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,57 +69,36 @@ export function FidelitySection() {
     };
   }, []);
 
-  // Prefer the freshly fetched balance; fall back to the profile balance while loading.
-  const balance = history?.balance ?? user?.points_balance ?? 0;
-  const valueDt = history?.value_dt ?? user?.points_value_dt ?? balance / 20;
   const transactions = history?.transactions ?? [];
 
   return (
     <div className="space-y-6">
-      {/* Balance card */}
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-          <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-            <Gift className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-            Programme de fidélité
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="p-4 sm:p-6">
-          {loading ? (
-            <div className="flex flex-wrap gap-6">
-              <Skeleton className="h-16 w-40 rounded-xl" />
-              <Skeleton className="h-16 w-40 rounded-xl" />
-            </div>
-          ) : (
-            <div className="flex flex-wrap items-end gap-x-10 gap-y-4">
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Votre solde</p>
-                <p className="font-display font-bold tracking-tight tabular-nums text-3xl sm:text-4xl text-red-600 dark:text-red-400">
-                  {balance} <span className="text-lg text-gray-500 dark:text-gray-400">points</span>
-                </p>
-              </div>
-              <div>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Valeur</p>
-                <p className="font-display font-bold tracking-tight tabular-nums text-2xl sm:text-3xl text-gray-900 dark:text-white">
-                  {valueDt.toFixed(2)} <span className="text-base text-gray-500 dark:text-gray-400">DT</span>
-                </p>
-              </div>
-            </div>
-          )}
-          <div className="mt-5 flex items-start gap-2 p-3 rounded-xl bg-red-50/50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40">
-            <Sparkles className="h-4 w-4 text-red-600 dark:text-red-400 mt-0.5 shrink-0" aria-hidden="true" />
-            <p className="text-xs leading-snug text-gray-600 dark:text-gray-400">
-              Gagnez 1 point par DT dépensé, et échangez 20 points contre 1 DT de remise lors de votre prochaine commande.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/*
+        ── THE BALANCE USED TO BE HERE TWICE ───────────────────────────────────────────────
+        This tab opened with a "Programme de fidélité" card showing the balance and its dinar
+        value in 36px type — directly under `AccountSummary`, which had just shown the same two
+        numbers. On a 390px screen that is the same "0 points / 0.00 DT" twice within 300px, and
+        the second one is the one a customer distrusts.
+
+        The summary keeps the numbers, because they are true on all three tabs. What is left here
+        is the only thing that belongs to THIS tab and nowhere else: the rules of the programme,
+        and the ledger below. `balance` and `valueDt` are still computed above — the history fetch
+        is authoritative and the summary reads the profile — but they are no longer rendered here.
+      */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand/5 p-3.5">
+        <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+        <p className="text-[12.5px] leading-snug text-ink-2">
+          Gagnez {EARN_RATE} point par DT dépensé — soit {CASHBACK_PERCENT}% de chaque commande — et
+          échangez {REDEEM_POINTS_PER_DT} points contre 1 DT de remise lors de votre prochaine
+          commande. Les points sont crédités une fois la commande livrée.
+        </p>
+      </div>
 
       {/* Transactions history */}
-      <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden">
-        <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-          <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-            <History className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
+      <Card className="rounded-xl border border-hairline bg-elevated shadow-sm overflow-hidden">
+        <CardHeader className="border-b border-hairline">
+          <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-ink-1">
+            <History className="h-5 w-5 text-brand" aria-hidden="true" />
             Historique des points
           </CardTitle>
         </CardHeader>
@@ -132,11 +110,11 @@ export function FidelitySection() {
               ))}
             </div>
           ) : error ? (
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+            <p className="text-sm text-brand">{error}</p>
           ) : transactions.length === 0 ? (
             <div className="py-8 text-center">
-              <Gift className="h-10 w-10 text-gray-300 dark:text-gray-700 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <Gift className="mx-auto mb-3 h-10 w-10 text-ink-3" aria-hidden="true" />
+              <p className="text-sm text-ink-3">
                 Aucune transaction pour le moment. Passez une commande pour commencer à cumuler des points.
               </p>
             </div>
@@ -148,13 +126,13 @@ export function FidelitySection() {
                 return (
                   <li
                     key={tx.id}
-                    className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50"
+                    className="flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-3 sm:gap-4 sm:p-4"
                   >
                     <span
                       className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${
                         positive
-                          ? 'bg-green-50 dark:bg-green-950/40 text-green-600 dark:text-green-400'
-                          : 'bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400'
+                          ? 'bg-ok/10 text-ok'
+                          : 'bg-brand/10 text-brand'
                       }`}
                     >
                       {positive ? (
@@ -169,28 +147,28 @@ export function FidelitySection() {
                           {meta.label}
                         </Badge>
                         {tx.commande_id != null && (
-                          <span className="text-xs text-gray-400 dark:text-gray-500">
+                          <span className="text-xs text-ink-3">
                             Commande #{tx.commande_id}
                           </span>
                         )}
                       </div>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 mt-1 break-words">
+                      <p className="mt-1 break-words text-sm text-ink-2">
                         {tx.description}
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">
+                      <p className="mt-0.5 text-xs text-ink-3">
                         {formatDate(tx.created_at)}
                       </p>
                     </div>
                     <div className="text-right shrink-0">
                       <p
                         className={`font-display font-bold tracking-tight tabular-nums ${
-                          positive ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'
+                          positive ? 'text-ok' : 'text-brand'
                         }`}
                       >
                         {positive ? '+' : ''}
                         {tx.points} pts
                       </p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500 tabular-nums">
+                      <p className="text-xs tabular-nums text-ink-3">
                         Solde : {tx.balance_after}
                       </p>
                     </div>

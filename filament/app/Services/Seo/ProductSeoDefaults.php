@@ -158,7 +158,56 @@ class ProductSeoDefaults
 
     private static function isLegacyDescription(Product $product, string $withBrand): bool
     {
-        return trim((string) $product->meta_description)
-            === "Achetez {$withBrand} en Tunisie au meilleur prix. Produit 100% authentique, livraison rapide 24-72h à Sousse, Tunis et partout en Tunisie, paiement à la livraison.";
+        $current = trim((string) $product->meta_description);
+        if ($current === '') {
+            return false;
+        }
+
+        if ($current === "Achetez {$withBrand} en Tunisie au meilleur prix. Produit 100% authentique, livraison rapide 24-72h à Sousse, Tunis et partout en Tunisie, paiement à la livraison.") {
+            return true;
+        }
+
+        /*
+         * ── OUR OWN TEMPLATE, GENERATED WITHOUT THE PRODUCT NAME ────────────────────────────────
+         *
+         * The blanks-only rule means a bad value written by an earlier version of this class is
+         * permanent: it is not blank, and the one legacy string above is the only shape that was
+         * ever detected. So a defect fixed in the template stays live on every row that already
+         * carried it, for as long as the catalogue exists.
+         *
+         * There is such a shape, and it is on the highest-impression product page on the site.
+         * /omega-3/omega-3-fish-oil-240-softgel-weightworld — 3,475 impressions, position 7.4,
+         * CTR 0.75% — serves:
+         *
+         *     "Oméga 3 en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison.
+         *      Produit 100% authentique."
+         *
+         * That is `buildDescription` output with `$lead` missing its `{$name} — ` prefix: the
+         * snippet names the CATEGORY and never the product. A searcher on "omega 3 fish oil" is
+         * shown a line that could belong to any of ninety products, from a page ranked seventh.
+         *
+         * ── WHY THIS IS SAFE TO OVERWRITE AND ADMIN COPY IS NOT ────────────────────────────────
+         * Both trailing sentences are ours verbatim, and they are specific enough that hand-written
+         * copy does not land on them by accident. Requiring BOTH, and requiring the description NOT
+         * to open with the product's own name, identifies a row this class generated badly — not a
+         * row somebody wrote. Anything a human authored fails the first test and is left alone.
+         */
+        $name = trim((string) $product->designation_fr);
+        if ($name === '') {
+            return false;
+        }
+
+        $isOwnTemplate = str_contains($current, 'Livraison 24-72h partout en Tunisie.')
+            && str_contains($current, 'Produit 100% authentique.');
+        if (! $isOwnTemplate) {
+            return false;
+        }
+
+        // Compared on a PREFIX of the name: `fitSentences` can trim the lead on a word boundary
+        // when the name alone overruns the budget, so a full-string comparison would call a
+        // correctly-generated long-name description legacy and rewrite it on every save.
+        $head = mb_strtolower(mb_substr($name, 0, 12));
+
+        return ! str_starts_with(mb_strtolower($current), $head);
     }
 }

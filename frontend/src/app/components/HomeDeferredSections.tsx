@@ -5,6 +5,7 @@ import type { Article, Brand } from '@/types';
 import { PromoBanner } from '@/app/components/PromoBanner';
 import { BlogSection } from '@/app/components/BlogSection';
 import { BrandsSection } from '@/app/components/BrandsSection';
+import { GoogleReviewsSection } from '@/app/components/GoogleReviewsSection';
 
 // PromoBanner, BlogSection and BrandsSection are now SERVER-RENDERED (static import) — they were
 // dynamic(ssr:false) + gated behind requestIdleCallback, so they were absent from the served HTML
@@ -22,6 +23,7 @@ export function HomeDeferredSections({ articles, brands }: { articles: Article[]
       <PromoBanner />
       <BlogSection articles={articles} />
       <BrandsSection brands={brands} />
+      <GoogleReviewsSection />
       <ScrollToTop />
     </>
   );

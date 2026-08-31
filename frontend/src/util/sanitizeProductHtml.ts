@@ -13,6 +13,8 @@
  * handled elsewhere / by trusted admin input); it removes chat-export cruft only.
  */
 
+import { normalizeProse } from './normalizeProse';
+
 const ARTIFACT_CLASS_WRAPPERS = [
   'markdown-main-panel',
   'attachment-container',
@@ -51,6 +53,11 @@ export function sanitizeProductHtml(html: string | null | undefined): string {
   // level changes, so an h1 becomes a section heading under the product name, which is what it
   // always meant. Deeper levels are left alone; h2 siblings are normal and harmless.
   out = out.replace(/<h1(\s[^>]*)?>/gi, (_m, attrs) => `<h2${attrs ?? ''}>`).replace(/<\/h1\s*>/gi, '</h2>');
+
+  /* Typed formatting becomes real markup: hand-typed bullets become lists, emoji headings lose
+     their emoji, <li><p> collapses. See normalizeProse for why this lives in the presentation
+     layer rather than in a migration. */
+  out = normalizeProse(out);
 
   // Collapse the resulting empty wrappers and excess whitespace.
   out = out

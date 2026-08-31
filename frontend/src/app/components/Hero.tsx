@@ -244,8 +244,25 @@ export function Hero({ slides, fallbackAlt, bestSellers = [] }: HeroProps) {
          connected with the category section"). Same rule as the band scale in Section.tsx — below
          `sm` a band's bottom padding is zero and the gap is the NEXT band's top padding alone.
          The hero is not a `<Section>` (it owns its own full-bleed frame), so it states the rule
-         itself rather than inheriting it. */
-      className="w-full bg-canvas pb-0 pt-0 sm:pb-6 sm:pt-4 lg:pb-8"
+         itself rather than inheriting it.
+
+         ── THE GAP UNDER THE HERO IS NOW THIS NUMBER ALONE (owner, 18/08/2026) ──────────────
+         *"for the first section, the upper one, make a padding bottom of 1.5em — the section that
+         holds the slider, the whole thing"*, and on mobile *"add to it padding bottom 0.3em"*.
+
+         1.5em is 24px at the 16px root, which is `pb-6` — a value the hero already had at `sm`;
+         what goes is `lg:pb-8`, so the desktop bottom is one number from 640px up instead of
+         stepping to 32 at 1024. That matters more than the 8px: the category rail below has just
+         given up its own top padding entirely (see CategoryRail), so this padding IS the gap
+         between the hero and the first row of cards, at every desktop width, and a value that
+         steps at `lg` would make that gap step with it.
+
+         Mobile was 0.3em (4px) for one revision and is now 0.5em = `pb-2` = 8px, the owner
+         having seen 4px on a real phone: the category rail below has also given up its top
+         padding since, so this is the ONLY space between the slider and the first row of cards
+         and 4px read as a collision rather than as a join. 8px is also the mobile bottom every
+         other band on the page carries, so the boundary is now the site's normal one. */
+      className="w-full bg-canvas pb-2 pt-0 sm:pb-6 sm:pt-4"
     >
       {/*
         The SITE container, byte-for-byte: `mx-auto max-w-site px-4 sm:px-6 lg:px-8`. The header,

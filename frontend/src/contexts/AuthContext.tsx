@@ -1,15 +1,17 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { login as apiLogin, register as apiRegister, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
-import type { User, LoginRequest, RegisterRequest, Order } from '@/types';
+import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
+import type { User, LoginRequest, RegisterRequest, Order, AuthResponse } from '@/types';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (credentials: LoginRequest) => Promise<void>;
-  register: (data: RegisterRequest) => Promise<void>;
+  login: (credentials: LoginRequest) => Promise<AuthResponse>;
+  register: (data: RegisterRequest) => Promise<AuthResponse>;
+  /** Sign in (or sign up, first time) with a Google ID token from GoogleSignInButton. */
+  loginWithGoogle: (credential: string) => Promise<void>;
   logout: () => void;
   updateProfile: (data: Partial<User> & { password?: string }) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -29,6 +31,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState<string | null>(null);
   const isFetchingOrdersRef = useRef(false);
+
+  const clearStoredSession = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setUser(null);
+  };
+
+  const establishSession = async (token: string, seed: Partial<User>) => {
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(seed));
+
+    try {
+      const profile = await getProfile();
+      setUser(profile);
+      localStorage.setItem('user', JSON.stringify(profile));
+    } catch (error) {
+      clearStoredSession();
+      throw error;
+    }
+  };
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -60,21 +82,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiLogin(credentials);
       
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      const userData: User = {
+      await establishSession(response.token, {
         id: response.id,
         name: response.name,
         email: credentials.email,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Fetch full profile
-      const profile = await getProfile();
-      setUser(profile);
-      localStorage.setItem('user', JSON.stringify(profile));
+      });
+      return response;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Login failed');
+      throw new Error(error.response?.data?.message || 'Connexion impossible. Réessayez.');
     }
   };
 
@@ -82,29 +97,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiRegister(data);
       
-      // Store token and user info
-      localStorage.setItem('token', response.token);
-      const userData: User = {
+      await establishSession(response.token, {
         id: response.id,
         name: response.name,
         email: data.email,
         phone: data.phone,
-      };
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      // Fetch full profile
-      const profile = await getProfile();
-      setUser(profile);
-      localStorage.setItem('user', JSON.stringify(profile));
+      });
+      return response;
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Registration failed');
+      const firstValidationError = Object.values(error.response?.data?.errors ?? {})
+        .flat()
+        .find((message) => typeof message === 'string');
+      throw new Error(firstValidationError || error.response?.data?.message || 'Inscription impossible. Réessayez.');
+    }
+  };
+
+  /**
+   * Google sign-in. Deliberately the SAME shape as login()/register() from here on: the API
+   * returns the same {token, id, name} envelope, so everything downstream — the stored session,
+   * the profile fetch, the order history — is one code path rather than a parallel one.
+   *
+   * The profile fetch is what fills in the fields Google cannot give us (phone, addresses,
+   * loyalty balance), which is why it is not optional here either.
+   */
+  const loginWithGoogle = async (credential: string) => {
+    try {
+      const response = await apiLoginWithGoogle(credential);
+      await establishSession(response.token, { id: response.id, name: response.name });
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Connexion Google impossible');
     }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
+    clearStoredSession();
     setOrders([]);
     setOrdersError(null);
     setOrdersLoading(false);
@@ -164,7 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [user]);
 
-  const getOrderDetails = async (id: number) => {
+  const getOrderDetails = useCallback(async (id: number) => {
     try {
       const details = await getOrderDetail(id);
       return details;
@@ -172,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Error fetching order details:', error);
       throw error;
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider
@@ -182,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         isLoading,
         login,
         register,
+        loginWithGoogle,
         logout,
         updateProfile,
         refreshProfile,

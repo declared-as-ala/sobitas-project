@@ -1,0 +1,225 @@
+name: Health watch (scheduled, no SSH)
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# WHY THIS EXISTS
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Before 14/08/2026 nothing in this repository ran on a schedule. Not one workflow had a `cron:`
+# line, so nothing ever checked whether production was still working. Every problem found that day
+# had been running unnoticed for days:
+#
+#   products.seo_schema_description missing   ~4 days   every recompose threw and lost the body
+#                                                       and barcode it was supposed to write
+#   the iHerb circuit breaker stuck open       3 days   900 jobs dispatched every 5 minutes, all
+#                                                       returning in 1ms, all reporting DONE
+#   seo:ctr-pass failing                      hourly    the six page-one categories that earn
+#                                                       impressions and no clicks
+#   every article URL serving HTTP 500          1 day   43,400 impressions/month of blog traffic
+#
+# None of them announced themselves. All four were found because somebody happened to look, and the
+# thing that made them expensive was not the bug — it was the days between the bug and noticing.
+#
+# The seventeen scripts in frontend/scripts/check-*.mjs already encode what "working" means. They
+# ran only on deploy, which is precisely when they are least needed: a deploy is when someone is
+# already watching. Three of the four failures above involved no deploy at all — a data change, an
+# expiring cache key, a renamed category — so a deploy-time gate could not have caught them.
+#
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# WHY IT DELIBERATELY DOES NOT USE SSH
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Every guard here reads public HTTPS. That is not a limitation, it is the point.
+#
+# On 14/08 the SSH key was fixed, sixteen diagnostic workflow runs were dispatched in thirty
+# minutes, and the VPS then stopped answering on port 22 entirely — a TCP timeout, while the site
+# itself kept serving 200s in under a second. A burst of connections from GitHub's large rotating
+# runner ranges is exactly the shape fail2ban exists to stop.
+#
+# A monitor that needs a shell is a monitor that stops working at the moment the box gets unhappy,
+# which is the moment you need it. This one keeps reporting when SSH, the deploy pipeline and the
+# whole vps-run workflow are unavailable.
+#
+# Alerting is GitHub's own: a failed scheduled run emails the repository owner. No new service, no
+# credential to rotate, nothing else to keep alive.
+
+on:
+  schedule:
+    # Every six hours. Fast enough that a three-day outage becomes a six-hour one; slow enough
+    # that a green run is never noise. Times are UTC and GitHub may delay a cron under load, which
+    # is fine here — nothing depends on the exact minute.
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: health-watch
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  watch:
+    name: Is production still working?
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # ── WHY THIS STEP EXISTS ────────────────────────────────────────────────────────────
+      # It did not, and that is why every scheduled run since 15/08 has been red.
+      #
+      # Sixteen of the seventeen guards here are dependency-free by design: they read public
+      # HTTPS with the global `fetch` and parse with `node:` builtins, so `node scripts/x.mjs`
+      # works on a bare checkout. `measure-category-rail.mjs` is the exception — a clipped label
+      # changes no status code and throws nothing, so the only way to see it is to lay the page
+      # out in a real engine. That one imports puppeteer, and puppeteer is in node_modules.
+      #
+      # The failure was ERR_MODULE_NOT_FOUND on every run, twice per run because the guard
+      # helper retries. The monitor was reporting a broken monitor, six-hourly, which is exactly
+      # the "looks like coverage while providing none" failure this workflow's own header warns
+      # about.
+      #
+      # PUPPETEER_SKIP_DOWNLOAD: ubuntu-latest already ships Chrome at /usr/bin/google-chrome and
+      # both measurement scripts resolve that path themselves. Downloading a second ~170MB copy
+      # on every scheduled run buys nothing.
+      - name: Install dependencies for the browser-based guards
+        working-directory: frontend
+        env:
+          PUPPETEER_SKIP_DOWNLOAD: '1'
+        run: npm ci --no-audit --no-fund
+
+      - name: Run every read-only guard against production
+        working-directory: frontend
+        run: |
+          set +e
+
+          FAILED=0
+          {
+            echo "## Health watch"
+            echo ""
+            echo "| guard | result |"
+            echo "|---|---|"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Each guard gets ONE retry before it is called a failure.
+          #
+          # These read the live site over the public internet, so a single timeout is a fact about
+          # the network and not about the site. A monitor that cries wolf gets muted, and a muted
+          # monitor is worse than none — it looks like coverage while providing none.
+          guard() {
+            local name="$1"; shift
+            local out rc
+            out=$("$@" 2>&1); rc=$?
+            if [ "$rc" -ne 0 ]; then
+              echo "::group::$name (first attempt failed, retrying)"
+              echo "$out"
+              echo "::endgroup::"
+              sleep 20
+              out=$("$@" 2>&1); rc=$?
+            fi
+
+            echo "::group::$name"
+            echo "$out"
+            echo "::endgroup::"
+
+            if [ "$rc" -eq 0 ]; then
+              echo "| \`$name\` | ✅ |" >> "$GITHUB_STEP_SUMMARY"
+            else
+              FAILED=1
+              echo "| \`$name\` | ❌ **FAILED** |" >> "$GITHUB_STEP_SUMMARY"
+              {
+                echo ""
+                echo "<details><summary>$name output</summary>"
+                echo ""
+                echo '```'
+                echo "$out" | tail -40
+                echo '```'
+                echo ""
+                echo "</details>"
+                echo ""
+              } >> "$GITHUB_STEP_SUMMARY"
+            fi
+          }
+
+          # ── Does every route type still answer? ───────────────────────────────────────────
+          # This is the one that would have caught the article 500s on 13/08 within six hours
+          # instead of a day. It asserts one live URL of each of 21 route types, discovering the
+          # dynamic ones from the API at runtime so the list cannot rot.
+          guard "routes"             node scripts/check-routes.mjs
+
+          # ── Is the content pipeline still moving? ─────────────────────────────────────────
+          # Names the FIRST starved stage rather than the last symptom. Exits non-zero on
+          # starvation, which is how "the breaker has been open for three days" becomes an email.
+          guard "catalog-health"     node scripts/check-catalog-health.mjs
+
+          # ── Do the CTR targets still point at pages that exist? ──────────────────────────
+          # seo:ctr-pass addresses six category pages by hard-coded slug, and a slug is a foreign
+          # key into a table an operator edits through a form. One of them (`gainers`) did not
+          # exist, so the pass returned FAILURE every hour for at least three days into a log file
+          # that needed a shell to read and did not survive a deploy.
+          guard "ctr-targets"        node scripts/check-ctr-targets.mjs
+
+          # ── Do retired product URLs answer honestly? ─────────────────────────────────────
+          # 1,060 pages sat in Search Console's "Not found" bucket because dead product slugs
+          # 301'd to /{slug}, which was also a 404. A redirect into a 404 is worse than the 404
+          # it replaced and it hides the real status from every report.
+          guard "dead-product-urls"  node scripts/check-dead-product-urls.mjs
+
+          # ── Do the pages that already rank waste their one SERP line? ────────────────────
+          # /omega-3 sat at position 7.5 on 2,827 impressions with ZERO clicks while showing
+          # "Oméga 3 Fish Oil Tunisie | EPA DHA - | Protéine Tunisie" — a title truncated to make
+          # room for the brand suffix, which was then appended after the orphaned hyphen. Nothing
+          # in the repo asserted the RENDERED title, so a defect made by two correct-looking
+          # components interacting was invisible to every other check.
+          guard "serp-titles"        node scripts/check-serp-titles.mjs
+
+          # ── Is the blog still linking to the pages that sell? ─────────────────────────────
+          guard "internal-links"     node scripts/check-internal-links.mjs
+
+          # ── Are listings still paginated, and still under the weight ceiling? ─────────────
+          # /sante-vitalite was an 8.4 MB page serving 12 products before this was fixed. A
+          # regression here is invisible to every other check.
+          guard "listing-pagination" node scripts/check-listing-pagination.mjs
+
+          # ── Do the six category labels still fit their cards? ─────────────────────────────
+          # "PERFORMANCE" rendered as "PERFORMANC" on the live homepage and was reported by the
+          # owner twice, a day apart, because the fix both times was arithmetic done by eye —
+          # padding and arrow size against column width. `line-clamp-2` HIDES the overflow rather
+          # than reporting it, so a clipped label changes no status code and throws nothing: no
+          # other check on this list can see it.
+          guard "category-rail"      node scripts/measure-category-rail.mjs
+
+          # ── Is the product page still laid out, at every width? ───────────────────────────
+          # The 16/08 redesign collapsed two parallel render trees into one and moved the
+          # gallery, the CTAs and the benefits list. This asserts the geometry a status code
+          # cannot see: nothing overflowing, every control clearing the 44px tap floor, exactly
+          # one product-image preload, and the buy box actually containing a buy button.
+          #
+          # It runs TWO products because half the page is conditional on stock — 10,535 of
+          # 10,669 published products are "sur commande" and their CTA is a request form, so a
+          # run against only those would report the bundle and the basket button as absent and
+          # call it a pass.
+          #
+          # It found four defects on the day it was written that the screenshots did not: 38px
+          # gallery arrows, a 16px checkbox, a 16px-tall product link, and thumbnails served at
+          # 140px into a 275px box.
+          guard "pdp-layout"         node scripts/measure-pdp.mjs
+
+          echo ""
+          if [ "$FAILED" -ne 0 ]; then
+            {
+              echo ""
+              echo "### Something is broken in production."
+              echo ""
+              echo "Expand the failing guard above for its output. Runbooks:"
+              echo "\`docs/runbooks/\`."
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "One or more guards failed — see the summary."
+            exit 1
+          fi
+
+          echo "All guards passed." >> "$GITHUB_STEP_SUMMARY"
+          echo "All guards passed."

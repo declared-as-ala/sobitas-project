@@ -7,6 +7,15 @@ export interface ApiResponse<T> {
 
 // Product Types
 export interface Product {
+  /**
+   * The second product photograph, for the card's hover state.
+   *
+   * Sent by /api/all_products, derived from the import staging row's gallery: on an iHerb listing
+   * the first image is the front of the pack and the second is the back, which on a supplement is
+   * the Supplement Facts panel. Null for the 309 legacy products, which have no staging row.
+   */
+  hover_image?: string | null;
+
   id: number;
   slug: string;
   designation_fr: string;
@@ -103,6 +112,51 @@ export interface Product {
     /** Return policy indicator for schema.org Product */
     has_merchant_return_policy?: boolean | null;
   };
+  /**
+   * Facts transcribed from the external catalogue row this product was promoted from.
+   *
+   * NULL for every hand-made product — the 309 legacy products have no staging row and never will,
+   * so both product views render no specification block for them, exactly as before this field
+   * existed. Present only on imported products, and only when at least one fact is printable.
+   *
+   * Deliberately narrow. The staging row also holds the source shop's URL, its rating, its stock
+   * flags and its price; none of those may appear on our page, so none of them is in this contract.
+   */
+  source_facts?: {
+    /** "600 g", "60 gélules végétales" — as the label prints it. Null for a per-unit dose (mg/µg). */
+    format?: string | null;
+    /** "Sans arôme", "Double Rich Chocolate" — the source's own wording. */
+    flavour?: string | null;
+    /** The CDN cover URL; the same value already in `cover`. Not rendered as a second image. */
+    image_url?: string | null;
+    /**
+     * The transcribed source PAGE — the manufacturer's own blocks, as opposed to facts read out of
+     * the product name above.
+     *
+     * NULL whenever the row has nothing publishable, which includes every legacy product (no
+     * staging row), every row whose page has not been read yet, and every row whose stored
+     * transcription is not in French. The API decides all of that; nothing on this side re-decides
+     * it, and nothing here may be reconstructed from another field.
+     *
+     * The manufacturer's OVERVIEW is deliberately absent: promotion folded it into
+     * `description_fr`, which is already rendered as the page's description on both routes.
+     */
+    content?: {
+      /** Prose blocks with our French heading and the source's verbatim HTML, in render order. */
+      sections?: Array<{ key: string; heading: string; html: string }> | null;
+      /** The Supplement Facts panel as an HTML table. Rendered in the page's nutrition slot. */
+      nutrition_html?: string | null;
+      /** Specification rows, merged into the same list as `format` and `flavour`. */
+      specs?: Array<{ key: string; label: string; value: string }> | null;
+      /** Product photographs the source page listed. Already size-normalised by the API. */
+      gallery?: string[] | null;
+      /**
+       * One sentence saying the text was transcribed, whether the French is a machine translation,
+       * and that the printed label governs. Composed server-side so both routes say it identically.
+       */
+      attribution?: string | null;
+    } | null;
+  } | null;
   /** Server-built schema.org Product graph (preferred over client-side `buildProductJsonLd`). */
   json_ld_product?: Record<string, unknown> | null;
   zone1?: string;
@@ -185,7 +239,61 @@ export interface Review {
     name: string;
     avatar?: string;
   };
+  /**
+   * Display name of a reviewer with NO account. `user` is null on these rows, so without this the
+   * whole guest-review feature renders as a page of "Client".
+   */
+  author_name?: string | null;
+  /**
+   * Published replies under this review. Sent by `product_details` via `withCount`, so a product
+   * page can label a thread without one request per review. Absent (not 0) when the backend has
+   * not been migrated yet — treat undefined as "unknown", never as "none".
+   */
+  replies_count?: number;
   created_at?: string;
+}
+
+/** One message in the thread under a review. Carries no rating and never touches aggregateRating. */
+export interface ReviewReply {
+  id: number;
+  review_id: number;
+  /** The reply this one answers, when it answers a reply rather than the review. One level only. */
+  parent_id: number | null;
+  /** Null for a guest and for the shop. Present = there is a member profile to link to. */
+  user_id: number | null;
+  name: string;
+  body: string;
+  /** Written from the admin panel, rendered as Protein.tn with a badge. */
+  is_staff: boolean;
+  created_at?: string;
+  /**
+   * CLIENT-SIDE ONLY — never sent by the API.
+   *
+   * Every reply is created held and published by the moderator a second later, so the author would
+   * otherwise post and see nothing. The reply is appended locally with this flag so they can read
+   * their own words with an honest "en cours de vérification" label, instead of the UI either
+   * lying about publication or appearing to have swallowed the message.
+   */
+  pending?: boolean;
+}
+
+/** A member's public page — what `/members/{id}` returns. Never an email, an order or a balance. */
+export interface MemberProfile {
+  id: number;
+  name: string;
+  member_since: string | null;
+  review_count: number;
+  /** The member's own average over their own published reviews. Not a product rating. */
+  average_given: number | null;
+  verified_count: number;
+  reviews: Array<{
+    id: number;
+    stars: number;
+    comment: string;
+    verified: boolean;
+    created_at?: string;
+    product: { id: number; slug: string; designation: string; cover?: string | null } | null;
+  }>;
 }
 
 // Slide types removed. This interface described columns (`titre`/`image`/`lien`) that never
@@ -316,6 +424,16 @@ export interface Order {
   livraison_code_postale?: string;
   livraison_adresse1?: string;
   livraison_adresse2?: string;
+  tracking?: OrderTracking | null;
+}
+
+export interface OrderTracking {
+  carrier: 'Aramex';
+  number: string;
+  status?: string | null;
+  shipped_at?: string | null;
+  delivered_at?: string | null;
+  url: string;
 }
 
 export interface OrderDetail {
@@ -413,6 +531,9 @@ export interface User {
   points_balance?: number;
   /** Monetary value of the balance in DT (balance / 20, 3 dp). From GET /profil. */
   points_value_dt?: number;
+  email_verified?: boolean;
+  phone_verified?: boolean;
+  contact_verified?: boolean;
 }
 
 /** Line item returned by POST /pack/quote (server-computed from real product prices). */
@@ -474,6 +595,8 @@ export interface AuthResponse {
   token: string;
   name: string;
   id: number;
+  requires_verification?: boolean;
+  verification_email_sent?: boolean;
 }
 
 // Contact & Newsletter Types
@@ -481,6 +604,14 @@ export interface ContactRequest {
   name: string;
   email: string;
   message: string;
+  /** Optional. Stored in its own column from migration 2026_08_20_000001; carried in the admin
+   *  notification either way, because a cash-on-delivery shop answers by telephone. */
+  phone?: string;
+  /** Optional routing hint ("Commande", "Disponibilité", "Conseil produit", …). */
+  subject?: string;
+  /** HONEYPOT. Rendered hidden and left empty by a human; a submission that fills it is answered
+   *  with success and silently dropped server-side. Never populate this from code. */
+  company?: string;
 }
 
 export interface NewsletterRequest {

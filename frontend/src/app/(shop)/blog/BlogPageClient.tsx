@@ -1,426 +1,304 @@
 'use client';
 
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, FolderOpen, Tag } from 'lucide-react';
-import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { PageHeader } from '@/app/components/PageHeader';
-import type { Article } from '@/types';
-import { type BlogTaxonomyItem } from '@/services/api';
+import {
+  ArrowRight,
+  BookOpen,
+  ChevronLeft,
+  ChevronRight,
+  Compass,
+  FolderOpen,
+  Search,
+  Tag,
+  X,
+} from 'lucide-react';
+import { BLOG_TOPICS, type BlogTopicId } from '@/content/blogTopics';
+import { Section } from '@/app/components/layout/Section';
+import { SectionHeader } from '@/app/components/SectionHeader';
+import type { BlogTaxonomyItem } from '@/services/api';
+import type { BlogIndexArticle } from '@/util/blogIndex';
+import { decodeHtmlEntities } from '@/util/htmlEntities';
 import { BlogCard } from './BlogCard';
 
 interface BlogPageClientProps {
-  articles: Article[];
-  /** Real blog taxonomy from the server (the article LIST payload omits categories/tags, so the
-   *  taxonomy nav must be fed from the dedicated endpoints to render its crawlable links). */
+  /** Lean index records: the 100 full HTML bodies never enter the client bundle. */
+  articles: BlogIndexArticle[];
   blogCategories?: BlogTaxonomyItem[];
   blogTags?: BlogTaxonomyItem[];
+  initialPage?: number;
 }
 
 const ARTICLES_PER_PAGE = 9;
-const WORDS_PER_MINUTE = 200;
 
-// Category slugs for filtering (keyword-based; backend has no category field)
-const BLOG_CATEGORIES = [
-  { id: 'all', label: 'Tous les articles' },
-  { id: 'complements', label: 'Compléments', keywords: ['complément', 'compléments', 'whey', 'créatine', 'protéine', 'supplément'] },
-  { id: 'lifestyle', label: 'Lifestyle', keywords: ['salle', 'sport', 'entraînement', 'fitness', 'objectif'] },
-  { id: 'nutrition', label: 'Nutrition', keywords: ['nutrition', 'régime', 'alimentaire', 'protéines', 'keto', 'masse', 'perte de poids'] },
-  { id: 'recettes', label: 'Recettes', keywords: ['recette', 'recettes'] },
-  { id: 'sport', label: 'Sport', keywords: ['sport', 'musculation', 'performance', 'athlète', 'bodybuilding'] },
-];
-
-// Decode HTML entities properly (server-safe, no window/document)
-function decodeHtmlEntities(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/&rsquo;/g, "'")
-    .replace(/&lsquo;/g, "'")
-    .replace(/&rdquo;/g, '"')
-    .replace(/&ldquo;/g, '"')
-    .replace(/&eacute;/g, 'é')
-    .replace(/&Eacute;/g, 'É')
-    .replace(/&egrave;/g, 'è')
-    .replace(/&Egrave;/g, 'È')
-    .replace(/&ecirc;/g, 'ê')
-    .replace(/&Ecirc;/g, 'Ê')
-    .replace(/&euml;/g, 'ë')
-    .replace(/&Euml;/g, 'Ë')
-    .replace(/&agrave;/g, 'à')
-    .replace(/&Agrave;/g, 'À')
-    .replace(/&acirc;/g, 'â')
-    .replace(/&Acirc;/g, 'Â')
-    .replace(/&auml;/g, 'ä')
-    .replace(/&Auml;/g, 'Ä')
-    .replace(/&ocirc;/g, 'ô')
-    .replace(/&Ocirc;/g, 'Ô')
-    .replace(/&ouml;/g, 'ö')
-    .replace(/&Ouml;/g, 'Ö')
-    .replace(/&ugrave;/g, 'ù')
-    .replace(/&Ugrave;/g, 'Ù')
-    .replace(/&ucirc;/g, 'û')
-    .replace(/&Ucirc;/g, 'Û')
-    .replace(/&uuml;/g, 'ü')
-    .replace(/&Uuml;/g, 'Ü')
-    .replace(/&ccedil;/g, 'ç')
-    .replace(/&Ccedil;/g, 'Ç')
-    .replace(/&iacute;/g, 'í')
-    .replace(/&Iacute;/g, 'Í')
-    .replace(/&iuml;/g, 'ï')
-    .replace(/&Iuml;/g, 'Ï');
+function topicName(id: BlogTopicId): string {
+  return BLOG_TOPICS.find((topic) => topic.id === id)?.shortLabel || 'Guide';
 }
 
-function stripHtml(html: string): string {
-  if (!html) return '';
-  const text = html
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-  return decodeHtmlEntities(text);
+function articleMatchesSearch(article: BlogIndexArticle, query: string): boolean {
+  if (!query) return true;
+  const tags = (article.tags || [])
+    .map((tag) => (typeof tag === 'string' ? tag : tag?.name || ''))
+    .join(' ');
+  return `${article.designation_fr} ${article.excerpt} ${tags}`.toLocaleLowerCase('fr').includes(query);
 }
 
-// Normalize for comparison: single spaces, trimmed, NFC unicode
-function normalizeForCompare(s: string): string {
-  return (s || '')
-    .normalize('NFC')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .toLowerCase();
-}
-
-function getExcerpt(article: Article, maxLength: number = 140): string {
-  const raw = article.description || article.description_fr || '';
-  let text = stripHtml(raw).trim();
-  if (!text) return '';
-
-  // Remove duplicated title from the start so the excerpt shows only content, not the title again
-  const title = decodeHtmlEntities(article.designation_fr || '').trim();
-  if (title) {
-    const normalizedTitle = normalizeForCompare(title);
-
-    // 1) Exact prefix: first N chars match title (case/space insensitive)
-    if (text.length >= title.length && normalizeForCompare(text.slice(0, title.length)) === normalizedTitle) {
-      text = text.slice(title.length).replace(/^[\s.,?!:;-]+/, '').trim();
-    } else {
-      // 2) Normalized starts-with: find title as prefix in normalized form (handles encoding differences)
-      const normalizedText = normalizeForCompare(text);
-      if (normalizedText.startsWith(normalizedTitle)) {
-        // Remove roughly the title from the start (same length in original text to preserve accents)
-        const after = text.slice(title.length).replace(/^[\s.,?!:;-]+/, '').trim();
-        if (after.length > 0) text = after;
-      } else {
-        // 3) First sentence equals title (e.g. "Title. Rest of content")
-        const firstSentence = text.split(/[.?!]/)[0]?.trim() || '';
-        if (firstSentence && normalizeForCompare(firstSentence) === normalizedTitle) {
-          text = text.slice(firstSentence.length).replace(/^[\s.,?!:;-]+/, '').trim();
-        }
-      }
-    }
-  }
-
-  if (!text) return '';
-  if (text.length <= maxLength) return text;
-  return text.slice(0, maxLength).trim() + '…';
-}
-
-function getReadingTimeMinutes(article: Article): number {
-  const raw = article.description || article.description_fr || '';
-  const text = stripHtml(raw);
-  const words = text ? text.split(/\s+/).filter(Boolean).length : 0;
-  return Math.max(1, Math.ceil(words / WORDS_PER_MINUTE));
-}
-
-function articleMatchesCategory(article: Article, categoryId: string): boolean {
-  if (categoryId === 'all') return true;
-  const cat = BLOG_CATEGORIES.find(c => c.id === categoryId);
-  if (!cat?.keywords?.length) return true;
-  const typed = article.blog_type != null && String(article.blog_type).trim() !== '';
-  if (typed) {
-    return String(article.blog_type).trim() === categoryId;
-  }
-  const searchText = [
-    article.designation_fr || '',
-    stripHtml(article.description || ''),
-    stripHtml(article.description_fr || ''),
-  ].join(' ').toLowerCase();
-  return cat.keywords.some(kw => searchText.includes(kw.toLowerCase()));
-}
-
-export function BlogPageClient({ articles, blogCategories, blogTags }: BlogPageClientProps) {
-  const searchParams = useSearchParams();
+export function BlogPageClient({
+  articles,
+  blogCategories,
+  blogTags,
+  initialPage = 1,
+}: BlogPageClientProps) {
   const router = useRouter();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [mounted, setMounted] = useState(false);
-  const isUserAction = useRef(false);
+  const searchParams = useSearchParams();
+  const listingRef = useRef<HTMLDivElement | null>(null);
+  const [activeTopic, setActiveTopic] = useState<BlogTopicId>('all');
+  const [query, setQuery] = useState('');
+  const deferredQuery = useDeferredValue(query.trim().toLocaleLowerCase('fr'));
+  const [currentPage, setCurrentPage] = useState(Math.max(1, initialPage));
 
-  // Articles come straight from the ISR server render (revalidate=300, fetch tag 'blog').
-  // We no longer re-download the whole 100-article corpus (full HTML bodies) client-side on
-  // every mount — that was a large per-visit payload with no SEO value. Freshness after an
-  // admin edit is handled server-side via revalidateTag('blog') (POST /api/revalidate-blog).
+  const sortedArticles = useMemo(
+    () =>
+      [...articles].sort((a, b) => {
+        const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
+        return dateB - dateA;
+      }),
+    [articles]
+  );
 
-  // On mount: mark hydrated and adopt the page number from the URL.
-  useEffect(() => {
-    setMounted(true);
-    const pageParam = searchParams.get('page');
-    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-    if (!isNaN(urlPage) && urlPage >= 1) {
-      setCurrentPage(urlPage);
-    }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ─── Crawlable taxonomy links (SEO) ───
-  // Derive real /blog/category & /blog/tag links from the articles' own taxonomy so those
-  // pages (previously orphaned → "crawled, currently not indexed") get inbound links in the
-  // SSR DOM. Sourced from the server-provided `articles` prop so the <a href> are present
-  // on first paint.
   const blogCategoryLinks = useMemo(() => {
-    // Prefer the dedicated /blog_categories payload (complete); fall back to the taxonomy embedded
-    // in the articles (empty when the list API omits it).
-    if (blogCategories && blogCategories.length > 0) {
-      return blogCategories.filter((c) => c?.slug && c?.name).map((c) => ({ slug: c.slug, name: c.name }));
-    }
-    const map = new Map<string, { slug: string; name: string }>();
-    for (const a of articles) {
-      for (const c of a.categories ?? []) {
-        if (c?.slug && c?.name && !map.has(c.slug)) map.set(c.slug, { slug: c.slug, name: c.name });
+    if (blogCategories?.length) return blogCategories.filter((category) => category?.slug && category?.name);
+    const map = new Map<string, BlogTaxonomyItem>();
+    for (const article of articles) {
+      for (const category of article.categories || []) {
+        if (category?.slug && category?.name) map.set(category.slug, category);
       }
     }
     return Array.from(map.values());
   }, [articles, blogCategories]);
 
   const blogTagLinks = useMemo(() => {
-    if (blogTags && blogTags.length > 0) {
-      return blogTags.filter((t) => t?.slug && t?.name).slice(0, 15).map((t) => ({ slug: t.slug, name: t.name, count: 0 }));
-    }
-    const counts = new Map<string, { slug: string; name: string; count: number }>();
-    for (const a of articles) {
-      for (const t of a.tags ?? []) {
-        if (typeof t === 'object' && t?.slug && t?.name) {
-          const existing = counts.get(t.slug);
-          if (existing) existing.count += 1;
-          else counts.set(t.slug, { slug: t.slug, name: t.name, count: 1 });
-        }
+    if (blogTags?.length) return blogTags.filter((tag) => tag?.slug && tag?.name).slice(0, 12);
+    const map = new Map<string, BlogTaxonomyItem>();
+    for (const article of articles) {
+      for (const tag of article.tags || []) {
+        if (typeof tag === 'object' && tag?.slug && tag?.name) map.set(tag.slug, tag);
       }
     }
-    return Array.from(counts.values())
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
+    return Array.from(map.values()).slice(0, 12);
   }, [articles, blogTags]);
 
-  // Filter by category (keyword-based)
+  const isDefaultScope = activeTopic === 'all' && deferredQuery === '';
+  const featuredArticles = isDefaultScope ? sortedArticles.slice(0, 3) : [];
+
   const filteredArticles = useMemo(() => {
-    return articles.filter(a => articleMatchesCategory(a, activeCategory));
-  }, [articles, activeCategory]);
+    const source = activeTopic === 'all'
+      ? sortedArticles
+      : sortedArticles.filter((article) => article.topicId === activeTopic);
+    return source.filter((article) => articleMatchesSearch(article, deferredQuery));
+  }, [activeTopic, deferredQuery, sortedArticles]);
 
-  // Sort by date (latest first)
-  const sortedArticles = useMemo(() => {
-    return [...filteredArticles].sort((a, b) => {
-      const dateA = a.created_at ? new Date(a.created_at).getTime() : 0;
-      const dateB = b.created_at ? new Date(b.created_at).getTime() : 0;
-      return dateB - dateA;
-    });
-  }, [filteredArticles]);
-
-  const totalPages = Math.max(1, Math.ceil(sortedArticles.length / ARTICLES_PER_PAGE));
-  const startIndex = (currentPage - 1) * ARTICLES_PER_PAGE;
-  const endIndex = startIndex + ARTICLES_PER_PAGE;
-  const paginatedArticles = useMemo(
-    () => sortedArticles.slice(startIndex, endIndex),
-    [sortedArticles, startIndex, endIndex]
+  // Lead stories stay removed from the default archive on every page; page 2 cannot repeat them.
+  const listingSource = isDefaultScope ? filteredArticles.slice(3) : filteredArticles;
+  const totalPages = Math.max(1, Math.ceil(listingSource.length / ARTICLES_PER_PAGE));
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+  const pageArticles = listingSource.slice(
+    (safeCurrentPage - 1) * ARTICLES_PER_PAGE,
+    safeCurrentPage * ARTICLES_PER_PAGE
   );
 
-  // Derive excerpt + reading time once per visible slice (they strip the full HTML body),
-  // instead of recomputing on every render. Recomputes only when the page slice changes.
-  const cardData = useMemo(
-    () =>
-      paginatedArticles.map((article) => ({
-        article,
-        excerpt: getExcerpt(article),
-        readingMinutes: getReadingTimeMinutes(article),
-      })),
-    [paginatedArticles]
-  );
-
-  // Sync currentPage from URL params (on URL change from external navigation)
   useEffect(() => {
-    const pageParam = searchParams.get('page');
-    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-
-    if (!isUserAction.current && !isNaN(urlPage) && urlPage >= 1 && urlPage <= totalPages) {
-      setCurrentPage(prevPage => (urlPage !== prevPage ? urlPage : prevPage));
-    }
-    isUserAction.current = false;
+    const value = Number.parseInt(searchParams.get('page') || '1', 10);
+    if (Number.isFinite(value) && value >= 1) setCurrentPage(Math.min(value, totalPages));
   }, [searchParams, totalPages]);
 
-  // Reset to page 1 when category changes
-  useEffect(() => {
+  const replacePageInUrl = (page: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    if (page <= 1) params.delete('page');
+    else params.set('page', String(page));
+    router.replace(params.size ? `/blog?${params.toString()}` : '/blog', { scroll: false });
+  };
+
+  const focusListing = () => {
+    requestAnimationFrame(() => listingRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  };
+
+  const selectTopic = (topic: BlogTopicId) => {
+    setActiveTopic(topic);
     setCurrentPage(1);
-    isUserAction.current = true;
-  }, [activeCategory]);
+    replacePageInUrl(1);
+    focusListing();
+  };
 
-  // Update URL when currentPage changes from user interaction
-  useEffect(() => {
-    if (!mounted) return;
-
-    const pageParam = searchParams.get('page');
-    const urlPage = pageParam ? parseInt(pageParam, 10) : 1;
-
-    if (currentPage !== urlPage && isUserAction.current) {
-      const params = new URLSearchParams(searchParams.toString());
-      if (currentPage === 1) {
-        params.delete('page');
-      } else {
-        params.set('page', currentPage.toString());
-      }
-      const newUrl = params.toString() ? `/blog?${params.toString()}` : '/blog';
-      router.replace(newUrl, { scroll: false });
-    }
-  }, [currentPage, router, searchParams, mounted]);
-
-  // Scroll to top on page change (client-side only)
-  useEffect(() => {
-    if (!mounted) return;
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  }, [currentPage, mounted]);
-
-  const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
-      isUserAction.current = true;
-      setCurrentPage(page);
-    }
+  const changePage = (page: number) => {
+    if (page < 1 || page > totalPages) return;
+    setCurrentPage(page);
+    replacePageInUrl(page);
+    focusListing();
   };
 
   return (
-    <div className="min-h-screen bg-canvas">
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-        <div className="mb-10 sm:mb-12">
-          <PageHeader
-            kicker="Blog"
-            title="Blog nutrition sportive & compléments en Tunisie"
-            subtitle="Conseils, guides et actualités : whey, créatine, prise de masse et compléments alimentaires."
-          >
-            {/* Category filters – pills, red accent (client-side filter UX) */}
-            <nav className="flex flex-wrap gap-2.5 md:gap-3" aria-label="Catégories du blog">
-              {BLOG_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  aria-pressed={activeCategory === cat.id}
-                  className={`inline-flex min-h-11 items-center rounded-full border px-4 py-2 text-sm font-medium transition-colors ${
-                    activeCategory === cat.id
-                      ? 'border-red-600 bg-red-600 text-white'
-                      : 'border-gray-200 bg-elevated text-gray-700 hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400'
-                  }`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </nav>
-
-            {/* Crawlable taxonomy navigation → real /blog/category & /blog/tag pages.
-                Real <Link href> (unlike the client filter buttons above) so search engines
-                can discover and index the taxonomy pages. */}
-            {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
-              <div className="mt-5 flex flex-col gap-3">
-                {blogCategoryLinks.length > 0 && (
-                  <nav className="flex flex-wrap items-center gap-2 sm:gap-2.5" aria-label="Parcourir les catégories du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                      <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
-                      Catégories
-                    </span>
-                    {blogCategoryLinks.map((cat) => (
-                      <Link
-                        key={cat.slug}
-                        href={`/blog/category/${cat.slug}`}
-                        className="inline-flex min-h-9 items-center rounded-full border border-gray-200 bg-elevated px-3.5 py-1.5 text-sm font-medium text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                      >
-                        {decodeHtmlEntities(cat.name)}
-                      </Link>
-                    ))}
-                  </nav>
-                )}
-                {blogTagLinks.length > 0 && (
-                  <nav className="flex flex-wrap items-center gap-2" aria-label="Parcourir les tags du blog">
-                    <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
-                      <Tag className="h-3.5 w-3.5" aria-hidden="true" />
-                      Tags
-                    </span>
-                    {blogTagLinks.map((t) => (
-                      <Link
-                        key={t.slug}
-                        href={`/blog/tag/${t.slug}`}
-                        className="inline-flex items-center rounded-full border border-gray-200 bg-gray-50 px-3 py-1 text-sm text-ink-2 transition-colors hover:border-red-600 hover:text-red-600 dark:border-gray-800 dark:bg-gray-900/60 dark:hover:border-red-400 dark:hover:text-red-400"
-                      >
-                        {decodeHtmlEntities(t.name)}
-                      </Link>
-                    ))}
-                  </nav>
-                )}
-              </div>
-            )}
-          </PageHeader>
-        </div>
-
-        {sortedArticles.length === 0 ? (
-          <div className="text-center py-16">
-            <p className="text-ink-3">Aucun article dans cette catégorie.</p>
+    <>
+      <Section first spacing="default" width="wide">
+        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)] lg:items-end lg:gap-12">
+          <div className="min-w-0">
+            <span className="pt-kicker mb-3 inline-flex items-center gap-2.5 text-brand">
+              <span className="h-px w-7 bg-brand" aria-hidden="true" />
+              Le guide Protein.tn
+            </span>
+            <h1 className="max-w-[18ch] font-display font-compressed text-[2.25rem] font-extrabold uppercase leading-[0.92] tracking-[-0.025em] text-ink-1 sm:text-5xl lg:text-[3.5rem]">
+              Blog nutrition sportive & compléments en Tunisie
+            </h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-2 sm:text-lg">
+              Des réponses claires pour comprendre la whey, la créatine, la nutrition et choisir selon votre objectif — sans jargon inutile.
+            </p>
+            <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-ink-2">
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-2 tabular-nums">{articles.length} guides</span>
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-2">Français & arabe</span>
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-2">Lecture gratuite</span>
+            </div>
           </div>
-        ) : (
-          <>
-            {/* Article grid: 1 col mobile, 2 tablet, 3 desktop */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8 mb-8 sm:mb-12">
-              {cardData.map(({ article, excerpt, readingMinutes }, index) => (
-                <BlogCard
-                  key={`blog-${currentPage}-${article.id}`}
-                  article={article}
-                  excerpt={excerpt}
-                  readingMinutes={readingMinutes}
-                  priority={index < 3}
-                />
+
+          <nav aria-label="Choisir un objectif" className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+            <div className="flex items-center gap-3 border-b border-rule px-4 py-3 sm:px-5">
+              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                <Compass className="h-5 w-5" aria-hidden="true" />
+              </span>
+              <div>
+                <span className="pt-kicker block text-brand">Commencer ici</span>
+                <span className="mt-0.5 block text-sm font-semibold text-ink-1">Quel sujet vous intéresse ?</span>
+              </div>
+            </div>
+            <div className="grid sm:grid-cols-2">
+              {BLOG_TOPICS.filter((topic) => topic.id !== 'all').slice(0, 4).map((topic, index) => (
+                <button
+                  key={topic.id}
+                  type="button"
+                  onClick={() => selectTopic(topic.id)}
+                  className={`group flex min-h-[88px] items-center justify-between gap-4 px-4 py-3 text-start transition-colors hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:px-5 ${
+                    index > 0 ? 'border-t border-rule' : ''
+                  } ${index === 1 ? 'sm:border-l sm:border-t-0' : ''} ${index === 3 ? 'sm:border-l' : ''}`}
+                >
+                  <span className="min-w-0">
+                    <span className="block font-display text-sm font-bold text-ink-1 group-hover:text-brand">{topic.label}</span>
+                    <span className="mt-1 line-clamp-2 block text-xs leading-relaxed text-ink-3">{topic.description}</span>
+                  </span>
+                  <ArrowRight className="h-4 w-4 shrink-0 text-brand transition-transform group-hover:translate-x-1" aria-hidden="true" />
+                </button>
               ))}
             </div>
+          </nav>
+        </div>
+      </Section>
 
-            {/* Compact pagination – "‹ 1/37 ›" style */}
-            {totalPages > 1 && (
-              <div className="flex items-center justify-center gap-4">
-                <button
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                  aria-label="Page précédente"
-                >
-                  <ChevronLeft className="h-5 w-5" aria-hidden="true" />
-                </button>
-                <span
-                  className="min-w-[4rem] text-center font-display font-semibold tabular-nums text-ink-1"
-                  aria-live="polite"
-                >
-                  {currentPage} / {totalPages}
-                </span>
-                <button
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === totalPages}
-                  className="flex h-11 w-11 items-center justify-center rounded-full border border-gray-200 text-gray-700 transition-colors hover:border-red-600 hover:text-red-600 disabled:pointer-events-none disabled:opacity-50 dark:border-gray-800 dark:text-gray-300 dark:hover:border-red-400 dark:hover:text-red-400"
-                  aria-label="Page suivante"
-                >
-                  <ChevronRight className="h-5 w-5" aria-hidden="true" />
-                </button>
+      {featuredArticles.length >= 3 && safeCurrentPage === 1 && (
+        <Section surface="sunken" spacing="default" width="wide" aria-labelledby="featured-guides-title">
+          <SectionHeader id="featured-guides-title" scale="2" kicker="À la une" title="Trois guides à lire maintenant" subtitle="Les publications les plus récentes, mises en avant sans masquer le reste de la bibliothèque." />
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(24rem,0.85fr)] lg:gap-5">
+            <BlogCard article={featuredArticles[0]} excerpt={featuredArticles[0].excerpt} readingMinutes={featuredArticles[0].readingMinutes} eyebrow={topicName(featuredArticles[0].topicId)} variant="feature" priority />
+            <div className="grid gap-4">
+              {featuredArticles.slice(1).map((article) => (
+                <BlogCard key={article.id} article={article} readingMinutes={article.readingMinutes} eyebrow={topicName(article.topicId)} variant="compact" />
+              ))}
+            </div>
+          </div>
+        </Section>
+      )}
+
+      <Section id="blog-articles" spacing="default" width="wide" aria-labelledby="all-guides-title">
+        <div ref={listingRef} className="scroll-mt-28">
+          <SectionHeader
+            id="all-guides-title"
+            scale="2"
+            kicker="Bibliothèque"
+            title={activeTopic === 'all' ? 'Tous les guides' : topicName(activeTopic)}
+            subtitle="Filtrez par thème ou recherchez un mot précis."
+            trailing={<span className="inline-flex min-h-11 items-center rounded-full border border-hairline bg-elevated px-4 text-sm font-semibold tabular-nums text-ink-2" aria-live="polite">{listingSource.length} résultat{listingSource.length > 1 ? 's' : ''}</span>}
+            trailingAllWidths
+          />
+
+          <div className="mb-5 overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+            <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)] lg:items-center">
+              <label className="relative block min-w-0">
+                <span className="sr-only">Rechercher dans le blog</span>
+                <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3" aria-hidden="true" />
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    if (currentPage > 1) replacePageInUrl(1);
+                    setCurrentPage(1);
+                  }}
+                  placeholder="Rechercher : créatine, whey, masse…"
+                  className="min-h-12 w-full rounded-xl border border-hairline bg-canvas pl-11 pr-11 text-sm text-ink-1 outline-none placeholder:text-ink-3 focus:border-brand focus:ring-2 focus:ring-focus/20"
+                />
+                {query && (
+                  <button type="button" onClick={() => setQuery('')} className="absolute right-0.5 top-1/2 flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" aria-label="Effacer la recherche">
+                    <X className="h-4 w-4" aria-hidden="true" />
+                  </button>
+                )}
+              </label>
+
+              <nav className="flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" aria-label="Filtrer les guides">
+                {BLOG_TOPICS.map((topic) => (
+                  <button key={topic.id} type="button" onClick={() => selectTopic(topic.id)} aria-pressed={activeTopic === topic.id} className={`inline-flex min-h-11 shrink-0 items-center rounded-xl border px-4 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${activeTopic === topic.id ? 'border-brand bg-brand text-on-brand' : 'border-hairline bg-canvas text-ink-2 hover:border-brand/40 hover:text-brand'}`}>
+                    {topic.shortLabel}
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </div>
+
+          {pageArticles.length === 0 ? (
+            <div className="rounded-2xl border border-hairline bg-elevated px-5 py-12 text-center sm:px-8">
+              <BookOpen className="mx-auto h-9 w-9 text-brand" strokeWidth={1.5} aria-hidden="true" />
+              <h3 className="mt-4 font-display text-xl font-bold text-ink-1">Aucun guide trouvé</h3>
+              <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">Essayez un autre mot ou revenez à l’ensemble des sujets.</p>
+              <button type="button" onClick={() => { setQuery(''); selectTopic('all'); }} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-brand px-5 text-sm font-semibold text-on-brand hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">Voir tous les guides</button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+              {pageArticles.map((article) => (
+                <BlogCard key={article.id} article={article} excerpt={article.excerpt} readingMinutes={article.readingMinutes} eyebrow={topicName(article.topicId)} />
+              ))}
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <nav className="mt-6 flex justify-center lg:mt-8" aria-label="Pagination du blog">
+              <div className="inline-flex items-center gap-2 rounded-2xl border border-hairline bg-elevated p-1.5">
+                <button type="button" onClick={() => changePage(safeCurrentPage - 1)} disabled={safeCurrentPage === 1} className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-40" aria-label="Page précédente"><ChevronLeft className="h-5 w-5" aria-hidden="true" /></button>
+                <span className="min-w-[5rem] text-center font-display text-sm font-bold tabular-nums text-ink-1" aria-live="polite">{safeCurrentPage} / {totalPages}</span>
+                <button type="button" onClick={() => changePage(safeCurrentPage + 1)} disabled={safeCurrentPage === totalPages} className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:pointer-events-none disabled:opacity-40" aria-label="Page suivante"><ChevronRight className="h-5 w-5" aria-hidden="true" /></button>
               </div>
-            )}
-          </>
-        )}
-      </main>
+            </nav>
+          )}
 
-      <ScrollToTop />
-    </div>
+          {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
+            <div className="mt-6 grid gap-4 rounded-2xl border border-hairline bg-elevated p-4 sm:p-5 lg:mt-8 lg:grid-cols-2">
+              {blogCategoryLinks.length > 0 && (
+                <nav className="min-w-0" aria-label="Catégories éditoriales">
+                  <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"><FolderOpen className="h-4 w-4" aria-hidden="true" /> Catégories</span>
+                  <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {blogCategoryLinks.map((category) => <Link key={category.slug} href={`/blog/category/${category.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-canvas px-3.5 text-sm font-medium text-ink-2 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">{decodeHtmlEntities(category.name)}</Link>)}
+                  </div>
+                </nav>
+              )}
+              {blogTagLinks.length > 0 && (
+                <nav className="min-w-0" aria-label="Sujets populaires">
+                  <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"><Tag className="h-4 w-4" aria-hidden="true" /> Sujets populaires</span>
+                  <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {blogTagLinks.map((tag) => <Link key={tag.slug} href={`/blog/tag/${tag.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-sunken px-3.5 text-sm text-ink-2 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">{decodeHtmlEntities(tag.name)}</Link>)}
+                  </div>
+                </nav>
+              )}
+            </div>
+          )}
+        </div>
+      </Section>
+    </>
   );
 }

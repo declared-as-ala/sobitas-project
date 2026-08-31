@@ -22,7 +22,11 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
   const faqSchema = hasFaqs ? buildFAQPageSchemaFromQA(faqs) : null;
 
   return (
-    <div className="mt-8 sm:mt-10 pt-8 border-t border-gray-200 dark:border-gray-800 space-y-8">
+    <div
+      className="mt-8 space-y-8 border-t border-gray-200 pt-8 dark:border-gray-800 sm:mt-10"
+      lang={entry.lang}
+      dir={entry.lang === 'ar' ? 'rtl' : 'ltr'}
+    >
       {faqSchema && (
         <script
           type="application/ld+json"
@@ -33,7 +37,7 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
       {hasFaqs && (
         <section aria-labelledby="faq-heading">
           <h2 id="faq-heading" className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Questions fréquentes
+            {entry.faqHeading || 'Questions fréquentes'}
           </h2>
           <ul className="space-y-4">
             {faqs.map((faq, i) => (
@@ -49,7 +53,7 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
       {hasLinks && (
         <section aria-labelledby="read-also-heading">
           <h2 id="read-also-heading" className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-4">
-            Lire aussi
+            {entry.linksHeading || 'Lire aussi'}
           </h2>
           <ul className="flex flex-wrap gap-2">
             {internalLinks.map((link, i) => (

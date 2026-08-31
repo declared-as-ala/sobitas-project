@@ -3,8 +3,17 @@
  * When an article slug matches, BlogSeoBlock renders FAQ section and "Lire aussi" links.
  * Create articles in CMS with these slugs to get full SEO benefit.
  */
-///dd
 export interface BlogSeoEntry {
+  /** Optional visible H1/title refresh. The URL remains unchanged to preserve accumulated signals. */
+  headline?: string;
+  /** Optional search snippet aligned with the refreshed article. */
+  metaDescription?: string;
+  /** ISO date for a substantive editorial refresh reflected in Article schema. */
+  dateModified?: string;
+  /** Localized labels for non-French articles. */
+  faqHeading?: string;
+  linksHeading?: string;
+  lang?: 'fr' | 'ar';
   /** FAQ for FAQPage schema and on-page accordion */
   faqs: Array<{ question: string; answer: string }>;
   /** Internal links to categories (anchor text = keyword for SEO) */
@@ -13,6 +22,161 @@ export interface BlogSeoEntry {
 
 /** Slug (from URL) → SEO config. Use normalized slug (lowercase, no accents). */
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
+  'ما هي الأطعمة التي تحتوي على الكرياتين؟': {
+    headline: 'ما هي الأطعمة التي تحتوي على الكرياتين؟ المصادر والكميات',
+    metaDescription:
+      'تعرف على أهم مصادر الكرياتين الطبيعية مثل اللحوم والأسماك، والفرق بينها وبين مكمل الكرياتين، مع إجابات واضحة قبل اختيار المنتج.',
+    dateModified: '2026-08-31',
+    lang: 'ar',
+    faqHeading: 'أسئلة شائعة عن الكرياتين في الطعام',
+    linksHeading: 'اقرأ أيضًا عن الكرياتين والبروتين',
+    faqs: [
+      {
+        question: 'ما أهم المصادر الطبيعية للكرياتين؟',
+        answer: 'يوجد الكرياتين طبيعيًا بصورة أساسية في اللحوم والأسماك. تختلف الكمية حسب نوع الغذاء وطريقة الطهي، لذلك لا توجد حصة واحدة ثابتة تصلح لكل المنتجات والأطباق.',
+      },
+      {
+        question: 'هل يحتوي الحليب أو البيض على كمية كبيرة من الكرياتين؟',
+        answer: 'يحتويان على كميات أقل بكثير من اللحوم والأسماك، لذلك لا يعدان من المصادر الرئيسية للكرياتين الغذائي.',
+      },
+      {
+        question: 'هل الغذاء يغني دائمًا عن مكمل الكرياتين؟',
+        answer: 'يعتمد ذلك على نظامك وهدفك. المكمل ليس ضروريًا للجميع، والطعام المتوازن هو الأساس. إذا كنت تعاني من حالة صحية أو تتناول أدوية فاستشر مختصًا قبل أي مكمل.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'مقارنة منتجات الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'دليل البروتين في تونس', href: '/proteines' },
+      { anchor: 'أفضل مكملات البروتين حسب الهدف', href: '/blog/أفضل مكملات البروتين في تونس: كيف تختار المنتج المناسب لهدفك الرياضي؟' },
+    ],
+  },
+  'ما هي فوائد وأضرار الكرياتين؟': {
+    headline: 'فوائد وأضرار الكرياتين: ما الذي تقوله الأدلة؟',
+    metaDescription:
+      'شرح متوازن لفوائد الكرياتين وآثاره الجانبية والاحتياطات المهمة، ومتى يجب استشارة الطبيب قبل استخدام مكمل الكرياتين.',
+    dateModified: '2026-08-31',
+    lang: 'ar',
+    faqHeading: 'أسئلة شائعة عن فوائد وأضرار الكرياتين',
+    linksHeading: 'معلومات تساعدك قبل الشراء',
+    faqs: [
+      {
+        question: 'ما أكثر فائدة مدروسة للكرياتين؟',
+        answer: 'أكثر الأدلة تتعلق بدعم الأداء في الجهود القصيرة والعالية الشدة عند استخدامه مع تدريب مناسب. النتائج تختلف بين الأشخاص ولا يعوض المكمل التدريب أو التغذية.',
+      },
+      {
+        question: 'هل يسبب الكرياتين احتباس الماء؟',
+        answer: 'قد يزيد الماء داخل العضلات ويظهر تغير في الوزن لدى بعض المستخدمين. هذا يختلف عن احتباس السوائل المرضي، لكن أي تورم غير معتاد يستدعي التوقف وطلب نصيحة طبية.',
+      },
+      {
+        question: 'من يجب أن يستشير الطبيب قبل تناول الكرياتين؟',
+        answer: 'من لديه مرض كلوي أو حالة مزمنة، والحامل أو المرضع، والقاصر، ومن يتناول أدوية قد تؤثر في الكلى أو توازن السوائل ينبغي أن يستشير طبيبًا أولًا.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'أنواع وأسعار الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'مصادر الكرياتين في الطعام', href: '/blog/ما هي الأطعمة التي تحتوي على الكرياتين؟' },
+      { anchor: 'مكملات غذائية في تونس', href: '/complements-alimentaires' },
+    ],
+  },
+  'ما هي المكملات الغذائية؟ الشرح الكامل للمبتدئين': {
+    headline: 'ما هي المكملات الغذائية؟ دليل مبسط للمبتدئين',
+    metaDescription:
+      'دليل مبسط لفهم المكملات الغذائية: أنواعها، قراءة الملصق، اختيار المنتج حسب الهدف، ومتى تحتاج إلى نصيحة طبيب أو مختص تغذية.',
+    dateModified: '2026-08-31',
+    lang: 'ar',
+    faqHeading: 'أسئلة المبتدئين عن المكملات الغذائية',
+    linksHeading: 'قارن الأنواع المتوفرة',
+    faqs: [
+      {
+        question: 'هل المكمل الغذائي بديل عن الطعام؟',
+        answer: 'لا. المكمل يكمل الاحتياج عندما لا يكفي الغذاء أو توجد حاجة محددة، لكنه لا يعوض نظامًا متوازنًا أو تشخيصًا طبيًا.',
+      },
+      {
+        question: 'كيف أقرأ ملصق المكمل؟',
+        answer: 'ابدأ بحجم الحصة وعدد الحصص والمكونات والكمية في كل حصة، ثم راجع مسببات الحساسية والتحذيرات وتاريخ الصلاحية ورقم التشغيلة.',
+      },
+      {
+        question: 'هل يحتاج كل رياضي إلى مكملات؟',
+        answer: 'ليس بالضرورة. الاحتياج يعتمد على الغذاء والهدف والحالة الصحية. يمكن أن يساعد مختص تغذية في تحديد النقص الفعلي بدل شراء عدة منتجات دون حاجة.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'المكملات الغذائية المتوفرة في تونس', href: '/complements-alimentaires' },
+      { anchor: 'دليل البروتين', href: '/proteines' },
+      { anchor: 'دليل الكرياتين', href: '/creatine' },
+    ],
+  },
+  'mass-gainer-prix-tunisie-guide-complet-pour-2025': {
+    headline: 'Mass Gainer Prix Tunisie : guide d’achat 2026',
+    metaDescription:
+      'Prix des mass gainers en Tunisie, formats, calories et marques : comparez les critères utiles pour choisir selon votre objectif et votre budget en 2026.',
+    dateModified: '2026-08-30',
+    lang: 'fr',
+    faqs: [
+      {
+        question: 'Quel est le prix d’un mass gainer en Tunisie en 2026 ?',
+        answer: 'Le prix varie selon la marque, le poids du pot, le nombre de portions et les promotions. Pour comparer correctement, regardez le prix au kilogramme et le coût par portion sur les fiches des gainers actuellement disponibles.',
+      },
+      {
+        question: 'Comment choisir un mass gainer sans payer seulement pour du sucre ?',
+        answer: 'Comparez les calories, les protéines, les glucides et les sucres par portion. Vérifiez aussi la taille réelle d’une portion : deux pots de même poids peuvent fournir un nombre de prises très différent.',
+      },
+      {
+        question: 'Mass gainer ou whey pour prendre de la masse ?',
+        answer: 'La whey aide surtout à compléter l’apport en protéines. Un mass gainer ajoute aussi beaucoup de glucides et de calories. Choisissez le gainer si vous peinez à atteindre votre besoin calorique avec l’alimentation ; sinon une whey peut suffire.',
+      },
+      {
+        question: 'Quand prendre un mass gainer ?',
+        answer: 'Il peut être pris entre les repas ou après l’entraînement selon votre organisation alimentaire. La quantité totale de calories et de protéines sur la journée compte davantage que l’heure précise de la prise.',
+      },
+      {
+        question: 'Peut-on commander un mass gainer avec livraison en Tunisie ?',
+        answer: 'Oui. Protein.tn affiche les références disponibles et livre dans tous les gouvernorats, généralement sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'comparer les mass gainers en Tunisie', href: '/gainers-proteines' },
+      { anchor: 'protéines et whey en Tunisie', href: '/proteines' },
+      { anchor: 'créatine pour la prise de masse', href: '/creatine' },
+      { anchor: 'produits Dymatize en Tunisie', href: '/dymatize' },
+    ],
+  },
+  'أفضل مكملات البروتين في تونس: كيف تختار المنتج المناسب لهدفك الرياضي؟': {
+    metaDescription:
+      'دليل اختيار أفضل مكمل بروتين في تونس حسب هدفك: زيادة الكتلة، التنشيف أو التغذية اليومية، مع مقارنة الواي، الأيزوليت والكازين والأسعار الحالية.',
+    dateModified: '2026-08-30',
+    lang: 'ar',
+    faqHeading: 'أسئلة شائعة عن مكملات البروتين في تونس',
+    linksHeading: 'دليلك لاختيار وشراء البروتين',
+    faqs: [
+      {
+        question: 'ما أفضل بروتين لزيادة الكتلة العضلية؟',
+        answer: 'يمكن أن يكون الواي بروتين خيارًا عمليًا لإكمال احتياجك اليومي من البروتين. إذا كنت لا تحصل على سعرات كافية من الطعام، يمكن التفكير في ماس غاينر بعد مقارنة كمية البروتين والسكريات والسعرات في الحصة.',
+      },
+      {
+        question: 'ما الفرق بين Whey Protein وWhey Isolate؟',
+        answer: 'الواي المركز عادة أقل سعرًا ويحتوي على نسبة جيدة من البروتين. الأيزوليت يخضع لترشيح أكبر ويحتوي غالبًا على دهون وسكريات ولاكتوز أقل، لذلك يناسب فترة التنشيف أو من لديهم حساسية تجاه اللاكتوز.',
+      },
+      {
+        question: 'كم سعر البروتين في تونس؟',
+        answer: 'السعر يتغير حسب النوع والعلامة والوزن والعروض. قارن السعر لكل كيلو أو لكل حصة بدل الاعتماد على سعر العلبة فقط، وراجع السعر والمخزون الحاليين في صفحة البروتين.',
+      },
+      {
+        question: 'كيف أتأكد أن مكمل البروتين أصلي؟',
+        answer: 'اشترِ من متجر معروف، وتحقق من سلامة الغطاء ورقم التشغيلة وتاريخ الصلاحية وبيانات المستورد أو الموزع على العبوة. تجنب المنتجات المفتوحة أو ذات السعر المنخفض بشكل غير منطقي.',
+      },
+      {
+        question: 'هل مكمل البروتين مناسب للجميع؟',
+        answer: 'هو غذاء مكمل وليس بديلًا عن الوجبات. يحتاج الاختيار إلى مراعاة نظامك الغذائي وتحملك للاكتوز وأي حالة صحية. استشر طبيبًا أو مختص تغذية إذا كنت تعاني من مرض مزمن أو مشكلة كلوية أو لديك حساسية غذائية.',
+      },
+    ],
+    internalLinks: [
+      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'واي أيزوليت', href: '/whey-isolate' },
+      { anchor: 'ماس غاينر لزيادة الوزن', href: '/gainers-proteines' },
+    ],
+  },
   'quest-ce-que-la-whey': {
     faqs: [
       { question: "Qu'est-ce que la whey protein ?", answer: "La whey (lactosérum) est la fraction protéique soluble du lait. Elle est absorbée rapidement et constitue une source de protéines complètes idéale pour la récupération et la prise de masse." },
@@ -20,11 +184,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où acheter de la whey en Tunisie ?", answer: "Proteine Tunisie propose une large gamme de whey protein en Tunisie avec livraison à Sousse, Tunis et Sfax. Consultez notre catégorie whey protein tunisie pour les prix et la livraison." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
-      { anchor: 'acheter whey en tunisie', href: '/proteine-whey' },
-      { anchor: 'meilleure whey protein', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
+      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
-      { anchor: 'prix whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'prix whey Tunisie', href: '/whey-proteine' },
     ],
   },
   'whey-ou-isolate': {
@@ -33,10 +197,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Quel est le meilleur prix isolate whey Tunisie ?", answer: "Proteine Tunisie propose des isolats de whey à des prix compétitifs. Consultez notre catégorie whey protein tunisie pour comparer les prix et la livraison en Tunisie." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
-      { anchor: 'acheter whey en tunisie', href: '/proteine-whey' },
-      { anchor: 'meilleure whey protein', href: '/proteine-whey' },
-      { anchor: 'isolat whey tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
+      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
+      { anchor: 'isolat whey tunisie', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
     ],
   },
@@ -49,7 +213,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'creatine tunisie', href: '/creatine' },
       { anchor: 'creatine monohydrate prix tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
   'bcaa-utile-ou-pas': {
@@ -60,7 +224,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'bcaa tunisie', href: '/bcaa' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
       { anchor: 'creatine tunisie', href: '/creatine' },
     ],
   },
@@ -72,7 +236,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'créatine Tunisie', href: '/creatine' },
       { anchor: 'comment prendre creatine', href: '/blog/comment-prendre-creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -86,7 +250,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les prix de nos créatines', href: '/creatine' },
       { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -98,7 +262,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
       { anchor: 'acheter créatine originale en Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -110,7 +274,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
       { anchor: 'créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -134,7 +298,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'choisir votre créatine sur Protein.tn', href: '/creatine' },
       { anchor: 'créatine Creapure® Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -146,7 +310,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les prix de nos créatines', href: '/creatine' },
       { anchor: 'sélection créatine Protein.tn', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -157,7 +321,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'voir les créatines disponibles', href: '/creatine' },
       { anchor: 'acheter créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey', href: '/proteine-whey' },
+      { anchor: 'protéines whey', href: '/whey-proteine' },
     ],
   },
 
@@ -168,7 +332,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'acheter créatine en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
       { anchor: 'gainers prise de masse Tunisie', href: '/gainers-proteines' },
     ],
   },
@@ -181,7 +345,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
       { anchor: 'acheter créatine originale Tunisie', href: '/creatine' },
-      { anchor: 'whey protein originale tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein originale tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -193,7 +357,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
       { anchor: 'voir les créatines disponibles', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/proteine-whey' },
+      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -205,14 +369,24 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
       { anchor: 'créatine Tunisie prix', href: '/creatine' },
-      { anchor: 'whey protein Tunisie', href: '/proteine-whey' },
+      { anchor: 'whey protein Tunisie', href: '/whey-proteine' },
     ],
   },
 };
 
-/** Normalize slug for lookup (lowercase, trim). */
+/** Normalize slug for lookup (decoded, Unicode-normalized, lowercase, trim). */
 export function getBlogSeoEntry(slug: string | undefined): BlogSeoEntry | null {
   if (!slug?.trim()) return null;
-  const key = slug.trim().toLowerCase();
+  // Depending on how the route was reached, Next can expose a Unicode path segment either as
+  // decoded text or as its percent-encoded representation. French slugs hide this distinction;
+  // Arabic slugs do not. Decode defensively and normalize Unicode so the same article always
+  // reaches its SEO overlay, FAQ schema and internal links.
+  let decodedSlug = slug;
+  try {
+    decodedSlug = decodeURIComponent(slug);
+  } catch {
+    // A malformed escape should not take the article page down; use the original value instead.
+  }
+  const key = decodedSlug.trim().normalize('NFC').toLowerCase();
   return BLOG_SEO_CONFIG[key] ?? null;
 }

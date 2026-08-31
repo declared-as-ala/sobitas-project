@@ -1,5 +1,65 @@
 import type { Metadata, Viewport } from "next";
-import { Inter, Noto_Sans_Arabic, Archivo, Poppins } from "next/font/google";
+/*
+ * TWO FAMILIES, DOWN FROM FOUR.
+ *
+ * Every next/font/google family is a BUILD-TIME FETCH of fonts.gstatic.com, and on 13/08/2026 one
+ * of them failed: next/font exhausted its three internal retries on Noto Sans Arabic and threw
+ * `TypeError: Cannot read properties of null (reading '1')`, taking the whole deploy down with no
+ * code change involved. Four families is four chances for that per build; two is two.
+ *
+ * WHAT WENT, AND WHY IT IS SAFE:
+ *   Poppins            13 uses of `font-poppins`, a card-only prototype. Its own Tailwind stack
+ *                      already listed var(--font-inter) as the next step, so those cards now render
+ *                      in Inter — the face the rest of the body already uses.
+ *   Noto Sans Arabic   `font-arabic` IS NOT IN tailwind.config.ts at all, so that class was always
+ *                      a no-op. The real consumer is globals.css, which declares
+ *                      `var(--font-arabic), "Noto Sans Arabic", "Segoe UI", Tahoma, Arial` — a
+ *                      complete Arabic fallback chain that resolves on every modern device without
+ *                      the download.
+ *
+ * WHAT STAYED, AND WHY NOT ONE FAMILY:
+ *   Archivo  309 uses of `font-display` — the condensed athletic face on every heading, price,
+ *            badge and countdown. It IS the storefront's visual identity.
+ *   Inter    the body/UI face, applied through `sans`.
+ * Collapsing to a single family would mean setting body copy in a condensed display face, which is
+ * a legibility regression on the paragraphs that actually get read. Two is the honest floor.
+ */
+/*
+ * ── SELF-HOSTED, BECAUSE THIS HAS NOW TAKEN THE DEPLOY DOWN TWICE ────────────────────────────
+ *
+ * The note above was written after the first time. Reducing four families to two halved the
+ * exposure and did not remove it, so on 15/08/2026 it happened again — this time to Inter, and
+ * this time it blocked a deploy carrying six commits of unrelated work:
+ *
+ *     #17 21.06 `next/font` error:
+ *     #17 21.06 Failed to fetch `Inter` from Google Fonts.
+ *     #17 ERROR: process "/bin/sh -c npm run build" did not complete successfully: exit code: 1
+ *
+ * Lint passed. The Next build on the RUNNER passed. Only the build inside the Docker image failed,
+ * because that is a second, separate egress to fonts.gstatic.com — so the same commit can be green
+ * and red in the same run depending on a third party's availability from one network namespace.
+ *
+ * `next/font/google` downloads at BUILD time by design, which is the right default for most sites
+ * and the wrong one for a deploy pipeline that must be reproducible. The two woff2 files are now
+ * committed (Inter 48 kB, Archivo 90 kB, `latin` subset only) and read from disk. The build has no
+ * network dependency for type at all, which also means it cannot be broken by a font URL rotating
+ * — the v20/v25 hashes in Google's CSS are not stable.
+ *
+ * LICENSING: both families are SIL Open Font License 1.1, which permits redistribution including
+ * bundling. Nothing about self-hosting them is a grey area.
+ *
+ * WHAT IS PRESERVED EXACTLY: the `--font-inter` / `--font-display` variable names, `display: swap`,
+ * Inter preloaded and Archivo not (see the note below for why that asymmetry is deliberate), and
+ * the fallback stacks. `adjustFontFallback` changes SHAPE rather than meaning — the Google loader
+ * takes a boolean, the local loader takes the fallback family to compute metric overrides from —
+ * so `true` becomes `'Arial'`, which is what the boolean resolved to for a sans-serif anyway.
+ *
+ * WEIGHT RANGES, NOT LISTS. These are the variable files, so one face covers the range: Inter
+ * `400 700` replaces `weight: ["400","500","600","700"]`, and Archivo `100 900` carries the weight
+ * axis while the file's `wdth` axis (62.5–125) keeps working through plain `font-stretch` — that
+ * axis is the whole reason Archivo was chosen over Oswald, and it survives self-hosting untouched.
+ */
+import localFont from "next/font/local";
 import { Suspense } from "react";
 
 import Script from "next/script";
@@ -12,38 +72,29 @@ import { NavigationHandler } from "@/app/components/NavigationHandler";
 import { DeferredToaster } from "@/app/components/DeferredToaster";
 // PWA install prompt, moved off the critical path — see DeferredInstallBanner for why.
 import { DeferredInstallBanner } from "@/app/components/DeferredInstallBanner";
-import { WhatsAppFab } from "@/app/components/WhatsAppFab";
 // The cart drawer's mount point. It used to be the last element of HeaderClient, which forced that
 // ~1,050-line component to subscribe to the drawer's open state — so every add-to-cart re-rendered
 // the entire header inside the tap handler. See CartDrawerHost for the measurements.
 import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { ReferralCapture } from "@/app/components/ReferralCapture";
+import { WebVitalsReporter } from "@/app/components/WebVitalsReporter";
 import { LOCALE_STORAGE_KEY } from "@/i18n";
 
-const inter = Inter({
-  // `latin` only: every French diacritic (é è ê à ç ù û î ô, œ at U+0152-0153) is in Google's
-  // `latin` range. `latin-ext` is Eastern-European coverage this French/Arabic storefront never
-  // renders, and it was extra preloaded Inter bytes competing with the hero LCP. Same call made
-  // for Archivo.
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+const inter = localFont({
+  /* The `latin` subset file, which is what `subsets: ["latin"]` selected before. Every French
+     diacritic (é è ê à ç ù û î ô, œ at U+0152-0153) is inside Google's `latin` range; `latin-ext`
+     is Eastern-European coverage this French/Arabic storefront never renders, and it was extra
+     preloaded bytes competing with the hero LCP. Same call made for Archivo. */
+  src: "./fonts/Inter-latin-variable.woff2",
+  // The variable file covers the range in one download, replacing the four static weights.
+  weight: "400 700",
+  style: "normal",
   display: "swap",
   preload: true,
   variable: "--font-inter",
-  adjustFontFallback: true,
+  adjustFontFallback: "Arial",
   fallback: ["system-ui", "Segoe UI", "Roboto", "Helvetica Neue", "Arial", "sans-serif"],
-});
-
-const notoArabic = Noto_Sans_Arabic({
-  subsets: ["arabic"],
-  weight: ["400", "600", "700"],
-  display: "swap",
-  variable: "--font-arabic",
-  // The site default is French; the Arabic subset must NOT be preloaded on every page
-  // (it added ~4 render-blocking font requests to a French-default site). It is still
-  // applied via the CSS variable when the user switches to Arabic (dir=rtl).
-  preload: false,
 });
 
 /**
@@ -82,28 +133,25 @@ const notoArabic = Noto_Sans_Arabic({
  * Section headings further down do re-flow slightly, but they are outside the viewport at load
  * and CLS only scores shifts that are actually on screen.
  */
-const archivo = Archivo({
-  subsets: ["latin"],
-  axes: ["wdth"],
+const archivo = localFont({
+  /* The two-axis file — `wdth` 62.5–125 alongside `wght`. That is 90 kB against 35 kB for the
+     weight axis alone, and it is the whole reason Archivo was chosen over Oswald: it buys two
+     typographic registers (condensed headlines at 82%, wide letterspaced kickers at 112%) from a
+     single download. `axes: ["wdth"]` used to request it; here the file simply IS that build, and
+     `font-stretch` continues to drive it with no loader involvement. */
+  src: "./fonts/Archivo-latin-variable.woff2",
+  weight: "100 900",
+  style: "normal",
   display: "swap",
   variable: "--font-display",
   preload: false,
-  adjustFontFallback: true,
+  adjustFontFallback: "Arial",
   fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
 });
 
 // Poppins — the typeface of the new GPT-designed product card. Scoped to the card for now (used
 // via the `font-poppins` utility), not preloaded (below-the-fold, and the body stays Inter under
 // the "card-first" rollout). Will widen to the rest of the site as more prototypes land.
-const poppins = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  display: "swap",
-  variable: "--font-poppins",
-  preload: false,
-  fallback: ["var(--font-inter)", "system-ui", "sans-serif"],
-});
-
 const SITE_TITLE_DEFAULT =
   'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie';
 const SITE_DESCRIPTION =
@@ -230,7 +278,7 @@ export default async function RootLayout({
   const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${notoArabic.variable} ${archivo.variable} ${poppins.variable}`}>
+    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${archivo.variable}`}>
       <head>
         {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
             same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously
@@ -249,14 +297,11 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Protéine Tunisie" />
-        {/* Favicons — ?v=7 busts the year-long Cloudflare/browser cache. v=7: the browser-tab icons
-            (32/16/ico) had their near-white background flood-filled to transparent — the previous
-            "official" export baked in an opaque off-white canvas instead of true alpha, which showed
-            as a white halo/box around the icon in the browser tab. */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=7" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=7" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=6" />
-        <link rel="icon" href="/favicon.ico?v=7" />
+        {/* Favicons — ?v=8 publishes the transparent Protein.tn P mark. */}
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=8" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=8" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=8" />
+        <link rel="icon" href="/favicon.ico?v=8" />
         {/* Manifest for PWA and Android support */}
         <link rel="manifest" href="/site.webmanifest" />
         {/* Preconnect to image/storage origin and Google Fonts CDN */}
@@ -288,6 +333,7 @@ export default async function RootLayout({
         <Script id="gtag-init" strategy="lazyOnload">
           {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });`}
         </Script>
+        <WebVitalsReporter />
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <Providers navigation={navigation} navCategories={navCategories} cmsPages={footer.cmsPages} coordinates={footer.coordinates}>
             <Suspense fallback={null}>
@@ -297,7 +343,23 @@ export default async function RootLayout({
             <GlobalLoader />
             <DeferredToaster />
             <DeferredInstallBanner />
-            <WhatsAppFab />
+            {/*
+              The floating WhatsApp bubble is gone (owner, 10/08/2026: "take off the popup button of
+              whatsapp from mobile, keep it only in the sidebar").
+
+              It was `md:hidden`, i.e. PHONES ONLY — desktop has WhatsApp in the nav — so unmounting
+              it removes it everywhere it appeared, and WhatsAppFab.tsx is deleted rather than left
+              as dead code.
+
+              The channel is not lost, and that was checked before removing it: the mobile menu in
+              HeaderClient has its own WhatsApp row, added precisely because the bubble had once been
+              the only way to reach WhatsApp on a phone. Deleting the dominant ordering channel for
+              Tunisian COD shoppers would be a conversion bug wearing a layout fix's clothes — so the
+              row was verified present first.
+
+              This also gives the bottom-right corner back to ScrollToTop and the tab bar, which the
+              pack-builder measurement had already flagged as over-crowded.
+            */}
             {/* Mounted once here, not per page, so it never remounts on navigation. */}
             <MobileTabBar />
             <CartDrawerHost />

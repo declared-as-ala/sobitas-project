@@ -43,15 +43,15 @@ class CreateCommande extends CreateRecord
         $data['adresse1'] = $pick($data['adresse1'] ?? null, $data['livraison_adresse1'] ?? null);
         $data['code_postale'] = $pick($data['code_postale'] ?? null, $data['livraison_code_postale'] ?? null);
 
-        // Auto find-or-create client when no client is selected (form sends user_id, not client_id)
-        if (empty($data['client_id']) && empty($data['user_id'])) {
+        // Back-office orders link to clients through client_id. user_id is reserved for an
+        // authenticated storefront account and must never receive a Client primary key.
+        if (empty($data['client_id'])) {
             /** @var ClientService $clientService */
             $clientService = app(ClientService::class);
             $client = $clientService->findOrCreateClientFromDeliveryInfo($data);
 
             if ($client) {
                 Log::info('filament.commande.create.client_linked', ['client_id' => $client->id]);
-                $data['user_id'] = $client->id;
                 if (Schema::hasColumn((new Commande())->getTable(), 'client_id')) {
                     $data['client_id'] = $client->id;
                 }

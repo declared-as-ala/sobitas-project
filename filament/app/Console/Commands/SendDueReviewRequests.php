@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Jobs\SendSmsJob;
 use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Services\PointsService;
@@ -65,7 +66,9 @@ class SendDueReviewRequests extends Command
         // Ask MySQL directly rather than Schema::hasColumn, which has twice reported false for
         // columns that exist on this database and silently turned guarded code into a no-op.
         if (! $this->hasColumn('commandes', 'delivered_at')) {
-            $this->error('commandes.delivered_at is missing — run migrations first.');
+            $this->error('commandes.delivered_at cannot be read — run migrations first.');
+            $this->line('Si les migrations sont à jour, cherchez « could not probe a column » dans le log Laravel :');
+            $this->line('la colonne existe et c’est la base qui refuse la lecture pour une autre raison.');
 
             return self::FAILURE;
         }
@@ -128,6 +131,9 @@ class SendDueReviewRequests extends Command
         $sent = 0;
         $failed = 0;
 
+        $smsEnabled = (bool) config('reviews.request_sms_enabled', false);
+        $smsSent = 0;
+
         foreach ($batch as $commande) {
             try {
                 Mail::to($this->emailFor($commande))->send(new ReviewRequestMail($commande));
@@ -141,12 +147,42 @@ class SendDueReviewRequests extends Command
                     'error'       => $e->getMessage(),
                 ]);
             }
+
+            /*
+             * The SMS is a SEPARATE try, deliberately, and it runs even when the email above
+             * failed. They are two independent channels to the same person; letting an SMTP
+             * timeout suppress the text message would mean one broken mail server costs this shop
+             * every review it was going to get that day.
+             *
+             * It does not have its own "sent" marker either — `review_request_sent_at` is stamped
+             * by the email branch and gates the whole order out of the next sweep, so the SMS is
+             * asked for at most once per order for exactly the same reason.
+             */
+            if ($smsEnabled) {
+                try {
+                    if ($this->sendReviewSms($commande)) {
+                        $smsSent++;
+                    }
+                } catch (\Throwable $e) {
+                    Log::warning('Review-request SMS failed', [
+                        'commande_id' => $commande->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+                }
+            }
+
             if ($sleep > 0) {
                 sleep($sleep);
             }
         }
 
-        $summary = sprintf('reviews:send-due-requests — sent %d, failed %d, still due %d', $sent, $failed, max(0, $sendable->count() - $sent));
+        $summary = sprintf(
+            'reviews:send-due-requests — sent %d, failed %d, still due %d%s',
+            $sent,
+            $failed,
+            max(0, $sendable->count() - $sent),
+            $smsEnabled ? sprintf(' (+%d SMS)', $smsSent) : ''
+        );
         $this->info($summary);
         // Logged as well as printed: this runs unattended in the scheduler container, where
         // console output goes nowhere anyone reads.
@@ -155,13 +191,104 @@ class SendDueReviewRequests extends Command
         return self::SUCCESS;
     }
 
+    /**
+     * Can this command read `$table.$column`?
+     *
+     * ── THIS METHOD TURNED THE WHOLE FEATURE OFF FOR AS LONG AS IT EXISTED ──────────────────
+     * It was `SHOW COLUMNS FROM \`{$table}\` LIKE ?` with the column BOUND as a parameter, and it
+     * returned false for `commandes.delivered_at` on 21/08/2026 — on the same afternoon that
+     * AramexTrackingSync wrote that exact column, successfully, on forty orders, with the values
+     * visible in the production log. The column plainly exists.
+     *
+     * So `reviews:send-due-requests` exited at its first line — *"commandes.delivered_at is
+     * missing — run migrations first."* — every single day at 10:00, and the `catch` turned the
+     * database's explanation into `false` on the way past. The one occurrence of this query
+     * elsewhere in the codebase (LoyaltyCard, `LIKE 'status'`) passes the column as a LITERAL and
+     * works, which is the difference.
+     *
+     * ── SO IT NO LONGER ASKS A PROXY QUESTION ──────────────────────────────────────────────
+     * Two metadata checks in a row have now voted "missing" on a column that exists: first
+     * `Schema::hasColumn` (per the note that introduced this method), then this one. Rather than
+     * replace it with a third way of asking the database about itself, this asks the question the
+     * command actually has — *can I select this column?* — because a SELECT that touches it cannot
+     * be wrong about whether it is there.
+     *
+     * `LIMIT 1` and no ordering, so the cost is one index-free row on a table of ~1,100.
+     *
+     * A genuine absence returns false, as before. Any OTHER database failure is logged with its
+     * message instead of being silently rewritten as "the feature is off", which is the specific
+     * behaviour that hid this for as long as it did.
+     */
     private function hasColumn(string $table, string $column): bool
     {
         try {
-            return ! empty(DB::select("SHOW COLUMNS FROM `{$table}` LIKE ?", [$column]));
+            DB::table($table)->select($column)->limit(1)->get();
+
+            return true;
         } catch (\Throwable $e) {
+            $message = strtolower($e->getMessage());
+            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column');
+
+            if (! $missing) {
+                Log::error('reviews:send-due-requests could not probe a column, and it is NOT a missing column', [
+                    'table'  => $table,
+                    'column' => $column,
+                    'error'  => $e->getMessage(),
+                ]);
+            }
+
             return false;
         }
+    }
+
+    /**
+     * The review request as a text message. Returns false when there is nothing sendable.
+     *
+     * ── WRITTEN TO FIT IN ONE SEGMENT, AND TO SOUND LIKE A PERSON ───────────────────────────
+     * Owner, 20/08/2026: *"make the review message humanized."*
+     *
+     * Two constraints pull against each other here. A message that sounds human needs a greeting,
+     * a reason and a sign-off; a message that costs one credit has 160 GSM-7 characters for all of
+     * it INCLUDING the link. That is why the short `review_code` exists — at 34 characters for the
+     * whole URL instead of 88, there is room left for a sentence.
+     *
+     * No emoji, no "!!", no "OFFRE": those are what a Tunisian phone user has learned to associate
+     * with bulk marketing, and this message has to read as coming from the shop that just
+     * delivered their parcel. The order number is in it for the same reason — it is the detail no
+     * spammer would have.
+     */
+    private function sendReviewSms(Commande $commande): bool
+    {
+        $phone = trim((string) ($commande->livraison_phone ?? $commande->phone ?? ''));
+        if ($phone === '') {
+            return false;
+        }
+
+        // Backfill the short code for orders created before the column existed, rather than
+        // falling back to the 64-character token and silently sending a 3-segment message.
+        if (empty($commande->review_code)) {
+            // `$this->hasColumn`, not Schema::hasColumn — see its docblock: Schema has twice
+            // reported false for columns that exist on this database, which would silently turn
+            // the SMS off rather than backfilling the code.
+            if (! $this->hasColumn('commandes', 'review_code')) {
+                return false;
+            }
+            $commande->forceFill(['review_code' => Commande::generateReviewCode()])->saveQuietly();
+        }
+
+        $base = rtrim((string) config('app.frontend_url', config('app.url')), '/');
+        $url  = $base . '/avis/' . $commande->review_code;
+
+        $prenom = trim((string) ($commande->livraison_prenom ?? $commande->prenom ?? ''));
+        $hello  = $prenom !== '' ? "Bonjour {$prenom}," : 'Bonjour,';
+
+        $text = "{$hello} votre commande #{$commande->numero} de Protein.tn est bien arrivee ?"
+            . " Votre avis aiderait vraiment les prochains clients : {$url}"
+            . ' Merci !';
+
+        SendSmsJob::dispatch($phone, $text);
+
+        return true;
     }
 
     /** Valid delivery/billing email for the order, or null when unusable. */

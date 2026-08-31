@@ -133,13 +133,62 @@ return [
         'query.wikidata.org' => ['trust' => 0.85, 'rps' => 1.0, 'store_text' => true, 'type' => 'open_database'],
         'pubchem.ncbi.nlm.nih.gov' => ['trust' => 0.90, 'rps' => 3.0, 'store_text' => true, 'type' => 'government'],
 
+        /**
+         * ---- iHerb: catalogue acquisition (see App\Services\Catalog\IHerb) ----
+         *
+         * `rps` is 1.5 — one request every 0.67s — and it is ONE entry, not two.
+         *
+         * It was two. 'iherb.com' was declared here AND again in the retailer block below at
+         * rps 0.2, and PHP keeps the last duplicate key silently. So every comment in this
+         * codebase said "one request every two seconds" while the importer actually ran at one
+         * every FIVE, turning a 24-hour hydration into a 59-hour one that nobody had budgeted
+         * for. The duplicate is gone; this is the only iherb entry.
+         *
+         * 1.5 rather than 0.5 because the owner needs a catalogue this week, and one request
+         * every two-thirds of a second is still a rounding error to a site of iHerb's size —
+         * 42,491 products becomes about 8 hours instead of 24. The circuit breaker is unchanged
+         * and remains the real protection: five 401/403/429 responses stop the run for thirty
+         * minutes, because a blocked host yields nothing ever again.
+         *
+         * CATALOG_IHERB_RPS overrides it without a deploy. If blocks or 429s ever appear in the
+         * log, lower it — that is the dial to reach for first. Going faster buys hours and risks a permanent block, and a
+         * blocked host yields nothing ever again.
+         *
+         * `store_text` is FALSE. iHerb's product descriptions are their copy, and republishing
+         * them would also be the fastest way for Google to read our pages as duplicates of a far
+         * stronger domain. We take facts — identity, brand, category, pack size — and write our
+         * own French titles from them.
+         */
+        /**
+         * `iherb.com` covers EVERY iherb subdomain, and that now matters for pacing as well as
+         * policy.
+         *
+         * The importer talks to two of them: `tn.iherb.com` for the identity JSON and — since
+         * `catalog:iherb:content` — `fr.iherb.com` for the product page, because iHerb serves the
+         * page's language by country subdomain and protein.tn is a French shop.
+         *
+         * PoliteFetcher::bucket() resolves both to THIS key, so they share one token bucket and one
+         * circuit breaker. Without that they would be two independent limiters, each politely
+         * pacing itself at 1.5 req/s while iHerb received 3.
+         */
+        'iherb.com' => ['trust' => 0.70, 'rps' => (float) env('CATALOG_IHERB_RPS', 1.5), 'store_text' => false, 'type' => 'retailer'],
+        // Shadowed by the entry above (str_ends_with '.iherb.com' matches first) and kept only as
+        // documentation of which host the identity endpoint lives on. Same values, so nothing moves.
+        'tn.iherb.com' => ['trust' => 0.70, 'rps' => (float) env('CATALOG_IHERB_RPS', 1.5), 'store_text' => false, 'type' => 'retailer'],
+        // Static image CDN — no crawl budget concern, but still paced.
+        'cloudinary.images-iherb.com' => ['trust' => 0.70, 'rps' => 2.0, 'store_text' => false, 'type' => 'cdn'],
+
         // ---- Retailers: read for facts, never for prose ----
         // A retailer's specs table is a fine cross-check on a barcode or a serving size. Its
         // description is written copy and its reviews belong to its customers, so neither is kept.
         'zumub.com' => ['trust' => 0.70, 'rps' => 0.25, 'store_text' => false, 'type' => 'retailer'],
         'bulk.com' => ['trust' => 0.70, 'rps' => 0.25, 'store_text' => false, 'type' => 'retailer'],
         'prozis.com' => ['trust' => 0.70, 'rps' => 0.25, 'store_text' => false, 'type' => 'retailer'],
-        'iherb.com' => ['trust' => 0.70, 'rps' => 0.2, 'store_text' => false, 'type' => 'retailer'],
+        // NOTE: 'iherb.com' was ALSO listed here, at rps 0.2, duplicating the entry in the
+        // catalogue block above. PHP keeps the LAST duplicate key silently, so the catalogue
+        // import was running at one request every FIVE seconds, not the two it was designed and
+        // documented for — 59 hours of hydration instead of 24, with every comment in the
+        // codebase stating the wrong figure. Removed; the single authoritative entry is above.
         'amazon.com' => ['trust' => 0.60, 'rps' => 0.15, 'store_text' => false, 'type' => 'retailer'],
         'ebay.com' => ['trust' => 0.55, 'rps' => 0.2, 'store_text' => false, 'type' => 'retailer'],
     ],

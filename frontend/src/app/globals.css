@@ -128,14 +128,61 @@
     width: 100%;
     max-width: 100%;
     font-size: var(--font-size);
+
+    /* PAINT THE CANVAS EXPLICITLY (owner, 11/08/2026: "at the bottom the background is not white,
+       and when I scroll it starts scrolling with me down").
+
+       Body's background normally propagates to the canvas — but only while the root's own
+       background is transparent, and only the PROPAGATED copy covers the full viewport. Anything
+       that gives <html> a background, and any moment the document is shorter than the viewport or
+       is being over-scrolled (rubber-band on macOS/iOS, overscroll on Chrome), exposes canvas that
+       body never painted. That strip is whatever the browser last had — which is exactly the
+       "different colour at the bottom that moves when I scroll" being described.
+
+       Setting the SAME token here makes the canvas deterministic. It costs nothing: html and body
+       resolve `--background` from the same scope, so light and dark both stay correct, and no band
+       changes colour. */
+    @apply bg-background;
   }
 
   /* Reserve the mobile tab bar's height so the last row of content and the footer are never
      hidden behind it. Driven by --tabbar-h (styles/tokens.css), which is 0px above 767px and
-     is the single knob that also switches the bar off entirely. */
+     is the single knob that also switches the bar off entirely.
+
+     NO env() HERE. `--tabbar-h` is `calc(56px + env(safe-area-inset-bottom, 0px))` — the inset was
+     folded INTO the token precisely because consumers kept forgetting it, and adding it again
+     counts it twice. On a notched iPhone that was ~34px of dead canvas under the footer of every
+     page on the site. The token is the whole footprint; consumers subtract against it and nothing
+     else. */
   @media (max-width: 767px) {
     body {
-      padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+      padding-bottom: var(--tabbar-h);
+    }
+
+    /* ── EXCEPT WHERE THERE IS NO TAB BAR ────────────────────────────────────────────────────
+       MobileTabBar renders nothing on /checkout, /login, /register, /forgot-password and
+       /reset-password (CHROME_FREE_ROUTES) — but this padding was reserving 56px plus the
+       safe-area inset for it anyway. On a phone that is a ~90px strip of bare canvas under the
+       bottom of every auth screen, in the page background rather than the screen's own surface,
+       which reads as the layout having run out.
+
+       `:has()` on an ordinary class rather than a body attribute set from an effect: this way it
+       is correct in the SSR'd HTML, so there is no frame where the strip exists and then
+       disappears. `.pt-no-chrome` is declared by AuthShell; /checkout can adopt it the day its
+       own fixed footer is revisited.
+
+       ── THE TOKEN, NOT THE PADDING ────────────────────────────────────────────────────────
+       Zeroing `padding-bottom` here would fix the strip and leave a subtler bug behind, which is
+       exactly what the first version of this rule did. `--tabbar-h` is not only the body's
+       reserve: every fixed-bottom element in the app is positioned against it. The install
+       banner parks itself at `bottom: var(--tabbar-h)` translated down by 110% of its own height
+       — 89px against an 81px element — which clears the fold only because the last 56px are
+       behind the tab bar. Take the tab bar away and leave the token at 56px, and 48px of a
+       banner that is supposed to be hidden sits at the bottom of every auth screen. Measured.
+
+       So the token goes to zero, which is simply the truth on these routes: there is no bar. */
+    body:has(.pt-no-chrome) {
+      --tabbar-h: 0px;
     }
   }
 
@@ -463,8 +510,12 @@ html[dir="rtl"] [data-i18n-ltr] {
  * exact moment a reader is deepest in the page and most likely to want it. Every control now
  * survives the collapse; what changes is only how much air sits around it.
  *
- *   desktop   bar     72 -> 58   nav row  48 -> 40   logo  40 -> 30     header 122 -> 100
+ *   desktop   bar     64 -> 52   nav row  48 -> 40   logo  40 -> 30     header 112 ->  92
  *   mobile    bar     64 -> 54                       logo  44 -> 36     header  65 ->  55
+ *
+ * The desktop bar was 72 -> 58 until 17/08/2026, when the two `flex-col` icon-and-label controls
+ * in the right-hand cluster (Compte, Panier) became plain 40px icon squares like the other three.
+ * The label was what the 72 was sized around.
  *
  * 22px on desktop and 10px on mobile, with the mobile utility strip's own 36px already scrolling
  * away under its own weight. Less than the 64px the fold bought, and worth it: a nav that
@@ -493,7 +544,7 @@ html[dir="rtl"] [data-i18n-ltr] {
 }
 
 [data-compact] .pt-hdr-bar-desktop {
-  height: 58px;
+  height: 52px;
 }
 [data-compact] .pt-hdr-bar-desktop .pt-hdr-logo {
   height: 30px;
@@ -506,6 +557,113 @@ html[dir="rtl"] [data-i18n-ltr] {
 }
 [data-compact] .pt-hdr-bar-mobile .pt-hdr-logo {
   height: 36px;
+}
+
+/* ==============================================================================================
+ * THE PRODUCT PAGE DOES NOT GET A STICKY HEADER.
+ *
+ * Owner, 17/08/2026: *"for the header in the product page don't make it sticky, make it relative"*.
+ *
+ * It is a reasonable ask and the reason is measurable. The header is 114px tall and it is the
+ * FIRST of three things competing for the top of a product page: the site header, the sticky
+ * add-to-cart bar that appears the moment the buy box scrolls away, and — on a phone — the bottom
+ * tab bar. Three persistent strips is a viewport with less product in it than chrome. On the one
+ * template where the visitor has already arrived at what they came for, the navigation is the
+ * least useful of the three, and the CTA bar is the one that has to stay.
+ *
+ * It also gives the photograph its height back: the gallery is capped against `100vh` minus the
+ * space above it, so 114px of header that scrolls away is 114px the packshot can use on the way
+ * down the page.
+ *
+ * Driven by an attribute the product page sets on <body> rather than by a route test in the
+ * header. The header would have to know that `/whey-proteine/tantor-…` is a product while
+ * `/whey-proteine` is a category and `/blog/…` is an article — a list it has no business holding
+ * and would get wrong the first time a route was added. The page that IS the product page is the
+ * one that knows.
+ *
+ * SPECIFICITY, deliberately: `body[data-page='product'] header.pt-site-header` is (0,3,2) against
+ * Tailwind's `.sticky` at (0,1,0), so it wins on the cascade with no `!important`. The attribute
+ * is set in an effect, so the server-rendered header is sticky for one frame — invisible, because
+ * at scroll 0 a sticky element and a relative one occupy exactly the same box.
+ * ============================================================================================ */
+body[data-page='product'] header.pt-site-header {
+  position: relative;
+}
+
+/* ==============================================================================================
+ * THE HEADER'S HEIGHT IS A TOKEN, AND THESE ARE THE THREE THINGS THAT CHANGE IT.
+ *
+ * `--header-h` is declared in styles/tokens.css (65px phone / 114px from 768). Everything that
+ * pins itself below the header reads it — today that is /shop's filter-and-sort toolbar, which
+ * previously hardcoded 68px and was therefore wrong at BOTH widths: a 13px seam on a phone with
+ * page content scrolling through it, and a 26px overlap on desktop with the search field's top
+ * edge hidden under the header. Measured 20/08/2026.
+ *
+ * 1. COMPACT. The header collapses on scroll (see [data-compact] above), 65 -> 55 and 114 -> 94.
+ *    A pinned element that does not follow leaves the same seam back, 10-20px of it, for the
+ *    entire time the reader is scrolling — which is the entire time it matters. `:has()` rather
+ *    than a second attribute write in HeaderClient: the attribute already exists, and this keeps
+ *    the whole geometry in CSS where the transition lives. A browser without `:has()` gets the
+ *    expanded value and a 10px gap while scrolling, which is exactly the old behaviour.
+ *
+ * 2. THE PRODUCT PAGE. Its header is relative (above), so nothing is above a pinned element.
+ *
+ * 3. /shop BELOW 768. Same argument the product page won on, and the owner made it again on
+ *    20/08/2026 looking at a phone: *"the header and the filter sticky in wrong place — maybe
+ *    don't even make the header pos top, make it relative"*.
+ *
+ *    Measured on a 390x844 phone before this: site header 55px + shop toolbar 118px + tab bar
+ *    56px = 229px of chrome, 27% of the viewport, three persistent strips, with a product grid
+ *    behind them. The header is the one of the three that is doing the least: the bottom tab bar
+ *    already carries Accueil / Favoris / Boutique / Compte / Panier, and the shop toolbar carries
+ *    a search field scoped to the catalogue you are actually looking at. So the header scrolls
+ *    away and the toolbar becomes the single pinned layer, at top 0 by construction — there is no
+ *    offset left to get wrong.
+ *
+ *    DESKTOP KEEPS IT. There the header is the category nav, the viewport is not the constraint,
+ *    and the toolbar pins under it correctly now that the offset is a token.
+ * ============================================================================================ */
+/* `--header-h` is COMPOSED on <body>, not declared four times, and that is load-bearing rather
+   than tidy. A custom property is substituted at computed-value time on the element that DECLARES
+   it: put the calc on `:root` and html would resolve it against html's own `--header-shrink`, so
+   the compact state — which is only knowable from an attribute on the header, i.e. inside body —
+   could never reach it. Declared on body, body's own shrink applies and every descendant inherits
+   the right answer.
+
+   It also means the two page overrides below need no specificity games. They set `--header-h`
+   directly on the same element the calc lives on, with one more attribute of specificity, so they
+   win by the ordinary cascade. The first attempt used `body:has(...)` for the compact state and a
+   plainer `body[data-page='shop']` for the override, and the `:has()` selector — (0,2,2) against
+   (0,1,1) — quietly won: the phone toolbar pinned itself 55px down the viewport with page content
+   showing above it. */
+body {
+  --header-h: calc(var(--header-h-full) - var(--header-shrink));
+}
+
+body:has(header.pt-site-header[data-compact]) {
+  --header-shrink: 10px;
+}
+
+@media (min-width: 768px) {
+  body:has(header.pt-site-header[data-compact]) {
+    --header-shrink: 20px;
+  }
+}
+
+/* Nothing is pinned above a pinned element on these two templates, so the offset is zero and the
+   consumer needs no media query of its own — `top: var(--header-h)` is correct everywhere. */
+body[data-page='product'] {
+  --header-h: 0px;
+}
+
+@media (max-width: 767px) {
+  body[data-page='shop'] header.pt-site-header {
+    position: relative;
+  }
+
+  body[data-page='shop'] {
+    --header-h: 0px;
+  }
 }
 
 /* WCAG 2.3.3. The collapse still HAPPENS — it is a layout state, not decoration, and removing it
@@ -604,35 +762,57 @@ html[dir="rtl"] [data-i18n-ltr] {
   animation: pt-tier-hit 620ms ease-out;
 }
 
+/* The product grid must be allowed to shrink beside the fixed-width pack summary. Keeping this
+   geometry in one named rule also prevents an ungenerated arbitrary grid class from collapsing
+   both columns to a single 1fr track in production. */
+@media (min-width: 1024px) {
+  .pt-pack-workspace {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 20rem;
+    align-items: start;
+    gap: 1.5rem;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .pt-pack-products-scroll {
+    min-height: 0;
+    padding-inline-end: 0.5rem;
+  }
+
+  /* Keep these offsets explicit. The production utility allow-list intentionally omits generic
+     top-position helpers, which otherwise leaves sticky elements with `top: auto` and makes them
+     behave like ordinary blocks even though their computed position is sticky. */
+  .pt-pack-controls {
+    top: 0;
+  }
+
+  .pt-pack-summary {
+    top: 9.75rem;
+  }
+
+  /* The catalog uses the document scroller. A previous fixed-height workspace trapped the wheel
+     inside a subtle nested scroller and made the page look frozen; normal page scrolling is more
+     predictable, while the compact controls and pack total remain sticky beside the products. */
+  .pt-pack-controls::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 1px;
+    background: rgb(var(--c-hairline));
+  }
+}
+
 /* --------------------------------------------------------------------------
    STICKY PACK BAR (pack builder, below lg)
    --------------------------------------------------------------------------
-   Sits directly ON TOP of the mobile tab bar rather than under it. Both are fixed, so without
-   this the pack total and its CTA are covered by Accueil/Favoris/Boutique — on exactly the screen
-   where the summary matters most.
-
-   Uses the same `--tabbar-h` knob every other bottom-anchored element reads. Reading the shared
-   variable rather than hardcoding 56px is what keeps this correct the day the tab bar's height
-   changes.
-
-   THE SAFE-AREA INSET IS NOT ADDED HERE, AND THAT IS A FIX. `--tabbar-h` already contains it —
-   tokens.css sets it to `calc(56px + env(safe-area-inset-bottom, 0px))` under 768px — so the
-   original `calc(var(--tabbar-h) + env(...))` counted the inset TWICE. On any notched iPhone that
-   floated the pack bar 34px above the tab bar, and page content scrolled through the gap between
-   them: two fixed bars with a moving stripe of products in between, which reads as a rendering
-   fault rather than as a layout.
-
-   Above 767px `--tabbar-h` is 0 and there is no tab bar underneath to supply the inset, so the bar
-   pads itself — otherwise on an iPad in portrait the action row sits on the home indicator.
+   The focused builder removes the storefront tab bar, so this summary anchors directly to the
+   viewport edge. The safe-area padding keeps its action clear of the iOS home indicator without
+   creating an empty strip on ordinary screens.
    -------------------------------------------------------------------------- */
 .pt-packbar {
-  bottom: var(--tabbar-h);
-}
-
-@media (min-width: 768px) {
-  .pt-packbar {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+  bottom: 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
 }
 
 .pt-hero {
@@ -725,39 +905,328 @@ html[dir="rtl"] [data-i18n-ltr] {
    intended" — invisible to a user, and impossible to mistake for a broken page.
    ========================================================================== */
 
-@keyframes pt-rise {
+/* ── THE SECTION REVEAL IS GONE (owner, 18/08/2026) ─────────────────────────────────────────
+   *"I noticed when I scroll, the sections get close to each other — I think there's an animation
+   on scroll, take it off"*.
+
+   That is an exact description of what it did. `pt-rise` translated each band up 28px across
+   `entry 8% → cover 32%`, so while you scrolled, the band below was still rising into place: the
+   gap between two bands was visibly SMALLER than its measured value and closed as you moved. Every
+   spacing decision on this page was made against `measure-bands.mjs` numbers that the animation
+   then contradicted for the duration of the scroll — which is the worst kind of motion, the kind
+   that makes a correct layout look wrong.
+
+   The whole scroll-driven layer goes with it: `@keyframes pt-rise`, the `@supports` gate and the
+   `.pt-reveal[data-motion]` rule. The `.pt-reveal` wrappers are removed from HomePageClient in the
+   same commit; the class keeps its `animation-timeline: none !important` reset in the mobile block
+   above, which is now simply a no-op for anything that still carries it.
+
+   Note for whoever adds motion here next: the hero "takeover" was removed earlier for causing
+   scroll lag, and this was the last survivor of that layer. Scroll-driven animation on BANDS is
+   what keeps being wrong on this page — the bands are the layout, and animating the layout while
+   the user is reading it is the problem, not the implementation. */
+
+/* ==========================================================================
+   THE BRAND MARQUEE
+   ==========================================================================
+   Owner, 18/08/2026: *"redesign this section… show the partner marks in a good way, you can add a
+   micro animation loop"*.
+
+   TRANSFORM ONLY, so it composites and never touches layout or paint on the main thread — the
+   same reason the (now removed) section reveal was written this way. The track holds the list
+   TWICE and travels exactly -50%, which is why the seam is invisible: at -50% the second copy sits
+   pixel-for-pixel where the first started, and the animation restarts from a frame identical to
+   the one it just drew.
+
+   `data-motion` IS LOAD-BEARING. The mobile block above clamps every animation-duration to 0.2s
+   with `!important` below 768px; without the attribute this 60s loop becomes a 0.2s one and the
+   logos strobe. That rule is documented as opt-out-per-component and this is the second component
+   to need it.
+
+   PAUSE ON HOVER AND ON FOCUS-WITHIN — the latter is not decoration: every tile is a link, and a
+   keyboard user tabbing into a moving strip cannot read what they have landed on.
+
+   REDUCED MOTION gets a real fallback rather than a frozen strip: the animation stops AND the
+   container becomes a normal horizontal scroller, so all the brands remain reachable by swipe or
+   scrollbar. A stopped marquee with `overflow: hidden` would hide two thirds of them.
+   ========================================================================== */
+/* ==============================================================================================
+   THE SEARCH PANEL'S ENTRANCE
+   ----------------------------------------------------------------------------------------------
+   Two 140ms animations, and they are deliberately the smallest thing that reads as intentional:
+   the panel rises 6px while it fades, the scrim only fades. A dropdown that slides further than
+   its own padding reads as a page transition, and this is a control that opens on every focus of
+   the header field — several times a session — so it has to be quick enough never to be waited on.
+
+   `data-motion` is NOT set here on purpose. globals.css clamps every animation-duration to 0.2s
+   below 768px unless a node opts out, and 140ms is already inside that budget: the mobile panel
+   gets the same animation at the same speed with no exemption needed.
+
+   `will-change` is absent for the same reason it usually should be — it promotes a layer for the
+   life of the element, and this element's life is the whole time the panel is open. A 140ms
+   opacity/transform pair does not need one.
+   ============================================================================================== */
+.pt-search-panel {
+  animation: pt-search-in 140ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pt-search-scrim {
+  animation: pt-search-scrim-in 140ms ease-out both;
+}
+
+@keyframes pt-search-in {
   from {
-    transform: translate3d(0, 28px, 0);
+    opacity: 0;
+    transform: translateY(-6px);
   }
   to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes pt-search-scrim-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /* The panel still has to APPEAR — `animation: none` on a `both`-filled keyframe would leave it
+     at opacity 0. It appears instantly instead. */
+  .pt-search-panel,
+  .pt-search-scrim {
+    animation-duration: 1ms;
+  }
+}
+
+/* ==============================================================================================
+   THE PRODUCT GRID'S ENTRANCE
+   ----------------------------------------------------------------------------------------------
+   Owner, 19/08/2026, on the boutique: *"add some life to the page, some micro animations, make it
+   unique — and don't make it look AI generated, make it look like a human designed it."*
+
+   The whole animation is ten pixels of upward travel over 260ms, staggered 35ms across the first
+   eight cards and flat after that. Three decisions in there are worth stating, because the reason
+   this reads as considered rather than as a template is that it does LESS than the obvious version:
+
+   1. TRANSFORM ONLY — NO FADE. Every stock "reveal" animation fades from opacity 0, and on THIS
+      page that is not a taste question: Chrome excludes fully transparent elements from Largest
+      Contentful Paint, so fading in the first row of product images would push the page's LCP out
+      by the length of the animation. A translate paints immediately and measures immediately.
+
+   2. THE STAGGER STOPS AT EIGHT. A 24-card grid staggered all the way through would take 840ms to
+      settle and the last row would still be moving after the reader had started scrolling. Eight
+      is the first row and a bit at every breakpoint, which is all anyone actually watches.
+
+   3. IT RUNS ON MOUNT ONLY. React reuses the DOM nodes across a filter change, so the grid does
+      not re-animate every time a checkbox moves — which would turn a considered entrance into a
+      twitch on every interaction.
+
+   No `data-motion`: globals.css clamps animation-duration to 0.2s below 768px unless a node opts
+   out, and letting the phone run this faster is correct rather than a limitation.
+   ============================================================================================== */
+.pt-grid-stagger > * {
+  animation: pt-card-in 260ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.pt-grid-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.pt-grid-stagger > *:nth-child(2) { animation-delay: 35ms; }
+.pt-grid-stagger > *:nth-child(3) { animation-delay: 70ms; }
+.pt-grid-stagger > *:nth-child(4) { animation-delay: 105ms; }
+.pt-grid-stagger > *:nth-child(5) { animation-delay: 140ms; }
+.pt-grid-stagger > *:nth-child(6) { animation-delay: 175ms; }
+.pt-grid-stagger > *:nth-child(7) { animation-delay: 210ms; }
+.pt-grid-stagger > *:nth-child(8) { animation-delay: 245ms; }
+
+@keyframes pt-card-in {
+  from {
+    transform: translateY(10px);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-grid-stagger > * {
+    animation-duration: 1ms;
+    animation-delay: 0ms;
+  }
+}
+
+@keyframes pt-marquee {
+  from {
     transform: translate3d(0, 0, 0);
   }
-}
+  to {
+    /* ── -50% IS SIX PIXELS SHORT, AND THAT IS ARITHMETIC, NOT TASTE ──────────────────────
+       Measured before fixing: the first copy repeats every 4,128px while half the track is
+       4,122 — a 6px jump on every wrap, once a minute, exactly the kind of glitch that reads as
+       "cheap" without anyone being able to say why.
 
-/* The hero scroll "takeover" (a pinned frame that grew from a contained card to full-bleed) was
-   removed when the hero became full-bleed + full-height from the start — there is nothing left to
-   grow into, and the pin/track machinery was the source of the earlier scroll lag. Only the
-   section-reveal below survives on the scroll-driven layer. */
-@supports (animation-timeline: view()) {
-  @media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-    /* Section reveal. `entry 8% → cover 32%` finishes well before the element is centred, so the
-       page never feels like it is waiting for content to catch up with the scroll. */
-    .pt-reveal[data-motion] {
-      animation: pt-rise linear both;
-      animation-timeline: view();
-      animation-range: entry 8% cover 32%;
-    }
+       With n tiles per copy, tile width w and gap g, the track is 2n tiles and 2n-1 gaps:
+
+           W     = 2n·w + (2n-1)g
+           W/2   = n·w + n·g - g/2
+           period= n·w + n·g            (a tile plus its gap, n times)
+
+       so half the track is always HALF A GAP short of the repeat. `gap-3` is 0.75rem, hence
+       0.375rem. Change the gap on the track and this number changes with it. */
+    transform: translate3d(calc(-50% - 0.375rem), 0, 0);
   }
 }
 
-/* Toast: top-center so it doesn't cover cart; compact on mobile */
+.pt-marquee {
+  animation: pt-marquee 60s linear infinite;
+  will-change: transform;
+}
+
+.pt-marquee-viewport:hover .pt-marquee,
+.pt-marquee-viewport:focus-within .pt-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-marquee {
+    animation: none;
+  }
+  .pt-marquee-viewport {
+    overflow-x: auto;
+  }
+}
+
+/*
+ * Notifications use the same quiet plate, hairline and single-accent grammar as the shop.
+ * Sonner owns stacking and swipe behaviour; this layer owns only the Protein.tn visual system.
+ */
 .sonner-toaster {
   --width: 22rem;
 }
+
+.sonner-toaster [data-sonner-toast].pt-toast {
+  --pt-toast-status: var(--c-brand);
+  position: relative;
+  min-height: 3.75rem;
+  gap: 0.625rem;
+  padding: 0.625rem 3rem 0.625rem 0.625rem;
+  border: 1px solid rgb(var(--c-hairline));
+  border-radius: 0.75rem;
+  background: rgb(var(--c-elevated));
+  color: rgb(var(--c-ink-1));
+  box-shadow: var(--shadow-card);
+}
+
+.sonner-toaster [data-sonner-toast][data-type='success'] {
+  --pt-toast-status: var(--c-ok);
+}
+
+.sonner-toaster [data-sonner-toast][data-type='warning'] {
+  --pt-toast-status: var(--c-warn);
+}
+
+.sonner-toaster [data-sonner-toast][data-type='error'] {
+  --pt-toast-status: var(--c-danger);
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon {
+  display: grid;
+  width: 2rem;
+  height: 2rem;
+  flex: 0 0 2rem;
+  place-items: center;
+  border: 1px solid rgb(var(--pt-toast-status) / 0.36);
+  border-radius: 0.625rem;
+  background: rgb(var(--c-elevated));
+  color: rgb(var(--pt-toast-status));
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon svg {
+  width: 1.125rem;
+  height: 1.125rem;
+  stroke-width: 2.25;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__content {
+  min-width: 0;
+  gap: 0.125rem;
+}
+
+.sonner-toaster .pt-toast__title {
+  display: -webkit-box;
+  overflow: hidden;
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 700;
+  line-height: 1.25;
+  color: rgb(var(--c-ink-1));
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.sonner-toaster .pt-toast__description {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 0.78125rem;
+  line-height: 1.4;
+  color: rgb(var(--c-ink-2));
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.sonner-toaster .pt-toast__action,
+.sonner-toaster .pt-toast__cancel {
+  min-height: 2.75rem;
+  border-radius: 0.625rem;
+  padding-inline: 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.sonner-toaster .pt-toast__action {
+  background: rgb(var(--c-brand-fill));
+  color: rgb(var(--c-on-brand));
+}
+
+.sonner-toaster .pt-toast__cancel {
+  background: rgb(var(--c-sunken));
+  color: rgb(var(--c-ink-2));
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close {
+  inset-block-start: 50% !important;
+  inset-inline-start: auto !important;
+  inset-inline-end: 0.125rem !important;
+  width: 2.75rem !important;
+  height: 2.75rem !important;
+  transform: translateY(-50%) !important;
+  border: 0 !important;
+  border-radius: 0.625rem !important;
+  background: transparent !important;
+  color: rgb(var(--c-ink-3)) !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close:hover {
+  background: rgb(var(--c-sunken)) !important;
+  color: rgb(var(--c-ink-1)) !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close:focus-visible {
+  outline: 2px solid rgb(var(--c-focus)) !important;
+  outline-offset: -4px !important;
+}
+
+.sonner-toaster [data-sonner-toast].pt-toast .pt-toast__close svg {
+  width: 1rem;
+  height: 1rem;
+}
+
 @media (max-width: 640px) {
   .sonner-toaster [data-sonner-toast] {
-    max-width: min(90vw, 22rem) !important;
-    width: auto !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: 22rem !important;
   }
 }
 
@@ -790,7 +1259,7 @@ input[type="search"]::-webkit-search-results-decoration {
 .checkout-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
-  gap: 1.5rem;
+  gap: 1rem;
   align-items: flex-start;
 }
 
@@ -803,19 +1272,65 @@ input[type="search"]::-webkit-search-results-decoration {
   position: static;
 }
 
+.checkout-main {
+  padding-top: 1.5rem;
+  padding-bottom: var(--checkout-cta-padding, 9rem);
+}
+
+@media (min-width: 640px) {
+  .checkout-layout {
+    gap: 1.5rem;
+  }
+
+  .checkout-main {
+    padding-top: 2rem;
+  }
+}
+
+/* Checkout owns the presentation of the shared address picker without changing its data flow. */
+.checkout-form [data-slot="select-trigger"],
+.checkout-form #code_postal {
+  min-height: 3rem;
+  border-color: rgb(var(--c-hairline));
+  background: rgb(var(--c-canvas));
+  color: rgb(var(--c-ink-1));
+  box-shadow: none;
+}
+
+.checkout-form [data-slot="select-trigger"]:hover {
+  border-color: rgb(var(--c-rule-strong));
+}
+
+.checkout-form [data-slot="select-trigger"]:focus-visible {
+  border-color: rgb(var(--c-brand));
+  box-shadow: 0 0 0 2px rgb(var(--c-focus) / 0.35);
+}
+
 @media (min-width: 1024px) {
   .checkout-layout {
-    grid-template-columns: minmax(0, 1fr) minmax(360px, 420px);
-    gap: 2rem;
+    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 400px);
+    gap: 1.5rem;
   }
 
   .checkout-summary-inner {
     position: sticky;
     top: 1rem;
   }
+
+  .checkout-main {
+    padding-top: 2.5rem;
+    padding-bottom: 3.5rem;
+  }
 }
 
-/* Checkout CTA footer: fixed bottom, safe-area, 72–88px height, button 52–56px. */
+@media (min-width: 1280px) {
+  .checkout-layout {
+    grid-template-columns: minmax(0, 1.65fr) minmax(400px, 440px);
+    gap: 2rem;
+  }
+}
+
+/* Checkout CTA footer: compact fixed action with a safe-area reserve. */
 .checkout-cta-footer {
   /* position, left, right, bottom, z-index in component */
 }
@@ -955,4 +1470,337 @@ input[type="search"]::-webkit-search-results-decoration {
   .supplement-facts .nutrition-table th,
   .supplement-facts .nutrition-table td { border-bottom-color: rgb(255 255 255 / 0.12); }
   .supplement-facts blockquote { border-left-color: rgb(255 255 255 / 0.18); }
+}
+
+/*
+ * ── THE PRODUCT PAGE'S RICH TEXT ────────────────────────────────────────────────────────────
+ * Owner, 17/08/2026, pointing at the Description panel: *"the formatting of the text and the
+ * font-family of the description and texts inside there [are] not good at all — make the best
+ * formatting and text separating into sections"*.
+ *
+ * ── WHAT WAS ACTUALLY WRONG ────────────────────────────────────────────────────────────────
+ * Five containers on this page rendered CMS HTML, and each carried its own hand-written string of
+ * `prose-*` utilities — between 8 and 19 of them, no two alike. So the same <h2> was semibold and
+ * near-black in Description, unstyled in the ingredient blocks, and had different vertical rhythm
+ * in each; a <table> got `px-2 sm:px-3` in two of them and nothing in the others. The page had no
+ * typographic system, it had five approximations of one, and the drift was invisible until you
+ * scrolled past all five.
+ *
+ * THE FONT-FAMILY NOTE IS LITERAL AND IT IS THE MOST VISIBLE PART. Tailwind Typography does not
+ * set a family, so every heading inside this CMS copy fell back to Inter — while the page's own
+ * headings, the H1, the section titles, the price and every badge are Archivo at `wdth` 82. The
+ * product's own name therefore appeared twice within 400px, in two different typefaces, and the
+ * body copy's headings read as pasted in from somewhere else. They now share the page's headline
+ * register.
+ *
+ * ── SEPARATING INTO SECTIONS, WHICH IS A RULE AND NOT A MARGIN ─────────────────────────────
+ * The transcribed copy on this catalogue is long and strictly sectioned — an overview, then the
+ * pack, then the format, then the manufacturer's notes. Margin alone does not separate those,
+ * because the paragraph spacing under a heading is already 14px and no reader measures the
+ * difference between 14 and 32. An <h2> here draws a hairline ACROSS the column above itself, so
+ * a section boundary is a line you see rather than a gap you infer. The first heading is exempt —
+ * a rule directly under the panel's own "DESCRIPTION" title is the double separator the owner
+ * called out on the phone in this same message.
+ *
+ * ── 68ch ───────────────────────────────────────────────────────────────────────────────────
+ * The description column is 744px at 1920, which sets ~96 characters a line at 16px — roughly
+ * 30 past the point where the eye starts losing its place on the return sweep. Paragraphs and
+ * lists cap at 68ch; tables and images deliberately do not, because they are read by scanning
+ * rather than by line.
+ *
+ * Tables are `display: block` so a transcribed panel wider than a phone scrolls INSIDE ITSELF.
+ * The obvious alternative — `overflow-x: auto` on this container — is wrong here and quietly so:
+ * a computed `overflow-x` of auto forces `overflow-y` to auto too, which would put a second
+ * scrollbar around the description's own `max-h-60` clamp.
+ */
+.pdp-prose {
+  color: rgb(var(--c-ink-2));
+  font-size: 0.9375rem;
+  line-height: 1.7;
+}
+
+@media (min-width: 640px) {
+  .pdp-prose { font-size: 1rem; }
+}
+
+.pdp-prose h1,
+.pdp-prose h2,
+.pdp-prose h3,
+.pdp-prose h4,
+.pdp-prose h5,
+.pdp-prose h6 {
+  font-family: var(--font-display), var(--font-inter), system-ui, sans-serif;
+  font-variation-settings: "wdth" 82;
+  color: rgb(var(--c-ink-1));
+  letter-spacing: -0.01em;
+  line-height: 1.15;
+  text-wrap: balance;
+}
+
+/* h1 cannot occur — sanitizeProductHtml demotes it — but style it in case the sanitiser changes. */
+.pdp-prose h1,
+.pdp-prose h2 {
+  margin: 1.75rem 0 0.625rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgb(var(--c-hairline));
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+@media (min-width: 640px) {
+  .pdp-prose h1,
+  .pdp-prose h2 { font-size: 1.375rem; }
+}
+
+.pdp-prose h3 {
+  margin: 1.5rem 0 0.375rem;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.pdp-prose h4,
+.pdp-prose h5,
+.pdp-prose h6 {
+  margin: 1.25rem 0 0.25rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(var(--c-ink-2));
+}
+
+/* The panel's own title is directly above; a rule and 28px of air under it is the seam the owner
+   asked us to stop drawing twice. */
+.pdp-prose > :first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.pdp-prose > :last-child { margin-bottom: 0; }
+
+.pdp-prose p {
+  margin: 0 0 0.875rem;
+  max-width: 68ch;
+}
+
+.pdp-prose strong,
+.pdp-prose b {
+  color: rgb(var(--c-ink-1));
+  font-weight: 600;
+}
+
+.pdp-prose em,
+.pdp-prose i { font-style: italic; }
+
+.pdp-prose a {
+  color: rgb(var(--c-brand));
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pdp-prose a:hover { color: rgb(var(--c-brand-hover)); }
+
+.pdp-prose ul,
+.pdp-prose ol {
+  margin: 0 0 1rem;
+  padding-inline-start: 1.25rem;
+  max-width: 68ch;
+}
+
+.pdp-prose ul { list-style: disc; }
+.pdp-prose ol { list-style: decimal; }
+
+.pdp-prose li { margin: 0.3rem 0; padding-inline-start: 0.2rem; }
+
+/* The marker is the only ornament in here, and one accent on a bullet is cheaper than five ticks
+   drawn as icons — see ProductHighlights for why that mattered. */
+.pdp-prose li::marker { color: rgb(var(--c-brand)); font-weight: 700; }
+
+.pdp-prose li > ul,
+.pdp-prose li > ol { margin: 0.3rem 0 0.15rem; }
+
+.pdp-prose table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  margin: 0 0 1.25rem;
+  font-size: 0.875rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.pdp-prose th,
+.pdp-prose td {
+  border: 1px solid rgb(var(--c-hairline));
+  padding: 0.5rem 0.625rem;
+  vertical-align: top;
+  text-align: start;
+}
+
+.pdp-prose thead th {
+  background: rgb(var(--c-sunken));
+  color: rgb(var(--c-ink-1));
+  font-weight: 600;
+}
+
+.pdp-prose tbody th { color: rgb(var(--c-ink-1)); font-weight: 500; }
+.pdp-prose td { color: rgb(var(--c-ink-2)); }
+
+.pdp-prose img {
+  max-width: 100%;
+  height: auto;
+  margin: 1rem 0;
+  border: 1px solid rgb(var(--c-hairline));
+  border-radius: 0.75rem;
+}
+
+.pdp-prose hr {
+  border: 0;
+  border-top: 1px solid rgb(var(--c-hairline));
+  margin: 1.5rem 0;
+}
+
+.pdp-prose blockquote {
+  margin: 1rem 0;
+  padding: 0.125rem 0 0.125rem 1rem;
+  border-inline-start: 2px solid rgb(var(--c-brand));
+  color: rgb(var(--c-ink-1));
+}
+
+/*
+ * The "Lire plus" clamp, faded rather than guillotined.
+ *
+ * `max-h-60` on a block of HTML cuts wherever 240px lands, and on this catalogue that is reliably
+ * the middle of a heading — a half-height "Pourquoi ce produit se démarque" with its descenders
+ * sliced off reads as a rendering fault, not as "there is more below". A mask makes the boundary
+ * a fade, which is the one visual convention every reader already knows means "continues".
+ *
+ * A MASK and not an overlaid gradient div: an overlay has to be painted in the surface colour, and
+ * this panel is `bg-elevated` in page scope and a white plate inside `.pt-slab` — the same class of
+ * assumption that put white text on a white card in the footer. A mask is colour-blind.
+ */
+/**
+ * The disclosure panels on the product page (ProductInfoSection).
+ *
+ * Keyed off `details[open]` rather than a class React toggles, because the element is native and
+ * has no React state — the animation has to come from the same place the open/closed state does.
+ * It plays on OPEN only: a closing `<details>` removes its content from the box tree immediately,
+ * so there is nothing left to animate out and attempting it produces a flash.
+ */
+@keyframes pdp-reveal-content {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: none; }
+}
+
+details[open] > .pdp-reveal-content {
+  animation: pdp-reveal-content 0.28s cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  details[open] > .pdp-reveal-content { animation: none; }
+}
+
+.pdp-clamped {
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+
+/**
+ * ── ONE ROW OF THE BRAND DIRECTORY ────────────────────────────────────────────────────────
+ * /brands renders 577 of these, and the utility classes that used to express them were the
+ * single largest thing in the document. Measured on the production build before this rule:
+ *
+ *     row link className          130 chars x 577 =  75 KB
+ *     brand-name span className    86 chars x 577 =  50 KB
+ *     product-count span           44 chars x 577 =  25 KB
+ *                                                   ------
+ *                                                   150 KB of a 491 KB HTML body
+ *
+ * Tailwind is right almost everywhere and wrong at this multiplicity: a utility string is a
+ * per-element cost, so it stops being free the moment the same element repeats into the
+ * hundreds. Three classes here cost ~1 KB in the stylesheet, once, cached — and the markup
+ * that consumes them is `class="pt-brand-row"`.
+ *
+ * Written against the CONSUMED tokens (`--c-*`) rather than literals, for the same reason every
+ * component in this codebase is: the directory sits on canvas today and the rule survives a
+ * theme flip, a `.pt-slab` ancestor or a band-surface change with no `.dark` variant of its own.
+ */
+.pt-brand-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 40px;
+  padding-block: 0.375rem;
+  border-bottom: 1px solid rgb(var(--c-hairline));
+  transition: border-color 150ms ease;
+}
+.pt-brand-row:hover {
+  border-bottom-color: rgb(var(--c-brand) / 0.4);
+}
+.pt-brand-row__lead {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  min-width: 0;
+}
+/* The 6px availability mark. A pill would out-weigh the brand name on a row this dense. */
+.pt-brand-row__dot {
+  flex-shrink: 0;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 9999px;
+  background-color: rgb(var(--c-ok));
+}
+.pt-brand-row__name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13.5px;
+  font-weight: 500;
+  color: rgb(var(--c-ink-1));
+  transition: color 150ms ease;
+}
+.pt-brand-row:hover .pt-brand-row__name {
+  color: rgb(var(--c-brand));
+}
+.pt-brand-row__count {
+  flex-shrink: 0;
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  color: rgb(var(--c-ink-3));
+}
+
+/**
+ * ── A BRAND LOGO SITS ON WHITE IN BOTH THEMES ─────────────────────────────────────────────
+ * Every other surface in this codebase follows the theme, and this one deliberately does not.
+ *
+ * A brand logo is artwork somebody else's designer authored, and it was authored on white:
+ * Optimum Nutrition, Nutrex, Universal and BioTech USA all ship a solid-black wordmark with no
+ * light variant. Rendered on a theme-aware plate they are legible in light mode and effectively
+ * invisible in dark — measured on the /brands featured tier, where four of the first twelve
+ * plates read as empty boxes at 1536 in dark theme. The contrast auditor cannot catch it, because
+ * a logo is an image and the rule it breaks is about text.
+ *
+ * So the WELL is fixed and the plate around it still flips: border, brand name, product count and
+ * the stock mark all stay band-aware, and only the artwork gets the background it was drawn for.
+ * The literal is deliberate and belongs here rather than in a token — a token that never varies
+ * is not a token, and putting it in tokens.css would invite a future `.dark` override that
+ * silently reintroduces this.
+ */
+.pt-logo-well {
+  /* BACKGROUND ONLY. Layout stays at the call site so the same class can dress a 160x80 marquee
+     tile and a full-width plate well without fighting their utilities — a `width: 100%` here
+     would silently override the marquee tile's `w-40`, since this file loads after Tailwind's
+     utility layer.
+
+     PURE WHITE, and that was measured rather than assumed. The first version used the warm
+     #F7F6F4 of --page-sunken to keep the well from glaring on a dark plate — but roughly half
+     these logos are WebP with a white background already baked into the artwork, so the beige
+     well framed a white rectangle framed a wordmark: three tones where there should be one.
+     White makes the well invisible in light theme (the plate is white too) and, in dark theme,
+     makes it continuous with the artwork it holds. */
+  background-color: #ffffff;
 }

@@ -293,8 +293,28 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       formatDate: (value, options) =>
         new Intl.DateTimeFormat(intlLocale, options ?? { dateStyle: 'medium' }).format(new Date(value)),
       formatNumber: (number, options) => new Intl.NumberFormat(intlLocale, options).format(number),
+      /*
+        ── MILLIMES OFF, BECAUSE THE CART WAS READING AS THOUSANDS ─────────────────────────
+        Owner, 18/08/2026, on the cart drawer: *"fix the content and how it shows inside, make it
+        pro"*. The line items read **299,000 DT**.
+
+        Nothing was broken: TND's ISO minor unit is 3 (millimes), so `style: 'currency'` defaults
+        to three fraction digits, and fr-TN uses a comma for the decimal point. "299,000 DT" is a
+        correct rendering of 299 dinars. It is also, to anyone glancing at a basket, two hundred
+        and ninety-nine thousand — and it disagreed with every other price on the site, which
+        prints `299 DT` on a card and `259.00 DT` on a product page.
+
+        0-2 fraction digits keeps the locale's symbol and grouping and drops the millimes nobody
+        prices in. This shop's prices are whole dinars or dinars-and-half; there is no product
+        whose price needs a third decimal, so nothing is being rounded away.
+      */
       formatCurrency: (number, currency = 'TND') =>
-        new Intl.NumberFormat(intlLocale, { style: 'currency', currency }).format(number),
+        new Intl.NumberFormat(intlLocale, {
+          style: 'currency',
+          currency,
+          minimumFractionDigits: 0,
+          maximumFractionDigits: 2,
+        }).format(number),
     };
   }, [locale, setLocale, translateLegacy]);
 

@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import { BookOpen, ChevronDown } from 'lucide-react';
 import { Hero } from '@/app/components/Hero';
 import { CategoryRail } from '@/app/components/CategoryRail';
 import { Section } from '@/app/components/layout/Section';
@@ -15,6 +16,7 @@ const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferred
 import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { getProductLink } from '@/util/productUrl';
+import { getEffectivePrice, getPriceDisplay } from '@/util/productPrice';
 import type { HeroSlide } from '@/util/heroImage';
 import type { HeroBestSeller } from '@/app/components/HeroBestSellers';
 
@@ -28,8 +30,10 @@ interface HomePageClientProps {
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
+  { href: '/proteines', label: 'Protéines en Tunisie' },
   { href: '/creatine', label: 'Créatine Tunisie' },
-  { href: '/proteine-whey', label: 'Whey protein Tunisie' },
+  { href: '/whey-proteine', label: 'Whey protein Tunisie' },
+  { href: '/dymatize', label: 'Dymatize Tunisie' },
   { href: '/bcaa', label: 'BCAA Tunisie' },
   { href: '/glutamine', label: 'Glutamine Tunisie' },
   { href: '/pre-workout', label: 'Pre workout Tunisie' },
@@ -58,7 +62,12 @@ function transformProduct(product: Product) {
   return {
     id: product.id,
     name: product.designation_fr,
-    price: product.promo && product.promo_expiration_date ? product.promo : product.prix,
+    // Same bug as the hero panel had, in the shared card transform: requiring
+    // promo_expiration_date to exist hid every PERMANENT promo (null expiry) and showed the full
+    // price. It also ignored expiry direction and the promo<prix guard. getEffectivePrice is the
+    // one function that gets all three right, and it is what the cart and checkout already use —
+    // so the card, the cart and the invoice now agree by construction.
+    price: getEffectivePrice(product),
     priceText: `${product.prix} DT`,
     image: product.cover ? getStorageUrl(product.cover) : undefined,
     category: product.sous_categorie?.designation_fr || '',
@@ -110,14 +119,26 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
   const heroBestSellers: HeroBestSeller[] = (safeAccueil.best_sellers || [])
     .slice(0, 3)
     .map((p) => {
-      const onPromo = Boolean(p.promo && p.promo_expiration_date && new Date(p.promo_expiration_date).getTime() > Date.now());
+      // getPriceDisplay, NOT a hand-rolled promo check.
+      //
+      // The inline version this replaces required promo_expiration_date to be PRESENT:
+      //   Boolean(p.promo && p.promo_expiration_date && new Date(...) > Date.now())
+      // A permanent promo — a promo price with no end date, which is how most of them are entered —
+      // has a null expiration, so that test was false and the panel showed the FULL price while the
+      // product card two sections below showed the discounted one. Same product, same page, two
+      // prices, and the higher one in the most prominent slot on the site.
+      //
+      // The shared helper also carries a guard the inline check never had: a promo is only active
+      // when promo < prix, so a mis-entered promo above the real price can no longer be shown as a
+      // discount.
+      const { finalPrice, oldPrice } = getPriceDisplay(p);
       return {
         id: p.id,
         name: p.designation_fr || 'Produit',
         href: getProductLink(p),
         image: p.cover ? getStorageUrl(p.cover) : null,
-        price: onPromo ? Number(p.promo) : Number(p.prix),
-        oldPrice: onPromo ? Number(p.prix) : null,
+        price: finalPrice,
+        oldPrice,
         ratingValue: (p as { rating_value?: number | null }).rating_value ?? null,
         reviewCount: (p as { review_count?: number | null }).review_count ?? null,
       };
@@ -134,6 +155,60 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
     })
     .map(transformProduct)
     .map(withBrand);
+
+  /*
+   * ── THE BAND HAS A DATE ON WHICH IT DELETES ITSELF, AND IT IS 3 SEPTEMBER 2026 ────────────
+   * `/ventes_flash?per_page=100` returns four products. All four carry `promo_expiration_date` of
+   * 2026-09-03, stamped inside one 32-minute window — somebody set up a fortnight's promotion in a
+   * single sitting. The filter above is correct and, on that morning, will return an empty array,
+   * at which point the render gate below (`flashSales.length > 0`) removes the band from the
+   * homepage in one step.
+   *
+   * Two things break, and only one of them is visible. The obvious one is that the page's discount
+   * moment disappears. The quiet one is that the bands either side of it are canvas and sunken, so
+   * removing the band between them leaves two adjacent surfaces of the same colour — and the whole
+   * band architecture rests on no two neighbours sharing a fill, with the 1px seam doing the
+   * separating. The page would not look broken; it would look slightly wrong, on the day nobody
+   * was looking for a layout change.
+   *
+   * SO THE BAND FALLS BACK TO REAL DISCOUNTS RATHER THAN TO NOTHING. Every homepage pool already
+   * in hand is searched for products whose promo price genuinely beats their list price —
+   * `getPriceDisplay` is the same helper the cards price with, including its guard against a promo
+   * entered ABOVE the list price — and the four deepest discounts take the slots.
+   *
+   * No extra request: these are the payloads the page already received. And no dishonesty: with no
+   * expiration date in the set, `VentesFlashSection` drops the countdown and the deadline line by
+   * itself, and now retitles to "Meilleures promos" — because a discount without a deadline is a
+   * promotion, not a flash sale.
+   *
+   * The real repair is upstream and is the owner's: a flash band wants ~8 products across ~6
+   * categories on staggered 24-72h expiries, rotating. Three of the current four are creatine.
+   */
+  const promoFallback =
+    flashSales.length > 0
+      ? []
+      : Array.from(
+          new Map(
+            [
+              ...(safeAccueil.best_sellers || []),
+              ...(safeAccueil.new_product || []),
+              ...(safeAccueil.ventes_flash || []),
+            ].map((p) => [p.id, p])
+          ).values()
+        )
+          .map((p) => ({ product: p, price: getPriceDisplay(p) }))
+          .filter(({ price }) => price.hasPromo && price.oldPrice != null && price.oldPrice > price.finalPrice)
+          .sort(
+            (a, b) =>
+              (b.price.oldPrice! - b.price.finalPrice) / b.price.oldPrice! -
+              (a.price.oldPrice! - a.price.finalPrice) / a.price.oldPrice!
+          )
+          .slice(0, 4)
+          .map(({ product }) => product)
+          .map(transformProduct)
+          .map(withBrand);
+
+  const discountBand = flashSales.length > 0 ? flashSales : promoFallback;
 
   return (
     /* overflow-x-clip, NOT overflow-x-hidden. `hidden` makes this div a scroll container (a
@@ -172,7 +247,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
               hero + trust    canvas          artwork supplies the darkness; the trust row is a
                                               CARD inside this band, not a band of its own
-              catégories      sunken
+              catégories      canvas          ── EXCEPTION, owner 18/08/2026: they edited this
+                                              band to white in DevTools and asked for the seam and
+                                              the top padding with it, so the rail reads as part of
+                                              the hero rather than as the page's second section.
+                                              It is the one place invariant 1 below is broken, and
+                                              it is broken deliberately: with the heading and the
+                                              "Tout voir" link also gone there is no band apparatus
+                                              left to separate, only six navigation tiles. The
+                                              alternation resumes at "ventes flash".
               plus vendus     canvas
               ventes flash    sunken          + the four black countdown tiles
               nouveautés      canvas
@@ -180,7 +263,8 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               promo strip     ORANGE          the one saturated band
               blog            canvas
               marques         sunken
-              bloc SEO        canvas
+              avis Google     canvas
+              bloc SEO        sunken
 
           TWO INVARIANTS, both asserted by scripts/measure-bands.mjs:
             1. No two adjacent bands share a surface, so the automatic 1px seam always has a
@@ -203,8 +287,12 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           `pt-defer` is a PROP on the Section, never on a wrapper: `content-visibility: auto`
           skips a subtree's paint but NOT the element's own box decoration, so a surface class on
           a CHILD of a deferred wrapper renders as a bare rectangle until it scrolls in.
-          `pt-reveal` stays on the outer div because it drives a `view()` timeline that must not
-          sit inside a skipped subtree.
+
+          The `div.pt-reveal` wrappers that used to sit around four of these bands are GONE
+          (owner, 18/08/2026: the scroll reveal made the sections "get close to each other" as you
+          scrolled — see the note where the keyframes used to be in globals.css). They were doing
+          nothing except driving that animation, so they are fragments now: four fewer boxes in the
+          tree, and the Sections are direct children of the page again.
         */}
 
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
@@ -218,7 +306,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
         {/* Les plus vendus — CANVAS. The highest-intent rail on the site, so it carries the
             page's largest heading (scale="1"). */}
         {(safeAccueil.best_sellers?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               id="products"
               kicker="Best-sellers"
@@ -227,21 +315,44 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               /* No per-card badge: the h2 above already says these are the best sellers, and on a
                  124px phone thumbnail the pill covered ~40% of the packshot. See ProductCard. */
               showBadge={false}
+              /* ── 0.5em ON A PHONE (owner, 18/08/2026) ──────────────────────────────────────
+                 `default` opens with `pt-4` (16px) on mobile, and that number was measured when
+                 the band above was a sand-filled category section with its own bottom padding and
+                 a seam. It is now white, seamless and 8px deep, so 16px on top of it read as a
+                 hole rather than as a boundary. `pt-2` is the owner's 0.5em; `sm:py-6` in the
+                 scale still wins from 640px up, so desktop is untouched. */
+              /* `border-t-0 pt-0` AT EVERY WIDTH (owner, 18/08/2026, third pass — first the
+                 phone, now "on the desktop for the section that holds les plus vente make the
+                 border top none and the padding top 0").
+
+                 The same argument as the rail above it, one band further down: the rail stopped
+                 presenting itself as a band, so the seam under it was drawing a boundary across
+                 a continuous white area, and this band's own top padding was measured against a
+                 sand section that no longer exists. The gap is the rail's bottom padding alone —
+                 24px at `lg`, 8 on a phone.
+
+                 `sm:pt-0 lg:pt-0` and not just `pt-0`: the scale sets `sm:py-6 lg:py-8`, and a
+                 breakpoint utility beats a base one regardless of authoring order. Every step the
+                 scale sets has to be answered. Measured, twice now. */
+              className="border-t-0 pt-0 sm:pt-0 lg:pt-0"
               defer
             />
-          </div>
+          </>
         )}
 
         {/* Ventes flash moved ABOVE Nouveaux produits: the discount moment should land before the
             newest, least-discounted rail. SLAB — white product plates punched out of black. */}
-        {flashSales.length > 0 && (
-          <div className="pt-reveal" data-motion>
-            <VentesFlashSection products={flashSales as any} />
-          </div>
+        {discountBand.length > 0 && (
+          <>
+            {/* `discountBand`, not `flashSales` — see the note where it is built. The band keeps
+                its slot (and therefore the canvas/sunken alternation) on the day the last promo
+                expires, and retitles itself when there is no deadline left to count down to. */}
+            <VentesFlashSection products={discountBand as any} />
+          </>
         )}
 
         {(safeAccueil.new_product?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               kicker="Nouveautés"
               title="Nouveaux produits"
@@ -249,7 +360,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               showBadge={false}
               defer
             />
-          </div>
+          </>
         )}
 
         {/* CategoryGrid used to sit here. It is gone because CategoryRail above renders the SAME
@@ -269,7 +380,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             what actually marks it as an offer. `feature` is now reserved to Ventes flash alone —
             two dominant bands is zero dominant bands. */}
         {(safeAccueil.packs?.length ?? 0) > 0 && (
-          <div className="pt-reveal" data-motion>
+          <>
             <ProductSection
               id="packs"
               kicker="Économisez"
@@ -281,7 +392,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               surface="sunken"
               defer
             />
-          </div>
+          </>
         )}
 
         {/* Below the fold - idle-loaded client islands */}
@@ -294,6 +405,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             the server-rendered HTML, which is what Googlebot reads. Asserted in verification. */}
         <Section
           spacing="tight"
+          surface="sunken"
           width="wide"
           defer
           /* The page's last band. Below `sm` every band is `pb-0` so it reads as connected to its
@@ -301,48 +413,75 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           last
           aria-label="Informations sur la protéine en Tunisie"
         >
-          {/* TWO COLUMNS at lg: prose left, the internal-link chips right. That halves the height
-              without deleting a single crawlable word — these are real internal ranking links and
-              the prose is the page's only long-form copy. The `border-t` is gone because the
-              automatic band seam draws it now. */}
-          <div className="grid gap-8 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:gap-12">
-            <div className="max-w-[62ch]">
-            {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top of <main>,
-                so this crawlable block leads with a keyword-rich h2. */}
-            <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mb-4 lg:text-[2.5rem]">
-              Nutrition sportive Tunisie : protéine, whey et créatine de qualité
-            </h2>
-            <p className="text-sm sm:text-base text-ink-2 leading-relaxed mb-4">
-              Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
-              <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
-              <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
-              prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
-              rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
-            </p>
-            <h2 className="font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 mt-8 mb-3 lg:text-[1.75rem]">
-              Livraison en Tunisie & avis clients
-            </h2>
-            <p className="text-sm sm:text-base text-ink-2 leading-relaxed">
-              Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
-              délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
-              sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
-              protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
-              confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
-            </p>
+          {/* The old presentation exposed two long essays at once. The words are useful, but the
+              wall was not. Native <details> keeps every word in the SSR HTML and makes it honestly
+              available to visitors — unlike bot-only content, which would be cloaking — while the
+              default state stays compact and task-oriented. */}
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+            <div className="grid gap-5 p-5 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(30rem,0.9fr)] lg:items-center lg:gap-10 lg:p-8">
+              <div className="min-w-0">
+                <span className="pt-kicker mb-2 inline-flex items-center gap-2 text-brand">
+                  <span className="h-px w-6 bg-brand" aria-hidden="true" />
+                  Guide Protein.tn
+                </span>
+                {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top. */}
+                <h2 className="max-w-[24ch] font-display font-compressed text-[1.75rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 sm:text-[2rem] lg:text-[2.5rem]">
+                  Nutrition sportive Tunisie : protéine, whey et créatine de qualité
+                </h2>
+              </div>
+
+              {/* High-intent internal links remain visible and crawlable. On a phone they form a
+                  deliberate horizontal rail instead of wrapping into a tall keyword cloud. */}
+              <nav
+                aria-label="Catégories compléments populaires"
+                className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] lg:mx-0 lg:grid lg:grid-cols-2 lg:overflow-visible lg:px-0 lg:pb-0 [&::-webkit-scrollbar]:hidden"
+              >
+                {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
+                  <Link
+                    key={href}
+                    href={href}
+                    className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-canvas px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    {label}
+                  </Link>
+                ))}
+              </nav>
             </div>
 
-            {/* Right column: the six high-intent internal links. */}
-            <nav aria-label="Catégories compléments populaires" className="flex flex-wrap gap-2 lg:content-start">
-              {PRIORITY_SHOP_CATEGORY_LINKS.map(({ href, label }) => (
-                <Link
-                  key={href}
-                  href={href}
-                  className="inline-flex min-h-[44px] items-center rounded-full border border-hairline bg-elevated px-4 text-xs sm:text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
-                >
-                  {label}
-                </Link>
-              ))}
-            </nav>
+            <details className="group border-t border-rule bg-canvas">
+              <summary className="flex min-h-16 cursor-pointer list-none items-center gap-3 px-5 py-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:px-6 lg:px-8 [&::-webkit-details-marker]:hidden">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                  <BookOpen className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block font-display text-base font-bold text-ink-1">Conseils, livraison et avis clients</span>
+                  <span className="mt-0.5 block text-xs text-ink-3 sm:text-sm">Lire le guide complet</span>
+                </span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform duration-200 group-open:rotate-180" aria-hidden="true" />
+              </summary>
+
+              <div className="grid gap-6 border-t border-hairline px-5 py-5 sm:px-6 sm:py-6 lg:grid-cols-2 lg:gap-10 lg:px-8 lg:py-8">
+                <p className="text-sm leading-relaxed text-ink-2 sm:text-base">
+                  Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
+                  <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
+                  <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
+                  prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
+                  rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.
+                </p>
+                <div>
+                  <h3 className="mb-3 font-display font-compressed text-[1.375rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 lg:text-[1.625rem]">
+                    Livraison en Tunisie & avis clients
+                  </h3>
+                  <p className="text-sm leading-relaxed text-ink-2 sm:text-base">
+                    Nous livrons partout en Tunisie via des partenaires fiables, avec un suivi précis de vos colis et des
+                    délais optimisés pour Sousse, Tunis, Sfax et les autres régions. Les <strong>avis clients</strong> laissés
+                    sur nos produits vous permettent de vérifier la satisfaction des sportifs qui utilisent déjà nos
+                    protéines, <strong>whey</strong> et <strong>créatine</strong>. Commandez vos compléments en ligne en toute
+                    confiance sur <strong>Proteine Tunisie</strong> et rejoignez la communauté Protein.tn.
+                  </p>
+                </div>
+              </div>
+            </details>
           </div>
         </Section>
       </main>

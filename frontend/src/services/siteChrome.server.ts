@@ -193,11 +193,18 @@ export async function getServerNavCategories(): Promise<Category[]> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const raw = await res.json();
     const list: Category[] = Array.isArray(raw) ? raw : Array.isArray(raw?.data) ? raw.data : [];
-    // Slim to what the mega-menu renders: category + subcategory names/slugs.
+    /*
+      Slim to what the mega-menu renders: category + subcategory names/slugs, plus the cover.
+      `cover` was dropped by this projection, so the redesigned panel's rail thumbnails fell back
+      to a single letter on a grey square for all six rayons — an image the API had all along.
+      It costs six ~55-character strings in the payload, and it is the difference between a menu
+      with photography in it and one that looks like a placeholder.
+    */
     return list.map((cat) => ({
       id: cat.id,
       slug: cat.slug,
       designation_fr: cat.designation_fr,
+      cover: cat.cover,
       sous_categories: (cat.sous_categories ?? []).map((sub) => ({
         id: sub.id,
         slug: sub.slug,

@@ -17,19 +17,26 @@ class SendSmsJob implements ShouldQueue
     use Queueable;
     use SerializesModels;
 
-    public int $tries = 3;
-
-    public int $backoff = 10;
+    // A gateway timeout is ambiguous: WinSMS may already have accepted the paid
+    // message. Automatic retries can therefore bill duplicates. Business-event
+    // idempotency below is the safer recovery boundary.
+    public int $tries = 1;
 
     public function __construct(
         public string $phoneNumber,
         public string $message,
+        public ?string $eventKey = null,
     ) {}
 
     public function handle(): void
     {
         try {
-            (new SmsService())->send_sms($this->phoneNumber, $this->message);
+            $sms = app(SmsService::class);
+            if ($this->eventKey) {
+                $sms->sendOnce($this->eventKey, $this->phoneNumber, $this->message);
+            } else {
+                $sms->send_sms($this->phoneNumber, $this->message);
+            }
         } catch (\Throwable $e) {
             Log::error('SendSmsJob failed', [
                 'phone_last4' => strlen($this->phoneNumber) >= 4 ? substr($this->phoneNumber, -4) : '****',

@@ -1,4 +1,5 @@
 import { Skeleton } from '@/app/components/ui/skeleton';
+import { Section } from '@/app/components/layout/Section';
 
 /** Kicker + display-face title placeholder that mirrors <PageHeader>. */
 function PageHeaderSkeleton() {
@@ -12,7 +13,7 @@ function PageHeaderSkeleton() {
 
 function OrderCardSkeleton() {
   return (
-    <div className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6 space-y-4">
+    <div className="rounded-xl border border-hairline bg-elevated shadow-sm p-6 space-y-4">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <Skeleton className="h-5 w-40" />
@@ -31,29 +32,38 @@ function OrderCardSkeleton() {
   );
 }
 
-/** Layout-matching placeholder for the account hub (profile/orders tabs) while auth resolves. */
+/**
+ * Layout-matching placeholder for the account hub while auth resolves.
+ *
+ * The geometry is copied from `AccountPage`, step for step, because this skeleton is what a
+ * returning customer sees on EVERY visit — the auth check is a round trip, and `/account` is not
+ * reachable without it. A skeleton that does not match is CLS on a guaranteed path, not a rare one.
+ *
+ *   mt-6  + summary strip   three stacked rows on a phone, one row of three cells from `sm`
+ *   mt-6  + tab list        p-1 around a 44px trigger = 52px, both widths
+ *   mb-6  + the first cards the orders tab is the default, so order cards are what to draw
+ */
 export function AccountPageSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+    <main className="min-h-dvh bg-sunken">
+      <Section as="div" spacing="default" first last>
         <PageHeaderSkeleton />
-        <div className="mt-8 space-y-8">
-          <Skeleton className="h-12 w-full rounded-xl" />
-          <div className="space-y-4">
-            <Skeleton className="h-44 w-full rounded-xl" />
-            <Skeleton className="h-44 w-full rounded-xl" />
-          </div>
+        <Skeleton className="mt-6 h-[14.5rem] w-full rounded-2xl sm:h-[5.75rem]" />
+        <Skeleton className="mt-6 h-[3.25rem] w-full rounded-xl" />
+        <div className="mt-6 space-y-4">
+          <OrderCardSkeleton />
+          <OrderCardSkeleton />
         </div>
-      </main>
-    </div>
+      </Section>
+    </main>
   );
 }
 
 /** Layout-matching placeholder for the orders list while auth/orders resolve. */
 export function OrdersPageSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+    <main className="min-h-dvh bg-sunken">
+      <Section as="div" spacing="default" first last>
         <div className="mb-8">
           <PageHeaderSkeleton />
         </div>
@@ -62,16 +72,16 @@ export function OrdersPageSkeleton() {
             <OrderCardSkeleton key={i} />
           ))}
         </div>
-      </main>
-    </div>
+      </Section>
+    </main>
   );
 }
 
 /** Layout-matching placeholder for a single order detail while it loads. */
 export function OrderDetailSkeleton() {
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
+    <main className="min-h-dvh bg-sunken">
+      <Section as="div" spacing="default" first last>
         <Skeleton className="h-9 w-24 mb-6" />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
           <PageHeaderSkeleton />
@@ -86,7 +96,7 @@ export function OrderDetailSkeleton() {
             <Skeleton className="h-56 w-full rounded-xl" />
           </div>
         </div>
-      </main>
-    </div>
+      </Section>
+    </main>
   );
 }

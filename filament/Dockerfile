@@ -3,6 +3,8 @@
 # ----------------------------------------
 FROM php:8.3-fpm
 
+ARG DEBIAN_FRONTEND=noninteractive
+
 # Install system dependencies (including Node.js for asset building)
 # gosu: for HIGH-06 — run PHP-FPM as www-data instead of root
 RUN apt-get update && apt-get install -y \
@@ -17,6 +19,7 @@ RUN apt-get update && apt-get install -y \
     libzip-dev \
     libicu-dev \
     libhiredis-dev \
+    sendmail \
     zip \
     && docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-configure intl \
@@ -106,6 +109,13 @@ RUN COMPOSER_MEMORY_LIMIT=-1 COMPOSER_ALLOW_SUPERUSER=1 composer install \
 # Copy application code (excludes files in .dockerignore, including public/storage symlink)
 # The public/storage symlink will be created at runtime by docker-entrypoint.sh
 COPY . .
+
+# Fail the image build before publication if any application PHP file has a syntax error.
+# Runtime cache commands are intentionally best-effort in docker-entrypoint.sh, so they cannot
+# serve as the release gate for a production checkout or notification change.
+RUN find app config database routes -type f -name '*.php' -print0 \
+    | xargs -0 -n1 php -l >/tmp/php-lint.log \
+    || { cat /tmp/php-lint.log; exit 1; }
 
 # Re-sync lock file after COPY (COPY overwrites the lock that composer update fixed above).
 # This ensures the image always ships a valid composer.lock matching composer.json.

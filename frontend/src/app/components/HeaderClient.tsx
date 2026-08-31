@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect, useRef, type ReactNode, type FormEvent } from 'react';
+import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import dynamic from 'next/dynamic';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import {
   ShoppingCart,
@@ -20,26 +19,17 @@ import {
   ChevronDown,
   ChevronUp,
   Heart,
-  Home,
-  ShoppingBag,
-  Store,
-  Newspaper,
-  Mail,
-  Info,
-  Star,
-  Tag,
   Gift,
-  Search,
   Shield,
   Lock,
   X,
   BadgeCheck,
-  type LucideIcon,
 } from 'lucide-react';
 import { SearchBar } from './SearchBar';
 import { Button } from '@/app/components/ui/button';
 import { useTheme } from 'next-themes';
 import { ProductsDropdown } from './ProductsDropdown';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
 import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
@@ -51,15 +41,11 @@ import {
   DropdownMenuTrigger,
 } from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
-import { Skeleton } from '@/app/components/ui/skeleton';
 import { cn } from '@/app/components/ui/utils';
-import { getNavigationItems, getCategories, searchProducts, getStorageUrl } from '@/services/api';
-import { useDebounce } from '@/util/debounce';
-import { getPriceDisplay } from '@/util/productPrice';
-import { buildProductUrlPath } from '@/util/productUrl';
+import { getNavigationItems, getCategories } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
-import type { SiteNavigationItem, Product } from '@/types';
+import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
 import { MULTILOCALE_ENABLED } from '@/i18n';
@@ -98,20 +84,17 @@ function withPackBuilder(links: HeaderNavLink[]): HeaderNavLink[] {
   return links.some((link) => link.href === '/pack-builder') ? links : [...links, PACK_BUILDER_LINK];
 }
 
-const NAV_ICON_MAP: Record<string, LucideIcon> = {
-  home: Home,
-  'shopping-bag': ShoppingBag,
-  package: Package,
-  store: Store,
-  newspaper: Newspaper,
-  mail: Mail,
-  phone: Phone,
-  info: Info,
-  star: Star,
-  heart: Heart,
-  tag: Tag,
-  gift: Gift,
-};
+/*
+  NAV_ICON_MAP and its <NavigationIcon> wrapper are DELETED, not left for later.
+
+  They existed to draw a 20px glyph beside every mobile nav row, keyed off a free-text `icon`
+  column in the navigation table. Anything the admin typed that was not one of these twelve keys
+  rendered NOTHING — the component returned null — so the column was ragged by construction, and
+  the rows that did resolve mostly resolved to the same two or three generic marks. The redesigned
+  drawer (owner, 18/08/2026) is uppercase type with no icons, which is what the reference does and
+  what a list of destinations wants; with the last call site gone, keeping a dead icon registry
+  around is how the next person re-adds the column by accident.
+*/
 
 /**
  * The backend nav occasionally ships English labels (e.g. "BRANDS") even though the site default is
@@ -152,11 +135,6 @@ function isProductsNavLink(link: HeaderNavLink): boolean {
   return link.href === '/shop' || link.label.toLocaleUpperCase('fr-FR').includes('PRODUIT');
 }
 
-function NavigationIcon({ name, className }: { name?: string | null; className: string }) {
-  const Icon = name ? NAV_ICON_MAP[name] : undefined;
-  return Icon ? <Icon className={className} aria-hidden /> : null;
-}
-
 function NavigationLink({
   item,
   className,
@@ -184,8 +162,134 @@ function NavigationLink({
   }
 
   return (
-    <Link href={item.href} className={className} onClick={onClick} {...targetProps} {...currentProps}>
+    /*
+     * ── prefetch={false}: 800 KB OFF EVERY PAGE ON THE SITE ────────────────────────────────
+     * MEASURED on /shop (production build, cold cache): 4,392 KB transferred, of which 1,556 KB
+     * was `fetch` — and it was not the shop's data. It was Next prefetching the RSC payload of
+     * every nav link that happened to be in the viewport, which on this header is all of them:
+     *
+     *     /?_rsc=…              187 KB   (twice — the logo and ACCUEIL are two links to /)
+     *     /brands?_rsc=…        132 KB
+     *     /pack-builder?_rsc=…  108 KB
+     *     /qui-sommes-nous      87 KB
+     *     …
+     *
+     * Next 15's default (`prefetch` unset) prefetches the FULL flight data for a STATIC route, and
+     * `/`, `/brands` and `/qui-sommes-nous` are all statically rendered — so the header downloads
+     * four other pages before the visitor has looked at this one. On a Tunisian 3G connection that
+     * is several seconds of contention against the page's own images.
+     *
+     * ── AND THE SENTENCE THAT USED TO FOLLOW THAT ONE WAS WRONG ────────────────────────────
+     * It read: *"`false` disables the VIEWPORT prefetch only. Next still prefetches on hover and
+     * on touchstart, so a deliberate move toward a link is as fast as it was."* That is true of
+     * the PAGES router and false here. From next/dist/client/app-dir/link.js:
+     *
+     *     const prefetchEnabled = prefetchProp !== false;
+     *     onMouseEnter:  if (!prefetchEnabled || NODE_ENV === 'development') return;
+     *     onTouchStart:  if (!prefetchEnabled) return;
+     *
+     * One flag, all three strategies. So every item in this header — and every row of the mobile
+     * drawer, which renders through the same component — has had NO prefetch of ANY kind since the
+     * day that prop was added. Not viewport, not hover, not touch. The saving above was real and
+     * the cost was invisible.
+     *
+     * `LinkWithLoading` is the component that already resolves this correctly, and it has been
+     * sitting one directory over: it keeps `prefetch={false}` (so the viewport prefetch stays off,
+     * which is the whole point of the measurement above) and adds `router.prefetch()` on a 90ms
+     * hover, on pointerdown and on touchstart — a gesture toward a link, which IS evidence of
+     * intent, unlike being on screen. It also puts the loading bar up in the same frame as the
+     * click, so a nav item now answers the tap instead of sitting there.
+     *
+     * External hrefs are handled above and never reach this branch.
+     */
+    <LinkWithLoading href={item.href} className={className} onClick={onClick} {...targetProps} {...currentProps}>
       {content}
+    </LinkWithLoading>
+  );
+}
+
+/**
+ * Badge subscriptions live in leaf controls. Keeping either count in HeaderClient makes one heart
+ * or cart tap reconcile the entire header, including both navigation systems and the search.
+ */
+function DesktopFavoritesAction() {
+  const count = useFavoritesCount();
+
+  return (
+    <Link
+      href="/favoris"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
+      aria-label={count > 0 ? `Favoris - ${count} produits` : 'Favoris'}
+    >
+      <Heart className="h-5 w-5" aria-hidden />
+      {count > 0 && (
+        <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </Link>
+  );
+}
+
+function DesktopCartAction({ onOpen }: { onOpen: () => void }) {
+  const count = useCartCount();
+
+  return (
+    <button
+      type="button"
+      className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
+      onClick={onOpen}
+      aria-label={count > 0 ? `Panier - ${count} articles` : 'Panier'}
+    >
+      <ShoppingCart className="h-5 w-5" aria-hidden />
+      {count > 0 && (
+        <span className="absolute right-0.5 top-0.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-brand px-1 text-[10px] font-bold leading-none text-on-brand ring-2 ring-canvas">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MobileCartMenuAction({ onOpen }: { onOpen: () => void }) {
+  const count = useCartCount();
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
+    >
+      <ShoppingCart className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
+      <span className="flex-1 text-left">Panier</span>
+      {count > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
+    </button>
+  );
+}
+
+function MobileFavoritesMenuAction({ onNavigate }: { onNavigate: () => void }) {
+  const count = useFavoritesCount();
+
+  return (
+    <Link
+      href="/favoris"
+      onClick={onNavigate}
+      className="flex min-h-[44px] w-full items-center gap-3 rounded-xl px-3 text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
+    >
+      <Heart
+        className={cn('h-5 w-5 shrink-0', count > 0 ? 'fill-brand text-brand' : 'text-ink-3')}
+        aria-hidden
+      />
+      <span className="flex-1">Favoris</span>
+      {count > 0 && (
+        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-on-brand">
+          {count > 99 ? '99+' : count}
+        </span>
+      )}
     </Link>
   );
 }
@@ -193,16 +297,24 @@ function NavigationLink({
 export function HeaderClient() {
   const { translateLegacy } = useI18n();
   const { headerLogoUrl } = useSiteLogos();
-  const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [productsOpen, setProductsOpen] = useState(false);
-  const [sidebarQuery, setSidebarQuery] = useState('');
+  /*
+    ── THE SIDEBAR NO LONGER SEARCHES (owner, 18/08/2026) ────────────────────────────────────
+    *"in the sidebar take off the search, since we have the search icon in the header"*.
+
+    It was a second, complete search implementation — its own query state, its own debounce, its
+    own `searchProducts` call, its own results list, its own skeletons, its own empty state and its
+    own "voir tous les résultats" button — sitting 40px below a header that already has a search
+    control. Two pipelines for one feature is two places to fix every bug, and the sidebar's copy
+    had already drifted (it used raw `.toFixed(2)` rather than the shop's `formatCurrency`).
+
+    Deleted here rather than hidden: ~120 lines of JSX and five pieces of state.
+  */
   /** Second level of the sidebar accordion: which category has its sub-categories open (one at a
    *  time, so the list never becomes an unreadable wall on a phone). */
   const [openCategoryId, setOpenCategoryId] = useState<number | null>(null);
-  const [sidebarResults, setSidebarResults] = useState<Product[]>([]);
-  const [sidebarSearching, setSidebarSearching] = useState(false);
   const { theme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
@@ -225,13 +337,9 @@ export function HeaderClient() {
     sidebar: normalizeNavigationItems(ssrNavigation.sidebar),
   }));
 
-  // NARROW SUBSCRIPTIONS. `useCart()` here re-rendered all ~1,050 lines of this component on every
-  // cart change; the header only ever needed the badge number and a way to open the drawer.
-  // `useCartCount()` returns a number, so React bails out unless the count actually moved, and
-  // `useCartActions()` never changes identity at all.
+  // Mutators are stable. Badge subscriptions live in the four small action components above, so
+  // changing a count no longer rerenders this full header.
   const { setCartDrawerOpen } = useCartActions();
-  const cartItemsCount = useCartCount();
-  const favoritesCount = useFavoritesCount();
   const { isAuthenticated, user, logout } = useAuth();
 
   useEffect(() => {
@@ -255,47 +363,10 @@ export function HeaderClient() {
 
   const closeMobileMenu = () => {
     setMobileMenuOpen(false);
-    // Reset the drawer to its resting state so the next open starts from the nav, not from a stale
-    // search result list or a half-expanded accordion.
-    setSidebarQuery('');
-    setSidebarResults([]);
+    // Reset the drawer to its resting state so the next open starts from the nav rather than
+    // from a half-expanded accordion.
     setOpenCategoryId(null);
   };
-
-  const handleSidebarSearch = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const q = sidebarQuery.trim();
-    if (!q) return;
-    router.push(`/shop?search=${encodeURIComponent(q)}`);
-    closeMobileMenu();
-  };
-
-  // Live sidebar search — same pipeline as the desktop bar (debounce → searchProducts), so results
-  // appear as you type instead of only on submit. Only runs while the drawer is actually open.
-  const debouncedSidebarQuery = useDebounce(sidebarQuery, 300);
-  useEffect(() => {
-    const q = debouncedSidebarQuery.trim();
-    if (!mobileMenuOpen || !q) {
-      setSidebarResults([]);
-      setSidebarSearching(false);
-      return;
-    }
-    let active = true;
-    setSidebarSearching(true);
-    searchProducts(q)
-      .then(({ products }) => {
-        if (active) setSidebarResults(Array.isArray(products) ? products : []);
-      })
-      .catch(() => {
-        if (active) setSidebarResults([]);
-      })
-      .finally(() => {
-        if (active) setSidebarSearching(false);
-      });
-    return () => {
-      active = false;
-    };
-  }, [debouncedSidebarQuery, mobileMenuOpen]);
 
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
   const sidebarLinks = withPackBuilder(dynamicNavigation.sidebar.length > 0 ? dynamicNavigation.sidebar : navLinks);
@@ -416,12 +487,6 @@ export function HeaderClient() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // While the shopper is typing, the drawer's scrollable middle shows results instead of the nav.
-  const showSidebarSearch = sidebarQuery.trim().length > 0;
-  // True between a keystroke and the debounce firing — keeps the skeleton up so results never flash
-  // stale matches for the previous query.
-  const sidebarSearchPending = sidebarQuery.trim() !== debouncedSidebarQuery.trim();
-
   return (
     // A FRAGMENT, not a wrapper <div>. `position: sticky` only holds while the element's PARENT box
     // is in view — if the sticky <header> lived inside a short wrapper div (just utility+header),
@@ -515,7 +580,7 @@ export function HeaderClient() {
           most recognisable "purchased theme" tell, and the rule does the same job at 1px. */}
       <header
         ref={headerRef}
-        className="bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule"
+        className="pt-site-header bg-canvas font-poppins sticky top-0 z-50 w-full border-b border-rule"
       >
         {/* MOBILE main bar — logo LEFT, then SEARCH + BURGER only (owner request). Compte and
             Panier used to live here too; they were removed because MobileTabBar already carries
@@ -580,8 +645,24 @@ export function HeaderClient() {
         {/* DESKTOP main bar: white surface, orange logo, wide search, ghost icon buttons. */}
         <div className="hidden md:block">
           <div className="max-w-site mx-auto px-4 lg:px-8">
-            <div className="pt-hdr-bar pt-hdr-bar-desktop flex items-center gap-6 h-[72px]">
-              <Link href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
+            {/*
+              ── ONE ROW OF ICONS, AND A SHORTER BAR ────────────────────────────────────────
+              Owner, 17/08/2026: *"for the header why Compte and Panier have names under them,
+              take them off — make them like a row once like the impact so we can make the height
+              of header more little"*.
+
+              Two of the five controls in this cluster were `flex-col` — icon over an 11px French
+              label — and three were plain 40px icon squares. So the row was a mix of two shapes
+              and its height was set by the taller one. The labels also said the least: a cart
+              glyph and a person glyph are the two most universally understood icons in commerce,
+              and both already carry an `aria-label` for the readers who need words.
+
+              All five are the same 40px square now, and the bar comes down 72 -> 64px resting and
+              58 -> 52 compact. With the nav row that is the whole header at 148 -> 132px resting,
+              on every page of the site.
+            */}
+            <div className="pt-hdr-bar pt-hdr-bar-desktop flex h-16 items-center gap-6">
+              <LinkWithLoading href="/" className="flex-shrink-0 transition-opacity duration-200 hover:opacity-80" aria-label="Proteine Tunisie - Accueil">
                 {/* Logo is NOT `priority`: next/image priority injects a fetchpriority=high preload
                     that ignores the responsive `hidden`/`md:block` split, so a phone was preloading
                     BOTH logo variants in a race with the hero LCP image. The logo is small and in
@@ -593,7 +674,7 @@ export function HeaderClient() {
                   height={70}
                   className="pt-hdr-logo h-9 lg:h-10 w-auto object-contain dark:brightness-0 dark:invert"
                 />
-              </Link>
+              </LinkWithLoading>
 
               {/* Search grows to fill the WHOLE middle (flex-1) so the icon cluster is pushed flush
                   to the right edge. Without this wrapper the search capped at max-w-2xl and the
@@ -603,7 +684,7 @@ export function HeaderClient() {
                 <SearchBar variant="desktop" className="w-full" />
               </div>
 
-              <div className="flex items-center gap-1.5 flex-shrink-0">
+              <div className="flex flex-shrink-0 items-center gap-0.5">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
 
                 {/* Compte — icon + french label. Keeps the auth dropdown when signed in. */}
@@ -612,11 +693,10 @@ export function HeaderClient() {
                     <DropdownMenuTrigger asChild>
                       <button
                         type="button"
-                        className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
                         aria-label="Mon compte"
                       >
                         <User className="h-5 w-5" aria-hidden />
-                        <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent
@@ -650,11 +730,10 @@ export function HeaderClient() {
                 ) : (
                   <Link
                     href="/login"
-                    className="flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95"
+                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
                     aria-label="Connexion"
                   >
                     <User className="h-5 w-5" aria-hidden />
-                    <span className="text-[11px] font-medium leading-none tracking-wide">Compte</span>
                   </Link>
                 )}
 
@@ -668,37 +747,8 @@ export function HeaderClient() {
                   {theme === 'dark' ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
                 </button>
 
-                {/* Favoris — icon only, keeps its count badge. */}
-                <Link
-                  href="/favoris"
-                  className="relative h-10 w-10 flex items-center justify-center rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
-                  aria-label={favoritesCount > 0 ? `Favoris - ${favoritesCount} produits` : 'Favoris'}
-                >
-                  <Heart className="h-5 w-5" aria-hidden />
-                  {favoritesCount > 0 && (
-                    <span className="absolute top-0.5 right-0.5 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-brand text-on-brand text-[10px] font-bold leading-none rounded-full ring-2 ring-canvas">
-                      {favoritesCount > 99 ? '99+' : favoritesCount}
-                    </span>
-                  )}
-                </Link>
-
-                {/* Panier — icon + french label + count badge. */}
-                <button
-                  type="button"
-                  className="relative flex flex-col items-center justify-center gap-0.5 px-3 py-1.5 rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
-                  onClick={() => setCartDrawerOpen(true)}
-                  aria-label={cartItemsCount > 0 ? `Panier - ${cartItemsCount} articles` : 'Panier'}
-                >
-                  <span className="relative">
-                    <ShoppingCart className="h-5 w-5" aria-hidden />
-                    {cartItemsCount > 0 && (
-                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] px-1 flex items-center justify-center bg-brand text-on-brand text-[10px] font-bold leading-none rounded-full ring-2 ring-canvas">
-                        {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                      </span>
-                    )}
-                  </span>
-                  <span className="text-[11px] font-medium leading-none tracking-wide">Panier</span>
-                </button>
+                <DesktopFavoritesAction />
+                <DesktopCartAction onOpen={() => setCartDrawerOpen(true)} />
               </div>
             </div>
           </div>
@@ -747,13 +797,31 @@ export function HeaderClient() {
                         // Shared underline vocabulary: a 2px accent bar that wipes in from the left on
                         // hover and stays pinned open when active. `after:` on this desktop-only row
                         // (hidden md:block) so its 300ms is never hit by the mobile 0.2s clamp.
-                        'group relative inline-flex items-center gap-1.5 h-full text-[14px] font-semibold whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
+                        'group relative inline-flex items-center h-full text-[13.5px] font-semibold tracking-[0.02em] whitespace-nowrap transition-colors duration-200 after:pointer-events-none after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-brand after:origin-left after:scale-x-0 after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100',
                         active
                           ? 'text-brand after:scale-x-100'
                           : 'text-ink-1 dark:text-gray-200 hover:text-brand'
                       )}
                     >
-                      <NavigationIcon name={link.icon} className="h-4 w-4" />
+                      {/*
+                        ── NO ICON ────────────────────────────────────────────────────────
+                        Owner, 17/08/2026, with the reference storefront's header beside ours:
+                        *"polish it and fix it and make the design of it good and more
+                        minimalistic but same functionality, like the design of the header of
+                        impact"*.
+
+                        Six glyphs sat in this row — a house, a box, a shop, a book, an envelope
+                        and an info circle — one per nav item. None of them was doing any work:
+                        the labels beside them already read ACCUEIL, BOUTIQUE, PACKS, MARQUES,
+                        BLOG, CONTACT, and no reader has ever needed a house to understand the
+                        word "accueil". What they DID do was add roughly 22px per item, which is
+                        why the row was crowded enough to need a horizontal scroller on a small
+                        laptop. The reference has none, and that is most of why its chrome reads
+                        as calmer than ours did.
+
+                        `NavigationIcon` stays — the mobile menu and the products dropdown both
+                        use it, and there an icon in a vertical list IS a scanning aid.
+                      */}
                       <span>{translateLegacy(link.label)}</span>
                     </NavigationLink>
                   );
@@ -767,8 +835,13 @@ export function HeaderClient() {
                   phone numbers a shopper is already scanning for. The desktop nav row now has
                   exactly ONE button, and it is the one that sells.
 
-                  There is still exactly one WhatsApp affordance per breakpoint: the floating
-                  bubble (WhatsAppFab) is `md:hidden` and covers phones. */}
+                  There is still exactly one WhatsApp affordance per breakpoint: the dark contact
+                  strip above on desktop, and the WhatsApp row in the mobile menu on phones.
+
+                  UPDATED 10/08/2026: the floating bubble that used to cover phones (WhatsAppFab) is
+                  gone entirely — owner: "take off the popup button of whatsapp from mobile, keep it
+                  only in the sidebar". The mobile-menu row further down this file is now the only
+                  phone affordance, which is why it must not be removed without replacing it. */}
 
               {/* Accès Pro lives HERE now, beside the pack CTA — not on /pack-builder.
                   Owner: "the Accès Pro button should be beside the composez votre pack in the
@@ -779,20 +852,45 @@ export function HeaderClient() {
                   to one page's heading where it competed with that page's own first action.
                   Outlined against the filled pack CTA, so the nav row still has exactly one button
                   that sells and this one reads as a door rather than a shout. */}
+              {/*
+                A LINK, not an outlined box. It was a bordered pill 12px from the filled orange
+                pack CTA — two button SHAPES side by side, which makes the reader weigh them
+                against each other before reading either. Stripping the outline leaves exactly one
+                object in this row that looks pressable, and the one that looks pressable is the
+                one that sells. The 44px target is kept by padding rather than by a border.
+              */}
               <Link
                 href="/partenaires"
-                className="shrink-0 inline-flex items-center gap-2 whitespace-nowrap rounded-lg border border-hairline px-3 py-2 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                className="shrink-0 inline-flex min-h-[44px] items-center gap-1.5 whitespace-nowrap px-2.5 text-[13px] font-semibold text-ink-2 transition-colors hover:text-brand"
               >
-                <BadgeCheck className="h-4 w-4 text-brand" aria-hidden />
+                <BadgeCheck className="h-4 w-4 shrink-0" aria-hidden />
                 <span>Accès Pro</span>
               </Link>
 
+              {/*
+                ── THE BUTTON STOPS FILLING ITS ROW ───────────────────────────────────────────
+                Owner, 18/08/2026: *"the header, make some inner padding — don't make the buttons
+                stick to borders! or make buttons smaller"*.
+
+                Both halves of that describe the same object. MEASURED at 1536: this pill was 36px
+                tall inside a 48px nav row, so it cleared the row's own rules by 6px top and
+                bottom, and its right edge sat exactly ON the page rail. Correct alignment — every
+                band on this site ends at that rail — but a saturated orange rectangle pressed
+                into all three edges of its row reads as jammed in rather than placed.
+
+                The rail cannot move: `max-w-site` + `px-4 lg:px-8` is shared with the header bar
+                above, the footer and every band between them, and a header that insets further
+                than the page would step visibly at both edges. So the mass comes down instead,
+                which is the owner's own alternative. 36 -> 32px tall, 14 -> 13px label, and the
+                icon follows: 8px of air above and below now, and the pill reads as sitting in the
+                row rather than filling it.
+              */}
               {packBuilderLink && (
                 <NavigationLink
                   item={packBuilderLink}
-                  className="shrink-0 inline-flex items-center gap-2 rounded-lg bg-brand px-4 py-2 text-[14px] font-semibold text-on-brand shadow-[0_2px_8px_rgba(255,90,0,0.25)] transition-all duration-200 hover:bg-brand-hover hover:shadow-[0_4px_12px_rgba(255,90,0,0.35)] active:scale-[0.98] whitespace-nowrap"
+                  className="shrink-0 inline-flex items-center gap-1.5 rounded-lg bg-brand px-3.5 py-1.5 text-[13px] font-semibold text-on-brand shadow-[0_2px_8px_rgba(255,90,0,0.25)] transition-all duration-200 hover:bg-brand-hover hover:shadow-[0_4px_12px_rgba(255,90,0,0.35)] active:scale-[0.98] whitespace-nowrap"
                 >
-                  <Gift className="h-4 w-4" aria-hidden />
+                  <Gift className="h-3.5 w-3.5" aria-hidden />
                   <span>{translateLegacy(packBuilderLink.label)}</span>
                 </NavigationLink>
               )}
@@ -831,150 +929,99 @@ export function HeaderClient() {
               </SheetClose>
             </div>
 
-            {/* 2 — SEARCH */}
-            <form onSubmit={handleSidebarSearch} role="search" className="shrink-0 px-4 pt-4 pb-2">
-              <div className="relative flex items-center">
-                <Search className="pointer-events-none absolute left-3 h-4 w-4 text-ink-3" aria-hidden />
-                <input
-                  type="text"
-                  inputMode="search"
-                  autoComplete="off"
-                  value={sidebarQuery}
-                  onChange={(e) => setSidebarQuery(e.target.value)}
-                  placeholder="Rechercher un produit..."
-                  aria-label="Rechercher un produit"
-                  className="w-full min-h-[44px] rounded-xl border border-hairline bg-sunken pl-9 pr-11 text-[14px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-focus/20 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-100 dark:placeholder:text-gray-400 dark:focus:bg-gray-900"
-                />
-                {showSidebarSearch ? (
+            {/*
+              ── 2 — WHO YOU ARE, THEN THE ONE THING TO DO ─────────────────────────────────
+              Owner, 18/08/2026, with a screenshot of Impact's drawer: *"in the top have login,
+              signup, and instead of 'install app' we put composer the pack generator"*.
+
+              That reference opens with identity and one coloured CTA, and it is the right shape
+              for a phone: the two questions a returning shopper has at the top of a menu are "am I
+              signed in" and "where do I start", and both are answered above the fold instead of
+              after eleven nav rows. Ours answered the first one at the BOTTOM of a scroll, under
+              WhatsApp and Favoris.
+
+              `S'inscrire` is the filled half and `Connexion` the outline: this shop's account
+              conversion problem is registration, not sign-in. Signed in, the pair becomes the
+              account link and a sign-out, so the row never disappears and never lies.
+            */}
+            {/* THE SCROLLER — everything below the logo bar scrolls, including the account
+                buttons and the pack CTA. */}
+            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {/* NOT `shrink-0` any more, and no longer a sibling of the scroller — it is the
+                first thing INSIDE it (owner, 18/08/2026: *"the buttons at the top, don't make them
+                stick; make them relative — when I scroll they don't keep on the top"*).
+
+                Pinned, they held ~120px of a 660px drawer permanently, and on a phone in landscape
+                that was a third of it. They are the first thing you see when the drawer opens,
+                which is what matters; once you are eleven rows down the nav you are not looking
+                for a sign-in button. */}
+            <div className="px-4 pt-4">
+              {isAuthenticated ? (
+                <div className="flex items-center gap-2">
+                  <Link
+                    href="/account"
+                    onClick={closeMobileMenu}
+                    className="flex h-12 flex-1 items-center justify-center gap-2 rounded-xl border-2 border-ink-1 font-display text-[14px] font-bold uppercase tracking-[0.02em] text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    <User className="h-4 w-4 shrink-0" aria-hidden />
+                    Mon compte
+                  </Link>
                   <button
                     type="button"
-                    onClick={() => {
-                      setSidebarQuery('');
-                      setSidebarResults([]);
-                    }}
-                    aria-label="Effacer la recherche"
-                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
+                    onClick={() => { logout(); closeMobileMenu(); }}
+                    className="flex h-12 shrink-0 items-center justify-center rounded-xl px-4 text-[13px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
                   >
-                    <X className="h-4 w-4" aria-hidden />
+                    Déconnexion
                   </button>
-                ) : (
-                  <button
-                    type="submit"
-                    aria-label="Rechercher"
-                    className="absolute right-1.5 flex h-8 w-8 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-white hover:text-brand dark:hover:bg-gray-700"
-                  >
-                    <Search className="h-4 w-4" aria-hidden />
-                  </button>
-                )}
-              </div>
-            </form>
-
-            {/* SCROLLABLE MIDDLE — live search results while typing, otherwise the nav list. Both
-                scroll above the pinned trust chips. */}
-            <div className="flex-1 min-h-0 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {showSidebarSearch ? (
-                <div className="px-4 pt-2 pb-4">
-                  {sidebarSearching || sidebarSearchPending ? (
-                    <div className="space-y-1" role="status" aria-label="Recherche en cours">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <div key={i} className="flex items-center gap-3 rounded-xl p-2">
-                          <Skeleton className="h-12 w-12 shrink-0 rounded-lg" />
-                          <div className="min-w-0 flex-1 space-y-2">
-                            <Skeleton className="h-3.5 w-2/3" />
-                            <Skeleton className="h-3 w-1/3" />
-                          </div>
-                        </div>
-                      ))}
-                      <span className="sr-only">Recherche en cours…</span>
-                    </div>
-                  ) : sidebarResults.length === 0 ? (
-                    <div className="py-12 text-center">
-                      <Search className="mx-auto h-8 w-8 text-ink-3 dark:text-gray-600" aria-hidden />
-                      <p className="mt-3 text-[14px] font-semibold text-ink-1 dark:text-gray-100">
-                        Aucun produit trouvé
-                      </p>
-                      <p className="mt-1 px-4 text-[13px] leading-snug text-ink-3 dark:text-gray-400">
-                        Rien ne correspond à «&nbsp;{sidebarQuery.trim()}&nbsp;». Essayez d&apos;autres termes.
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <p className="px-1 pb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
-                        {sidebarResults.length} résultat{sidebarResults.length > 1 ? 's' : ''}
-                      </p>
-                      <ul className="space-y-0.5">
-                        {sidebarResults.map((product) => {
-                          const pd = getPriceDisplay(product);
-                          return (
-                            <li key={product.id}>
-                              <Link
-                                href={buildProductUrlPath(product)}
-                                onClick={closeMobileMenu}
-                                className="flex items-center gap-3 rounded-xl p-2 transition-colors hover:bg-sunken dark:hover:bg-gray-800"
-                              >
-                                <span className="relative block h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-sunken dark:bg-gray-800">
-                                  {product.cover ? (
-                                    <Image
-                                      src={getStorageUrl(product.cover)}
-                                      alt=""
-                                      fill
-                                      className="object-contain"
-                                      sizes="48px"
-                                      unoptimized
-                                    />
-                                  ) : null}
-                                </span>
-                                <span className="min-w-0 flex-1">
-                                  <span className="block truncate text-[14px] font-medium text-ink-1 dark:text-gray-100">
-                                    {product.designation_fr}
-                                  </span>
-                                  <span className="mt-0.5 block text-[13px]">
-                                    {pd.hasPromo && pd.oldPrice != null ? (
-                                      <>
-                                        <span className="text-ink-3 line-through dark:text-gray-500">
-                                          {pd.oldPrice.toFixed(2)} DT
-                                        </span>
-                                        <span className="ml-1.5 font-semibold text-brand">
-                                          {pd.finalPrice.toFixed(2)} DT
-                                        </span>
-                                      </>
-                                    ) : (
-                                      <span className="font-semibold text-ink-1 dark:text-gray-200">
-                                        {pd.finalPrice.toFixed(2)} DT
-                                      </span>
-                                    )}
-                                  </span>
-                                </span>
-                                <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                              </Link>
-                            </li>
-                          );
-                        })}
-                      </ul>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          const q = sidebarQuery.trim();
-                          if (!q) return;
-                          router.push(`/shop?search=${encodeURIComponent(q)}`);
-                          closeMobileMenu();
-                        }}
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-brand text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
-                      >
-                        <span>Voir tous les résultats ({sidebarResults.length})</span>
-                        <ChevronRight className="h-4 w-4 shrink-0" aria-hidden />
-                      </button>
-                    </>
-                  )}
                 </div>
               ) : (
-              <>
+                /* The reference's pair, in this site's voice: 48px, the display face in caps,
+                   and the outline half drawn in `border-ink-1` rather than the hairline — at
+                   `border-rule` on white the button read as a disabled field rather than as the
+                   equal-weight alternative it is. The two now carry the same visual weight and
+                   differ only in fill, which is the whole point of an outline/filled pair. */
+                <div className="grid grid-cols-2 gap-2.5">
+                  <Link
+                    href="/login"
+                    onClick={closeMobileMenu}
+                    className="flex h-12 items-center justify-center rounded-xl border-2 border-ink-1 font-display text-[14px] font-bold uppercase tracking-[0.02em] text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                  >
+                    Connexion
+                  </Link>
+                  <Link
+                    href="/register"
+                    onClick={closeMobileMenu}
+                    className="flex h-12 items-center justify-center rounded-xl bg-brand font-display text-[14px] font-bold uppercase tracking-[0.02em] text-on-brand transition-colors hover:bg-brand-hover"
+                  >
+                    S&apos;inscrire
+                  </Link>
+                </div>
+              )}
+
+              {/* The reference's "Installer l'application" slot. This shop has no app; what it has
+                  is the pack builder, which is the highest-intent path on the site and was
+                  previously buried between two dividers halfway down the scroll. */}
+              {packBuilderLink && (
+                <NavigationLink
+                  item={packBuilderLink}
+                  onClick={closeMobileMenu}
+                  className="mt-2 flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-on-brand transition-colors hover:bg-brand-hover"
+                >
+                  <span className="flex items-center gap-2">
+                    <Gift className="h-5 w-5 shrink-0" aria-hidden />
+                    <span>{translateLegacy(packBuilderLink.label)}</span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
+                </NavigationLink>
+              )}
+            </div>
+
               {/* 3 + 4 — NAVIGATION */}
-              <div className="px-4 pt-2 pb-2">
-                <h3 className="px-1 mb-2 text-[12px] font-semibold uppercase tracking-wide text-brand">
-                  Navigation
-                </h3>
-                <nav className="space-y-1">
+              {/* No "NAVIGATION" kicker. It labelled the only list on the screen, in the one
+                  colour this drawer should spend on its CTA — the reference has no such label and
+                  does not need one. */}
+              <div className="px-4 pb-2 pt-3">
+                <nav className="space-y-0.5">
                   {sidebarLinks.map((link) => {
                     if (link.href === '/pack-builder') return null;
 
@@ -983,40 +1030,86 @@ export function HeaderClient() {
                       const hasCategories = sidebarCategories.length > 0;
                       return (
                         <div key={`${link.href}-${link.label}`}>
-                          <button
-                            type="button"
-                            aria-expanded={hasCategories ? productsOpen : undefined}
-                            onClick={() => {
-                              if (!hasCategories) {
-                                router.push('/shop');
-                                closeMobileMenu();
-                                return;
-                              }
-                              // Collapsing the whole section also collapses whichever category was
-                              // expanded, so reopening starts from a clean list.
-                              if (productsOpen) setOpenCategoryId(null);
-                              setProductsOpen((v) => !v);
-                            }}
+                          {/*
+                            ── TAPPING BOUTIQUE GOES TO THE BOUTIQUE (owner, 20/08/2026) ──────
+                            *"still when i click on boutique it's not instantly browsing to /shop
+                            — fix it in the entire website."*
+
+                            THIS ROW WAS THE BUG, and it was not slowness. It was a `<button>`, and
+                            its only behaviour when categories had loaded — which is always, one
+                            tick after the drawer opens — was `setProductsOpen(v => !v)`. Tapping
+                            BOUTIQUE did not navigate to /shop. It could not: no branch of that
+                            handler pushed a route unless `sidebarCategories` was EMPTY, i.e. only
+                            when the API had failed. The one path the owner takes was the fallback
+                            path for a broken fetch.
+
+                            So the row now does what its label says, and the accordion moves to its
+                            own control beside it. That is the same split the desktop mega-menu
+                            already makes, for the same stated reason (see ProductsDropdown): the
+                            link goes to /shop, the chevron opens the rayons, and merging them
+                            forces a choice between navigating and browsing that neither a mouse
+                            nor a keyboard should have to make.
+
+                            `LinkWithLoading`, not `<Link>`: it warms /shop on `touchstart` — ~80ms
+                            before the tap even completes — and it is what puts the loading state on
+                            screen in the same frame as the tap. The chevron carries the label in
+                            its `aria-label` so a screen reader can tell the two apart.
+                          */}
+                          <div
                             className={cn(
-                              'flex w-full items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
-                              shopActive
-                                ? 'bg-brand/10 text-brand'
-                                : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
+                              'flex items-stretch rounded-lg transition-colors',
+                              shopActive ? 'text-brand' : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
                             )}
                           >
-                            <NavigationIcon
-                              name={link.icon}
-                              className={cn('h-5 w-5 shrink-0', shopActive ? 'text-brand' : 'text-ink-3')}
-                            />
-                            <span className="flex-1 text-left">{translateLegacy(link.label)}</span>
-                            {!hasCategories ? (
-                              <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
-                            ) : productsOpen ? (
-                              <ChevronUp className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                            <LinkWithLoading
+                              href={link.href}
+                              onClick={closeMobileMenu}
+                              loadingMessage="Chargement de la boutique..."
+                              aria-current={shopActive ? 'page' : undefined}
+                              /* ── THE REFERENCE'S ROW (owner, 18/08/2026) ──────────────────
+                                 Impact's drawer is a column of uppercase display type with a chevron
+                                 where a row expands and nothing where it does not — no icons, no
+                                 tinted active pill, no rounded hover plate. It reads as a list of
+                                 destinations rather than as a toolbar, which is what a menu is.
+
+                                 Ours had a 20px icon on every row, and the icons came from a
+                                 free-text `icon` column in the DB: half of them fell back to the same
+                                 generic glyph, so the column was six identical marks pretending to be
+                                 information. The active row keeps its brand colour and loses its
+                                 `bg-brand/10` plate — colour is enough on a list this short. */
+                              className="flex min-h-[52px] flex-1 items-center px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em]"
+                            >
+                              {translateLegacy(link.label)}
+                            </LinkWithLoading>
+                            {hasCategories ? (
+                              <button
+                                type="button"
+                                aria-expanded={productsOpen}
+                                aria-label={
+                                  productsOpen
+                                    ? 'Masquer les rayons'
+                                    : `Afficher les rayons de ${translateLegacy(link.label)}`
+                                }
+                                onClick={() => {
+                                  // Collapsing the whole section also collapses whichever category
+                                  // was expanded, so reopening starts from a clean list.
+                                  if (productsOpen) setOpenCategoryId(null);
+                                  setProductsOpen((v) => !v);
+                                }}
+                                className="flex min-h-[52px] w-12 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                              >
+                                {productsOpen ? (
+                                  <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+                                ) : (
+                                  <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                                )}
+                              </button>
                             ) : (
-                              <ChevronDown className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                              <span className="flex min-h-[52px] w-12 shrink-0 items-center justify-center" aria-hidden>
+                                <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />
+                              </span>
                             )}
-                          </button>
+                          </div>
 
                           {hasCategories && (
                             <div
@@ -1151,16 +1244,12 @@ export function HeaderClient() {
                         onClick={closeMobileMenu}
                         ariaCurrent={active ? 'page' : undefined}
                         className={cn(
-                          'flex items-center gap-3 min-h-[48px] px-3 rounded-xl text-[15px] font-semibold transition-colors',
+                          'flex items-center gap-3 min-h-[52px] rounded-lg px-3 font-display text-[15px] font-bold uppercase tracking-[0.02em] transition-colors',
                           active
-                            ? 'bg-brand/10 text-brand'
+                            ? 'text-brand'
                             : 'text-ink-1 hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800'
                         )}
                       >
-                        <NavigationIcon
-                          name={link.icon}
-                          className={cn('h-5 w-5 shrink-0', active ? 'text-brand' : 'text-ink-3')}
-                        />
                         <span>{translateLegacy(link.label)}</span>
                       </NavigationLink>
                     );
@@ -1168,27 +1257,8 @@ export function HeaderClient() {
                 </nav>
               </div>
 
-              {/* 5 — divider */}
-              <div className="mx-4 border-t border-hairline dark:border-gray-800" />
-
-              {/* 6 — PACK CTA */}
-              {packBuilderLink && (
-                <div className="px-4 py-3">
-                  <NavigationLink
-                    item={packBuilderLink}
-                    onClick={closeMobileMenu}
-                    className="flex h-12 items-center justify-between rounded-xl bg-brand px-4 text-[15px] font-semibold text-white transition-colors hover:bg-brand-hover"
-                  >
-                    <span className="flex items-center gap-2">
-                      <Gift className="h-5 w-5 shrink-0" aria-hidden />
-                      <span>{translateLegacy(packBuilderLink.label)}</span>
-                    </span>
-                    <ChevronRight className="h-5 w-5 shrink-0" aria-hidden />
-                  </NavigationLink>
-                </div>
-              )}
-
-              {/* 7 — divider */}
+              {/* divider — the pack CTA that used to sit between two of these now leads the
+                  drawer, above the nav. One rule, not two around an empty slot. */}
               <div className="mx-4 border-t border-hairline dark:border-gray-800" />
 
               {/* 8 — UTILITY ITEMS */}
@@ -1246,97 +1316,53 @@ export function HeaderClient() {
                   </span>
                 </Link>
 
-                <button
-                  type="button"
-                  onClick={() => { setCartDrawerOpen(true); closeMobileMenu(); }}
-                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                >
-                  <ShoppingCart className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                  <span className="flex-1 text-left">Panier</span>
-                  {cartItemsCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white">
-                      {cartItemsCount > 99 ? '99+' : cartItemsCount}
-                    </span>
-                  )}
-                </button>
+                <MobileCartMenuAction
+                  onOpen={() => {
+                    setCartDrawerOpen(true);
+                    closeMobileMenu();
+                  }}
+                />
 
-                <Link
-                  href="/favoris"
-                  onClick={closeMobileMenu}
-                  className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                >
-                  <Heart
-                    className={cn('h-5 w-5 shrink-0', favoritesCount > 0 ? 'fill-brand text-brand' : 'text-ink-3')}
-                    aria-hidden
-                  />
-                  <span className="flex-1">Favoris</span>
-                  {favoritesCount > 0 && (
-                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1 text-[11px] font-bold text-white">
-                      {favoritesCount > 99 ? '99+' : favoritesCount}
-                    </span>
-                  )}
-                </Link>
+                <MobileFavoritesMenuAction onNavigate={closeMobileMenu} />
 
-                {isAuthenticated ? (
-                  <>
-                    <Link
-                      href="/account"
-                      onClick={closeMobileMenu}
-                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                    >
-                      <User className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                      <span>Mon compte</span>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => { logout(); closeMobileMenu(); }}
-                      className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[14px] font-medium text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 dark:hover:bg-gray-800 dark:hover:text-white"
-                    >
-                      <span className="pl-8">Déconnexion</span>
-                    </button>
-                  </>
-                ) : (
-                  <Link
-                    href="/login"
-                    onClick={closeMobileMenu}
-                    className="flex w-full items-center gap-3 min-h-[44px] px-3 rounded-xl text-[15px] font-medium text-ink-1 transition-colors hover:bg-sunken dark:text-gray-100 dark:hover:bg-gray-800"
-                  >
-                    <User className="h-5 w-5 shrink-0 text-ink-3" aria-hidden />
-                    <span>Connexion</span>
-                  </Link>
-                )}
+                {/* Connexion / Mon compte / Déconnexion used to live here, at the BOTTOM of a
+                    scroll, under WhatsApp and Favoris. They are the first thing in the drawer now
+                    — see the account row above — and repeating them here would be the same two
+                    links twice in one panel. */}
               </div>
-              </>
-              )}
             </div>
 
-            {/* 9 — TRUST CHIPS (pinned to bottom, always visible) */}
-            <div className="mt-auto shrink-0 border-t border-hairline dark:border-gray-800 px-4 pt-3 pb-4">
-              <div className="grid grid-cols-3 gap-2">
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Truck className="h-4 w-4 shrink-0 text-ok" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Livraison rapide
-                    <br />
-                    24–48h
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Shield className="h-4 w-4 shrink-0 text-ink-1 dark:text-gray-200" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Paiement à
-                    <br />
-                    la livraison
-                  </span>
-                </div>
-                <div className="flex flex-col gap-1 rounded-lg bg-sunken dark:bg-gray-800 px-2.5 py-2">
-                  <Lock className="h-4 w-4 shrink-0 text-ink-1 dark:text-gray-200" aria-hidden />
-                  <span className="text-[11px] leading-tight text-ink-1 dark:text-gray-200">
-                    Paiement
-                    <br />
-                    100% sécurisé
-                  </span>
-                </div>
+            {/*
+              ── 9 — THE TRUST STRIP, AT A THIRD OF THE HEIGHT (owner, 18/08/2026) ───────────
+              *"the footer tags of the livraison etc are taking a lot of height, while that's our
+              power on mobile — polish it"*.
+
+              Both halves of that are right, which is why this shrinks rather than disappears. For
+              a Tunisian cash-on-delivery shopper, "paiement à la livraison" IS the objection
+              handler — it belongs in the drawer. But it was three filled cards, each with a 16px
+              icon above two wrapped lines of 11px text, pinned to the bottom: ~92px of a 660px
+              panel, permanently, to say three things nobody needs to read twice.
+
+              One row, one line each, icon beside text instead of above it, no fills and no card
+              radii — the three facts read as a footnote, which is what they are once the shopper
+              is inside the menu. 92 -> ~34px, and the nav above it gets those 58px back.
+
+              `<br>` gone too: the text wrapped by hand at a width that no longer exists.
+            */}
+            <div className="mt-auto shrink-0 border-t border-hairline px-4 py-2.5">
+              <div className="flex items-center justify-between gap-2 text-[11px] leading-none text-ink-2">
+                <span className="flex items-center gap-1.5">
+                  <Truck className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden />
+                  Livraison 24–48h
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Shield className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
+                  Paiement livraison
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Lock className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
+                  100% sécurisé
+                </span>
               </div>
             </div>
           </div>

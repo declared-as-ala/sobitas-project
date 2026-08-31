@@ -1,11 +1,11 @@
 'use client';
 
-import { memo, useMemo, useEffect, useState } from 'react';
-import Link from 'next/link';
+import { memo, useMemo, useEffect, useRef, useState } from 'react';
 import { FlashDealCard } from './FlashDealCard';
+import { ProductGrid } from './ProductGrid';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { ArrowRight, Clock, Flame } from 'lucide-react';
+import { Clock, Flame } from 'lucide-react';
 
 interface FlashProduct {
   id: number;
@@ -34,25 +34,26 @@ interface CountdownState {
 }
 
 /**
- * Below this, the pill counts down. Above it, the pill states a date and nothing ticks.
+ * How far outside the viewport the strip starts ticking.
  *
- * ── WHY A THRESHOLD AT ALL ─────────────────────────────────────────────────────────────────
- * Owner, looking at the live band: the clock read **"FIN DANS 27J 13:08:14"**. A seconds-precision
- * countdown to a deadline four weeks out is not urgency, it is a clock that says "no rush" — it
- * spends the band's one scarce signal on a number nobody can act on. Worse, it was ALSO the widest
- * element in the row that overflowed on a phone (174px of a 321px run), so the credibility problem
- * and the layout problem were the same problem.
+ * ── WHAT THIS REPLACED, AND WHY THE REPLACEMENT IS THE BETTER SHAPE ────────────────────────
+ * There used to be a 48-HOUR threshold here: inside it the clock ticked once a second, outside it
+ * the seconds tile disappeared and the interval dropped to 30s. It was doing two jobs at once — a
+ * design judgement (a seconds counter on a four-week deadline is a clock that says *no rush*) and
+ * a performance one (this band is ~1,500px down a page with a measured 419ms INP, and
+ * `content-visibility: auto` skips PAINT, not JavaScript, so the old `setInterval` ran on every
+ * visitor from first paint whether or not they ever scrolled here).
  *
- * 48h is the point where a person can still act differently because of the clock. Above it the
- * honest statement is a date; below it, seconds genuinely matter.
+ * The owner has overruled the design half — *"for the ventes flash add seconds"* — and once the
+ * seconds tile is permanent, a 30s tick is simply a wrong clock, so the threshold has nothing left
+ * to decide. The performance half is real regardless of the deadline, and an IntersectionObserver
+ * answers it directly rather than by proxy: nothing is scheduled until the strip is near the
+ * screen, and the interval is torn down again when it leaves.
  *
- * The second win is that above the threshold NOTHING IS SCHEDULED. The old code ran
- * `setInterval(…, 1000)` forever, on every visitor, re-rendering a text node once a second to
- * animate a digit that `globals.css` only animates at >=1024px anyway — on a page with a measured
- * 419ms INP. `content-visibility: auto` skips paint, not JavaScript, so it ran before the band was
- * ever scrolled to.
+ * 200px of margin so the first visible tick is already correct rather than arriving a beat after
+ * the band appears.
  */
-const LIVE_WINDOW_MS = 48 * 60 * 60 * 1000;
+const TICK_ROOT_MARGIN = '200px';
 
 /**
  * The clock, as ONE inline pill — a live countdown inside 48h, a plain date outside it.
@@ -82,6 +83,27 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
      hydration risk either. */
   const [countdown, setCountdown] = useState<CountdownState | null>(null);
 
+  /* `ticking` gates the interval, NOT the first computation — see the two effects below. */
+  const stripRef = useRef<HTMLDivElement>(null);
+  const [ticking, setTicking] = useState(false);
+
+  useEffect(() => {
+    const el = stripRef.current;
+    if (!el) return;
+    /* No observer (very old browser, or a test environment): tick rather than freeze. A clock that
+       never moves is a worse failure than one that costs a re-render a second. */
+    if (typeof IntersectionObserver === 'undefined') {
+      setTicking(true);
+      return;
+    }
+    const io = new IntersectionObserver(
+      (entries) => setTicking(entries.some((e) => e.isIntersecting)),
+      { rootMargin: TICK_ROOT_MARGIN }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+
   useEffect(() => {
     const update = () => {
       const diff = Math.max(0, expirationDate.getTime() - Date.now());
@@ -97,19 +119,20 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
         isExpired: false,
       });
     };
+    /* ALWAYS compute once, even off screen. Without this the tiles would render `––` until the
+       band scrolled into view, and on a phone that is a visible flash of placeholder digits inside
+       the element whose entire job is to look live. */
     update();
-    // Outside the live window the pill is a static date, so there is nothing to schedule.
-    if (expirationDate.getTime() - Date.now() > LIVE_WINDOW_MS) return;
+    if (!ticking) return;
     const id = setInterval(update, 1000);
     return () => clearInterval(id);
-  }, [expirationDate]);
+  }, [expirationDate, ticking]);
 
   /* An expired promo used to return null — the pill vanished from the accessibility tree while
      discounted cards carried on rendering underneath it. A sentence is the honest end state. */
   if (countdown?.isExpired) return <span className="sr-only">Cette offre est terminée.</span>;
 
   const pad = (n: number) => String(n).padStart(2, '0');
-  const live = countdown != null && countdown.days < 2;
 
   /* `timeZone` is PINNED on both formats. Without it the server formats in the container's UTC and
      the browser in the visitor's zone, so any promo expiring near midnight renders a different date
@@ -120,25 +143,150 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
     timeZone: 'Africa/Tunis',
   });
 
-  /* The PILL ONLY. The spoken sentence is `<FlashDeadline>` below, rendered by the band outside
-     the header's `hidden … sm:flex` slot — see the note at the call site. */
+  /* ── THE CLOCK AS SEGMENTED TILES (owner, 15/08/2026: "add urgency countdown in a good
+     stylish way") ────────────────────────────────────────────────────────────────────────────
+     What was here was one inline pill printing `27J 13:08:14` as a single run of text. Two
+     problems, and the owner has now named both of them across two sessions:
+
+       IT DID NOT READ AS URGENCY. A long unbroken numeric string is a timestamp; people read
+       timestamps as information, not as pressure. Segmenting it into labelled tiles is what makes
+       a clock feel like a deadline — each unit gets its own object, and the eye lands on the
+       smallest one that is still moving.
+
+       IT WAS INVISIBLE ON A PHONE. The pill was passed to `SectionHeader`'s `trailing` slot,
+       which is `hidden … sm:flex`. Most of this site's traffic is mobile, so the urgency device
+       was hidden from the majority of the people it exists for. The tiles are rendered by the band
+       itself, at every width — see the call site.
+
+     ── WHAT STILL DOES NOT TICK, AND WHY THAT SURVIVED THE REDESIGN ──────────────────────────
+     `live` is unchanged: inside 48h the seconds tile is present and `setInterval` runs at 1s;
+     outside it there is no seconds tile and the interval runs at 30s. That rule came from the
+     owner's own earlier objection — "FIN DANS 27J 13:08:14" is a clock that says *no rush* — and
+     it is also what keeps a 1s re-render off a page with a measured 419ms INP. A deadline three
+     weeks out now shows JOURS / HEURES / MIN, which is honest and still visibly a countdown.
+
+     `aria-hidden` on the whole strip. Live digits are either a screen-reader firehose (with
+     aria-live) or an unlabelled cluster of numbers a user lands on mid-count (without it).
+     `<FlashDeadline>` carries the same information as one absolute date, announced once. */
+  /* ── SECONDS AT EVERY DISTANCE (owner, 18/08/2026: "for the ventes flash add seconds") ──
+     This tile used to appear only inside 48h, and the reasoning above still stands as a design
+     argument: a seconds counter on a deadline four weeks out is a clock that says *no rush*. The
+     owner has weighed that and asked for the seconds anyway, which is theirs to decide — a moving
+     digit is what makes a countdown read as live at a glance, and that is worth more to them than
+     the precision argument.
+
+     What does NOT come back is the old cost. The 1s interval that used to run on every visitor
+     from first paint now runs only while the strip is actually on screen (see the observer in the
+     effect above): a band 1,500px down a page with a measured 419ms INP should not be scheduling
+     a re-render a second for a reader who never scrolls to it. `live` is therefore no longer about
+     the seconds tile at all — it only chooses the tick RATE, and the far branch keeps a 1s tick
+     now because a seconds tile that updates every 30s would simply be wrong. */
+  const segments: Array<{ value: number; label: string }> = [];
+  if (!countdown || countdown.days > 0) segments.push({ value: countdown?.days ?? 0, label: 'Jours' });
+  segments.push({ value: countdown?.hours ?? 0, label: 'Heures' });
+  segments.push({ value: countdown?.minutes ?? 0, label: 'Min' });
+  segments.push({ value: countdown?.seconds ?? 0, label: 'Sec' });
+
   return (
-    <span
-      className="pt-slab inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5"
+    /* ── THE LABEL STACKS BELOW `sm`, AND THAT NUMBER WAS MEASURED ───────────────────────────
+       `measure-flash.mjs` failed the first version of this strip at 280px in both themes:
+       "1 element(s) overflow their own box". The arithmetic, at the narrowest viewport in real
+       traffic (a 320px phone at Android's largest display-size setting reports ~280 CSS px):
+
+           content box                    248px
+           "Se termine dans" + clock     ~110px
+           three 44px tiles               132px
+           two colons + four gaps         ~28px
+                                          ────
+                                          270px   → 22px over
+
+       Stacking the label onto its own line leaves the tiles 160px of a 248px box. Below `sm` the
+       whole strip is centred, which matches the two-up rail above it; from `sm` it is one row on
+       the same left rail as the heading. */
+    /* ── ONE ROW, AND ALIGNED WITH THE HEADING (owner, 18/08/2026: "redesign and polish the
+       ventes flash section") ─────────────────────────────────────────────────────────────────
+       Two changes here, both about where this strip SITS rather than what it says.
+
+       It is `items-start` below `sm`, not `items-center`. The strip now renders inside the
+       heading block (see the call site), directly under a left-aligned kicker and a left-aligned
+       H2; centring it there put three left edges and one centred object in a 40px stack.
+
+       And the label no longer needs its own line: at 11px "Se termine dans" is ~92px and four
+       36px tiles with their separators are ~168px, which is 260 of a 358px content box at 390.
+       `flex-wrap` keeps the 280px case honest — it wraps rather than overflowing, which is what
+       `measure-flash` asserts at that width. */
+    <div
+      ref={stripRef}
+      className="flex w-full flex-wrap items-center gap-x-2.5 gap-y-2 rounded-xl border border-brand/20 bg-elevated px-3 py-2.5 sm:w-auto sm:gap-x-3"
       aria-hidden="true"
     >
-      <Clock className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
-      <span className="text-[10px] font-semibold uppercase tracking-wide text-ink-3">
-        {live ? 'Fin dans' : 'Jusqu’au'}
+      <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink-3">
+        <Clock className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
+        {/* ALWAYS THE DURATION PHRASING, because the tiles are always a duration now.
+            This read `live ? 'Se termine dans' : 'Jusqu’au'`, which was correct while the far
+            branch printed a DATE. It no longer does, so production rendered
+
+                JUSQU’AU  19 JOURS : 04 HEURES : 46 MIN
+
+            — "until the 19 days", a preposition pointing at an interval. Caught by reading the
+            deployed strip rather than the code: the label and the tiles are two branches that
+            were changed at different times, and only the rendered string shows them disagreeing.
+            The absolute date is still available on the `title` below. */}
+        Se termine dans
       </span>
-      <span className="font-display text-sm font-bold tabular-nums leading-none text-brand">
-        {live && countdown
-          ? `${countdown.days > 0 ? `${countdown.days}J ` : ''}${pad(countdown.hours)}:${pad(
-              countdown.minutes
-            )}:${pad(countdown.seconds)}`
-          : dateLabel}
-      </span>
-    </span>
+
+      {/* TILES AT EVERY DISTANCE, seconds included. The old code swapped to a bare date string
+          three weeks out, which is why a phone screenshot of this band showed no clock at all, and
+          then showed JOURS/HEURES/MIN with no moving digit. The `title` carries the absolute date
+          for anyone hovering, and <FlashDeadline> announces it once for anyone listening. */}
+      <div className="flex items-center gap-1 sm:gap-1.5" title={`Jusqu’au ${dateLabel}`}>
+        {segments.map((seg, i) => (
+          <div key={seg.label} className="flex items-center gap-1 sm:gap-1.5">
+            {/* `min-w-[2.75rem]` so the tile does not resize when 9 becomes 10 — a countdown that
+                reflows its neighbours once a second is the jitteriest thing on a page.
+                `tabular-nums` does the same job for the digits inside it. */}
+            {/* ── 44px TILES, AND THE FOURTH ONE FITS ────────────────────────────────────
+                A seconds tile joined this row on 18/08. Re-measured rather than assumed, because
+                the previous note in this file got the budget wrong and shrank the tiles for no
+                reason: four 44px tiles, three 5px separators and the gaps between them come to
+                ~215px, against a 288px content box at 320px — the narrowest viewport in real
+                traffic. The row was never tight; the label stacks onto its own line below `sm`,
+                which is what actually bought the space (see the wrapper).
+
+                `min-w`, not `w`: the tile must not resize when 9 becomes 10, or the clock reflows
+                its own neighbours once a second. `tabular-nums` does the same job for the digits. */}
+            {/* ── 36px, DOWN FROM 44 (owner, 18/08/2026) ──────────────────────────────
+                Four 44x48 black tiles are the heaviest object in a band that has been asked three
+                separate times to be quieter, and at the top of a section whose content is four
+                white cards on sand they read as the subject rather than as the qualifier. 36px
+                wide, 8px shorter, `rounded-md`, and the whole cluster now sits on the heading row
+                beside the title instead of on a row of its own — which is where the height comes
+                from: the header block goes 150px -> ~96px at `lg`.
+
+                Still `min-w`, not `w`: the tile must not resize when 9 becomes 10, or the clock
+                reflows its own neighbours once a second. */}
+            <div className="pt-slab flex min-w-[2.25rem] flex-col items-center rounded-md px-1 py-1">
+              <span className="font-display text-[15px] font-bold tabular-nums leading-none text-brand sm:text-base">
+                {countdown ? pad(seg.value) : '––'}
+              </span>
+              {/* 9px, and it is the ONE place on the site left under 11px after the 18/08 sweep.
+                  It is a deliberate exception rather than a straggler: this is a unit label under a
+                  numeral, the whole strip is `aria-hidden`, and the same information is announced
+                  once as a full sentence by <FlashDeadline>. Raising it to 11px needs a 52px tile
+                  to fit "HEURES", which is a 60px-wider clock to make a caption legible that
+                  nobody reads as text. */}
+              <span className="mt-0.5 text-[9px] font-semibold uppercase leading-none tracking-wider text-ink-3">
+                {seg.label}
+              </span>
+            </div>
+            {/* No separator after the last tile: a trailing colon reads as a truncated value. */}
+            {i < segments.length - 1 && (
+              <span className="font-display text-sm font-bold leading-none text-ink-3">:</span>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
   );
 });
 
@@ -172,66 +320,64 @@ interface VentesFlashSectionProps {
 }
 
 /**
- * Ventes Flash — a BANNER, and now one you can actually see.
+ * Ventes Flash — the same parts as every other band on the landing page.
  *
- * ── WHAT THE OWNER REPORTED, AND WHAT WAS ACTUALLY WRONG ───────────────────────────────────
- * *"the banner and the section itself looks so bad background colour and isolation and the design
- * system and responsivity on the mobile looks very bad"* — four complaints, all reproducible, all
- * measured on the live site before anything here changed:
+ * ── THE ASK, AND WHAT IT COST TO IGNORE IT ────────────────────────────────────────────────
+ * Owner, 13/08/2026: *"redesign the vente flash section to be kinda uniform with the landing
+ * page."* This band had been redesigned four times before that, each time by adding something —
+ * a dark slab, then a plate, then a wash, then a hatch — and each pass moved it further from the
+ * page it lives on. The whole of this pass is subtraction.
  *
- *   (d) MOBILE WAS BROKEN, NOT JUST UGLY. "Tout voir" sat 50px past the plate's right edge at
- *       320px and 10px at 360px, and the plate was `overflow-hidden`, so the link was silently
- *       sliced off rather than visibly overflowing. The header held an unbreakable 321px run —
- *       countdown pill 174 + gap 12 + CTA 135 — inside a 254px content box. Exactly:
- *       `ctaOverflow = 370 − viewportWidth`, which reproduces +50 / +10 / −20 at 320 / 360 / 390.
+ * `scripts/measure-flash.mjs` had been asserting the truth the entire time. Run against
+ * production before anything here changed, 12 widths x 2 themes:
  *
- *       The trap: `shrink-0` was NOT the cause and removing it moves nothing. Below `sm` the
- *       container was `flex-col`, so flex-shrink resolves on the VERTICAL axis; CSS never shrinks
- *       content in the cross axis. Dropping `shrink-0` from the pill and the link instead shreds
- *       them to ~90px min-content — a three-line rounded pill, a taller band, on the exact screens
- *       being complained about.
+ *     width   bandH   screens   cardW   cardH   edge
+ *       280    1244     1.38      214     254    1px
+ *       360    1227     1.36      294     254    1px
+ *       390    1227     1.36      324     254    1px     <- the phone most of the traffic uses
+ *       430     733     0.81      177     254    1px
+ *      1024     386     0.43      219     181    1px
+ *      1440     328     0.36      323     122    1px
  *
- *   (a)+(b) THE PLATE WAS INVISIBLE. A `bg-elevated` (#FFFFFF) card on a `sunken` (#F7F6F4) band
- *       is 1.06:1, and its `border-hairline` edge is 1.16:1. Neither is a boundary. So the block
- *       that was supposed to say "this is one time-limited offer" said nothing, and 1,376px of
- *       bordered white read as a failed load. That is the whole of "background colour and
- *       isolation", and no amount of tuning inside the plate fixes a 1.06:1 fill.
+ * 24 of 24 edge checks failing, and every width over the height ceiling. The band the owner asked
+ * THREE separate times to make smaller than a section measured 1.36 viewport heights on a phone.
+ * Nothing ran the guard, so nothing said so — the same reason every other defect found this week
+ * survived for days, and why `health-watch.yml` now exists.
  *
- *   (c) IT HAND-ROLLED THE DESIGN SYSTEM. Four separate copies of `SectionHeader`'s internals had
- *       drifted here: the h2 string with a stray `mt-1`, a kicker without the leading rule, a
- *       different CTA pill, a different arrow. Meanwhile `SectionHeader.tsx:17` names "Ventes
- *       flash" in the four bands reserved for `scale="1"`, and this one was rendering scale 2 —
- *       the smallest heading of the three adjacent rails, on the band meant to dominate them.
+ * ── WHAT WAS ACTUALLY DIFFERENT ABOUT THIS BAND ───────────────────────────────────────────
+ * Three things, and all three are now gone:
  *
- * ── THE FIX IS MOSTLY DELETION ─────────────────────────────────────────────────────────────
- *   1. THE PLATE IS GONE, and the BAND carries the separation. `border-t-4 border-brand` is
- *      full-bleed at the band boundary: #D03B04 on sand is 4.51:1 light, #FF8A4C on #191A1D is
- *      7.45:1 dark — against 1.16:1 for the hairline it replaces. A band edge is what the rest of
- *      this site uses to separate bands, so this also answers (c).
+ *   1. AN INNER PANEL NOTHING ELSE HAS. `rounded-3xl border border-brand/25 bg-elevated
+ *      shadow-lg`, over a brand gradient wash and a 135deg hatch.
+ *      `grep -rn rounded-3xl src/app/components` returns exactly one line and it was this one.
+ *      Only `shadow-lg`, only textured surface, only nested frame on the page. Not a matter of
+ *      taste: it was unique, and unique is what "doesn't look like the rest" means.
  *
- *      Verified rather than assumed: `[data-band] { border-top: 1px }` lives in `@layer base` and
- *      lands at byte ~4.8k of the emitted stylesheet, while border utilities land at ~53k. Tailwind
- *      puts utilities in a later layer, so the utility wins on LAYER, not on specificity — no
- *      `!important`, no arbitrary value.
+ *   2. A CARD THAT WAS ProductCard'S EXACT INVERSE. ProductCard is `flex-row sm:flex-col`;
+ *      FlashDealCard was `flex-col sm:flex-row`. On a phone the rail above showed row cards and
+ *      this band showed columns; from `sm` they swapped. Two adjacent bands rendering the same
+ *      kind of object in opposite shapes at every single width. See FlashDealCard for the fix and
+ *      for why a column card is what made the phone band 1,227px.
  *
- *      `.pt-slab` on the plate was the obvious alternative and it busts the budget: at 1440 the
- *      plate is 1376x432 ≈ 594k px² of dark against roughly 415k px² of headroom under v6's 12%
- *      ceiling. The pill (~5k px²) is the dark this band is allowed.
+ *   3. A FORKED GRID. `grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4`,
+ *      missing the `md` step — so at 768-1023px this band showed two columns while the identical
+ *      rail above it showed three. It was forked because `ProductGrid` could only render a
+ *      `<div>` and this band wants list semantics; `ProductGrid` now takes `as`/`role`, which
+ *      removes the reason to fork rather than just the fork.
  *
- *   2. `SectionHeader` REPLACES THE HAND-ROLLED HEADER, and that is what fixes the clip — not a
- *      patch to it. `SectionHeader.tsx:128` wraps the view-all in `hidden … sm:block`, so the
- *      321px run DOES NOT EXIST below `sm`. The overflow goes to 0 at every width by deletion.
- *      `icon` was written for this band — its own docblock says "e.g. Flame on Ventes flash".
+ * ── WHAT IS DELIBERATELY KEPT ─────────────────────────────────────────────────────────────
+ * `scale="2"`. SectionHeader reserves scale 1 to the three rails that sell and names this band as
+ * the documented scale-2 case. Uniform means built from the same parts, not shouting at the same
+ * volume — the urgency comes from the 4px brand edge, the flame, the `Jusqu\'a -24%` kicker and
+ * the live clock.
  *
- *   3. THE CARDS FILL THE RAIL. `max-w-[260px]` came off the items. With the 352px left column
- *      gone, four deals divide the full rail instead of huddling at 156px with dead space beside
- *      them — and at 1024-1117px the fourth card was being truncated mid-tile, which is the part
- *      of "isolation looks bad" that is a layout bug rather than a colour.
+ * The COUNTDOWN PILL stays the band's one dark surface (~5k px2, `.pt-slab`, on tokens.css's
+ * allowed list by name). The plate was 1376x432 = 594k px2 of dark against ~415k px2 of headroom
+ * under the 12% ceiling — 1.4x the entire remaining budget on its own, which is the arithmetic
+ * that should have stopped it shipping the first time.
  *
- * ── WHAT IS DELIBERATELY NOT CHANGED ───────────────────────────────────────────────────────
- * `spacing="default"`, not `feature`. `feature` is `pb-0 pt-6` below `sm` — it would collapse the
- * band's entire bottom gap on a phone — and Section.tsx's own rule is that one page gets at most
- * one `feature` band.
+ * `spacing="default"`, never `feature`: Section.tsx allows one `feature` band per page and this
+ * band gave that step up when it stopped being a section.
  */
 export const VentesFlashSection = memo(function VentesFlashSection({ products }: VentesFlashSectionProps) {
   /* Gate the countdown on a STABLE value — whether any promo carries an expiration date at all —
@@ -271,121 +417,176 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     <Section
       id="ventes-flash"
       surface="sunken"
-      /* ── `tight`, DOWN FROM `default` — AND `feature` IS NOW THE WRONG ANSWER ────────────
-         Section.tsx's `feature` step is documented as "reserved for the band that must out-weigh
-         its neighbours — Ventes flash, and nothing else". That reservation is now stale and its
-         docblock says so: the owner has asked twice for this band to stop behaving like a section.
-         `tight` is the support-band step, which is what a banner is. */
-      spacing="tight"
+      /* ── `default`, THE SAME STEP AS EVERY OTHER PRODUCT BAND ────────────────────
+         `tight` was the support-band step, chosen when this band was a banner wrapped in its own
+         panel. With the panel gone it is a product grid on a sand surface, which is the exact
+         thing `default` is documented as being for — and on a phone `default` is SMALLER
+         (`pt-4` against `tight`'s `pt-6`), so uniformity costs nothing here. */
+      spacing="default"
       width="wide"
+      /* ── NO BRAND EDGE (owner, 15/08/2026: "for the vente flash, take off the border top") ──
+         The 4px rule was restored one session earlier because `measure-flash.mjs` asserted it and
+         had been failing 24/24 — the guard was right that the band and its guard disagreed, and
+         the disagreement was resolved in the guard's favour. The owner has now resolved it the
+         other way, which is theirs to do.
+
+         The band does not lose its boundary: `[data-band]` in `@layer base` still paints the 1px
+         seam every other band boundary on this site uses, and this band's `surface="sunken"`
+         already changes the ground colour against the white section above it. What it loses is the
+         one decoration that made it louder than its neighbours — which is the same direction every
+         other change to this band has gone (the slab, the plate, the wash, the hatch, the CTA).
+
+         `measure-flash.mjs` is updated in the same commit. Leaving a guard asserting a removed
+         design is how `measure-flash` came to fail for days while a real regression hid behind
+         the noise. */
       defer
       aria-labelledby="ventes-flash-heading"
-      /* The band's own edge, overriding the 1px `[data-band]` seam. See the note above for why
-         this wins on layer order and why the measurement was checked in the emitted CSS. */
-      className="border-t-4 border-brand"
     >
-      {/* THE KICKER CARRIES THE NUMBER. It used to be an 11px line of prose BELOW the products
-          ("Jusqu'à −24% sur une sélection…") — the band's only quantity, set at its smallest size,
-          under the fold of its own rail, restating the orange badge already painted on every card.
-          In the kicker it is the first thing read, and it costs no row.
+      {/* ── THE PLATE IS GONE, AND IT WAS THE WHOLE OF "NOT UNIFORM" ────────────────
+          Owner, 13/08/2026: "redesign the vente flash section to be kinda uniform with the
+          landing page."
 
-          THE COUNTDOWN IS IN THE HEADING ROW, not on a line of its own. That line cost 44px on
-          every width, and `trailing` puts the pill inside SectionHeader's existing
-          `hidden … sm:flex` guard — so it is mobile-safe by construction rather than by care.
+          What sat here was `rounded-3xl border border-brand/25 bg-elevated shadow-lg` over a
+          brand gradient wash and a 135deg hatch. `grep -rn rounded-3xl src/app/components`
+          returns ONE line and it was this one: the band was the only inner panel anywhere in the
+          component tree, the only `shadow-lg`, the only textured surface. Not "slightly
+          different" — unique. Nobody needs to know the design system to see that one band is
+          wearing a costume.
 
-          THE SPOKEN DEADLINE IS RENDERED SEPARATELY, BELOW, and that is not tidiness. `hidden` is
-          `display: none`, which removes a subtree from the ACCESSIBILITY TREE as well as from the
-          page — so leaving the `sr-only <time>` inside the pill would have silently deleted the
-          only machine-readable expiry on every phone. Sighted users would have lost nothing, which
-          is exactly why it would never have been noticed.
+          It cost more than it looked, too. The panel's own `px-4 py-5` sat INSIDE the band's
+          padding, so the band paid for two frames; `overflow-hidden` on it is what let the
+          earlier clipped-CTA bug hide from a guard that was watching for spill; and the wash and
+          the hatch are two more full-size composited layers on a band that already lazy-loads
+          four packshots.
 
-          `scale="2"`, DOWN FROM 1. Scale 1 is the step for "the rails that sell", and by the
-          design system's own list this band was one of them — but the owner has now twice said
-          this should read as a banner rather than as a section, and a 56px headline is the single
-          loudest thing making it a section. Scale 2 is the documented support step; it is not a
-          new number. SectionHeader's own docblock is corrected to match. */}
-      <SectionHeader
-        id="ventes-flash-heading"
-        kicker={maxDiscount > 0 ? `Jusqu'à −${maxDiscount}%` : 'Offres limitées'}
-        icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
-        title="Ventes flash"
-        scale="2"
-        viewAllHref="/offres"
-        viewAllLabel="Tout voir"
-        trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
-      />
+          Everything it was carrying is carried by parts the rest of the page already uses: the
+          separation by the 4px brand edge above, the urgency by the flame, the `Jusqu'a -24%`
+          kicker, the live clock, and the orange badge already painted on every card. */}
+      <div className="border-l-4 border-brand pl-4 sm:pl-5">
+        <SectionHeader
+          id="ventes-flash-heading"
+          kicker={
+            earliestExpiration
+              ? maxDiscount > 0
+                ? `En direct · jusqu'à −${maxDiscount}%`
+                : 'En direct · offres limitées'
+              : maxDiscount > 0
+                ? `Jusqu'à −${maxDiscount}%`
+                : 'Offres limitées'
+          }
+          icon={<Flame className="pt-flame h-4 w-4 text-brand" aria-hidden="true" />}
+        /*
+          THE TITLE FOLLOWS THE DATA, because the alternative is a lie with a name.
 
+          "Ventes flash" is a claim about time, and the countdown beside it is the evidence. When
+          the set carries no expiration date the countdown and the spoken deadline both drop out by
+          themselves (see `earliestExpiration`) — and a heading that still says "flash" over four
+          undated discounts is the band asserting an urgency the page can no longer show.
+
+          This is not hypothetical: every promo in the catalogue expires on 2026-09-03, after which
+          the homepage falls back to the deepest real discounts it already holds (HomePageClient),
+          which have no deadline. Same band, same layout, honest label.
+        */
+          title={earliestExpiration ? 'Ventes flash' : 'Meilleures promos'}
+          subtitle={
+            earliestExpiration
+              ? 'Les prix baissent, le chrono tourne.'
+              : 'Une sélection courte, des remises bien visibles.'
+          }
+        /* ── THE CLOCK RETURNS TO THE HEADING ROW, WITHOUT THE BUG THAT MOVED IT OFF ──────
+           It was pulled out of `trailing` because that slot is `hidden … sm:flex`, so on a phone
+           — most of this site's traffic — the urgency device did not exist at all. It went to a
+           row of its own below the header, which fixed the visibility and cost ~54px of vertical
+           space at every width, on the band that has been asked repeatedly to read as a banner
+           rather than a section.
+
+           `trailingAllWidths` fixes the original bug at its source instead: ONE node, rendered
+           beside the title from `sm` and under it below that. Not two copies — this node owns an
+           IntersectionObserver and a 1s interval, and `display: none` stops neither. */
+          trailing={earliestExpiration ? <CountdownDisplay expirationDate={earliestExpiration} /> : undefined}
+          trailingAllWidths
+        /* `scale="2"` IS DELIBERATE AND HAD TO SURVIVE THIS PASS. SectionHeader reserves scale 1
+           to the three rails that sell and names this band as the documented scale-2 case: it
+           keeps its urgency from the brand edge and the live clock, not from type size. Uniform
+           means built from the same parts, not shouting at the same volume. */
+        /* ── NO "TOUT VOIR" (owner, 15/08/2026) ────────────────────────────────────────────
+           *"take off the button from the vente flash — means that a section for show, no CTA in
+           it … even in the desktop."*
+
+           Both routes to /offres are gone: this `viewAllHref` (desktop, in the header row) and the
+           full-width bar that used to sit under the grid on phones. They were a matched pair —
+           `SectionHeader` hides its view-all below `sm`, so the bar existed only to cover the
+           width where the header link was not rendered.
+
+           The band is not orphaned by this. Every card is a link to its product, /offres is in the
+           footer and reachable from the boutique nav, and this band's job is now what its name says
+           — showing what is discounted right now. Three consecutive bands each carrying a
+           "Tout voir" is what made the page read as a list of shops rather than one shop. */
+        />
+      </div>
+
+      {/* The spoken deadline, once, as an absolute date. Separate from the strip above because
+          that strip is `aria-hidden` — live digits are either a screen-reader firehose (with
+          aria-live) or an unlabelled cluster of numbers landed on mid-count (without it). */}
       {earliestExpiration && <FlashDeadline expirationDate={earliestExpiration} />}
 
-      {/* ── the rail ───────────────────────────────────────────────────────────────────────
-          ONE LAYOUT THAT IS BOTH A ROW AND A SCROLLER, sized on the items rather than by a
-          breakpoint: `grow` + `basis-[156px]` lets four deals share the rail, `min-w-[156px]`
-          stops them shrinking below legible, so the day there are ten they overflow and it scrolls
-          with nothing deciding when.
+      {/* ── THE CANONICAL GRID, NOT A FOURTH COPY OF IT ─────────────────────────
+          This was `grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:gap-3 lg:grid-cols-4`, hand
+          rolled because `ProductGrid` could only render a `<div>` and this band wants list
+          semantics. Every difference in that string turned out to be a defect rather than a
+          decision:
 
-          `-mx-4 px-4 … sm:mx-0 sm:px-0` — the scroll container spans the full screen on a phone
-          while its content stays on the rail, so a card scrolls out to the edge instead of stopping
-          32px short. CategoryRail's own fix.
+            no `md` step   768-1023px showed TWO columns while the identical rail directly above
+                           it showed three.
+            `min-[420px]`  a breakpoint on no scale, so below it four cards stacked one-up and
+                           the band measured 1,227px at 390px — 1.36 viewport heights.
+            `gap-2.5`      10px, on no lattice, against the grid's 12/16/24.
 
-          `scroll-px-4` matters more than it looks: the snapport is the scrollport's padding box
-          reduced by scroll-padding, which was 0, so the snap offsets were 16/184/352… and ZERO WAS
-          NOT ONE OF THEM. The first swipe destroyed the left gutter and pulled a card flush to the
-          screen edge. A screenshot at rest cannot show that, which is why it survived.
-
-          `snap-proximity` over `mandatory` so the snap does not fight the browser scrolling a
-          keyboard-focused card into view. `overscroll-x-contain` stops a swipe chaining into the
-          Android/iOS back gesture.
-
-          `<ul role="list">` because the rail's only "there is more" cue is a half-visible card,
-          which assistive tech cannot perceive — a list announces its size. `role` is required, not
+          `ProductGrid` now takes `as`/`role`, so the list semantics cost no fork. `role` is not
           belt-and-braces: preflight's `list-style: none` makes Safari+VoiceOver drop list
-          semantics. */}
-      <ul
+          semantics, and a rail whose only "there is more" cue is visual needs its size spoken. */}
+      <ProductGrid
+        /* ── TWO COLUMNS THROUGH THE MIDDLE, AND THIS IS THE ONE PLACE THE GRID DIVERGES ──
+           Measured on the local production build, using ProductGrid's own steps unmodified:
+
+               768px   3 columns -> card 229px wide, 181px tall, band 522px
+              1024px   4 columns -> card 222px wide, 181px tall, band 355px
+              1280px   4 columns -> card 286px wide, 122px tall, band 297px
+
+           122px is the row card's natural height. 181px is it FAILING: below ~264px of card there
+           is no room for a name beside a 96px thumbnail and a 48px control, so the title takes its
+           second line AND the price row wraps the struck-through original onto the badge. 768px is
+           worse still, because four items in a three-column grid also leave an orphan row.
+
+           So the column count is chosen on the card's minimum width rather than copied: 1 -> 2 -> 2
+           -> 4. Every card is at least 286px at every width, and nothing wraps. `cn` is
+           tailwind-merge, so these three replace the matching steps and `sm:grid-cols-2`, the gaps
+           and the base column all still come from ProductGrid.
+
+           This is a real divergence from the rails and it is the only one. It exists because this
+           band's card is a row and theirs is a column, which is what keeps this band a banner —
+           a row card simply does not fit four-across in a 950px container, and the honest way to
+           say that is in the column count rather than by letting the text break. */
+        className="scrollbar-hide flex snap-x snap-mandatory overflow-x-auto pb-2 sm:grid sm:grid-cols-2 sm:overflow-visible sm:pb-0 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-4"
+        as="ul"
         role="list"
-        className="scrollbar-hide -mx-4 flex snap-x snap-proximity items-stretch gap-3 overflow-x-auto overscroll-x-contain scroll-px-4 px-4 sm:mx-0 sm:scroll-px-0 sm:px-0"
       >
-        {/* ── SIZED FOR A ROW CARD, WHICH IS THE OPPOSITE PROBLEM TO A COLUMN CARD ──────────
-            A column card had to be kept NARROW, because its height followed its width and that is
-            what made the band a section. A row card has a fixed 64px thumbnail, so its height is
-            constant and width costs nothing — it wants to be WIDE enough for a two-line product
-            name beside that thumbnail.
-
-            `min-w-[264px]` is the floor, re-derived when the thumbnail grew to 80/96px: 96 + 12
-            gap + 48 button + 24 padding + 12 gap = 192px of fixed furniture, leaving ~72px for the
-            name at the floor and ~180px at the 400px cap. Below 264 the name clamps to a handful
-            of characters and the card starts lying about what it contains.
-
-            `max-w-[400px]`, up from 340: at 1920 four cards now divide the rail EXACTLY
-            ((1536−36)/4 = 375), so the 140px of dead rail the 340 cap used to leave is gone. */}
         {products.map((product) => (
           <li
             key={product.id}
-            className="min-w-[264px] max-w-[400px] grow basis-[300px] snap-start"
+            className="w-[calc(100%-2rem)] min-w-0 flex-none snap-start sm:w-auto"
           >
             <FlashDealCard product={product} />
           </li>
         ))}
-      </ul>
+      </ProductGrid>
 
-      {/* THE PHONE GETS ITS OWN ROUTE TO /offres.
-          `SectionHeader` correctly hides the view-all below `sm` — that is what makes the clip
-          impossible — and for CategoryRail that is the end of it, because its tiles ARE the
-          navigation. This rail is different: it hides products behind a swipe, so the way to the
-          full list has to exist somewhere. As a full-width bar it is a 48px target where there used
-          to be a 0px-wide clipped one.
-
-          `border-rule-strong` (3.10:1 on sand), not `border-hairline` (1.16:1): a ghost button's
-          border is its only boundary, so WCAG 1.4.11's 3:1 applies to it.
-          `ring-offset-sunken` because Tailwind's default ring-offset is white, which on this sand
-          band paints a white gap between the control and its focus ring. */}
-      <Link
-        href="/offres"
-        aria-label="Tout voir les offres flash"
-        className="mt-4 flex min-h-[48px] w-full items-center justify-center gap-2 rounded-full border border-rule-strong px-5 font-display font-extended text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 focus-visible:ring-offset-sunken sm:hidden [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand"
-      >
-        Tout voir les offres
-        <ArrowRight className="h-4 w-4" aria-hidden="true" />
-      </Link>
+      {/* THE PHONE'S "TOUT VOIR LES OFFRES" BAR IS GONE WITH ITS DESKTOP TWIN.
+          It existed only because `SectionHeader` hides its view-all below `sm`, so the two were
+          one control rendered at complementary widths. Removing one and keeping the other would
+          have left a CTA on phones and none on desktop — the opposite of uniform, and the exact
+          shape of bug `measure-flash`'s "exactly one visible /offres link" assertion was written
+          to catch. That assertion now expects ZERO; see the note beside it. */}
     </Section>
   );
 });

@@ -34,11 +34,21 @@ const THEME = one('theme', 'light');
  * value, so a drifted table silently stops enforcing the scale.
  */
 const LEGAL = {
-  /* Below `sm` a band's BOTTOM padding is 0 and the gap is the lower band's `pt` alone — see the
-     scale note in Section.tsx. So 0 is legal at 390 on its own merits, not as a stage/hero
-     special case, and the mobile column will show `pb 0` on every band but the last. */
-  390: { strip: 12, tight: 24, default: 16, feature: 24, stage: 0, zero: 0 },
-  1440: { strip: 16, tight: 32, default: 40, feature: 48, stage: 0 },
+  /* Below `sm` the gap between two bands is essentially the lower band's `pt` — see the scale
+     note in Section.tsx — so 0 is legal at 390 on its own merits and not as a hero special case.
+     `mobileBottom` is the 8px every content step has carried at the bottom since 10/08/2026
+     ("in mobile between the sections make a padding bottom of .5em or more little"), and
+     `heroBottom` is the 4px the owner asked for under the slider on 18/08/2026 (0.3em).
+
+     ── THIS TABLE WENT STALE AND THE GUARD WENT RED WITHOUT ANYBODY NOTICING ────────────────
+     It mirrors Section.tsx's SPACING by hand, so it is wrong the moment that scale moves. It had
+     been wrong since the 10/08 change: measured against PRODUCTION on 18/08 this run reported
+     EIGHT off-scale paddings, all of them the same legitimate 8px bottom. Eight false failures is
+     how a guard teaches people to stop reading it. Anyone touching SPACING must touch this. */
+  390: { strip: 12, tight: 20, default: 16, feature: 24, stage: 0, zero: 0, mobileBottom: 8, heroBottom: 4 },
+  /* Updated 18/08/2026 with the scale itself: `lg` came down one 8px notch across the board when
+     the owner asked for tighter desktop bands. tight 32->24, default 40->32, feature 48->40. */
+  1440: { strip: 16, tight: 24, default: 32, feature: 40, stage: 0 },
 };
 
 const CHROME = [
@@ -135,6 +145,33 @@ const legalValues = new Set(Object.values(legal));
  */
 const GAP_WARN = WIDTH < 768 ? 72 : 104;
 
+/**
+ * Boundaries where two bands are ALLOWED to share a surface, keyed by the LOWER band's label.
+ *
+ * The alternation rule exists because in dark theme a slab against canvas measures 1.39:1 — the
+ * fill is not a boundary — so a page that separates by colour alone only separates for half its
+ * users. That argument is about bands. It stops applying when the thing below is not presenting
+ * itself as a band at all.
+ *
+ * Every entry needs a date, a reason, and the guarantee that SOMETHING still separates the two.
+ *
+ *   'Acheter par objectif'  owner, 18/08/2026, edited live in DevTools: white fill, no seam, no
+ *                           top padding, and — in the same message — no heading and no "Tout
+ *                           voir". With the whole band apparatus removed, six navigation tiles
+ *                           are meant to read as the bottom of the hero rather than as the page's
+ *                           second section, and a rule across a continuous white area was drawing
+ *                           a boundary where the design no longer has one. What separates it from
+ *                           the hero is the hero's 24px of bottom padding.
+ *   'products'              consequence of the above, not a second decision: "Les plus vendus"
+ *                           was white under a sand rail and is now white under a white one. It
+ *                           KEEPS its 1px seam, so the boundary is still drawn — which is the
+ *                           part of the invariant that actually protects dark theme.
+ *
+ * An exception that is not listed here still fails the run. That is the point: this file is the
+ * record of which clashes somebody decided on, so a new one cannot arrive by accident.
+ */
+const SHARED_SURFACE_OK = new Set(['Acheter par objectif', 'products']);
+
 console.log(`\n${ROUTE}  @${WIDTH}px  ${THEME}\n`);
 console.log('  #  band                          top   height   pt   pb    gap   surface   seam');
 console.log('  ' + '-'.repeat(84));
@@ -150,7 +187,8 @@ bands.forEach((b, i) => {
   const pbOk = legalValues.has(b.pb);
   if (!ptOk || !pbOk) offScale++;
   const clash = prevBg !== null && prevBg === b.bg;
-  if (clash) sharedSurface++;
+  const sanctioned = clash && SHARED_SURFACE_OK.has(b.label);
+  if (clash && !sanctioned) sharedSurface++;
 
   const gap = prevPb === null ? null : prevPb + b.pt;
   const gapWide = gap !== null && gap > GAP_WARN;
@@ -165,7 +203,7 @@ bands.forEach((b, i) => {
       `${String(b.pt).padStart(5)}${ptOk ? ' ' : '!'}${String(b.pb).padStart(4)}${pbOk ? ' ' : '!'}` +
       `${(gap === null ? '—' : String(gap)).padStart(6)}${gapWide ? '!' : ' '}` +
       ` ${b.bg.padEnd(9)} ${b.first ? 'first' : b.borderTop}` +
-      (clash ? '   <-- SAME SURFACE AS ABOVE' : '')
+      (clash ? (sanctioned ? '   (shares surface — sanctioned)' : '   <-- SAME SURFACE AS ABOVE') : '')
   );
 });
 
@@ -173,7 +211,7 @@ const doc = await page.evaluate(() => document.documentElement.scrollHeight);
 console.log('\n  ' + '-'.repeat(84));
 console.log(`  ${bands.length} bands, document ${doc}px`);
 console.log(`  off-scale paddings (marked !): ${offScale}`);
-console.log(`  adjacent bands sharing a surface: ${sharedSurface}`);
+console.log(`  adjacent bands sharing a surface (unsanctioned): ${sharedSurface}`);
 console.log(`  boundaries wider than ${GAP_WARN}px: ${wideGaps}`);
 console.log(`  legal paddings @${WIDTH}: ${[...legalValues].sort((a, b) => a - b).join(' / ')}\n`);
 

@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { Section } from '@/app/components/layout/Section';
+import { SectionHeader } from '@/app/components/SectionHeader';
 import { ProductCard } from '@/app/components/ProductCard';
 import { ProductGrid } from '@/app/components/ProductGrid';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
@@ -14,344 +16,30 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Slider } from '@/app/components/ui/slider';
 import { Checkbox } from '@/app/components/ui/checkbox';
-import { Filter, Search, X, CircleAlert, Check, SlidersHorizontal } from 'lucide-react';
+import { ArrowDownUp, Filter, Search, X, CircleAlert, Check, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/app/components/ui/accordion';
 import { Badge } from '@/app/components/ui/badge';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Pagination } from '@/app/components/ui/pagination';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/app/components/ui/select';
 import type { Product, Category, Brand } from '@/types';
 import { searchProducts, getProductsByCategory, getProductsBySubCategory, getProductsByBrand } from '@/services/api';
 import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { generateBrandDescriptionFallback } from '@/util/brandDescriptionFallback';
+import {
+  buildShopUrl,
+  DEFAULT_SHOP_SORT,
+  SHOP_GRID_COLS,
+  SHOP_PER_PAGE,
+  type ShopFacets,
+  type ShopQuery,
+  type ShopSort,
+} from '@/util/shopQuery';
+import { ShopFilters, CREATINE_TYPES, CREATINE_GOALS, SORT_OPTIONS } from './ShopFilters';
 
 const SKELETON_MIN_MS = 300;
-
-const CREATINE_TYPES = ['Monohydrate', 'Micronisée', 'Capsules', 'Creapure'];
-const CREATINE_GOALS = ['Force', 'Masse', 'Performance', 'Récupération'];
-
-/** Sort options — single source shared by the desktop top-bar select and the mobile sheet's "Trier par" group. */
-const SORT_OPTIONS: Array<{ value: string; label: string }> = [
-  { value: 'popularity', label: 'Popularité' },
-  { value: 'price-asc', label: 'Prix : croissant' },
-  { value: 'price-desc', label: 'Prix : décroissant' },
-  { value: 'newest', label: 'Nouveautés' },
-  { value: 'best-sellers', label: 'Meilleures ventes' },
-];
-
-interface ProductFiltersProps {
-  variant: 'mobile' | 'desktop';
-  inStockOnly: boolean;
-  setInStockOnly: (value: boolean) => void;
-  isCreatineCategory: boolean;
-  selectedTypes: string[];
-  toggleType: (type: string) => void;
-  selectedGoals: string[];
-  toggleGoal: (goal: string) => void;
-  uniqueFlavors: string[];
-  selectedFlavors: string[];
-  toggleFlavor: (flavor: string) => void;
-  categories: Category[];
-  brands: Brand[];
-  filterCounts: { categoryCounts: Map<string, number>; brandCounts: Map<number, number> };
-  selectedCategories: string[];
-  toggleCategory: (slug: string) => void;
-  selectedBrands: number[];
-  toggleBrand: (id: number) => void;
-  priceRange: [number, number];
-  setPriceRange: (value: [number, number]) => void;
-  priceBounds: { min: number; max: number };
-  sortBy: string;
-  setSortBy: (value: string) => void;
-}
-
-/**
- * The shop filter accordion (Disponibilité, Type/Objectif Créatine, Arômes, Catégories, Marques,
- * Prix). Rendered in BOTH the mobile Sheet and the desktop aside from this single source so the two
- * can no longer drift. `variant` only tunes density (checkbox size, paddings, default-open groups);
- * all state + handlers are owned by ShopContent and passed in, so the filter behavior is identical.
- */
-function ProductFilters({
-  variant,
-  inStockOnly,
-  setInStockOnly,
-  isCreatineCategory,
-  selectedTypes,
-  toggleType,
-  selectedGoals,
-  toggleGoal,
-  uniqueFlavors,
-  selectedFlavors,
-  toggleFlavor,
-  categories,
-  brands,
-  filterCounts,
-  selectedCategories,
-  toggleCategory,
-  selectedBrands,
-  toggleBrand,
-  priceRange,
-  setPriceRange,
-  priceBounds,
-  sortBy,
-  setSortBy,
-}: ProductFiltersProps) {
-  const isMobile = variant === 'mobile';
-  const idPrefix = isMobile ? 'mobile' : 'desktop';
-  const itemClass = 'border border-gray-200 dark:border-gray-800 rounded-xl px-4';
-  const triggerClass = `${isMobile ? 'py-3.5 text-sm' : 'py-2.5 text-xs sm:text-sm'} font-semibold hover:no-underline`;
-  const listClass = isMobile ? 'space-y-0.5' : 'space-y-2';
-  const scrollListClass = `${listClass} ${isMobile ? 'max-h-72' : 'max-h-60'} overflow-y-auto overflow-x-hidden -mr-2 pr-2`;
-  const checkboxClass = isMobile ? 'h-5 w-5' : 'h-4 w-4';
-  // On mobile every option row is a ≥44px tap target; the label pads to fill the row height.
-  const rowClass = isMobile ? 'flex items-center gap-3 min-h-[44px]' : 'flex items-center gap-3';
-  const rowBetweenClass = isMobile
-    ? 'flex items-center justify-between gap-3 min-h-[44px] group'
-    : 'flex items-center justify-between gap-3 group';
-  const labelBase = isMobile ? 'text-sm' : 'text-xs sm:text-sm';
-  const labelPad = isMobile ? 'py-2' : '';
-  const labelState = (selected: boolean) =>
-    selected ? 'font-semibold text-gray-900 dark:text-white' : 'font-normal text-gray-700 dark:text-gray-300';
-  const defaultOpen = isMobile
-    ? ['sort', 'availability', 'categories', 'brands']
-    : ['availability', 'types', 'goals', 'flavors'];
-
-  return (
-    <Accordion type="multiple" defaultValue={defaultOpen} className={isMobile ? 'space-y-2.5' : 'space-y-1'}>
-      {/* Trier — mobile only (the desktop top-bar select stays the sort control on ≥md) */}
-      {isMobile && (
-        <AccordionItem value="sort" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Trier par</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className="space-y-0.5">
-              {SORT_OPTIONS.map((opt) => {
-                const active = sortBy === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => setSortBy(opt.value)}
-                    aria-pressed={active}
-                    className={`flex w-full items-center justify-between gap-3 min-h-[44px] px-3 rounded-lg text-sm transition-colors ${
-                      active
-                        ? 'bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 font-semibold'
-                        : 'text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800'
-                    }`}
-                  >
-                    <span>{opt.label}</span>
-                    {active && <Check className="h-4 w-4 shrink-0 text-red-600 dark:text-red-400" aria-hidden="true" />}
-                  </button>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Availability */}
-      <AccordionItem value="availability" className={itemClass}>
-        <AccordionTrigger className={triggerClass}>Disponibilité</AccordionTrigger>
-        <AccordionContent className="pb-3">
-          <div className={rowClass}>
-            <Checkbox
-              id={`${idPrefix}-in-stock`}
-              checked={inStockOnly}
-              onCheckedChange={(checked) => setInStockOnly(checked === true)}
-              className={checkboxClass}
-            />
-            <label htmlFor={`${idPrefix}-in-stock`} className={`${labelBase} ${labelPad} cursor-pointer flex-1 font-normal`}>
-              En stock uniquement
-            </label>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-
-      {/* Créatine Type */}
-      {isCreatineCategory && (
-        <AccordionItem value="types" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Type de Créatine</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={listClass}>
-              {CREATINE_TYPES.map((type) => (
-                <div key={type} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-type-${type}`}
-                    checked={selectedTypes.includes(type)}
-                    onCheckedChange={() => toggleType(type)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-type-${type}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedTypes.includes(type))}`}
-                  >
-                    {type}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Créatine Goal */}
-      {isCreatineCategory && (
-        <AccordionItem value="goals" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Objectif</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={listClass}>
-              {CREATINE_GOALS.map((goal) => (
-                <div key={goal} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-goal-${goal}`}
-                    checked={selectedGoals.includes(goal)}
-                    onCheckedChange={() => toggleGoal(goal)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-goal-${goal}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedGoals.includes(goal))}`}
-                  >
-                    {goal}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Arômes */}
-      {uniqueFlavors.length > 0 && (
-        <AccordionItem value="flavors" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Arômes</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {uniqueFlavors.map((flavor) => (
-                <div key={flavor} className={rowClass}>
-                  <Checkbox
-                    id={`${idPrefix}-flavor-${flavor}`}
-                    checked={selectedFlavors.includes(flavor)}
-                    onCheckedChange={() => toggleFlavor(flavor)}
-                    className={checkboxClass}
-                  />
-                  <label
-                    htmlFor={`${idPrefix}-flavor-${flavor}`}
-                    className={`${labelBase} ${labelPad} cursor-pointer flex-1 ${labelState(selectedFlavors.includes(flavor))}`}
-                  >
-                    {flavor}
-                  </label>
-                </div>
-              ))}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Catégories */}
-      {categories.length > 0 && (
-        <AccordionItem value="categories" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Catégories</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {categories.map((category) => {
-                const count = filterCounts.categoryCounts.get(category.slug) || 0;
-                const isSelected = selectedCategories.includes(category.slug);
-                return (
-                  <div key={category.id} className={rowBetweenClass}>
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Checkbox
-                        id={`${idPrefix}-cat-${category.id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggleCategory(category.slug)}
-                        className={checkboxClass}
-                      />
-                      <label
-                        htmlFor={`${idPrefix}-cat-${category.id}`}
-                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
-                      >
-                        {category.designation_fr}
-                      </label>
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Marques */}
-      {brands.length > 0 && (
-        <AccordionItem value="brands" className={itemClass}>
-          <AccordionTrigger className={triggerClass}>Marques</AccordionTrigger>
-          <AccordionContent className="pb-3">
-            <div className={scrollListClass}>
-              {brands.map((brand) => {
-                const count = filterCounts.brandCounts.get(brand.id) || 0;
-                const isSelected = selectedBrands.includes(brand.id);
-                return (
-                  <div key={brand.id} className={rowBetweenClass}>
-                    <div className="flex items-center gap-3 flex-1 min-w-0">
-                      <Checkbox
-                        id={`${idPrefix}-brand-${brand.id}`}
-                        checked={isSelected}
-                        onCheckedChange={() => toggleBrand(brand.id)}
-                        className={checkboxClass}
-                      />
-                      <label
-                        htmlFor={`${idPrefix}-brand-${brand.id}`}
-                        className={`${labelBase} ${labelPad} cursor-pointer flex-1 truncate ${labelState(isSelected)}`}
-                      >
-                        {brand.designation_fr}
-                      </label>
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500 tabular-nums shrink-0">{count}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </AccordionContent>
-        </AccordionItem>
-      )}
-
-      {/* Prix */}
-      <AccordionItem value="price" className={itemClass}>
-        <AccordionTrigger className={triggerClass}>Prix</AccordionTrigger>
-        <AccordionContent className="pb-3">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="font-semibold text-gray-900 dark:text-white">
-                {priceRange[0]} DT - {priceRange[1]} DT
-              </span>
-            </div>
-            <Slider
-              value={priceRange}
-              onValueChange={(value) => setPriceRange(value as [number, number])}
-              min={priceBounds.min}
-              max={priceBounds.max}
-              step={10}
-              className="w-full [&_[data-slot=slider-range]]:bg-red-600 [&_[data-slot=slider-thumb]]:border-red-600"
-            />
-            <div className="flex justify-between text-xs text-gray-400">
-              <span>{priceBounds.min} DT</span>
-              <span>{priceBounds.max} DT</span>
-            </div>
-          </div>
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
-}
 
 interface ShopPageClientProps {
   productsData: {
@@ -361,6 +49,8 @@ interface ShopPageClientProps {
   };
   categories: Category[];
   brands: Brand[];
+  /** From getInStockCount — printed beside "En stock uniquement". null when the count failed. */
+  inStockCount?: number | null;
   initialCategory?: string;
   isSubcategory?: boolean;
   parentCategory?: string;
@@ -371,6 +61,44 @@ interface ShopPageClientProps {
   categorySeoLanding?: React.ReactNode;
   /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
   categorySeoLandingBottom?: React.ReactNode;
+
+  /*
+   * ── SERVER-DRIVEN MODE: THE THREE PROPS BELOW TRAVEL TOGETHER OR NOT AT ALL ────────────────
+   *
+   * When they are present, this component STOPS filtering, sorting and paginating. `productsData`
+   * is then one page of results that the database has already narrowed, and every control writes to
+   * the URL instead of to local state.
+   *
+   * Why opt-in rather than a rewrite: this component renders FIVE surfaces — /shop, the top-category
+   * pages, the subcategory pages, brand pages and the category fallbacks. Only /shop has a server
+   * page that parses the query string. Making the new behaviour unconditional would have handed the
+   * other four a 12-product array to filter client-side and left them showing 12 products each,
+   * which is precisely the failure this migration exists to fix, moved rather than removed.
+   *
+   * So the legacy path below is untouched and still runs for those four. When these props are absent
+   * nothing about this file behaves differently from before.
+   *
+   * They are one unit because half of it is worse than neither: `serverPagination` without
+   * `serverQuery` would page through a grid whose filters still ran locally, and `facets` without
+   * `serverPagination` would describe 10,669 products beside a grid showing 12.
+   */
+  /** The URL's filter state, already parsed by the server page. */
+  serverQuery?: ShopQuery;
+  /** The whole catalogue's facets — see ApisController::shopFacets for why these cannot come from the page. */
+  facets?: ShopFacets;
+  serverPagination?: { total: number; totalPages: number; currentPage: number; perPage: number };
+  /**
+   * The path this listing lives at — '/shop', '/sante-vitalite', '/whey-isolate'.
+   *
+   * Server mode writes state into the URL, so it has to know WHICH URL. Without this every control
+   * on a category page pushed to /shop and navigated the shopper out of the category they were
+   * browsing; and the pager, which is the crawl path, emitted /shop?page=2 from /sante-vitalite.
+   *
+   * The path-implied filter is deliberately NOT repeated in the query string: /sante-vitalite?page=2
+   * rather than /sante-vitalite?category=sante-vitalite&page=2. Two URLs for one page is the
+   * duplicate-content problem this whole migration exists to reduce.
+   */
+  serverBasePath?: string;
 }
 
 type UrlFilters = { category: string | null; brand: string | null; search: string | null };
@@ -407,6 +135,7 @@ function ShopContent({
   productsData,
   categories,
   brands,
+  inStockCount = null,
   initialCategory,
   isSubcategory,
   parentCategory,
@@ -414,7 +143,23 @@ function ShopContent({
   categoryBreadcrumbLabel,
   categorySeoLanding,
   categorySeoLandingBottom,
+  serverQuery,
+  facets,
+  serverPagination,
+  serverBasePath = '/shop',
 }: ShopPageClientProps) {
+  /**
+   * The one switch. See the prop docblock: everything downstream reads this rather than testing the
+   * three props individually, so there is no path on which two of them are honoured and one is not.
+   */
+  const isServerMode = Boolean(serverQuery && serverPagination);
+  // Pulled out as primitives so everything downstream can depend on the VALUES rather than on the
+  // `facets` object, whose identity changes on every server render. See priceBounds.
+  const facetsMin = facets?.price.min;
+  // p99, NOT max. The catalogue runs 11 to 40 000 DT and one outlier put every real price in
+  // the first 0.4% of the slider track. A handle at maximum is written as no upper bound, so
+  // the 40 000 DT item stays reachable — see ShopFacets.price.
+  const facetsMax = facets?.price.p99 ?? facets?.price.max;
   // NOTE: useSearchParams() is deliberately NOT called here — it lives in <UrlFilterSync> below.
   // Calling it at this level is a dynamic API that opts every route rendering this component out of
   // static rendering; on /shop that meant the boutique answered no-store to every visitor. Isolating
@@ -422,19 +167,50 @@ function ShopContent({
   // render on the server. See the component definition for the full story.
   const [urlFilters, setUrlFilters] = useState<UrlFilters>(EMPTY_URL_FILTERS);
   const router = useRouter();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  const [selectedBrands, setSelectedBrands] = useState<number[]>([]);
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
-  const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>([0, 1000]);
+
+  /*
+   * In server mode these useState calls are still the ones the JSX reads, but the URL is the source
+   * of truth: each is SEEDED from serverQuery and re-synced by the effect below whenever the server
+   * sends a new page. Keeping the same state variables — rather than reading serverQuery directly at
+   * every render site — is what lets the ~700 lines of JSX below stay identical for both modes.
+   */
+  const [searchQuery, setSearchQuery] = useState(serverQuery?.search ?? '');
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(serverQuery?.categories ?? []);
+  const [selectedBrands, setSelectedBrands] = useState<number[]>(serverQuery?.brands ?? []);
+  /*
+   * Seeded from the URL and the real catalogue bounds on the FIRST render, not reconciled afterwards.
+   *
+   * The old `[0, 1000]` literal was a guess that happened to be wrong by a factor of forty — the
+   * catalogue runs 11 to 40000 DT — and the reconciliation effect that fixed it up afterwards is
+   * what the redirect loop was made of. Starting correct removes the window in which anything could
+   * observe the wrong value and act on it.
+   */
+  const initialPriceRange = (): [number, number] => {
+    // facetsMax is p99, matching priceBounds — seeding from the true max would put the handle
+    // outside the track the slider actually renders.
+    const lo = serverQuery?.minPrice ?? facetsMin ?? 0;
+    const hi = serverQuery?.maxPrice ?? facetsMax ?? 1000;
+    return [lo, hi];
+  };
+  const [priceRange, setPriceRange] = useState<[number, number]>(initialPriceRange);
+  const [debouncedPriceRange, setDebouncedPriceRange] = useState<[number, number]>(initialPriceRange);
   const [showFilters, setShowFilters] = useState(false);
   const [showFiltersDesktop, setShowFiltersDesktop] = useState(true);
-  
+  const [mobileFiltersReady, setMobileFiltersReady] = useState(false);
+
+  useEffect(() => {
+    setMobileFiltersReady(true);
+  }, []);
+
   // Sorting and sub-filters states
-  const [sortBy, setSortBy] = useState<string>('popularity');
+  const [sortBy, setSortBy] = useState<string>(serverQuery?.sort ?? 'popularity');
+  /* Drives the sort trigger's outline on a phone, where the trigger is an icon with no room for
+     its own value. "A sort is applied" is the half of the information that fits in 44px, and it
+     is the half that matters — a shopper who did not change it does not need telling. */
+  const sortIsDefault = sortBy === 'popularity';
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [selectedGoals, setSelectedGoals] = useState<string[]>([]);
-  const [selectedFlavors, setSelectedFlavors] = useState<string[]>([]);
+  const [selectedFlavors, setSelectedFlavors] = useState<string[]>(serverQuery?.flavors ?? []);
 
   // Provide safe defaults if productsData is undefined
   const safeProductsData = productsData || {
@@ -467,12 +243,124 @@ function ShopContent({
   //
   // The filter itself stays — the checkbox is still there for anyone who wants it. Out-of-stock
   // items are sorted last (see the sorting engine) so they never push a buyable product down.
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [inStockOnly, setInStockOnly] = useState(serverQuery?.inStock ?? false);
+  const [currentPage, setCurrentPage] = useState(serverQuery?.page ?? 1);
   const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
+  /*
+   * Set while a URL navigation is in flight so the grid can show its skeleton instead of the
+   * previous page's products. Without it, clicking "page 4" leaves page 3 on screen for the whole
+   * round trip with no feedback at all, and on a Tunisian 3G connection that is long enough for a
+   * shopper to click again.
+   */
+  const [isNavigating, setIsNavigating] = useState(false);
 
-  const PRODUCTS_PER_PAGE = 12;
+  const PRODUCTS_PER_PAGE = serverPagination?.perPage ?? 12;
+
+  /**
+   * Write the next filter state to the URL and let the server answer with the matching page.
+   *
+   * `scroll: false` because the page is already at the top for a filter change and jumping is worse
+   * than not; pagination scrolls explicitly in handlePageChange, which is the one case where the
+   * shopper's eye must move.
+   *
+   * Every mutation resets to page 1 unless it IS a page change — filtering to 4 results while
+   * sitting on page 7 renders an empty grid that looks like a broken shop.
+   */
+  const pushQuery = (patch: Partial<ShopQuery>) => {
+    if (!serverQuery) return;
+    const next: ShopQuery = { ...serverQuery, ...patch, page: patch.page ?? 1 };
+
+    /*
+     * ── A CATEGORY CHANGE ON A SCOPED LISTING LEAVES THAT LISTING ───────────────────────────
+     *
+     * On /sante-vitalite the category filter is not a query parameter — it is the PATH, and the
+     * server page re-applies it on every render. So writing `?category=proteines` onto that path
+     * would produce a ticked checkbox above a grid that never changed: the parameter is parsed,
+     * then overwritten by the scope. A control that visibly does nothing is worse than one that
+     * is not offered.
+     *
+     * Ticking another category is an unambiguous request to browse it, so it goes to the boutique
+     * with that filter applied — /shop?category=proteines — which is a URL where the choice is
+     * real. Everything else (price, brand, flavour, sort, page) stays on the current path, because
+     * those genuinely do narrow the scoped listing.
+     */
+    const scoped = serverBasePath !== '/shop';
+    const changesScope =
+      scoped && (patch.categories !== undefined || patch.subcategories !== undefined);
+
+    setIsNavigating(true);
+    router.push(
+      changesScope
+        ? buildShopUrl({ ...next, subcategories: [] }, '/shop')
+        : buildShopUrl(next, serverBasePath),
+      { scroll: false }
+    );
+  };
+
+  /*
+   * Re-seed local state whenever the server sends a different query.
+   *
+   * Needed because router.push() re-renders this component with new props but React keeps the
+   * existing state — so after navigating to ?brand=72 the grid would be correct and the checkbox
+   * beside it unticked. The dependency is the serialised query rather than the object, which is a
+   * new identity on every render and would loop.
+   */
+  const serverQueryKey = serverQuery ? buildShopUrl(serverQuery, serverBasePath) : '';
+  useEffect(() => {
+    if (!serverQuery) return;
+    setSearchQuery(serverQuery.search);
+    setSelectedCategories(serverQuery.categories);
+    setSelectedBrands(serverQuery.brands);
+    setSelectedFlavors(serverQuery.flavors);
+    setInStockOnly(serverQuery.inStock);
+    setSortBy(serverQuery.sort);
+    setCurrentPage(serverQuery.page);
+    setIsNavigating(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serverQueryKey]);
+
+  /*
+   * Safety net for the skeleton.
+   *
+   * `isNavigating` is cleared by the effect above, which only fires when the SERVER QUERY CHANGES.
+   * If a control ever produces the URL the page is already on — an unchanged sort, a filter toggled
+   * off and straight back on — no navigation happens, that effect never runs, and the boutique sits
+   * behind a skeleton forever with no error to explain it. A stuck spinner is one of the few
+   * failures a shopper cannot work around, so it gets a hard ceiling rather than an argument about
+   * whether the case is reachable.
+   */
+  useEffect(() => {
+    if (!isNavigating) return;
+    const timer = setTimeout(() => setIsNavigating(false), 8000);
+    return () => clearTimeout(timer);
+  }, [isNavigating]);
+
+  /*
+    ── THIS TEMPLATE OWNS THE TOP OF A PHONE VIEWPORT ────────────────────────────────────────
+    `data-page="shop"` drives two rules in globals.css, both scoped to `max-width: 767px`: the
+    site header stops being sticky, and `--header-h` goes to 0 so this page's toolbar pins at the
+    very top with nothing above it to get the offset wrong.
+
+    The attribute is set here, by the page, rather than tested for in HeaderClient — the same
+    reasoning the product page's block records: the header would have to know which routes own
+    their viewport, a list it has no business holding and would get wrong the first time a route
+    was added.
+
+    Measured on a 390x844 phone before this: 55px header + 118px toolbar + 56px tab bar = 229px,
+    27% of the viewport, with a 13px seam between the first two because the toolbar's offset was
+    hardcoded at 68px.
+  */
+  useEffect(() => {
+    document.body.setAttribute('data-page', 'shop');
+    return () => {
+      // Only clear what this page set. A cleanup that removed the attribute unconditionally would
+      // fight the product page during a client-side transition between the two.
+      if (document.body.getAttribute('data-page') === 'shop') {
+        document.body.removeAttribute('data-page');
+      }
+    };
+  }, []);
 
   // Keep skeleton visible at least SKELETON_MIN_MS to avoid flicker on fast loads
   useEffect(() => {
@@ -494,8 +382,28 @@ function ShopContent({
     }
   }, [isSearching]);
 
+  /*
+   * Server mode: the grid IS the server's answer. Track it directly.
+   *
+   * The legacy effect below cannot do this job. It resets `products` from `safeProductsData` only on
+   * the branch where no category is selected, because in client mode `products` is a mutable working
+   * set that the category/brand/search fetches below overwrite. In server mode there is no working
+   * set — there is the page the server sent — so following the prop is both simpler and the only
+   * thing that is correct when the shopper pages from 3 to 4 without changing any filter.
+   */
+  useEffect(() => {
+    if (!isServerMode) return;
+    setProducts(safeProductsData.products || []);
+  }, [isServerMode, safeProductsData.products]);
+
   // Initialize from URL params or props
   useEffect(() => {
+    // Server mode parses the URL on the server, where it can act on it — see the prop docblock.
+    // Letting this run as well would fight that: it collapses multi-select categories to a single
+    // slug (`setSelectedCategories([decodedCategory])`) and resets `products` from the props on the
+    // no-category branch, so picking a second category would tick one box and show the wrong grid.
+    if (isServerMode) return;
+
     const { category, brand, search } = urlFilters;
 
     const categoryToUse = initialCategory || category;
@@ -527,27 +435,22 @@ function ShopContent({
     } else {
       setSearchQuery('');
     }
-  }, [urlFilters, initialCategory, initialBrand, safeProductsData.products]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [urlFilters, initialCategory, initialBrand, safeProductsData.products, isServerMode]);
 
   // Get unique subcategories from ALL products (not just filtered) for proper mapping
-  const subCategories = useMemo(() => {
-    const subs = new Map<string, { id: number; name: string; slug: string; categoryId?: number }>();
-    const allProducts = safeProductsData.products || [];
-    allProducts.forEach(p => {
-      if (p.sous_categorie) {
-        const key = p.sous_categorie.id.toString();
-        if (!subs.has(key)) {
-          subs.set(key, {
-            id: p.sous_categorie.id,
-            name: p.sous_categorie.designation_fr,
-            slug: p.sous_categorie.slug,
-            categoryId: p.sous_categorie.categorie_id,
-          });
-        }
-      }
-    });
-    return Array.from(subs.values());
-  }, [safeProductsData.products]);
+  /*
+   * `subCategories` USED TO BE COMPUTED HERE AND READ BY NOTHING.
+   *
+   * A useMemo built a Map of every rayon on every render — from all products in client mode, and
+   * from facets.subcategories in server mode — and no line in this 1,600-line file ever consumed
+   * the result. Dead code is cheap to leave alone right up until it starts costing bytes: it was
+   * the only reason `facets.subcategories` was serialised into the page, and it made the facets
+   * object look load-bearing when it was not.
+   *
+   * Removed rather than commented out. If a rayon rail is wanted here later, it should read
+   * facets.subcategories directly at the render site, where its cost is visible.
+   */
 
   // Real, crawlable SSR links to this TOP category's subcategories. On a top-category view the
   // subcategories are otherwise only reachable through filter checkboxes (client state) or bot-only
@@ -582,6 +485,19 @@ function ShopContent({
 
   // Get min and max prices
   const priceBounds = useMemo(() => {
+    /*
+     * THE SLIDER DESCRIBES THE CATALOGUE, NOT THE PAGE.
+     *
+     * This is the single most damaging thing to get wrong in server mode, because it is silently
+     * self-reinforcing. Derived from the 12 products on screen, the bounds collapse to (say)
+     * 89–140 DT; the effect below then RESETS priceRange to those bounds; the filter engine then
+     * excludes anything outside them. Page 2 recomputes a different range and the shop appears to
+     * lose products as you page through it — with no error and a plausible-looking slider.
+     */
+    if (isServerMode && facetsMin !== undefined && facetsMax !== undefined) {
+      return { min: facetsMin, max: facetsMax };
+    }
+
     const prices = products
       .map(p => getEffectivePrice(p))
       .filter((price): price is number => price !== null && price !== undefined);
@@ -590,15 +506,32 @@ function ShopContent({
       min: Math.floor(Math.min(...prices)),
       max: Math.ceil(Math.max(...prices)),
     };
-  }, [products]);
+    // Depends on the two NUMBERS, not on the `facets` object. The server sends a new object on every
+    // render, so depending on it made this memo — and therefore the seeding effect below, and
+    // everything downstream of that — re-fire on every navigation. That churn is what turned one
+    // bad push into a loop.
+  }, [products, isServerMode, facetsMin, facetsMax]);
 
   // Update price range when bounds change
   useEffect(() => {
-    if (priceBounds.max > 0) {
-      setPriceRange([priceBounds.min, priceBounds.max]);
-      setDebouncedPriceRange([priceBounds.min, priceBounds.max]);
-    }
-  }, [priceBounds]);
+    if (priceBounds.max <= 0) return;
+    /*
+     * In server mode the URL wins. A shopper who shared /shop?min_price=200 must land on a slider
+     * showing 200 — this effect running unconditionally would reset it to the catalogue bounds on
+     * mount and quietly discard the filter they linked to, while the grid (filtered by the server)
+     * still showed the narrowed results. Slider and grid disagreeing is the bug; falling back to the
+     * bounds only when the URL is silent is the fix.
+     */
+    const lo = isServerMode && serverQuery?.minPrice !== null && serverQuery?.minPrice !== undefined
+      ? serverQuery.minPrice
+      : priceBounds.min;
+    const hi = isServerMode && serverQuery?.maxPrice !== null && serverQuery?.maxPrice !== undefined
+      ? serverQuery.maxPrice
+      : priceBounds.max;
+    setPriceRange([lo, hi]);
+    setDebouncedPriceRange([lo, hi]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [priceBounds, isServerMode, serverQuery?.minPrice, serverQuery?.maxPrice]);
 
   // Debounce price range updates
   useEffect(() => {
@@ -608,8 +541,62 @@ function ShopContent({
     return () => clearTimeout(timer);
   }, [priceRange]);
 
+  /*
+   * ── THE PRICE FILTER NAVIGATES ON A GESTURE, NEVER FROM AN EFFECT ────────────────────────
+   *
+   * This was an effect watching `debouncedPriceRange` and pushing whenever it disagreed with the
+   * URL. It shipped, and it put /shop into a redirect loop: /shop -> ?max_price=1000 -> /shop -> …
+   *
+   * The mechanism, because it is worth not rebuilding: `priceRange` initialises to [0, 1000], while
+   * the real catalogue bounds are min 11 / max 40000. On mount the effect therefore read a max of
+   * 1000, correctly observed that 1000 < 40000, concluded the shopper had narrowed the price, and
+   * wrote ?max_price=1000. The seeding effect then reconciled the slider to the true bounds, which
+   * changed the debounced value, which re-ran the push effect, which now saw 40000 >= 40000 and
+   * wrote the filter back off. Each write is a navigation, each navigation is a new server render
+   * with a fresh `facets` object, and a fresh `facets` re-fires the whole chain.
+   *
+   * No guard on the comparison fixes this, because the bug is not the comparison — it is that an
+   * effect reconciling derived state is allowed to change the URL at all. On mount, "the state does
+   * not match the URL" means the state has not been seeded yet; it does NOT mean the shopper asked
+   * for anything.
+   *
+   * So the push now hangs off the slider's own handler, exactly like handleSearchChange. It cannot
+   * fire on mount, because on mount nobody has touched the slider. Same 400 ms debounce, so dragging
+   * is one navigation rather than one per pixel.
+   */
+  const priceDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handlePriceChange = (range: [number, number]) => {
+    setPriceRange(range);
+    if (!isServerMode) return;
+    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current);
+    priceDebounceRef.current = setTimeout(() => {
+      const [lo, hi] = range;
+      // A range at the catalogue bounds is "no filter" (null), not an explicit min/max — that keeps
+      // the canonical boutique at /shop rather than /shop?min_price=11&max_price=40000.
+      pushQuery({
+        minPrice: lo <= priceBounds.min ? null : lo,
+        maxPrice: hi >= priceBounds.max ? null : hi,
+      });
+    }, 400);
+  };
+  useEffect(() => () => {
+    if (priceDebounceRef.current) clearTimeout(priceDebounceRef.current);
+  }, []);
+
   // Calculate filter counts
   const filterCounts = useMemo(() => {
+    // Server mode: counts come from four GROUP BYs over the whole catalogue rather than from a tally
+    // of what is on screen. Counting the page would have printed "12" beside every checkbox.
+    if (isServerMode && facets) {
+      const categoryCounts = new Map<string, number>(
+        Object.entries(facets.category_counts).map(([slug, n]) => [slug, Number(n) || 0])
+      );
+      const brandCounts = new Map<number, number>(
+        Object.entries(facets.brand_counts).map(([id, n]) => [Number(id), Number(n) || 0])
+      );
+      return { categoryCounts, brandCounts };
+    }
+
     const allProducts = safeProductsData.products || [];
     const categoryCounts = new Map<string, number>();
     const brandCounts = new Map<number, number>();
@@ -625,7 +612,7 @@ function ShopContent({
     });
 
     return { categoryCounts, brandCounts };
-  }, [safeProductsData.products]);
+  }, [safeProductsData.products, isServerMode, facets]);
 
   // Check if Creatine category is active
   const isCreatineCategory = useMemo(() => {
@@ -639,6 +626,11 @@ function ShopContent({
 
   // Dynamic flavor extraction from products
   const uniqueFlavors = useMemo(() => {
+    // Server mode: only aromas actually present on a published product (see shopFacets). Reading
+    // them off the current page would have offered three flavours on page 1 and three different
+    // ones on page 2, and un-ticked the shopper's own selection the moment it left the page.
+    if (isServerMode && facets) return facets.flavors;
+
     const flavors = new Set<string>();
     const list = products.length > 0 ? products : (safeProductsData.products || []);
     list.forEach(p => {
@@ -652,7 +644,7 @@ function ShopContent({
       }
     });
     return Array.from(flavors);
-  }, [products, safeProductsData.products]);
+  }, [products, safeProductsData.products, isServerMode, facets]);
 
   // Dynamic category SEO Applied filters chips
   const appliedFilters = useMemo(() => {
@@ -692,11 +684,48 @@ function ShopContent({
       filters.push({ type: 'flavor', label: flavor, value: flavor });
     });
 
+    /*
+     * ── AVAILABILITY WAS THE ONE FILTER WITH NO CHIP, AND IT IS THE ONE THAT CHANGES MOST ───
+     * `stock` was declared in the union and in removeFilter, and never pushed here — so ticking
+     * "En stock uniquement" left no chip, no count on the Filtres badge and nothing in the rail's
+     * "Tout effacer" state. On this catalogue that box takes the boutique from 11,263 products to
+     * 133, which is the single largest thing a shopper can do to the grid, and it was also the
+     * only one they could not see they had done.
+     */
+    if (inStockOnly) {
+      filters.push({ type: 'stock', label: 'En stock', value: 'stock' });
+    }
+
     return filters;
-  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands, selectedTypes, selectedGoals, selectedFlavors]);
+  }, [selectedCategories, selectedBrands, priceRange, priceBounds, categories, brands, safeProductsData.brands, selectedTypes, selectedGoals, selectedFlavors, inStockOnly]);
 
   // Remove specific filters
   const removeFilter = (type: 'category' | 'brand' | 'price' | 'stock' | 'type' | 'goal' | 'flavor', value: string | number) => {
+    if (isServerMode && serverQuery) {
+      // The applied-filter chips are the most-used way to undo a filter, so they have to travel the
+      // same road as the checkbox that set it. Dropping only the local state here would clear the
+      // chip and leave the URL — and therefore the grid — filtered.
+      if (type === 'category') {
+        pushQuery({ categories: serverQuery.categories.filter(c => c !== value) });
+      } else if (type === 'brand') {
+        pushQuery({ brands: serverQuery.brands.filter(b => b !== Number(value)) });
+      } else if (type === 'price') {
+        setPriceRange([priceBounds.min, priceBounds.max]);
+        pushQuery({ minPrice: null, maxPrice: null });
+      } else if (type === 'stock') {
+        setInStockOnly(false);
+        pushQuery({ inStock: false });
+      } else if (type === 'flavor') {
+        pushQuery({ flavors: serverQuery.flavors.filter(f => f !== value) });
+      } else {
+        // 'type' and 'goal' are creatine-only refinements with no server filter and no route to
+        // /shop — they cannot be applied here, so there is nothing to remove.
+        if (type === 'type') setSelectedTypes(prev => prev.filter(t => t !== value));
+        if (type === 'goal') setSelectedGoals(prev => prev.filter(g => g !== value));
+      }
+      return;
+    }
+
     if (type === 'category') {
       setSelectedCategories(prev => prev.filter(c => c !== value));
     } else if (type === 'brand') {
@@ -748,6 +777,25 @@ function ShopContent({
 
   // Handle filtering
   useEffect(() => {
+    /*
+     * ── IN SERVER MODE THIS EFFECT MUST NOT RUN AT ALL ──────────────────────────────────────
+     *
+     * It exists to reproduce the server's filtering in the browser, and in server mode the server
+     * has already done it — `productsData` IS the answer for the current URL. Letting it run does
+     * two harmful things at once:
+     *
+     *   · it overwrites the correct server-rendered page with a client-fetched one, so the grid
+     *     changes under the shopper a moment after the page appears;
+     *   · getProductsByCategory() walks the WHOLE category 100 rows at a time. For sante-vitalite
+     *     that is 8,849 products over 88 requests, issued concurrently, FROM THE BROWSER. The same
+     *     walk on the server side is the shape that exhausted the php-fpm pool on 12/08 —
+     *     ~40 concurrent per_page=100&page=N requests in three seconds, every child busy.
+     *
+     * The legacy (non-server) surfaces still need it, so this is an early return rather than a
+     * deletion.
+     */
+    if (isServerMode) return;
+
     const isInitialCategoryLoad = initialCategory && 
                                    selectedCategories.length > 0 && 
                                    selectedCategories[0] === initialCategory &&
@@ -909,7 +957,7 @@ function ShopContent({
     } else {
       applyFilters();
     }
-  }, [searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
+  }, [isServerMode, searchQuery, selectedCategories, selectedBrands, safeProductsData.products, brands, initialCategory, retryCount]);
 
   useEffect(() => {
     setIsDescriptionExpanded(false);
@@ -946,6 +994,21 @@ function ShopContent({
 
   // Compute filtered & sorted products
   const filteredProducts = useMemo(() => {
+    /*
+     * ── SERVER MODE SHORT-CIRCUITS THE WHOLE ENGINE BELOW ────────────────────────────────────
+     * Not an optimisation — running it would be actively wrong. The 12 products in `products` are
+     * page N of a result set the database has ALREADY narrowed and ordered. Re-applying the price,
+     * brand, stock and flavour predicates to them can only ever remove rows, so a page would render
+     * 9 of its 12 products; re-sorting them would reorder page N against pages N-1 and N+1, so a
+     * product could appear on two pages and another on none.
+     *
+     * The availability-first rule the sort below ends on is not lost: ApisController::allProducts
+     * applies the same expression as orderAvailableFirst() before its own ORDER BY, across the whole
+     * result set rather than one page of it — which is stronger, because it means the out-of-stock
+     * tail sinks to the LAST pages instead of to the bottom of every page.
+     */
+    if (isServerMode) return products;
+
     let filtered = products;
 
     // Price Filter
@@ -1026,28 +1089,92 @@ function ShopContent({
     isCreatineCategory, 
     selectedTypes, 
     selectedGoals, 
-    selectedFlavors, 
-    sortBy
+    selectedFlavors,
+    sortBy,
+    isServerMode
   ]);
 
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  /*
+   * Counts and page totals come from the paginator in server mode.
+   *
+   * `filteredProducts.length` is 12 there — it is the size of the page, not of the result set — so
+   * every use of it below (the "Affichage 25-36 sur 10 669 produits" line, the "Voir N produits"
+   * button, the pager) has to read `resultCount` instead. That substitution is the difference
+   * between a shop that says it has 10,669 products and one that insists it has 12.
+   */
+  const resultCount = isServerMode ? (serverPagination?.total ?? 0) : filteredProducts.length;
+
+  /*
+   * The six rayons for the "Parcourir par rayon" band at the foot of the page. Derived from the
+   * props the page already ships — `categories` for the names and `facets.category_counts` for the
+   * numbers, which /api/shop_facets computes anyway — so the band costs no fetch and no payload.
+   * `scoped` inside the navigation callback answers the same question, but it is a local there.
+   */
+  const isBoutiqueRoot = serverBasePath === '/shop';
+  const browseCategories = useMemo(
+    () =>
+      (categories ?? [])
+        .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
+          Boolean(c?.slug && c?.designation_fr)
+        )
+        .map((c) => ({
+          slug: c.slug,
+          designation_fr: c.designation_fr.trim(),
+          count: Number(facets?.category_counts?.[c.slug] ?? 0) || 0,
+        }))
+        .sort((a, b) => b.count - a.count),
+    [categories, facets]
+  );
+  const totalPages = isServerMode
+    ? (serverPagination?.totalPages ?? 1)
+    : Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
   const paginatedProducts = useMemo(() => {
+    // The server already sliced. Slicing again would show 12 of 12 on page 1 and nothing after.
+    if (isServerMode) return filteredProducts;
     const startIndex = (currentPage - 1) * PRODUCTS_PER_PAGE;
     const endIndex = startIndex + PRODUCTS_PER_PAGE;
     return filteredProducts.slice(startIndex, endIndex);
-  }, [filteredProducts, currentPage]);
+  }, [filteredProducts, currentPage, isServerMode, PRODUCTS_PER_PAGE]);
 
   useEffect(() => {
+    // In server mode the page number lives in the URL and pushQuery already resets it to 1 on every
+    // filter change. Running this as well would fight the re-seeding effect: it fires on the state
+    // change that a navigation to ?page=4 causes, snapping currentPage back to 1 while the grid
+    // showed page 4 — a pager that highlights the wrong page on every turn.
+    if (isServerMode) return;
     setCurrentPage(1);
-  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly, selectedTypes, selectedGoals, selectedFlavors]);
+  }, [searchQuery, selectedCategories, selectedBrands, debouncedPriceRange, inStockOnly, selectedTypes, selectedGoals, selectedFlavors, isServerMode]);
 
+  /*
+   * ── EVERY TOGGLE BELOW WRITES TO THE URL IN SERVER MODE ──────────────────────────────────
+   * Each keeps its existing local-state behaviour verbatim on the legacy path (category pages,
+   * brand pages, subcategory pages) and pushes a new URL on /shop. The push is computed from the
+   * CURRENT server query rather than from local state, because local state can be one render behind
+   * a navigation and a filter computed from stale state silently drops the shopper's previous
+   * choice.
+   *
+   * Category and brand stay single-select, exactly as they were — `[slug]` not `[...prev, slug]`.
+   * The API accepts a list and the URL format carries one, so multi-select is now a UI change away,
+   * but changing it here would have made this migration a behaviour change as well as a plumbing
+   * one, and only one of those is safe to ship at a time.
+   */
   const toggleCategory = (categorySlug: string) => {
+    if (isServerMode && serverQuery) {
+      const next = serverQuery.categories.includes(categorySlug) ? [] : [categorySlug];
+      pushQuery({ categories: next });
+      return;
+    }
     setSelectedCategories(prev =>
       prev.includes(categorySlug) ? prev.filter(c => c !== categorySlug) : [categorySlug]
     );
   };
 
   const toggleBrand = (brandId: number) => {
+    if (isServerMode && serverQuery) {
+      const next = serverQuery.brands.includes(brandId) ? [] : [brandId];
+      pushQuery({ brands: next });
+      return;
+    }
     setSelectedBrands(prev =>
       prev.includes(brandId) ? prev.filter(b => b !== brandId) : [brandId]
     );
@@ -1066,10 +1193,53 @@ function ShopContent({
   };
 
   const toggleFlavor = (flavor: string) => {
+    if (isServerMode && serverQuery) {
+      const next = serverQuery.flavors.includes(flavor)
+        ? serverQuery.flavors.filter(f => f !== flavor)
+        : [...serverQuery.flavors, flavor];
+      pushQuery({ flavors: next });
+      return;
+    }
     setSelectedFlavors(prev =>
       prev.includes(flavor) ? prev.filter(f => f !== flavor) : [...prev, flavor]
     );
   };
+
+  /** "Disponible uniquement". Server mode turns it into ?in_stock=1 rather than a local predicate. */
+  const handleInStockChange = (next: boolean) => {
+    if (isServerMode) {
+      // Optimistic: the checkbox must tick on the click, not after the round trip.
+      setInStockOnly(next);
+      pushQuery({ inStock: next });
+      return;
+    }
+    setInStockOnly(next);
+  };
+
+  const handleSortChange = (next: string) => {
+    setSortBy(next);
+    if (isServerMode) pushQuery({ sort: next as ShopSort });
+  };
+
+  /*
+   * The shop's own search box. Debounced to 400 ms in server mode so typing "whey protein" is one
+   * navigation, not twelve — each of which would be a server render and an API call.
+   *
+   * The input stays fully controlled by local state so there is no lag between the keystroke and
+   * the character appearing; only the navigation is deferred.
+   */
+  const searchDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const handleSearchChange = (next: string) => {
+    setSearchQuery(next);
+    if (!isServerMode) return;
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+    searchDebounceRef.current = setTimeout(() => {
+      pushQuery({ search: next.trim() });
+    }, 400);
+  };
+  useEffect(() => () => {
+    if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
+  }, []);
 
   const clearFilters = () => {
     setSearchQuery('');
@@ -1077,16 +1247,38 @@ function ShopContent({
     setSelectedBrands([]);
     setPriceRange([priceBounds.min, priceBounds.max]);
     setInStockOnly(false);
-    setSortBy('popularity');
+    setSortBy(DEFAULT_SHOP_SORT);
     setSelectedTypes([]);
     setSelectedGoals([]);
     setSelectedFlavors([]);
     setCurrentPage(1);
+    if (isServerMode) {
+      // Do NOT reset `products` from props here — in server mode the props are the CURRENT filtered
+      // page, so seeding from them would leave the old results on screen under a cleared sidebar.
+      // The navigation to /shop is what refills the grid.
+      setIsNavigating(true);
+      router.push('/shop');
+      return;
+    }
     setProducts(safeProductsData.products || []);
     router.push('/shop');
   };
 
   const handlePageChange = (page: number) => {
+    if (isServerMode) {
+      /*
+       * NO router.push HERE. In server mode the pager renders <Link href> (see buildHref at the
+       * render site) and Next performs the navigation itself — pushing as well would fire the same
+       * navigation twice, which shows up as a doubled history entry and a second render of the same
+       * page. This handler's whole job is the optimistic state so the button highlights on the
+       * click rather than after the round trip; the re-seeding effect then confirms the page number
+       * from the server's own `current_page`.
+       */
+      setCurrentPage(page);
+      setIsNavigating(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -1095,7 +1287,9 @@ function ShopContent({
   // desktop aside (see <ProductFilters>), so the two panels can never drift again.
   const filterProps = {
     inStockOnly,
-    setInStockOnly,
+    // The handler, not the raw setter: in server mode "disponible uniquement" is ?in_stock=1, and
+    // passing setInStockOnly here would tick the box while the grid kept every out-of-stock product.
+    setInStockOnly: handleInStockChange,
     isCreatineCategory,
     selectedTypes,
     toggleType,
@@ -1112,20 +1306,43 @@ function ShopContent({
     selectedBrands,
     toggleBrand,
     priceRange,
-    setPriceRange,
+    // The handler, not the raw setter. In server mode the price filter is ?min_price/?max_price, and
+    // the push has to originate here — from the drag — rather than from an effect watching state.
+    setPriceRange: handlePriceChange,
     priceBounds,
     sortBy,
-    setSortBy,
+    setSortBy: handleSortChange,
+    inStockCount,
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
-      {/* Own boundary, so reading search params defers only this null-rendering leaf (see above). */}
-      <Suspense fallback={null}>
-        <UrlFilterSync onChange={setUrlFilters} />
-      </Suspense>
+    <div className="min-h-screen bg-canvas">
+      {/* Own boundary, so reading search params defers only this null-rendering leaf (see above).
+          Not mounted in server mode: the server page already parsed the query string and passed it
+          down as `serverQuery`, so this would be a second, weaker reading of the same URL. */}
+      {!isServerMode && (
+        <Suspense fallback={null}>
+          <UrlFilterSync onChange={setUrlFilters} />
+        </Suspense>
+      )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16 animate-fade-in">
+      {/*
+        ── THE RAIL IS max-w-site (1600), NOT max-w-7xl (1280) ───────────────────────────────
+        Owner, 19/08/2026: *"use the full width — why are we losing all of that white space?"*
+
+        MEASURED on the live page at a 1536 viewport: the content rail was 1,280px, so 256px —
+        17% of the window — was margin either side of a product grid. Every other full-width band
+        on this site runs on `max-w-site`; the boutique, the page with the most cards on it, was
+        the one surface not sharing the site's rail. tailwind.config.ts says exactly this: "if two
+        of them disagree their edges visibly step in and out down the page."
+
+        The extra 320px is what pays for the fourth column at `xl` below.
+
+        `py` comes down with it (32/48/64 -> 24/32/40): the old top padding was tuned when the
+        page was narrower and the grid shorter, and 64px of nothing above an H1 on a listing page
+        is a header, not breathing room.
+      */}
+      <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -1162,7 +1379,14 @@ function ShopContent({
             }
           }
           
-          return breadcrumbItems.length > 1 ? (
+          /*
+             `> 0`, not `> 1`. On /shop itself the array holds exactly one item — Boutique — and the
+             old guard rendered null, so the page emitted BreadcrumbList JSON-LD with no visible
+             counterpart and no link back to the homepage from its main content. ShopBreadcrumbs
+             injects the "Accueil" crumb itself and renders the last item unlinked, so `> 0` gives
+             "Accueil › Boutique" with a real anchor on Accueil and the current page as text.
+          */
+          return breadcrumbItems.length > 0 ? (
             <div className="mb-4">
               <ShopBreadcrumbs items={breadcrumbItems} />
             </div>
@@ -1188,17 +1412,27 @@ function ShopContent({
         {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
         {topCategorySubcategories.length > 0 && (
           <nav aria-label="Sous-catégories" className="mb-6 sm:mb-8">
-            <h2 className="text-xs font-display font-semibold uppercase tracking-wider text-red-600 dark:text-red-400 mb-3">
-              Sous-catégories
-            </h2>
-            <ul className="flex flex-wrap gap-2">
+            <div className="mb-3 flex items-center justify-between gap-4">
+              <h2 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand">
+                Explorer ce rayon
+              </h2>
+              <span className="text-xs tabular-nums text-ink-3">{topCategorySubcategories.length} catégories</span>
+            </div>
+            <ul
+              className={
+                topCategorySubcategories.length <= 6
+                  ? 'grid grid-cols-2 gap-2 sm:grid-cols-3'
+                  : '-mx-4 flex snap-x snap-mandatory gap-2 overflow-x-auto px-4 pb-2 [scrollbar-width:none] sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:hidden'
+              }
+            >
               {topCategorySubcategories.map((sub) => (
-                <li key={sub.slug}>
+                <li key={sub.slug} className={topCategorySubcategories.length > 6 ? 'w-[11.25rem] shrink-0 snap-start sm:w-[12.5rem]' : undefined}>
                   <Link
                     href={`/${sub.slug}`}
-                    className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 shadow-sm transition-colors hover:border-red-500 hover:text-red-600 dark:hover:border-red-500 dark:hover:text-red-400"
+                    className="group flex min-h-[50px] w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-elevated px-3.5 py-2.5 text-[13px] font-semibold leading-tight text-ink-2 shadow-sm transition-[border-color,color,transform] hover:-translate-y-0.5 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   >
-                    {sub.designation_fr}
+                    <span className="line-clamp-2">{sub.designation_fr}</span>
+                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -1249,245 +1483,353 @@ function ShopContent({
           </div>
         )}
 
-        {/* Page title and product counts */}
-        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <div>
+        {/*
+          ── THE HEADING, AND WHY THE COUNT IS BESIDE IT RATHER THAN UNDER IT ────────────────
+          The boutique's H1 is a 40px compressed line and the result count was a 12px grey line
+          under it with 8px between them — two blocks of type doing one job. On the baseline they
+          read as one sentence: what this page is, and how much of it there is.
+        */}
+        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-6">
+          <div className="min-w-0">
             {!categorySeoLanding && !isSubcategory && (
               // Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
               // rewritten to that route, so the two are the same page to a searcher but were two
-              // different headings: "Boutique — Protéines & Compléments Alimentaires en Tunisie" for
-              // the bot, "Tous nos produits" for everyone else. Divergent h1s on one URL are the
-              // thing that turns dynamic rendering into cloaking, and "Tous nos produits" names no
-              // product, category or country — nothing a Tunisian searcher would ever type.
-              <h1 className="font-display uppercase tracking-tight leading-[0.95] text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white">
+              // different headings — divergent h1s on one URL are what turns dynamic rendering into
+              // cloaking.
+              <h1 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
                 {currentBrand
                   ? `Produits ${currentBrand.designation_fr}`
                   : 'Boutique — Protéines & Compléments Alimentaires en Tunisie'}
               </h1>
             )}
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-2">
-              {!showSkeleton && (totalPages > 1 ? (
-                `Affichage ${(currentPage - 1) * PRODUCTS_PER_PAGE + 1}-${Math.min(currentPage * PRODUCTS_PER_PAGE, filteredProducts.length)} sur ${filteredProducts.length} produits`
-              ) : (
-                `${filteredProducts.length} produit${filteredProducts.length > 1 ? 's' : ''} trouvé${filteredProducts.length > 1 ? 's' : ''}`
-              ))}
-            </p>
           </div>
+          {!showSkeleton && (
+            <p className="shrink-0 text-[13px] tabular-nums text-ink-2 sm:pb-1">
+              {/* resultCount, not filteredProducts.length — in server mode the latter is the size of
+                  the page, so this would read "24 produits" on an 11,263-product catalogue. */}
+              {totalPages > 1 ? (
+                <>
+                  <span className="font-semibold text-ink-1">
+                    {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–
+                    {Math.min(currentPage * PRODUCTS_PER_PAGE, resultCount)}
+                  </span>{' '}
+                  sur <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produits
+                </>
+              ) : (
+                <>
+                  <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produit
+                  {resultCount > 1 ? 's' : ''}
+                </>
+              )}
+            </p>
+          )}
         </div>
 
-        {/* Search, Filter & Sort Row */}
-        <div className="flex flex-col md:flex-row gap-2 sm:gap-3 mb-4 sm:mb-6">
-          <div className="flex-1 relative min-w-0">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 pointer-events-none" aria-hidden="true" />
-            <Input
-              type="search"
-              placeholder="Rechercher un produit..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-9 min-h-[44px] bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 focus:border-red-500 dark:focus:border-red-500 rounded-xl shadow-sm placeholder:text-gray-400 text-sm"
-            />
-          </div>
-          
-          <div className="flex items-center gap-3 w-full md:w-auto">
-            {/* Dynamic Sorting Select dropdown (Radix Select) */}
-            <div className="flex-1 md:w-56 min-w-[155px]">
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="min-h-[44px] h-auto border-gray-200 dark:border-gray-700 focus:ring-red-500 rounded-xl">
-                  <SelectValue placeholder="Trier par" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="popularity">Popularité</SelectItem>
-                  <SelectItem value="price-asc">Prix : croissant</SelectItem>
-                  <SelectItem value="price-desc">Prix : décroissant</SelectItem>
-                  <SelectItem value="newest">Nouveautés</SelectItem>
-                  <SelectItem value="best-sellers">Meilleures ventes</SelectItem>
-                </SelectContent>
-              </Select>
+        {/*
+          ── THE TOOLBAR IS STICKY ─────────────────────────────────────────────────────────
+          At 24 products a page the grid is ~2,400px tall, so the sort control and the filter
+          button spend most of the page's scroll off-screen. Sticking the toolbar means changing
+          your mind about the order does not mean scrolling back to the top — on a listing page
+          that is the single most-wanted control and it was the one furthest away.
+
+          `top-[var(--header-h,4rem)]` rather than `top-0`: the site header is sticky too, and a
+          toolbar pinned at 0 slides underneath it.
+        */}
+        <div className="sticky top-[var(--header-h)] z-30 -mx-4 mb-4 border-b border-rule bg-canvas px-4 py-2 transition-[top] duration-200 motion-reduce:transition-none sm:-mx-6 sm:px-6 sm:py-2.5 lg:-mx-8 lg:px-8">
+          {/* ONE ROW AT EVERY WIDTH. It was `flex-col` below `md`, which made the pinned bar two
+              rows and 118px tall — on a 390px phone that was 118 of the 186px of chrome standing
+              between the reader and a product. Sort collapses to its icon below `sm` instead,
+              which is the control that survives compression best: it has a default nobody changes,
+              and when somebody does change it the button goes brand-coloured, the same way the
+              filter count does. */}
+          <div className="flex min-w-0 items-center gap-2 md:gap-3">
+            <div className="relative min-w-0 flex-1">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                aria-hidden="true"
+              />
+              <input
+                type="text"
+                inputMode="search"
+                /* Short enough to survive the ~200px this field gets on a 390px phone once
+                   sort and Filtres are beside it. The full sentence is on aria-label, where it
+                   costs no pixels. */
+                placeholder="Rechercher…"
+                value={searchQuery}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                aria-label="Rechercher dans la boutique"
+                /* 16px on a phone — iOS Safari zooms the viewport on focusing any input under it. */
+                className="h-11 w-full rounded-xl border border-hairline bg-elevated pl-9 pr-9 text-[16px] text-ink-1 placeholder:text-ink-3 transition-colors focus:border-brand focus:outline-none focus:ring-2 focus:ring-focus/15 sm:text-[13.5px]"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => handleSearchChange('')}
+                  aria-label="Effacer la recherche"
+                  /* 28px VISUAL, 44px TARGET. Growing the box to 44 would drag the X off the
+                     input's optical centre, which is worse than the small glyph; `after:-inset-2`
+                     extends the hit area instead. DESIGN_SYSTEM's 44px floor is about what a thumb
+                     can land on, not about what is painted. */
+                  className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-lg text-ink-3 transition-colors after:absolute after:-inset-2 after:content-[''] hover:text-brand"
+                >
+                  <X className="h-4 w-4" aria-hidden="true" />
+                </button>
+              )}
             </div>
 
-            {/* Desktop toggle filters view */}
-            <Button
-              variant="outline"
-              onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
-              className="hidden lg:flex items-center gap-2 min-h-[44px] border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 rounded-xl"
-            >
-              <Filter className="h-4 w-4" />
-              <span>Filtres</span>
-              {appliedFilters.length > 0 && (
-                <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                  {appliedFilters.length}
-                </Badge>
-              )}
-            </Button>
-
-            {/* Mobile filter drawer sheet */}
-            <Sheet open={showFilters} onOpenChange={setShowFilters}>
-              <SheetTrigger asChild>
-                <Button
-                  variant="outline"
-                  className="lg:hidden shrink-0 min-h-[44px] px-4 border-gray-200 dark:border-gray-700 rounded-xl"
-                  aria-label="Ouvrir les filtres"
+            <div className="flex shrink-0 items-center gap-2">
+              {/* `w-11` below `sm` renders the trigger as a square icon button — Radix keeps the
+                  listbox and the keyboard behaviour, only the label is dropped. `sortIsDefault`
+                  drives the brand outline, so a phone still shows that a sort is APPLIED even
+                  though it cannot show which one until the sheet opens. */}
+              <div className="relative shrink-0">
+                <select
+                  value={sortBy}
+                  onChange={(event) => handleSortChange(event.target.value as ShopSort)}
+                  aria-label={`Trier — ${SORT_OPTIONS.find((o) => o.value === sortBy)?.label ?? 'Popularité'}`}
+                  className={`h-11 w-11 cursor-pointer rounded-xl border bg-elevated px-0 text-transparent outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-focus/15 sm:w-44 sm:px-3 sm:text-[13.5px] lg:w-52 ${
+                    sortIsDefault ? 'border-hairline sm:text-ink-1' : 'border-brand sm:text-brand'
+                  }`}
                 >
-                  <SlidersHorizontal className="h-4 w-4 mr-2" />
-                  <span>Filtres</span>
-                  {(appliedFilters.length > 0) && (
-                    <Badge variant="secondary" className="ml-1 h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                      {appliedFilters.length}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent
-                side="bottom"
-                showCloseButton={false}
-                className="h-[92dvh] max-h-[92dvh] rounded-t-2xl p-0 gap-0 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex flex-col"
-              >
-                {/* Grab handle */}
-                <div className="shrink-0 flex justify-center pt-3 pb-1">
-                  <span className="h-1.5 w-10 rounded-full bg-gray-300 dark:bg-gray-700" aria-hidden="true" />
-                </div>
+                  {SORT_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value} className="text-ink-1">
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <ArrowDownUp
+                  className={`pointer-events-none absolute left-1/2 top-1/2 h-4 w-4 -translate-x-1/2 -translate-y-1/2 sm:hidden ${
+                    sortIsDefault ? 'text-ink-1' : 'text-brand'
+                  }`}
+                  aria-hidden="true"
+                />
+              </div>
 
-                {/* Header: title + active count + close (44px) */}
-                <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 px-4 pb-3 pt-1 border-b border-gray-200 dark:border-gray-800">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <SheetTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white">
-                      <Filter className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
-                      Filtres
-                    </SheetTitle>
-                    {appliedFilters.length > 0 && (
-                      <Badge variant="secondary" className="h-5 min-w-[20px] px-1.5 text-xs bg-red-100 text-red-600 dark:bg-red-950 dark:text-red-400">
-                        {appliedFilters.length}
-                      </Badge>
-                    )}
-                  </div>
+              {/* Desktop: collapse the rail. It stays OPEN by default now — a filter rail that
+                  has to be summoned is a filter rail nobody uses, and this page has 577 brands
+                  and six aisles behind it. */}
+              <button
+                type="button"
+                onClick={() => setShowFiltersDesktop(!showFiltersDesktop)}
+                aria-pressed={showFiltersDesktop}
+                className="hidden h-11 items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-[13.5px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand lg:flex"
+              >
+                <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                Filtres
+                {appliedFilters.length > 0 && (
+                  <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                    {appliedFilters.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Phone: the same rail in a bottom sheet. */}
+              {mobileFiltersReady ? (
+              <Sheet open={showFilters} onOpenChange={setShowFilters}>
+                <SheetTrigger asChild>
                   <button
                     type="button"
-                    onClick={() => setShowFilters(false)}
-                    aria-label="Fermer les filtres"
-                    className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                    aria-label="Ouvrir les filtres"
+                    /* Keeps its word at every width. It is the highest-value control on this bar
+                       — the one that takes 11,263 products down to something a person can read —
+                       and an unlabelled funnel glyph is the commonest way that gets missed. */
+                    className={`flex h-11 shrink-0 items-center gap-2 rounded-xl border bg-elevated px-3.5 text-[13.5px] font-semibold transition-colors sm:px-4 lg:hidden ${
+                      appliedFilters.length > 0
+                        ? 'border-brand text-brand'
+                        : 'border-hairline text-ink-1 hover:border-brand'
+                    }`}
                   >
-                    <X className="h-5 w-5" />
+                    <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                    Filtres
+                    {appliedFilters.length > 0 && (
+                      <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                        {appliedFilters.length}
+                      </span>
+                    )}
                   </button>
-                </SheetHeader>
-
-                {/* Scrollable filter body */}
-                <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-4">
-                  <ProductFilters variant="mobile" {...filterProps} />
-                </div>
-
-                {/* Sticky action footer: Réinitialiser + Appliquer */}
-                <div className="shrink-0 flex items-center gap-3 border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-                  <Button
-                    variant="outline"
-                    onClick={clearFilters}
-                    className="min-h-[48px] flex-1 rounded-xl border-gray-300 dark:border-gray-700 font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800"
-                  >
-                    Réinitialiser
-                  </Button>
-                  <Button
-                    onClick={() => setShowFilters(false)}
-                    className="min-h-[48px] flex-[1.7] rounded-xl font-display uppercase tracking-wide font-semibold bg-red-600 hover:bg-red-700 text-white shadow-sm"
-                  >
-                    Voir {filteredProducts.length} produit{filteredProducts.length > 1 ? 's' : ''}
-                  </Button>
-                </div>
-              </SheetContent>
-            </Sheet>
+                </SheetTrigger>
+                <SheetContent
+                  side="bottom"
+                  showCloseButton={false}
+                  className="flex h-[92dvh] max-h-[92dvh] flex-col gap-0 rounded-t-2xl border-t border-hairline bg-elevated p-0"
+                >
+                  <div className="flex shrink-0 justify-center pb-1 pt-3">
+                    <span className="h-1.5 w-10 rounded-full bg-rule" aria-hidden="true" />
+                  </div>
+                  <SheetHeader className="shrink-0 flex-row items-center justify-between gap-2 space-y-0 border-b border-hairline px-4 pb-3 pt-1">
+                    <SheetTitle className="flex items-center gap-2 font-display text-base font-bold uppercase tracking-wide text-ink-1">
+                      <Filter className="h-4 w-4 text-brand" aria-hidden="true" />
+                      Filtres
+                      {appliedFilters.length > 0 && (
+                        <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-brand px-1.5 text-[11px] font-bold text-on-brand">
+                          {appliedFilters.length}
+                        </span>
+                      )}
+                    </SheetTitle>
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      aria-label="Fermer les filtres"
+                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
+                    >
+                      <X className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </SheetHeader>
+                  <div className="flex-1 overflow-y-auto overflow-x-hidden px-4 py-2">
+                    <ShopFilters
+                      variant="mobile"
+                      {...filterProps}
+                      appliedFilters={appliedFilters}
+                      removeFilter={removeFilter}
+                      clearFilters={clearFilters}
+                    />
+                  </div>
+                  <div className="flex shrink-0 items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+                    {appliedFilters.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={clearFilters}
+                        className="min-h-[48px] flex-1 rounded-xl border border-rule text-[14px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                      >
+                        Réinitialiser
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setShowFilters(false)}
+                      className="min-h-[48px] flex-[1.7] rounded-xl bg-brand font-display text-[14px] font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover"
+                    >
+                      Voir {resultCount.toLocaleString('fr-FR')} produit{resultCount > 1 ? 's' : ''}
+                    </button>
+                  </div>
+                </SheetContent>
+              </Sheet>
+              ) : (
+                <button
+                  type="button"
+                  disabled
+                  aria-label="Chargement des filtres"
+                  className="flex h-11 shrink-0 items-center gap-2 rounded-xl border border-hairline bg-elevated px-3.5 text-[13.5px] font-semibold text-ink-1 sm:px-4 lg:hidden"
+                >
+                  <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+                  Filtres
+                </button>
+              )}
+            </div>
           </div>
+
+          {/* ── ACTIVE FILTERS ─────────────────────────────────────────────────────────────
+              Inside the sticky toolbar, not below it. A chip that scrolls away is a filter the
+              shopper stops being able to see they applied — which is the commonest way a
+              "nothing matches" screen gets read as a broken shop. */}
+          {appliedFilters.length > 0 && (
+            <div className="mt-2 flex flex-wrap items-center gap-1.5">
+              {appliedFilters.map((filter, index) => (
+                <button
+                  key={`${filter.type}-${filter.value}-${index}`}
+                  type="button"
+                  onClick={() => removeFilter(filter.type, filter.value)}
+                  aria-label={`Retirer le filtre ${filter.label}`}
+                  /* Same trick as the clear button, and here it is load-bearing: these chips sit
+                     INSIDE the pinned toolbar, so raising them to a real 44px would spend the
+                     viewport the header-h work just bought back. The inset is asymmetric
+                     (`-inset-y-1.5 -inset-x-1`) because `gap-1.5` between adjacent chips is 6px —
+                     a uniform -inset-2 would make neighbouring hit boxes overlap. */
+                  className="group relative inline-flex min-h-[30px] items-center gap-1.5 rounded-full border border-brand/30 bg-brand/[0.07] pl-3 pr-2 text-[12px] font-semibold text-ink-1 transition-colors after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-[''] hover:border-brand hover:bg-brand/15"
+                >
+                  {filter.label}
+                  <X className="h-3.5 w-3.5 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={clearFilters}
+                className="relative ml-0.5 inline-flex min-h-[30px] items-center rounded-full px-2.5 text-[12px] font-semibold text-brand transition-colors after:absolute after:-inset-x-1 after:-inset-y-1.5 after:content-[''] hover:underline"
+              >
+                Tout effacer
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Applied Filters Badges / Chips */}
-        {appliedFilters.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-6">
-            <span className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-400">Filtres actifs :</span>
-            {appliedFilters.map((filter, index) => (
-              <Badge
-                key={`${filter.type}-${filter.value}-${index}`}
-                variant="outline"
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs sm:text-sm bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-800 rounded-xl"
-              >
-                <span className="text-gray-900 dark:text-gray-100 font-medium">{filter.label}</span>
-                <button
-                  onClick={() => removeFilter(filter.type, filter.value)}
-                  className="-mr-1 ml-0.5 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full p-1 transition-colors"
-                  aria-label={`Retirer le filtre ${filter.label}`}
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              </Badge>
-            ))}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="text-xs text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/20 h-8 rounded-lg"
-            >
-              Tout effacer
-            </Button>
-          </div>
-        )}
-
         {/* Grid and Sidebar main split */}
-        <div className="flex flex-col lg:flex-row gap-6">
-          {/* Collapsible Desktop Filter Panel */}
-          {showFiltersDesktop && (
-              <aside className="hidden lg:block w-72 flex-shrink-0">
-                <div className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800 px-5 pt-5 pb-8 space-y-1 sticky top-4 shadow-sm">
-                  <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-100 dark:border-gray-800">
-                    <h2 className="font-display font-bold text-sm tracking-wide uppercase text-gray-900 dark:text-white flex items-center gap-1.5">
-                      <Filter className="h-3.5 w-3.5 text-red-600 dark:text-red-400" /> Filtres
-                    </h2>
-                    <div className="flex items-center gap-1.5">
-                      {appliedFilters.length > 0 && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={clearFilters}
-                          className="text-xs text-red-600 hover:text-red-700 h-7 px-2"
-                        >
-                          Tout effacer
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setShowFiltersDesktop(false)}
-                        className="h-7 w-7 p-0"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
+        <div className="flex flex-col gap-6 lg:flex-row lg:gap-8">
+          {/*
+            ── THE RAIL IS 17rem AND IT STICKS ──────────────────────────────────
+            272px rather than 288: the extra 16px goes to the grid, where it is the difference
+            between four ~296px cards and four ~292px ones at 1600.
 
-                  <ProductFilters variant="desktop" {...filterProps} />
+            THE OFFSET IS DERIVED, NOT TYPED. It was `top-[8.5rem]` — 136px — chosen when the
+            toolbar above it pinned at a hardcoded 68px and ended at 134px. The day the toolbar
+            moved to `top-[var(--header-h)]` that arithmetic stopped holding and nothing complained:
+            measured at 1536, the toolbar now runs 94 -> 160 in the compact state and 114 -> 180 at
+            rest, so the rail's "Filtres" heading pinned 24px (compact) to 44px (resting) INSIDE
+            the toolbar's own box. A hardcoded offset under a derived one is a regression waiting
+            for someone to change the derived one.
+
+            `4.75rem` is 76px: the toolbar's measured 66px (py-2.5 + border-y + an h-11 control row)
+            plus a 10px gutter. `5.75rem` adds a 16px bottom gutter, so the rail's foot lands clear
+            of the viewport edge in BOTH header states rather than only the one it was measured in.
+
+            The max-height plus overflow means a rail with two dozen brands open scrolls inside
+            itself instead of pushing the page. Without that the aside was 1,800px tall and the
+            grid beside it scrolled independently — the classic listing-page fault where the
+            filters end up somewhere above the products you are looking at.
+          */}
+          {showFiltersDesktop && (
+            <aside className="hidden w-[17rem] shrink-0 lg:block">
+              <div className="sticky top-[calc(var(--header-h)+4.75rem)] max-h-[calc(100dvh-var(--header-h)-5.75rem)] overflow-y-auto overscroll-contain rounded-2xl border border-hairline bg-elevated px-4 py-3">
+                <div className="mb-1 flex items-center justify-between gap-2 border-b border-hairline pb-2.5">
+                  <h2 className="flex items-center gap-1.5 font-display text-[13px] font-bold uppercase tracking-wide text-ink-1">
+                    <Filter className="h-3.5 w-3.5 text-brand" aria-hidden="true" /> Filtres
+                  </h2>
+                  {appliedFilters.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={clearFilters}
+                      className="rounded-lg px-1.5 py-1 text-[11px] font-semibold text-brand transition-colors hover:underline"
+                    >
+                      Tout effacer
+                    </button>
+                  )}
                 </div>
-              </aside>
-            )}
+                <ShopFilters variant="desktop" {...filterProps} />
+              </div>
+            </aside>
+          )}
 
           {/* Products Grid */}
           <div className="flex-1 min-w-0">
             {filterError ? (
-              <div className="flex flex-col items-center justify-center py-12 sm:py-16 px-4">
-                <div className="rounded-lg bg-red-50 dark:bg-red-950/40 p-4 mb-4">
-                  <CircleAlert className="h-10 w-10 text-red-600 dark:text-red-400" aria-hidden />
-                </div>
-                <h3 className="font-display uppercase tracking-tight text-lg font-bold text-gray-900 dark:text-white mb-1">
+              <div className="flex flex-col items-center justify-center rounded-2xl border border-hairline bg-elevated px-4 py-16">
+                <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 text-brand">
+                  <CircleAlert className="h-7 w-7" aria-hidden="true" />
+                </span>
+                <h3 className="mb-1 font-display text-lg font-bold uppercase tracking-wide text-ink-1">
                   Une erreur s&apos;est produite
                 </h3>
-                <p className="text-gray-500 dark:text-gray-400 text-center max-w-md mb-6">
-                  {filterError.message}
-                </p>
-                <Button
+                <p className="mb-6 max-w-md text-center text-sm text-ink-2">{filterError.message}</p>
+                <button
+                  type="button"
                   onClick={() => { setFilterError(null); setRetryCount(c => c + 1); }}
-                  className="gap-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide min-h-[44px]"
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-brand px-6 font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover"
                 >
                   Réessayer
-                </Button>
+                </button>
               </div>
-            ) : showSkeleton ? (
-              <ProductsSkeleton showBreadcrumb={false} showFilters={false} />
+            ) : showSkeleton || isNavigating ? (
+              /* isNavigating: in server mode a filter or a page turn is a real round trip, and
+                 without this the previous page's twelve products stay on screen for its whole
+                 duration with no feedback — long enough on a Tunisian mobile connection for a
+                 shopper to conclude the click did nothing and click again. */
+              <ProductsSkeleton
+                showBreadcrumb={false}
+                showFilters={false}
+                gridClassName={SHOP_GRID_COLS}
+                cardCount={SHOP_PER_PAGE}
+              />
             ) : filteredProducts.length === 0 ? (
-              <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+              <div className="rounded-2xl border border-hairline bg-elevated">
                 <EmptyState
                   title="Aucun résultat"
                   description="Aucun produit ne correspond à ces filtres."
@@ -1495,29 +1837,97 @@ function ShopContent({
                   className="pb-2"
                 />
                 <div className="flex justify-center pb-12 sm:pb-16">
-                  <Button
-                    variant="outline"
+                  <button
+                    type="button"
                     onClick={clearFilters}
-                    className="rounded-xl border-red-600 text-red-600 hover:bg-red-50 hover:text-red-700 dark:border-red-400 dark:text-red-400 dark:hover:bg-red-950/40 min-h-[44px]"
+                    className="inline-flex min-h-[44px] items-center rounded-xl border border-brand px-5 text-sm font-semibold text-brand transition-colors hover:bg-brand hover:text-on-brand"
                   >
                     Réinitialiser les filtres
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : (
               <div className="space-y-8 sm:space-y-12">
-                <ProductGrid className="min-w-0 w-full">
+                {/*
+                  ── THE COLUMN LADDER IS SET BY THE CARD'S WIDTH, NOT BY THE BREAKPOINT NAME ──
+                  MEASURED with the 272px filter rail open, at every step:
+
+                      lg   1024   2 cols   344px
+                      xl   1280   3 cols   288px
+                      2xl  1536   4 cols   274px      <- the owner's screen (1920 at 125%)
+                           1920   4 cols   290px      (rail capped at max-w-site)
+
+                  The first attempt was `xl:grid-cols-4`, and that put the fourth column in at
+                  1280 where it measured 210px — narrower than the 285px the card was rebuilt at
+                  yesterday, and the exact "squeezed" failure that card work was fixing. The
+                  breakpoint that can afford four columns beside this rail is 1536, so that is
+                  where the fourth column starts.
+
+                  The same string goes to <ProductsSkeleton> below, and that is not tidiness: the
+                  skeleton renders through this same primitive, so a mismatch re-columns the grid
+                  the moment hydration swaps one for the other — CLS on the page with the most
+                  cards on it.
+                */}
+                <ProductGrid className={`pt-grid-stagger min-w-0 w-full ${SHOP_GRID_COLS}`}>
                   {paginatedProducts.map((product, idx) => (
                     <ProductCard
                       key={product.id}
                       product={product}
                       variant="compact"
                       imageContext="packs"
+                      /* Three columns, so the card is 285px with the filter rail open and 389px
+                         with it closed at 1280 — against the default declaration's 205px. Without
+                         this the browser keeps fetching the 4-up file and paints it into a box
+                         nearly twice as wide, which is exactly the softness the wider cards were
+                         meant to cure. Steps below `lg` are unchanged because the grid is. */
+                      /* Re-derived for the wider rail and the fourth column: at `xl` a card is
+                         ~300px of a 1600px rail, which is 19vw, not 30. Declaring 30vw made the
+                         browser fetch a file half again too large for every card on the page. */
+                      /* Re-derived against the MEASURED card width at every step of the ladder
+                         above, not guessed: 46vw (2-up), 32vw (3-up at md), 35vw (2-up at lg
+                         beside the rail), 25vw (3-up at xl), 19vw (4-up at 2xl). The previous
+                         string declared 30vw where the card is 34 and 19vw where it is 25, so the
+                         browser was fetching a file a step too small and painting it into a wider
+                         box — which is the softness the bigger cards were meant to cure. */
+                      /*
+                        ── THE LADDER HAS SIX STEPS AND THE OLD STRING DESCRIBED FOUR ──────────
+                        `46vw` below 640 described a 2-up phone grid this page does not have.
+                        Below `sm` the card is a ROW, not a tile: ProductCard pins the image column
+                        to a fixed `w-[104px]` (`min-[360px]:w-[124px]`), and PackCardImage insets
+                        the <Image> by 4%. So at 390px the real box is 124 x 0.92 = 114 CSS px
+                        against 179px declared — a 1.57x over-declaration, which at DPR 3 makes the
+                        browser choose the 640w candidate where 384w would do. 2.78x the pixels, on
+                        the connection least able to afford them.
+
+                        The window 641-767 had the opposite fault: one `32vw` bracket UNDER-declared
+                        a 2-up grid by ~30%, so the browser upscaled a candidate that was too small
+                        and the packshots were soft.
+
+                        Six brackets for the six real steps of `ProductGrid` twMerged with the
+                        override below — 1 / 2 / 3 / 2 / 3 / 4 columns — each derived as
+                        (card width x 0.92) at the WIDEST point of its range:
+                          <360   the fixed 104px column
+                          360-639 the fixed 124px column
+                          640-767 2-up, peaks 42vw at 767   -> 45
+                          768-1023 3-up, peaks 28.2vw       -> 30
+                          1024-1279 2-up beside the 272px rail, peaks 31.9vw -> 33
+                          1280-1535 3-up, peaks 22.3vw      -> 23
+                          >=1536 4-up, 16.4vw at 1536       -> 18
+
+                        Getting this wrong is SILENT — nothing errors, the page just ships the
+                        wrong bytes. Re-derive it here if the column ladder below ever changes.
+                      */
+                      imageSizes="(max-width: 359px) 104px, (max-width: 639px) 124px, (max-width: 767px) 45vw, (max-width: 1023px) 30vw, (max-width: 1279px) 33vw, (max-width: 1535px) 23vw, 18vw"
                       // Mobile-first: the shop grid is 2-col on phones (81% of traffic), so only
                       // the first 2 cards are above the fold. Eager-loading 4 made cards 3–4
                       // (off-screen on mobile) compete with the LCP image. Prioritize just the
                       // first 2; the rest lazy-load (still prompt near the desktop fold).
-                      priority={idx < 2}
+                      /* The first ROW, not the first two cards. LCP on this page is a product
+                         image, and at 4-up the first row is four of them — leaving cards 3 and 4
+                         lazy meant the largest painted element was often one the browser had been
+                         told not to hurry. Two on a phone (2-up), four from `lg`, and the cost of
+                         being wrong is bounded: `priority` on four 300px images is ~40 KB. */
+                      priority={idx < 4}
                     />
                   ))}
                 </ProductGrid>
@@ -1527,6 +1937,16 @@ function ShopContent({
                       currentPage={currentPage}
                       totalPages={totalPages}
                       onPageChange={handlePageChange}
+                      /* Real <a href="/shop?page=N"> in server mode. With 10,669 products at 12 a
+                         page this pager IS the crawl path to pages 2-890 — as onClick buttons it
+                         was a dead end for both Googlebot and anyone trying to open page 4 in a new
+                         tab. Omitted on the legacy category/brand views, whose pagination is still
+                         client state and has no URL to point at. */
+                      buildHref={
+                        isServerMode && serverQuery
+                          ? (page) => buildShopUrl({ ...serverQuery, page }, serverBasePath)
+                          : undefined
+                      }
                     />
                   </div>
                 )}
@@ -1541,6 +1961,43 @@ function ShopContent({
         </div>
       </main>
 
+      {/*
+        ── SIX LINKS THE HUMAN PAGE DID NOT HAVE AND THE CRAWLER VIEW DID ─────────────────────
+        /x-crawler/shop passes `subCategories={categoryLinks}` and lists all six rayons; the human
+        /shop listed none in its main content. That is a bot/human content divergence on one URL,
+        which is the exact thing the crawler route's own docblock forbids — and it is the direction
+        that looks like cloaking rather than merely like an inconsistency.
+
+        BELOW the grid, never above: this is a navigation aid for someone who did not find what
+        they wanted, and putting it above would push 24 products down the page to serve the
+        minority who did not.
+
+        Rendered only on the boutique proper. On a brand or category view the crumb trail and the
+        page's own heading already say where you are, and a second "browse by" block there competes
+        with the filters instead of complementing them.
+      */}
+      {isBoutiqueRoot && !currentBrand && browseCategories.length > 0 && (
+        <Section spacing="tight" surface="sunken" width="wide" aria-labelledby="shop-parcourir">
+          <SectionHeader id="shop-parcourir" title="Parcourir par rayon" scale="3" />
+          <ul className="flex flex-wrap gap-2">
+            {browseCategories.map((c) => (
+              <li key={c.slug}>
+                <Link
+                  href={`/${c.slug}`}
+                  prefetch={false}
+                  className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
+                >
+                  {c.designation_fr}
+                  {c.count > 0 && (
+                    <span className="tabular-nums text-[12px] text-ink-3">{c.count.toLocaleString('fr-FR')}</span>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </Section>
+      )}
+
       <ScrollToTop />
     </div>
   );
@@ -1550,8 +2007,8 @@ export function ShopPageClient(props: ShopPageClientProps) {
   return (
     <Suspense fallback={
       <>
-        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 lg:py-16">
-          <ProductsSkeleton />
+        <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+          <ProductsSkeleton gridClassName={SHOP_GRID_COLS} cardCount={SHOP_PER_PAGE} />
         </main>
       </>
     }>

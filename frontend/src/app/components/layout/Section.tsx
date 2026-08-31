@@ -72,14 +72,30 @@ import { Container, type ContainerWidth } from './Container';
  *
  *     BELOW `sm`, THE GAP BETWEEN TWO BANDS IS THE LOWER BAND'S `pt`, AND NOTHING ELSE.
  *
- * That is the logical end of this file's own doctrine. Separation is a fill change plus a 1px
+ * That was the logical end of this file's own doctrine. Separation is a fill change plus a 1px
  * seam; emptiness was never doing the work. On a 390px screen the sum of two paddings is a much
  * larger fraction of the viewport than the same sum at 1440 — 64px is 7.6% of a phone screen and
  * 4.4% of a laptop — so the boundary that reads as "considered" on desktop reads as "disconnected"
- * on a phone. Halving both numbers would have kept the sum arithmetic; removing one side removes
- * the arithmetic. Every mobile boundary is now a single value that can be read off this table:
+ * on a phone. Halving both numbers would have kept the sum arithmetic; removing one side removed
+ * the arithmetic entirely.
  *
- *     strip     12   ·  tight  24   ·  default  16   ·  feature  24
+ * ── REVISED 10/08/2026: ZERO WENT ONE UNIT TOO FAR ────────────────────────────────────────
+ * Owner, on the live phone layout: *"in mobile between the section make a padding bottom of .5em
+ * or more little"*.
+ *
+ * Zero was the logical end of the doctrine and one unit past the useful end of it. The bands did
+ * read as connected — but a band's last row of content sat flush against the seam, so the 1px rule
+ * looked like it was underlining that content rather than closing the band.
+ *
+ * Mobile `pb` is now **8px** (`pb-2` = 0.5rem, the requested 0.5em) on the three content steps.
+ * Deliberately the smallest value on the lattice this file insists on: one 8px unit keeps the grid
+ * intact, and every mobile boundary grows by exactly 8 rather than by a new arbitrary number. The
+ * mobile gap is still one value per step, now plus that 8:
+ *
+ *     strip  12   ·   tight  24+8   ·   default  16+8   ·   feature  24+8
+ *
+ * `strip` is unchanged: it is one row tall, symmetric already, and was never part of the
+ * complaint. `stage` stays `py-0` because the hero owns its own internal frame.
  *
  * From `sm` up the symmetric scale returns unchanged — desktop was not the complaint, and the
  * circled gaps were fixed there in the previous pass.
@@ -97,9 +113,9 @@ const SPACING = {
   /** Anything exactly one row tall: the trust/COD strip, the orange promo strip. */
   strip: 'py-3 sm:py-4',
   /** Support bands carrying navigation or prose: the category rail, brand wall, SEO block. */
-  tight: 'pb-0 pt-6 sm:py-6 lg:py-8',
+  tight: 'pb-2 pt-5 sm:py-5 lg:py-6',
   /** Every canvas/sunken product or content grid. */
-  default: 'pb-0 pt-4 sm:py-8 lg:py-10',
+  default: 'pb-2 pt-4 sm:py-6 lg:py-8',
   /**
    * The step for a band that must out-weigh its neighbours. At most ONE per page: two dominant
    * bands is zero dominant bands.
@@ -114,8 +130,31 @@ const SPACING = {
    * Currently held by: nothing on the homepage. `/partenaires` uses it for its application band,
    * which is a different page and therefore not a conflict.
    */
-  feature: 'pb-0 pt-6 sm:py-10 lg:py-12',
+  feature: 'pb-2 pt-6 sm:py-8 lg:py-10',
 } as const;
+
+/*
+ * ── THE DESKTOP STEP CAME DOWN ON 18/08/2026 ────────────────────────────────────────────────
+ * Owner, having tightened the homepage's section spacing in DevTools and screenshotted the
+ * result: *"this is how i want the website to look on desktop — measured sections spacings, and
+ * looks super good"*.
+ *
+ * A screenshot is a target, not a specification, so this was measured on both sides rather than
+ * eyeballed. Their screen is 1920 at 125% Windows scaling — a 1536 CSS viewport — where the page
+ * ran 6,828px and their edit brought it to roughly 6,490. Eight bands, ~340px: 16px off each
+ * band's desktop padding is 128 of it, and the rest comes from the category rail's tile aspect
+ * and the flash band, both changed in the same commit.
+ *
+ * Every step moved by ONE notch of the 8px lattice and the ladder's shape is unchanged —
+ * tight < default < feature, still 8px apart at `lg`. That matters more than the absolute values:
+ * the whole reason this scale exists is that three bands agreeing is what makes a page read as one
+ * document, and a "just make this one tighter" edit at a call site is what it was written to
+ * prevent. If the page needs to come down again, it comes down HERE, again, for all of it.
+ *
+ * The PHONE is deliberately almost untouched (`tight` loses 4px, `default` nothing). It was
+ * retuned two days ago against its own measurements and was not part of this note — the owner's
+ * screenshot and their words both say desktop.
+ */
 
 /**
  * A surface is a TOKEN SCOPE, not a background utility.

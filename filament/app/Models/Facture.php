@@ -36,6 +36,8 @@ class Facture extends Model
         'discount_ht'          => 'decimal:3',
         'coupon_value_snapshot' => 'decimal:3',
         'status'               => BlStatus::class,
+        'aramex_pushed_at'     => 'datetime',
+        'aramex_delivered_at'  => 'datetime',
     ];
 
     /**

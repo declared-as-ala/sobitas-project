@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { isChromeFreeRoute } from '@/app/components/MobileTabBar';
 
 const InstallAppBanner = dynamic(
   () => import('@/app/components/InstallAppBanner').then((m) => ({ default: m.InstallAppBanner })),
@@ -39,8 +40,6 @@ const InstallAppBanner = dynamic(
  * The install prompt is a growth surface and this costs installs on one route. It is the right
  * trade here and nowhere else: every other page keeps it, and reversing this is deleting one line.
  */
-const HIDDEN_ON = ['/pack-builder', '/checkout', '/cart'];
-
 export function DeferredInstallBanner() {
   const pathname = usePathname() || '/';
   const [mounted, setMounted] = useState(false);
@@ -67,6 +66,6 @@ export function DeferredInstallBanner() {
   // Checked AFTER the hooks, never before — an early return above `useEffect` would change the hook
   // count between routes and break the rules of hooks on every client navigation.
   if (!mounted) return null;
-  if (HIDDEN_ON.some((p) => pathname.startsWith(p))) return null;
+  if (isChromeFreeRoute(pathname) || pathname.startsWith('/pack-builder') || pathname.startsWith('/cart')) return null;
   return <InstallAppBanner />;
 }

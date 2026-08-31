@@ -32,3 +32,10 @@ branch_structure.json
 protein_db_backup.sql
 db/mysql-protein.sql
 frontend/*.stackdump
+
+# Local build and browser-audit output
+frontend/.next-*/
+frontend/.snap/
+tmp/
+r.json
+s.html

@@ -43,12 +43,23 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'phone_verified_at' => 'datetime',
         'password' => 'hashed',
     ];
+
+    public function hasVerifiedContact(): bool
+    {
+        return $this->hasVerifiedEmail() || $this->phone_verified_at !== null;
+    }
 
     public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Partner::class, 'user_id');
+    }
+
+    public function client(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Client::class, 'user_id');
     }
 
     public function canAccessPanel(Panel $panel): bool
@@ -77,7 +88,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             ->getResetPasswordUrl($token, $this);
 
         $user     = $this;
-        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromAddr = (string) config('mail.from.address');
         $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PartnerInviteReset: attempting send', [
@@ -101,12 +112,31 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     }
 
     /**
-     * Send the password reset notification using the SAME direct Mail::send()
-     * path as order confirmation emails — bypasses the Notification system
-     * to guarantee delivery via the hardcoded SMTP config.
+     * Send the password reset notification.
+     *
+     * ── ONE MODEL, TWO AUDIENCES, AND THEY NEED DIFFERENT LINKS ─────────────────────────────
+     * This table holds admin staff AND storefront customers. Until now every reset mail linked to
+     * the FILAMENT ADMIN panel's reset screen — correct for staff, useless for a customer, who
+     * cannot open that panel at all (canAccessPanel refuses them). It never showed up as a bug
+     * because the storefront's own /forgot-password endpoint was never routed, so no customer had
+     * ever reached this method. Routing it (20/08/2026) is precisely what would have started
+     * mailing customers a link they cannot use.
+     *
+     * The destination is therefore chosen from the role: staff keep the signed Filament URL they
+     * have always had, everybody else gets the storefront screen through the ResetPasswordLink
+     * notification. The role list is the same config canAccessPanel reads, so the two cannot
+     * disagree about who counts as staff.
      */
     public function sendPasswordResetNotification($token): void
     {
+        $isStaff = in_array((int) ($this->role_id ?? 0), config('partners.admin_role_ids', [1, 3]), true);
+
+        if (! $isStaff) {
+            $this->notify(new \App\Notifications\ResetPasswordLink($token));
+
+            return;
+        }
+
         // Use Filament panel's URL builder — generates a SIGNED URL.
         // The previous manual route() call was NOT signed, causing 403.
         $resetUrl = \Filament\Facades\Filament::getPanel('admin')
@@ -115,7 +145,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
 
 
         $user     = $this;
-        $fromAddr = config('mail.from.address', 'bitoutawalid@gmail.com');
+        $fromAddr = (string) config('mail.from.address');
         $fromName = config('mail.from.name', 'Protein.tn');
 
         Log::info('PasswordReset: attempting to send reset email', [

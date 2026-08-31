@@ -1,8 +1,9 @@
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { BlogCardSkeleton } from '@/app/components/BlogCardSkeleton';
+import { Section } from '@/app/components/layout/Section';
 
-const CARD_COUNT = 9;
-const PILL_COUNT = 6;
+const CARD_COUNT = 6;
+const PILL_COUNT = 5;
 
 /**
  * Layout-matching skeleton for the blog index — same container, header rhythm and 1/2/3-col grid
@@ -11,24 +12,40 @@ const PILL_COUNT = 6;
  */
 export function BlogListSkeleton() {
   return (
-    <div className="min-h-screen bg-white dark:bg-gray-950">
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10 lg:py-14">
-        <div className="mb-10 sm:mb-12">
-          <Skeleton className="h-3 w-16" />
-          <Skeleton className="mt-3 h-9 sm:h-11 lg:h-14 w-full max-w-2xl" />
-          <Skeleton className="mt-4 h-4 w-full max-w-xl" />
-          <div className="mt-6 flex flex-wrap gap-2 md:gap-3">
-            {Array.from({ length: PILL_COUNT }).map((_, i) => (
-              <Skeleton key={i} className="h-11 w-24 rounded-full" />
-            ))}
+    <>
+      <Section first spacing="default" width="wide">
+        <div className="grid gap-7 lg:grid-cols-2 lg:items-end lg:gap-12">
+          <div>
+            <Skeleton className="h-3 w-24" />
+            <Skeleton className="mt-3 h-20 w-full max-w-2xl sm:h-24" />
+            <Skeleton className="mt-4 h-5 w-full max-w-xl" />
+            <div className="mt-5 flex gap-2"><Skeleton className="h-8 w-20 rounded-full" /><Skeleton className="h-8 w-28 rounded-full" /></div>
+          </div>
+          <Skeleton className="h-56 rounded-2xl" />
+        </div>
+      </Section>
+      <Section surface="sunken" spacing="default" width="wide">
+        <Skeleton className="h-3 w-20" />
+        <Skeleton className="mt-3 h-9 w-72 max-w-full" />
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_0.85fr]">
+          <Skeleton className="h-[28rem] rounded-2xl" />
+          <div className="grid gap-4"><Skeleton className="h-[13.5rem] rounded-2xl" /><Skeleton className="h-[13.5rem] rounded-2xl" /></div>
+        </div>
+      </Section>
+      <Section spacing="default" width="wide">
+        <div className="mb-5 flex items-end justify-between gap-4">
+          <div><Skeleton className="h-3 w-20" /><Skeleton className="mt-3 h-9 w-48" /></div>
+          <Skeleton className="h-11 w-24 rounded-full" />
+        </div>
+        <div className="mb-5 rounded-2xl border border-hairline bg-elevated p-3 sm:p-4">
+          <div className="flex gap-2 overflow-hidden">
+            {Array.from({ length: PILL_COUNT }).map((_, i) => <Skeleton key={i} className="h-11 w-24 shrink-0 rounded-xl" />)}
           </div>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 lg:gap-8">
-          {Array.from({ length: CARD_COUNT }).map((_, i) => (
-            <BlogCardSkeleton key={i} />
-          ))}
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+          {Array.from({ length: CARD_COUNT }).map((_, i) => <BlogCardSkeleton key={i} />)}
         </div>
-      </main>
-    </div>
+      </Section>
+    </>
   );
 }

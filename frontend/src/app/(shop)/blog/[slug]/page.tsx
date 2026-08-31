@@ -1,17 +1,20 @@
 import { Metadata } from 'next';
 import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getLatestArticles } from '@/services/api';
+import { getLatestArticles, getAllArticles, getCategories } from '@/services/api';
+import { relatedArticles as pickRelatedArticles } from '@/util/relatedArticles';
+import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 // Request-scoped cache: generateMetadata + the page body used to issue TWO separate
 // article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildMetaDescription, htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
-import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { resolveArticleLanguage, buildArticleTitle, localityHint } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
+import { getBlogSeoEntry } from '@/config/blogSeoConfig';
 import { ArticleDetailClient } from './ArticleDetailClient';
 
 interface ArticlePageProps {
@@ -38,10 +41,70 @@ function stripHtml(html: string): string {
   return htmlToText(html, 160);
 }
 
+const ARTICLE_TOPIC_PATTERNS = [
+  /\bwhey\b/i,
+  /cr[eé]atine/i,
+  /om[eé]ga\s*3/i,
+  /magn[eé]sium/i,
+  /\bbcaa\b/i,
+  /pre[- ]?workout/i,
+  /gainer|prise de masse/i,
+  /collag[eè]ne/i,
+];
+
+/**
+ * Keep a Filament SEO title when it names the article's subject. If a generic campaign title drops
+ * that subject, use the concise first clause of the visible H1 instead. This is deliberately an
+ * alignment guard, not an override table: editors still control every topic-aligned title.
+ */
+function topicAlignedArticleHeadline(preferred: string, visibleHeadline: string): string {
+  const preferredTitle = preferred.trim();
+  const visibleTitle = visibleHeadline.trim();
+  if (!visibleTitle) return preferredTitle;
+
+  const visibleIsArabic = /[\u0600-\u06ff]/u.test(visibleTitle);
+  const preferredIsArabic = /[\u0600-\u06ff]/u.test(preferredTitle);
+  const dropsLanguage = visibleIsArabic && !preferredIsArabic;
+  const dropsCoreTopic = ARTICLE_TOPIC_PATTERNS.some(
+    (pattern) => pattern.test(visibleTitle) && !pattern.test(preferredTitle)
+  );
+
+  if (preferredTitle && !dropsLanguage && !dropsCoreTopic) return preferredTitle;
+
+  const firstClause = visibleTitle.split(/\s+(?:[|—–])\s+|\s*[:?!]\s*/u, 1)[0]?.trim();
+  return firstClause && firstClause.length >= 12 ? firstClause : visibleTitle;
+}
+
+/**
+ * Apply the same alignment rule to snippets. A generic campaign description is useful across a
+ * landing page, but on an article it can erase the exact subject that earned the impression.
+ * Preserve topic-aligned editor copy; otherwise fall back to the article's own opening text.
+ */
+function topicAlignedArticleDescription(
+  preferred: string,
+  articleOpening: string,
+  visibleHeadline: string
+): string {
+  const preferredDescription = preferred.trim();
+  const opening = articleOpening.trim();
+  const visibleTitle = visibleHeadline.trim();
+  if (!preferredDescription) return opening;
+
+  const visibleIsArabic = /[\u0600-\u06ff]/u.test(visibleTitle);
+  const preferredIsArabic = /[\u0600-\u06ff]/u.test(preferredDescription);
+  const dropsLanguage = visibleIsArabic && !preferredIsArabic;
+  const dropsCoreTopic = ARTICLE_TOPIC_PATTERNS.some(
+    (pattern) => pattern.test(visibleTitle) && !pattern.test(preferredDescription)
+  );
+
+  return !dropsLanguage && !dropsCoreTopic ? preferredDescription : opening || preferredDescription;
+}
+
 export async function generateMetadata({ params }: ArticlePageProps): Promise<Metadata> {
   const { slug } = await params;
   try {
     const article = await getArticleDetails(slug);
+    const seoOverlay = getBlogSeoEntry(slug);
     const imageUrl =
       article.seo?.open_graph?.image ||
       article.seo?.twitter?.image ||
@@ -51,17 +114,25 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // The headline, resolved BEFORE the description because the description is built relative to
     // it — an article body opens with its own headline, so stripping tags leaves the title
     // restated as the first words of the snippet.
-    const articleHeadline =
-      article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+    const storedHeadline =
+      seoOverlay?.headline || article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
+    const articleHeadline = topicAlignedArticleHeadline(
+      storedHeadline,
+      article.designation_fr || storedHeadline
+    );
 
     // buildMetaDescription wraps the RESOLVED value, not just the fallback: seo.description and
     // meta_description_fr are CMS fields and carry the same raw entities AND the same repeated
     // headline. It decodes, drops that repetition, and truncates on a word boundary.
+    const storedDescription =
+      seoOverlay?.metaDescription || article.seo?.description || article.seo_description || article.meta_description_fr || '';
+    const alignedDescription = topicAlignedArticleDescription(
+      storedDescription,
+      description,
+      article.designation_fr || articleHeadline
+    );
     const metaDescription = buildMetaDescription(
-      article.seo?.description ||
-        article.seo_description ||
-        article.meta_description_fr ||
-        description ||
+      alignedDescription ||
         `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
       { title: articleHeadline, maxLen: 500 }
     );
@@ -73,11 +144,17 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       `/blog/${encodeURIComponent(article.slug || slug)}`
     );
     const articleLanguage = resolveArticleLanguage(article);
-    const title = articleHeadline;
-    const descriptionWithTunisia = metaDescription.includes('Tunisie') ? metaDescription : `${metaDescription} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
+    /* Branded here rather than by the root layout's `%s | Protéine Tunisie` template. On an Arabic
+       headline that template produces a bidirectional string whose Latin run the bidi algorithm
+       moves to the visual START — an Arabic searcher sees the French brand first and the headline
+       they typed second. See buildArticleTitle for the five articles this is measured on. */
+    const title = buildArticleTitle(articleHeadline, articleLanguage);
+    const descriptionWithTunisia = localityHint(metaDescription, articleLanguage);
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
-      title,
+      // absolute: `title` already carries the brand. Without this the template appends it AGAIN,
+      // which is the defect on the French side and doubles the French one on the Arabic side.
+      title: { absolute: title },
       // truncateAtWord, not .slice(): the top Arabic article (5,834 impressions, 0.29% CTR)
       // was ending its snippet on a dangling single letter because 160 landed mid-word.
       description: truncateAtWord(descriptionWithTunisia, 160),
@@ -130,25 +207,81 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
   const { slug } = await params;
   
   try {
-    // relatedArticles is incidental — its failure must not 404 the article itself.
-    const [article, relatedArticles] = await Promise.all([
+    /*
+     * relatedArticles, the article pool and the taxonomy are all incidental — no failure among them
+     * may 404 the article itself.
+     *
+     * getAllArticles() is the pool the related rail is chosen FROM. It is one cached call
+     * (next: { tags: ['blog'] }) and it replaces a rail that was the same three URLs on every one of
+     * 224 articles — see util/relatedArticles.ts for why that shape was worth spending a call on.
+     */
+    const [article, latestArticles, articlePool, categories] = await Promise.all([
       getArticleDetails(slug),
       getLatestArticles().catch(() => [] as Awaited<ReturnType<typeof getLatestArticles>>),
+      getAllArticles().catch(() => [] as Awaited<ReturnType<typeof getAllArticles>>),
+      getCategories(undefined, { perPage: 50 }).catch(() => []),
     ]);
 
     if (!article) {
       notFound();
     }
 
-    const filteredRelated = relatedArticles.filter(a => a.slug !== slug).slice(0, 3);
+    const seoOverlay = getBlogSeoEntry(slug);
+    const displayArticle = seoOverlay
+      ? {
+          ...article,
+          designation_fr: seoOverlay.headline || article.designation_fr,
+          description_fr: seoOverlay.headline ? article.description_fr?.replace(/2025/g, '2026') : article.description_fr,
+          description: seoOverlay.headline ? article.description?.replace(/2025/g, '2026') : article.description,
+          updated_at: seoOverlay.dateModified || article.updated_at,
+          schema: {
+            ...article.schema,
+            headline: seoOverlay.headline || article.schema?.headline || article.designation_fr,
+            description: seoOverlay.metaDescription || article.schema?.description,
+            date_modified: seoOverlay.dateModified || article.schema?.date_modified,
+          },
+        }
+      : article;
+
+    /*
+     * ── LINK TARGETS FOR IN-CONTENT LINKS ────────────────────────────────────────────────────
+     * Built on the server so the anchors are in the initial HTML. That is the whole point: the
+     * article page's existing route to the shop is BlogRecommendedProducts, which fetches on an
+     * IntersectionObserver, so its links do not exist until something scrolls — and Googlebot
+     * renders but does not scroll.
+     *
+     * The synonyms below are the ones a category NAME cannot supply. "Whey Protéine" is the
+     * category; "whey" on its own is what the articles say, and it is the term the site is trying
+     * to rank for. Everything else is derived from the live taxonomy, so renaming a category in
+     * Filament updates the linking with no code change.
+     */
+    const linkTargets: LinkTarget[] = targetsFromTaxonomy(categories, {
+      'whey-proteine': ['whey', 'whey isolate', 'protéine de lactosérum'],
+      creatine: ['créatine monohydrate', 'monohydrate de créatine'],
+      proteines: ['protéine en poudre', 'poudre de protéine'],
+      'prise-de-masse': ['gainer', 'mass gainer'],
+      'acides-amines': ['bcaa', 'acides aminés'],
+    });
+
+    /*
+     * Related by SUBJECT, with the newest posts as the fallback when an article shares no
+     * significant term with any other. Six rather than three: the rail is the only inbound link
+     * most of these 224 articles have, and 184 of them are currently unindexed.
+     */
+    const pool = articlePool.length > 0 ? articlePool : latestArticles;
+    const filteredRelated = pickRelatedArticles(
+      { slug: displayArticle.slug ?? slug, designation_fr: displayArticle.designation_fr },
+      pool,
+      6
+    );
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
-    const articleImageUrl = article.cover ? getStorageUrl(article.cover) : undefined;
-    const articleSchema = buildArticleSchema(article, baseUrl, articleImageUrl);
+    const articleImageUrl = displayArticle.cover ? getStorageUrl(displayArticle.cover) : undefined;
+    const articleSchema = buildArticleSchema(displayArticle, baseUrl, articleImageUrl);
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
         { name: 'Accueil', url: '/' },
         { name: 'Blog', url: '/blog' },
-        { name: article.designation_fr || article.slug || 'Article', url: blogHref(article.slug || slug) },
+        { name: displayArticle.designation_fr || displayArticle.slug || 'Article', url: blogHref(displayArticle.slug || slug) },
       ],
       baseUrl
     );
@@ -157,7 +290,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-        <ArticleDetailClient article={article} relatedArticles={filteredRelated}>
+        <ArticleDetailClient article={displayArticle} relatedArticles={filteredRelated} linkTargets={linkTargets}>
           <BlogSeoBlock slug={slug} />
         </ArticleDetailClient>
       </>

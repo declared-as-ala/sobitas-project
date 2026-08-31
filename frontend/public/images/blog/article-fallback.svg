@@ -1,0 +1,24 @@
+<svg width="1200" height="750" viewBox="0 0 1200 750" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="750" fill="#FFF8F4"/>
+  <path d="M0 585C220 430 408 720 650 546C850 402 1010 458 1200 330V750H0V585Z" fill="#F9E8DE"/>
+  <path d="M850 -12C1002 73 1078 182 1200 175V0H850V-12Z" fill="#DC3700"/>
+  <path d="M980 0C1050 58 1125 91 1200 94V0H980Z" fill="#111113"/>
+  <g opacity="0.34" stroke="#DC3700" stroke-width="2">
+    <path d="M66 102H422"/>
+    <path d="M66 126H318"/>
+    <path d="M66 150H364"/>
+  </g>
+  <g transform="translate(480 210)">
+    <rect x="0" y="50" width="240" height="240" rx="44" fill="white" stroke="#E8DCD5" stroke-width="4"/>
+    <path d="M72 116C102 98 139 98 168 116V225C139 207 102 207 72 225V116Z" fill="#FFF1E9" stroke="#DC3700" stroke-width="8" stroke-linejoin="round"/>
+    <path d="M120 107V216" stroke="#DC3700" stroke-width="8" stroke-linecap="round"/>
+    <path d="M42 80L58 96M198 80L182 96M120 58V36" stroke="#111113" stroke-width="8" stroke-linecap="round"/>
+  </g>
+  <g fill="#DC3700">
+    <circle cx="92" cy="626" r="10"/>
+    <circle cx="126" cy="626" r="10" opacity="0.65"/>
+    <circle cx="160" cy="626" r="10" opacity="0.35"/>
+  </g>
+  <text x="600" y="574" text-anchor="middle" fill="#111113" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" letter-spacing="5">LE GUIDE PROTEIN.TN</text>
+  <text x="600" y="622" text-anchor="middle" fill="#625D5A" font-family="Arial, Helvetica, sans-serif" font-size="22">Nutrition sportive • conseils • comparatifs</text>
+</svg>

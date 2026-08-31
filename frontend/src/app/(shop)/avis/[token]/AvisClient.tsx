@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Star, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 import {
   getOrderForReview,
   submitReviewByToken,
@@ -16,6 +16,15 @@ interface RowState {
   comment: string;
   submitting: boolean;
   done: boolean;
+  /**
+   * When this row was first touched, per product, in ms.
+   *
+   * Stamped on the first interaction rather than on page load: this page is reached from an email
+   * and can sit open in a tab for an hour before anybody types, and counting that as composition
+   * time would make every review look laboriously hand-written — the opposite of the signal being
+   * measured. Per product, because one page can carry four reviews written minutes apart.
+   */
+  openedAt: number | null;
 }
 
 export default function AvisClient({ token }: { token: string }) {
@@ -23,6 +32,22 @@ export default function AvisClient({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderForReview | null>(null);
   const [rows, setRows] = useState<Record<number, RowState>>({});
+  /*
+    ── WHY THIS FORM CARRIES THE SAME EVIDENCE AS THE PRODUCT PAGE ──────────────────────────────
+    This is the form a real customer reaches from the delivery email, so it will carry most of the
+    review volume — and every review written here has an attested purchase behind it, which is one
+    of the two conditions for being paid 50 loyalty points. It was therefore both the highest-volume
+    path and the most valuable one to farm, and it was the only one sending no evidence at all.
+
+    `honeypot`  a field no human can see. A script that fills every input it finds fills this one;
+                the server then returns the ordinary success message and stores nothing, because
+                telling a bot it was caught tells whoever wrote it which field to skip.
+    `openedAt`  per row, above — submit time minus this is how long composing took, which the
+                server weighs against the length of the text.
+
+    Neither decides anything alone. See ReviewAuthenticity for how they are scored.
+  */
+  const [honeypot, setHoneypot] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -33,7 +58,7 @@ export default function AvisClient({ token }: { token: string }) {
         setOrder(data);
         const init: Record<number, RowState> = {};
         data.products.forEach((p) => {
-          init[p.product_id] = { stars: 0, comment: '', submitting: false, done: p.reviewed };
+          init[p.product_id] = { stars: 0, comment: '', submitting: false, done: p.reviewed, openedAt: null };
         });
         setRows(init);
       } catch (e: unknown) {
@@ -52,7 +77,12 @@ export default function AvisClient({ token }: { token: string }) {
   }, [token]);
 
   const update = (id: number, patch: Partial<RowState>) =>
-    setRows((r) => ({ ...r, [id]: { ...r[id], ...patch } }));
+    setRows((r) => ({
+      ...r,
+      // The first star click or the first keystroke starts this row's clock — one place, so a new
+      // control added to the form later cannot forget to stamp it.
+      [id]: { ...r[id], openedAt: r[id]?.openedAt ?? Date.now(), ...patch },
+    }));
 
   const submit = async (p: ReviewProduct) => {
     const row = rows[p.product_id];
@@ -72,6 +102,8 @@ export default function AvisClient({ token }: { token: string }) {
         product_id: p.product_id,
         stars: row.stars,
         comment: row.comment.trim(),
+        compose_ms: row.openedAt ? Math.max(0, Date.now() - row.openedAt) : 0,
+        hp_field: honeypot,
       });
       update(p.product_id, { submitting: false, done: true });
       toast.success(
@@ -85,6 +117,34 @@ export default function AvisClient({ token }: { token: string }) {
       toast.error(msg);
     }
   };
+
+  /*
+    Moved off the visible page rather than `display:none` (some bots skip hidden inputs), removed
+    from the tab order, hidden from assistive technology, and told not to autofill. That last one is
+    the failure mode this technique actually has — an autofilled honeypot silently discards a real
+    customer's review — which is also why the field is named `hp_field` and not `website`.
+
+    The clip is on the INPUT, not on a wrapper. A wrapper hides the field visually while leaving the
+    input's own box at full size, which measured 5160px² the first time this was written elsewhere.
+  */
+  const honeypotField = (
+    <>
+      <label htmlFor="hp_field" className="absolute h-px w-px overflow-hidden [clip-path:inset(50%)]">
+        Ne pas remplir
+      </label>
+      <input
+        id="hp_field"
+        name="hp_field"
+        type="text"
+        tabIndex={-1}
+        autoComplete="off"
+        aria-hidden="true"
+        className="absolute h-px w-px overflow-hidden border-0 p-0 opacity-0 [clip-path:inset(50%)]"
+        value={honeypot}
+        onChange={(e) => setHoneypot(e.target.value)}
+      />
+    </>
+  );
 
   const allDone =
     !!order && order.products.length > 0 && order.products.every((p) => rows[p.product_id]?.done);
@@ -182,6 +242,7 @@ export default function AvisClient({ token }: { token: string }) {
                                   </button>
                                 ))}
                               </div>
+                              {honeypotField}
                               <textarea
                                 value={row?.comment || ''}
                                 onChange={(e) => update(p.product_id, { comment: e.target.value })}

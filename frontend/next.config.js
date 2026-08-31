@@ -39,6 +39,15 @@ const nextConfig = {
     formats: ['image/avif', 'image/webp'],
     remotePatterns: [
       { protocol: 'https', hostname: 'admin.protein.tn' },
+      // Imported-catalogue product photography, referenced rather than mirrored.
+      //
+      // next/image REFUSES to render a host that is not listed here — it throws rather than
+      // falling back. The matching server-side allowlist is config/catalog.php
+      // `media.external_hosts`, which stops ImagePath::normalize() stripping the domain off these
+      // URLs and leaving a path that resolves against our own host. BOTH are required: add a CDN
+      // to one and not the other and every imported image silently disappears.
+      { protocol: 'https', hostname: 'cloudinary.images-iherb.com' },
+      { protocol: 'https', hostname: 's3.images-iherb.com' },
       { protocol: 'https', hostname: 'images.unsplash.com' },
       { protocol: 'https', hostname: 'protein.tn' },
       { protocol: 'https', hostname: 'sobitas.tn' },
@@ -72,7 +81,27 @@ const nextConfig = {
     //
     // `has` entries are AND-ed within a rule, so each facet key needs its own rule to get OR.
     // `page` is deliberately absent: pagination is not a duplicate and must stay indexable.
-    const FACET_KEYS = ['search', 'brand', 'category', 'orderby', 'sort', 'min_price', 'max_price', 'filter'];
+    // `flavors` and `in_stock` joined the list when /shop moved to server-side filtering: they are
+    // now real, shareable URLs that return a narrowed slice of the boutique, which is exactly the
+    // duplicate this rule exists to keep out of the index. A facet key that is not listed here is
+    // indexed, and the cost of that mistake compounds — /shop?search={search_term_string} reached
+    // 169 impressions at position 76 before anyone noticed it was in there at all.
+    /*
+     * ── EVERY ALIAS parseShopQuery HONOURS, NOT JUST THE ONES buildShopUrl WRITES ────────────
+     * util/shopQuery.ts reads BOTH spellings of three of these — `csv(sp.brand).concat(csv(sp.brands))`
+     * and the same for category/categories and subcategory/subcategories. So `/shop?brands=72`,
+     * `?categories=…`, `?subcategory=whey-isolate` and `?subcategories=…` all returned a genuinely
+     * narrowed slice of the boutique with NO X-Robots-Tag, index/follow, and a canonical pointing
+     * at /shop — the "Alternate page with proper canonical" bucket instead of the clean noindex the
+     * singular keys get.
+     *
+     * `buildShopUrl` only ever writes the singular forms, so no internal link mints these; they
+     * arrive from external links and hand-typed URLs, which is exactly the traffic this list exists
+     * to handle. Note `subcategory` — SINGULAR — was missing too.
+     *
+     * `page` stays absent on purpose: that is what keeps the 470 real paginated pages indexable.
+     */
+    const FACET_KEYS = ['search', 'brand', 'brands', 'category', 'categories', 'subcategory', 'subcategories', 'orderby', 'sort', 'min_price', 'max_price', 'filter', 'flavors', 'in_stock'];
     const facetedShopNoindex = FACET_KEYS.map((key) => ({
       source: '/shop',
       has: [{ type: 'query', key }],
@@ -81,6 +110,27 @@ const nextConfig = {
 
     return [
       ...facetedShopNoindex,
+      /*
+       * MACHINE ENDPOINTS: noindex AS WELL AS robots.txt-disallowed, because the two fail in
+       * opposite directions. robots.txt stops a crawl but cannot remove a URL Google already
+       * indexed from a link — that is the "Indexed, though blocked by robots.txt" bucket, which is
+       * unfixable by robots.txt alone precisely because the crawler is forbidden to fetch the page
+       * and see the noindex. The header removes it; the Disallow keeps the budget.
+       *
+       * Measured 18/08/2026: /api-proxy/blog_tags and /api-proxy/all_articles both answered 200
+       * JSON with no X-Robots-Tag whatsoever, and robots.txt disallowed only `/api/`.
+       *
+       * DELIBERATELY NOT /x-crawler. That prefix is the middleware REWRITE target, and whether a
+       * next.config header matches the original path or the rewritten one is not something to be
+       * confident about from the docs — and being wrong means `noindex, nofollow` on every
+       * category and product page Googlebot is served, i.e. deindexing the whole site. Direct
+       * access to /x-crawler is refused in middleware instead, where "am I rewriting, or is
+       * someone asking for the internal path" is known rather than inferred.
+       */
+      {
+        source: '/api-proxy/:path*',
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
       {
         source: '/:path*',
         headers: [
@@ -94,7 +144,11 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              "frame-src 'self' https://www.google.com",
+              /* `accounts.google.com` is required by Sign in with Google: the GIS button and the
+                 FedCM prompt both render inside an iframe from that origin, and CSP rejects it
+                 silently — the button simply never appears, with nothing in the console that
+                 names the policy. `www.google.com` was already here for reCAPTCHA. */
+              "frame-src 'self' https://www.google.com https://accounts.google.com",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
               "style-src 'self' 'unsafe-inline' https:",
               "img-src 'self' data: https:",
@@ -240,18 +294,61 @@ const nextConfig = {
      *     curl -s https://protein.tn/ | grep -c '<style'
      */
     inlineCss: false,
-    // Disable the client-side Router Cache for both dynamic and static pages.
-    // With non-zero values the browser REUSES a prefetched RSC payload for that many
-    // seconds — so a <Link> prefetched while a page's data was momentarily empty/stale
-    // (e.g. an ISR page prerendered before the backend had the data) keeps replaying that
-    // stale snapshot on soft navigation, while a hard refresh (which bypasses the Router
-    // Cache) shows the correct content. That is exactly the "click Packs → empty, refresh
-    // → products appear" bug, and it applied site-wide (shop, category, offres, blog…).
-    // 0/0 makes every navigation refetch a fresh RSC payload from the server (the route is
-    // still ISR-cached on the origin, so this stays fast), matching the intent above.
+    /*
+     * ── `static: 0` MADE EVERY PREFETCH ON THIS SITE DEAD ON ARRIVAL ────────────────────────
+     * Owner, 20/08/2026: *"still when i click on boutique it's not instantly browsing to /shop —
+     * fix it in the entire website."* "The entire website" is exactly right, and this line is why.
+     *
+     * WHAT THIS VALUE ACTUALLY CONTROLS. From next/dist/client/components/router-reducer/
+     * prefetch-cache-utils.js (15.5.9), `getPrefetchEntryCacheStatus` decides whether a prefetched
+     * entry may be reused:
+     *
+     *     if (Date.now() < (lastUsedTime ?? prefetchTime) + DYNAMIC_STALETIME_MS) …
+     *     if (kind === 'auto' && Date.now() < prefetchTime + STATIC_STALETIME_MS) return stale;
+     *     if (kind === 'full' && Date.now() < prefetchTime + STATIC_STALETIME_MS) return reusable;
+     *     return expired;
+     *
+     * Every branch is a strict `<` against `+ N`. At N = 0 all three are false for EVERY entry —
+     * including one prefetched a millisecond ago. And `static` gates BOTH kinds, so it is this
+     * value, not `dynamic`, that governs a prefetch that has not been used yet.
+     *
+     * Then navigate-reducer.js:160 calls `prunePrefetchCache()` at the TOP of every navigation,
+     * before it looks the entry up on line 183 — so the entry is deleted, the click creates a
+     * fresh lazy one, and the reducer returns the network promise. Because router.push runs inside
+     * a transition, the OLD PAGE STAYS ON SCREEN until the server answers. Nothing paints. That is
+     * the reported symptom, precisely.
+     *
+     * Verified in the shipped bundle rather than inferred: .next-prod/static/chunks/1255-*.js
+     * contains `let d=1e3*Number("0"),p=1e3*Number("0")`.
+     *
+     * WHAT THAT COST. LinkWithLoading warms every card, nav item and search result with
+     * `router.prefetch(href)` on hover/pointerdown/touchstart. That is `PrefetchKind.FULL`, which
+     * omits the Next-Router-Prefetch header, so the server does a COMPLETE dynamic render and the
+     * client caches the finished page — products, facets, pagination. One hundred per cent of that
+     * work was being thrown away on the next line of the reducer.
+     *
+     * WHY IT WAS 0, AND WHY THAT REASON NO LONGER HOLDS. The note this replaces described a real
+     * bug: a Link prefetched while an ISR page's data was momentarily empty kept replaying the
+     * empty snapshot on soft navigation — "click Packs → empty, refresh → products appear". But
+     * that was a bug about the ORIGIN serving an empty payload, and it has since been fixed at the
+     * source: util/loadForCache.ts calls `noStore()` whenever a primary fetch throws, so a failed
+     * render is never baked into the Full Route Cache and the client can no longer be handed an
+     * empty payload to cache. Killing the client cache was treating the symptom.
+     *
+     * The old note also justified itself with "the route is still ISR-cached on the origin, so this
+     * stays fast". That is false for the one route the owner is complaining about: /shop awaits
+     * `searchParams`, which opts it out of static rendering entirely (see its own header comment).
+     * For /shop, 0 meant a full origin round-trip, every click, with nothing on screen.
+     *
+     * 30 SECONDS, NOT NEXT'S DEFAULT 300. A gesture-driven prefetch is consumed within a second of
+     * being fired, so 30s covers the entire case this exists for with an order of magnitude to
+     * spare, while capping how stale a price or a stock badge can be at half a minute rather than
+     * five. `dynamic` stays at 0 — Next's own default — so returning to a page you have already
+     * visited still refetches.
+     */
     staleTimes: {
       dynamic: 0,
-      static: 0,
+      static: 30,
     },
     optimizePackageImports: [
       'lucide-react',

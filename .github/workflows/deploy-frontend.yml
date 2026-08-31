@@ -13,15 +13,11 @@ on:
       - ".github/workflows/deploy-frontend.yml"
   workflow_dispatch:
 
-# Serialise deploys. Two merges close together each build and push the SAME `:latest` tag, then
-# each pulls `:latest` on the VPS — so the image that ends up running is whichever build finished
-# last, not whichever commit is newest. That is not theoretical: PRs #183 and #184 merged 13s
-# apart, their deploys finished 2s apart, and the box came up running the earlier commit's image.
-# The category fix in #184 was reported green and was simply not on the server; Googlebot kept
-# seeing 20 of 79 products until the run was re-triggered by hand.
-#
-# cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
-# mid-recreate; queueing costs a few minutes and always converges on the newest commit.
+# Per-workflow group, NOT a shared one. Sharing it was tried on 10/08/2026 and was worse:
+# GitHub keeps at most ONE pending run per concurrency group, so with all three deploy
+# workflows in one group the frontend deploy (#408) was CANCELLED outright rather than
+# queued — a silently dropped deploy, which beats an intermittent failure only in that it
+# fails quietly. SSH contention is handled by backoff between attempts instead.
 concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -47,10 +43,17 @@ jobs:
           test -f frontend/Dockerfile || (echo "❌ frontend/Dockerfile not found" && exit 1)
           echo "✓ frontend/Dockerfile found"
 
+      # Node 24, matching frontend/Dockerfile and frontend/.nvmrc.
+      #
+      # `npm run build` runs the prebuild chain, and scripts/check-sitemap-crawl.mjs imports
+      # src/util/sitemapCrawl.ts by its .ts path so the check drives the shipping code. Type
+      # stripping exists from Node 22.6; on Node 20 — what this step used to pin — the runtime
+      # rejects the flag with exit 9 and the build never reaches next build. The Dockerfile carries
+      # the same pin, because the image build runs the same npm script.
       - name: Setup Node.js
         uses: actions/setup-node@v5
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
@@ -62,14 +65,27 @@ jobs:
         run: npm run lint
         working-directory: frontend
 
+      # ── ONE RETRY, BECAUSE THE BUILD DEPENDS ON A THIRD-PARTY CDN ──────────────────────
+      # layout.tsx loads four families through next/font/google (Inter, Noto Sans Arabic, Archivo,
+      # Poppins), so EVERY build has to reach fonts.gstatic.com. On 13/08/2026 that fetch failed,
+      # next/font exhausted its own 3 internal retries and then threw
+      # `TypeError: Cannot read properties of null (reading '1')`, and the whole deploy failed with
+      # no code change involved — a contrast fix sat unshipped while the live page still measured
+      # its six failures.
+      #
+      # A retry is a mitigation, not the cure. The real fix is to vendor the woff2 files and switch
+      # to next/font/local, which removes the network from the build entirely; that needs the font
+      # files committed and is tracked separately. Until then one clean retry turns the common case
+      # (a transient CDN blip) from a failed deploy into a slower one.
       - name: Build (Next.js)
-        run: npm run build
+        run: npm run build || (echo "::warning::build failed once — retrying, usually a next/font CDN blip" && sleep 15 && npm run build)
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
           NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
 
       - name: Log in to GHCR
+        id: ghcr_login
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
@@ -80,6 +96,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and Push Docker Image
+        id: image_push
         uses: docker/build-push-action@v6
         with:
           context: ./frontend
@@ -141,17 +158,130 @@ jobs:
 
             echo "✅ Frontend deploy done"
 
+      # ── POST-DEPLOY SMOKE TESTS AGAINST THE LIVE SITE ──────────────────────────────────────
+      #
+      # Three bugs reached production on 13/08/2026, and every one of them passed typecheck, passed
+      # the build, and answered HTTP 200 while being wrong:
+      #
+      #   1. /shop navigated itself in a loop — /shop -> ?max_price=1000 -> /shop, twelve times in
+      #      six seconds. It only existed once React had mounted and run its effects, so nothing
+      #      static could see it, and it also wiped ?page=N on arrival.
+      #   2. Every product page emitted schema.org/OutOfStock while the visible page correctly said
+      #      "Sur commande" — availability has two authors and the PHP one silently wins.
+      #   3. The brand list was serialised into /shop twice, 36 KB of exact duplicate.
+      #
+      # The common property is that none was visible at a layer cheaper than the rendered output. So
+      # these run against the DEPLOYED site, after the deploy, and they are the reason a fourth one
+      # of this class should not reach a customer.
+      #
+      # continue-on-error, deliberately: the deploy has already happened by this point and failing
+      # the job would not undo it. What this must do is make the failure LOUD in the run summary,
+      # not pretend the release can be recalled.
+      - name: Smoke test the live site
+        id: smoke
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "Waiting for the new container to answer..."
+          for i in $(seq 1 20); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://protein.tn/shop || echo 000)
+            [ "$code" = "200" ] && break
+            sleep 15
+          done
+
+          fail=0
+          cd frontend
+
+          # FIRST, and shallowest. The three checks below are deep checks of one surface each and
+          # every one of them is about products; on 13/08/2026 all three passed while all 224 article
+          # URLs served 500. A page that does not answer cannot be audited for anything else, so
+          # "does every route type answer 200" runs before any question about what a page contains.
+          echo "::group::every route type answers 200"
+          node scripts/check-routes.mjs || fail=1
+          echo "::endgroup::"
+
+          echo "::group::availability schema"
+          node scripts/check-availability-schema.mjs || fail=1
+          echo "::endgroup::"
+
+          # Asserts the in-content links to the shop are in the RAW HTML of an article. The page
+          # already had a product rail that fetches on an IntersectionObserver, so it rendered fine
+          # for a human and contributed nothing to a crawler — this is the check that tells those
+          # two apart.
+          echo "::group::in-content internal links"
+          node scripts/check-internal-links.mjs || fail=1
+          echo "::endgroup::"
+
+          # Six categories and fifty subcategories showed twelve products each with no pager, which
+          # left /shop?page=1..890 as the only crawl path to the 10,669th product. This asserts every
+          # listing can still be paged, that page 2 is not a duplicate of page 1, and that it
+          # self-canonicalises.
+          echo "::group::listing pagination"
+          node scripts/check-listing-pagination.mjs || fail=1
+          echo "::endgroup::"
+
+          echo "::group::card hover endpoints"
+          node scripts/check-hover-endpoints.mjs || fail=1
+          echo "::endgroup::"
+
+          echo "::group::self-navigation (needs a browser)"
+          # Chrome ships on the GitHub runner image; puppeteer's own download is unreliable here.
+          export CHROME_PATH="${CHROME_PATH:-/usr/bin/google-chrome}"
+          if [ -x "$CHROME_PATH" ]; then
+            node scripts/check-shop-no-loop.mjs || fail=1
+          else
+            echo "::warning::no Chrome at $CHROME_PATH — the redirect-loop check did not run"
+          fi
+          echo "::endgroup::"
+
+          if [ "$fail" = "1" ]; then
+            echo "::error::Live smoke tests FAILED. The deploy is already out — investigate now."
+            exit 1
+          fi
+          echo "All live smoke tests passed."
+
       - name: Report what actually happened
         if: always()
         run: |
+          # ── THIS SUMMARY USED TO LIE ────────────────────────────────────────────────────
+          # It opened with "### Image built and published to GHCR" unconditionally, and then, if
+          # the VPS step had not succeeded, reassured the reader: "This does not mean the deploy
+          # failed. The image is in the registry and the server pulls it itself."
+          #
+          # On 17/08/2026 the GHCR LOGIN failed with a dropped connection, so the build-and-push
+          # step was skipped and no image ever reached the registry. The summary said it had, and
+          # told whoever read it to wait for a poller to collect an image that did not exist.
+          #
+          # A deploy report is read exactly once, by someone deciding whether to act. It now states
+          # what the push step actually did before it says anything else.
           {
-            echo "### Image built and published to GHCR"
+            if [ "${{ steps.image_push.outcome }}" = "success" ]; then
+              echo "### Image built and published to GHCR"
+            else
+              echo "### NO IMAGE WAS PUBLISHED"
+              echo ""
+              echo "\`Build and Push Docker Image\` outcome: \`${{ steps.image_push.outcome }}\`"
+              echo "(GHCR login: \`${{ steps.ghcr_login.outcome }}\`)."
+              echo ""
+              echo "**Production is still serving the previous release.** Nothing to poll for and"
+              echo "nothing to roll back - re-run the job. Both failures seen so far were transient"
+              echo "network errors reaching ghcr.io or the VPS, not credentials."
+            fi
             echo ""
-            if [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
+            if [ "${{ steps.smoke.outcome }}" = "failure" ]; then
+              echo "**LIVE SMOKE TESTS FAILED.** The release is already serving. See the"
+              echo "\"Smoke test the live site\" step for which check broke."
+              echo ""
+            fi
+            if [ "${{ steps.image_push.outcome }}" != "success" ]; then
+              :
+            elif [ "${{ steps.push_to_vps.outcome }}" = "success" ]; then
               echo "The VPS was asked to pull it immediately, and did."
             else
               echo "Could not reach the VPS over SSH (outcome: ${{ steps.push_to_vps.outcome }})."
               echo ""
+              # Reachable only when the image DID publish - the branch above returns early
+              # otherwise, which is the whole point of this rewrite.
               echo "**This does not mean the deploy failed.** The image is in the registry and the"
               echo "server pulls it itself on its next poll - see scripts/vps-autodeploy.sh."
               echo "If the site has not changed after a few minutes, the poller is not installed:"

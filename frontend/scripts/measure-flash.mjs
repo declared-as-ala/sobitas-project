@@ -55,21 +55,43 @@ console.log(`\n  ${BASE}  ·  #ventes-flash\n`);
 
 for (const theme of THEMES) {
   console.log(`  ═══ ${theme.toUpperCase()} ═══`);
-  console.log('   width  bandH  screens  cardW  cardH  h2   edge   over  strays');
-  console.log('  ' + '─'.repeat(74));
+  console.log('   width  bandH  vs #products  cardW  cardH  h2   edge   over  strays');
+  console.log('  ' + '─'.repeat(78));
 
   for (const width of WIDTHS) {
     const page = await browser.newPage();
     await page.setViewport({ width, height: 900, deviceScaleFactor: 1 });
     if (theme === 'dark') await page.emulateMediaFeatures([{ name: 'prefers-color-scheme', value: 'dark' }]);
-    await page.goto(`${BASE}/`, { waitUntil: 'networkidle2', timeout: 90000 });
+    /* `domcontentloaded` + an explicit wait for the band, NOT `networkidle2`.
+       This page loads ~40 packshots from a remote origin, so "fewer than 3 connections for 500ms"
+       is a statement about that origin's health, not about the layout being ready. Measured here:
+       the same script passed all 12 widths on one run and threw `Navigation timeout of 90000 ms`
+       on the next, against an identical build — the flake was the network, and a guard that fails
+       for reasons unrelated to what it asserts is the guard nobody runs.
+
+       Waiting for `#ventes-flash` is the real precondition and it is what the next line needs
+       anyway. Layout is settled by the 1.5s pause below, which was already here. */
+    await page.goto(`${BASE}/`, { waitUntil: 'domcontentloaded', timeout: 90000 });
+    await page.waitForSelector('#ventes-flash', { timeout: 30000 }).catch(() => {});
     // The band is `defer`red behind an IntersectionObserver, so it must be scrolled to first.
     await page.evaluate(() => document.querySelector('#ventes-flash')?.scrollIntoView({ block: 'center' }));
+    /* Every width here is a TYPE measurement in disguise — band height, card height, and whether
+       anything overflows its box all move with the face the text is set in. Archivo loads with
+       `font-display: swap` and is deliberately not preloaded, so until it arrives the browser
+       paints a wider metric-adjusted Arial. Measuring in that window makes the result depend on
+       Chrome's cache rather than on the CSS, which is precisely how measure-category-rail failed
+       on production one run after passing on the same build. */
+    await page.evaluate(() => document.fonts.ready);
     await page.evaluate(() => new Promise((r) => setTimeout(r, 1500)));
 
     const m = await page.evaluate(() => {
       const band = document.querySelector('#ventes-flash');
       if (!band) return null;
+      /* THE BAND THIS ONE IS JUDGED AGAINST. "Les plus vendus" is `<ProductSection id="products">`
+         — the rail directly above, same grid, same product count, the full-size card. Measuring it
+         in the same pass is what lets the height assertion below be a RATIO instead of a constant;
+         see the note at the assertion for why the constant had to go. */
+      const sellingRail = document.querySelector('#products');
       const rail = band.querySelector('ul[role="list"]');
       const cards = rail ? [...rail.children] : [];
       const h2 = band.querySelector('h2');
@@ -119,6 +141,7 @@ for (const theme of THEMES) {
       return {
         bandH: Math.round(bandRect.height),
         screens: +(bandRect.height / window.innerHeight).toFixed(2),
+        sellingRailH: sellingRail ? Math.round(sellingRail.getBoundingClientRect().height) : null,
         cardH: cards[0] ? Math.round(cards[0].getBoundingClientRect().height) : null,
         bandW: Math.round(bandRect.width),
         railW: rail ? Math.round(rail.getBoundingClientRect().width) : null,
@@ -154,8 +177,9 @@ for (const theme of THEMES) {
       continue;
     }
 
+    const vs = m.sellingRailH ? `${(m.bandH / m.sellingRailH).toFixed(2)}x of ${m.sellingRailH}` : '?';
     console.log(
-      `   ${String(width).padEnd(6)} ${String(m.bandH).padEnd(6)} ${String(m.screens).padEnd(8)} ` +
+      `   ${String(width).padEnd(6)} ${String(m.bandH).padEnd(6)} ${vs.padEnd(13)} ` +
         `${String(m.cardW).padEnd(6)} ${String(m.cardH).padEnd(6)} ${String(m.h2).padEnd(4)} ` +
         `${m.edgeW.padEnd(6)} ${String(m.overflowing.length).padEnd(5)} ${m.strays.length ? m.strays.join(',') : 'in'}`
     );
@@ -164,16 +188,66 @@ for (const theme of THEMES) {
     if (m.strays.length) fail(`@${theme} ${width}px · control(s) outside the band: ${m.strays.join(' ')}`);
     if (m.docW > m.vw) fail(`@${theme} ${width}px · page scrolls horizontally: ${m.docW} > ${m.vw}`);
     if (m.smallest && m.smallest.side < 44) fail(`@${theme} ${width}px · tap target ${Math.round(m.smallest.side)}px — "${m.smallest.text}"`);
-    if (m.edgeW !== '4px') fail(`@${theme} ${width}px · band edge is ${m.edgeW}, expected 4px (the brand rule lost to the [data-band] seam)`);
-    if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected exactly 1`);
-    /* THE BANNER CEILING. "Make it a banner, not a full section" is a height, so it is asserted as
-       one rather than left to whoever looks at it next.
-       320px against a measured 224-262px: enough headroom for a product name wrapping to a third
-       line or a fifth deal, nowhere near enough to let the vertical card back in (that measured
-       453-458px band) or to re-add a row of chrome. Absolute pixels, not a fraction of the
-       viewport, because the test viewport is 900px tall and a real phone is 700-850 — a ratio here
-       would quietly mean something different on every device. */
-    if (m.bandH > 320) fail(`@${theme} ${width}px · band is ${m.bandH}px — over the 320px banner ceiling, this is a section again`);
+    /* ── THE 4px BRAND EDGE IS GONE BY DECISION, SO THE ASSERTION GOES WITH IT ────────────────
+       Owner, 15/08/2026: "for the vente flash, take off the border top."
+
+       This check existed because the band and its guard disagreed — the edge was specified, the
+       plate had replaced it, and 24 of 24 checks failed for days while nobody ran it. That was a
+       real finding and it was resolved by restoring the edge. The owner has now resolved the same
+       disagreement the other way, which is theirs to resolve.
+
+       Deleting the assertion rather than loosening it, because there is nothing left to assert: the
+       band's boundary is `[data-band]`'s 1px seam plus the `surface="sunken"` ground change, and
+       both of those are asserted for every band by measure-bands.mjs. A guard kept alive on a
+       design that no longer exists is how this file came to fail 24/24 in the first place — noise
+       that trains everyone to ignore the one run that matters.
+
+       The measurement itself is KEPT and still printed in the summary line below, so a future
+       change to the seam is visible in the output even though nothing fails on it. */
+    /* ZERO, not one (owner, 15/08/2026: "take off the button from the vente flash … even in the
+       desktop"). The band is a display now.
+
+       The assertion is kept rather than deleted, and inverted rather than loosened, because the
+       thing it was written to catch is still possible in the other direction: the desktop link and
+       the phone bar were ONE control rendered at complementary widths, so re-adding either alone
+       leaves a CTA at some widths and none at others. Counting at all twelve widths is what makes
+       "we removed it" verifiable instead of "we removed the one we could see". */
+    if (m.offersLinks !== 0) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected 0 — this band shows, it does not sell`);
+    /* THE BANNER CEILING, AS A RATIO TO THE RAIL ABOVE IT.
+       "Make it a banner, not a full section" is a height, so it is asserted rather than left to
+       whoever looks at it next. It used to be asserted as a flat 320px, and that number was
+       calibrated against ONE layout — a horizontal snap scroller putting all four deals in a single
+       row. The moment the band became a grid the constant stopped describing anything: it failed at
+       all twelve widths in both themes, including 328px at 1440 where the band was fine.
+
+       A guard that fails on a healthy page is worse than no guard. Nobody ran this one for days,
+       and while nobody ran it the phone band reached 1,227px — 1.36 viewport heights — which is the
+       exact defect it existed to prevent. It cried wolf, so it got ignored, so it missed the wolf.
+
+       The invariant that actually survives a layout change is RELATIVE: this band must read as
+       materially lighter than the selling rail beside it. Same page, same width, same product
+       count, measured in the same pass — so it holds at every viewport without a per-device number,
+       and it keeps meaning the same thing the next time the grid changes.
+
+       CALIBRATION, from the two measurements that matter rather than from taste:
+
+           healthy, this design      0.38 - 0.73   (0.73 at 1024, where the band is 2x2 and the
+                                                    rail is 1x4 in the same container)
+           the defect it must catch  1.30          (390px, four COLUMN cards, band 1,227px
+                                                    against the rail's 941px)
+
+       0.85 sits between them with room on both sides: ~16% of headroom over the worst healthy
+       width, and still 53% below the regression. A ceiling set just above what happens to be
+       measured today is a ceiling that fails on the next legitimate change, which is how the
+       320px constant ended up ignored. */
+    const RATIO = 0.85;
+    if (m.sellingRailH && m.bandH > m.sellingRailH * RATIO) {
+      fail(
+        `@${theme} ${width}px · band is ${m.bandH}px against the selling rail's ${m.sellingRailH}px ` +
+          `(${(m.bandH / m.sellingRailH).toFixed(2)}x, ceiling ${RATIO}x) — this is a section again`
+      );
+    }
+    if (!m.sellingRailH) fail(`@${theme} ${width}px · #products not found — nothing to size the band against`);
 
     if (width === WIDTHS[0]) console.log(`          clock: "${m.clock}"   edge: ${m.edgeW} ${m.edgeC}   band bg: ${m.bandBg}`);
 

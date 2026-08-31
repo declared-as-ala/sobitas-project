@@ -3,6 +3,7 @@ import { cache } from 'react';
 import {
   getProductDetails,
   fetchCategoryOrSubCategory,
+  fetchCategoryOrSubCategoryMetadata,
   getArticleDetails,
   getPageBySlug,
   getAllBrands,
@@ -37,6 +38,9 @@ export const getCachedProductDetails = cache((slug: string) => getProductDetails
  * runs outside a request scope, where React cache() has no store.
  */
 export const getCachedCategoryOrSubCategory = cache((slug: string) => fetchCategoryOrSubCategory(slug));
+export const getCachedCategoryOrSubCategoryMetadata = cache((slug: string) =>
+  fetchCategoryOrSubCategoryMetadata(slug)
+);
 export const getCachedArticleDetails = cache((slug: string) => getArticleDetails(slug));
 export const getCachedPageBySlug = cache((slug: string) => getPageBySlug(slug));
 export const getCachedAllBrands = cache(() => getAllBrands());

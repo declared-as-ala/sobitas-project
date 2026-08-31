@@ -1,0 +1,252 @@
+name: VPS Doctor (diagnose SSH deploy failures)
+
+# Why this exists
+#
+# Every deploy between 08/08/2026 and 13/08/2026 died at the same line:
+#
+#     ssh: handshake failed: unable to authenticate, attempted methods [none password]
+#
+# That message is ambiguous. It appears BOTH when VPS_PASSWORD is wrong AND when the server has
+# stopped accepting passwords at all, and those two have opposite fixes. This workflow asks the
+# SERVER what it accepts, and then actually TRIES the key, so nobody has to guess.
+#
+# ── WHAT THIS WORKFLOW GOT WRONG UNTIL 14/08/2026 ────────────────────────────────────────────
+#
+# 1. It never touched VPS_SSH_KEY. The owner was told to verify a newly-added key by running
+#    "VPS Doctor", and VPS Doctor read VPS_HOST, VPS_USER and VPS_PORT only. It could not have
+#    reported on the key whether the key was perfect or absent. Step 4 below is the fix, and it
+#    is the question the workflow existed to answer.
+#
+# 2. It trusted the secrets to be clean. VPS_HOST carries a TRAILING NEWLINE — visible in run
+#    31783547317's log as an untimestamped blank line between `VPS_HOST: ***` and `VPS_USER: ***`.
+#    `/dev/tcp/$VPS_HOST/$PORT` then expands to a hostname with an embedded newline, which bash
+#    fails to resolve INSTANTLY: the step died in 25 ms having written nothing at all, and the
+#    resulting red X was read as "the SSH key is broken". The key was fine.
+#
+#    appleboy/ssh-action trims its own inputs, which is why every deploy kept working while this
+#    diagnostic did not — a difference that is invisible until something hand-written uses the
+#    value directly. Everything below is trimmed before use.
+#
+# Run it from Actions → "VPS Doctor" → "Run workflow". Nothing is deployed or changed.
+
+on:
+  workflow_dispatch:
+
+jobs:
+  diagnose:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Diagnose
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          VPS_USER: ${{ secrets.VPS_USER }}
+          VPS_PORT: ${{ secrets.VPS_PORT }}
+          VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          set +e
+          set +x
+
+          # Written to BOTH the run summary and stdout. The summary is the readable artefact, but
+          # it is not retrievable through the REST API, so a diagnosis that exists only there
+          # cannot be read by anyone helping remotely — including from a terminal with `gh`.
+          # Duplicating into the log costs nothing and makes the verdict greppable.
+          S() { echo "$@" >> "$GITHUB_STEP_SUMMARY"; echo "$@"; }
+
+          # ── 0. Trim the secrets before anything reads them ──────────────────────────────
+          # tr -d '[:space:]' rather than a trailing-newline strip: a value pasted from a web
+          # terminal can pick up a CR, a leading space or a non-breaking space, and every one of
+          # those breaks a hostname silently. None of the three can legitimately appear in a
+          # hostname, a username or a port number.
+          HOST=$(printf '%s' "$VPS_HOST" | tr -d '[:space:]')
+          SSH_USER=$(printf '%s' "$VPS_USER" | tr -d '[:space:]')
+          PORT=$(printf '%s' "$VPS_PORT" | tr -d '[:space:]')
+          PORT="${PORT:-22}"
+
+          S "## VPS Doctor"
+          S ""
+
+          # Report the hygiene problem WITHOUT printing the value: length before and after is
+          # proof enough and leaks nothing.
+          RAW_LEN=${#VPS_HOST}
+          CLEAN_LEN=${#HOST}
+          S "### 0. Secret hygiene"
+          if [ "$RAW_LEN" -ne "$CLEAN_LEN" ]; then
+            S "⚠️ **\`VPS_HOST\` contains $((RAW_LEN - CLEAN_LEN)) stray whitespace character(s)**"
+            S "— almost certainly a trailing newline from the paste. Trimmed for this run."
+            S ""
+            S "Worth re-saving the secret without it. Deploys survive it because"
+            S "\`appleboy/ssh-action\` trims its own inputs, so this stays invisible until"
+            S "something hand-written uses the value directly and fails in a way that looks"
+            S "exactly like an authentication problem."
+          else
+            S "✓ \`VPS_HOST\` is clean."
+          fi
+          if [ -z "$HOST" ] || [ -z "$SSH_USER" ]; then
+            S ""
+            S "❌ VPS_HOST or VPS_USER is empty after trimming — nothing to test."
+            exit 1
+          fi
+          S ""
+
+          # ── 1. Is the SSH port reachable at all? ────────────────────────────────────────
+          # This is the line that failed in 25 ms and started the whole misdiagnosis. It now runs
+          # on the TRIMMED host, which is the actual fix; nc is preferred over /dev/tcp because it
+          # takes the host as a single argument and returns a real exit code rather than a bash
+          # redirection error, and /dev/tcp stays as a fallback for images without netcat.
+          reachable() {
+            if command -v nc >/dev/null 2>&1; then
+              nc -z -w 10 "$1" "$2" 2>/dev/null
+            else
+              timeout 10 bash -c "exec 3<>/dev/tcp/$1/$2" 2>/dev/null
+            fi
+          }
+          S "### 1. Reachability"
+          if reachable "$HOST" "$PORT"; then
+            S "✓ TCP connect to port \`$PORT\` succeeded — the server is up and reachable."
+          else
+            S "❌ Cannot open a TCP connection to port \`$PORT\`."
+            S ""
+            S "This is NOT an auth problem. Either the VPS is off, the IP in \`VPS_HOST\` changed,"
+            S "the SSH port changed, or a firewall is blocking GitHub's runners."
+            exit 1
+          fi
+          S ""
+
+          # ── 2. Which auth methods does the server accept? ───────────────────────────────
+          # PreferredAuthentications=none offers nothing, so the server refuses and, in refusing,
+          # names every method it WOULD have taken. No credential is used to obtain this.
+          PROBE=$(ssh \
+            -o PreferredAuthentications=none \
+            -o PubkeyAuthentication=no \
+            -o StrictHostKeyChecking=no \
+            -o UserKnownHostsFile=/dev/null \
+            -o ConnectTimeout=15 \
+            -o BatchMode=yes \
+            -p "$PORT" "$SSH_USER@$HOST" exit 2>&1 | grep -i "permission denied" | head -1)
+
+          S "### 2. Authentication methods the server accepts"
+          S '```'
+          S "${PROBE:-(server did not name its methods)}"
+          S '```'
+          S ""
+
+          # ── 3. Does VPS_SSH_KEY parse? ──────────────────────────────────────────────────
+          # Deliberately separate from step 4. "The key is malformed" and "the key is fine but the
+          # server has never heard of it" are indistinguishable in a deploy log and need opposite
+          # fixes — re-paste the secret, versus re-run Step 2 of the runbook on the VPS.
+          S "### 3. Is \`VPS_SSH_KEY\` a usable private key?"
+          KEY_OK=0
+          if [ -z "$VPS_SSH_KEY" ]; then
+            S "❌ The \`VPS_SSH_KEY\` secret is not set."
+            S ""
+            S "See \`docs/runbooks/ssh-key-for-github-deploys.md\`."
+          else
+            KEYFILE="$RUNNER_TEMP/vps_key"
+            ( umask 077; printf '%s\n' "$VPS_SSH_KEY" > "$KEYFILE" )
+            chmod 600 "$KEYFILE"
+
+            # -y derives the public half from the private one. It is a pure local parse that
+            # never touches the network, which is what makes it able to separate a bad PASTE
+            # from a bad SERVER STATE. -P with an empty argument supplies an empty passphrase;
+            # </dev/null stops it prompting and hanging the job for six hours.
+            if ssh-keygen -y -P '' -f "$KEYFILE" </dev/null >/dev/null 2>"$RUNNER_TEMP/keyerr"; then
+              FP=$(ssh-keygen -l -f "$KEYFILE" 2>/dev/null | head -1)
+              S "✓ Parsed cleanly. Fingerprint:"
+              S '```'
+              S "$FP"
+              S '```'
+              S "Confirm it matches the VPS — in the Hostinger browser terminal:"
+              S '```bash'
+              S "ssh-keygen -lf ~/.ssh/github_actions.pub"
+              S '```'
+              KEY_OK=1
+            else
+              ERR=$(head -3 "$RUNNER_TEMP/keyerr" 2>/dev/null)
+              S "❌ The secret is set, but it is **not a valid private key**."
+              S ""
+              S '```'
+              S "${ERR:-(no detail)}"
+              S '```'
+              S "The three ways this happens, most likely first:"
+              S ""
+              S "1. **The BEGIN and END banner lines were left out** of the copy. Both lines are"
+              S "   part of the key, not decoration around it."
+              S "2. **The key has a passphrase.** Actions cannot type one. Regenerate it with an"
+              S "   empty passphrase — in bash that is -N followed by two double-quote characters."
+              S "   Wrapping those in single quotes instead sets the passphrase to a literal"
+              S "   two-character string, which parses but can never be used unattended."
+              S "3. **The line breaks were mangled** by copying out of a narrow browser terminal."
+              S "   Maximise the window and copy it again."
+            fi
+          fi
+          S ""
+
+          # ── 4. THE ANSWER: does the key actually open the door? ─────────────────────────
+          S "### 4. Does the key actually log in?"
+          VERDICT=1
+          if [ "$KEY_OK" = "1" ]; then
+            # PreferredAuthentications=publickey so that a WORKING PASSWORD cannot mask a broken
+            # key and report a false green — which is exactly how this would have gone wrong
+            # today, since the server still accepts passwords and every deploy is passing.
+            # BatchMode=yes so it fails instead of prompting.
+            OUT=$(ssh -i "$RUNNER_TEMP/vps_key" \
+              -o IdentitiesOnly=yes \
+              -o PreferredAuthentications=publickey \
+              -o StrictHostKeyChecking=no \
+              -o UserKnownHostsFile=/dev/null \
+              -o BatchMode=yes \
+              -o ConnectTimeout=20 \
+              -p "$PORT" "$SSH_USER@$HOST" 'echo VPS_DOCTOR_LOGIN_OK; uptime' 2>&1)
+
+            if echo "$OUT" | grep -q VPS_DOCTOR_LOGIN_OK; then
+              S "✅ **The key works.** GitHub Actions can log into the VPS with no password."
+              S ""
+              S '```'
+              S "$(echo "$OUT" | grep -v VPS_DOCTOR_LOGIN_OK | head -3)"
+              S '```'
+              S "\`VPS_PASSWORD\` can now be deleted whenever you like — the workflows prefer the"
+              S "key and no longer depend on it."
+              VERDICT=0
+            else
+              S "❌ The key is well-formed, but the server **rejected** it."
+              S ""
+              S '```'
+              S "$(echo "$OUT" | grep -vi 'warning: permanently added' | head -6)"
+              S '```'
+              S "The key parses, so this is the VPS side: the public half is not in"
+              S "\`authorized_keys\`, or the permissions around it are wrong. In the browser"
+              S "terminal:"
+              S ""
+              S '```bash'
+              S "cat ~/.ssh/github_actions.pub >> ~/.ssh/authorized_keys"
+              S "chmod 700 ~/.ssh && chmod 600 ~/.ssh/authorized_keys"
+              S "ls -la ~/.ssh"
+              S '```'
+              S "\`~/.ssh\` must be \`700\` and \`authorized_keys\` must be \`600\`. sshd ignores both"
+              S "files when they are group- or world-writable and tells the client nothing about"
+              S "why, so a permissions problem is indistinguishable from a missing key from here."
+            fi
+          else
+            S "Skipped — step 3 has to pass first."
+          fi
+          S ""
+
+          # ── 5. Is anything actually broken right now? ───────────────────────────────────
+          # Context, so a red X on this workflow is not mistaken for a production outage.
+          S "### 5. Meanwhile, the password fallback"
+          case "$PROBE" in
+            *password*)
+              S "The server still accepts passwords, so deploys keep landing through"
+              S "\`VPS_PASSWORD\` while the key is being sorted out. **Nothing is down.**"
+              ;;
+            *publickey*)
+              S "⚠️ The server does **not** accept passwords — only keys. \`VPS_PASSWORD\` cannot"
+              S "work however often it is re-typed, and the key above is the only way in."
+              ;;
+            *)
+              S "The server refused without naming its methods. See the raw output in step 2."
+              ;;
+          esac
+
+          echo "Diagnosis written to the run summary."
+          exit $VERDICT

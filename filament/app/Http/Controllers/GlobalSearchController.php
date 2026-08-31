@@ -149,17 +149,18 @@ class GlobalSearchController extends Controller
     private function searchCommandes(string $term): array
     {
         $rows = Commande::query()
-            ->with('client:id,name,phone_1')
+            ->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1'])
             ->where(function ($query) use ($term): void {
                 $query->where('numero', 'like', $term)
                     ->orWhere('phone', 'like', $term)
                     ->orWhere('nom', 'like', $term)
                     ->orWhere('prenom', 'like', $term)
-                    ->orWhereHas('client', fn ($q) => $q->where('name', 'like', $term)->orWhere('phone_1', 'like', $term));
+                    ->orWhereHas('client', fn ($q) => $q->where('name', 'like', $term)->orWhere('phone_1', 'like', $term))
+                    ->orWhereHas('legacyClient', fn ($q) => $q->where('name', 'like', $term)->orWhere('phone_1', 'like', $term));
             })
             ->orderByDesc('created_at')
             ->limit(self::LIMIT_PER_GROUP)
-            ->get(['id', 'numero', 'phone', 'nom', 'prenom', 'prix_ttc', 'created_at', 'client_id']);
+            ->get(['id', 'numero', 'phone', 'nom', 'prenom', 'prix_ttc', 'created_at', 'client_id', 'user_id']);
 
         return $rows->map(fn (Commande $r) => [
             'id' => $r->id,

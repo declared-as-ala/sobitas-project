@@ -7,6 +7,7 @@ import { ProductDetailFallbackClient } from '@/app/(shop)/shop/ProductDetailFall
 import { ProductDetailSkeleton } from '@/app/components/ProductDetailSkeleton';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildProductUrlPath, getProductPrimarySubCategory, buildProductCanonicalUrl } from '@/util/productUrl';
+import { getComplementProducts } from '@/services/productComplements';
 
 const ProductDetailClient = nextDynamic(() => import('./ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -73,13 +74,16 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
         : `/shop/${encodeURIComponent(product.slug)}`;
       permanentRedirect(dest);
     }
-    const similarData = product.sous_categorie_id
-      ? await getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
-      : { products: [] };
+    const [similarData, complementProducts] = await Promise.all([
+      product.sous_categorie_id
+        ? getSimilarProducts(product.sous_categorie_id).catch(() => ({ products: [] }))
+        : Promise.resolve({ products: [] }),
+      getComplementProducts(product).catch(() => []),
+    ]);
 
     return (
       <>
-        <ProductDetailClient product={product} similarProducts={similarData.products || []} />
+        <ProductDetailClient product={product} similarProducts={similarData.products || []} complementProducts={complementProducts} />
       </>
     );
   } catch (error: any) {

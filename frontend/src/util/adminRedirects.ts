@@ -50,6 +50,42 @@ export function normalizeRedirectKey(input: string): string {
   return s === '' ? '/' : s;
 }
 
+/**
+ * The DESTINATION half, which was trimmed and otherwise trusted.
+ *
+ * `old_url` has been normalised since this file was written; `new_url` was passed through as typed.
+ * Live rule id=11 on 15/08/2026 was `/pendant-l-entrainement -> /Intra-Workout`, hand-typed with the
+ * stored capitalisation of the subcategory. Both capitals cost real time, because a miscapitalised
+ * path is not a 404 here — MySQL's collation is case-insensitive, so `(shop)/[slug]` resolves the
+ * category, renders it, and only then notices in the page body that the canonical slug disagrees and
+ * issues its own redirect. Measured on production, that second hop took between 6 and 17 seconds and
+ * did not answer at all when cold.
+ *
+ * So an admin typo turned one redirect into two, the second of them slower than any crawler waits.
+ * Middleware now folds case before anything else runs, which catches this at request time — but the
+ * rule should not emit the bad URL in the first place: a redirect that immediately redirects again is
+ * a chain, and chains are what the coverage report counts.
+ *
+ * Only the PATH is lowered. Query and fragment are left exactly as typed, because a `?ref=CoachAli`
+ * or a tracking value is case-significant and none of this is about them.
+ */
+export function normalizeRedirectDestination(input: string): string {
+  const raw = input.trim();
+  if (!raw) return raw;
+
+  // Absolute URLs are admin-configurable on purpose (→ admin.protein.tn). Leave the host alone —
+  // `sameOriginOrTrusted` in middleware is what decides whether it is allowed.
+  if (/^https?:\/\//i.test(raw)) return raw;
+
+  const cut = raw.search(/[?#]/);
+  const path = cut === -1 ? raw : raw.slice(0, cut);
+  const rest = cut === -1 ? '' : raw.slice(cut);
+
+  // Percent-escapes are stepped over: `%D9%85` is a live Arabic blog slug and lowering its hex
+  // digits rewrites a URL that was already correct.
+  return path.replace(/%[0-9A-Fa-f]{2}|[A-Z]+/g, (m) => (m.startsWith('%') ? m : m.toLowerCase())) + rest;
+}
+
 async function fetchRules(): Promise<Map<string, RedirectRule>> {
   const map = new Map<string, RedirectRule>();
   try {
@@ -81,7 +117,7 @@ async function fetchRules(): Promise<Map<string, RedirectRule>> {
       // Never let a stray rule hijack the homepage.
       if (!key || key === '/') continue;
       const code = Number(row?.code) || 301;
-      const to = row?.new_url ? String(row.new_url).trim() : null;
+      const to = row?.new_url ? normalizeRedirectDestination(String(row.new_url)) : null;
       // 301/302 need a destination; 410 (Gone) does not.
       if (code !== 410 && !to) continue;
       // Guard against self-redirect loops (old_url === new_url).

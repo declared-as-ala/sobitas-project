@@ -7,6 +7,16 @@
 The canonical visual language for protein.tn. Every page and component must read as one
 art-directed brand, not assembled parts. When redesigning a surface, conform it to this document.
 
+> **This document is long because it records reasoning, and reasoning is what stops a decision being
+> undone six weeks later. It is not the thing you read at the start of every task.**
+>
+> The operating layer is the **`protein-ui` skill** — `.claude/skills/protein-ui/SKILL.md` — which
+> loads automatically for any UI, UX, visual, styling or layout work, and which every redesign is
+> expected to have been read against. It carries the rules, the token vocabulary, the primitive
+> table, the verification commands and the new-component contract, and it points back here for the
+> *why*. **If you change a rule in this document, change it in the skill in the same commit** — a
+> second source of truth that drifts is worse than one long file.
+
 > **Golden rule:** change the *look*, never the *logic*. Only touch `className`, JSX
 > layout/structure, typography, spacing, icons, and decorative motion. Do **not** alter data
 > fetching, props, API calls, `generateMetadata`, JSON-LD, SEO copy, `href`s, form behaviour, or
@@ -736,3 +746,91 @@ landing pages. Delete it or use it; do not leave it undecided indefinitely.
 
 `globals.css:196-281` overrides physical-direction utilities with `!important` for `html[dir="rtl"]`
 (~85 lines). New components should prefer logical properties, or they will break in Arabic.
+
+---
+
+## 14b. Status colour — never tint the plate with the text's own hue
+
+`--c-ok` and `--c-warn` are documented at **5.02:1**, `--c-destructive` at **4.84:1**. Those numbers
+are measured against an *untinted* surface — the page canvas.
+
+Compositing the same hue behind them destroys the margin. Measured on the account status badges,
+which is where this rule came from:
+
+| Chip | `bg-<token>/10` | `bg-elevated` |
+|---|---|---|
+| Livrée (`ok`) | 4.39:1 ✗ | 5.02:1 ✓ |
+| En livraison (`warn`) | 4.38:1 ✗ | 5.02:1 ✓ |
+| Annulée (`destructive`) | 4.14:1 ✗ | 4.84:1 ✓ |
+| Gagnés, on a `bg-sunken` row | 4.08:1 ✗ | 5.02:1 ✓ |
+
+So the canonical status chip keeps the colour in the **border and the text** and leaves the plate
+alone:
+
+```
+border border-ok/40 bg-elevated text-ok
+border border-warn/40 bg-elevated text-warn
+border border-destructive/40 bg-elevated text-destructive
+border border-rule bg-elevated text-ink-2          /* neutral */
+```
+
+A `/10` tint behind an ICON is fine — a graphical object needs 3:1, not 4.5:1, and the icon plates
+in `AccountSummary` and `AuthShell`'s benefit list use exactly that.
+
+## 14c. A form screen fits the phone, and "fits" is measured on the content
+
+Auth, checkout steps and any other screen whose job is one form: the content must fit the viewport
+without page scroll. A form that scrolls puts its own submit button below the fold, and the
+customer's estimate of how long it will take is made from what is on screen when the page lands.
+
+Enforced by `measure-auth` against **real devices**, not a cross-product of widths and heights —
+320×667 is not a phone, and testing it produces failures nobody can act on:
+
+| Device | | Enforced |
+|---|---|---|
+| iPhone 14 | 390×844 | yes |
+| Android | 360×740 | yes |
+| iPhone SE | 375×667 | yes |
+| iPhone 5 | 320×568 | **no** — printed as a note every run |
+
+Two rules that come out of getting this wrong:
+
+- **Measure the content, not the document.** `documentElement.scrollHeight` is never smaller than
+  the viewport. Use explicit hooks (`data-auth-header` / `-body` / `-card`) and sum the real
+  heights, or a page that fits reports the viewport height and tells you nothing.
+- **Reserve for anything an env flag hides.** The Google sign-in block is behind
+  `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and is absent locally — ~96px that only appears in production.
+
+**44px is a floor, not a budget line.** Shrinking a control to buy vertical space is the first idea
+and always the wrong one; it failed 12 combinations within a minute of being tried.
+
+When a screen genuinely cannot fit, drop the least essential element at that height rather than
+crushing the design everywhere — `[@media(max-height:700px)]:hidden` on the mobile benefit line is
+the only height query in the codebase and it exists for exactly that trade.
+
+## 15. The contract for a NEW component
+
+Sections 1-14 describe surfaces that exist. This one is the checklist for one that does not yet,
+because "conform it to this document" is not actionable when there is nothing to conform.
+
+1. **Does a primitive already do this?** Extend it before adding a sibling. `ProductGrid` grew an
+   `as`/`role` prop rather than letting Ventes flash keep its forked copy of the class string — and
+   the fork had already drifted a whole breakpoint. A component that cannot be reused in the one
+   shape a caller needs does not prevent the fork; it guarantees it.
+2. **Server component** unless it needs state, an effect, a handler or a browser API.
+3. **Tokens only.** A new file is absent from `design-baseline.json`, so `lint:design` requires it
+   to be at **zero** violations. This is not a nice-to-have — it is the gate.
+4. **Both themes and 320 / 390 / 768 / 1024 / 1440 from the first draft.** Not a later pass. 81% of
+   this site's traffic is a phone, and 320 is also what a 360px Android reports at the largest
+   display-size setting — i.e. someone who has asked the system for bigger text.
+5. **≥44x44px** on everything interactive, keyboard reachable, `focus-visible:ring-focus`, French
+   labels. A control that must *look* smaller keeps its target with `-my-3 py-3`, never by shrinking.
+6. **A skeleton if it loads**, matching the final layout's padding, gaps and aspect ratios exactly.
+   Shared geometry goes in a constant both files import — see `util/productCardFrame.ts`. Two
+   hand-matched copies is how the card and its skeleton drifted into CLS.
+7. **Write down why, next to the code**, wherever the reason is not obvious from reading it. Every
+   long comment in this codebase exists because someone undid a decision that looked arbitrary.
+
+Then verify against the rendered page, not the source (§0). If the component's claim is numeric
+("the card is shorter", "the sheet fits on one screen"), write the measurement script — there are
+eleven already in `scripts/` to copy from.

@@ -43,11 +43,34 @@ function topLevelRouteSegments(dir, insideGroup = false) {
     const hasPage = ['page.tsx', 'page.ts', 'page.jsx', 'page.js'].some((f) => {
       try { return statSync(join(full, f)).isFile(); } catch { return false; }
     });
-    if (hasPage) found.add(name);
-    // A segment can hold only nested pages (e.g. /foo/[id]) and still own the /foo namespace,
-    // but only a real page at the top level can collide with the /{slug} listing route.
+    /*
+     * A segment counts if it holds a page ITSELF **or anywhere beneath it**.
+     *
+     * This used to require a page at the top level, on the reasoning that "only a real page at the
+     * top level can collide with the /{slug} listing route". That is true of the ONE-segment
+     * rewrite and false of the TWO-segment one: middleware rewrites `/{a}/{b}` to
+     * `/x-crawler/product/{a}/{b}` unless `a` is reserved, so a segment owning nothing but
+     * `[token]/page.tsx` is rewritten to a product view that cannot resolve it.
+     *
+     * `avis` was exactly that. app/(shop)/avis/ holds no page of its own, only avis/[token], so
+     * this function never saw it, and /avis/{token} answered 200 to a human and 404 to Googlebot
+     * on production for as long as the route has existed.
+     */
+    const hasNestedPage = hasPage || holdsPageSomewhere(full);
+    if (hasNestedPage) found.add(name);
   }
   return found;
+}
+
+/** Does this directory contain a page file at any depth? */
+function holdsPageSomewhere(dir) {
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isFile() && /^page\.(tsx|ts|jsx|js)$/.test(entry.name)) return true;
+    if (entry.isDirectory() && !entry.name.startsWith('_') && holdsPageSomewhere(join(dir, entry.name))) {
+      return true;
+    }
+  }
+  return false;
 }
 
 const src = readFileSync(join(root, 'src', 'util', 'productUrl.ts'), 'utf8');

@@ -1,5 +1,70 @@
 <?php
 
+/*
+ * Environment values are edited through multiple deployment surfaces. A copied Markdown link
+ * such as `[contact@protein.tn](mailto:contact@protein.tn)` used to reach Symfony unchanged and
+ * made every mail fail RFC validation before the transport was even called. Accept the address
+ * portion defensively, while rejecting anything that still is not an actual mailbox.
+ */
+$emailAddress = static function (mixed $value, string $fallback = ''): string {
+    $candidate = trim((string) $value);
+    if (preg_match('/mailto:([^\s)>]+)/i', $candidate, $match)) {
+        $candidate = trim($match[1], " <>[]()\t\n\r\0\x0B");
+    }
+
+    return filter_var($candidate, FILTER_VALIDATE_EMAIL) ? $candidate : $fallback;
+};
+
+$requestedMailer = strtolower(trim((string) env('MAIL_MAILER', 'log')));
+$smtpHost = trim((string) env('MAIL_HOST', ''));
+$smtpIsGmail = str_contains(strtolower($smtpHost), 'gmail');
+$smtpUsername = $emailAddress(env('MAIL_USERNAME'));
+$rawSmtpPassword = trim((string) env('MAIL_PASSWORD', ''));
+// Google displays 16-character app passwords in four groups. Those visual spaces are not part of
+// the credential, but copying the displayed value into .env preserves them and Gmail answers 535.
+$smtpPassword = $smtpIsGmail
+    ? (preg_replace('/\s+/', '', $rawSmtpPassword) ?? '')
+    : $rawSmtpPassword;
+$smtpReady = $smtpHost !== ''
+    && ! in_array(strtolower($smtpHost), ['127.0.0.1', 'localhost', 'mailpit', 'example.com'], true)
+    && $smtpUsername !== ''
+    && $smtpPassword !== '';
+
+$awsAccessKey = trim((string) env('AWS_ACCESS_KEY_ID', ''));
+$awsSecretKey = trim((string) env('AWS_SECRET_ACCESS_KEY', ''));
+$awsRegion = trim((string) env('AWS_DEFAULT_REGION', 'us-east-1')) ?: 'us-east-1';
+$sesSmtpReady = $awsAccessKey !== '' && $awsSecretKey !== '';
+$sesSmtpPassword = null;
+if ($sesSmtpReady) {
+    // AWS SES SMTP credentials use the IAM access-key id as username and a deterministic
+    // Signature-v4 conversion of the secret access key as password.
+    $dateKey = hash_hmac('sha256', '11111111', 'AWS4'.$awsSecretKey, true);
+    $regionKey = hash_hmac('sha256', $awsRegion, $dateKey, true);
+    $serviceKey = hash_hmac('sha256', 'ses', $regionKey, true);
+    $terminalKey = hash_hmac('sha256', 'aws4_request', $serviceKey, true);
+    $signature = hash_hmac('sha256', 'SendRawEmail', $terminalKey, true);
+    $sesSmtpPassword = base64_encode(chr(0x04).$signature);
+}
+
+// Presence is not validity. The retained Gmail app password is structurally complete but the live
+// SMTP probe can still reject it (535). Honour the explicit deployment choice so a stale credential
+// cannot silently override the local transport and make every queued job exhaust its retries.
+$defaultMailer = $requestedMailer;
+
+$fromAddress = $defaultMailer === 'sendmail'
+    ? 'contact@protein.tn'
+    : ($smtpIsGmail && $smtpUsername !== ''
+        ? $smtpUsername
+        : $emailAddress(env('MAIL_FROM_ADDRESS'), $smtpUsername ?: 'contact@protein.tn'));
+$fromName = $defaultMailer === 'sendmail' ? 'Protein.tn' : env('MAIL_FROM_NAME', 'Protein.tn');
+$replyToAddress = $defaultMailer === 'sendmail'
+    ? 'contact@protein.tn'
+    : $emailAddress(env('MAIL_REPLY_TO'), $fromAddress);
+$adminEmails = array_values(array_unique(array_filter(array_map(
+    static fn (string $value): string => $emailAddress($value),
+    array_map('trim', explode(',', (string) env('ADMIN_EMAILS', 'contact@protein.tn')))
+))));
+
 return [
 
     /*
@@ -13,27 +78,38 @@ return [
     |
     */
 
-    'default' => 'smtp',
+    'default' => $defaultMailer,
 
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations
     |--------------------------------------------------------------------------
     |
-    | Hardcoded to match backend .env so Filament campaign emails use the same
-    | SMTP as order emails (no dependency on Filament container env).
-    |
+    | SMTP credentials come only from the runtime environment. Keeping the
+    | default mailer configurable also ensures test and staging environments can
+    | use the array or log drivers without ever touching production SMTP.
     */
 
     'mailers' => [
         'smtp' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST', 'smtp.gmail.com'),
-            'port' => env('MAIL_PORT', 587),
-            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
-            'username' => env('MAIL_USERNAME', 'bitoutawalid@gmail.com'),
-            'password' => env('MAIL_PASSWORD', 'axnvxeodqwnvnnyl'),
-            'timeout' => null,
+            'host' => $smtpHost !== '' ? $smtpHost : '127.0.0.1',
+            'port' => (int) env('MAIL_PORT', 2525),
+            'encryption' => env('MAIL_ENCRYPTION'),
+            'username' => $smtpUsername ?: null,
+            'password' => $smtpPassword !== '' ? $smtpPassword : null,
+            'timeout' => 15,
+            'auth_mode' => null,
+        ],
+
+        'ses-smtp' => [
+            'transport' => 'smtp',
+            'host' => 'email-smtp.'.$awsRegion.'.amazonaws.com',
+            'port' => 587,
+            'encryption' => 'tls',
+            'username' => $sesSmtpReady ? $awsAccessKey : null,
+            'password' => $sesSmtpPassword,
+            'timeout' => 15,
             'auth_mode' => null,
         ],
 
@@ -67,6 +143,7 @@ return [
             'transport' => 'failover',
             'mailers' => [
                 'smtp',
+                'sendmail',
                 'log',
             ],
         ],
@@ -83,8 +160,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'bitoutawalid@gmail.com'),
-        'name'    => env('MAIL_FROM_NAME', 'Protein.tn'),
+        'address' => $fromAddress,
+        'name'    => $fromName,
     ],
 
     /*
@@ -93,8 +170,10 @@ return [
     |--------------------------------------------------------------------------
     */
     'reply_to' => [
-        'address' => env('MAIL_REPLY_TO', env('MAIL_FROM_ADDRESS', 'contact@protein.tn')),
-        'name' => env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Protein.TN')),
+        'address' => $replyToAddress,
+        'name' => $defaultMailer === 'sendmail'
+            ? 'Protein.tn'
+            : env('MAIL_REPLY_TO_NAME', env('MAIL_FROM_NAME', 'Protein.TN')),
     ],
 
     /*
@@ -126,6 +205,10 @@ return [
     |
     */
 
-    'admin_emails' => array_filter(array_map('trim', explode(',', env('ADMIN_EMAILS', 'bitoutawalid@gmail.com')))),
+    'admin_emails' => $adminEmails,
+
+    // Safe diagnostic flag: confirms all three SMTP values exist without exposing the password.
+    'smtp_ready' => $smtpReady,
+    'ses_smtp_ready' => $sesSmtpReady,
 
 ];

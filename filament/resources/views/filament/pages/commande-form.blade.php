@@ -26,8 +26,9 @@
         $selProducts = \App\Models\Product::whereIn('id', $selProductIds)->get(['id','designation_fr','code_product','qte'])->keyBy('id');
     }
 
-    // Resolve client for display (user_id holds the client FK on commandes)
-    $selClientId = $record?->user_id ?? $data['user_id'] ?? null;
+    // Storefront users and Filament clients are separate tables. Numeric ids frequently collide,
+    // so the client selector must only ever read commandes.client_id.
+    $selClientId = $record?->client_id ?? $data['client_id'] ?? null;
     $selClient = $selClientId ? \App\Models\Client::find($selClientId) : null;
     $max = 100;
 
@@ -506,7 +507,7 @@ function cmdSave() {
         return;
     }
 
-    @this.set('data.user_id', $('#select_client').val() || null);
+    @this.set('data.client_id', $('#select_client').val() || null);
     @this.set('data.nom',    document.getElementById('cmd_nom').value);
     @this.set('data.prenom', document.getElementById('cmd_prenom').value);
     @this.set('data.email',  document.getElementById('cmd_email').value);

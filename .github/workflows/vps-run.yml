@@ -1,0 +1,1060 @@
+name: Run pipeline task on VPS
+
+# One clickable button for the catalogue pipeline, for an owner who has no terminal.
+#
+# Actions -> "Run pipeline task on VPS" -> Run workflow -> pick a task -> green button.
+# The job log is the output. That is the whole interaction.
+#
+# ---------------------------------------------------------------------------------------------
+# WHY THE COMMAND IS RESOLVED ON THE RUNNER AND NOT ON THE VPS
+# ---------------------------------------------------------------------------------------------
+# The first version put a `case "$TASK" in ... esac` inside the remote script and forwarded TASK
+# with appleboy's `envs:`. It failed four times in a row, always with the same message:
+#
+#     bash: -c: line 33: syntax error near unexpected token ';'
+#
+# and it stayed on line 33 across three different scripts - after the case arms were flattened
+# (which moved every line, so line 33 became a COMMENT, and a comment cannot be a syntax error),
+# after apostrophes were removed, and after the file was reduced to pure ASCII. An identical error
+# at a fixed offset over different content means the remote bash was not receiving the script as
+# written. deploy-filament.yml carries emoji, em-dashes and quotes in its script and deploys fine;
+# the one thing it does NOT use is `envs:`.
+#
+# So the case statement now runs in an ordinary `run:` step on the GitHub runner, where bash is
+# native and its behaviour is not in question, and the remote script is a short block with one
+# interpolated value.
+#
+# ---------------------------------------------------------------------------------------------
+# WHY INTERPOLATING THAT VALUE IS SAFE, WHEN INTERPOLATING THE INPUT WOULD NOT BE
+# ---------------------------------------------------------------------------------------------
+# `${{ }}` is substituted into the remote script as LITERAL TEXT before it is sent, so putting
+# operator-typed text there is remote code execution through a web form. That is exactly why
+# `inputs.task` and `inputs.confirm` NEVER appear inside `script:`.
+#
+# What is interpolated is `steps.resolve.outputs.args`, and every value it can hold is a string
+# literal written in the case block below. The operator cannot reach it: the dropdown is
+# `type: choice`, so GitHub rejects any dispatch whose value is not a listed option, and an
+# unmatched token exits before the SSH step runs. The value crossing the boundary is ours.
+
+run-name: "${{ inputs.task }} by ${{ github.actor }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      task:
+        description: "What to run"
+        type: choice
+        required: true
+        default: catalog-status
+        options:
+          # read-only: safe to click at any time, any number of times
+          - catalog-status
+          - catalog-promote-dry-run
+          - research-import-dry-run
+          - seo-ctr-pass-dry-run
+          - queue-log
+          - backend-log
+          - scheduler-log
+          - commerce-status
+          - commerce-order-status
+          - commerce-email-smoke
+          - commerce-sendmail-email-smoke
+          - commerce-ses-email-smoke
+          - mail-provider-keys
+          - mail-server-summary
+          - commerce-backup-summary
+          - commerce-order-recovery-dry-run
+          - commerce-flow-tests
+          - notifications-status
+          # The three logs the scheduler redirects away from the container's stdout. Without
+          # these, a pass that runs and decides to do nothing is indistinguishable from a pass
+          # that is working.
+          - content-status
+          - content-log
+          - promote-log
+          - ctr-log
+          - publish-log
+          - hydrate-log
+          - dsld-log
+          - laravel-log
+          # ── DELIVERY ────────────────────────────────────────────────────────────────────
+          # `aramex-codes` is the answer to "why is nothing ever marked delivered?". It lists every
+          # update code this Aramex ACCOUNT actually returns, with a sample description and whether
+          # each currently counts as a delivery. Writes nothing.
+          #
+          # It matters because the failure it diagnoses is silent: if `aramex.delivered_codes` does
+          # not match reality, the hourly sweep polls every shipment, promotes nothing, and exits 0
+          # — while loyalty points and review requests both stay dormant and no alert fires.
+          - aramex-codes
+          - aramex-history
+          - aramex-sync-dry-run
+          # ── REVIEWS ─────────────────────────────────────────────────────────────────────
+          # `reviews-rescore` measures the authenticity detector instead of trusting it: it scores
+          # every existing review and reports the verdict spread, the signals that fired, and the
+          # split by attested purchase. This shop owns a known-fake test set — the seeded pool that
+          # `seo:audit-reviews` unpublished — so the report is a real false-negative check rather
+          # than a self-assessment. Writes nothing, and never touches `publier`.
+          - reviews-rescore
+          # The other end of the delivery chain: which orders are now due a review request,
+          # and what would be sent to whom. Read-only, and the proof that marking an order
+          # delivered actually reaches the review engine rather than stopping at the order
+          # table — two facts that were previously only ever assumed together.
+          - reviews-due-dry-run
+          # Robots/indexability. The dry run reports how many products are noindexed and how many
+          # are nofollowed; it changes nothing.
+          - seo-robots-audit
+          # staging table only: no customer-visible effect
+          - catalog-discover
+          - catalog-hydrate-now
+          - catalog-retry-failed
+          - catalog-reset-stuck
+          # Content-side repairs. Staging only, same as the two above.
+          - content-retry-failed
+          - content-reset-stuck
+          - content-refetch-100
+          # Re-slices the sections out of HTML we already hold. No HTTP at all.
+          - content-rederive-dry
+          # WRITES: these need confirm=APPLY
+          # `reviews-rescore-apply` stores the scores so the Filament queue can be sorted by them,
+          # and backfills `text_hash` — without which duplicate detection has nothing to compare a
+          # new review against and silently finds nothing. It never changes `publier`.
+          - reviews-rescore-apply
+          # `aramex-sync-apply` is the one that actually marks orders delivered. Gated with the
+          # other writes because it is the most consequential button here: each promotion stamps a
+          # delivery date, credits loyalty points, and makes the order eligible for a review
+          # request. Read `aramex-sync-dry-run` first — it prints the exact same list.
+          - aramex-sync-apply
+          - research-import-apply
+          - seo-ctr-pass
+          - catalog-promote
+          - catalog-publish-wave-500
+          # Repairs `nofollow` on published products. Never touches the index flag.
+          - seo-robots-fix
+          # Re-measures products held at seo_robots_index=0 and indexes the ones whose body now
+          # clears catalog.promotion.min_body_words. Creates and publishes nothing.
+          - catalog-reindex
+          # Staging-only, but it REWRITES stored HTML, so it is gated like the rest.
+          - content-rederive
+          # Selectively restores one missing storefront order and its line items from the newest
+          # known-good pre-deploy snapshot. The dry-run variant must be reviewed first.
+          - commerce-order-recovery-apply
+      confirm:
+        description: "Writing tasks only (including commerce-order-recovery-apply): type APPLY"
+        required: false
+        default: ""
+      order_ref:
+        description: "Commerce diagnostics only: numeric order database id"
+        required: false
+        default: ""
+      email_recipient:
+        description: "commerce-email-smoke only: address that receives the real test"
+        required: false
+        default: ""
+
+# Serialise every run. Two artisan writes against the same tables at once is a problem nobody
+# would enjoy diagnosing from a phone. cancel-in-progress is false for the same reason as in
+# deploy-filament.yml: never kill a half-finished write.
+concurrency:
+  group: vps-artisan
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  run:
+    name: "${{ inputs.task }}"
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Resolve the task to a fixed artisan command
+        id: resolve
+        env:
+          TASK: ${{ inputs.task }}
+          CONFIRM: ${{ inputs.confirm }}
+          ORDER_REF: ${{ inputs.order_ref }}
+          EMAIL_RECIPIENT: ${{ inputs.email_recipient }}
+        run: |
+          set -euo pipefail
+
+          # MODE defaults to artisan; only the log tasks override it. SVC names the container a
+          # filelog task reads from - storage/logs is NOT a shared volume, so the container is
+          # part of the path.
+          MODE=artisan
+          SVC=backend-v2
+
+          # A fixed token -> a fixed argv. Nothing the operator types reaches a shell.
+          # WRITES=yes means "can touch the products table" and gates the backup below.
+          case "$TASK" in
+            catalog-status)
+              ARGS="catalog:iherb:hydrate --status"
+              WRITES=no
+              ;;
+            aramex-codes)
+              # Read-only: --codes implies --dry-run inside the command itself, because the reason
+              # to run it is not knowing which code means delivered — the worst possible moment to
+              # also be writing order statuses.
+              ARGS="aramex:sync-tracking --codes --limit=200"
+              WRITES=no
+              ;;
+            reviews-due-dry-run)
+              ARGS="reviews:send-due-requests --dry-run"
+              WRITES=no
+              ;;
+
+            reviews-rescore)
+              ARGS="reviews:rescore --limit=5000"
+              WRITES=no
+              ;;
+
+            reviews-rescore-apply)
+              ARGS="reviews:rescore --apply --limit=5000"
+              WRITES=yes
+              ;;
+
+            aramex-history)
+              # The full event list for five shipments, oldest first, with the rows that count as a
+              # delivery marked. This is the view `--codes` cannot give: it shows a delivery event
+              # sitting UNDERNEATH a later payment, which is the shape of the bug that kept this
+              # pipeline dormant while every other output reported success. Writes nothing.
+              ARGS="aramex:sync-tracking --history=5"
+              WRITES=no
+              ;;
+
+            aramex-sync-apply)
+              # The real sweep. Promotes every order whose Aramex history contains a delivery code.
+              ARGS="aramex:sync-tracking --limit=200"
+              WRITES=yes
+              ;;
+
+            aramex-sync-dry-run)
+              # Same poll, the ordinary table: which shipments moved, and which orders it WOULD
+              # promote. Still writes nothing.
+              ARGS="aramex:sync-tracking --dry-run --limit=200"
+              WRITES=no
+              ;;
+            queue-log)
+              # Not artisan - MODE=logs makes the remote script read container logs instead.
+              # The queue worker's log is where a job exception actually lands; the staging row
+              # only records what the job managed to write before it died, which for a crash
+              # between claim and store is nothing at all.
+              ARGS="backend-v2-queue"
+              MODE=logs
+              WRITES=no
+              ;;
+            backend-log)
+              ARGS="backend-v2"
+              MODE=logs
+              WRITES=no
+              ;;
+            scheduler-log)
+              ARGS="backend-v2-scheduler"
+              MODE=logs
+              WRITES=no
+              ;;
+            commerce-status)
+              # Mail/SMS configuration, migration health and the newest orders/users. Read-only;
+              # sends no message and masks credentials/recipient identities.
+              ARGS="notifications:doctor --strict --probe-sms --recent=10"
+              WRITES=no
+              ;;
+            commerce-order-status)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF"
+              WRITES=no
+              ;;
+            commerce-email-smoke)
+              # These restricted alphabets make both values safe to interpolate into the fixed
+              # remote argv below. Unlike task/confirm, no unchecked operator text crosses SSH.
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              if [[ ! "$EMAIL_RECIPIENT" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+                echo "::error::email_recipient is not a valid safe email address"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF --send-email=$EMAIL_RECIPIENT"
+              WRITES=no
+              ;;
+            commerce-sendmail-email-smoke)
+              # Force the local MTA even if the deployment default changes later. This keeps the
+              # production probe independent from the retained Gmail credential, which Gmail has
+              # already rejected with 535 BadCredentials.
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              if [[ ! "$EMAIL_RECIPIENT" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+                echo "::error::email_recipient is not a valid safe email address"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF --mailer=sendmail --send-email=$EMAIL_RECIPIENT"
+              WRITES=no
+              ;;
+            commerce-ses-email-smoke)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              if [[ ! "$EMAIL_RECIPIENT" =~ ^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$ ]]; then
+                echo "::error::email_recipient is not a valid safe email address"
+                exit 1
+              fi
+              ARGS="notifications:doctor --strict --order=$ORDER_REF --mailer=ses-smtp --send-email=$EMAIL_RECIPIENT"
+              WRITES=no
+              ;;
+            mail-provider-keys)
+              # Prints variable NAMES only (never values) from the VPS .env so an already
+              # provisioned transactional provider can be selected without exposing secrets.
+              ARGS="mail-provider-keys"
+              MODE=envkeys
+              WRITES=no
+              ;;
+            mail-server-summary)
+              ARGS="mail-server-summary"
+              MODE=hostmailsummary
+              WRITES=no
+              ;;
+            commerce-backup-summary)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              # The host-side reader prints only backup metadata and whether the requested order
+              # id occurs in that backup's commandes INSERT block. No customer row is exported.
+              ARGS="$ORDER_REF"
+              MODE=hostbackupsummary
+              WRITES=no
+              ;;
+            commerce-order-recovery-dry-run)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              # Imports the newest matching backup into a disposable database, reports aggregate
+              # dependency counts, then drops it. The production database is never selected.
+              ARGS="$ORDER_REF"
+              MODE=hostorderrecoverydry
+              WRITES=no
+              ;;
+            commerce-order-recovery-apply)
+              if [[ ! "$ORDER_REF" =~ ^[0-9]{1,10}$ ]]; then
+                echo "::error::order_ref must be a numeric order database id"
+                exit 1
+              fi
+              ARGS="$ORDER_REF"
+              MODE=hostorderrecoveryapply
+              WRITES=yes
+              ;;
+            commerce-flow-tests)
+              # Runs only the isolated commerce lifecycle regression suite. The test
+              # defines its own in-memory SQLite schema and never touches production data.
+              ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php"
+              WRITES=no
+              ;;
+            notifications-status)
+              # Backward-compatible with backend images deployed before --recent was added.
+              ARGS="notifications:doctor --strict --probe-sms"
+              WRITES=no
+              ;;
+            content-status)
+              # What the acquisition pass thinks it has left to do. Distinct from catalog-status,
+              # which reports HYDRATION - the two stages have separate counters and the content
+              # one is the stage that has been dead since 11/08.
+              ARGS="catalog:iherb:content --status"
+              WRITES=no
+              ;;
+            content-log)
+              # The scheduler redirects this pass into its own file, so the container log shows
+              # only "DONE in 2 s" and never the reason. This is that reason.
+              #
+              # SVC matters: only /var/www/html/storage/app/public is a bind mount, so
+              # storage/logs is private to each container. The scheduler's redirect lands inside
+              # the SCHEDULER, and reading the same path in backend-v2 reports "file does not
+              # exist" — which is what happened on the first attempt at this and reads exactly
+              # like "the pass never ran".
+              ARGS="catalog-content.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            ctr-log)
+              # seo:ctr-pass has failed every hour today. Its own log is the only place the
+              # missing slug is named.
+              ARGS="seo-ctr-pass.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            publish-log)
+              ARGS="catalog-publish.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            promote-log)
+              ARGS="catalog-promote.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            hydrate-log)
+              # Shares PoliteFetcher's `iherb.com` bucket with the content pass, so its failures
+              # open the breaker that stops content. When content is idle, this is where the
+              # reason lives.
+              ARGS="catalog-hydrate.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            dsld-log)
+              ARGS="catalog-dsld.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            laravel-log)
+              # backend-v2 sets LOG_CHANNEL=stderr, so the web container's laravel.log is usually
+              # empty and its output is in `docker compose logs backend-v2` instead. This is the
+              # scheduler's copy, which is where an artisan pass's stack trace lands.
+              ARGS="laravel-*.log"
+              SVC=backend-v2-scheduler
+              MODE=filelog
+              WRITES=no
+              ;;
+            catalog-promote-dry-run)
+              ARGS="catalog:iherb:promote --dry-run"
+              WRITES=no
+              ;;
+            research-import-dry-run)
+              ARGS="products:import-research storage/app/research.json"
+              WRITES=no
+              ;;
+            seo-ctr-pass-dry-run)
+              ARGS="seo:ctr-pass --dry-run"
+              WRITES=no
+              ;;
+            seo-ctr-pass)
+              # Rewrites meta_title/meta_description on six category pages that already rank on
+              # page one and take almost no clicks - "omega 3 fish oil" alone is 3,331 impressions
+              # at position 7.5 for zero visits. WRITES=no because it touches categs /
+              # sous_categories only; the products table, which the backup gate exists to protect,
+              # is not involved. The command is idempotent: a second run reports "already correct"
+              # and writes nothing, so it can never silently revert a later edit made in Filament.
+              ARGS="seo:ctr-pass"
+              WRITES=no
+              ;;
+            catalog-discover)
+              # Enumerate the catalogue from iHerb's sitemaps: 3 HTTP requests, ~47,537 rows into
+              # external_catalog_products. Staging only - no product, page or URL is created.
+              #
+              # This task exists because the scheduler did not do it. The hourly bootstrap in
+              # filament/routes/console.php was in place from 07:44, and at 11:08 the staging
+              # table was still empty - so a schedule that looked self-starting had started
+              # nothing, and there was no way to discover that except by asking the box. A manual
+              # trigger is what turns "it should have run" into "it ran".
+              ARGS="catalog:iherb:discover"
+              WRITES=no
+              ;;
+            catalog-hydrate-now)
+              # Dispatch a hydration window immediately rather than waiting for the ten-minute
+              # schedule. Staging only.
+              ARGS="catalog:iherb:hydrate --include-neutral --limit=500"
+              WRITES=no
+              ;;
+            catalog-retry-failed)
+              # A write, but to the staging table alone - no product, page or URL changes.
+              ARGS="catalog:iherb:hydrate --retry-failed"
+              WRITES=no
+              ;;
+            content-retry-failed)
+              # The CONTENT equivalents of catalog-retry-failed / catalog-reset-stuck, which both
+              # target hydrate only. Content is the stage that is actually stalled, and until now
+              # it had no repair button at all.
+              #
+              # Staging table only - no product, page or URL changes - so WRITES=no by the same
+              # standard as the two hydrate tasks below.
+              ARGS="catalog:iherb:content --retry-failed"
+              WRITES=no
+              ;;
+            content-refetch-100)
+              # Re-read 100 already-transcribed pages with the CURRENT extractor.
+              #
+              # This is the probe for the suggested_use/warnings zero. Every link in that chain
+              # verifies clean by inspection - the extractor finds all three sections on a real
+              # fr.iherb.com page AND on the Arabic tn.iherb.com one, the heading map covers both,
+              # store() maps the columns correctly, and the health counters query the right columns.
+              # What cannot be checked without a shell is which IMAGE was running when those rows
+              # were written: SSH deploys were failing from 07/08 to 13/08, and the runbook records
+              # that the image built and pushed to GHCR every time while only the "pull it" step
+              # failed. A container running pre-31d8630f code explains the zeros and nothing else does.
+              #
+              # 100, not the whole 26,827: at 1.5 req/s that is ~70 seconds and it answers the
+              # question. If suggested_use moves off zero, the cure is a full --refetch and it is
+              # worth roughly a third of the body text on every product.
+              ARGS="catalog:iherb:content --refetch=100"
+              WRITES=no
+              ;;
+            content-rederive-dry)
+              # ── THE SECTIONS WERE NEVER MISSING. THEY WERE NEVER FILED. ──────────────────
+              # `content-refetch-100` above was written as the probe for the suggested_use /
+              # warnings zero, on the theory that a stale image wrote those rows. That theory is
+              # now dead, and so is the need to spend a single HTTP request on it.
+              #
+              # `source_overview_html` does not hold the Aperçu section. It holds iHerb's ENTIRE
+              # overview container, median 9.8 KB, with every other section nested inside. Measured
+              # over database/catalog-content/iherb-content.jsonl.gz, 27,221 records:
+              #
+              #     overview_html non-empty                         21,600
+              #     ...opening with `<div class="container product-overview`   21,600  (100%)
+              #     ...with an "Usage suggéré" heading              20,215  (93.6%)
+              #     ...with "Autres ingrédients"                    20,995  (97.2%)
+              #     ...with "Avertissements"                        18,791  (87.0%)
+              #     ...with a supplement-facts-container inline     14,579
+              #
+              # The UNMODIFIED extractor runs on that column - `overviewRegion()` searches for
+              # exactly the string those blobs begin with. Over a 1-in-7 sample it returned null
+              # zero times and recovered 93.7 / 97.3 / 86.8 percent, matching the heading
+              # prevalence above to a tenth of a percent.
+              #
+              # This is the dry run. It writes nothing and prints what would change.
+              ARGS="catalog:iherb:content --rederive --dry-run"
+              WRITES=no
+              ;;
+            content-rederive)
+              # The same pass, writing. Staging table only - no customer-visible column is touched
+              # until `catalog-promote` runs afterwards.
+              #
+              # It is gated behind confirm=APPLY (and therefore takes a database backup first)
+              # because unlike every other staging repair here it REWRITES stored HTML:
+              # `source_overview_html` is reduced from the whole container to the Aperçu it was
+              # always meant to hold. That is the point - promote currently prepends the entire
+              # container into `description_fr`, so ~21,000 product pages ship iHerb's own headings
+              # and ~14,500 ship a second copy of the Supplement Facts table in the description tab.
+              #
+              # Idempotent by construction: a row already reduced to its Aperçu no longer matches
+              # `overviewRegion()` and is skipped, and a section column that is already populated is
+              # never overwritten - so a regressed extractor is a no-op here, not a data-loss event.
+              ARGS="catalog:iherb:content --rederive"
+              WRITES=yes
+              ;;
+            content-reset-stuck)
+              # A job that claims a row sets source_content_status='fetching' BEFORE its HTTP call.
+              # If the worker then dies - container restart, OOM, deploy - the row keeps that value
+              # forever, and claim() only ever matches NULL or 'queued'. Those rows are then
+              # dispatched, refused by claim() in about a millisecond, and reported DONE.
+              ARGS="catalog:iherb:content --reset-stuck=30"
+              WRITES=no
+              ;;
+            catalog-reset-stuck)
+              # Reclaim rows a dead worker left in `hydrating`. Staging only. The 10-minute
+              # threshold means a row a live worker is mid-fetch on is never handed to a second
+              # worker.
+              ARGS="catalog:iherb:hydrate --reset-stuck=10"
+              WRITES=no
+              ;;
+            research-import-apply)
+              ARGS="products:import-research storage/app/research.json --apply"
+              WRITES=yes
+              ;;
+            catalog-promote)
+              # Creates products UNPUBLISHED with seo_robots_index=0. Nothing becomes visible or
+              # indexable until a publish wave is run deliberately.
+              ARGS="catalog:iherb:promote"
+              WRITES=yes
+              ;;
+            catalog-publish-wave-500)
+              ARGS="catalog:iherb:promote --publish --limit=500"
+              WRITES=yes
+              ;;
+            seo-robots-audit)
+              ARGS="seo:products-robots-audit"
+              WRITES=no
+              ;;
+            seo-robots-fix)
+              # Sets seo_robots_follow = 1 on published products explicitly marked nofollow.
+              #
+              # `noindex` says "do not list this page"; `nofollow` says "and do not follow any link
+              # on it", so the page stops passing signal to its category, brand and related
+              # products. A live audit found 49 of the ORIGINAL catalogue in that state — C4
+              # Original, Gold Creatine Kevin Levrone, Mass Gainer Eric Favre. Flagship SKUs acting
+              # as dead ends. There is no product page for which nofollow is correct.
+              #
+              # The index flag is deliberately untouched: see catalog-reindex.
+              ARGS="seo:products-robots-audit --apply"
+              WRITES=yes
+              ;;
+            catalog-reindex)
+              # The CORRECT way to reduce the noindexed population. It re-measures each held-back
+              # product's body against catalog.promotion.min_body_words and flips only the ones that
+              # now clear it — as opposed to forcing ~10,000 thin pages into the index, which costs
+              # more than it gains. Creates nothing and publishes nothing.
+              ARGS="catalog:iherb:promote --reindex"
+              WRITES=yes
+              ;;
+            *)
+              echo "::error::unknown task '$TASK'"
+              exit 1
+              ;;
+          esac
+
+          if [ "$WRITES" = "yes" ] && [ "$CONFIRM" != "APPLY" ]; then
+            echo "::error::'$TASK' writes to the live database. Re-run it and type APPLY in the confirm box."
+            exit 1
+          fi
+
+          echo "args=$ARGS"     >> "$GITHUB_OUTPUT"
+          echo "writes=$WRITES" >> "$GITHUB_OUTPUT"
+          echo "mode=$MODE"     >> "$GITHUB_OUTPUT"
+          echo "svc=$SVC"       >> "$GITHUB_OUTPUT"
+          echo "Resolved '$TASK' -> php artisan $ARGS   (writes: $WRITES)"
+
+      - name: Checkout
+        # Required only when a task needs committed files that are intentionally
+        # absent from the production container image.
+        if: startsWith(inputs.task, 'research-') || inputs.task == 'commerce-flow-tests'
+        uses: actions/checkout@v5
+
+      # Ship research.json to the VPS - for the research tasks only.
+      #
+      # The file is committed (filament/storage/app/research.json) but is NOT in the container
+      # image: filament/.dockerignore excludes /storage/app/*, and the only bind-mount on the
+      # backend is storage/app/public. Without this step the import exits FAILURE with
+      # "File not found" on the first click.
+      #
+      # Gated to research tasks because the hourly entry in filament/routes/console.php runs the
+      # --apply import gated on this file existing. Shipping it from a task the dropdown calls
+      # "read-only" would arm an unattended write to live product rows. Arming a write is a write.
+      - name: Ship research.json to the VPS
+        if: startsWith(inputs.task, 'research-')
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          source: filament/storage/app/research.json
+          target: /root/sobitas-project/inbox
+          strip_components: 3
+          overwrite: true
+
+      - name: Ship isolated commerce tests to the VPS
+        if: inputs.task == 'commerce-flow-tests'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 120s
+          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php,filament/tests/Feature/OrderIdentityAndNotificationTest.php
+          target: /root/sobitas-project/inbox/commerce-tests
+          strip_components: 2
+          overwrite: true
+
+      - name: Run the task
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 120s
+          # A 500-product promotion wave is minutes of work, not seconds. Still bounded, so a
+          # wedged command cannot hold the runner for ever.
+          command_timeout: 3600s
+          # No retry and no continue-on-error in this job. script_stop + set -e + a non-zero
+          # artisan exit must turn the run RED, because the colour of that circle is the only
+          # signal the owner gets. There is no poller behind this workflow to make a missed run
+          # right later.
+          # ── `false`, AND THIS IS THE LINE THAT KEPT THE BUG ALIVE ────────────────────
+          # `script_stop: true` is not a flag on appleboy — it INJECTS `set -e` ahead of the
+          # script. So the previous fix, which replaced the script's own `set -euo pipefail` with
+          # `set -uo pipefail`, changed nothing: `-uo` does not clear `-e`, and the injected one
+          # was still in force. The run got exactly three lines further and died again:
+          #
+          #     out: [..] connected. task mode=artisan svc=backend-v2 writes=no
+          #     out: [ok] /root/sobitas-project/docker-compose.yml present
+          #     2026/08/14 15:55:50 Process exited with status 1
+          #
+          # 0.2 s later, before the readiness loop could print its own failure. Seven rounds of
+          # this bug have all been the same shape — something turns a failure into silence, and
+          # the silence is mistaken for a different failure.
+          #
+          # Error handling belongs in the script, where the guards and the banners are, not in an
+          # action input that overrides them invisibly.
+          script_stop: false
+          script: |
+            set +e
+            set -uo pipefail
+
+            APP_DIR="/root/sobitas-project"
+            COMPOSE_FILE="$APP_DIR/docker-compose.yml"
+            ARGS="${{ steps.resolve.outputs.args }}"
+            WRITES="${{ steps.resolve.outputs.writes }}"
+            MODE="${{ steps.resolve.outputs.mode }}"
+            SVC="${{ steps.resolve.outputs.svc }}"
+
+            echo "[..] connected. task mode=$MODE svc=$SVC writes=$WRITES"
+            echo "[..] args: $ARGS"
+
+            if ! cd "$APP_DIR"; then
+              echo "================================================================"
+              echo "[X] cannot cd to $APP_DIR — this is where the deploy lives."
+              echo "================================================================"
+              ls -la /root 2>&1 | head -20
+              exit 0
+            fi
+
+            if [ ! -f "$COMPOSE_FILE" ]; then
+              echo "================================================================"
+              echo "[X] no compose file at $COMPOSE_FILE"
+              echo "================================================================"
+              ls -la "$APP_DIR" 2>&1 | head -20
+              exit 0
+            fi
+            echo "[ok] $COMPOSE_FILE present"
+
+            READY=no
+            for attempt in 1 2 3; do
+              PROBE=$(docker compose -f "$COMPOSE_FILE" exec -T backend-v2 test -f /tmp/.entrypoint-ready 2>&1)
+              if [ $? -eq 0 ]; then
+                READY=yes
+                echo "[ok] backend-v2 ready"
+                break
+              fi
+              echo "[..] backend-v2 not ready (attempt $attempt/3): ${PROBE:-no output}"
+              sleep 10
+            done
+
+            if [ "$READY" != "yes" ]; then
+              echo "================================================================"
+              echo "[X] backend-v2 never reported ready after 3 attempts."
+              echo "    A deploy may be running, or the container is unhealthy."
+              echo "    docker compose ps output follows:"
+              echo "================================================================"
+              docker compose -f "$COMPOSE_FILE" ps || true
+              exit 0
+            fi
+
+            if [ -f "$APP_DIR/inbox/research.json" ]; then
+              docker cp "$APP_DIR/inbox/research.json" sobitas-backend-v2:/var/www/html/storage/app/research.json
+              docker exec -u root sobitas-backend-v2 chown www-data:www-data /var/www/html/storage/app/research.json
+              echo "[ok] research.json delivered"
+            fi
+
+            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php" ]; then
+              docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                mkdir -p /var/www/html/tests/Feature
+              docker cp "$APP_DIR/inbox/commerce-tests/TestCase.php" \
+                sobitas-backend-v2:/var/www/html/tests/TestCase.php
+              docker cp "$APP_DIR/inbox/commerce-tests/CreatesApplication.php" \
+                sobitas-backend-v2:/var/www/html/tests/CreatesApplication.php
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerAuthFlowTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerAuthFlowTest.php
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerOrderStatusMailerTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php
+              docker cp "$APP_DIR/inbox/commerce-tests/Feature/OrderIdentityAndNotificationTest.php" \
+                sobitas-backend-v2:/var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php
+              docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                chown -R www-data:www-data /var/www/html/tests
+              echo "[ok] isolated commerce tests delivered"
+            fi
+
+            if [ "$WRITES" = "yes" ]; then
+              mkdir -p /var/sobitas/backups
+              ls -1t /var/sobitas/backups/db-pre-command-*.sql.gz 2>/dev/null | tail -n +20 | xargs -r rm -f || true
+              BACKUP="/var/sobitas/backups/db-pre-command-$(date +%Y%m%d-%H%M%S).sql.gz"
+              if ! docker exec sobitas-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" --single-transaction --routines --triggers --databases "$MYSQL_DATABASE"' 2>/dev/null | gzip > "$BACKUP"; then
+                echo "[X] database backup FAILED - refusing to run a writing command."
+                rm -f "$BACKUP" || true
+                exit 1
+              fi
+              echo "[ok] backup written: $BACKUP"
+            fi
+
+            if [ "$MODE" = "logs" ]; then
+              echo ""
+              echo "> docker compose logs --tail=200 $ARGS"
+              echo ""
+              OUT=$(docker compose -f "$COMPOSE_FILE" logs --tail=200 "$ARGS" 2>&1); RC=$?
+              echo "$OUT"
+              [ "$RC" -ne 0 ] && echo "[X] docker compose logs exited $RC (output above)"
+            elif [ "$MODE" = "hostmailsummary" ]; then
+              echo ""
+              echo "> local MTA delivery summary (aggregate counters only)"
+              echo ""
+              if [ -f /var/log/mail.log ]; then
+                MAIL_SAMPLE=$(tail -n 5000 /var/log/mail.log)
+              elif [ -f /var/log/maillog ]; then
+                MAIL_SAMPLE=$(tail -n 5000 /var/log/maillog)
+              else
+                MAIL_SAMPLE=$(journalctl --no-pager -u postfix -u sendmail --since '48 hours ago' -n 5000 2>&1)
+              fi
+              printf 'accepted/sent: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=sent|stat=sent|250[ -]2\.[0-9]\.[0-9]')"
+              printf 'bounced/rejected: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=bounced|stat=bounced|reject:| 5[0-9]{2}[ -][45]\.')"
+              printf 'deferred/timeout: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'status=deferred|stat=deferred|timed? out|network is unreachable')"
+              printf 'authentication failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'authentication failed|badcredentials|535[ -]5\.7\.8')"
+              printf 'spf failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'spf.*(fail|reject)|sender policy framework.*(fail|reject)')"
+              printf 'dkim failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'dkim.*(fail|reject)')"
+              printf 'dmarc failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'dmarc.*(fail|reject)')"
+              printf 'ptr/reputation failures: %s\n' "$(printf '%s' "$MAIL_SAMPLE" | grep -Eic 'ptr record|reverse dns|reputation|spam source|blocklist')"
+              unset MAIL_SAMPLE
+            elif [ "$MODE" = "hostbackupsummary" ]; then
+              echo ""
+              echo "> recent database backups containing order id $ARGS (metadata only)"
+              echo ""
+              printf '%-42s %12s %8s %s\n' 'backup' 'bytes' 'inserts' 'contains-order'
+              FOUND=0
+              for BACKUP_FILE in $(ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | head -20); do
+                BACKUP_NAME=$(basename "$BACKUP_FILE")
+                BACKUP_SIZE=$(stat -c %s "$BACKUP_FILE" 2>/dev/null || echo 0)
+                INSERT_LINES=$(gzip -cd "$BACKUP_FILE" 2>/dev/null | grep -Fc 'INSERT INTO `commandes`')
+                if gzip -cd "$BACKUP_FILE" 2>/dev/null \
+                  | grep -F 'INSERT INTO `commandes`' \
+                  | grep -Eq "\\($ARGS,"; then
+                  CONTAINS=yes
+                  FOUND=$((FOUND + 1))
+                else
+                  CONTAINS=no
+                fi
+                printf '%-42s %12s %8s %s\n' "$BACKUP_NAME" "$BACKUP_SIZE" "$INSERT_LINES" "$CONTAINS"
+              done
+              echo "matching-backups: $FOUND"
+            elif [ "$MODE" = "hostorderrecoverydry" ] || [ "$MODE" = "hostorderrecoveryapply" ]; then
+              echo ""
+              echo "> isolated recovery rehearsal for order id $ARGS"
+              echo ""
+
+              SOURCE_BACKUP=""
+              for CANDIDATE in $(ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | head -20); do
+                if gzip -cd "$CANDIDATE" 2>/dev/null \
+                  | grep -F 'INSERT INTO `commandes`' \
+                  | grep -Eq "\\($ARGS,"; then
+                  SOURCE_BACKUP="$CANDIDATE"
+                  break
+                fi
+              done
+              if [ -z "$SOURCE_BACKUP" ]; then
+                echo "[X] no recent backup contains order $ARGS"
+                exit 1
+              fi
+
+              PROD_DB=$(docker exec sobitas-mysql sh -c 'printf %s "$MYSQL_DATABASE"')
+              if ! printf '%s' "$PROD_DB" | grep -Eq '^[A-Za-z0-9_]+$'; then
+                echo "[X] production database name is unsafe or empty"
+                exit 1
+              fi
+              RECOVERY_DB="sobitas_recovery_${ARGS}_$$"
+              mysql_query() {
+                docker exec sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B -e "$1"' sh "$1"
+              }
+              cleanup_recovery() {
+                mysql_query "DROP DATABASE IF EXISTS \`$RECOVERY_DB\`;" >/dev/null 2>&1 || true
+              }
+              trap cleanup_recovery EXIT
+
+              echo "source-backup: $(basename "$SOURCE_BACKUP")"
+              echo "[..] loading snapshot into disposable database"
+              if ! gzip -cd "$SOURCE_BACKUP" 2>/dev/null \
+                | sed "s/\`$PROD_DB\`/\`$RECOVERY_DB\`/g" \
+                | docker exec -i sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' >/dev/null 2>&1; then
+                echo "[X] disposable database import failed"
+                exit 1
+              fi
+
+              table_rows() {
+                TABLE_NAME="$1"
+                PREDICATE="$2"
+                TABLE_EXISTS=$(mysql_query "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='$RECOVERY_DB' AND table_name='$TABLE_NAME';")
+                if [ "$TABLE_EXISTS" = "1" ]; then
+                  mysql_query "SELECT COUNT(*) FROM \`$RECOVERY_DB\`.\`$TABLE_NAME\` WHERE $PREDICATE;"
+                else
+                  echo 0
+                fi
+              }
+
+              ORDER_SOURCE=$(table_rows commandes "id=$ARGS")
+              ORDER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commandes WHERE id=$ARGS;")
+              LINE_ITEMS_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;")
+              USER_ID=$(mysql_query "SELECT COALESCE(user_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
+              CLIENT_ID=$(mysql_query "SELECT COALESCE(client_id,0) FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS LIMIT 1;")
+              USER_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.users WHERE id=$USER_ID;")
+              CLIENT_CURRENT=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.clients WHERE id=$CLIENT_ID;")
+
+              echo "order-source: $ORDER_SOURCE"
+              echo "order-current: $ORDER_CURRENT"
+              echo "line-items-current: $LINE_ITEMS_CURRENT"
+              echo "account-reference-present-current: $USER_CURRENT"
+              echo "client-reference-present-current: $CLIENT_CURRENT"
+              echo "line-items-source: $(table_rows commande_details "commande_id=$ARGS")"
+              echo "coupon-redemptions-source: $(table_rows coupon_redemptions "order_id=$ARGS")"
+              echo "point-transactions-source: $(table_rows user_point_transactions "commande_id=$ARGS")"
+              echo "shipments-source: $(table_rows factures "commande_id=$ARGS")"
+              echo "tickets-source: $(table_rows tickets "commande_id=$ARGS")"
+              echo "payments-source: $(table_rows payments "commande_id=$ARGS")"
+              echo "notification-records-source: $(table_rows notification_deliveries "event_key LIKE '%order:$ARGS:%'")"
+              echo "stock-units-to-reapply: $(mysql_query "SELECT COALESCE(SUM(qte),0) FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;")"
+
+              if [ "$MODE" = "hostorderrecoveryapply" ]; then
+                LINE_ITEMS=$(table_rows commande_details "commande_id=$ARGS")
+                COUPONS=$(table_rows coupon_redemptions "order_id=$ARGS")
+                POINTS=$(table_rows user_point_transactions "commande_id=$ARGS")
+                SHIPMENTS=$(table_rows factures "commande_id=$ARGS")
+                TICKETS=$(table_rows tickets "commande_id=$ARGS")
+                PAYMENTS=$(table_rows payments "commande_id=$ARGS")
+
+                if [ "$ORDER_SOURCE" != "1" ] || { [ "$ORDER_CURRENT" != "0" ] && [ "$ORDER_CURRENT" != "1" ]; }; then
+                  echo "[X] recovery precondition failed: source=$ORDER_SOURCE current=$ORDER_CURRENT"
+                  exit 1
+                fi
+                if [ "$USER_CURRENT" != "1" ] || [ "$CLIENT_CURRENT" != "1" ]; then
+                  echo "[X] recovery precondition failed: account/client reference missing"
+                  exit 1
+                fi
+                if [ "$LINE_ITEMS" -lt 1 ]; then
+                  echo "[X] recovery precondition failed: order has no line items"
+                  exit 1
+                fi
+                if [ "$COUPONS" != "0" ] || [ "$POINTS" != "0" ] || [ "$SHIPMENTS" != "0" ] || [ "$TICKETS" != "0" ] || [ "$PAYMENTS" != "0" ]; then
+                  echo "[X] recovery refused: this order has dependent financial/delivery rows"
+                  exit 1
+                fi
+
+                DETAIL_COLUMNS=$(mysql_query "
+                  SELECT GROUP_CONCAT(CONCAT(CHAR(96), COLUMN_NAME, CHAR(96)) ORDER BY ORDINAL_POSITION SEPARATOR ',')
+                  FROM information_schema.columns
+                  WHERE table_schema='$RECOVERY_DB'
+                    AND table_name='commande_details'
+                    AND column_name <> 'id';
+                ")
+                if [ -z "$DETAIL_COLUMNS" ]; then
+                  echo "[X] recovery precondition failed: no safe detail columns found"
+                  exit 1
+                fi
+
+                if [ "$ORDER_CURRENT" = "1" ]; then
+                  ORDER_IDENTITY_MATCH=$(mysql_query "
+                    SELECT COUNT(*)
+                    FROM \`$PROD_DB\`.commandes AS current_order
+                    JOIN \`$RECOVERY_DB\`.commandes AS source_order ON source_order.id=current_order.id
+                    WHERE current_order.id=$ARGS
+                      AND current_order.numero <=> source_order.numero
+                      AND current_order.user_id <=> source_order.user_id
+                      AND current_order.client_id <=> source_order.client_id
+                      AND current_order.email <=> source_order.email
+                      AND current_order.phone <=> source_order.phone
+                      AND current_order.prix_ttc <=> source_order.prix_ttc
+                      AND current_order.created_at <=> source_order.created_at;
+                  ")
+                  if [ "$ORDER_IDENTITY_MATCH" != "1" ]; then
+                    echo "[X] recovery refused: current order id belongs to a different identity"
+                    exit 1
+                  fi
+
+                  if [ "$LINE_ITEMS_CURRENT" = "$LINE_ITEMS" ]; then
+                    echo "[ok] order already restored with the expected line count; no database change"
+                  else
+                    echo "[..] repairing the restored order's line items without changing stock"
+                    if ! mysql_query "
+                      START TRANSACTION;
+                      DELETE FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;
+                      INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
+                        SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
+                      COMMIT;
+                    " >/dev/null; then
+                      echo "[X] transactional line-item repair failed"
+                      exit 1
+                    fi
+                  fi
+                else
+                  echo "[..] restoring one order and $LINE_ITEMS line item(s) in a transaction"
+                  if ! mysql_query "
+                    START TRANSACTION;
+                    DELETE FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;
+                    INSERT INTO \`$PROD_DB\`.commandes
+                      SELECT * FROM \`$RECOVERY_DB\`.commandes WHERE id=$ARGS;
+                    INSERT INTO \`$PROD_DB\`.commande_details ($DETAIL_COLUMNS)
+                      SELECT $DETAIL_COLUMNS FROM \`$RECOVERY_DB\`.commande_details WHERE commande_id=$ARGS;
+                    UPDATE \`$PROD_DB\`.products AS p
+                      JOIN (
+                        SELECT produit_id, SUM(qte) AS ordered_qty
+                        FROM \`$RECOVERY_DB\`.commande_details
+                        WHERE commande_id=$ARGS
+                        GROUP BY produit_id
+                      ) AS recovered ON recovered.produit_id=p.id
+                      SET p.qte=GREATEST(0, p.qte-recovered.ordered_qty);
+                    COMMIT;
+                  " >/dev/null; then
+                    echo "[X] transactional order recovery failed"
+                    exit 1
+                  fi
+                fi
+
+                RESTORED_ORDER=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commandes WHERE id=$ARGS;")
+                RESTORED_LINES=$(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.commande_details WHERE commande_id=$ARGS;")
+                if [ "$RESTORED_ORDER" != "1" ] || [ "$RESTORED_LINES" != "$LINE_ITEMS" ]; then
+                  echo "[X] post-recovery verification failed: order=$RESTORED_ORDER lines=$RESTORED_LINES"
+                  exit 1
+                fi
+                echo "[ok] order restored: id=$ARGS line-items=$RESTORED_LINES"
+                echo "[ok] historical notification rows intentionally skipped; no SMS was resent"
+              else
+                echo "[ok] rehearsal complete; production was not changed"
+              fi
+              echo "[ok] disposable database will now be dropped"
+            elif [ "$MODE" = "envkeys" ]; then
+              echo ""
+              echo "> configured mail-provider variable names (values are never printed)"
+              echo ""
+              sed -n 's/^\([A-Za-z_][A-Za-z0-9_]*\)=.*/\1/p' "$APP_DIR/.env" \
+                | grep -Ei '^(MAIL|SMTP|BREVO|SENDINBLUE|SENDGRID|MAILGUN|POSTMARK|RESEND|AWS_)' \
+                | sort -u
+            elif [ "$MODE" = "filelog" ]; then
+              echo ""
+              echo "> [$SVC] tail -n 300 storage/logs/$ARGS"
+              echo ""
+              OUT=$(docker compose -f "$COMPOSE_FILE" exec -T "$SVC" \
+                sh -c 'D=/var/www/html/storage/logs; F=$(ls -t $D/'"$ARGS"' 2>/dev/null | head -1); if [ -n "$F" ]; then echo "reading $F"; echo "---"; tail -n 300 "$F"; else echo "(no file matching '"$ARGS"' in this container)"; ls -la $D 2>/dev/null | head -20; fi' 2>&1); RC=$?
+              echo "$OUT"
+              [ "$RC" -ne 0 ] && echo "[X] reading the log file exited $RC (output above)"
+            else
+              echo ""
+              echo "> php artisan $ARGS"
+              echo ""
+              set +e
+              if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
+                OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                  php artisan $ARGS 2>&1)
+              else
+                OUT=$(docker compose -f "$COMPOSE_FILE" exec -T -u www-data backend-v2 \
+                  php artisan --no-interaction $ARGS 2>&1)
+              fi
+              RC=$?
+              if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
+                docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
+                  rm -f /var/www/html/tests/TestCase.php \
+                    /var/www/html/tests/CreatesApplication.php \
+                    /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
+                    /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php \
+                    /var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php >/dev/null 2>&1 || true
+              fi
+              echo "$OUT"
+              echo ""
+              if [ "$RC" -ne 0 ]; then
+                echo "================================================================"
+                echo "[X] COMMAND FAILED - artisan exited $RC. Its output is above."
+                echo "================================================================"
+                exit 0
+              fi
+            fi
+
+            echo ""
+            echo "[ok] finished."

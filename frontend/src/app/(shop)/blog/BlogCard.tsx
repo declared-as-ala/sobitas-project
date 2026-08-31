@@ -18,6 +18,10 @@ interface BlogCardProps {
   readingMinutes?: number;
   /** Heading level for the card title. Defaults to h2 (h3 inside a titled section). */
   titleAs?: 'h2' | 'h3';
+  /** One article component, three editorial roles. */
+  variant?: 'standard' | 'feature' | 'compact';
+  /** Human topic label, computed once by the blog index. */
+  eyebrow?: string;
 }
 
 /**
@@ -25,63 +29,100 @@ interface BlogCardProps {
  * and the category/tag pages so every blog surface shares one anatomy: 4:3 cover (Newspaper
  * fallback), line-clamped title, date + optional reading-time meta, and a "Lire la suite" link.
  */
-export function BlogCard({ article, priority = false, excerpt, readingMinutes, titleAs = 'h2' }: BlogCardProps) {
+export function BlogCard({
+  article,
+  priority = false,
+  excerpt,
+  readingMinutes,
+  titleAs = 'h2',
+  variant = 'standard',
+  eyebrow,
+}: BlogCardProps) {
   const Title = titleAs;
   const date = article.created_at ? new Date(article.created_at) : null;
   const title = decodeHtmlEntities(article.designation_fr || '');
 
   return (
-    <article className="group h-full">
+    <article className="group h-full min-w-0">
       <Link
         href={blogHref(article.slug)}
-        className="flex h-full flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-red-200 hover:shadow-xl dark:border-gray-800 dark:bg-gray-900 dark:hover:border-red-500/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 dark:focus-visible:ring-offset-gray-950"
+        className={`h-full overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm transition-[border-color,box-shadow,transform] duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus motion-reduce:transform-none motion-reduce:transition-none ${
+          variant === 'compact'
+            ? 'grid grid-cols-[7.5rem_minmax(0,1fr)] sm:grid-cols-[9rem_minmax(0,1fr)]'
+            : 'flex flex-col'
+        }`}
       >
-        <div className="relative aspect-[16/10] overflow-hidden bg-gray-100 dark:bg-gray-800">
+        <div
+          className={`relative overflow-hidden bg-sunken ${
+            variant === 'compact'
+              ? 'h-full min-h-[10.5rem]'
+              : variant === 'feature'
+                ? 'aspect-[16/9] lg:aspect-[16/8.4]'
+                : 'aspect-[16/10]'
+          }`}
+        >
           {article.cover ? (
             <SafeImage
               src={getStorageUrl(article.cover, article.updated_at || article.created_at)}
               alt={title || 'Article'}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-[1.06]"
-              sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+              className="object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transform-none motion-reduce:transition-none"
+              sizes={
+                variant === 'feature'
+                  ? '(max-width: 1024px) 100vw, 66vw'
+                  : variant === 'compact'
+                    ? '(max-width: 640px) 35vw, 18vw'
+                    : '(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw'
+              }
               priority={priority}
+              fallbackSrc="/images/blog/article-fallback.svg"
+              retryOnError={false}
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center bg-gray-100 dark:bg-gray-800">
-              <Newspaper className="h-10 w-10 text-gray-300 dark:text-gray-700" strokeWidth={1.5} aria-hidden="true" />
+            <div className="flex h-full w-full items-center justify-center bg-sunken">
+              <Newspaper className="h-10 w-10 text-ink-3/40" strokeWidth={1.5} aria-hidden="true" />
             </div>
           )}
           {/* Floating date pill (magazine style) — moves the date onto the cover, freeing the footer.
               Opaque chip rather than bg-white/90 + backdrop-blur-sm: `backdrop-blur` is banned
               (DESIGN_SYSTEM §9) and on a blog grid it was one compositing layer per card. At 90%
               opacity the blur was doing almost nothing anyway; solid reads more crisply. */}
-          {date && (
-            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-gray-800 shadow-sm dark:bg-gray-950 dark:text-gray-100">
-              <Calendar className="h-3 w-3 text-red-600 dark:text-red-400" strokeWidth={2} aria-hidden="true" />
+          {date && variant !== 'compact' && (
+            <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full border border-hairline bg-elevated px-2.5 py-1 text-[11px] font-semibold text-ink-1 shadow-sm">
+              <Calendar className="h-3 w-3 text-brand" strokeWidth={2} aria-hidden="true" />
               {format(date, 'd MMM yyyy', { locale: fr })}
             </span>
           )}
         </div>
-        <div className="flex min-w-0 flex-1 flex-col p-5">
-          <Title className="mb-2 line-clamp-2 text-lg font-bold leading-snug tracking-tight text-gray-900 transition-colors group-hover:text-red-600 dark:text-white dark:group-hover:text-red-400">
+        <div className={`flex min-w-0 flex-1 flex-col ${variant === 'compact' ? 'p-4' : 'p-4 sm:p-5'}`}>
+          {eyebrow && (
+            <span className="mb-2 font-display text-[10px] font-semibold uppercase tracking-[0.16em] text-brand">
+              {eyebrow}
+            </span>
+          )}
+          <Title
+            className={`line-clamp-2 font-display font-bold leading-snug tracking-tight text-ink-1 transition-colors group-hover:text-brand ${
+              variant === 'feature' ? 'mb-3 text-xl sm:text-2xl lg:text-[1.75rem]' : 'mb-2 text-base sm:text-lg'
+            }`}
+          >
             {title}
           </Title>
-          {excerpt && (
-            <p className="mb-5 line-clamp-3 flex-1 text-sm leading-relaxed text-gray-600 dark:text-gray-400">
+          {excerpt && variant !== 'compact' && (
+            <p className={`mb-4 flex-1 text-sm leading-relaxed text-ink-2 ${variant === 'feature' ? 'line-clamp-3 max-w-3xl sm:text-base' : 'line-clamp-2'}`}>
               {excerpt}
             </p>
           )}
-          <div className="mt-auto flex items-center justify-between border-t border-gray-100 pt-3.5 dark:border-gray-800">
+          <div className={`mt-auto flex items-center justify-between gap-3 border-t border-hairline ${variant === 'compact' ? 'pt-3' : 'pt-3.5'}`}>
             {typeof readingMinutes === 'number' ? (
-              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-500 dark:text-gray-400">
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium text-ink-3">
                 <Clock className="h-3.5 w-3.5 flex-shrink-0" strokeWidth={1.75} aria-hidden="true" />
                 {readingMinutes} min de lecture
               </span>
             ) : (
               <span aria-hidden="true" />
             )}
-            <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-red-600 dark:text-red-400">
-              Lire l'article
+            <span className={`inline-flex shrink-0 items-center gap-1.5 font-semibold text-brand ${variant === 'compact' ? 'text-xs' : 'text-sm'}`}>
+              {variant === 'compact' ? 'Lire' : 'Lire le guide'}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" strokeWidth={1.75} aria-hidden="true" />
             </span>
           </div>

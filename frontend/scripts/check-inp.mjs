@@ -93,20 +93,25 @@ await page.evaluate(() => {
   }).observe({ type: 'event', durationThreshold: 0, buffered: true });
 });
 
-/** Tap N different product cards' favourite buttons — the cleanest isolated interaction: it
- *  mutates shared state that every card subscribes to, and opens no drawer to muddy the timing. */
-const hearts = await page.$$('article button[aria-label*="favoris"]');
-const cartButtons = await page.$$('article button[aria-label*="au panier"]');
-console.log(`\n  ${hearts.length} favourite buttons, ${cartButtons.length} add-to-cart buttons found`);
+/** Toggle one visible card N times — the cleanest isolated interaction: it mutates shared state
+ *  without opening a drawer, while also showing whether repeated updates remain responsive. */
+const HEART_SELECTOR = 'article button[aria-label*="favoris"]';
+const CART_SELECTOR = 'article button[aria-label*="au panier"]';
+const heartCount = await page.$$eval(HEART_SELECTOR, (buttons) => buttons.length);
+const cartCount = await page.$$eval(CART_SELECTOR, (buttons) => buttons.length);
+console.log(`\n  ${heartCount} favourite buttons, ${cartCount} add-to-cart buttons found`);
 
-const tapped = Math.min(TAPS, hearts.length);
+const tapped = Math.min(TAPS, heartCount);
 for (let i = 0; i < tapped; i++) {
-  await hearts[i].tap();
+  // A favourite mutation intentionally rerenders the tapped card, and the flash countdown can
+  // refresh the rail between pointer-down and click. Locator re-resolves and retries against the
+  // live DOM; an ElementHandle can detach before Puppeteer scrolls it into view.
+  await page.locator(HEART_SELECTOR).click();
   await new Promise((r) => setTimeout(r, 450));
 }
 // One add-to-cart as well: it is the money interaction and it also opens the drawer.
-if (cartButtons.length) {
-  await cartButtons[0].tap();
+if (cartCount) {
+  await page.locator(CART_SELECTOR).click();
   await new Promise((r) => setTimeout(r, 800));
 }
 

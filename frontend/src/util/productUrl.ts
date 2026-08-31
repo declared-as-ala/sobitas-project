@@ -106,6 +106,7 @@ export function isReservedRouteSlug(slug: string): boolean {
     'contact',
     'login',
     'register',
+    'verify-email',
     'reset-password',
     'forgot-password',
     'order-confirmation',
@@ -114,6 +115,12 @@ export function isReservedRouteSlug(slug: string): boolean {
     'page',
     'proteine-sousse',
     'qui-sommes-nous',
+    'mentions-legales',
+    // Public member profiles (/membres/{id}). Caught by check-reserved-routes on the very first
+    // build after the route was added: without this the middleware rewrites /membres to
+    // /x-crawler/category/membres, which resolves category → brand → CMS page, finds none, and
+    // serves Googlebot a 404 for a route that answers 200 to a browser.
+    'membres',
     // Missing here meant middleware rewrote /pack-builder to /x-crawler/category/pack-builder,
     // which resolves category → brand → CMS page, found none, and served Googlebot a 404 +
     // noindex for a page that returns 200 to every human. Verified live before the fix:
@@ -123,6 +130,35 @@ export function isReservedRouteSlug(slug: string): boolean {
     'pack-builder',
     // Caught by that same check on its first build — which is the point of having it.
     'partenaires',
+    /*
+     * /avis/{token} — the per-order review page. Same defect as /pack-builder, and it survived
+     * check-reserved-routes.mjs because that check only looks at top-level segments that hold a
+     * page.tsx DIRECTLY. `avis/` holds no page of its own, only `avis/[token]/page.tsx`, so the
+     * segment was invisible to it while being very much a real route.
+     *
+     * Verified on production 18/08/2026, /avis/zz-test-123:
+     *   human → 200
+     *   bot   → 404   (rewritten to /x-crawler/product/avis/{token}, which is not a product)
+     *
+     * Found by rule L2 of scripts/check-indexability-live.mjs — "browser and Googlebot agree" —
+     * which is the rule that exists because a status that differs by user-agent is invisible to
+     * every check run from a browser.
+     */
+    'avis',
+    /*
+     * 'x-crawler' — the rewrite TARGET, reserved so it can never be rewritten a second time.
+     *
+     * Middleware sends crawler user-agents from /shop to /x-crawler/shop. A rewrite is supposed to
+     * be internal and not re-enter middleware; on a local production build it does. On re-entry the
+     * path /x-crawler/shop matched the two-segment product rule, was rewritten AGAIN to
+     * /x-crawler/product/x-crawler/shop, and 404'd — so the boutique answered Googlebot 404 on any
+     * cold cache. Reserving the segment makes the second pass a no-op, which is the correct
+     * behaviour either way: /x-crawler/* is never a category or a product.
+     *
+     * check-reserved-routes.mjs skips this segment when it enumerates real routes, so listing it
+     * here is additive and cannot make that check drift.
+     */
+    'x-crawler',
     'api',
     'admin',
     '_next',

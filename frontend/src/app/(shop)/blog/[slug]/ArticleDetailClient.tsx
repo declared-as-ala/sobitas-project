@@ -10,15 +10,21 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { stripEmptyHeadings } from '@/util/htmlEntities';
+import { injectInternalLinks, type LinkTarget } from '@/util/internalLinks';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState, useEffect, useRef } from 'react';
-import { toast } from 'sonner';
+import { notify as toast } from '@/lib/notify';
 
 interface ArticleDetailClientProps {
   article: Article;
   relatedArticles: Article[];
+  /**
+   * Shop pages this article may link to from inside its prose, built from the live taxonomy by the
+   * server component. Empty is a valid value and simply means no in-content link is added.
+   */
+  linkTargets?: LinkTarget[];
   /** Optional SEO block (FAQ + internal links) rendered between content and related articles */
   children?: React.ReactNode;
 }
@@ -151,11 +157,38 @@ function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
   return undefined;
 }
 
-export function ArticleDetailClient({ article, relatedArticles, children }: ArticleDetailClientProps) {
+export function ArticleDetailClient({ article, relatedArticles, linkTargets = [], children }: ArticleDetailClientProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
-  const content = article.description_fr || article.description || '';
+  const rawContent = article.description_fr || article.description || '';
+
+  /*
+   * ── IN-CONTENT LINKS TO THE SHOP, ADDED BEFORE THE SPLIT AND BEFORE THE DECODE ────────────
+   *
+   * Both orderings are deliberate.
+   *
+   * BEFORE THE SPLIT, so the link budget is spent over the whole article rather than twice over
+   * its two halves — splitContentForMiddleInsert cuts at a </p>, which no anchor can straddle, so
+   * inserting first is safe.
+   *
+   * BEFORE decodeHtmlEntities, because that function handles &nbsp; &amp; &lt; &gt; &quot; and the
+   * quote entities and does NOT touch &eacute;. The corpus is full of "prot&eacute;ine", so a
+   * matcher run after it would still be reading entities. injectInternalLinks compiles each
+   * accented letter into an alternation over the bare letter, the accented letter and both entity
+   * spellings, which is why it can run on the raw CMS HTML and match all three.
+   *
+   * This component carries 'use client', but Next renders it on the server for the initial HTML,
+   * so these anchors ARE in the document Googlebot receives. That is the entire reason the linking
+   * is done here rather than in an effect: the existing route to the shop from an article is
+   * BlogRecommendedProducts, which fetches on an IntersectionObserver and therefore contributes
+   * nothing to a crawler that renders without scrolling.
+   */
+  const content = useMemo(
+    () => injectInternalLinks(rawContent, linkTargets, { max: 6 }),
+    [rawContent, linkTargets]
+  );
+
   const readingTime = useMemo(() => calculateReadingTime(content), [content]);
   const [contentBefore, contentAfter] = useMemo(() => splitContentForMiddleInsert(content), [content]);
 
@@ -407,7 +440,7 @@ export function ArticleDetailClient({ article, relatedArticles, children }: Arti
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
             <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                <Link href="/proteine-whey" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/proteine-whey" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/proteine-whey" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
+                <Link href="/whey-proteine" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/whey-proteine" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/whey-proteine" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
               </p>
             </div>
           )}

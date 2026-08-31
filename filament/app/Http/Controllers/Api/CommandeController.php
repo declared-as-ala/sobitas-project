@@ -3,11 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Mail\OrderConfirmedAdminMail;
-use App\Mail\OrderConfirmedCustomerMail;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
-use App\Models\Message;
 use App\Models\CouponRedemption;
 use App\Models\Product;
 use App\Models\User;
@@ -15,13 +12,13 @@ use App\Services\ClientService;
 use App\Services\CouponService;
 use App\Services\PackDiscountService;
 use App\Services\PointsService;
-use App\Services\SmsService;
+use App\Services\OrderConfirmationDispatcher;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Schema;
 
 class CommandeController extends Controller
@@ -57,7 +54,10 @@ class CommandeController extends Controller
      * ⚠️ LEGACY CODE — This replicates the exact behavior from
      *   AdminCommandeController::storeCommandeApi() in the backend project.
      *   Price calculation logic preserved as-is.
-     *   SMS and email are now dispatched to queue for better response time.
+     *
+     * Customer/admin email and SMS are dispatched only after the transaction commits. Production
+     * has a supervised Redis worker, so checkout latency is no longer coupled to WinSMS or SMTP.
+     * Each notification job owns an idempotency key in notification_deliveries.
      */
     public function storeCommandeApi(Request $request): JsonResponse
     {
@@ -80,6 +80,27 @@ class CommandeController extends Controller
 
         $commandeData = $request->commande;
 
+        $idempotencyKey = trim((string) $request->header('Idempotency-Key', ''));
+        if ($idempotencyKey !== '' && ! preg_match('/^[A-Za-z0-9._:-]{16,100}$/', $idempotencyKey)) {
+            return response()->json(['message' => 'Clé de commande invalide.'], 422);
+        }
+        $payloadHash = hash('sha256', (string) json_encode($request->only([
+            'commande', 'panier', 'coupon_code', 'pack_discount', 'points_to_redeem',
+        ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+
+        if ($idempotencyKey !== '') {
+            $existing = Commande::where('checkout_idempotency_key', $idempotencyKey)->first();
+            if ($existing) {
+                if ($existing->checkout_payload_hash && ! hash_equals($existing->checkout_payload_hash, $payloadHash)) {
+                    return response()->json([
+                        'message' => 'Cette clé de commande a déjà été utilisée avec un panier différent.',
+                    ], 409);
+                }
+
+                return $this->orderCreatedResponse($existing, true);
+            }
+        }
+
         // The authenticated token owner (or null for guests). The ONLY identity
         // allowed to earn or spend loyalty points.
         $authUser = $this->resolveTokenUser($request);
@@ -87,7 +108,8 @@ class CommandeController extends Controller
         Log::info('filament.api.add_commande.start', ['payload_keys' => array_keys($commandeData ?? [])]);
 
         $couponService = app(CouponService::class);
-        $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser) {
+        try {
+            $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser, $idempotencyKey, $payloadHash) {
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -111,32 +133,27 @@ class CommandeController extends Controller
             // user_id (that would be an IDOR: attaching an order, and any points
             // side-effects, to an arbitrary account).
             $hasClientIdColumn = Schema::hasColumn($new_facture->getTable(), 'client_id');
+            $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData, $authUser);
+
+            if ($client && $hasClientIdColumn) {
+                $new_facture->client_id = $client->id;
+                Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id]);
+            }
+
             if ($authUser) {
+                // user_id is the authenticated storefront User. client_id is the matching
+                // back-office Client. They are different tables and their numeric ids must
+                // never be copied into one another.
                 $new_facture->user_id = $authUser->id;
-                if ($hasClientIdColumn) {
-                    $new_facture->client_id = $authUser->id;
-                }
-            } elseif (! empty($commandeData['user_id'])) {
-                // Legacy attribution only (guest checkout that carried an id). No
-                // loyalty points can be earned or spent on this unauthenticated path.
-                $new_facture->user_id = $commandeData['user_id'];
-                if ($hasClientIdColumn) {
-                    $new_facture->client_id = $commandeData['user_id'];
-                }
+            } elseif ($client) {
+                // Preserve the historic back-office convention for guest orders only. Never trust
+                // commande.user_id from the browser: it could attach an order to another account.
+                $new_facture->user_id = $client->id;
             } else {
-                $client = app(ClientService::class)->findOrCreateClientFromDeliveryInfo($commandeData);
-                if ($client) {
-                    Log::info('filament.api.add_commande.client_linked', ['client_id' => $client->id]);
-                    $new_facture->user_id = $client->id;
-                    if ($hasClientIdColumn) {
-                        $new_facture->client_id = $client->id;
-                    }
-                } else {
-                    Log::warning('filament.api.add_commande.no_client_created', [
-                        'has_phone' => ! empty($commandeData['livraison_phone'] ?? $commandeData['phone'] ?? null),
-                        'has_email' => ! empty($commandeData['livraison_email'] ?? $commandeData['email'] ?? null),
-                    ]);
-                }
+                Log::warning('filament.api.add_commande.no_client_created', [
+                    'has_phone' => ! empty($commandeData['livraison_phone'] ?? $commandeData['phone'] ?? null),
+                    'has_email' => ! empty($commandeData['livraison_email'] ?? $commandeData['email'] ?? null),
+                ]);
             }
 
             $new_facture->livraison_nom = $commandeData['livraison_nom'] ?? null;
@@ -150,6 +167,10 @@ class CommandeController extends Controller
             $new_facture->livraison_adresse2 = $commandeData['livraison_adresse2'] ?? null;
             $new_facture->etat = Commande::STATUS_NEW;
             $new_facture->order_token = bin2hex(random_bytes(32));
+            if ($idempotencyKey !== '') {
+                $new_facture->checkout_idempotency_key = $idempotencyKey;
+                $new_facture->checkout_payload_hash = $payloadHash;
+            }
 
             // Atomic order number via number_sequences table (lockForUpdate, no race condition)
             $year = (int) date('Y');
@@ -270,6 +291,11 @@ class CommandeController extends Controller
                         response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos points de fidélité.'], 422)
                     );
                 }
+                if (! $authUser->hasVerifiedContact()) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                        response()->json(['message' => 'Vérifiez votre email avant d’utiliser vos points.'], 422)
+                    );
+                }
 
                 $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
                 $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
@@ -325,9 +351,26 @@ class CommandeController extends Controller
             }
 
             return $new_facture;
-        });
+            });
+        } catch (QueryException $e) {
+            // Two concurrent retries can both pass the early lookup. The unique
+            // index chooses one winner; return its order without buying another
+            // SMS, decrementing stock again, or creating another loyalty debit.
+            if ($idempotencyKey !== '') {
+                $existing = Commande::where('checkout_idempotency_key', $idempotencyKey)->first();
+                if ($existing) {
+                    if ($existing->checkout_payload_hash && ! hash_equals($existing->checkout_payload_hash, $payloadHash)) {
+                        return response()->json([
+                            'message' => 'Cette clé de commande a déjà été utilisée avec un panier différent.',
+                        ], 409);
+                    }
 
-        $commande = $new_facture->fresh(['details.product']);
+                    return $this->orderCreatedResponse($existing, true);
+                }
+            }
+
+            throw $e;
+        }
 
         // NOTE: loyalty points are EARNED on delivery (when etat becomes "livree"),
         // not at order creation — these are cash-on-delivery orders, so crediting
@@ -336,91 +379,28 @@ class CommandeController extends Controller
         // PointsService::syncOnStatusChange(). Redeemed points are refunded there
         // too if the order is later cancelled/returned.
 
-        // ── Send SMS ──────────────────────────────────────────────────────────────
         try {
-            $phone = $commande->phone ?? $commande->livraison_phone ?? null;
-            if ($phone && ! empty(trim((string) $phone))) {
-                $nom    = trim(($commande->nom ?: $commande->livraison_nom ?: ''));
-                $prenom = trim(($commande->prenom ?: $commande->livraison_prenom ?: ''));
-                $numero = (string) ($commande->numero ?? '');
-                $total  = number_format((float) ($commande->prix_ttc ?? 0), 3, '.', ' ');
-
-                $msg = Message::getCached();
-                $template = $msg ? trim((string) ($msg->msg_passez_commande ?? '')) : '';
-
-                $commande->loadMissing('details.product:id,designation_fr');
-                $products = $commande->details
-                    ->take(4)
-                    ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-                    ->filter()
-                    ->implode(', ');
-                $more = $commande->details->count() > 4
-                    ? ' (+' . ($commande->details->count() - 4) . ')'
-                    : '';
-                $productsText = trim($products . $more);
-                $etatLabel = Commande::getStatusLabel((string) ($commande->etat ?? 'nouvelle_commande'));
-
-                if ($template !== '') {
-                    // Admin template: [nom], [prenom], [num_commande], [etat], [produits], [total]
-                    $sms = str_replace(
-                        ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
-                        [$nom, $prenom, $numero, $etatLabel, $productsText, $total],
-                        $template
-                    );
-                } else {
-                    // Built-in rich fallback
-                    $productNames = $commande->details
-                        ->take(3)
-                        ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-                        ->implode(', ');
-                    $hasMore = $commande->details->count() > 3
-                        ? ' (+' . ($commande->details->count() - 3) . ')'
-                        : '';
-
-                    $greeting = $nom ? "Bonjour {$nom}" : 'Bonjour';
-                    $sms  = "{$greeting}, votre commande #{$numero} est confirmée ✅\n";
-                    $sms .= "Produits: {$productNames}{$hasMore}\n";
-                    $sms .= "Total: {$total} TND\n";
-                    $sms .= "Merci pour votre confiance 🙌";
-                }
-
-                if (! empty(trim($sms))) {
-                    app(SmsService::class)->send_sms($phone, $sms);
-                }
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send order SMS', [
-                'commande_id' => $commande->id,
-                'error'       => $e->getMessage(),
+            app(OrderConfirmationDispatcher::class)->dispatch($new_facture->id);
+        } catch (\Throwable $e) {
+            // The order is committed and must be returned even if Redis is momentarily unavailable.
+            Log::critical('Order confirmation jobs could not be dispatched', [
+                'commande_id' => $new_facture->id,
+                'error' => $e->getMessage(),
             ]);
         }
 
-        // ── Send emails ───────────────────────────────────────────────────────────
-        try {
-            $adminEmailsRaw = config('mail.admin_emails', config('mail.username', 'admin@protein.tn'));
-            $adminEmails = is_array($adminEmailsRaw)
-                ? array_filter(array_map('trim', $adminEmailsRaw))
-                : array_filter(array_map('trim', explode(',', (string) $adminEmailsRaw)));
-            foreach ($adminEmails as $adminEmail) {
-                Mail::to($adminEmail)->send(new OrderConfirmedAdminMail($commande));
-            }
+        return $this->orderCreatedResponse($new_facture);
+    }
 
-            $clientEmail = $commande->email ?? $commande->livraison_email ?? null;
-            if ($clientEmail && filter_var($clientEmail, FILTER_VALIDATE_EMAIL)) {
-                Mail::to($clientEmail)->send(new OrderConfirmedCustomerMail($commande));
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send order email', [
-                'commande_id' => $commande->id,
-                'error'       => $e->getMessage(),
-            ]);
-        }
-
+    private function orderCreatedResponse(Commande $commande, bool $replayed = false): JsonResponse
+    {
         return response()->json([
-            'id'         => $new_facture->id,
-            'message'    => 'Merci pour votre commande',
+            'id' => $commande->id,
+            'numero' => $commande->numero,
+            'message' => 'Merci pour votre commande',
             'alert-type' => 'success',
-        ], 201);
+            'replayed' => $replayed,
+        ], $replayed ? 200 : 201);
     }
 
     /**
@@ -443,8 +423,12 @@ class CommandeController extends Controller
         $authorized = false;
 
         if ($request->user()) {
-            $userId = $request->user()->id;
-            $authorized = $facture->user_id == $userId || $facture->client_id == $userId;
+            // Reuse the collision-safe account scope. A raw comparison between commandes.user_id
+            // and users.id leaks legacy orders because user_id previously stored Client ids.
+            $authorized = Commande::query()
+                ->visibleToStorefrontUser($request->user())
+                ->whereKey($facture->id)
+                ->exists();
         }
 
         if (! $authorized) {

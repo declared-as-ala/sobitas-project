@@ -19,7 +19,10 @@ export function ProductDetailSkeleton() {
   return (
     <div className="min-h-screen bg-white dark:bg-gray-950">
 
-      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl py-3 sm:py-6 lg:py-12 pb-40 sm:pb-44 lg:pb-12">
+      {/* Same rail as ProductDetailClient — `max-w-site`, not `max-w-7xl`. A skeleton on a
+          different width than the page it stands in for produces a visible horizontal jump at
+          hydration, which is the one thing a skeleton exists to prevent. */}
+      <main className="w-full mx-auto px-4 sm:px-6 lg:px-8 max-w-site py-3 sm:py-6 lg:py-12 pb-40 sm:pb-44 lg:pb-12">
         {/* Breadcrumb */}
         <div className="mb-3 sm:mb-4">
           <SkeletonLine className="h-4 w-64 max-w-full rounded" />
@@ -127,7 +130,7 @@ export function ProductDetailSkeleton() {
         // Kept in lockstep with the real bar in ProductDetailClient — any drift here is CLS.
         style={{ paddingBottom: 'calc(var(--tabbar-raise) + 0.5rem)' }}
       >
-        <div className="w-full mx-auto px-4 sm:px-6 max-w-7xl flex flex-col gap-2 sm:gap-3">
+        <div className="w-full mx-auto px-4 sm:px-6 max-w-site flex flex-col gap-2 sm:gap-3">
           <div className="flex items-center justify-between gap-2">
             <SkeletonLine className="h-4 w-12" />
             <SkeletonLine className="h-6 w-24" />

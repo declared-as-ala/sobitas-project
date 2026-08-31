@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Client;
+use App\Models\User;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Client lookup/creation by phone for online orders.
@@ -36,15 +38,23 @@ class ClientService
 
     /**
      * Find or create client from online order delivery data.
-     * Uses phone as primary identifier; updates missing name/address/region/ville if client exists.
+     * An authenticated storefront account is resolved by its stable user mapping or canonical
+     * email only. Phone matching is deliberately skipped for accounts: recycled/shared phone
+     * numbers must never attach an order to somebody else's back-office client.
      *
      * @param  array<string, mixed>  $deliveryData  Keys: livraison_phone|phone, livraison_nom|nom, livraison_prenom|prenom, livraison_adresse1|adresse1, livraison_region|region, livraison_ville|ville, livraison_email|email, etc.
      * @return Client|null  The client, or null if no phone provided.
      */
-    public function findOrCreateClientFromDeliveryInfo(array $deliveryData): ?Client
+    public function findOrCreateClientFromDeliveryInfo(array $deliveryData, ?User $account = null): ?Client
     {
         $phone = $deliveryData['livraison_phone'] ?? $deliveryData['phone'] ?? null;
         $email = $deliveryData['livraison_email'] ?? $deliveryData['email'] ?? null;
+        $accountEmail = $account ? strtolower(trim((string) $account->email)) : '';
+        if ($accountEmail !== '') {
+            // The token owner is authoritative. Checkout form fields are delivery snapshots,
+            // not an identity source.
+            $email = $accountEmail;
+        }
 
         if (($phone === null || trim((string) $phone) === '') && ($email === null || trim((string) $email) === '')) {
             // Require at least phone or email
@@ -69,22 +79,28 @@ class ClientService
 
         $isQuickOrderEmail = $email && preg_match('/^quickorder-[^@]+@protein\.tn$/i', (string) $email);
 
-        // 1) Real customer emails: try email first
-        if ($email && ! $isQuickOrderEmail) {
-            $client = Client::where('email', $email)->first();
+        $hasUserMapping = Schema::hasColumn((new Client())->getTable(), 'user_id');
+
+        // 1) Stable storefront-account mapping, then canonical email. Restrict an email match to
+        // an unclaimed client (or the same account) so one account can never steal another's row.
+        if ($account && $hasUserMapping) {
+            $client = Client::query()->where('user_id', $account->getKey())->first();
+        }
+        if (! $client && $email && ! $isQuickOrderEmail) {
+            $client = Client::query()
+                ->whereRaw('LOWER(TRIM(email)) = ?', [strtolower(trim((string) $email))])
+                ->when($account && $hasUserMapping, function ($query) use ($account): void {
+                    $query->where(function ($ownership) use ($account): void {
+                        $ownership->whereNull('user_id')->orWhere('user_id', $account->getKey());
+                    });
+                })
+                ->first();
         }
 
-        // 2) Then phone (primary key when available)
-        if (! $client && $normalized !== null) {
-            $client = Client::query()
-                ->whereNotNull('phone_1')
-                ->orWhereNotNull('phone_2')
-                ->get()
-                ->first(function (Client $c) use ($normalized) {
-                    $n1 = $this->normalizePhone($c->phone_1);
-                    $n2 = $this->normalizePhone($c->phone_2);
-                    return $n1 === $normalized || $n2 === $normalized;
-                });
+        // 2) Guests may be identified by phone. Authenticated accounts may not: the same phone
+        // can exist as phone_2 on an older client and was the cause of the production mix-up.
+        if (! $client && ! $account && $normalized !== null) {
+            $client = $this->findByNormalizedPhone($normalized);
         }
 
         if ($client) {
@@ -109,6 +125,10 @@ class ClientService
                 $client->email = $email;
                 $dirty = true;
             }
+            if ($account && $hasUserMapping && (int) ($client->user_id ?? 0) !== (int) $account->getKey()) {
+                $client->user_id = $account->getKey();
+                $dirty = true;
+            }
             if (property_exists($client, 'code_postale') && ($client->code_postale === null || trim((string) $client->code_postale) === '') && $codePostale !== null && trim((string) $codePostale) !== '') {
                 $client->code_postale = $codePostale;
                 $dirty = true;
@@ -120,8 +140,13 @@ class ClientService
         }
 
         $client = new Client();
-        $client->name = $fullName !== '' ? $fullName : 'Client ' . substr($normalized, -4);
-        $client->phone_1 = $phone;
+        $fallbackName = $account?->name ?: (($email && str_contains((string) $email, '@')) ? strstr((string) $email, '@', true) : 'Client');
+        $client->name = $fullName !== '' ? $fullName : $fallbackName;
+
+        // Keep the account/client relationship correct even if the entered phone already belongs
+        // to a legacy client. The order snapshot retains the delivery number regardless.
+        $phoneOwner = $normalized !== null ? $this->findByNormalizedPhone($normalized) : null;
+        $client->phone_1 = ($account && $phoneOwner) ? null : $phone;
         if (! $isQuickOrderEmail) {
             $client->email = $email;
         }
@@ -133,9 +158,25 @@ class ClientService
         }
         $client->source = self::SOURCE_ONLINE;
         $client->sms = false;
+        if ($account && $hasUserMapping) {
+            $client->user_id = $account->getKey();
+        }
         $client->save();
 
         return $client;
+    }
+
+    private function findByNormalizedPhone(string $normalized): ?Client
+    {
+        return Client::query()
+            ->where(function ($query): void {
+                $query->whereNotNull('phone_1')->orWhereNotNull('phone_2');
+            })
+            ->get()
+            ->first(function (Client $client) use ($normalized): bool {
+                return $this->normalizePhone($client->phone_1) === $normalized
+                    || $this->normalizePhone($client->phone_2) === $normalized;
+            });
     }
 
     /**

@@ -10,6 +10,7 @@ use App\Models\Message;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\PointsService;
+use App\Services\CustomerOrderStatusMailer;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
@@ -19,12 +20,10 @@ use Illuminate\Support\Facades\Schema;
 
 class CommandeObserver
 {
-    /**
-     * Notify all panel users when a new commande is created.
-     */
+    /** Notify only panel administrators when a new order is created. */
     public function created(Commande $commande): void
     {
-        $recipients = User::all();
+        $recipients = User::whereIn('role_id', config('partners.admin_role_ids', [1, 3]))->get();
         if ($recipients->isEmpty()) {
             return;
         }
@@ -78,14 +77,66 @@ class CommandeObserver
             ]);
         }
 
+        // Delivery/tracking email is independent from SMS. A mail outage must not
+        // prevent the status update, points credit or stock transition.
+        try {
+            app(CustomerOrderStatusMailer::class)->sendOnce($commande);
+        } catch (\Throwable $e) {
+            Log::error('Order status customer email failed', [
+                'commande_id' => $commande->id,
+                'etat' => $commande->etat,
+                'error' => $e->getMessage(),
+            ]);
+        }
+
         if ($commande->etat === 'annuler') {
             $this->restoreStockForCancelledOrder($commande);
 
             return;
         }
 
+        if (! in_array((string) $commande->etat, config('customer_notifications.sms_order_statuses', []), true)) {
+            Log::info('Order status SMS suppressed: milestone is not customer-useful', [
+                'commande_id' => $commande->id,
+                'etat' => $commande->etat,
+            ]);
+
+            return;
+        }
+
         $phone = $commande->livraison_phone ?? $commande->phone ?? null;
         if (empty(trim((string) $phone))) {
+            return;
+        }
+
+        /*
+         * ── THE BACKFILL GUARD ──────────────────────────────────────────────────────────────
+         * A status change is normally something an admin just did, so texting about it is the
+         * point. But `AramexTrackingSync` also flips orders to "livrée" from the courier's own
+         * history, and on the run that follows a fix to the delivery codes that history is months
+         * deep — so this same line would send a hundred people "votre commande est livrée" about
+         * parcels they unpacked in June. Confusing, and billed per message.
+         *
+         * The test is the DELIVERY date, not the row's age: an order created long ago and
+         * delivered this morning is exactly the case that must still send. `delivered_at` is set
+         * by the sync from Aramex's own timestamp before it saves, so it is already correct here.
+         *
+         * Only delivery statuses are gated. A cancellation or a status an operator sets by hand
+         * carries no such timestamp and is always sent.
+         */
+        $smsMaxAgeDays = (int) config('aramex.status_sms_max_age_days', 3);
+        if (
+            $smsMaxAgeDays > 0
+            && in_array($commande->etat, PointsService::DELIVERED_STATUSES, true)
+            && ! empty($commande->delivered_at)
+            && $commande->delivered_at->lt(now()->subDays($smsMaxAgeDays))
+        ) {
+            Log::info('Order status SMS suppressed: delivery is older than the notify window', [
+                'commande_id'  => $commande->id,
+                'delivered_at' => (string) $commande->delivered_at,
+                'max_age_days' => $smsMaxAgeDays,
+            ]);
+
             return;
         }
 
@@ -124,7 +175,11 @@ class CommandeObserver
                 . 'Merci pour votre confiance.';
         }
 
-        SendSmsJob::dispatch($phone, $sms);
+        SendSmsJob::dispatch(
+            $phone,
+            $sms,
+            'order:'.$commande->id.':status:'.strtolower((string) $commande->etat)
+        );
 
         Log::info('Order status SMS dispatched', [
             'commande_id' => $commande->id,

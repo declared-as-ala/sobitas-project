@@ -151,7 +151,20 @@ class TicketResource extends Resource
                                 ->defaultItems(0)
                                 ->addActionLabel('Ajouter une ligne')
                                 ->columnSpanFull()
-                                ->itemLabel(fn (array $state) => isset($state['produit_id']) ? (\App\Models\Product::query()->select('id', 'designation_fr')->find($state['produit_id'])?->designation_fr ?? 'Ligne') : 'Ligne'),
+                                /* `?array` — Filament passes null for an item that has just been
+                                   added, and a non-nullable type hint makes that a TypeError
+                                   instead of a label. Same defect as ProductResource's FAQ
+                                   repeater; see the note there. */
+                                ->itemLabel(function (?array $state): string {
+                                    $id = $state['produit_id'] ?? null;
+                                    if (blank($id)) {
+                                        return 'Ligne';
+                                    }
+
+                                    return \App\Models\Product::query()
+                                        ->select('id', 'designation_fr')
+                                        ->find($id)?->designation_fr ?? 'Ligne';
+                                }),
                         ])
                         ->columnSpanFull(),
                 ])->columnSpan(2),

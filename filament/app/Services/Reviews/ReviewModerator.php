@@ -28,6 +28,12 @@ class ReviewModerator
 {
     private const GROQ_ENDPOINT = 'https://api.groq.com/openai/v1/chat/completions';
 
+    /** A star-rated opinion about the product. */
+    public const KIND_REVIEW = 'review';
+
+    /** A message in the thread under a review — no rating, and it may legitimately be a question. */
+    public const KIND_REPLY = 'reply';
+
     /**
      * Vet one review. Always returns a verdict array (never throws).
      *
@@ -38,14 +44,41 @@ class ReviewModerator
      */
     public function moderate(Review $review): array
     {
-        $comment = trim((string) $review->comment);
-        $stars   = (int) ($review->note ?? $review->stars ?? 0);
+        return $this->moderateComment(
+            (string) $review->comment,
+            (int) ($review->note ?? $review->stars ?? 0),
+            (string) (optional($review->product)->designation_fr ?? ('#' . $review->product_id)),
+            self::KIND_REVIEW
+        );
+    }
+
+    /**
+     * Vet any piece of customer-written text attached to a product.
+     *
+     * Extracted from moderate() so REPLIES can be vetted by the same classifier rather than by a
+     * second one. A reply is exactly as capable of carrying a phone number, a competitor's link or
+     * abuse as a review is — and it renders on the same public page — so the one thing it must not
+     * have is a weaker filter written separately and drifting from this one.
+     *
+     * `$stars` is null for a reply, because a reply has no rating. The prompt is told so rather
+     * than being handed a fake 0/5, which the classifier reads as a furious customer.
+     *
+     * Never throws, exactly like moderate(): a moderation failure must never break a submission.
+     *
+     * @return array{
+     *   decision:string, genuine:?bool, sentiment:?string, language:?string,
+     *   flags:array<int,string>, summary:string, reason:string, source:string, checked_at:string
+     * }
+     */
+    public function moderateComment(string $text, ?int $stars, string $productLabel, string $kind = self::KIND_REVIEW): array
+    {
+        $comment = trim($text);
 
         $ruleFlags = $this->ruleScan($comment);
 
         $ai = null;
         if ((bool) config('reviews.moderation.enabled', true) && $this->apiKey() !== '') {
-            $ai = $this->aiClassify($review, $comment, $stars);
+            $ai = $this->aiClassify($productLabel, $stars, $comment, $kind);
         }
 
         return $this->decide($ruleFlags, $ai);
@@ -100,9 +133,9 @@ class ReviewModerator
      *
      * @return array<string,mixed>|null
      */
-    private function aiClassify(Review $review, string $comment, int $stars): ?array
+    private function aiClassify(string $product, ?int $stars, string $comment, string $kind): ?array
     {
-        $product = optional($review->product)->designation_fr ?? ('#' . $review->product_id);
+        $product = $product !== '' ? $product : 'produit inconnu';
 
         $system = <<<'SYS'
 You are a strict content-moderation classifier for product reviews on Protein.tn, a sports-nutrition and supplements store in Tunisia. Reviews may be written in French, Tunisian Arabic ("derja", in Arabic OR Latin script), or English.
@@ -127,7 +160,21 @@ Respond with ONLY a JSON object (no prose, no markdown):
 }
 SYS;
 
-        $user = "Produit: {$product}\nNote: {$stars}/5\nAvis: \"{$comment}\"";
+        /*
+         * A reply is judged against a DIFFERENT bar in exactly one respect, and getting this wrong
+         * would gut the feature: a reply is very often a QUESTION ("est-ce que ça se prend avant
+         * l'entraînement ?"), which is not an opinion about the product at all. Handed the review
+         * prompt unchanged, the classifier reads that as off_topic and holds it — so the first
+         * thing a working replies system would have done is silently swallow the questions it
+         * exists to carry.
+         */
+        if ($kind === self::KIND_REPLY) {
+            $system .= "\n\nThis text is a REPLY in the discussion under a review, not a review. It has no star rating. A QUESTION about the product, about dosage, or about delivery is a legitimate reply and MUST be published — do not mark a question off_topic. A short agreement or thanks is also legitimate.";
+        }
+
+        $rating = $stars === null ? 'aucune (réponse)' : "{$stars}/5";
+        $label  = $kind === self::KIND_REPLY ? 'Réponse' : 'Avis';
+        $user   = "Produit: {$product}\nNote: {$rating}\n{$label}: \"{$comment}\"";
 
         try {
             $res = Http::withToken($this->apiKey())

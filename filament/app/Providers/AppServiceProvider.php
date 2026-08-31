@@ -20,6 +20,7 @@ use App\Observers\CommandeObserver;
 use App\Observers\PageSeoObserver;
 use App\Observers\ProductSeoObserver;
 use App\Observers\ReviewObserver;
+use App\Observers\ReviewReplyObserver;
 use App\Observers\SitemapTouchObserver;
 use App\Observers\SlideCacheObserver;
 use App\Observers\UserObserver;
@@ -68,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
         // Database notifications: new commandes, new avis, new users
         Commande::observe(CommandeObserver::class);
         Review::observe(ReviewObserver::class);
+        \App\Models\ReviewReply::observe(ReviewReplyObserver::class);
         User::observe(UserObserver::class);
 
         // A slide edit must reach the storefront NOW, not in ~10 minutes. The hero sits behind

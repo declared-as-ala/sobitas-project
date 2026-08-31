@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
@@ -20,6 +21,7 @@ class Commande extends Model
         'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone',
         'livraison_region', 'livraison_ville', 'livraison_code_postale',
         'livraison_adresse1', 'livraison_adresse2', 'sms_sent',
+        'checkout_idempotency_key', 'checkout_payload_hash',
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'discount_ht', 'discount_ttc', 'stock_restored_at',
@@ -62,6 +64,13 @@ class Commande extends Model
                     ]);
                 }
             }
+
+            // The short alias the SMS link uses. Same rule: never block an order over it, and
+            // never assume the column exists — this runs on installs where the migration has not
+            // been applied yet.
+            if (empty($commande->review_code) && \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'review_code')) {
+                $commande->review_code = self::generateReviewCode();
+            }
         });
 
         // Give stock back when an order is DELETED (unless a prior cancel already restored it —
@@ -96,6 +105,60 @@ class Commande extends Model
                 ]);
             }
         });
+    }
+
+    /**
+     * A 10-character review code, from an alphabet with no 0/O/1/I/l.
+     *
+     * The excluded characters are not superstition: this code is read off a phone screen and
+     * occasionally typed by hand, and a "0" that is really an "O" turns a review request into a
+     * 404 with no way for the customer to tell which character betrayed them.
+     *
+     * Collision is checked rather than assumed. At 32^10 the birthday bound is astronomically far
+     * from this shop's order count, but a unique index that throws on insert would abort the
+     * ORDER, and no review link is worth losing a sale over.
+     */
+    public static function generateReviewCode(): string
+    {
+        $alphabet = '23456789abcdefghjkmnpqrstuvwxyz';
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $code = '';
+            for ($i = 0; $i < 10; $i++) {
+                $code .= $alphabet[random_int(0, strlen($alphabet) - 1)];
+            }
+            if (! static::where('review_code', $code)->exists()) {
+                return $code;
+            }
+        }
+
+        // Five collisions in a row is not chance, it is a broken RNG. Fall back to something
+        // guaranteed unique rather than looping forever.
+        return substr(bin2hex(random_bytes(8)), 0, 10);
+    }
+
+    /**
+     * Find an order from whatever the review link carried — the 64-character `order_token` from an
+     * email, or the 10-character `review_code` from an SMS.
+     *
+     * One method, so the two review endpoints cannot come to disagree about which references are
+     * valid. Length is the discriminator and the two spaces cannot overlap: a review code is 10
+     * characters and a token is 64.
+     */
+    public static function findByReviewRef(?string $ref): ?self
+    {
+        $ref = trim((string) $ref);
+        if ($ref === '') {
+            return null;
+        }
+
+        if (strlen($ref) <= 16) {
+            return \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'review_code')
+                ? static::where('review_code', $ref)->first()
+                : null;
+        }
+
+        return static::where('order_token', $ref)->first();
     }
 
     // ── Status Labels (single source of truth) ────────────
@@ -163,10 +226,46 @@ class Commande extends Model
 
     // ── Relationships ──────────────────────────────────
 
-    /** Client linked to this order. Prefer client_id when set; otherwise user_id (legacy). */
+    /** Back-office customer linked through commandes.client_id. */
     public function client(): BelongsTo
     {
+        return $this->belongsTo(Client::class, 'client_id');
+    }
+
+    /** Historical orders stored a Client id in user_id before client_id existed. */
+    public function legacyClient(): BelongsTo
+    {
         return $this->belongsTo(Client::class, 'user_id');
+    }
+
+    /**
+     * Orders visible to an authenticated storefront account.
+     *
+     * Exact email matching restores guest/legacy purchases made with the account's verified login
+     * address while keeping unrelated numeric Client/User ids from leaking another customer's order.
+     */
+    public function scopeVisibleToStorefrontUser(Builder $query, User $user): Builder
+    {
+        $email = strtolower(trim((string) $user->email));
+        $mappedClientId = \Illuminate\Support\Facades\Schema::hasColumn('clients', 'user_id')
+            ? Client::query()->where('user_id', $user->getKey())->value('id')
+            : null;
+
+        return $query->where(function (Builder $orders) use ($user, $email, $mappedClientId): void {
+            // `commandes.user_id` historically stored a Client id. It is safe as an account
+            // identity only when the same order is linked to the Client explicitly mapped to
+            // this User; otherwise equal integers from different tables could leak an order.
+            if ($mappedClientId) {
+                $orders->where(function (Builder $owned) use ($user, $mappedClientId): void {
+                    $owned->where('user_id', $user->getKey())->where('client_id', $mappedClientId);
+                });
+            }
+            if ($email !== '') {
+                $method = $mappedClientId ? 'orWhereRaw' : 'whereRaw';
+                $orders->{$method}('LOWER(TRIM(email)) = ?', [$email])
+                    ->orWhereRaw('LOWER(TRIM(livraison_email)) = ?', [$email]);
+            }
+        });
     }
 
     public function quotation(): BelongsTo
@@ -182,6 +281,15 @@ class Commande extends Model
     public function factures(): HasMany
     {
         return $this->hasMany(Facture::class, 'commande_id');
+    }
+
+    /** Latest Aramex shipment created for this order, when one exists. */
+    public function latestShipment(): HasOne
+    {
+        return $this->hasOne(Facture::class, 'commande_id')
+            ->ofMany(['id' => 'max'], function ($query): void {
+                $query->whereNotNull('aramex_hawb')->where('aramex_hawb', '!=', '');
+            });
     }
 
     /** Tickets used as BL (bon de livraison) for this order. */

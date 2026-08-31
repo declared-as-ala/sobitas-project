@@ -35,7 +35,11 @@ import {
 import { ApiError } from '@/services/http';
 import { loadForCache } from '@/util/loadForCache';
 import { getErrorStatus } from '@/util/errorStatus';
-import { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
+import { retiredSlugDestination } from '@/util/retiredSlug';
+import {
+  generateMetadata as generateCategoryMetadata,
+  loadListingPage,
+} from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeo } from '@/util/resolveCategorySeo';
@@ -48,11 +52,16 @@ import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
+import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
 
-type PageProps = { params: Promise<{ slug: string }> };
+type PageProps = {
+  params: Promise<{ slug: string }>;
+  searchParams?: Promise<RawSearchParams>;
+};
 
 function isNotFoundError(error: unknown): boolean {
   if (error instanceof ApiError) return error.status === 404;
@@ -93,7 +102,7 @@ async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
   }
 }
 
-export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) {
@@ -102,7 +111,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     if (await hasCategoryOrSubCategory(cleanSlug)) {
       // Reuse the human category page's metadata (same title/description, canonical → /{slug}).
-      return generateCategoryMetadata({ params });
+      return generateCategoryMetadata({ params, searchParams });
     }
     const brand = await findBrandBySlug(cleanSlug);
     if (brand) {
@@ -179,12 +188,13 @@ function ldScript(schema: object, key: string) {
   );
 }
 
-export default async function CrawlerCategoryPage({ params }: PageProps) {
+export default async function CrawlerCategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) notFound();
 
   const baseUrl = getBaseUrl();
+  const listingQuery = parseShopQuery(searchParams ? await searchParams : undefined);
 
   // 1. Category / subcategory listing
   let catResult: Awaited<ReturnType<typeof fetchCategoryOrSubCategory>> | null = null;
@@ -203,7 +213,16 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
     const merged = mergeCategorySeo(seoJson, (data as { seo?: unknown }).seo as never);
     const title = merged.h1?.trim() || entity?.designation_fr || cleanSlug;
     const introHtml = merged.intro?.trim() ? sanitizeProductHtml(merged.intro) : null;
-    const products: Product[] = ((data as { products?: Product[] }).products) ?? [];
+    // The taxonomy endpoint always embeds page 1. Use the same cached listing loader as the human
+    // category route so Googlebot receives the requested ?page=N, not twelve page-1 products at
+    // every paginated URL.
+    const { productsData, serverPagination } = await loadListingPage(
+      listingQuery,
+      isSub
+        ? { subcategories: [cleanSlug], categories: [] }
+        : { categories: [cleanSlug], subcategories: [] }
+    );
+    const products: Product[] = (productsData.products ?? []) as Product[];
     const subCats: CrawlerListLink[] = !isSub
       ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
           .filter((sc) => sc?.slug && sc?.designation_fr)
@@ -238,7 +257,11 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
       .filter((p) => p.url && p.url !== '/shop/');
 
     const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl);
-    const collectionSchema = buildCollectionPageSchema(title, `/${cleanSlug}`, baseUrl, {
+    const collectionPath = buildShopUrl(
+      { ...listingQuery, page: serverPagination.currentPage },
+      `/${cleanSlug}`
+    );
+    const collectionSchema = buildCollectionPageSchema(title, collectionPath, baseUrl, {
       description: merged.metaDescription?.trim() || undefined,
     });
     const itemListSchema = productListItems.length > 0
@@ -268,6 +291,11 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
           products={products}
           subCategories={subCats}
           relatedCategories={relatedCategories}
+          pagination={{
+            currentPage: serverPagination.currentPage,
+            totalPages: serverPagination.totalPages,
+            buildHref: (page) => buildShopUrl({ ...listingQuery, page }, `/${cleanSlug}`),
+          }}
           kind={isSub ? 'subcategory' : 'category'}
         />
       </>
@@ -303,21 +331,29 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
     const itemListSchema = productListItems.length > 0
       ? buildItemListSchema(productListItems, baseUrl, { name: title })
       : null;
+    const brandSeo = getBrandSeoEntry(cleanSlug);
+    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
 
     return (
       <>
         {ldScript(breadcrumbSchema, 'bc')}
         {ldScript(collectionSchema, 'cp')}
         {itemListSchema && ldScript(itemListSchema, 'il')}
+        {faqSchema && ldScript(faqSchema, 'faq')}
         <CrawlerCategoryView
           title={title}
+          headingOverride={brandSeo?.h1}
           // Factual intro from the brand's own catalogue. These 55 pages were a median of 39
           // words for Googlebot — an H1, a breadcrumb and a bare product list — which is the thin,
           // near-identical "scaled content" pattern Google discounts, on exactly the brand+geo
           // queries ("dymatize tunisie") they exist to win.
-          introHtml={buildBrandIntroHtml(title, products)}
+          introHtml={brandSeo?.introHtml ?? buildBrandIntroHtml(title, products)}
+          howToChooseTitle={brandSeo?.howToChooseTitle ?? null}
+          howToChooseBody={brandSeo?.howToChooseBody ?? null}
+          faqs={brandSeo?.faqs ?? []}
           breadcrumbs={breadcrumbs}
           products={products}
+          relatedCategories={brandSeo?.relatedCategories.map((item) => ({ name: item.name, url: item.url })) ?? []}
           kind="brand"
         />
       </>
@@ -349,17 +385,29 @@ export default async function CrawlerCategoryPage({ params }: PageProps) {
   }
 
   /**
-   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5 …).
-   * Recovered HERE as well as in app/(shop)/[slug]/page.tsx because middleware rewrites bot
-   * traffic for /{slug} to this crawler view — so the (shop) recovery never runs for Googlebot,
-   * which is precisely the visitor these Search Console 404s come from.
+   * THE DEAD END, RESOLVED HERE TOO — because this is the route Googlebot reaches.
    *
-   * Runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so a
-   * real slug ending in a number is served above and never redirected.
+   * Middleware rewrites bot traffic for /{slug} to this crawler view, so the recovery in
+   * app/(shop)/[slug]/page.tsx never runs for the one visitor whose result appears in Search
+   * Console. That was already the reason the legacy `-N` strip was duplicated into this file; both
+   * halves now come from the shared resolver instead, so the two can no longer drift apart —
+   * which they had, in the direction that mattered.
+   *
+   * See util/retiredSlug.ts for the order. Two things changed with it: a root-level PRODUCT slug
+   * is resolved to the product rather than 404'd, and the `-N` base is verified before the hop is
+   * spent (it used to fire unconditionally, so `/zzz-fake-thing-2` 308'd into a 404).
    */
-  const baseSlug = cleanSlug.replace(/-\d+$/, '');
-  if (baseSlug && baseSlug !== cleanSlug) {
-    permanentRedirect(`/${baseSlug}`);
+  const retired = await retiredSlugDestination(cleanSlug, {
+    product: true,
+    // This route's own resolvers, for the same reason as the (shop) twin: middleware's taxonomy
+    // set knows categories but not brands or CMS pages, and /optimum-nutrition-2 strips to a BRAND.
+    listing: async (candidate) =>
+      (await hasCategoryOrSubCategory(candidate)) ||
+      (await findBrandBySlug(candidate)) !== null ||
+      (await findPageBySlug(candidate)) !== null,
+  });
+  if (retired) {
+    permanentRedirect(retired);
   }
 
   notFound();

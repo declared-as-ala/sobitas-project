@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -217,6 +218,29 @@ class Product extends Model
     public function brand(): BelongsTo
     {
         return $this->belongsTo(Brand::class, 'brand_id');
+    }
+
+    /**
+     * The staging row this product was promoted from, if any. NULL for every hand-made product.
+     *
+     * ── WHY THE SOURCE FACTS ARE READ THROUGH A RELATION AND NOT COPIED ONTO `products` ───
+     * `pack_size`, `pack_unit` and `flavour` are transcribed from the source title and are the only
+     * structured facts an imported product has beyond its name and price. The obvious move is three
+     * more columns on `products` — and `products` is the legacy table with no create-migration, NOT
+     * NULL columns with no DEFAULT, and 309 live rows the business runs on. Every column added there
+     * is a permanent liability taken on for rows that already have somewhere to live.
+     *
+     * Reading them through this relation makes "the 309 are unaffected" structural rather than a
+     * promise: they have no `external_catalog_products` row, `product_id` is written only by
+     * promotion, so the relation is null for them and the specification block on the product page
+     * renders nothing at all. There is no state in which a legacy product can acquire one by
+     * accident.
+     *
+     * `hasOne` and not `hasMany`: promotion sets `product_id` once, on one row, and never again.
+     */
+    public function externalCatalogSource(): HasOne
+    {
+        return $this->hasOne(ExternalCatalogProduct::class, 'product_id');
     }
 
     public function tags(): BelongsToMany
@@ -452,9 +476,41 @@ class Product extends Model
             return $this->normalizeAvailabilitySchema($override);
         }
 
-        return $this->is_available
-            ? 'https://schema.org/InStock'
-            : 'https://schema.org/OutOfStock';
+        if ($this->is_available) {
+            return 'https://schema.org/InStock';
+        }
+
+        /*
+         * ── UNAVAILABLE IS TWO DIFFERENT THINGS, AND THIS RETURNED ONE ANSWER FOR BOTH ───────
+         *
+         * Measured on the live catalogue, 13/08/2026:
+         *
+         *     134     qte>0, rupture=false, force_out_of_stock=false   real inventory
+         *     10,535  qte=0, rupture=true,  force_out_of_stock=false   imported iHerb catalogue
+         *
+         * The 10,535 never sold out — they were never stocked. They are items the shop will bring in
+         * on request, which is what schema.org/BackOrder means ("orderable but not in stock").
+         * Declaring them OutOfStock is both inaccurate and expensive: OutOfStock forfeits Google
+         * merchant-listing and free-product-listing eligibility, BackOrder keeps it.
+         *
+         * OutOfStock is reserved for `force_out_of_stock` — the owner's explicit "do not sell this"
+         * switch. A blanket BackOrder would advertise as obtainable the one category of product they
+         * have deliberately marked unobtainable.
+         *
+         * THIS ACCESSOR IS THE AUTHORITY, not the frontend. util/structuredData.ts has matching
+         * three-state logic, but it only applies as a FALLBACK: the value computed here travels in
+         * the product payload and takes precedence over it. Fixing only the TypeScript side left
+         * every product page still emitting OutOfStock, with the frontend's own rule shadowed and
+         * no error anywhere — which is exactly what happened, and how this was found.
+         */
+        $forced = filter_var(
+            $this->attributes['force_out_of_stock'] ?? false,
+            FILTER_VALIDATE_BOOLEAN
+        );
+
+        return $forced
+            ? 'https://schema.org/OutOfStock'
+            : 'https://schema.org/BackOrder';
     }
 
     public function getEffectiveItemConditionSchemaAttribute(): string

@@ -19,18 +19,19 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { ArrowLeft } from 'lucide-react';
 import { EmptyState } from '@/app/components/EmptyState';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCart } from '@/app/contexts/CartContext';
 import { packQuote } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import type { Product, PackQuote } from '@/types';
-import { toast } from 'sonner';
-import { GOAL_CATEGORY_EMPHASIS, type Goal } from '@/util/nutritionTargets';
+import { notify as toast } from '@/lib/notify';
 import { flyToPack, pulseTierUnlocked } from './packMotion';
 import { PackWizard } from './wizard/PackWizard';
-import type { GoalCovers } from './wizard/goalCovers';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -42,8 +43,6 @@ export interface PackBuilderGroup {
 
 interface PackBuilderClientProps {
   groups: PackBuilderGroup[];
-  /** Landing-page category photographs, one per goal. Decorative — may be empty. */
-  goalCovers: GoalCovers;
 }
 
 /** Display-only mirror of the backend PackDiscountService tiers. See the header note. */
@@ -53,15 +52,41 @@ const PACK_TIERS: { min: number; percent: number }[] = [
   { min: 500, percent: 12 },
 ];
 
-export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps) {
+function FocusedBuilderHeader() {
+  return (
+    <header className="border-b border-hairline bg-elevated">
+      <div className="max-w-site relative mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
+        <LinkWithLoading
+          href="/"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1.5 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1 sm:px-2"
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Retour à la boutique
+        </LinkWithLoading>
+        <Image
+          src="/logo.png"
+          alt="Protein.tn"
+          width={136}
+          height={36}
+          priority
+          className="h-auto w-[88px] shrink-0 md:absolute md:left-1/2 md:w-[104px] md:-translate-x-1/2"
+        />
+        <p className="hidden text-xs font-semibold text-ink-2 lg:block">
+          Pack sur mesure <span className="mx-1.5 text-hairline">•</span>
+          jusqu’à <span className="font-display text-base font-extrabold text-brand">−12%</span>
+        </p>
+      </div>
+    </header>
+  );
+}
+
+export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const router = useRouter();
   const { addToCart, setPackDiscount, setCartDrawerOpen } = useCart();
 
   const [pack, setPack] = useState<Record<number, number>>({});
   const [quote, setQuote] = useState<PackQuote | null>(null);
   const [quoteLoading, setQuoteLoading] = useState(false);
-  const [goal, setGoal] = useState<Goal | null>(null);
-  const [categoryOrder, setCategoryOrder] = useState<string[] | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   /** Where a flying product thumbnail lands — the wizard's footer total. */
@@ -83,11 +108,6 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
    * masse, il manque Gainers" on the recap — the page telling the customer they had not done the
    * thing they had just done.
    */
-  const coveredSlugs = useMemo(
-    () => groups.filter((g) => g.products.some((p) => (pack[p.id] ?? 0) > 0)).map((g) => g.slug),
-    [groups, pack]
-  );
-
   const entries = useMemo(
     () =>
       Object.entries(pack)
@@ -116,13 +136,7 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
     });
   }, []);
 
-  /**
-   * Add one, and throw the thumbnail at the footer total.
-   *
-   * The flight is the reason this is not just `setQty`. On a phone the footer sits under the thumb,
-   * so adding an item changes numbers the hand is covering — the tap reads as "nothing happened",
-   * which is how people tap twice and end up with a quantity they did not choose.
-   */
+  /** Add one and aim the confirmation motion at whichever pack summary is currently visible. */
   const addOne = useCallback(
     (product: Product, img: HTMLElement | null) => {
       const stock = getStockDisponible(product as never);
@@ -133,7 +147,9 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
       const current = pack[product.id] ?? 0;
       if (current >= stock) return;
       setQty(product, current + 1);
-      flyToPack(img, footerRef.current);
+      const visibleTarget = Array.from(document.querySelectorAll<HTMLElement>('[data-pack-target]'))
+        .find((element) => element.getClientRects().length > 0);
+      flyToPack(img, visibleTarget ?? footerRef.current);
     },
     [pack, setQty]
   );
@@ -227,20 +243,6 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
   }, [discountPercent]);
 
   /**
-   * The goal REORDERS the category steps; it never filters. Someone losing weight can still want a
-   * pre-workout, and a recommendation that removes options is one people learn to distrust.
-   */
-  const availableSlugs = useMemo(() => groups.map((g) => g.slug), [groups]);
-  const handleSelectGoal = useCallback(
-    (g: Goal) => {
-      const emphasis = GOAL_CATEGORY_EMPHASIS[g].filter((s) => availableSlugs.includes(s));
-      setGoal(g);
-      setCategoryOrder([...emphasis, ...availableSlugs.filter((s) => !emphasis.includes(s))]);
-    },
-    [availableSlugs]
-  );
-
-  /**
    * Commit the pack to the cart and leave.
    *
    * `submitting` is never reset on the success path, and that is deliberate rather than a leak: the
@@ -275,7 +277,8 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
 
   if (groups.length === 0) {
     return (
-      <div className="min-h-screen bg-canvas">
+      <div className="pt-no-chrome min-h-screen bg-canvas">
+        <FocusedBuilderHeader />
         <main className="max-w-site mx-auto px-4 pb-16 pt-10 sm:px-6 lg:px-8">
           {/* The H1 still renders when the catalogue is unavailable. The page must not become
               heading-less because an upstream fetch failed — that is a permanent SEO loss caused by
@@ -299,23 +302,11 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
        so every card on it was white-on-white and the plates had to be drawn with borders alone.
        On sand the same cards read as objects, exactly as they do on the homepage, and the borders
        become an edge rather than the only thing defining a card. */
-    <div className="min-h-screen bg-sunken">
-      {/* THE BOTTOM RESERVE, AND WHY IT NO LONGER STEPS DOWN AT `md`.
-          Two fixed things stack at the bottom: the step bar and MobileTabBar (56px + safe area).
-          Only the TAB BAR is `md:hidden`. The step bar has no breakpoint gate at all — it renders
-          at every width — and it measures ~93px whenever a tier nudge is showing (3px track + a
-          24px nudge line + a 66px action row).
-          The old `md:pb-16 lg:pb-20` reserved 64/80px against that 93px bar, so from 768px up the
-          last ~30px of the page sat behind it. That was survivable while the bar was optional and
-          the step's own Continuer lived in the flow; now that the bar IS the way forward and the
-          grid runs right up to it, the bottom row of products would be clipped on every laptop.
-          128px from `md` clears the bar at every width with the same margin phones get. */}
-      <main className="max-w-site mx-auto px-4 pb-36 pt-6 sm:px-6 sm:pt-10 md:pb-32 lg:px-8">
+    <div className="pt-no-chrome min-h-screen bg-sunken">
+      <FocusedBuilderHeader />
+      <main className="max-w-site mx-auto px-4 pb-32 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-16 lg:pt-4">
         <PackWizard
           groups={groups}
-          goalCovers={goalCovers}
-          categoryOrder={categoryOrder}
-          goal={goal}
           pack={pack}
           entries={entries}
           itemCount={itemCount}
@@ -326,11 +317,8 @@ export function PackBuilderClient({ groups, goalCovers }: PackBuilderClientProps
           tierLabel={quote?.tier_label ?? null}
           nextTier={nextTier}
           quoteLoading={quoteLoading}
-          hasQuote={quote !== null}
           submitting={submitting}
           tiers={PACK_TIERS}
-          coveredSlugs={coveredSlugs}
-          onSelectGoal={handleSelectGoal}
           onAdd={addOne}
           onSetQty={setQty}
           onRemove={removeProduct}

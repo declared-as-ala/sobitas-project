@@ -11,6 +11,15 @@ export interface ProductsSkeletonProps {
   showBreadcrumb?: boolean;
   /** Show filter pills row (2–4 pills) */
   showFilters?: boolean;
+  /**
+   * Column override forwarded to the real <ProductGrid>.
+   *
+   * MUST be kept identical to whatever the page passes its own grid. The skeleton exists to hold
+   * the exact geometry the content will occupy, so a page that overrides its columns and leaves
+   * this alone gets a visible column jump the instant hydration swaps one for the other — which is
+   * CLS, on the surface that has the most cards on the page.
+   */
+  gridClassName?: string;
   /** Number of product cards (default 12) */
   cardCount?: number;
   className?: string;
@@ -25,6 +34,7 @@ export function ProductsSkeleton({
   showBreadcrumb = true,
   showFilters = true,
   cardCount = CARD_COUNT,
+  gridClassName,
   className,
 }: ProductsSkeletonProps) {
   return (
@@ -59,7 +69,7 @@ export function ProductsSkeleton({
       )}
 
       {/* Product grid — shared primitive, matches the real grid */}
-      <ProductGrid>
+      <ProductGrid className={gridClassName}>
         {Array.from({ length: cardCount }).map((_, i) => (
           <ProductCardSkeleton key={i} />
         ))}

@@ -1,4 +1,5 @@
 import type { CategorySeoContent } from '@/types/categorySeo';
+import { isSubstantivelyDuplicateHtml } from '@/util/categorySeoDedup';
 import { sanitizeExtraJsonLd } from '@/util/extraJsonLd';
 
 /** Normalized SEO object from Laravel API (`productsBySubCategoryId` / `productsByCategoryId`). */
@@ -143,6 +144,76 @@ function apiHasUsableSeo(api: CategorySeoFromApi | null | undefined): boolean {
   return true;
 }
 
+/** Visible text length of an HTML fragment — the only fair way to compare two intros. */
+function textLength(html: string | undefined | null): number {
+  return String(html ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim().length;
+}
+
+/**
+ * THE RICHER OF THE TWO INTROS, NOT SIMPLY THE CMS ONE.
+ *
+ * `content/categories/*.json` holds 47 hand-written category guides. The merge used to read
+ * "API if present, else JSON", so wherever the CMS had ANY intro the guide was discarded whole —
+ * and on the highest-value commercial pages the CMS copy is the shorter of the two. Measured
+ * against production on 17/08/2026:
+ *
+ *     /whey-proteine   guide 713 words   CMS 262 words rendered   position 35.3
+ *     /creatine        guide 1028 words  CMS  40 words rendered   position 25.8
+ *     /proteines       guide 435 words   CMS  41 words rendered   position 33.9
+ *
+ * The blog outranks the shop on the shop's own head terms for exactly this reason:
+ * /blog/whey-protein-en-tunisie is 4,495 words at position 11.2 while /proteines rendered 41.
+ *
+ * THE TRADE, STATED PLAINLY: a deliberately SHORT CMS intro now loses to a longer guide. That is
+ * the intended behaviour and it is the reason this is length-based rather than source-based — but
+ * it does mean "I shortened it in Filament and nothing changed" is a real possible report. The
+ * answer there is to shorten the JSON guide too, or delete it. Ties go to the CMS, so an edit of
+ * equal length always wins and the owner keeps control at the margin.
+ */
+function richerIntro(apiIntro: string, jsonIntro: string): string {
+  if (!apiIntro) return jsonIntro;
+  if (!jsonIntro) return apiIntro;
+  return textLength(jsonIntro) > textLength(apiIntro) ? jsonIntro : apiIntro;
+}
+
+/** Compare questions ignoring case, accents, punctuation and spacing. */
+function faqKey(q: string): string {
+  return String(q ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-z0-9]+/g, ' ')
+    .trim();
+}
+
+/**
+ * BOTH SETS OF FAQs, DEDUPED — they answer different questions, so keeping one was a straight loss.
+ *
+ * The old rule was "API FAQs if there are any, else JSON". /whey-proteine has 11 questions in its
+ * guide and 1 in the CMS, so it published ONE. Every extra answered question is long-tail surface
+ * and another FAQPage entity; there is no reason the two sources should be exclusive.
+ *
+ * CMS entries lead, so the owner's wording is what a reader sees first and what wins a collision.
+ */
+function mergeFaqs(
+  apiFaqs: Array<{ question: string; answer: string }>,
+  jsonFaqs: Array<{ question: string; answer: string }>
+): Array<{ question: string; answer: string }> {
+  const out: Array<{ question: string; answer: string }> = [];
+  const seen = new Set<string>();
+  for (const f of [...apiFaqs, ...jsonFaqs]) {
+    const key = faqKey(f?.question);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(f);
+  }
+  return out;
+}
+
 function mergeRelatedSlugs(api: CategorySeoFromApi | undefined, jsonSlugs: string[] | undefined): string[] {
   const fromApi = Array.isArray(api?.related_category_slugs)
     ? api!.related_category_slugs!.filter((s): s is string => typeof s === 'string' && s.trim() !== '')
@@ -177,8 +248,9 @@ export function mergeCategorySeo(
   const useApi = apiHasUsableSeo(api);
 
   const h1 = useApi ? (api!.h1 ?? '').trim() || (j.h1 ?? '') : (j.h1 ?? '');
-  const intro = useApi ? (api!.short_intro_html ?? '').trim() || (j.intro ?? '') : (j.intro ?? '');
-  const longBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
+  const intro = richerIntro(useApi ? (api!.short_intro_html ?? '').trim() : '', (j.intro ?? '').trim());
+  const apiLongBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
+  const longBottomHtml = isSubstantivelyDuplicateHtml(intro, apiLongBottomHtml) ? '' : apiLongBottomHtml;
 
   const howToChooseTitle = ((j.howToChooseTitle ?? '') as string).trim();
   const howToChooseBody = ((j.howToChooseBody ?? '') as string).trim();
@@ -187,7 +259,7 @@ export function mergeCategorySeo(
     ? api!.faq.filter((x) => x && typeof x.question === 'string' && typeof x.answer === 'string')
     : [];
   const faqsFromJson = Array.isArray(j.faqs) ? j.faqs : [];
-  const faqs = useApi && faqsFromApi.length > 0 ? faqsFromApi : faqsFromJson;
+  const faqs = mergeFaqs(useApi ? faqsFromApi : [], faqsFromJson);
 
   const metaTitle = useApi ? (api!.title ?? '').trim() || j.metaTitle : j.metaTitle;
   const metaDescription = useApi

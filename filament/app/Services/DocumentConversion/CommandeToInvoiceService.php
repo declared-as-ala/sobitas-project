@@ -32,7 +32,7 @@ class CommandeToInvoiceService
 
             $invoice = new FactureTva();
             $invoice->commande_id = $order->id;
-            $invoice->client_id = $order->user_id ?? null;
+            $invoice->client_id = $order->client_id ?? $order->user_id;
             $invoice->numero = $this->numberSequence->nextFacture();
             $invoice->status = InvoiceStatus::Issued;
             if (Schema::hasColumn('facture_tvas', 'date_facture')) {

@@ -103,6 +103,20 @@ interface SectionHeaderProps {
    * one call site rather than a change to the component.
    */
   centerOnMobile?: boolean;
+  /**
+   * Render `trailing` at EVERY width instead of hiding it below `sm`.
+   *
+   * The guard above exists because a hand-rolled heading row once shipped a 321px unbreakable run
+   * into a 254px box at 320px. That is a real hazard and it stays the default. This opt-in is for
+   * a trailing node that has been MEASURED at the narrow widths — Ventes flash's countdown, whose
+   * own layout stacks its label onto a second line below `sm` and is asserted at 280px by
+   * `measure-flash.mjs`.
+   *
+   * It is one prop rather than a second render position on purpose: rendering the node twice
+   * (once mobile, once desktop) would mount it twice, and this particular node owns an
+   * IntersectionObserver and a 1s interval. `display: none` does not stop either of them.
+   */
+  trailingAllWidths?: boolean;
 }
 
 export function SectionHeader({
@@ -116,6 +130,7 @@ export function SectionHeader({
   id,
   trailing,
   centerOnMobile = false,
+  trailingAllWidths = false,
 }: SectionHeaderProps) {
   return (
     /* 20 / 24 — down from 24/32/40 along with the band scale.
@@ -123,8 +138,12 @@ export function SectionHeader({
        padding and its content, so its bottom margin must stay strictly SMALLER than the band's
        own `pt` (32/40 at `default`). At the old 40px it was larger than `tight`'s 24px top
        padding, which is precisely why the category band read as a heading adrift in a field. */
+    /* COLUMN below `sm`, ROW from there. With no trailing node — every band but one — the
+       container has a single child and the direction changes nothing, so this is not a change to
+       the other nine headings on the homepage. With one, the node sits UNDER the title on a phone
+       and BESIDE it on a desktop, from a single element in the tree. */
     <div
-      className={`mb-5 flex flex-row items-end justify-between gap-4 lg:mb-6 ${
+      className={`mb-5 flex flex-col items-stretch gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4 lg:mb-6 ${
         centerOnMobile ? 'max-sm:justify-center' : ''
       }`}
     >
@@ -147,7 +166,11 @@ export function SectionHeader({
       {(viewAllHref || trailing) && (
         // min-h-[44px]: this was a ~34px pill, below the 44px tap floor. It is also the only
         // control in the band, so it is worth being reachable.
-        <div className="hidden shrink-0 items-center gap-3 pb-1 sm:flex">
+        <div
+          className={`shrink-0 items-center gap-3 sm:flex sm:pb-1 ${
+            trailingAllWidths ? 'flex max-sm:w-full' : 'hidden'
+          }`}
+        >
           {trailing}
           {viewAllHref && (
           <Link

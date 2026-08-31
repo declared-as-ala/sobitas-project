@@ -165,7 +165,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
           <div className="mt-12 sm:mt-16 pt-8 border-t border-hairline">
             <Link
               href="/"
-              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-brand hover:bg-brand-hover transition-colors"
+              className="group inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-on-brand bg-brand hover:bg-brand-hover transition-colors"
             >
               <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
               Retour à l&apos;accueil

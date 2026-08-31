@@ -8,6 +8,7 @@ on:
       - develop
     paths:
       - "filament/**"
+      - "nginx/configuration.conf"
       - "docker-compose.yml"
       - ".github/workflows/deploy-filament.yml"
   workflow_dispatch:
@@ -17,15 +18,11 @@ on:
         required: false
         default: 'false'
 
-# Serialise deploys. Two merges close together each build and push the SAME `:latest` tag, then
-# each pulls `:latest` on the VPS — so the image that ends up running is whichever build finished
-# last, not whichever commit is newest. That is not theoretical: PRs #183 and #184 merged 13s
-# apart, their deploys finished 2s apart, and the box came up running the earlier commit's image.
-# The category fix in #184 was reported green and was simply not on the server; Googlebot kept
-# seeing 20 of 79 products until the run was re-triggered by hand.
-#
-# cancel-in-progress is deliberately FALSE. Cancelling a half-finished deploy could leave the VPS
-# mid-recreate; queueing costs a few minutes and always converges on the newest commit.
+# Per-workflow group, NOT a shared one. Sharing it was tried on 10/08/2026 and was worse:
+# GitHub keeps at most ONE pending run per concurrency group, so with all three deploy
+# workflows in one group the frontend deploy (#408) was CANCELLED outright rather than
+# queued — a silently dropped deploy, which beats an intermittent failure only in that it
+# fails quietly. SSH contention is handled by backoff between attempts instead.
 concurrency:
   group: deploy-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
@@ -53,6 +50,13 @@ jobs:
           set -e
           test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
           echo "✓ filament/Dockerfile found"
+
+      - name: Validate Nginx configuration
+        run: |
+          set -e
+          docker run --rm \
+            -v "$PWD/nginx/configuration.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:stable nginx -t
 
       - name: Log in to GHCR
         uses: docker/login-action@v3
@@ -86,6 +90,20 @@ jobs:
       # and the deploy printed `no such service: backend-v2-scheduler` while still reporting
       # success. Any future service, port or env change to compose would have failed the same way.
       - name: Sync docker-compose.yml to VPS
+        id: sync_compose
+        # Non-blocking, but NOT forgiven — see "Fail workflow" at the foot of this job.
+        #
+        # This step used to be a hard gate, and that hid the cause of every failure since
+        # 08/08/2026. When SSH auth broke, scp died first, the two deploy attempts were SKIPPED,
+        # and the diagnostic step that exists precisely to explain the failure never ran. What the
+        # owner saw was a drone-scp stack trace; what they needed was one line saying the password
+        # was wrong.
+        #
+        # This does not soften the run: if the sync fails, the job still fails at the end, with a
+        # message that says whether the compose file or the deploy was the problem. A stale
+        # docker-compose.yml on the server is exactly the silent failure the sync was added to
+        # prevent, so it is reported — just not in a way that suppresses the real diagnosis.
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -104,7 +122,10 @@ jobs:
           # so a key is the fix rather than a fresher password.
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
-          source: docker-compose.yml
+          # Nginx is a bind mount, not part of the PHP image. Syncing only docker-compose.yml meant
+          # an SEO/status fix in nginx/configuration.conf could be committed, pass CI, recreate the
+          # container, and still leave production using the VPS's stale file.
+          source: docker-compose.yml,nginx/configuration.conf
           target: /root/sobitas-project
           overwrite: true
 
@@ -143,6 +164,34 @@ jobs:
 
             [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
 
+            # Keep transactional SMS credentials in GitHub Secrets and install them into the
+            # persistent VPS environment without ever printing their values. All web, queue and
+            # scheduler containers consume this same .env file through docker-compose.
+            upsert_secret() {
+              SECRET_KEY="$1"
+              SECRET_VALUE="$2"
+              SECRET_TMP=".env.tmp.$$"
+              # Do not place a secret in sed replacement syntax: `&`, `|` and `\`
+              # have special meanings there and can silently corrupt SMTP passwords.
+              grep -v "^${SECRET_KEY}=" .env > "$SECRET_TMP" || true
+              printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> "$SECRET_TMP"
+              mv "$SECRET_TMP" .env
+              chmod 600 .env
+            }
+
+            [ -n '${{ secrets.SMS_API_KEY }}' ] || { echo "❌ SMS_API_KEY GitHub secret is missing"; exit 1; }
+            [ -n '${{ secrets.SMS_SENDER_ID }}' ] || { echo "❌ SMS_SENDER_ID GitHub secret is missing"; exit 1; }
+            upsert_secret SMS_API_KEY '${{ secrets.SMS_API_KEY }}'
+            upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
+            echo "✓ WinSMS credentials installed"
+
+            # The application image contains a validated sendmail transport. Laravel normalizes
+            # its From/Reply-To address to contact@protein.tn, so stale VPS sender values cannot
+            # break order confirmation serialization. Keep this block branch-free because
+            # appleboy/ssh-action's script_stop rewriting is not compatible with shell case/if
+            # compound statements.
+            echo "✓ Using the image's validated local sendmail fallback"
+
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
 
@@ -153,7 +202,11 @@ jobs:
             docker pull "$IMAGE"
 
             echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
+            # A backend image release must never recreate stateful dependencies. On 29/08 three
+            # newly committed orders disappeared during this exact deploy window while only app
+            # code was changing. The existing healthy DB/Redis containers are dependencies, not
+            # release artifacts; migrations run from backend-v2 after it is recreated below.
+            docker compose -f "$COMPOSE_FILE" up -d --no-recreate mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
             # A safety net must never become a gate. On 2026-07-28 this block killed three
@@ -168,6 +221,19 @@ jobs:
             # Two fixes. Prune BEFORE writing — retention that only runs after a successful write
             # can never free the space that write needs. And probe writability inside a SUBSHELL,
             # so a fatal redirect kills the subshell and is caught here as a plain false.
+            # ── THE SHARED LOG DIRECTORY, PREPARED BEFORE ANY CONTAINER MOUNTS IT ───────
+            # docker-compose now bind-mounts /var/sobitas/logs into all four backend services so
+            # they write to ONE place that survives a deploy. That mount is only safe if the host
+            # directory exists and www-data can write to it: Laravel's log handler throws
+            # `UnexpectedValueException: The stream or file could not be opened` when it cannot,
+            # and on a fresh container that surfaces as a 500 rather than as a missing log.
+            #
+            # uid/gid 33 is www-data on the Debian base these images use. Numeric on purpose —
+            # the name does not exist on the HOST, only inside the container.
+            mkdir -p /var/sobitas/logs 2>/dev/null || true
+            chown -R 33:33 /var/sobitas/logs 2>/dev/null || true
+            chmod 775 /var/sobitas/logs 2>/dev/null || true
+
             mkdir -p /var/sobitas/backups 2>/dev/null || true
             # Keep the 29 newest, so the one about to be written lands inside the cap of 30.
             ls -1t /var/sobitas/backups/db-pre-deploy-*.sql.gz 2>/dev/null | tail -n +30 | xargs -r rm -f || true
@@ -189,6 +255,15 @@ jobs:
               echo "🔑 APP_KEY missing, generating..."
               KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
+            fi
+
+            echo "🩺 Checking SMTP and SMS configuration (no messages are sent)..."
+            # This is an observability check, not a deployment prerequisite. Production currently
+            # reports its legacy sendmail setup here; --strict intentionally exits non-zero for
+            # that warning. Let the warning remain prominent without preventing an unrelated image
+            # or Nginx rollout from reaching the server.
+            if ! docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan notifications:doctor --strict --probe-sms; then
+              echo "⚠️  Notification configuration needs attention; continuing the deploy."
             fi
 
             echo "🔄 Recreating backend container with latest image..."
@@ -231,9 +306,31 @@ jobs:
 
             echo "🚀 Deploy complete!"
 
+      - name: Back off before retrying SSH
+        # The retry used to fire instantly, which is the one timing guaranteed to fail again.
+        #
+        # Every push starts three deploy workflows (filament, frontend, fitness-api) and all three
+        # SSH into the same VPS at the same second. Measured 10/08/2026: run #935 deployed cleanly
+        # at 08:10 and #936 was refused at 08:25 with "unable to authenticate", while frontend run
+        # #407 from the same push succeeded — and a credential-free probe confirmed the server was
+        # still accepting passwords. That is contention, not a bad secret.
+        #
+        # A shared concurrency group was tried and was worse: GitHub keeps only one PENDING run per
+        # group, so it cancelled the frontend deploy outright. Waiting is the cheap, correct answer
+        # — 90 seconds is longer than the other workflows' SSH phases, so the retry lands in a quiet
+        # window instead of the same pile-up.
+        if: steps.deploy_attempt_1.outcome == 'failure'
+        run: |
+          echo "Attempt 1 failed. Waiting 90s so a concurrent deploy's SSH session can finish."
+          sleep 90
+
       - name: Deploy to VPS (attempt 2 on transient SSH failure)
         if: steps.deploy_attempt_1.outcome == 'failure'
         id: push_to_vps
+        # Soft, so the verdict step below is always reached and can explain the failure in one
+        # line. The run still fails there — this changes which message the owner reads, not
+        # whether a broken deploy is reported as broken.
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.VPS_HOST }}
@@ -266,6 +363,27 @@ jobs:
 
             [ -f .env ] || { [ -f filament/.env.example ] && cp filament/.env.example .env || touch .env; }
 
+            upsert_secret() {
+              SECRET_KEY="$1"
+              SECRET_VALUE="$2"
+              if grep -q "^${SECRET_KEY}=" .env; then
+                sed -i "s|^${SECRET_KEY}=.*|${SECRET_KEY}=${SECRET_VALUE}|" .env
+              else
+                printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> .env
+              fi
+              chmod 600 .env
+            }
+
+            [ -n '${{ secrets.SMS_API_KEY }}' ] || { echo "❌ SMS_API_KEY GitHub secret is missing"; exit 1; }
+            [ -n '${{ secrets.SMS_SENDER_ID }}' ] || { echo "❌ SMS_SENDER_ID GitHub secret is missing"; exit 1; }
+            upsert_secret SMS_API_KEY '${{ secrets.SMS_API_KEY }}'
+            upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
+            echo "✓ WinSMS credentials installed"
+
+            # Keep the retry path identical to attempt 1 without shell compound statements;
+            # script_stop injects a status guard after each source line.
+            echo "✓ Using the image's validated local sendmail fallback"
+
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
 
@@ -276,7 +394,8 @@ jobs:
             docker pull "$IMAGE"
 
             echo "🔍 Start dependencies..."
-            docker compose -f "$COMPOSE_FILE" up -d mysql redis
+            # Retry path must carry the same stateful-container guard as attempt 1.
+            docker compose -f "$COMPOSE_FILE" up -d --no-recreate mysql redis
 
             echo "🗄️  Pre-deploy database backup (safety net before migrate --force)..."
             # A safety net must never become a gate. On 2026-07-28 this block killed three
@@ -312,6 +431,13 @@ jobs:
               echo "🔑 APP_KEY missing, generating..."
               KEY=$(docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan key:generate --show 2>/dev/null || true)
               [ -n "$KEY" ] && echo "APP_KEY=$KEY" >> .env && echo "✓ APP_KEY added to .env"
+            fi
+
+            echo "🩺 Checking SMTP and SMS configuration (no messages are sent)..."
+            # Keep diagnostics visible, but do not turn a notification warning into a false SSH
+            # failure after the image has already been pulled and the pre-deploy backup completed.
+            if ! docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan notifications:doctor --strict --probe-sms; then
+              echo "⚠️  Notification configuration needs attention; continuing the deploy."
             fi
 
             echo "🔄 Recreating backend container with latest image..."
@@ -367,12 +493,83 @@ jobs:
         # The whole outage was one cause: the VPS password was rotated in Hostinger and
         # VPS_PASSWORD in GitHub was not updated. Set VPS_SSH_KEY and that class of failure stops
         # recurring, because a key does not change when a password does.
-        if: steps.deploy_attempt_1.outcome == 'failure'
+        # `always()` because the two steps above are now soft: without it this step inherits the
+        # default `success()` and is skipped exactly when it is needed most.
+        #
+        # And the retry is now actually honoured. The old condition tested attempt 1 alone, so a
+        # deploy that failed once and SUCCEEDED on the retry still exited 1 here — the retry could
+        # never produce a green run, which made it decorative. It now fails only when attempt 2
+        # did not succeed.
+        if: >-
+          always() && (
+            steps.sync_compose.outcome == 'failure' ||
+            (steps.deploy_attempt_1.outcome == 'failure' && steps.push_to_vps.outcome != 'success')
+          )
         run: |
-          echo "❌ SSH deploy failed — the new image did NOT reach the server."
-          echo "   Most likely: VPS_PASSWORD is stale after a password change in Hostinger."
-          echo "   Permanent fix: set the VPS_SSH_KEY secret (a key survives password rotation)."
-          exit 1
+          FAILED=0
+
+          if [ "${{ steps.sync_compose.outcome }}" = "failure" ]; then
+            echo "❌ Could not copy docker-compose.yml to the server."
+            FAILED=1
+          fi
+
+          if [ "${{ steps.deploy_attempt_1.outcome }}" = "failure" ]; then
+            echo "❌ SSH deploy failed — the new image did NOT reach the server."
+            FAILED=1
+          fi
+
+          if [ "$FAILED" = "1" ]; then
+            echo ""
+            echo "   The image itself built and is in GHCR. Only the VPS steps failed, and both"
+            echo "   fail on the same thing: authentication."
+            echo ""
+            echo "   Diagnosed 10/08/2026 by asking the server directly, with no credential:"
+            echo "     ssh -o PreferredAuthentications=none root@<host>"
+            echo "     → Permission denied (publickey,password)"
+            echo ""
+            echo "   The server DOES accept passwords. So VPS_PASSWORD does not hold the server's"
+            echo "   current root password — updating it is the entire fix."
+            echo ""
+            echo "     1. Hostinger → VPS → Settings → Root password → set a new one."
+            echo "        Use letters and digits ONLY. The previous password contained ) ' and #,"
+            echo "        and quote characters are the classic way a password arrives mangled."
+            echo "     2. GitHub → Settings → Secrets and variables → Actions → VPS_PASSWORD →"
+            echo "        Update. No leading or trailing space, no newline."
+            echo "     3. Re-run this workflow."
+            echo ""
+            echo "   Run the 'VPS Doctor' workflow any time this recurs — it names the cause"
+            echo "   without using any credential at all."
+            exit 1
+          fi
+
+      # ── EVERY ROUTE TYPE MUST STILL ANSWER 200 AFTER A BACKEND DEPLOY ──────────────────────
+      #
+      # This workflow had no live check at all, and on 13/08/2026 that cost the site its blog for a
+      # day: a product-only eager load was added to the ARTICLE endpoint, Eloquent raised
+      # RelationNotFoundException, and all 224 article URLs served 500. The image built, the deploy
+      # was green, and `/blog` itself stayed 200 because it runs through a different method — so
+      # nothing anywhere reported a problem while Google was being handed 5xx on the best-ranking
+      # pages the site owns.
+      #
+      # A PHP relation is resolved at request time. No build step, no typecheck and no container
+      # health check can see it. Only fetching the page can, which is why this asks the live site.
+      #
+      # `if: always()` because the SSH steps above routinely fail on this host while the deploy
+      # itself still lands — the VPS pulls the new image on its own poll (scripts/vps-autodeploy.sh).
+      # Skipping the check whenever SSH was unhappy would skip it on exactly the deploys nobody
+      # watched.
+      - name: Every route type still answers 200
+        if: always()
+        continue-on-error: true
+        run: |
+          set -uo pipefail
+          echo "Waiting for the API to serve the new image..."
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 30 https://admin.protein.tn/api/categories?per_page=1 || echo 000)
+            [ "$code" = "200" ] && break
+            sleep 20
+          done
+          cd frontend && node scripts/check-routes.mjs
 
       - name: Report what actually happened
         if: always()

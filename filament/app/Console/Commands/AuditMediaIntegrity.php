@@ -68,6 +68,15 @@ class AuditMediaIntegrity extends Command
                         if (! $path) {
                             continue;
                         }
+                        // A referenced CDN cover is not a file on this disk and never will be, so
+                        // exists() answers false for every imported product. Auditing them here
+                        // would report the whole imported catalogue — 812 rows today, ~19,000 when
+                        // hydration finishes — as broken media, and an audit whose output is mostly
+                        // false is an audit nobody reads. Their reachability is a different check
+                        // (an HTTP one), not this one.
+                        if (ImagePath::isExternal($path)) {
+                            continue;
+                        }
                         $checked++;
                         $this->bumpPrefixStats($path, $prefixStats);
                         if ($disk->exists($path)) {
@@ -118,6 +127,13 @@ class AuditMediaIntegrity extends Command
                     $rewritten = [];
                     $changed = false;
                     foreach ($normalized as $path) {
+                        // Same reason as the single-column loop above: a referenced CDN URL is not
+                        // a file on this disk. It is kept in $rewritten so --apply-path-fix cannot
+                        // drop it from the gallery.
+                        if (ImagePath::isExternal($path)) {
+                            $rewritten[] = $path;
+                            continue;
+                        }
                         $checked++;
                         $this->bumpPrefixStats($path, $prefixStats);
                         if ($disk->exists($path)) {

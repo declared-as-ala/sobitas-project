@@ -1,26 +1,19 @@
-'use client';
-
-import Link from 'next/link';
+import type { ReactNode } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
-  Truck,
-  Wallet, 
-  ShieldCheck, 
-  Tag, 
-  Headphones, 
-  Sparkles, 
+  BookOpen,
   ChevronDown,
   ChevronRight,
-  TrendingUp,
-  Bookmark,
-  Zap,
-  Flame,
-  Activity,
-  HeartHandshake,
-  Star
+  CircleCheck,
+  ShieldCheck,
+  Sparkles,
+  Star,
+  Truck,
+  Wallet,
 } from 'lucide-react';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
-import { CategorySeoLandingExpandable } from '@/app/(shop)/category/CategorySeoLandingExpandable';
+import { htmlToText } from '@/util/sanitizeProductHtml';
 
 export interface RelatedLink {
   slug: string;
@@ -29,95 +22,49 @@ export interface RelatedLink {
 }
 
 interface CategorySeoLandingProps {
-  /** Page title (H1). Required for top/all. */
   title: string;
-  /** Optional SEO hero banners from API (absolute URLs). */
+  /** Canonical taxonomy slug; used to select the approved lightweight category artwork. */
+  slug?: string;
+  /** Admin banner remains a fallback for categories without approved local art. */
   banners?: { desktop?: string; mobile?: string };
-  /** Intro HTML or plain text (newlines → paragraphs). Server-rendered. */
   intro: string | null;
-  /** Long-form bottom SEO HTML from API (distinct from JSON “how-to”). */
   longBottomHtml?: string | null;
   howToChooseTitle: string | null;
   howToChooseBody: string | null;
   faqs: Array<{ question: string; answer: string }>;
   relatedCategories: RelatedLink[];
   bestProducts: RelatedLink[];
-  /** If true, output FAQPage JSON-LD. */
   withFaqSchema?: boolean;
-  /** 'header' = trust row + H1 only (products above the fold); 'below-fold' = intro + how-to + FAQ + related + best (no H1); 'top' = H1 + intro + how-to + FAQs; 'bottom' = Catégories + Produits phares; 'all' = everything. */
   section?: 'header' | 'below-fold' | 'top' | 'bottom' | 'all';
 }
 
-const TRUST_BADGES = [
-  { icon: Truck, title: "Livraison Rapide", desc: "24-72h partout en Tunisie" },
-  { icon: Wallet, title: "Paiement Cash", desc: "Payez à la livraison" },
-  { icon: ShieldCheck, title: "100% Original", desc: "Produits authentiques" },
-  { icon: Tag, title: "Meilleurs Prix", desc: "Tarifs & packs exclusifs" },
-  { icon: Headphones, title: "Support Client", desc: "Conseils d'experts sportifs" },
+const CATEGORY_ART: Record<string, string> = {
+  proteines: '/media/category-art/proteines.png',
+  'sante-vitalite': '/media/category-art/sante-vitalite.png',
+  'perte-de-poids': '/media/category-art/perte-de-poids.png',
+  performance: '/media/category-art/performance.png',
+  equipement: '/media/category-art/equipement.png',
+  'prise-de-masse': '/media/category-art/prise-de-masse.png',
+};
+
+const TRUST_FACTS = [
+  { icon: ShieldCheck, label: 'Produits authentiques' },
+  { icon: Truck, label: 'Livraison 24–72 h' },
+  { icon: Wallet, label: 'Paiement à la livraison' },
 ];
 
-const CREATINE_BENEFITS = [
-  {
-    icon: Flame,
-    title: "Force Explosive & ATP",
-    desc: "Sature vos réserves musculaires en phosphocréatine pour resynthétiser l'ATP instantanément lors des séries intenses."
-  },
-  {
-    icon: Activity,
-    title: "Volume & Hydratation",
-    desc: "Favorise la volumisation cellulaire par rétention d'eau intramusculaire pour un aspect plein et dense."
-  },
-  {
-    icon: Zap,
-    title: "Récupération Accélérée",
-    desc: "Diminue la fatigue musculaire entre les séries lourdes et favorise une régénération musculaire rapide."
-  },
-];
+function renderContent(value: string): ReactNode {
+  if (value.includes('<')) return <div dangerouslySetInnerHTML={{ __html: value }} />;
 
-const GENERIC_BENEFITS = [
-  {
-    icon: ShieldCheck,
-    title: "100% Authentique",
-    desc: "Produits importés officiellement, qualité certifiée et testée en laboratoire.",
-  },
-  {
-    icon: Truck,
-    title: "Livraison Express",
-    desc: "Expédition rapide, livraison 24-72h dans toute la Tunisie.",
-  },
-  {
-    icon: HeartHandshake,
-    title: "Conseils Experts",
-    desc: "Notre équipe de coachs sportifs vous guide dans vos choix.",
-  },
-];
-
-/** Renders plain text as paragraphs (double newline = new paragraph). */
-function textToParagraphs(text: string): React.ReactNode {
-  if (!text.trim()) return null;
-  const blocks = text.split(/\n\n+/).filter((b) => b.trim());
-  return blocks.map((p, i) => (
-    <p key={i} className="mb-3 sm:mb-4 last:mb-0 text-gray-700 dark:text-gray-300 leading-relaxed">
-      {p.trim().split('\n').map((line, j) => (
-        <span key={j}>
-          {j > 0 && <br />}
-          {line.trim()}
-        </span>
-      ))}
-    </p>
-  ));
-}
-
-function plainTextFromContent(value: string): string {
   return value
-    .replace(/<[^>]*>/g, ' ')
-    .replace(/&[a-z]+;/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
+    .split(/\n\n+/)
+    .filter((paragraph) => paragraph.trim())
+    .map((paragraph, index) => <p key={index}>{paragraph.trim()}</p>);
 }
 
 export function CategorySeoLanding({
   title,
+  slug,
   banners,
   intro,
   longBottomHtml,
@@ -129,347 +76,181 @@ export function CategorySeoLanding({
   withFaqSchema = true,
   section = 'all',
 }: CategorySeoLandingProps) {
-  const heroDesktop = banners?.desktop?.trim();
-  const heroMobile = banners?.mobile?.trim();
-  const heroSrc = heroDesktop || heroMobile;
-  const hasIntro = intro && intro.trim().length > 0;
-  const hasLongBottom = Boolean(longBottomHtml && longBottomHtml.trim().length > 0);
-  const hasHowTo = howToChooseTitle && howToChooseBody;
+  const hasIntro = Boolean(intro?.trim());
+  const hasLongBottom = Boolean(longBottomHtml?.trim());
+  const hasHowTo = Boolean(howToChooseTitle?.trim() && howToChooseBody?.trim());
   const hasFaqs = faqs.length > 0;
-  const hasRelated = relatedCategories.length > 0;
-  const hasBest = bestProducts.length > 0;
+  const showHeader = section === 'header' || section === 'top' || section === 'all';
+  const showDetails = section === 'below-fold' || section === 'top' || section === 'all';
+  const showLinks = section === 'below-fold' || section === 'bottom' || section === 'all';
+  const localArt = slug ? CATEGORY_ART[slug] : undefined;
+  const desktopArt = localArt || banners?.desktop?.trim() || banners?.mobile?.trim();
+  const mobileArt = localArt || banners?.mobile?.trim() || banners?.desktop?.trim();
+  const faqSchema = withFaqSchema && hasFaqs && showDetails ? buildFAQPageSchemaFromQA(faqs) : null;
 
-  const faqSchema =
-    withFaqSchema && hasFaqs && (section === 'top' || section === 'all' || section === 'below-fold')
-      ? buildFAQPageSchemaFromQA(faqs)
-      : null;
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
-  const showHeader = section === 'header' || section === 'top' || section === 'all';
-  const showTop = section === 'top' || section === 'all';
-  const showContentBelowFold = section === 'below-fold';
-  const showBottom = section === 'bottom' || section === 'all' || section === 'below-fold';
-  const headerIntro = section === 'header' && hasIntro ? plainTextFromContent(intro) : '';
-
-  const isCreatine = title.toLowerCase().includes('créatine') || title.toLowerCase().includes('creatine');
-
   return (
-    <div className="space-y-6 sm:space-y-8 lg:space-y-12">
-      {faqSchema && (
-        <script
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
-        />
-      )}
+    <div className="space-y-6 lg:space-y-8">
+      {faqSchema ? (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      ) : null}
 
-      {/* Header section */}
-      {showHeader && (
-        <div className="space-y-6">
-          {heroSrc && (
-            <div className="relative w-full overflow-hidden rounded-2xl border border-gray-200 dark:border-gray-800 bg-gray-100 dark:bg-gray-800 mb-4 sm:mb-6 aspect-[21/9] max-h-[260px] sm:max-h-[320px] shadow-sm">
-              <picture className="contents">
-                {heroMobile ? (
-                  <source media="(max-width: 767px)" srcSet={heroMobile} />
-                ) : null}
-                <Image
-                  src={heroDesktop || heroMobile!}
-                  alt={title ? `Bannière — ${title}` : 'Bannière catégorie'}
-                  fill
-                  className="object-cover"
-                  sizes="(max-width: 768px) 100vw, min(1400px, 100vw)"
-                  priority
-                />
-              </picture>
+      {showHeader ? (
+        <header className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
+          <div className="grid min-h-[250px] grid-cols-1 lg:grid-cols-5">
+            <div className="flex min-w-0 flex-col justify-center px-4 py-6 sm:p-8 lg:col-span-3 lg:p-10">
+              <p className="mb-3 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+                <span className="h-px w-5 bg-brand" aria-hidden="true" />
+                Sélection Protein.tn
+              </p>
+              <h1 className="max-w-[20ch] font-display font-compressed text-[2.15rem] font-extrabold uppercase leading-[0.92] tracking-[-0.025em] text-ink-1 sm:text-[2.75rem] lg:text-[3.25rem]">
+                {title}
+              </h1>
+              {hasIntro ? (
+                <p className="mt-4 line-clamp-3 max-w-[68ch] text-sm leading-relaxed text-ink-2 sm:text-[15px]">
+                  {htmlToText(intro!, 520)}
+                </p>
+              ) : null}
+
+              <ul className="mt-6 grid gap-2 border-t border-rule pt-4 sm:grid-cols-3">
+                {TRUST_FACTS.map(({ icon: Icon, label }) => (
+                  <li key={label} className="flex min-h-8 items-center gap-2 text-[12px] font-semibold text-ink-2">
+                    <Icon className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                    {label}
+                  </li>
+                ))}
+              </ul>
             </div>
-          )}
 
-          {/* Premium Trust Badges Grid */}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-2.5 sm:gap-4 my-2">
-            {TRUST_BADGES.map((badge, idx) => {
-              const Icon = badge.icon;
-              return (
-                <div
-                  key={idx}
-                  className="flex items-center gap-2.5 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
-                >
-                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                    <Icon className="h-[18px] w-[18px]" />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-gray-900 dark:text-white leading-tight">
-                      {badge.title}
-                    </h4>
-                    <p className="text-[10px] text-gray-500 dark:text-gray-400 truncate mt-0.5 leading-none">
-                      {badge.desc}
-                    </p>
-                  </div>
-                </div>
-              );
-            })}
+            {desktopArt ? (
+              <div className="relative min-h-[180px] overflow-hidden bg-ink-1 sm:min-h-[220px] lg:col-span-2 lg:min-h-[250px]">
+                <picture className="contents">
+                  {mobileArt ? <source media="(max-width: 767px)" srcSet={mobileArt} /> : null}
+                  <Image
+                    src={desktopArt}
+                    alt={`Sélection ${title}`}
+                    fill
+                    className="object-cover"
+                    sizes="(max-width: 767px) 100vw, 38vw"
+                    priority={Boolean(localArt)}
+                  />
+                </picture>
+              </div>
+            ) : null}
+          </div>
+        </header>
+      ) : null}
+
+      {showDetails && (hasIntro || hasHowTo || hasLongBottom) ? (
+        <section aria-labelledby="category-guide-title" className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-6 lg:p-8">
+          <div className="mb-5 flex items-start gap-3">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/[0.08] text-brand">
+              <BookOpen className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Conseil d’achat</p>
+              <h2 id="category-guide-title" className="mt-1 font-display font-compressed text-2xl font-extrabold uppercase leading-none text-ink-1 sm:text-3xl">
+                {howToChooseTitle?.trim() || `Bien choisir ${title.toLocaleLowerCase('fr')}`}
+              </h2>
+            </div>
           </div>
 
-          {/* CREATINE HERO */}
-          {isCreatine ? (
-            <div className="p-6 sm:p-8 md:p-10 rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-              <div className="flex flex-col lg:flex-row items-center gap-8">
-                <div className="flex-1 min-w-0 text-center lg:text-left">
-                  {/* Kicker */}
-                  <span className="inline-flex items-center gap-2 mb-4 sm:mb-5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400 justify-center lg:justify-start">
-                    <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-                    Force &amp; Volume Maximum
-                  </span>
-
-                  <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl md:text-5xl lg:text-6xl">
-                    Créatine <span className="text-red-600 dark:text-red-400">Tunisie</span>
-                  </h1>
-
-                  <p className="mt-4 text-sm sm:text-base text-gray-600 dark:text-gray-400 leading-relaxed max-w-2xl mx-auto lg:mx-0">
-                    Vous souhaitez franchir un palier et augmenter votre force de manière explosive ? Sur <strong>Protein.tn</strong>, découvrez les meilleures formules de <strong>créatine monohydrate</strong>, micronisée et labellisée Creapure® aux meilleurs prix en Tunisie. Importation 100% officielle avec livraison express chez vous.
-                  </p>
-
-                  {/* Horizontal mini-guide tags */}
-                  <div className="mt-6 flex flex-wrap justify-center lg:justify-start gap-2 text-xs">
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Monohydrate</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Creapure®</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Micronisée</span>
-                    <span className="px-3 py-1.5 rounded-lg bg-red-50 dark:bg-red-950/40 border border-red-100 dark:border-red-900/40 text-red-700 dark:text-red-300 font-medium">Capsules</span>
-                  </div>
-                </div>
-
-                {/* Creatine benefits grid inside hero */}
-                <div className="w-full lg:w-[350px] shrink-0 space-y-3">
-                  {CREATINE_BENEFITS.map((benefit, i) => {
-                    const BIcon = benefit.icon;
-                    return (
-                      <div
-                        key={i}
-                        className="flex gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 transition-all duration-300 group"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                          <BIcon className="h-[18px] w-[18px]" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                            {benefit.title}
-                          </h4>
-                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 leading-snug">
-                            {benefit.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
+            <div className="prose prose-neutral max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]">
+              {hasHowTo ? renderContent(howToChooseBody!) : hasIntro ? renderContent(intro!) : null}
             </div>
-          ) : (
-            /* Generic category hero — flat, one-accent */
-            <div className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm p-6 sm:p-8 md:p-10">
-              <div className="flex flex-col lg:flex-row items-start gap-8 lg:gap-10">
-
-                {/* ── Left column: kicker + H1 + clamped intro ── */}
-                <div className="flex-1 min-w-0">
-
-                  {/* Kicker */}
-                  <span className="inline-flex items-center gap-2 mb-5 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-red-600 dark:text-red-400">
-                    <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
-                    Qualité Premium
-                  </span>
-
-                  {/* H1 */}
-                  <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-gray-900 dark:text-white text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] mb-4">
-                    {title.replace(/\s+tunisie\s*$/i, '')}{' '}
-                    <span className="text-red-600 dark:text-red-400">Tunisie</span>
-                  </h1>
-
-                  {/* Intro — hard-clamped to 3 lines */}
-                  {headerIntro && (
-                    <p className="text-sm sm:text-[0.9rem] text-gray-600 dark:text-gray-400 leading-relaxed line-clamp-3 max-w-xl">
-                      {headerIntro}
-                    </p>
-                  )}
-
-                  {/* Divider */}
-                  <div className="h-px w-full max-w-xs bg-gray-200 dark:bg-gray-800 mt-5" />
-
-                  {/* Mini stat row */}
-                  <div className="flex flex-wrap gap-4 mt-4">
-                    {[
-                      { label: 'Livraison', value: '24-72h' },
-                      { label: 'Produits', value: '100% Originaux' },
-                      { label: 'Paiement', value: 'Cash à la livraison' },
-                    ].map((stat) => (
-                      <div key={stat.label} className="flex flex-col">
-                        <span className="text-[10px] font-display font-semibold uppercase tracking-wider text-red-600/80 dark:text-red-400/70">{stat.label}</span>
-                        <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-100">{stat.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* ── Right column: benefit cards ── */}
-                <div className="w-full lg:w-[300px] xl:w-[320px] shrink-0 space-y-2.5">
-                  {GENERIC_BENEFITS.map((benefit, i) => {
-                    const BIcon = benefit.icon;
-                    return (
-                      <div
-                        key={i}
-                        className="group flex gap-3 p-3.5 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50 shadow-sm hover:shadow-md hover:border-red-200 dark:hover:border-red-500/30 hover:-translate-y-0.5 transition-all duration-300"
-                      >
-                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-colors duration-300">
-                          <BIcon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <h4 className="text-xs sm:text-sm font-bold text-gray-900 dark:text-white leading-tight">
-                            {benefit.title}
-                          </h4>
-                          <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5 leading-snug">
-                            {benefit.desc}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Full content (intro) – expanded below-fold */}
-      {(showTop || showContentBelowFold) && hasIntro && (
-        <CategorySeoLandingExpandable>
-          <section className="prose prose-red dark:prose-invert max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-p:leading-relaxed prose-headings:font-bold prose-headings:tracking-tight prose-headings:text-gray-900 dark:prose-headings:text-white prose-headings:mt-6 prose-headings:mb-3">
-            <div className="text-base sm:text-base leading-relaxed">
-              {intro.includes('<') ? (
-                <div dangerouslySetInnerHTML={{ __html: intro }} />
-              ) : (
-                textToParagraphs(intro)
-              )}
-            </div>
-          </section>
-        </CategorySeoLandingExpandable>
-      )}
-
-      {/* Full content (how to choose) */}
-      {(showTop || showContentBelowFold) && hasHowTo && (
-        <section className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm relative overflow-hidden">
-          <div className="absolute top-0 left-0 w-1.5 h-full bg-red-600" />
-          <h2 className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-red-500" />
-            {howToChooseTitle}
-          </h2>
-          <div className="text-gray-700 dark:text-gray-300 text-sm sm:text-[15px] leading-relaxed">
-            {howToChooseBody.includes('<') ? (
-              <div dangerouslySetInnerHTML={{ __html: howToChooseBody }} />
-            ) : (
-              textToParagraphs(howToChooseBody)
-            )}
+            <aside className="rounded-xl bg-sunken p-4 sm:p-5" aria-label="Pourquoi commander chez Protein.tn">
+              <p className="text-xs font-semibold uppercase tracking-[0.12em] text-ink-3">L’essentiel</p>
+              <ul className="mt-3 space-y-3">
+                {[
+                  'Vérifiez votre objectif et la portion conseillée.',
+                  'Comparez le prix, le format et la disponibilité.',
+                  'Besoin d’aide ? Notre équipe vous conseille.',
+                ].map((item) => (
+                  <li key={item} className="flex gap-2.5 text-[13px] leading-snug text-ink-2">
+                    <CircleCheck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </aside>
           </div>
+
+          {hasLongBottom ? (
+            <details className="group mt-6 border-t border-rule pt-5">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold text-ink-1">
+                <span>Lire le guide complet</span>
+                <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
+              </summary>
+              <article
+                className="prose prose-neutral mt-4 max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]"
+                dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
+              />
+            </details>
+          ) : null}
         </section>
-      )}
+      ) : null}
 
-      {/* Full content (longBottomHtml) */}
-      {(showTop || showContentBelowFold) && hasLongBottom && (
-        <article
-          className="rounded-2xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 lg:p-8 shadow-sm"
-          aria-labelledby="category-seo-long-heading"
-        >
-          <h2 id="category-seo-long-heading" className="text-lg sm:text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-            <Bookmark className="h-5 w-5 text-red-500" />
-            En savoir plus
-          </h2>
-          <div
-            className="prose prose-red dark:prose-invert max-w-none prose-p:text-gray-700 dark:prose-p:text-gray-300 prose-headings:text-gray-900 dark:prose-headings:text-white prose-a:text-red-600 dark:prose-a:text-red-500 hover:prose-a:underline text-sm sm:text-[15px] leading-relaxed"
-            dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
-          />
-        </article>
-      )}
-
-      {/* Full content (FAQs) */}
-      {(showTop || showContentBelowFold) && hasFaqs && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white flex items-center gap-2 px-1">
-            Questions fréquentes (FAQ)
-          </h2>
-          <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-gray-900 shadow-sm divide-y divide-gray-100 dark:divide-gray-800">
-            {faqs.map((faq, i) => (
-              <div key={i} className="group transition-colors duration-200 hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
-                <details className="group">
-                  <summary className="list-none flex items-center justify-between gap-4 py-4 px-5 sm:px-6 cursor-pointer text-left font-semibold text-gray-900 dark:text-white transition-colors">
-                    <span className="flex items-center gap-3">
-                      <span className="text-red-500 font-bold text-sm sm:text-base shrink-0">Q{i + 1}.</span>
-                      <span className="text-sm sm:text-[15px]">{faq.question}</span>
-                    </span>
-                    <span className="shrink-0 text-gray-400 group-open:rotate-180 transition-transform duration-300" aria-hidden>
-                      <ChevronDown className="h-[18px] w-[18px]" />
-                    </span>
-                  </summary>
-                  <div className="pb-5 px-5 sm:px-6 pt-1 text-gray-600 dark:text-gray-300 text-sm sm:text-base leading-relaxed border-t border-gray-100 dark:border-gray-800 bg-gray-50/30 dark:bg-gray-950/20">
-                    {faq.answer}
-                  </div>
-                </details>
-              </div>
+      {showDetails && hasFaqs ? (
+        <section aria-labelledby="category-faq-title">
+          <div className="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Réponses rapides</p>
+              <h2 id="category-faq-title" className="mt-1 font-display font-compressed text-2xl font-extrabold uppercase leading-none text-ink-1 sm:text-3xl">
+                Questions fréquentes
+              </h2>
+            </div>
+            <span className="hidden text-sm text-ink-3 sm:inline">{faqs.length} réponses</span>
+          </div>
+          <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated divide-y divide-rule">
+            {faqs.map((faq, index) => (
+              <details key={faq.question} className="group">
+                <summary className="flex min-h-[58px] cursor-pointer list-none items-center justify-between gap-4 px-4 py-3 font-semibold text-ink-1 sm:px-6">
+                  <span className="flex items-start gap-3 text-sm sm:text-[15px]">
+                    <span className="mt-0.5 text-xs tabular-nums text-brand">{String(index + 1).padStart(2, '0')}</span>
+                    {faq.question}
+                  </span>
+                  <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
+                </summary>
+                <p className="border-t border-rule bg-sunken px-4 py-4 ps-11 text-sm leading-relaxed text-ink-2 sm:px-6 sm:ps-[3.75rem] sm:text-[15px]">
+                  {faq.answer}
+                </p>
+              </details>
             ))}
           </div>
         </section>
-      )}
+      ) : null}
 
-      {/* Bottom suggestions (associated categories & top products) */}
-      {showBottom && (hasRelated || hasBest) && (
-        <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8 mt-4">
-          {hasRelated && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900/30 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
-                <TrendingUp className="h-[18px] w-[18px] text-red-500" />
-                Catégories associées
-              </h2>
-              <ul className="grid grid-cols-1 gap-2.5">
-                {relatedCategories.map((c) => (
-                  <li key={c.slug}>
-                    <Link
-                      href={c.url}
-                      className="group flex items-center justify-between p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/50 hover:bg-red-50 dark:hover:bg-red-950/10 hover:border-red-200 dark:hover:border-red-900/40 transition-all duration-300"
-                    >
-                      <span className="font-semibold text-xs sm:text-sm text-gray-700 dark:text-gray-300 group-hover:text-red-600 dark:group-hover:text-red-400 transition-colors">
-                        {c.name}
-                      </span>
-                      <ChevronRight className="h-4 w-4 text-gray-400 group-hover:text-red-500 group-hover:translate-x-0.5 transition-all" />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-          {hasBest && (
-            <div className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 sm:p-6 shadow-sm">
-              <h2 className="text-base sm:text-lg font-display uppercase tracking-tight font-bold text-gray-900 dark:text-white mb-3 sm:mb-4 flex items-center gap-2">
-                <Sparkles className="h-[18px] w-[18px] text-red-500" />
-                Produits phares
-              </h2>
-              <ul className="grid grid-cols-1 gap-2.5">
-                {bestProducts.map((p) => (
-                  <li key={p.slug}>
-                    <Link
-                      href={p.url}
-                      className="flex items-center gap-3 p-3 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50/80 dark:bg-gray-800/50 hover:bg-red-50 dark:hover:bg-red-950/10 hover:border-red-200 dark:hover:border-red-900/40 transition-all duration-300 group"
-                    >
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-red-500/10 text-red-600 dark:text-red-400 group-hover:bg-red-600 group-hover:text-white transition-all duration-300">
-                        <Star className="h-4 w-4" aria-hidden="true" />
-                      </span>
-                      <span className="font-semibold text-xs sm:text-sm text-gray-800 dark:text-gray-200 group-hover:text-red-600 dark:group-hover:text-red-400 line-clamp-2 transition-colors">
-                        {p.name}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {showLinks && (relatedCategories.length > 0 || bestProducts.length > 0) ? (
+        <section className="grid gap-4 md:grid-cols-2">
+          <LinkList title="Rayons associés" icon={<Sparkles className="h-4 w-4" aria-hidden="true" />} links={relatedCategories} />
+          <LinkList title="Produits à découvrir" icon={<Star className="h-4 w-4" aria-hidden="true" />} links={bestProducts} />
         </section>
-      )}
+      ) : null}
+    </div>
+  );
+}
+
+function LinkList({ title, icon, links }: { title: string; icon: ReactNode; links: RelatedLink[] }) {
+  if (links.length === 0) return null;
+
+  return (
+    <div className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-5">
+      <h2 className="flex items-center gap-2 font-display text-sm font-bold uppercase tracking-wide text-ink-1">
+        <span className="text-brand">{icon}</span>
+        {title}
+      </h2>
+      <ul className="mt-3 divide-y divide-rule">
+        {links.slice(0, 6).map((item) => (
+          <li key={item.slug}>
+            <Link href={item.url} className="group flex min-h-11 items-center justify-between gap-3 text-sm font-medium text-ink-2 transition-colors hover:text-brand">
+              <span className="line-clamp-1">{item.name}</span>
+              <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

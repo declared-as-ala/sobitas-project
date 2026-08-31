@@ -13,11 +13,34 @@
 # Storage URL:  https://admin.protein.tn/storage/<relative-path>
 # ==============================================================
 
+# ── LOG ROTATION. THIS IS NOT HOUSEKEEPING; IT IS AN OUTAGE FIX. ─────────────────────────────
+#
+# Docker's default json-file driver has NO SIZE LIMIT. Every service here inherited that, and
+# backend-v2 runs with LOG_CHANNEL=stderr — so every Laravel log line, including every warning from
+# a 10,669-product import, went into a file that could only ever grow.
+#
+# A full disk on this box does not look like a full disk. It looks like admin.protein.tn answering
+# 504 on every URL after exactly 60 seconds, because MySQL cannot write, so every PHP worker blocks
+# on it, so the proxy gives up. It has already happened once in a different guise: on 2026-07-28 the
+# pre-deploy mysqldump died 0.1s in because it could not CREATE its output file, and took three
+# consecutive deploys with it.
+#
+# 10 MB x 3 files x ~10 services caps container logs at roughly 300 MB, permanently.
+#
+# ROTATION APPLIES TO CONTAINERS CREATED AFTER THIS CHANGE. `docker compose restart` does NOT
+# recreate a container and will NOT pick it up — it needs `docker compose up -d`.
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
 services:
   mysql:
     image: mysql:8.0
     container_name: sobitas-mysql
     restart: unless-stopped
+    logging: *default-logging
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootsecret}
       MYSQL_DATABASE: ${MYSQL_DATABASE:-protein_db}
@@ -47,6 +70,7 @@ services:
     image: redis:7-alpine
     container_name: sobitas-redis
     restart: unless-stopped
+    logging: *default-logging
     command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     volumes:
       - redis-data:/data
@@ -62,6 +86,7 @@ services:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - .env
     environment:
@@ -98,6 +123,8 @@ services:
       MAIL_ENCRYPTION: tls
       MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
       MAIL_FROM_NAME: Protein.tn
+      MAIL_REPLY_TO: bitoutawalid@gmail.com
+      ADMIN_EMAILS: bitoutawalid@gmail.com
     networks:
       - sobitas-net
     expose:
@@ -111,6 +138,49 @@ services:
       # Host bind-mount: uploaded files persist across container recreations.
       # php-fpm writes here; nginx reads the same host directory via its own mount.
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
+    # ── THE CHECK THAT WAS MISSING WHEN admin.protein.tn WENT DOWN ───────────────────────────
+    #
+    # This service had `restart: unless-stopped` and no healthcheck, and that pairing is a trap:
+    # `unless-stopped` only acts when the process EXITS. A php-fpm pool with every worker blocked on
+    # a slow database does not exit. It accepts connections and never answers them, Docker reports
+    # `Up 6 days`, and the first anyone hears about it is a customer — which is precisely what
+    # happened, with every URL on admin.protein.tn returning 504 after exactly 60s.
+    #
+    # ── WHY IT CALLS NGINX INSTEAD OF CHECKING ITSELF ────────────────────────────────────────
+    # The obvious check is "is something listening on 9000". It is also useless here, because an
+    # exhausted pool still accepts the TCP connection — it queues it in the listen backlog and never
+    # replies. The socket test would have stayed green throughout the outage.
+    #
+    # Going out through nginx and back into php-fpm exercises the ENTIRE path a customer uses:
+    # nginx → fpm → MySQL. /api/coordonnees is chosen for it because it is unauthenticated, tiny,
+    # and touches the database. If that cannot answer in 15s, the site is down whatever `docker ps`
+    # thinks.
+    #
+    # Tuned deliberately not to flap: 3 consecutive failures at 30s intervals means ~90s of genuine
+    # unavailability before this goes red. A healthcheck that trips on one slow request would have
+    # a watchdog restarting a working site under load, which is worse than no watchdog at all.
+    healthcheck:
+      # `$$x`, not `$x`. Compose interpolates `$NAME` in this file BEFORE Docker ever sees it, so a
+      # single `$` would have shipped `php -r '=stream_context_create(...)'` — a parse error that
+      # exits non-zero, marking the container unhealthy forever and sending the watchdog into a
+      # restart loop against a perfectly healthy site. `$$` is the escape for a literal `$`.
+      #
+      # No `ignore_errors` either: without it, file_get_contents returns false on any non-2xx, so a
+      # 500 from Laravel counts as down. With it, a 500 returns a body and would pass — a green
+      # healthcheck on a broken application is worse than none.
+      test:
+        - CMD-SHELL
+        - php -r '$$x=stream_context_create(["http"=>["timeout"=>12]]); exit(@file_get_contents("http://backend-nginx-v2/api/coordonnees",false,$$x)===false?1:0);'
+      interval: 30s
+      timeout: 15s
+      retries: 3
+      start_period: 120s
 
   # Laravel task scheduler.
   #
@@ -125,6 +195,7 @@ services:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-scheduler
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - .env
     environment:
@@ -140,6 +211,31 @@ services:
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
+      # ── THE THREE LINES THIS SERVICE WAS MISSING, AND WHAT THEY COST ────────────────────
+      # backend-v2 (line 87), backend-v2-queue (line 177) and fitness-api (line 249) all pin
+      # REDIS_HOST to the service name. This service did not, so it fell through to `.env`,
+      # where REDIS_HOST is `127.0.0.1` — correct for a host process, and inside a container it
+      # points at the container itself, where nothing listens on 6379.
+      #
+      # Measured on production 11/08/2026:
+      #   backend-v2            host=redis
+      #   backend-v2-queue      host=redis
+      #   backend-v2-scheduler  host=127.0.0.1   <- RedisException: Connection refused
+      #
+      # The failure mode is the worst available: `schedule:work` KEEPS RUNNING and keeps logging
+      # "No scheduled commands are ready to run", because it only touches Redis when a command is
+      # actually due — and then `withoutOverlapping()` cannot take its mutex and the command dies
+      # before executing. So `schedule:list` shows every entry with a healthy "Next Due", the
+      # container is `Up`, the deploy is green, and NOTHING HAS EVER RUN. Every scheduled command
+      # in routes/console.php was affected: the SEO watchdog, self-heal, review requests, the
+      # nutrition enrichment, and both catalogue crawls.
+      #
+      # The three lines above it (CACHE/SESSION/QUEUE_CONNECTION: redis) are what made it fatal
+      # rather than merely wrong: they route the scheduler's cache — and therefore every
+      # overlap mutex — at a Redis it cannot reach.
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
     command: php artisan schedule:work
     networks:
       - sobitas-net
@@ -150,11 +246,18 @@ services:
         condition: service_healthy
     volumes:
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
 
   backend-v2-queue:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-queue
     restart: unless-stopped
+    logging: *default-logging
     env_file:
       - .env
     environment:
@@ -190,6 +293,8 @@ services:
       MAIL_ENCRYPTION: tls
       MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
       MAIL_FROM_NAME: Protein.tn
+      MAIL_REPLY_TO: bitoutawalid@gmail.com
+      ADMIN_EMAILS: bitoutawalid@gmail.com
     command: >
       php artisan queue:work redis
       --sleep=3
@@ -204,16 +309,29 @@ services:
         condition: service_healthy
     volumes:
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
 
   backend-v2-public-init:
     image: ghcr.io/declared-as-ala/sobitas-backend-v2:latest
     container_name: sobitas-backend-v2-public-init
     restart: "no"
+    logging: *default-logging
     networks:
       - sobitas-net
     volumes:
       - backend-v2-public:/public
       - /var/sobitas/uploads:/var/www/html/storage/app/public
+      # ONE log directory, shared by every backend service and surviving the deploy that
+      # replaces the container. Without this each service kept its own storage/logs inside
+      # its own writable layer, so `catalog:iherb:content` wrote to the SCHEDULER's copy while
+      # every attempt to read it landed in backend-v2's — and both were destroyed on the next
+      # deploy. That is the single reason the content-pass stall took three days to see.
+      - /var/sobitas/logs:/var/www/html/storage/logs
     entrypoint: ["/bin/sh", "-c"]
     command:
       - |
@@ -229,6 +347,7 @@ services:
     image: nginx:stable
     container_name: sobitas-laravel-nginx-v2
     restart: unless-stopped
+    logging: *default-logging
     ports:
       - "8083:80"
     networks:
@@ -247,6 +366,7 @@ services:
       dockerfile: Dockerfile
     container_name: sobitas-fitness-api
     restart: unless-stopped
+    logging: *default-logging
     environment:
       PORT: 4000
       DATABASE_URL: mysql://laravel:secret@mysql:3306/protein_db
@@ -271,6 +391,7 @@ services:
     image: ghcr.io/declared-as-ala/sobitas-frontend:latest
     container_name: sobitas-frontend
     restart: unless-stopped
+    logging: *default-logging
     environment:
       NODE_ENV: production
       # NEXT_PUBLIC_* are baked into the client bundle at build time by CI.

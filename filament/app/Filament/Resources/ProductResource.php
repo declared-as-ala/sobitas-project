@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
+use App\Filament\Support\ExternalImageUpload;
 use App\Filament\Support\ImagePath;
 use App\Models\Product;
 use App\Models\Review;
@@ -14,6 +15,7 @@ use Filament\Forms;
 use Filament\Forms\Components\FileUpload;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
@@ -184,37 +186,48 @@ class ProductResource extends Resource
                                 ]),
                             Section::make('Médias')
                                 ->schema([
-                                    FileUpload::make('cover')
-                                        ->label('Couverture (image principale)')
-                                        ->disk('public')
-                                        ->directory('produits')
-                                        ->image()
-                                        ->imageEditor()
-                                        ->maxSize(4096)
-                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('produits', 'public');
-                                            if (! $path) {
-                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                                            }
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                                        }),
-                                    FileUpload::make('images')
-                                        ->label('Gallery (images secondaires)')
-                                        ->disk('public')
-                                        ->directory('produits')
-                                        ->image()
-                                        ->multiple()
-                                        ->reorderable()
-                                        ->maxSize(4096)
-                                        ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
-                                            $path = $file->store('produits', 'public');
-                                            if (! $path) {
-                                                $ext  = $file->getClientOriginalExtension() ?: 'jpg';
-                                                $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
-                                            }
-                                            return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
-                                        }),
+                                    // ExternalImageUpload::allow() — REQUIRED on any upload whose
+                                    // column can hold an imported cover. Without it Filament's own
+                                    // hydration drops the CDN URL (the public disk has no such
+                                    // file), the field renders empty, and the next save writes that
+                                    // emptiness back over the column. See that class for the full
+                                    // mechanism; it is a no-op for a relative path on the disk,
+                                    // which is what all 309 legacy products carry.
+                                    ExternalImageUpload::allow(
+                                        FileUpload::make('cover')
+                                            ->label('Couverture (image principale)')
+                                            ->disk('public')
+                                            ->directory('produits')
+                                            ->image()
+                                            ->imageEditor()
+                                            ->maxSize(4096)
+                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                                $path = $file->store('produits', 'public');
+                                                if (! $path) {
+                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                }
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                                            })
+                                    ),
+                                    ExternalImageUpload::allow(
+                                        FileUpload::make('images')
+                                            ->label('Gallery (images secondaires)')
+                                            ->disk('public')
+                                            ->directory('produits')
+                                            ->image()
+                                            ->multiple()
+                                            ->reorderable()
+                                            ->maxSize(4096)
+                                            ->saveUploadedFileUsing(function (\Livewire\Features\SupportFileUploads\TemporaryUploadedFile $file): string {
+                                                $path = $file->store('produits', 'public');
+                                                if (! $path) {
+                                                    $ext  = $file->getClientOriginalExtension() ?: 'jpg';
+                                                    $path = $file->storeAs('produits', \Illuminate\Support\Str::uuid() . '.' . $ext, 'public');
+                                                }
+                                                return (new \App\Services\Media\ConvertUploadedImageToWebp())->convertStoredPathToWebp((string) $path) ?? (string) $path;
+                                            })
+                                    ),
                                 ]),
                             Section::make('Flags produit')
                                 ->schema([
@@ -347,7 +360,32 @@ class ProductResource extends Resource
                                         ->default([])
                                         ->collapsible()
                                         ->collapsed()
-                                        ->itemLabel(fn (array $state): ?string => $state['q'] ? '❓ ' . Str::limit($state['q'], 60) : 'Nouvelle question')
+                                        /*
+                                         * ── THIS LABEL COULD TAKE THE WHOLE PAGE DOWN ────────
+                                         * `$state['q']` with no `??`, and `array $state` typed
+                                         * non-nullable. Both throw rather than degrade:
+                                         *
+                                         *   · pressing "Ajouter une question" creates an item with
+                                         *     no keys yet -> "Undefined array key \"q\"" ->
+                                         *     ErrorException -> 500;
+                                         *   · a legacy `faq` JSON row shaped {question, answer}
+                                         *     instead of {q, a} -> the same, on EDIT, for that
+                                         *     product only;
+                                         *   · Filament passing null for a fresh item -> TypeError.
+                                         *
+                                         * An item LABEL is decoration. It must never be able to
+                                         * fail the render of the form it decorates — the sibling
+                                         * repeater ten lines down already got this right.
+                                         *
+                                         * The emoji goes with it: DS010 bans them in the
+                                         * storefront and there is no reason the admin should read
+                                         * differently.
+                                         */
+                                        ->itemLabel(function (?array $state): string {
+                                            $question = trim((string) ($state['q'] ?? ''));
+
+                                            return $question !== '' ? Str::limit($question, 60) : 'Nouvelle question';
+                                        })
                                         ->addActionLabel('Ajouter une question')
                                         ->reorderable()
                                         ->cloneable()
@@ -467,6 +505,43 @@ class ProductResource extends Resource
                                                     ->helperText('Emballage européen ou américain ?'),
                                             ]),
 
+                                            /**
+                                             * ── THE 500 ON /products/create LIVED IN THIS REPEATER ──────────────
+                                             * Owner, 20/08/2026: "https://admin.protein.tn/products/create is 500."
+                                             *
+                                             * Two fields below type-hinted `Forms\Get $get`, i.e.
+                                             * `Filament\Forms\Get`. That class was REMOVED in Filament v4 —
+                                             * verified against the pinned release rather than assumed:
+                                             * filament/forms v4.2.0 ships exactly three files at the root of
+                                             * src/ (FormsComponent, FormsServiceProvider, helpers) and Get.php
+                                             * is not one of them. It is
+                                             * Filament\Schemas\Components\Utilities\Get now, which is what every
+                                             * other resource here already imports. This file was the last place
+                                             * holding the v3 name; a sweep of the whole app found no other.
+                                             *
+                                             * ── WHY IT KILLED CREATE AND LEFT EDIT WORKING ──────────────────────
+                                             * Because the broken hints sit inside a REPEATER ITEM, and the two
+                                             * pages fill the form differently:
+                                             *
+                                             *   Repeater::setUp()         calls defaultItems(1) — the component's
+                                             *                             default state is one EMPTY item.
+                                             *   CreateRecord::fillForm()  calls $this->form->fill() with NO
+                                             *                             arguments, and that is the call that
+                                             *                             applies defaults. One item is created,
+                                             *                             its fields render, the closures are
+                                             *                             evaluated, and PHP cannot resolve the
+                                             *                             type hint. Fatal, on every load.
+                                             *   EditRecord::fillForm()    fills from the record instead, so
+                                             *                             defaults are skipped. `nutrition_facts`
+                                             *                             is null on ~97% of products, the
+                                             *                             repeater renders ZERO items, and the
+                                             *                             broken closures never run.
+                                             *
+                                             * A dead class name therefore sat in a shipped file for weeks,
+                                             * invisible everywhere except the one page that instantiates an empty
+                                             * repeater row. `php artisan filament:check-classes` now fails on
+                                             * exactly this, without needing anyone to open the page.
+                                             */
                                             Forms\Components\Repeater::make('nutrition_facts.rows')
                                                 ->label('Lignes du tableau')
                                                 ->helperText('Dans l\'ordre de l\'étiquette. Utilisez « Niveau » pour les sous-lignes (ex. « dont sucres » sous « Glucides ») : une sous-ligne est un composant de la ligne au-dessus, pas une ligne à côté.')
@@ -497,12 +572,17 @@ class ProductResource extends Resource
                                                             // Hidden rather than ignored: a number typed beside
                                                             // "quantité non indiquée" would be a contradiction,
                                                             // and TranscribedLabel drops it anyway.
-                                                            ->visible(fn (Forms\Get $get): bool => ($get('kind') ?? 'value') === 'value'),
+                                                            //
+                                                            // `Get` is Filament\Schemas\Components\Utilities\Get.
+                                                            // It was `Forms\Get` — a class filament/forms v4 does
+                                                            // not ship — and that one word was the 500 on
+                                                            // /products/create. See the note on this Repeater.
+                                                            ->visible(fn (Get $get): bool => ($get('kind') ?? 'value') === 'value'),
                                                         Forms\Components\TextInput::make('unit')
                                                             ->label('Unité')
                                                             ->columnSpan(1)
                                                             ->datalist(['g', 'mg', 'µg', 'kcal', 'kJ', 'ml', 'UI'])
-                                                            ->visible(fn (Forms\Get $get): bool => ($get('kind') ?? 'value') === 'value'),
+                                                            ->visible(fn (Get $get): bool => ($get('kind') ?? 'value') === 'value'),
                                                         Forms\Components\TextInput::make('percent_dv')
                                                             ->label('% VQ')
                                                             ->numeric()

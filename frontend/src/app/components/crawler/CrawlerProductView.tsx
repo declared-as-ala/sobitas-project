@@ -28,6 +28,13 @@ import { buildComparison } from '@/util/productComparison';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import {
+  productSourceAttribution,
+  productSourceFactRows,
+  productSourceGallery,
+  productSourceNutritionHtml,
+  productSourceSections,
+} from '@/util/productSourceFacts';
 import type { Product } from '@/types';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
@@ -79,6 +86,29 @@ export function CrawlerProductView({
   const comparison = buildComparison(product, similarProducts);
   const subCategoryName = getProductPrimarySubCategory(product)?.designation_fr ?? '';
   const officialVideoId = videoId(product.official_video);
+  /*
+   * Transcribed specifications — the same rows, from the same function, as the human page.
+   *
+   * Empty for every one of the 309 hand-made products (they carry no source_facts), so the section
+   * below does not render for them and this file's output for those products is unchanged.
+   */
+  const sourceFacts = productSourceFactRows(product);
+  /*
+   * The transcribed product page: the manufacturer's suggested use, ingredient list and warnings,
+   * the Supplement Facts panel, the photo gallery, and one sentence about where the words came from.
+   *
+   * The manufacturer's OVERVIEW is not here — promotion folded it into `description_fr`, so it
+   * arrives through `descriptionHtml` above and is rendered by the Description section, on this
+   * route and on the human one alike. Rendering it here as well would print the same paragraph
+   * twice on the only page Googlebot sees.
+   *
+   * All four are empty for every one of the 309 hand-made products, so every block below is absent
+   * from their markup exactly as it was before this content existed.
+   */
+  const sourceSections = productSourceSections(product);
+  const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
+  const sourceGallery = productSourceGallery(product);
+  const sourceAttribution = productSourceAttribution(product);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -156,6 +186,32 @@ export function CrawlerProductView({
           </section>
         )}
 
+        {/*
+          Transcribed specifications.
+
+          For an imported product this is the only structured fact on the page besides the price:
+          the format printed on the packaging, and the flavour variant. Both come from the source
+          product name via IHerbNormalizer, which transcribes and never converts, and both are
+          rendered here in the same words and the same order as on the human page — the parity
+          requirement that makes this route a projection rather than a second, different page.
+
+          Nothing renders when the list is empty, which is the permanent state of all 309 hand-made
+          products.
+        */}
+        {sourceFacts.length > 0 && (
+          <section aria-label="Caractéristiques" className="my-6">
+            <h2 className="text-lg font-semibold">Caractéristiques</h2>
+            <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
+              {sourceFacts.map((row) => (
+                <div key={row.key} className="contents">
+                  <dt className="font-medium">{row.label}</dt>
+                  <dd>{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </section>
+        )}
+
         {/* Full description — expanded, no "read more" clamp */}
         {descriptionHtml && (
           <section aria-label="Description" className="my-6">
@@ -167,14 +223,57 @@ export function CrawlerProductView({
           </section>
         )}
 
+        {/*
+          The transcribed prose blocks — suggested use, other ingredients, warnings.
+
+          Straight after the description because that is where they sit on the source page and where
+          the human route prints them: the description tab, under the description. Each block's
+          heading is ours (ImportedSourceContent::SECTION_HEADINGS) and each block's CONTENT is the
+          manufacturer's, transcribed verbatim and sanitised — never rewritten, never summarised.
+
+          The warnings block in particular is a safety text a customer acts on. It is rendered whole,
+          in the same words, on both routes; it is not truncated and it is not moved below the fold,
+          because there is no fold on this route and there must be no version of this page where it
+          says less.
+        */}
+        {sourceSections.length > 0 &&
+          sourceSections.map((section) => {
+            const html = sanitizeRichHtml(section.html);
+            if (!html) return null;
+            return (
+              <section key={section.key} aria-label={section.heading} className="my-6">
+                <h2 className="text-lg font-semibold">{section.heading}</h2>
+                <div
+                  className="prose prose-sm mt-2 max-w-none"
+                  dangerouslySetInnerHTML={{ __html: html }}
+                />
+              </section>
+            );
+          })}
+
         {/* Nutrition / specs */}
-        {(nutritionHtml || nutritionImages.length > 0) && (
+        {(nutritionHtml || sourceNutritionHtml || nutritionImages.length > 0) && (
           <section aria-label="Valeurs nutritionnelles" className="my-6">
             <h2 className="text-lg font-semibold">Valeurs nutritionnelles</h2>
             {nutritionHtml && (
               <div
                 className="prose prose-sm mt-2 max-w-none"
                 dangerouslySetInnerHTML={{ __html: nutritionHtml }}
+              />
+            )}
+            {/*
+              The Supplement Facts panel transcribed from the source page, as the table it is.
+
+              It sits AFTER `nutrition_values`, which is the column an admin fills in by hand from
+              the physical label of the lot we hold. When both exist the hand-read one leads, because
+              it is evidence about the product in our warehouse and this one is a transcription of a
+              retailer's rendering of the manufacturer's panel. In practice they never both exist:
+              promotion writes no `nutrition_values`, and no legacy product has a staging row.
+            */}
+            {sourceNutritionHtml && (
+              <div
+                className="prose prose-sm mt-2 max-w-none overflow-x-auto"
+                dangerouslySetInnerHTML={{ __html: sourceNutritionHtml }}
               />
             )}
             {/*
@@ -209,6 +308,58 @@ export function CrawlerProductView({
               </ul>
             )}
           </section>
+        )}
+
+        {/*
+          The product photographs the source page listed.
+
+          Migration 2026_08_10_000008 and CatalogIHerbPromote::coverUrl() both record that a gallery
+          was impossible against the JSON payload — a primary index and no count means probing 1..n
+          and storing URLs that 404. The PAGE lists them outright, so these are enumerated, not
+          guessed; the API drops the source's CMS banners and normalises each URL to the same size
+          variant the cover already uses.
+
+          Plain <img> rather than next/image, like every other image on this route: this view ships
+          no JavaScript on purpose. The alt text names the product and says which photograph it is,
+          because that text is the only part a crawler can read — and Google Images is where a
+          catalogue of product photography actually earns something.
+
+          Absent for all 309 legacy products, which carry no gallery on this route today either.
+        */}
+        {sourceGallery.length > 0 && (
+          <section aria-label="Photos du produit" className="my-6">
+            <h2 className="text-lg font-semibold">Photos du produit</h2>
+            <ul className="mt-2 grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {sourceGallery.map((url, i) => (
+                <li key={url}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={url}
+                    width={300}
+                    height={300}
+                    loading="lazy"
+                    alt={`${product.designation_fr ?? 'Produit'} — photo ${i + 1}/${sourceGallery.length}`}
+                    className="h-auto w-full rounded border"
+                  />
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
+        {/*
+          Where the words above came from, said on the page.
+
+          One sentence, composed server-side so this route and the human route cannot word it
+          differently: the text is transcribed from the manufacturer's own listing, the French may be
+          a machine translation (iHerb declares it on every non-English page, and the transcribed
+          sentences include suggested use and contraindications), and the label printed on the
+          packaging is what governs.
+
+          Null for every product with no transcribed content, which is all 309 legacy products.
+        */}
+        {sourceAttribution && (
+          <p className="my-6 text-xs text-gray-600">{sourceAttribution}</p>
         )}
 
         {/* Reviews — all published, inline */}
@@ -294,15 +445,20 @@ export function CrawlerProductView({
             <h2 className="text-lg font-semibold">Comparer avec des produits similaires</h2>
             <div className="mt-2 overflow-x-auto">
               <table className="w-full border-collapse text-sm">
+                {/* The caption used to name the CURRENT product's subcategory and claim the rows
+                    below were "autres {that category}". They frequently are not: a live Googlebot
+                    fetch showed "Autres barres & snacks protéinés" printed above four whey
+                    proteins. It was a false statement served to a crawler on ~6,133 pages, and it
+                    was avoidable — each row's own category is now a COLUMN, so the table shows the
+                    truth per row instead of asserting a wrong one over all of them. */}
                 <caption className="pb-2 text-left text-gray-600">
-                  {subCategoryName
-                    ? `Autres ${subCategoryName.toLowerCase()} disponibles chez Protein.tn`
-                    : 'Autres produits disponibles chez Protein.tn'}
+                  Produits similaires disponibles chez Protein.tn
                 </caption>
                 <thead>
                   <tr>
                     <th scope="col" className="border-b-2 p-2 text-left">Produit</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Marque</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Catégorie</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Format</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Prix</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Disponibilité</th>
@@ -319,10 +475,21 @@ export function CrawlerProductView({
                         )}
                       </th>
                       <td className="border-b p-2">{row.brand || '—'}</td>
+                      {/* Linked: 4-6 extra internal links to category pages from every product
+                          page, on the crawler route, which is the surface that gets read. */}
+                      <td className="border-b p-2">
+                        {row.category
+                          ? row.categoryUrl
+                            ? <a className="underline" href={row.categoryUrl}>{row.category}</a>
+                            : row.category
+                          : '—'}
+                      </td>
                       <td className="border-b p-2">{row.format || '—'}</td>
                       <td className="border-b p-2">
                         {formatTnd(row.price)}
-                        {row.hasPromo ? ' (promo)' : ''}
+                        {/* "promo" alone never said promo FROM WHAT. The saving is the number the
+                            reader came to this table for. */}
+                        {row.oldPrice != null ? ` au lieu de ${formatTnd(row.oldPrice)}` : row.hasPromo ? ' (promo)' : ''}
                       </td>
                       <td className="border-b p-2">{row.inStock ? 'En stock' : 'En rupture'}</td>
                     </tr>

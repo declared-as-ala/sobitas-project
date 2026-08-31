@@ -3,7 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Facture;
-use App\Services\AramexService;
+use App\Services\AramexTrackingSync;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Schema;
@@ -32,6 +32,19 @@ class AramexTrackingWidget extends Widget
             ->load('client:id,name');
     }
 
+    /**
+     * Manual refresh — the same code path the hourly schedule runs.
+     *
+     * It used to be a private copy: its own query, its own loop, and a write that touched only
+     * `factures.aramex_status`. So pressing this button told you a parcel had been delivered and
+     * left the ORDER untouched — no delivered_at, no loyalty points, no review request. That
+     * divergence is exactly what AramexTrackingSync exists to remove, and a button that does
+     * something subtly different from the scheduler is worse than no button.
+     *
+     * (Its query was also wrong. `->whereNotIn(...)->orWhere(...)` binds as
+     * `(A AND B) OR (C AND D)`, so it re-admitted rows the first half had just excluded and
+     * re-polled settled shipments on every press.)
+     */
     public function refreshAll(): void
     {
         if (! Schema::hasColumn('factures', 'aramex_hawb')) {
@@ -40,28 +53,17 @@ class AramexTrackingWidget extends Widget
 
         $this->loading = true;
 
-        $shipments = Facture::query()
-            ->whereNotNull('aramex_hawb')
-            ->whereNotIn('aramex_status', ['SH006', 'SH069', 'annulé'])
-            ->orWhere(fn ($q) => $q->whereNotNull('aramex_hawb')->whereNull('aramex_status'))
-            ->get(['id', 'aramex_hawb']);
-
-        $service = app(AramexService::class);
-        $updated = 0;
-
-        foreach ($shipments as $bl) {
-            $result = $service->trackShipment($bl->aramex_hawb);
-            if ($result['update_code']) {
-                $bl->aramex_status = $result['update_code'];
-                $bl->save();
-                $updated++;
-            }
-        }
+        $result = app(AramexTrackingSync::class)->sync();
 
         $this->loading = false;
 
+        $body = $result['orders_updated'] > 0
+            ? $result['orders_updated'] . ' commande(s) marquée(s) comme livrée(s).'
+            : null;
+
         Notification::make()
-            ->title($updated . ' expédition(s) mise(s) à jour')
+            ->title($result['status_changed'] . ' expédition(s) mise(s) à jour')
+            ->body($body)
             ->success()
             ->send();
     }

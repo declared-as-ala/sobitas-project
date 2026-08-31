@@ -27,7 +27,7 @@ class SoumissionMail extends Mailable
      */
     public function build(): static
     {
-        $from = $this->fromAddress ?? 'contact@protein.tn';
+        $from = $this->fromAddress ?: (string) config('mail.from.address');
 
         return $this->from($from)
             ->subject('Protein.TN | Suivi de commande')

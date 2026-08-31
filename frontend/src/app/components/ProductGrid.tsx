@@ -33,18 +33,39 @@ import { cn } from '@/app/components/ui/utils';
 export function ProductGrid({
   children,
   className,
+  as: Tag = 'div',
+  role,
 }: {
   children: ReactNode;
   className?: string;
+  /**
+   * The element to render. `div` for the rails, `ul` for a band that wants list semantics.
+   *
+   * ── WHY THIS PROP EXISTS AT ALL ─────────────────────────────────────────────────────────
+   * Ventes flash wanted `<ul role="list">` — a rail's only "there is more" cue is visual, so a
+   * list announces its size to a screen reader — and this component rendered a hard `<div>`. So
+   * it copied the class string instead, and the copy immediately drifted: it shipped
+   * `grid-cols-1 min-[420px]:grid-cols-2 lg:grid-cols-4` with `gap-2.5 sm:gap-3`. Two arbitrary
+   * numbers (a 420px breakpoint that is on no scale, a 10px gap that is on no lattice) and a
+   * MISSING `md` step, so at 768-1023px the flash band showed two columns while the identical
+   * rail above it showed three.
+   *
+   * That is the exact failure the docblock above this one is about. A component that cannot be
+   * reused in the one shape a caller needs does not prevent the fork — it guarantees it.
+   */
+  as?: 'div' | 'ul';
+  /** Set alongside `as="ul"`: preflight's `list-style:none` makes Safari+VoiceOver drop list semantics. */
+  role?: string;
 }) {
   return (
-    <div
+    <Tag
+      role={role}
       className={cn(
         'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 lg:gap-6',
         className,
       )}
     >
       {children}
-    </div>
+    </Tag>
   );
 }

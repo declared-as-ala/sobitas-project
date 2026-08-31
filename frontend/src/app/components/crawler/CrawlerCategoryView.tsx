@@ -22,6 +22,7 @@ export type CrawlerListLink = { name: string; url: string };
 
 export function CrawlerCategoryView({
   title,
+  headingOverride,
   introHtml,
   howToChooseTitle = null,
   howToChooseBody = null,
@@ -31,9 +32,12 @@ export function CrawlerCategoryView({
   products,
   subCategories = [],
   relatedCategories = [],
+  pagination = null,
   kind,
 }: {
   title: string;
+  /** Optional editorial H1 for a measured landing page; `title` still names the taxonomy. */
+  headingOverride?: string;
   introHtml?: string | null;
   /** Buying guide + FAQ, mirroring the human category page. Omitting these handed Googlebot
    *  roughly a tenth of the page's real content — see the note at the render site below. */
@@ -45,6 +49,21 @@ export function CrawlerCategoryView({
   products: Product[];
   subCategories?: CrawlerListLink[];
   relatedCategories?: CrawlerListLink[];
+  /**
+   * Crawlable pagination.
+   *
+   * ── WHY A BOT VIEW NEEDS A PAGER AT ALL ─────────────────────────────────────────────────────
+   * This route exists because the human /shop hides its catalogue behind client state. It was then
+   * given the WHOLE catalogue in one page, which solved that and created a second problem the
+   * moment the iHerb import landed: 10,669 products as one flat list is a multi-megabyte document
+   * that Googlebot truncates, and it says nothing about which products belong together.
+   *
+   * Twelve per page with real prev/next/numbered anchors — matching the human page exactly, which
+   * is the parity rule this file's docblock insists on — gives the crawler a finite document and a
+   * path it can walk to the last product. `buildHref` is supplied by the caller so the same
+   * component serves /shop?page=N and any future paginated category view.
+   */
+  pagination?: { currentPage: number; totalPages: number; buildHref: (page: number) => string } | null;
   kind: 'category' | 'subcategory' | 'brand';
 }) {
   const productLinks = (products ?? [])
@@ -52,10 +71,10 @@ export function CrawlerCategoryView({
     .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
     .filter((p) => p.url && p.url !== '/shop/');
 
-  const heading =
-    kind === 'brand'
+  const heading = headingOverride ||
+    (kind === 'brand'
       ? `Produits ${title}`
-      : title;
+      : title);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -159,6 +178,60 @@ export function CrawlerCategoryView({
           </p>
         )}
       </section>
+
+      {/* Pagination — plain anchors, because this is the only route Googlebot has to the catalogue
+          past page 1. Prev/next PLUS an explicit first and last: a crawler that only ever follows
+          "next" needs 890 sequential fetches to reach the end of the shop, which no crawl budget
+          covers, whereas a direct link to the last page lets it sample both ends. */}
+      {pagination && pagination.totalPages > 1 && (
+        <nav aria-label="Pagination" className="my-6 border-t border-hairline pt-4">
+          <p className="text-sm text-ink-3">
+            Page {pagination.currentPage} sur {pagination.totalPages}
+          </p>
+          <ul className="mt-2 flex flex-wrap gap-3 text-sm">
+            {pagination.currentPage > 1 && (
+              <>
+                <li>
+                  <a className="text-brand underline" href={pagination.buildHref(1)} rel="first">
+                    Première page
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-brand underline"
+                    href={pagination.buildHref(pagination.currentPage - 1)}
+                    rel="prev"
+                  >
+                    Page précédente
+                  </a>
+                </li>
+              </>
+            )}
+            {pagination.currentPage < pagination.totalPages && (
+              <>
+                <li>
+                  <a
+                    className="text-brand underline"
+                    href={pagination.buildHref(pagination.currentPage + 1)}
+                    rel="next"
+                  >
+                    Page suivante
+                  </a>
+                </li>
+                <li>
+                  <a
+                    className="text-brand underline"
+                    href={pagination.buildHref(pagination.totalPages)}
+                    rel="last"
+                  >
+                    Dernière page ({pagination.totalPages})
+                  </a>
+                </li>
+              </>
+            )}
+          </ul>
+        </nav>
+      )}
 
       {/* Sub-categories under a top category (deeper crawl paths) */}
       {subCategories.length > 0 && (

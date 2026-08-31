@@ -16,11 +16,14 @@ import {
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
-import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema, buildFAQPageSchemaFromQA } from '@/util/structuredData';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
+import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
 
 export type RootSlugPageProps = {
   params: Promise<{ slug: string }>;
@@ -132,7 +135,7 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   };
 }
 
-export async function generateMetadata({ params }: RootSlugPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: RootSlugPageProps): Promise<Metadata> {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
   if (!cleanSlug || isReservedRouteSlug(cleanSlug)) {
@@ -140,7 +143,9 @@ export async function generateMetadata({ params }: RootSlugPageProps): Promise<M
   }
 
   if (await hasCategoryOrSubCategory(cleanSlug)) {
-    return generateCategoryMetadata({ params });
+    // searchParams forwarded, or ?page=7 would inherit page 1's canonical and declare the other
+    // pages of the series non-existent — see the note on canonicalUrl in the category route.
+    return generateCategoryMetadata({ params, searchParams });
   }
 
   const brand = await findBrandBySlug(cleanSlug);
@@ -158,7 +163,7 @@ export async function generateMetadata({ params }: RootSlugPageProps): Promise<M
   return { title: 'Page introuvable | Proteine Tunisie', robots: { index: false, follow: false } };
 }
 
-export default async function RootSlugPage({ params }: RootSlugPageProps) {
+export default async function RootSlugPage({ params, searchParams }: RootSlugPageProps) {
   const { slug } = await params;
   const cleanSlug = slug?.trim();
 
@@ -167,7 +172,9 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
   }
 
   if (await hasCategoryOrSubCategory(cleanSlug)) {
-    return <CategoryPage params={params} />;
+    // Without searchParams this route renders page 1 for every page number: /sante-vitalite?page=2
+    // answered 200 and was a byte-for-byte duplicate of page 1, measured 14/08/2026.
+    return <CategoryPage params={params} searchParams={searchParams} />;
   }
 
   const brand = await findBrandBySlug(cleanSlug);
@@ -186,8 +193,9 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
     // a bare BreadcrumbList was emitted, so brand pages (a primary ranking surface) were nearly
     // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
     const baseUrl = getBaseUrl();
+    const brandSeo = getBrandSeoEntry(cleanSlug);
     const brandTitle = buildBrandMetaTitle(brand.designation_fr);
-    const brandDesc = `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
+    const brandDesc = brandSeo?.metaDescription || `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
         { name: 'Accueil', url: '/' },
@@ -205,6 +213,7 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
           { name: `Produits ${brand.designation_fr}` }
         )
       : null;
+    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
 
     return (
       <>
@@ -213,11 +222,16 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
         {itemListSchema && (
           <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
         )}
+        {faqSchema && (
+          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+        )}
         <ShopPageClient
           productsData={productsData}
           categories={categories}
           brands={result.brands}
           initialBrand={brand.id}
+          categorySeoLanding={brandSeo ? <BrandSeoHeader entry={brandSeo} /> : undefined}
+          categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : undefined}
         />
       </>
     );
@@ -248,43 +262,72 @@ export default async function RootSlugPage({ params }: RootSlugPageProps) {
   }
 
   /**
-   * LEGACY NUMERIC SUFFIX on a listing slug (/creatine-2, /vitamines-2, /whey-isolate-5, …).
-   * The old site paginated/duplicated category, subcategory and brand URLs by appending an index.
-   * Every one of them is a hard 404 today (56 of them in the current Search Console export).
+   * THE DEAD END: A ROOT-LEVEL SLUG THAT IS NEITHER CATEGORY, BRAND NOR CMS PAGE.
    *
-   * This runs ONLY after category, subcategory, brand and CMS-page resolution have all failed, so
-   * a real slug that happens to end in a number (omega-3, whey-80-2kg) is resolved above and never
-   * reaches here. Sending the dead URL to its base listing in one 301 recovers the link equity
-   * instead of dropping it.
+   * Two shapes arrive here, and until now only one of them was answered.
+   *
+   * LEGACY NUMERIC SUFFIX (/creatine-2, /vitamines-2, /whey-isolate-5) — the old site duplicated
+   * listing URLs by appending an index. These were handled, but UNCONDITIONALLY: the code below
+   * used to be `permanentRedirect('/' + baseSlug)` with nothing checking that the base resolved.
+   * Measured on production 17/08/2026, `/zzz-fake-thing-2` answered 308 → `/zzz-fake-thing` → 404
+   * — a cacheable redirect into a 404, which is the exact shape the rest of this codebase was
+   * rewritten to stop producing. The base is now verified before the hop is spent.
+   *
+   * ROOT-LEVEL PRODUCT SLUG (/citrulline-malate-210g-ostrovit) — the old site's flat product URL,
+   * and this route never asked whether a slug was a PRODUCT. It probes category, then brand, then
+   * CMS page, and 404s. That product is live: API id=409, served at
+   * /citrulline/citrulline-malate-210g-ostrovit. The gap has been filled by hand ever since —
+   * 17 rules in Filament → Redirections plus ~50 in redirects.js, one URL at a time, and most of
+   * them aimed at a CATEGORY because that is what a person can look up quickly. Resolved here they
+   * reach the product itself.
+   *
+   * Both are safe at this point precisely because everything else has already failed: a real slug
+   * that happens to end in a number (omega-3, whey-80-2kg) was served above and never reaches here.
    */
-  const baseSlug = cleanSlug.replace(/-\d+$/, '');
-  if (baseSlug && baseSlug !== cleanSlug) {
-    permanentRedirect(`/${baseSlug}`);
+  const retired = await retiredSlugDestination(cleanSlug, {
+    product: true,
+    // This route's own resolvers are authoritative for "is it a listing" — the taxonomy set that
+    // middleware uses knows categories but not brands or CMS pages, and /optimum-nutrition-2
+    // strips to a BRAND.
+    listing: async (candidate) =>
+      (await hasCategoryOrSubCategory(candidate)) ||
+      (await findBrandBySlug(candidate)) !== null ||
+      (await findPageBySlug(candidate)) !== null,
+  });
+  if (retired) {
+    permanentRedirect(retired);
   }
 
   notFound();
 }
 
 /**
- * Opt this route into the Full Route Cache.
+ * ── generateStaticParams IS GONE, AND THAT IS THE PRICE OF ?page=N ────────────────────────────
  *
- * Next only registers a dynamic segment in `prerenderManifest.dynamicRoutes` when the route
- * exports generateStaticParams. Without it the route is compiled as `ƒ` (server-rendered on
- * demand) and `export const revalidate` above is inert — which is why every listing and product
- * URL was answering `Cache-Control: private, no-cache, no-store` no matter how many fetch-level
- * cache fixes landed, while param-less routes like `/` cached normally.
+ * It used to return an empty array purely to register this route in `prerenderManifest.dynamicRoutes`,
+ * which is what made `export const revalidate = 600` take effect. That note was correct and the
+ * measurement behind it still holds — without the export the route compiles as `ƒ` and every request
+ * re-renders.
  *
- * Returning an EMPTY array is deliberate, and is enough. Verified with a controlled build against
- * this project's own Next 15.5.9:
- *   no generateStaticParams  -> `ƒ /[slug]`, dynamicRoutes: []          , every request re-renders
- *   `return []`              -> `● /[slug]`, dynamicRoutes: ["/[slug]"] , 1st request MISS, 2nd HIT
- * So on-demand ISR covers every slug; nothing needs to be enumerated.
+ * It had to go because the two are mutually exclusive. A route registered as statically renderable
+ * may not read `searchParams`, and reading `searchParams` is the only way to serve ?page=2. Shipping
+ * both produced exactly what Next promises it will: every category and subcategory URL answered
  *
- * Enumerating the catalogue here would be actively worse: `next build` runs in CI where Cloudflare
- * 403s the runner, so the list would come back empty or partial and bake bad pages — the exact
- * failure this codebase has hit before. An empty list cannot bake anything wrong; it only skips
- * build-time prewarming, and the first visitor to each URL warms it.
+ *     Error: An error occurred in the Server Components render
+ *     digest: 'DYNAMIC_SERVER_USAGE'
+ *
+ * i.e. HTTP 500 on /proteines, /probiotiques and every other listing — live, for the twenty minutes
+ * it took to notice and revert. The build passes, because with an empty param list there is nothing
+ * to prerender and therefore nothing to fail; the throw only happens when a real request arrives.
+ * That is the whole reason this comment is here rather than a one-line removal.
+ *
+ * ── WHAT PAYS FOR IT ─────────────────────────────────────────────────────────────────────────
+ * The same thing that paid for it on /shop, which made this identical trade for the identical
+ * reason: the DATA is cached with unstable_cache even though the RENDER is not. The expensive part
+ * of this route was never React — it was the API walk, and that is now one 12-row request behind a
+ * 600s cache instead of up to 88 concurrent 100-row requests per render.
+ *
+ * So the route loses its HTML cache and gains a data cache, and the origin load goes DOWN rather
+ * than up. Bots are unaffected either way: middleware rewrites them to /x-crawler/category/{slug},
+ * which keeps its own generateStaticParams and its own full-catalogue render.
  */
-export function generateStaticParams(): { slug: string }[] {
-  return [];
-}

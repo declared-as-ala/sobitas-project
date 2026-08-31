@@ -5,9 +5,14 @@
  */
 
 import { getStorageUrl } from '@/services/api';
+import { OPENING_HOURS } from '@/util/company';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
-import { isInStock } from '@/util/cartStock';
+import { isInStock, getProductStockStatus } from '@/util/cartStock';
+import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import { productSourceGallery } from '@/util/productSourceFacts';
+import { cleanSourceText } from '@/util/sourceBoilerplate';
 import type { Product, FAQ, Review } from '@/types';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
@@ -83,6 +88,85 @@ function defaultPriceValidUntil(): string {
 
 /** Shipping destination is required by Google alongside shippingRate/deliveryTime. */
 const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } as const;
+
+/**
+ * OfferShippingDetails — emitted ONLY for a product that is actually in stock.
+ *
+ * `deliveryTime` asserts handling in 0-1 days and transit in 1-3 days. That is a true statement
+ * about a product sitting in the Sousse shop and a false one about a product we do not hold: the
+ * catalogue import promotes every product with qte = 0 (catalog.promotion.initial_qte), so without
+ * this gate ~20,000 Offers would each carry a delivery commitment for goods that have never been in
+ * the country, right next to `availability: OutOfStock` that says so.
+ *
+ * The trade-off, stated rather than hidden: shippingDetails is a RECOMMENDED field for merchant
+ * listings, so out-of-stock products may show "missing field shippingDetails" as a non-critical
+ * Search Console warning. That is the correct side to be wrong on — an out-of-stock item is not
+ * eligible for a merchant listing anyway, so the field buys nothing, while a shipping promise we
+ * cannot keep is a claim about the real world. Everything Google actually requires on the Offer —
+ * price, priceCurrency, availability, itemCondition, url, hasMerchantReturnPolicy — stays
+ * unconditional.
+ */
+/**
+ * schema.org availability, with BackOrder for the catalogue the shop does not physically hold.
+ *
+ * Three states, not two. 10,535 of 10,669 published products are imported catalogue entries with
+ * qte=0 — they were never in stock and never sold out. Declaring those OutOfStock is both wrong and
+ * expensive: OutOfStock forfeits Google merchant-listing and free-product-listing eligibility, while
+ * BackOrder ("orderable but not in stock") keeps it.
+ *
+ * OutOfStock is reserved for `force_out_of_stock`, the owner's explicit "do not sell this" switch.
+ * That distinction is the whole point — a blanket BackOrder would advertise as obtainable the one
+ * category of product the owner has deliberately marked unobtainable.
+ */
+function availabilityFor(product: Parameters<typeof getProductStockStatus>[0]): string {
+  const status = getProductStockStatus(product);
+  if (!status.isOutOfStock) return 'https://schema.org/InStock';
+  return status.isBackOrder ? 'https://schema.org/BackOrder' : 'https://schema.org/OutOfStock';
+}
+
+function buildShippingDetails(product: Product, price: number): Record<string, unknown> | null {
+  if (!isInStock(product)) return null;
+
+  return {
+    '@type': 'OfferShippingDetails',
+    shippingRate: { '@type': 'MonetaryAmount', value: price >= 300 ? 0 : 10, currency: 'TND' },
+    shippingDestination: SHIPPING_DESTINATION,
+    deliveryTime: {
+      '@type': 'ShippingDeliveryTime',
+      handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
+      transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
+    },
+  };
+}
+
+/**
+ * The Product `description`, never empty, and never the same sentence 20,000 times.
+ *
+ * This used to end in one hardcoded literal — "{name} — complément alimentaire authentique
+ * disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie." — duplicated in
+ * both builders. Two problems, and the catalogue import turns both from cosmetic into structural:
+ *
+ * 1. It is IDENTICAL across every product that lacks a description, differing only by the substituted
+ *    name. At 309 products that was a handful of pages. At ~20,000 imported products it is the
+ *    single most repeated string on the domain, and "many pages whose text differs only by a
+ *    substituted noun" is the literal description of scaled content abuse.
+ * 2. It did not match the visible page. The PDP renders generateProductFallbackDescription() in its
+ *    Description section, so the structured data described the product one way and the body another.
+ *
+ * Both are fixed by deriving from the same generator the page renders: the text is attribute-driven
+ * (name, brand, subcategory, flavours, price, stock) so it varies with the product, and structured
+ * data and visible text now state the same thing. It still asserts nothing we do not hold — every
+ * value in it comes from a column.
+ *
+ * The literal remains as a last resort for the case where even that generator produces nothing,
+ * because "Missing field description" must not be reachable.
+ */
+function factualProductDescription(product: Product): string {
+  const generated = stripHtml(generateProductFallbackDescription(product), 500);
+  if (generated) return generated;
+
+  return `${product.designation_fr || 'Produit'} — produit référencé chez ${SITE_BRAND_NAME}.`;
+}
 
 
 export type BreadcrumbItem = { name: string; url: string };
@@ -328,8 +412,32 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
 }
 
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
+  /*
+   * ── EVERY PHOTOGRAPH WE HOLD, NOT JUST THE COVER (owner, 16/08/2026) ────────────────────────
+   *
+   * 6,437 products carry 23,293 photographs between them and this schema was declaring ONE.
+   *
+   * `image` is a REQUIRED field for Product rich results, and Google's own guidance asks for
+   * several images per product — different angles, the label, the packaging — because that is what
+   * lets a result qualify for the image-rich treatments in Search and in Google Images. Sending one
+   * URL when eight exist is the difference between an eligible listing and a minimal one, on
+   * roughly ten thousand pages.
+   *
+   * ORDER MATTERS AND THE COVER STAYS FIRST. Google treats the first entry as the primary image,
+   * and the cover is the photograph the shop chose. The gallery follows it, deduplicated — on an
+   * imported product the cover IS gallery[0], so without the Set the primary image would be
+   * declared twice.
+   *
+   * WHERE THESE URLS POINT, STATED PLAINLY: the imported photography is referenced on the source
+   * CDN rather than mirrored, so these entries leave our domain. That is a real dependency and the
+   * owner has taken it knowingly. It is not a new one — `cover` on those same products already
+   * points at the same host, so this widens an existing exposure rather than opening one. The host
+   * is in `next.config.js images.remotePatterns` and in `config/catalog.php media.external_hosts`;
+   * both are required, and dropping either breaks the images site-wide.
+   */
+  const galleryImages = productSourceGallery(product as Parameters<typeof productSourceGallery>[0]);
   // Main product cover first so Google uses it as primary image in Product rich results.
-  const rawImages = [product.schema?.image, product.seo?.image, product.cover, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
+  const rawImages = [product.schema?.image, product.seo?.image, product.cover, ...galleryImages, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
   const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
   if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
   const imageArray = imagePaths
@@ -345,7 +453,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     : (parsePriceForSchema(product.schema?.price) ?? effectivePrice);
   const availability =
     product.schema?.availability
-    ?? (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
+    ?? availabilityFor(product);
   const description = stripHtml(
     product.seo?.description || product.seo_description || product.meta_description || product.description_cover || product.description_fr || '',
     500
@@ -365,7 +473,6 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     return null;
   }
 
-  const shippingRateValue = price >= 300 ? 0 : 10;
   const offersPayload: Record<string, unknown> = {
     '@type': 'Offer',
     url: canonicalUrl,
@@ -374,18 +481,12 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     availability,
     itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
     seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
-    shippingDetails: {
-      '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
-      shippingDestination: SHIPPING_DESTINATION,
-      deliveryTime: {
-        '@type': 'ShippingDeliveryTime',
-        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
-      },
-    },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
+
+  // In-stock only — see buildShippingDetails.
+  const shippingDetails = buildShippingDetails(product, price);
+  if (shippingDetails) offersPayload.shippingDetails = shippingDetails;
 
   // On an active promo, the sale price is only valid until the promo expires — tell Google so it
   // doesn't keep showing a stale sale price after the promotion ends.
@@ -404,10 +505,8 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     '@context': 'https://schema.org',
     '@type': 'Product',
     name: cleanSchemaName(product.designation_fr),
-    // Never empty (GSC "Missing field description") — factual fallback from real product identity.
-    description:
-      description ||
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
+    // Never empty (GSC "Missing field description") — see factualProductDescription.
+    description: description || factualProductDescription(product),
     // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
     image: dedupedImages.length > 0 ? dedupedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     sku,
@@ -478,15 +577,47 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const source = deepStripRatingNodes(raw) as Record<string, unknown>;
   delete source['@graph'];
   const canonical = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
-  const normalizedImages = normalizeJsonLdImages(source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover);
+  /*
+   * ── THE GALLERY BELONGS HERE TOO, AND THIS IS THE BUILDER THAT ACTUALLY RUNS ────────────────
+   *
+   * `app/(shop)/[slug]/[productSlug]/page.tsx` prefers this function whenever the backend sends a
+   * `schema` blob, falling back to `buildProductJsonLd` only when it does not. Every imported
+   * product HAS that blob, so adding the gallery to the other builder alone changed nothing for
+   * the ~10,000 pages it was meant for. Verified on a local production build before this line
+   * existed: `Product JSON-LD image entries: 1` on a product whose API response carries three.
+   *
+   * The backend's own `schema.image` is a single string — the cover — so it stays FIRST and keeps
+   * its meaning as the primary image. The gallery is appended and the whole list deduplicated,
+   * because on an imported product the cover is also `gallery[0]`.
+   */
+  const normalizedImages = [
+    ...new Set(
+      normalizeJsonLdImages([
+        source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover,
+        ...productSourceGallery(product as Parameters<typeof productSourceGallery>[0]),
+      ].flat())
+    ),
+  ];
   const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
   const availability =
     (typeof product.schema?.availability === 'string' && product.schema.availability) ||
-    (isInStock(product) ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock');
-  const price = formatSchemaPrice(getSchemaPrice(product));
-  const brandName = (product.schema?.brand || product.brand?.designation_fr || SITE_BRAND_NAME).toString();
+    availabilityFor(product);
+  const priceNumber = getSchemaPrice(product);
+  const price = formatSchemaPrice(priceNumber);
+  /**
+   * The brand, or NO brand node at all.
+   *
+   * This used to fall back to SITE_BRAND_NAME, which made every brandless product declare
+   * `brand: { name: "Protéine Tunisie" }` — asserting that the shop manufactures the goods it
+   * resells, and inventing a Brand @id URL to go with it. buildProductJsonLd has always omitted the
+   * node instead (`brand: … : undefined`), so the two builders disagreed about the same product
+   * depending on whether the backend graph happened to be present.
+   *
+   * `brand` is recommended, not required, for Product rich results. Omitting it costs a recommended
+   * field; filling it with the retailer's name states something untrue about who makes the product.
+   */
+  const realBrand = (product.schema?.brand || product.brand?.designation_fr || '').toString().trim();
 
-  const shippingRateValue = getSchemaPrice(product) >= 300 ? 0 : 10;
   const offersInput =
     (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
   const offers: Record<string, unknown> = {
@@ -503,18 +634,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
       name: SITE_BRAND_NAME,
       url: PRODUCTION_ORIGIN,
     },
-    shippingDetails: {
-      '@type': 'OfferShippingDetails',
-      shippingRate: { '@type': 'MonetaryAmount', value: shippingRateValue, currency: 'TND' },
-      shippingDestination: SHIPPING_DESTINATION,
-      deliveryTime: {
-        '@type': 'ShippingDeliveryTime',
-        handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-        transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
-      },
-    },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
+
+  // In-stock only — see buildShippingDetails. The `delete` matters as much as the assignment: the
+  // backend Offer arrives through `...offersInput` and can carry its own shippingDetails, so simply
+  // not setting ours would let the upstream delivery promise survive on an out-of-stock product.
+  const sanitizeShipping = buildShippingDetails(product, priceNumber);
+  if (sanitizeShipping) offers.shippingDetails = sanitizeShipping;
+  else delete offers.shippingDetails;
 
   // Mirror buildProductJsonLd: on an active promo the sale price expires with the promo.
   const sanitizeUntilRaw = product.schema?.price_valid_until
@@ -537,11 +665,6 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     mainEntityOfPage: canonical,
     sku,
     productID: sku,
-    brand: {
-      '@type': 'Brand',
-      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandName.toLowerCase().replace(/\s+/g, '-'))}`,
-      name: brandName,
-    },
     // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
     image: normalizedImages.length > 0 ? normalizedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
     description:
@@ -550,10 +673,46 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
         500
       ) ||
       (typeof source.description === 'string' && source.description.trim() ? source.description : '') ||
-      // Factual fallback so "Missing field description" can't occur (never an empty string).
-      `${product.designation_fr || 'Produit'} — complément alimentaire authentique disponible en Tunisie chez Protéine Tunisie, livraison rapide partout en Tunisie.`,
+      // Never empty (GSC "Missing field description") — see factualProductDescription.
+      factualProductDescription(product),
     offers,
   };
+
+  if (realBrand) {
+    sanitized.brand = {
+      '@type': 'Brand',
+      /*
+       * THE BRAND @id MUST BE THE BRAND PAGE'S REAL URL, AND IT WAS NOT.
+       *
+       * This was `realBrand.toLowerCase().replace(/\s+/g, '-')`, which collapses spaces and leaves
+       * every other character alone. Measured live on 12/08/2026 for "Nature's Way":
+       *
+       *     emitted   https://protein.tn/nature's-way   -> 404
+       *     the page  https://protein.tn/nature-s-way   -> 200
+       *
+       * An `@id` is an identifier Google resolves and follows; pointing it at a 404 tells Google
+       * the brand entity does not exist, on every product of that brand. Apostrophes, ampersands
+       * and dots are common in supplement brand names (Nature's Way, Doctor's Best, Nature's
+       * Bounty), so this was not one product — it was a whole class of them.
+       *
+       * brandNameToSlug is the function that ALREADY decides this site's brand URLs: it folds
+       * accents, turns every non-alphanumeric run into a single hyphen (so "Nature's Way" becomes
+       * "nature-s-way", matching the live page) and applies BRAND_SLUG_OVERRIDES, which exists
+       * because `app/api/` shadows the `(shop)/[slug]` route and the brand "API" would otherwise
+       * point at a route handler. Deriving the URL a second way here could only ever drift from
+       * the router, and did.
+       *
+       * encodeURIComponent stays as a belt-and-braces guard; the slug it now receives is already
+       * URL-safe, so it is a no-op rather than the thing producing %27.
+       */
+      '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandNameToSlug(realBrand))}`,
+      name: realBrand,
+    };
+  } else {
+    // No brand we can name. Drop whatever `...source` supplied rather than letting the backend's
+    // own fallback stand in for one.
+    delete sanitized.brand;
+  }
 
   if (normalizedImages.length > 0) {
     sanitized.image = normalizedImages;
@@ -569,6 +728,30 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
 
   if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
+  /*
+   * -- THE SOURCE RETAILER'S NAME MUST NOT BE IN OUR STRUCTURED DATA ------------------------
+   * `json_ld_product.description` arrives from the backend carrying the source site's own
+   * accuracy-and-translation notice, and that notice names the source retailer four times.
+   * Measured on one product; it is the same transcribed block on every imported one, which is
+   * 21,273 pages with a competitor's brand inside the `description` field of our Product schema —
+   * the field Google is most likely to quote back in a rich result.
+   *
+   * `cleanSourceText` cuts the notice (the shop states the same two facts in its own words on the
+   * page) and redacts anything that survives. Applied HERE because this is the choke point: all
+   * three routes that emit a Product schema from the backend blob go through this function.
+   */
+  if (typeof sanitized.description === 'string') {
+    const cleaned = cleanSourceText(sanitized.description).trim();
+    /*
+     * FALL BACK, never delete. `description` is required for a Product rich result and an absent
+     * one is a "Missing field description" error in Search Console — so the cut must not be able
+     * to create one. It can: a product whose description_fr is nothing but the transcribed notice
+     * would clean down to an empty string. `factualProductDescription` is the same never-empty
+     * generator the other builder ends its chain with.
+     */
+    sanitized.description = cleaned.length >= 40 ? cleaned : factualProductDescription(product);
+  }
+
   // The return policy is emitted (validly) on the Offer above. Remove any PRODUCT-level
   // hasMerchantReturnPolicy that leaked in via `...source` — the backend's copy can carry a
   // stale/invalid returnPolicyCategory, which is what triggers Google's "Invalid enum value
@@ -662,6 +845,10 @@ export function buildOrganizationSchema(
     alternateName: ['SOBITAS', 'Sobitas'],
     url: base,
     logo: `${base}/logo.png`,
+    // Search Console recommends a store-level return policy in addition to the policy carried
+    // by each Product Offer. Keeping both tied to the same constant prevents the organization
+    // and product graphs from drifting into contradictory commercial terms.
+    hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
     description:
       'Whey protein, créatine, vitamines et compléments alimentaires en Tunisie — livraison rapide et produits authentiques. Boutique à Sousse, livraison dans tout le pays.',
     ...(rating
@@ -791,21 +978,15 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     priceRange: '$$',
     currenciesAccepted: 'TND',
     paymentAccepted: 'Cash on delivery, Bank transfer',
-    // Must match the visible hours on the Contact page (Lun→Sam 10h–19h30, Dimanche 14h–19h).
-    openingHoursSpecification: [
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
-        opens: '10:00',
-        closes: '19:30',
-      },
-      {
-        '@type': 'OpeningHoursSpecification',
-        dayOfWeek: 'Sunday',
-        opens: '14:00',
-        closes: '19:00',
-      },
-    ],
+    /* Derived from util/company.ts's OPENING_HOURS, not retyped. The comment that used to sit
+       here said "Must match the visible hours on the Contact page" — an instruction to a future
+       reader to keep two literals in sync by hand, which is the failure this now cannot have. */
+    openingHoursSpecification: OPENING_HOURS.spec.map((slot) => ({
+      '@type': 'OpeningHoursSpecification',
+      dayOfWeek: slot.days,
+      opens: slot.opens,
+      closes: slot.closes,
+    })),
     sameAs: [
       'https://www.facebook.com/protein.tn',
       'https://www.instagram.com/protein.tn',
@@ -932,7 +1113,11 @@ export function buildItemListSchema(
     name: options?.name || 'Produits',
     description: options?.description || undefined,
     numberOfItems: items.length,
-    itemListElement: items.slice(0, 20).map((item, index) => ({
+    /* 30, not 20. /shop renders SHOP_PER_PAGE = 24 products a page, so a 20-item cap silently
+       dropped four products from every page of a 470-page series — 1,880 products, on the only
+       listing markup they appear in. The cap exists to stop a 3,000-item category page emitting
+       600 KB of JSON-LD, which 30 still does; it was never meant to be tighter than a page. */
+    itemListElement: items.slice(0, 30).map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,
       name: item.name,
@@ -1003,7 +1188,12 @@ export function buildArticleSchema(article: {
   const rawAuthor = String(article.seo?.author || article.schema?.author || '').trim();
   const author = rawAuthor && rawAuthor !== SITE_BRAND_NAME
     ? { '@type': 'Person', name: rawAuthor }
-    : { '@type': 'Organization', name: SITE_BRAND_NAME, '@id': `${base}/#organization` };
+    : {
+        '@type': 'Organization',
+        name: SITE_BRAND_NAME,
+        '@id': `${base}/#organization`,
+        url: base,
+      };
   return {
     '@context': 'https://schema.org',
     '@type': article.schema?.type || 'BlogPosting',

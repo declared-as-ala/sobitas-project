@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
+import { retiredSlugDestination } from '@/util/retiredSlug';
 import dynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
@@ -18,6 +19,8 @@ import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, i
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 import { buildMetaDescription } from '@/util/sanitizeProductHtml';
+import { getComplementProducts } from '@/services/productComplements';
+import { getPriceDisplay } from '@/util/productPrice';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -40,6 +43,29 @@ function getErrorStatus(e: unknown): number | null {
 
 /** CTR-optimized product title for Tunisia SERP. */
 function productTitle(product: Product): string {
+  /*
+   * Search Console opportunity titles (3-month export, 31/08/2026).
+   *
+   * These are deliberately limited to products with meaningful impressions where the imported
+   * catalogue title does not answer the actual query.  They do not invent discounts, stock or
+   * delivery promises; price and availability remain in Product/Offer structured data.  Keeping
+   * this as a small reviewed map also avoids turning every PDP into the same keyword template.
+   */
+  const searchOpportunityTitles: Record<string, string> = {
+    'omega-3-fish-oil-240-softgel-weightworld':
+      'Omega 3 Fish Oil WeightWorld 240 capsules – Prix Tunisie',
+    '100-whey-gold-standard-2-27kg':
+      'Gold Standard Whey 2,27 kg – Prix Tunisie | Protein.tn',
+    'anabolic-whey-80-2-25kg-proactive':
+      'Anabolic Whey 80 ProActive 2,25 kg – Prix Tunisie',
+    'serious-mass-2-7-kg':
+      'Serious Mass 2,7 kg – Prix Tunisie | Optimum Nutrition',
+    'serious-mass-5-45-kg-optimum-nutrition':
+      'Serious Mass 5,45 kg – Prix Tunisie | Optimum Nutrition',
+  };
+  const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
+  if (opportunityTitle) return opportunityTitle;
+
   const explicit = product.seo?.title || product.seo_title || product.meta_title;
   if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';
@@ -66,7 +92,29 @@ function productDescription(product: Product, productName: string): string {
   const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
   if (explicit?.trim()) {
     const plain = buildMetaDescription(explicit, { title: productName, maxLen: 160 });
-    if (plain) return plain;
+    if (plain) {
+      /*
+       * Imported catalogue rows often carry one identical template with only the category changed:
+       * "… en Tunisie. Livraison 24-72h… paiement… authentique." It is valid text but weak SERP
+       * copy—the highest-impression example, Omega 3 Fish Oil, earned 3,475 impressions at position
+       * 7.4 and only 0.75% CTR. Google explicitly recommends bringing scattered product facts such
+       * as price together in a product description, so enrich ONLY that known template. Hand-written
+       * benefit copy remains authoritative.
+       */
+      const isGenericImportTemplate =
+        /livraison\s+24\s*[-–]\s*72h/i.test(plain) &&
+        /paiement\s+[àa]\s+la\s+livraison/i.test(plain) &&
+        /authentique/i.test(plain);
+
+      if (!isGenericImportTemplate) return plain;
+
+      const price = getPriceDisplay(product).finalPrice;
+      const priceText = Number.isFinite(price) && price > 0 ? ` : ${Math.round(price)} DT` : '';
+      return buildMetaDescription(
+        `${productName}${priceText}. Livraison 24–72h partout en Tunisie, paiement à la livraison. Produit authentique.`,
+        { maxLen: 160 }
+      );
+    }
   }
   // Leave room for the trust line rather than truncating it away.
   const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });
@@ -152,9 +200,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       title: { absolute: title },
       description,
       keywords: productKeywords(product),
+      // Published AND not individually held back. Both must be true.
+      //
+      // `publier` is the shop's "is this for sale" switch; `seo.robots.index` is the separate
+      // "may Google list it" switch. Honouring only the first meant a product could be marked
+      // noindex in Filament and still be advertised as indexable here — and this route must agree
+      // with x-crawler/product, which bots are rewritten to, or the two views of the same product
+      // disagree about whether it belongs in the index.
       robots: {
-        index: isPublished,
-        follow: isPublished,
+        index: isPublished && (product.seo?.robots?.index ?? true),
+        follow: isPublished && (product.seo?.robots?.follow ?? true),
       },
       alternates: {
         canonical: canonicalUrl,
@@ -212,36 +267,53 @@ export default async function NewProductPage({ params }: PageProps) {
        * Only reached AFTER the full slug has already 404'd, so real slugs that merely end in a
        * number (omega-3, iso-whey-zero-2-27-kg) resolve normally and never hit this path.
        */
-      const baseSlug = cleanProductSlug.replace(/-\d+$/, '');
-      if (baseSlug && baseSlug !== cleanProductSlug) {
-        let fallback: Product | null = null;
-        try {
-          fallback = await getCachedProductDetails(baseSlug);
-        } catch (retryError) {
-          unstable_rethrow(retryError);
-          fallback = null;
-        }
-        if (fallback?.id) permanentRedirect(buildProductCanonicalUrl(fallback));
-      }
       /**
        * DEAD END, not a detour. We are here only because the API gave a DEFINITIVE 404 for the
        * full slug (and, for a legacy -N slug, for the base slug too). The old fallback redirected
-       * to /shop/{slug} — but middleware then re-runs the exact same lookup there
-       * (resolveShopSlug → lookupProduct → 404 → no numeric suffix → `/{slug}`) and 301s again,
-       * producing a 308 → 301 → 404 THREE-hop chain for every genuinely deleted product (~150
-       * URLs in the GSC "Not found" export). Google attributes the final 404 to the original URL
-       * regardless, so the extra hops only burn crawl budget.
+       * to /shop/{slug} — but middleware then re-ran the same lookup there and 301'd again,
+       * producing a 308 → 301 → 404 THREE-hop chain for every genuinely deleted product.
        *
-       * Go directly to the single destination that chain could ever reach: the root listing path.
-       * Same outcome, one hop — it still resolves when the segment is really a category/brand/CMS
-       * slug (/proteines/whey-isolate → /whey-isolate) and returns a clean hard 404 when it is not.
-       * To upgrade that terminal 404 to a 410 for a confirmed-deleted product, add the canonical
-       * path to Filament → Redirections with code 410: middleware checks that in-process map FIRST
-       * (util/adminRedirects.ts, ~1 backend hit per 5 min per worker), so it costs no extra
-       * request on the hot path and needs no guessing here.
+       * ── AND THEN IT TRADED THREE HOPS FOR ONE HOP INTO THE SAME 404 ────────────────────
+       * The fix for that chain was `permanentRedirect('/' + rootSlug)`, and the comment that
+       * shipped with it said the quiet part out loud: it "returns a clean hard 404 when it is
+       * not" a category. There is no such thing as a clean 404 behind a 301. Google spends the
+       * hop, caches the redirect, still finds nothing, and every report shows the DESTINATION's
+       * status instead of the URL that was actually requested — which is exactly how 1,060 pages
+       * accumulated in the Search Console "Not found" bucket without anything naming the cause.
+       *
+       * Measured on production 14/08/2026, after the middleware half of this fix had shipped:
+       *
+       *     /creatine/gold-creatine-300g   301 → /gold-creatine-300g   404
+       *
+       * the last surviving failure in `check-dead-product-urls.mjs`, and it was this line.
+       *
+       * ── SAME RESOLUTION AS MIDDLEWARE, AND DELIBERATELY THE SAME HELPERS ───────────────
+       * `isTaxonomySlug` answers the question the old code assumed: /proteines/whey-isolate is a
+       * real category and must still redirect; /creatine/gold-creatine-300g is a deleted product
+       * whose root segment is a product slug, and must not pretend otherwise.
+       *
+       *   true   a real category/brand → 301, unchanged behaviour, link equity kept
+       *   null   the backend could not answer → 301 anyway. Unknown is not evidence of absence,
+       *          and 404-ing live listings during a backend hiccup is far worse than one wasted
+       *          hop. Same fail-open contract as util/taxonomySlugs.ts itself.
+       *   false  positively not taxonomy → try for a RELEVANT category, else a terminal 404.
+       *
+       * 404 rather than 410 only because a Server Component cannot set an arbitrary status;
+       * `notFound()` is the honest terminal answer available here, and it is strictly better than
+       * a redirect into one. For a confirmed-deleted product worth a 410, add the path to
+       * Filament → Redirections with code 410 — middleware checks that map FIRST, so it never
+       * reaches this route.
+       *
+       * ── THE FOUR STEPS ABOVE NOW LIVE IN ONE FILE ──────────────────────────────────────
+       * They were written here and copied, in half, into x-crawler/product/[slug] — which is the
+       * route Googlebot actually gets, since middleware rewrites bot UAs to it. The copy carried
+       * the `-N` retry and neither the taxonomy check nor the relevance match, so the same URL
+       * answered 200 to Chrome and 404 to Googlebot, and Search Console reports the latter.
+       * Sharing `retiredSlugDestination` is what stops that divergence recurring.
        */
-      const rootSlug = baseSlug && baseSlug !== cleanProductSlug ? baseSlug : cleanProductSlug;
-      permanentRedirect(`/${encodeURIComponent(rootSlug)}`);
+      const destination = await retiredSlugDestination(cleanProductSlug, { product: true });
+      if (destination) permanentRedirect(destination);
+      notFound();
     }
     // Transient failure (429/5xx/timeout): rethrow. This ISR route (revalidate 300) would
     // otherwise CACHE a wrong 404 for a healthy product — the worst affichage bug possible
@@ -267,9 +339,23 @@ export default async function NewProductPage({ params }: PageProps) {
     permanentRedirect(`/shop/${cleanProductSlug}`);
   }
 
-  const similarProducts = await (product.sous_categorie_id
-    ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
-    : Promise.resolve([] as Product[]));
+  /*
+    Two independent lists, fetched TOGETHER rather than one after the other.
+
+    `similarProducts` is the same sub-category — the rail at the bottom of the page and the
+    comparison table. `complementProducts` is the other shelves — a creatine and a shaker for a
+    whey — and it is what "Complétez votre commande" builds a basket from. Awaiting them in
+    sequence would add the second round trip to TTFB for no reason; `Promise.all` overlaps them.
+
+    The complement fetch is four 3 KB queries and returns [] immediately for a product that is not
+    itself addable, which is 10,535 of 10,669 of them. See services/productComplements.ts.
+  */
+  const [similarProducts, complementProducts] = await Promise.all([
+    product.sous_categorie_id
+      ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
+      : Promise.resolve([] as Product[]),
+    getComplementProducts(product).catch(() => [] as Product[]),
+  ]);
 
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   // Always compute from subcategory — never trust legacy seo.canonical_url (C3 fix)
@@ -320,6 +406,7 @@ export default async function NewProductPage({ params }: PageProps) {
       <ProductDetailClient 
         product={product} 
         similarProducts={similarProducts} 
+        complementProducts={complementProducts}
         slugOverride={cleanProductSlug} 
         breadcrumbItems={breadcrumbItems}
       />

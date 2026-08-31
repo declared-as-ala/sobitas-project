@@ -2,14 +2,10 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { Button } from '@/app/components/ui/button';
-import { Input } from '@/app/components/ui/input';
-import { Label } from '@/app/components/ui/label';
-import { Card, CardContent } from '@/app/components/ui/card';
-import { Mail, Loader2, ArrowLeft } from 'lucide-react';
+import { Mail, ArrowLeft, MailCheck } from 'lucide-react';
 import { requestPasswordReset } from '@/services/api';
-import { toast } from 'sonner';
-import { AuthShell, AuthCardHeader } from '@/app/components/AuthShell';
+import { notify as toast } from '@/lib/notify';
+import { AuthShell, AuthCardHeader, AuthField, AuthSubmit } from '@/app/components/AuthShell';
 
 export default function ForgotPasswordClient() {
   const [email, setEmail] = useState('');
@@ -20,11 +16,26 @@ export default function ForgotPasswordClient() {
     e.preventDefault();
     setLoading(true);
     try {
-      const res = await requestPasswordReset(email.trim());
+      await requestPasswordReset(email.trim());
       setDone(true);
-      toast.success(res.message);
-    } catch {
-      toast.error('Une erreur est survenue. Réessayez plus tard.');
+    } catch (error) {
+      /*
+        ── THE SAME ANSWER EITHER WAY, ON PURPOSE ──────────────────────────────────────────
+        A different message for "no such account" turns this form into an oracle that tells an
+        attacker which addresses are customers here. The backend answers with one neutral message
+        whatever it finds, so a 4xx/5xx from it must land on the same screen — otherwise the toast
+        gives away precisely what the wording hides.
+
+        A request that never REACHED the server is the one honest exception: there is nothing to
+        leak, and telling someone their reset mail is on its way when the browser is offline is
+        the worst of both.
+      */
+      const reached = !!(error && typeof error === 'object' && 'response' in error && (error as { response?: unknown }).response);
+      if (reached) {
+        setDone(true);
+      } else {
+        toast.error('Connexion impossible. Vérifiez votre réseau et réessayez.');
+      }
     } finally {
       setLoading(false);
     }
@@ -32,58 +43,72 @@ export default function ForgotPasswordClient() {
 
   return (
     <AuthShell>
-      <Card className="border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
+      {done ? (
+        <div>
+          <div className="mb-5 flex h-12 w-12 items-center justify-center rounded-xl bg-sunken">
+            <MailCheck className="h-6 w-6 text-brand" strokeWidth={2} aria-hidden="true" />
+          </div>
+          <AuthCardHeader
+            title="Vérifiez vos e-mails"
+            subtitle={
+              <>
+                Si un compte est associé à <strong className="font-semibold text-ink-1">{email}</strong>, vous
+                recevrez un lien pour choisir un nouveau mot de passe. Il est valable une heure.
+              </>
+            }
+          />
+          <p className="mb-6 text-sm leading-relaxed text-ink-2">
+            Rien reçu au bout de quelques minutes ? Regardez dans les indésirables, ou
+            écrivez-nous à{' '}
+            <a
+              href="mailto:contact@protein.tn"
+              className="rounded font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            >
+              contact@protein.tn
+            </a>
+            .
+          </p>
+          <button
+            type="button"
+            onClick={() => setDone(false)}
+            className="inline-flex min-h-[44px] w-full items-center justify-center rounded-xl border border-hairline bg-canvas px-4 text-sm font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          >
+            Utiliser une autre adresse
+          </button>
+        </div>
+      ) : (
+        <>
           <AuthCardHeader
             kicker="Récupération"
             title="Mot de passe oublié"
-            subtitle={
-              done
-                ? 'Si un compte correspond à cet e-mail, vous recevrez un lien pour réinitialiser votre mot de passe.'
-                : 'Indiquez votre adresse e-mail. Nous vous enverrons un lien sécurisé.'
-            }
+            subtitle="Indiquez l’adresse e-mail de votre compte. Nous vous enverrons un lien sécurisé pour en choisir un nouveau."
           />
-          <CardContent>
-            {!done ? (
-              <form onSubmit={onSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email">E-mail</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      required
-                      autoComplete="email"
-                      className="pl-10 h-11 rounded-xl focus-visible:ring-red-500 dark:focus-visible:ring-red-400"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                    />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full h-11 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide" disabled={loading}>
-                  {loading ? (
-                    <>
-                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      Envoi…
-                    </>
-                  ) : (
-                    'Envoyer le lien'
-                  )}
-                </Button>
-              </form>
-            ) : null}
-            <Button
-              variant="ghost"
-              className="mt-6 w-full text-gray-600 hover:text-red-600 dark:text-gray-400 dark:hover:text-red-400"
-              asChild
-            >
-              <Link href="/login">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Retour à la connexion
-              </Link>
-            </Button>
-          </CardContent>
-      </Card>
+          <form onSubmit={onSubmit} className="space-y-4">
+            <AuthField
+              label="Email"
+              Icon={Mail}
+              type="email"
+              inputMode="email"
+              placeholder="votre@email.com"
+              autoComplete="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+            />
+            <AuthSubmit loading={loading} loadingLabel="Envoi…">
+              Envoyer le lien
+            </AuthSubmit>
+          </form>
+        </>
+      )}
+
+      <Link
+        href="/login"
+        className="mt-6 inline-flex min-h-[44px] w-full items-center justify-center gap-2 rounded-lg text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+      >
+        <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+        Retour à la connexion
+      </Link>
     </AuthShell>
   );
 }

@@ -1,6 +1,11 @@
-import { getAllProducts, getCategories } from '@/services/api';
+import { permanentRedirect } from 'next/navigation';
+import { unstable_cache } from 'next/cache';
+import { getShopPage, getCategories } from '@/services/api';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { loadForCache } from '@/util/loadForCache';
+import { getBaseUrl } from '@/util/canonical';
+import { buildShopSchemas, shopCanonicalPath } from '@/util/shopJsonLd';
+import { parseShopQuery, buildShopUrl, SHOP_PER_PAGE, type RawSearchParams } from '@/util/shopQuery';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 
 /**
@@ -24,32 +29,99 @@ import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/craw
  * drift. A bot sees the products a shopper sees; it just gets them as plain anchors instead of a
  * client-side grid. Divergence between the two views is what makes dynamic rendering indefensible,
  * and it has bitten this codebase repeatedly — keep them equal.
+ *
+ * ── NOW PAGINATED, AND PARITY IS WHY ──────────────────────────────────────────────────────────
+ * This fetched the whole catalogue in one page, which was right when the catalogue was 410 products
+ * and became wrong at 10,669. Two things broke at once:
+ *
+ *   1. getAllProductsComplete() caps at 3,000, so the crawler view silently listed 3,097 products
+ *      and no link existed to the other 7,572 — from anywhere on the site.
+ *   2. Even at the cap, a 3,000-anchor document is one Googlebot truncates, and it flattens the
+ *      catalogue into a single undifferentiated list.
+ *
+ * The human page now reads ?page=N and renders twelve. This does the same, from the same parser and
+ * the same URL builder, so the two views cannot drift on which twelve. That is the parity rule
+ * above applied to pagination rather than abandoned because of it.
  */
 
-// Same metadata object as the human page: title, description, canonical, facet noindex rules and
-// prev/next. Re-exported rather than re-declared so the two can never disagree.
+// Same metadata object as the human page: title, description and canonical. Re-exported rather
+// than re-declared so the two can never disagree — including the page-N canonical and the
+// "— Page N" title suffix that arrived with server-side pagination.
+//
+// It does NOT carry "facet noindex rules and prev/next", which this comment claimed for months.
+// The facet rules are response headers set in next.config.js and never touch generateMetadata, and
+// no rel=prev/next is emitted anywhere (Google retired support in 2019; the anchor-level rel
+// attributes in CrawlerCategoryView are all Bing needs). A comment that describes protection the
+// code does not provide is worse than no comment.
 export { generateMetadata } from '@/app/(shop)/shop/page';
 
-export const revalidate = 300;
+type PageProps = { searchParams: Promise<RawSearchParams> };
 
-export default async function CrawlerShopPage() {
-  // loadForCache, not a bare catch: a transient upstream failure (the build runner getting
-  // Cloudflare-403'd is the known one) renders empty but must NOT be baked into the ISR cache,
-  // or Googlebot gets an empty boutique pinned for the whole revalidate window.
+export default async function CrawlerShopPage({ searchParams }: PageProps) {
+  const query = parseShopQuery(await searchParams);
+
+  /*
+   * ── THE SAME CACHE ENTRY A HUMAN FETCH USES ───────────────────────────────────────────────
+   * This was the only x-crawler route with neither `unstable_cache` nor `revalidate` — its two
+   * siblings both opt in. Every Googlebot fetch of every one of the 470 pages was an uncached
+   * upstream catalogue call, against the origin whose php-fpm pool has been exhausted before.
+   *
+   * The key is BYTE-IDENTICAL to the human route's (same prefix, same SHOP_PER_PAGE, same URL
+   * builder) so `/shop?page=7` fetched by a bot and by a shopper share one entry rather than
+   * doubling the load. If you change one, change both — a divergent key silently halves the hit
+   * rate and nothing errors.
+   *
+   * loadForCache stays OUTSIDE the wrapper: inside, an empty render is what gets cached, and
+   * Googlebot would get an empty boutique pinned for the whole window.
+   */
+  const cachedShopPage = unstable_cache(
+    () => getShopPage(query),
+    ['shop-page', String(SHOP_PER_PAGE), buildShopUrl(query)],
+    { revalidate: 300, tags: ['shop', 'products'] }
+  );
+  const cachedCategories = unstable_cache(() => getCategories(), ['shop-categories'], {
+    revalidate: 3600,
+    tags: ['categories'],
+  });
+
   const [productsResponse, categories] = await Promise.all([
     loadForCache(
-      () => getAllProducts(),
-      { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getAllProducts>>
+      cachedShopPage,
+      { products: [], brands: [], categories: [] } as Awaited<ReturnType<typeof getShopPage>>
     ),
-    getCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
+    cachedCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
   ]);
 
   const rawProducts = Array.isArray(productsResponse.products) ? productsResponse.products : [];
 
   // Resolve each product's subcategory so every link is the canonical /{subcategory}/{slug} and
-  // never the legacy /shop/{slug}, which 301s. Linking 303 products through redirects would have
+  // never the legacy /shop/{slug}, which 301s. Linking products through redirects would have
   // recreated at a stroke the exact problem just fixed across the category pages.
   const products = enrichProductsWithSubcategory(rawProducts, categories);
+
+  const totalPages = Math.max(1, productsResponse.pagination?.last_page ?? 1);
+  const currentPage = Math.min(Math.max(1, productsResponse.pagination?.current_page ?? query.page), totalPages);
+  const total = productsResponse.pagination?.total ?? products.length;
+
+  /*
+   * The same 308 guard the human route carries, and it matters MORE here: middleware forwards the
+   * page number to this route, so an unbounded ?page=N space is one a crawler can walk. Serving a
+   * bot a 200 with an empty product list, from the view that exists specifically to be indexed, is
+   * the worst version of that bug. See (shop)/shop/page.tsx for the two guard conditions.
+   */
+  if (productsResponse.pagination && query.page > totalPages && query.page !== totalPages) {
+    permanentRedirect(buildShopUrl({ ...query, page: totalPages }));
+  }
+
+  // The three schemas the human page emits, from the same builder. Before this, a crawler UA got
+  // ZERO structured data on /shop while every shopper got three blocks of it.
+  const schemas = buildShopSchemas({
+    products,
+    categories: categories ?? [],
+    currentPage,
+    canonicalPath: shopCanonicalPath({ ...query, page: currentPage }),
+    baseUrl: getBaseUrl(),
+  });
 
   const categoryLinks: CrawlerListLink[] = (categories ?? [])
     .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
@@ -58,12 +130,20 @@ export default async function CrawlerShopPage() {
     .map((c) => ({ name: c.designation_fr.trim(), url: `/${c.slug}` }));
 
   return (
-    <CrawlerCategoryView
+    <>
+      {schemas.map((schema, i) => (
+        <script
+          key={i}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+        />
+      ))}
+      <CrawlerCategoryView
       kind="category"
       title="Boutique — Protéines & Compléments Alimentaires en Tunisie"
       introHtml={
         '<p>Tout le catalogue Protéine Tunisie : whey, créatine, gainers, BCAA, vitamines et ' +
-        'équipement. Livraison partout en Tunisie, paiement à la livraison.</p>'
+        `équipement — ${total} références. Livraison partout en Tunisie, paiement à la livraison.</p>`
       }
       breadcrumbs={[
         { name: 'Accueil', url: '/' },
@@ -71,6 +151,14 @@ export default async function CrawlerShopPage() {
       ]}
       products={products}
       subCategories={categoryLinks}
-    />
+      pagination={{
+        currentPage,
+        totalPages,
+        // The same builder the human pager uses, so /shop?page=7 and the bot's "page suivante" are
+        // byte-identical URLs rather than two spellings of one page.
+        buildHref: (page) => buildShopUrl({ ...query, page }),
+      }}
+      />
+    </>
   );
 }
