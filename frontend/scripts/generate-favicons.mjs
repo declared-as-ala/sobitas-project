@@ -15,6 +15,31 @@ const source = path.join(publicDir, 'icon.png');
 async function loadCleanSource() {
   const { data, info } = await sharp(source).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const pixelCount = info.width * info.height;
+
+  // Image generators can occasionally render the transparency preview grid into an opaque RGB
+  // file. Recover the intended alpha from orange-vs-neutral chroma and lock the artwork to the
+  // Protein.tn brand orange before sizing it. Real RGBA sources pass through unchanged.
+  let hasTransparency = false;
+  for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+    if (data[pixel * 4 + 3] < 250) {
+      hasTransparency = true;
+      break;
+    }
+  }
+  if (!hasTransparency) {
+    for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+      const offset = pixel * 4;
+      const red = data[offset];
+      const green = data[offset + 1];
+      const blue = data[offset + 2];
+      const orangeChroma = Math.max(0, ((red - green) / 161 + (red - blue) / 224) / 2);
+      const alpha = Math.max(0, Math.min(255, Math.round((orangeChroma - 0.015) * 280)));
+      data[offset] = 213;
+      data[offset + 1] = 59;
+      data[offset + 2] = 4;
+      data[offset + 3] = alpha;
+    }
+  }
   const visited = new Uint8Array(pixelCount);
   let largest = [];
 
@@ -69,32 +94,43 @@ async function render(size, filename) {
   return buffer;
 }
 
-// ICO files may embed a PNG payload. A single crisp 32 px entry is sufficient because the HTML
-// explicitly advertises 16/32 px PNG variants first; ICO remains the legacy fallback.
-function pngToIco(png, size = 32) {
+// ICO files may embed PNG payloads. Include both 16 px and 32 px entries for legacy browser and
+// Windows surfaces, while modern browsers use the explicitly advertised PNG variants.
+function pngsToIco(images) {
   const header = Buffer.alloc(6);
   header.writeUInt16LE(0, 0);
   header.writeUInt16LE(1, 2);
-  header.writeUInt16LE(1, 4);
+  header.writeUInt16LE(images.length, 4);
 
-  const directory = Buffer.alloc(16);
-  directory.writeUInt8(size === 256 ? 0 : size, 0);
-  directory.writeUInt8(size === 256 ? 0 : size, 1);
-  directory.writeUInt8(0, 2);
-  directory.writeUInt8(0, 3);
-  directory.writeUInt16LE(1, 4);
-  directory.writeUInt16LE(32, 6);
-  directory.writeUInt32LE(png.length, 8);
-  directory.writeUInt32LE(22, 12);
-  return Buffer.concat([header, directory, png]);
+  let payloadOffset = 6 + images.length * 16;
+  const directories = images.map(({ png, size }) => {
+    const directory = Buffer.alloc(16);
+    directory.writeUInt8(size === 256 ? 0 : size, 0);
+    directory.writeUInt8(size === 256 ? 0 : size, 1);
+    directory.writeUInt8(0, 2);
+    directory.writeUInt8(0, 3);
+    directory.writeUInt16LE(1, 4);
+    directory.writeUInt16LE(32, 6);
+    directory.writeUInt32LE(png.length, 8);
+    directory.writeUInt32LE(payloadOffset, 12);
+    payloadOffset += png.length;
+    return directory;
+  });
+  return Buffer.concat([header, ...directories, ...images.map(({ png }) => png)]);
 }
 
-await render(16, 'favicon-16x16.png');
+const favicon16 = await render(16, 'favicon-16x16.png');
 const favicon32 = await render(32, 'favicon-32x32.png');
 await render(180, 'apple-touch-icon.png');
 await render(192, 'favicon-192x192.png');
 const favicon512 = await render(512, 'favicon-512x512.png');
-await fs.writeFile(path.join(publicDir, 'favicon.ico'), pngToIco(favicon32));
+await fs.writeFile(
+  path.join(publicDir, 'favicon.ico'),
+  pngsToIco([
+    { png: favicon16, size: 16 },
+    { png: favicon32, size: 32 },
+  ]),
+);
 await fs.writeFile(source, favicon512);
 await fs.writeFile(path.join(root, 'favicon.png'), favicon512);
 
