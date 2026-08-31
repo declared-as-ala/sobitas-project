@@ -15,7 +15,7 @@ class MarketingTemplatesSeeder extends Seeder
                 'type' => 'sms',
                 'name' => 'Ne ratez pas nos offres – Visitez Protein.tn',
                 'subject' => null,
-                'content_text' => "Protein.tn: Ne ratez pas nos offres et nouveautés 💪 Visitez protein.tn dès maintenant. {{stop_text}}",
+                'content_text' => "Protein.tn: découvrez nos offres et nouveaux produits sur protein.tn. {{stop_text}}",
                 'content_html' => null,
                 'variables_schema' => [
                     ['name' => 'stop_text', 'label' => 'Texte désinscription', 'default' => 'STOP'],
@@ -36,7 +36,7 @@ class MarketingTemplatesSeeder extends Seeder
                 'type' => 'sms',
                 'name' => 'Code promo – % remise',
                 'subject' => null,
-                'content_text' => "Protein.tn: -{{discount_percent}}% avec le code {{promo_code}} jusqu'au {{end_date}}. Commandez sur protein.tn {{stop_text}}",
+                'content_text' => "Protein.tn: profitez de -{{discount_percent}}% avec le code {{promo_code}} jusqu'au {{end_date}} sur protein.tn. {{stop_text}}",
                 'content_html' => null,
                 'variables_schema' => [
                     ['name' => 'promo_code', 'label' => 'Code promo', 'default' => ''],
@@ -65,7 +65,7 @@ class MarketingTemplatesSeeder extends Seeder
                 'type' => 'sms',
                 'name' => 'Nouveaux produits / Nouvel arrivage',
                 'subject' => null,
-                'content_text' => "Protein.tn: Nouvel arrivage 💪 {{product_1_name}} est dispo: {{product_1_url}}. + nouveautés sur protein.tn {{stop_text}}",
+                'content_text' => "Protein.tn: {{product_1_name}} est maintenant disponible: {{product_1_url}}. Découvrez aussi nos nouveautés. {{stop_text}}",
                 'content_html' => null,
                 'variables_schema' => [
                     ['name' => 'product_1_name', 'label' => 'Produit 1 nom', 'default' => ''],

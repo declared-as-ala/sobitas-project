@@ -115,16 +115,15 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      MAIL_MAILER: smtp
-      MAIL_HOST: smtp.gmail.com
-      MAIL_PORT: "587"
-      MAIL_USERNAME: bitoutawalid@gmail.com
-      MAIL_PASSWORD: "axnv xeod qwnv nnyl"
-      MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
+      # Use the VPS MTA that is installed and monitored with the application.
+      # Do not pin personal SMTP credentials in source control: an expired app
+      # password previously stopped every queued transactional email.
+      MAIL_MAILER: sendmail
+      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
+      MAIL_FROM_ADDRESS: contact@protein.tn
       MAIL_FROM_NAME: Protein.tn
-      MAIL_REPLY_TO: bitoutawalid@gmail.com
-      ADMIN_EMAILS: bitoutawalid@gmail.com
+      MAIL_REPLY_TO: contact@protein.tn
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
     networks:
       - sobitas-net
     expose:
@@ -236,6 +235,12 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      MAIL_MAILER: sendmail
+      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
+      MAIL_FROM_ADDRESS: contact@protein.tn
+      MAIL_FROM_NAME: Protein.tn
+      MAIL_REPLY_TO: contact@protein.tn
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
     command: php artisan schedule:work
     networks:
       - sobitas-net
@@ -285,16 +290,12 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      MAIL_MAILER: smtp
-      MAIL_HOST: smtp.gmail.com
-      MAIL_PORT: "587"
-      MAIL_USERNAME: bitoutawalid@gmail.com
-      MAIL_PASSWORD: "axnv xeod qwnv nnyl"
-      MAIL_ENCRYPTION: tls
-      MAIL_FROM_ADDRESS: bitoutawalid@gmail.com
+      MAIL_MAILER: sendmail
+      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
+      MAIL_FROM_ADDRESS: contact@protein.tn
       MAIL_FROM_NAME: Protein.tn
-      MAIL_REPLY_TO: bitoutawalid@gmail.com
-      ADMIN_EMAILS: bitoutawalid@gmail.com
+      MAIL_REPLY_TO: contact@protein.tn
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
     command: >
       php artisan queue:work redis
       --sleep=3

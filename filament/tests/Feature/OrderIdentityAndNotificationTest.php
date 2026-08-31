@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\Commande;
 use App\Models\User;
 use App\Services\ClientService;
+use App\Services\TransactionalSmsText;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
@@ -91,6 +92,12 @@ class OrderIdentityAndNotificationTest extends TestCase
             $table->unsignedInteger('attempts')->default(0);
             $table->text('last_error')->nullable();
             $table->timestamp('sent_at')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('messages', function (Blueprint $table): void {
+            $table->id();
+            $table->text('msg_passez_commande')->nullable();
+            $table->text('msg_etat_commande')->nullable();
             $table->timestamps();
         });
     }
@@ -190,6 +197,38 @@ class OrderIdentityAndNotificationTest extends TestCase
             'status' => 'sent',
             'attempts' => 1,
         ]);
+    }
+
+    public function test_transactional_sms_copy_is_concise_and_does_not_expose_product_names(): void
+    {
+        $order = Commande::findOrFail($this->insertOrder([
+            'numero' => '2026/MAIL',
+            'prix_ttc' => 259,
+            'etat' => Commande::STATUS_NEW,
+        ]));
+
+        $sms = TransactionalSmsText::confirmation($order);
+
+        $this->assertSame(
+            'Protein.tn: commande #2026/MAIL bien recue. Total: 259 TND, paiement a la livraison. Notre equipe vous appellera pour confirmation. Merci.',
+            $sms
+        );
+        $this->assertLessThanOrEqual(160, mb_strlen($sms));
+        $this->assertStringNotContainsString('Produits:', $sms);
+    }
+
+    public function test_transactional_status_sms_uses_professional_support_copy(): void
+    {
+        $order = Commande::findOrFail($this->insertOrder([
+            'numero' => '2026/STATUS',
+            'etat' => 'en_cours_de_livraison',
+        ]));
+
+        $sms = TransactionalSmsText::status($order);
+
+        $this->assertStringStartsWith('Protein.tn: mise a jour commande #2026/STATUS:', $sms);
+        $this->assertStringContainsString("Besoin d'aide? +216 27 612 500.", $sms);
+        $this->assertLessThanOrEqual(160, mb_strlen($sms));
     }
 
     /** @param array<string, mixed> $overrides */

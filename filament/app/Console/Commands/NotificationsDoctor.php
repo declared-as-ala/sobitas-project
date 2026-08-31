@@ -9,6 +9,7 @@ use App\Models\Message;
 use App\Models\NotificationDelivery;
 use App\Models\User;
 use App\Services\SmsService;
+use App\Services\TransactionalSmsText;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Mail;
 
@@ -36,6 +37,7 @@ class NotificationsDoctor extends Command
     protected $signature = 'notifications:doctor
                             {--order= : An order id or numero to render the real messages for}
                             {--send-email= : Send the customer confirmation to THIS address}
+                            {--send-test-email-to-admin : Send a generic, customer-data-free delivery test to the first configured admin}
                             {--mailer= : Use this configured mailer for the explicit test email}
                             {--send-sms= : Send the confirmation SMS to THIS number}
                             {--recent=0 : Show this many recent orders/users and notification table health}
@@ -151,6 +153,12 @@ class NotificationsDoctor extends Command
         $recent = max(0, min(25, (int) $this->option('recent')));
         if ($recent > 0) {
             $this->renderCommerceHealth($recent);
+        }
+
+        if ($this->option('send-test-email-to-admin')) {
+            if (! $this->sendGenericAdminEmail($mailer, $admins)) {
+                return self::FAILURE;
+            }
         }
 
         // ── The real messages for a real order ────────────────────────────────────────────
@@ -322,28 +330,51 @@ class NotificationsDoctor extends Command
 
     private function previewSms(Commande $order): string
     {
-        $nom      = trim((string) ($order->nom ?: $order->livraison_nom ?: ''));
-        $numero   = (string) ($order->numero ?? '');
-        $total    = number_format((float) ($order->prix_ttc ?? 0), 3, '.', ' ');
-        $products = $order->details->take(3)->map(fn ($d) => $d->product->designation_fr ?? 'Produit')->implode(', ');
-        $more     = $order->details->count() > 3 ? ' (+' . ($order->details->count() - 3) . ')' : '';
+        return SmsService::toGsm7(TransactionalSmsText::confirmation($order));
+    }
 
-        $template = trim((string) (optional(Message::getCached())->msg_passez_commande ?? ''));
-        if ($template !== '') {
-            $sms = str_replace(
-                ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
-                [$nom, (string) ($order->prenom ?? ''), $numero, Commande::getStatusLabel((string) $order->etat), $products . $more, $total],
-                $template
-            );
-        } else {
-            $greeting = $nom !== '' ? "Bonjour {$nom}" : 'Bonjour';
-            $sms = "{$greeting}, votre commande #{$numero} est confirmée.\n"
-                . "Produits: {$products}{$more}\n"
-                . "Total: {$total} TND. Paiement à la livraison.\n"
-                . 'Nous vous appelons pour confirmer. Protein.tn';
+    /**
+     * Exercise the real transport without exposing any order or customer data.
+     * This is safe to run after a deploy and gives operations a repeatable smoke test.
+     *
+     * @param  list<string>  $admins
+     */
+    private function sendGenericAdminEmail(string $defaultMailer, array $admins): bool
+    {
+        $testMailer = trim((string) $this->option('mailer')) ?: $defaultMailer;
+        if (! array_key_exists($testMailer, (array) config('mail.mailers'))) {
+            $this->error("Mailer de test inconnu : {$testMailer}");
+
+            return false;
         }
 
-        return SmsService::toGsm7($sms);
+        $recipient = collect($admins)
+            ->first(fn ($email): bool => filter_var($email, FILTER_VALIDATE_EMAIL) !== false);
+        if (! $recipient) {
+            $this->error('Aucune adresse ADMIN_EMAILS valide pour le test technique.');
+
+            return false;
+        }
+
+        try {
+            Mail::mailer($testMailer)->raw(
+                "Le transport e-mail transactionnel de Protein.tn fonctionne.\n\n"
+                .'Test technique sans donnée client effectué le '.now()->format('d/m/Y H:i').' (Africa/Tunis).',
+                function ($message) use ($recipient): void {
+                    $message->to($recipient)
+                        ->subject('[Protein.tn] Test technique e-mail réussi');
+                }
+            );
+            $this->components->info(
+                'E-mail technique envoyé à '.$this->mask((string) $recipient)." via {$testMailer}."
+            );
+
+            return true;
+        } catch (\Throwable $e) {
+            $this->error('Envoi e-mail technique ÉCHOUÉ : '.$e->getMessage());
+
+            return false;
+        }
     }
 
     private function renderCommerceHealth(int $limit): void

@@ -6,11 +6,11 @@ use App\Filament\Resources\CommandeResource;
 use App\Jobs\SendSmsJob;
 use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
-use App\Models\Message;
 use App\Models\Product;
 use App\Models\User;
 use App\Services\PointsService;
 use App\Services\CustomerOrderStatusMailer;
+use App\Services\TransactionalSmsText;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\DB;
@@ -140,40 +140,7 @@ class CommandeObserver
             return;
         }
 
-        $msg = Message::getCached();
-        $commande->loadMissing('details.product:id,designation_fr');
-        $products = $commande->details
-            ->take(4)
-            ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-            ->filter()
-            ->implode(', ');
-        $more = $commande->details->count() > 4 ? ' (+' . ($commande->details->count() - 4) . ')' : '';
-        $productsText = trim($products . $more);
-        $total = number_format((float) ($commande->prix_ttc ?? 0), 3, '.', ' ');
-
-        if ($msg && ! empty(trim((string) $msg->msg_etat_commande))) {
-            $sms = str_replace(
-                ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
-                [
-                    $commande->nom ?? '',
-                    $commande->prenom ?? '',
-                    $commande->numero ?? '',
-                    Commande::getStatusLabel($commande->etat),
-                    $productsText,
-                    $total,
-                ],
-                $msg->msg_etat_commande
-            );
-        } else {
-            $greeting = trim(($commande->prenom ?? '') . ' ' . ($commande->nom ?? ''));
-            $greeting = $greeting !== '' ? "Bonjour {$greeting}," : 'Bonjour,';
-            $status = Commande::getStatusLabel($commande->etat);
-            $sms = $greeting
-                . " votre commande {$commande->numero} est {$status}.\n"
-                . "Produits: {$productsText}\n"
-                . "Total: {$total} TND.\n"
-                . 'Merci pour votre confiance.';
-        }
+        $sms = TransactionalSmsText::status($commande);
 
         SendSmsJob::dispatch(
             $phone,

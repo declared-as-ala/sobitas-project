@@ -279,12 +279,8 @@ class SendDueReviewRequests extends Command
         $base = rtrim((string) config('app.frontend_url', config('app.url')), '/');
         $url  = $base . '/avis/' . $commande->review_code;
 
-        $prenom = trim((string) ($commande->livraison_prenom ?? $commande->prenom ?? ''));
-        $hello  = $prenom !== '' ? "Bonjour {$prenom}," : 'Bonjour,';
-
-        $text = "{$hello} votre commande #{$commande->numero} de Protein.tn est bien arrivee ?"
-            . " Votre avis aiderait vraiment les prochains clients : {$url}"
-            . ' Merci !';
+        $text = "Protein.tn: votre commande #{$commande->numero} est bien arrivee?"
+            . " Partagez votre avis pour aider nos clients: {$url}. Merci.";
 
         SendSmsJob::dispatch($phone, $text);
 

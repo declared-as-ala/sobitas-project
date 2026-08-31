@@ -4,7 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CommandeResource\Pages;
 use App\Models\Commande;
-use App\Models\Message;
+use App\Services\TransactionalSmsText;
 use App\Jobs\SendSmsJob;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
@@ -226,35 +226,10 @@ class CommandeResource extends Resource
                             return;
                         }
 
-                        $msg = Message::getCached();
-
-                        if ($msg && $msg->msg_etat_commande) {
-                            $record->loadMissing('details.product:id,designation_fr');
-                            $products = $record->details
-                                ->take(4)
-                                ->map(fn ($d) => $d->product->designation_fr ?? 'Produit')
-                                ->filter()
-                                ->implode(', ');
-                            $more = $record->details->count() > 4 ? ' (+' . ($record->details->count() - 4) . ')' : '';
-                            $productsText = trim($products . $more);
-                            $total = number_format((float) ($record->prix_ttc ?? 0), 3, '.', ' ');
-
-                            $sms = str_replace(
-                                ['[nom]', '[prenom]', '[num_commande]', '[etat]', '[produits]', '[total]'],
-                                [
-                                    $record->nom ?? '',
-                                    $record->prenom ?? '',
-                                    $record->numero ?? '',
-                                    Commande::getStatusLabel($record->etat),
-                                    $productsText,
-                                    $total,
-                                ],
-                                $msg->msg_etat_commande
-                            );
-                            
-                            // Queue SMS to avoid blocking the request
-                            SendSmsJob::dispatch($record->phone, $sms);
-                        }
+                        SendSmsJob::dispatch(
+                            $record->phone,
+                            TransactionalSmsText::status($record)
+                        );
 
                         Notification::make()
                             ->title('SMS mis en file d\'attente')

@@ -57,6 +57,7 @@ on:
           - scheduler-log
           - commerce-status
           - commerce-order-status
+          - commerce-mail-smoke
           - commerce-email-smoke
           - commerce-sendmail-email-smoke
           - commerce-ses-email-smoke
@@ -264,6 +265,12 @@ jobs:
                 exit 1
               fi
               ARGS="notifications:doctor --strict --order=$ORDER_REF"
+              WRITES=no
+              ;;
+            commerce-mail-smoke)
+              # Privacy-safe production smoke test. It contains no order/customer data and is
+              # delivered only to the first validated ADMIN_EMAILS address.
+              ARGS="notifications:doctor --strict --mailer=sendmail --send-test-email-to-admin"
               WRITES=no
               ;;
             commerce-email-smoke)

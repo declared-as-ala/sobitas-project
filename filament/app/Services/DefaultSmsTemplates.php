@@ -28,15 +28,15 @@ class DefaultSmsTemplates
     {
         return [
             self::KEY_OFFERS => [
-                'name' => 'Ne ratez pas nos offres – Protein.tn',
-                'body' => 'Ne ratez pas nos offres et nouveautés sur Protein.tn. Visitez protein.tn. {{stop_text}}',
+                'name' => 'Offres et nouveautés – Protein.tn',
+                'body' => 'Protein.tn: découvrez nos offres et nouveaux produits sur protein.tn. {{stop_text}}',
                 'variables_schema' => [
                     ['name' => 'stop_text', 'label' => 'Texte désinscription', 'default' => 'STOP'],
                 ],
             ],
             self::KEY_PROMO => [
                 'name' => 'Code promo – % remise',
-                'body' => 'Protein.tn: -{{discount_percent}}% avec le code {{promo_code}} jusqu\'au {{end_date}}. Commandez sur protein.tn {{stop_text}}',
+                'body' => 'Protein.tn: profitez de -{{discount_percent}}% avec le code {{promo_code}} jusqu\'au {{end_date}} sur protein.tn. {{stop_text}}',
                 'variables_schema' => [
                     ['name' => 'promo_code', 'label' => 'Code promo', 'default' => ''],
                     ['name' => 'discount_percent', 'label' => '% remise', 'default' => '10'],
@@ -46,7 +46,7 @@ class DefaultSmsTemplates
             ],
             self::KEY_NEW_PRODUCTS => [
                 'name' => 'Nouveaux produits / Nouvel arrivage',
-                'body' => 'Protein.tn: Nouvel arrivage. {{product_name}} en ligne: {{product_url}} + nouveautés sur protein.tn {{stop_text}}',
+                'body' => 'Protein.tn: {{product_name}} est maintenant disponible: {{product_url}}. Découvrez aussi nos nouveautés. {{stop_text}}',
                 'variables_schema' => [
                     ['name' => 'product_name', 'label' => 'Nom produit', 'default' => ''],
                     ['name' => 'product_url', 'label' => 'URL produit', 'default' => 'https://protein.tn'],
