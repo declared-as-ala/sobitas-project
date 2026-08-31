@@ -91,31 +91,31 @@ export function CategorySeoLanding({
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5 lg:space-y-7">
       {faqSchema ? (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       ) : null}
 
       {showHeader ? (
-        <header className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
-          <div className="grid min-h-[250px] grid-cols-1 lg:grid-cols-5">
-            <div className="flex min-w-0 flex-col justify-center px-4 py-6 sm:p-8 lg:col-span-3 lg:p-10">
-              <p className="mb-3 flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand">
+        <header className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+          <div className="grid grid-cols-1 lg:min-h-[232px] lg:grid-cols-5">
+            <div className="flex min-w-0 flex-col justify-center px-4 py-5 sm:p-6 lg:col-span-3 lg:px-8 lg:py-6">
+              <p className="mb-2.5 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-brand sm:text-[11px]">
                 <span className="h-px w-5 bg-brand" aria-hidden="true" />
                 Sélection Protein.tn
               </p>
-              <h1 className="max-w-[20ch] font-display font-compressed text-[2.15rem] font-extrabold uppercase leading-[0.92] tracking-[-0.025em] text-ink-1 sm:text-[2.75rem] lg:text-[3.25rem]">
+              <h1 className="max-w-[21ch] text-balance font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.025em] text-ink-1 sm:text-[2.55rem] lg:text-[3rem]">
                 {title}
               </h1>
               {hasIntro ? (
-                <p className="mt-4 line-clamp-3 max-w-[68ch] text-sm leading-relaxed text-ink-2 sm:text-[15px]">
+                <p className="mt-3 line-clamp-2 max-w-[68ch] text-[13.5px] leading-relaxed text-ink-2 sm:line-clamp-3 sm:text-[14.5px]">
                   {htmlToText(intro!, 520)}
                 </p>
               ) : null}
 
-              <ul className="mt-6 grid gap-2 border-t border-rule pt-4 sm:grid-cols-3">
+              <ul className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-rule pt-3 sm:grid-cols-3">
                 {TRUST_FACTS.map(({ icon: Icon, label }) => (
-                  <li key={label} className="flex min-h-8 items-center gap-2 text-[12px] font-semibold text-ink-2">
+                  <li key={label} className="flex min-h-8 items-center gap-2 text-[11.5px] font-semibold leading-tight text-ink-2 sm:text-[12px]">
                     <Icon className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                     {label}
                   </li>
@@ -124,7 +124,7 @@ export function CategorySeoLanding({
             </div>
 
             {desktopArt ? (
-              <div className="relative min-h-[180px] overflow-hidden bg-ink-1 sm:min-h-[220px] lg:col-span-2 lg:min-h-[250px]">
+              <div className="relative min-h-[155px] overflow-hidden bg-ink-1 sm:min-h-[205px] lg:col-span-2 lg:min-h-[232px]">
                 <picture className="contents">
                   {mobileArt ? <source media="(max-width: 767px)" srcSet={mobileArt} /> : null}
                   <Image
@@ -134,6 +134,7 @@ export function CategorySeoLanding({
                     className="object-cover"
                     sizes="(max-width: 767px) 100vw, 38vw"
                     priority={Boolean(localArt)}
+                    quality={75}
                   />
                 </picture>
               </div>

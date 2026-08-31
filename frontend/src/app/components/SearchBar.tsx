@@ -355,10 +355,10 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
               ref={panelRef}
               role="dialog"
               aria-label="Recherche produits"
-              className="pt-search-panel fixed inset-x-0 z-50 border-b border-hairline bg-elevated shadow-lg"
+              className="pt-search-panel fixed inset-x-0 z-50 max-h-[min(72dvh,36rem)] overflow-hidden rounded-b-2xl border-b border-hairline bg-elevated shadow-2xl"
               style={{ top: `${headerBottom}px` }}
             >
-              <form onSubmit={submit} role="search" className="px-3 py-2.5">
+              <form onSubmit={submit} role="search" className="px-4 pb-3 pt-3.5">
                 <div className="relative flex items-center">
                   <Search
                     className="pointer-events-none absolute left-3.5 h-[18px] w-[18px] text-ink-3"
@@ -371,7 +371,7 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
                        any input under 16px — that is the whole of the owner's "it zooms in so bad",
                        and it is a documented behaviour with one fix. Not `text-base`: a rename of
                        that utility must not silently re-arm the zoom. */
-                    className="h-12 w-full rounded-xl border border-hairline bg-sunken pl-11 pr-11 text-[16px] text-ink-1 transition-colors placeholder:text-ink-3 focus:border-brand focus:bg-elevated focus:outline-none focus:ring-2 focus:ring-focus/20"
+                    className="h-[52px] w-full rounded-2xl border border-hairline bg-sunken pl-11 pr-11 text-[16px] text-ink-1 transition-colors placeholder:text-ink-3 focus:border-brand focus:bg-elevated focus:outline-none focus:ring-4 focus:ring-focus/10"
                   />
                   <button
                     type={query ? 'button' : 'submit'}
@@ -445,21 +445,10 @@ export function SearchBar({ variant = 'desktop', className }: SearchBarProps) {
         <div
           ref={panelRef}
           id={listboxId}
-          /* ── 42rem, ANCHORED LEFT ────────────────────────────────────────────────────────
-             The field is ~1,130px on a 1536 screen because it fills the header bar, and the
-             dropdown used to inherit that width. A 1,130px row holding a 300px name and a 60px
-             price put ~700px of nothing between the two things the reader is comparing.
-
-             46rem (736px) rather than the 42 it shipped at this morning — owner: *"the popup is
-             okay, you can make it bigger and more visible."* Wide enough that a full product name
-             stops truncating at the ~34-character mark, still narrow enough that a name and its
-             price are one saccade apart. Pinned to the field's left edge, which is where the caret
-             is and where every name starts.
-
-             `shadow-2xl` plus a `ring-1` on the accent: on a white page a panel separated only by
-             a hairline reads as part of the page. The ring is 8% brand — enough to make the box a
-             distinct object, far short of a coloured border. */
-          className="pt-search-panel absolute left-0 top-full z-50 mt-2.5 w-full max-w-[46rem] overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-2xl ring-1 ring-brand/[0.08]"
+          /* Match the field width. The previous 46rem cap squeezed the catalogue into two small
+             columns while leaving most of the header field unused. A full-width panel keeps the
+             popular terms compact and gives long product names the reading measure they need. */
+          className="pt-search-panel absolute inset-x-0 top-full z-50 mt-2.5 w-full overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-2xl ring-1 ring-brand/[0.08]"
         >
           {panelBody}
         </div>

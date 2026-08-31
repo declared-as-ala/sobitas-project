@@ -3,7 +3,7 @@ import { unstable_cache } from 'next/cache';
 import { htmlToText } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getCategories } from '@/services/api';
+import { getCategories, getInStockCount, getShopFacets } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
 // no canonical — the exact shell measured under crawl load).
@@ -270,6 +270,56 @@ function mergeCategorySeoForSlug(
   };
 }
 
+/**
+ * Shared listing furniture for every category page.
+ *
+ * These values describe the catalogue rather than one 24-product page, so deriving them in the
+ * browser is both inaccurate and expensive. The cache keys intentionally match /shop: warming one
+ * surface warms the other, and a category navigation does not add three origin requests to TTFB.
+ */
+async function loadCategoryListingSupport() {
+  const cachedFacets = unstable_cache(() => getShopFacets(), ['shop-facets'], {
+    revalidate: 600,
+    tags: ['shop', 'products'],
+  });
+  const cachedCategories = unstable_cache(() => getCategories(), ['shop-categories'], {
+    revalidate: 3600,
+    tags: ['categories'],
+  });
+  const cachedInStockCount = unstable_cache(() => getInStockCount(), ['shop-in-stock-count'], {
+    revalidate: 300,
+    tags: ['shop', 'products'],
+  });
+
+  const [facets, categories, inStockCount] = await Promise.all([
+    cachedFacets(),
+    cachedCategories().catch((error) => {
+      console.error('Error fetching categories:', error);
+      return [] as Awaited<ReturnType<typeof getCategories>>;
+    }),
+    cachedInStockCount(),
+  ]);
+
+  // The filter UI reads only these fields. Keeping media/SEO/admin timestamps out of the RSC
+  // payload saves roughly 13 KB before compression on every category navigation.
+  const categoriesForClient = categories.map((category) => ({
+    id: category.id,
+    slug: category.slug,
+    designation_fr: category.designation_fr,
+    sous_categories: (category.sous_categories ?? []).map((subCategory) => ({
+      id: subCategory.id,
+      slug: subCategory.slug,
+      designation_fr: subCategory.designation_fr,
+    })),
+  }));
+
+  // Brands and subcategories are not consumed from facets by ShopPageClient. Do not serialize a
+  // second copy of those lists; keep only the authoritative ranges and count maps.
+  const facetsForClient = { ...facets, brands: [], subcategories: [] };
+
+  return { categories, categoriesForClient, facets: facetsForClient, inStockCount };
+}
+
 function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined, slug?: string): string {
   if (seoH1?.trim()) {
     const trimmed = seoH1.trim();
@@ -476,16 +526,10 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
     permanentRedirect(`/${encodeURIComponent(canonicalSlug)}`);
   }
 
-  // Start both independent fetches concurrently (was a sequential waterfall: getCategories was fully
-  // awaited before the category fetch even began). categories feeds only later related-links /
-  // breadcrumbs; the category fetch depends only on the slug. Awaiting the category promise inside
-  // the existing try preserves the notFound()/rethrow error handling.
-  const categoriesPromise = getCategories().catch((e) => {
-    console.error('Error fetching categories:', e);
-    return [] as Awaited<ReturnType<typeof getCategories>>;
-  });
+  // Start taxonomy/facets while the route resolves. Once the type is known, the scoped product
+  // request starts immediately and waits beside this promise rather than behind it.
+  const listingSupportPromise = loadCategoryListingSupport();
   const categoryPromise = fetchCategoryOrSubCategory(canonicalSlug);
-  const categories = await categoriesPromise;
 
   try {
     const { type, data } = await categoryPromise;
@@ -505,12 +549,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
        * taxonomy, the brands and the SEO copy below — but it has no notion of ?page=N, which is
        * why /probiotiques showed the same twelve products at every page number.
        */
-      const { productsData, serverPagination } = await loadListingPage(listingQuery, {
-        subcategories: [canonicalSlug],
-        // A subcategory page must never also carry the /shop category filter: the two would
-        // intersect and a shopper arriving from a filtered /shop link would see an empty grid.
-        categories: [],
-      });
+      const [{ productsData, serverPagination }, listingSupport] = await Promise.all([
+        loadListingPage(listingQuery, {
+          subcategories: [canonicalSlug],
+          // A subcategory page must never also carry the /shop category filter: the two would
+          // intersect and a shopper arriving from a filtered /shop link would see an empty grid.
+          categories: [],
+        }),
+        listingSupportPromise,
+      ]);
+      const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const parentCat = sub.sous_category?.categorie;
@@ -667,9 +715,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             }
           >
             <ShopPageClient
-              productsData={productsData}
-              categories={categories}
+              productsData={{ ...productsData, categories: [] }}
+              categories={categoriesForClient as never}
               brands={productsData.brands ?? []}
+              facets={facets}
+              inStockCount={inStockCount}
               initialCategory={canonicalSlug}
               isSubcategory
               serverQuery={serverQuery}
@@ -694,10 +744,14 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       };
       // Same reasoning as the subcategory branch: /sante-vitalite holds 8,849 products and showed
       // twelve of them, with ?page=2 answering 200 and rendering a duplicate of page 1.
-      const { productsData, serverPagination } = await loadListingPage(listingQuery, {
-        categories: [canonicalSlug],
-        subcategories: [],
-      });
+      const [{ productsData, serverPagination }, listingSupport] = await Promise.all([
+        loadListingPage(listingQuery, {
+          categories: [canonicalSlug],
+          subcategories: [],
+        }),
+        listingSupportPromise,
+      ]);
+      const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const seoJsonCat = await getCategorySeoContent(canonicalSlug);
@@ -836,9 +890,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             }
           >
             <ShopPageClient
-              productsData={productsData}
-              categories={categories}
+              productsData={{ ...productsData, categories: [] }}
+              categories={categoriesForClient as never}
               brands={productsData.brands ?? []}
+              facets={facets}
+              inStockCount={inStockCount}
               initialCategory={canonicalSlug}
               serverQuery={serverQuery}
               serverPagination={serverPagination}

@@ -39,7 +39,7 @@ import {
 } from '@/util/shopQuery';
 import { ShopFilters, CREATINE_TYPES, CREATINE_GOALS, SORT_OPTIONS } from './ShopFilters';
 
-const SKELETON_MIN_MS = 300;
+const SKELETON_MIN_MS = 180;
 
 interface ShopPageClientProps {
   productsData: {
@@ -1235,7 +1235,7 @@ function ShopContent({
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
     searchDebounceRef.current = setTimeout(() => {
       pushQuery({ search: next.trim() });
-    }, 400);
+    }, 320);
   };
   useEffect(() => () => {
     if (searchDebounceRef.current) clearTimeout(searchDebounceRef.current);
@@ -1342,7 +1342,7 @@ function ShopContent({
         page was narrower and the grid shorter, and 64px of nothing above an H1 on a listing page
         is a header, not breathing room.
       */}
-      <main className="mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-10">
+      <main className="mx-auto w-full max-w-site px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
@@ -1407,11 +1407,11 @@ function ShopContent({
         })()}
 
         {/* Category SEO Section */}
-        {categorySeoLanding && <div className="mb-6">{categorySeoLanding}</div>}
+        {categorySeoLanding && <div className="mb-5 sm:mb-6">{categorySeoLanding}</div>}
 
         {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
         {topCategorySubcategories.length > 0 && (
-          <nav aria-label="Sous-catégories" className="mb-6 sm:mb-8">
+          <nav aria-label="Sous-catégories" className="mb-5 sm:mb-7">
             <div className="mb-3 flex items-center justify-between gap-4">
               <h2 className="font-display text-xs font-semibold uppercase tracking-[0.14em] text-brand">
                 Explorer ce rayon

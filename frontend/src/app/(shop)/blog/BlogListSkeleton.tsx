@@ -27,7 +27,7 @@ export function BlogListSkeleton() {
       <Section surface="sunken" spacing="default" width="wide">
         <Skeleton className="h-3 w-20" />
         <Skeleton className="mt-3 h-9 w-72 max-w-full" />
-        <div className="mt-6 grid gap-4 lg:grid-cols-[1.45fr_0.85fr]">
+        <div className="mt-6 grid gap-4 lg:grid-cols-[1.5fr_0.85fr] lg:gap-6">
           <Skeleton className="h-[28rem] rounded-2xl" />
           <div className="grid gap-4"><Skeleton className="h-[13.5rem] rounded-2xl" /><Skeleton className="h-[13.5rem] rounded-2xl" /></div>
         </div>
@@ -42,7 +42,7 @@ export function BlogListSkeleton() {
             {Array.from({ length: PILL_COUNT }).map((_, i) => <Skeleton key={i} className="h-11 w-24 shrink-0 rounded-xl" />)}
           </div>
         </div>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:gap-6">
           {Array.from({ length: CARD_COUNT }).map((_, i) => <BlogCardSkeleton key={i} />)}
         </div>
       </Section>

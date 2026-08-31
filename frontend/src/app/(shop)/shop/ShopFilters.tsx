@@ -439,7 +439,10 @@ export function ShopFilters({
               <OptionRow
                 key={category.id}
                 label={category.designation_fr}
-                count={filterCounts.categoryCounts.get(category.slug) || 0}
+                // Missing means the facet service is unavailable, not "zero products". Omitting
+                // the badge is honest degradation; a real zero still renders because Map#get
+                // returns the numeric 0 when the backend supplied it.
+                count={filterCounts.categoryCounts.get(category.slug)}
                 selected={selectedCategories.includes(category.slug)}
                 onToggle={() => toggleCategory(category.slug)}
                 dense={dense}
@@ -507,7 +510,7 @@ export function ShopFilters({
               <OptionRow
                 key={brand.id}
                 label={brand.designation_fr}
-                count={filterCounts.brandCounts.get(brand.id) || 0}
+                count={filterCounts.brandCounts.get(brand.id)}
                 selected={selectedBrands.includes(brand.id)}
                 onToggle={() => toggleBrand(brand.id)}
                 dense={dense}

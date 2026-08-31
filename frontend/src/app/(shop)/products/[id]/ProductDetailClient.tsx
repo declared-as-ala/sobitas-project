@@ -11,7 +11,8 @@ import { ProductInfoSection } from '@/app/components/product/ProductInfoSection'
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
 import { REVIEW_POINTS_AWARD, pointsToDt } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
-import { buildProductUrl } from '@/util/productUrl';
+import { buildProductUrl, buildProductUrlPath } from '@/util/productUrl';
+import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
@@ -91,6 +92,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { addToCart, getCartQty } = useCart();
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
+  const [requestOpen, setRequestOpen] = useState(false);
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
@@ -1321,13 +1323,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   */
                   <>
                     <Button
-                      asChild
+                      type="button"
+                      onClick={() => setRequestOpen(true)}
                       className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide"
                     >
-                      <Link href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}>
-                        <Mail className="me-2 h-4 w-4 shrink-0" />
-                        Demander ce produit
-                      </Link>
+                      <Mail className="me-2 h-4 w-4 shrink-0" />
+                      Demander ce produit
                     </Button>
                 {/*
                   ── ORDER ON WHATSAPP ─────────────────────────────────────────────────────
@@ -2733,17 +2734,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 the old branch would have meant almost nobody saw the change. */}
             {stockStatus.isBackOrder ? (
               <Button
-                asChild
+                type="button"
                 size="default"
+                onClick={() => setRequestOpen(true)}
                 className="flex-1 min-w-0 min-h-[44px] h-auto py-2 text-sm bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-bold"
+                aria-label="Demander ce produit"
               >
-                <Link
-                  href={`/contact?produit=${encodeURIComponent(product.designation_fr || '')}`}
-                  aria-label="Demander ce produit"
-                >
-                  <Mail className="h-4 w-4 mr-2 shrink-0" />
-                  Demander ce produit
-                </Link>
+                <Mail className="h-4 w-4 mr-2 shrink-0" />
+                Demander ce produit
               </Button>
             ) : (
               <Button
@@ -2789,6 +2787,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           )}
         </div>
       </div>
+
+      {requestOpen && (
+        <ProductRequestDialog
+          open={requestOpen}
+          onOpenChange={setRequestOpen}
+          productName={product.designation_fr || 'Ce produit'}
+          productPath={buildProductUrlPath(product)}
+          priceText={`${displayPrice.toFixed(2)} DT`}
+        />
+      )}
 
       <ScrollToTop />
     </div>

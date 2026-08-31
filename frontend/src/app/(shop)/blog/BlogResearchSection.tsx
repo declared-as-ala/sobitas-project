@@ -23,14 +23,14 @@ export function BlogResearchSection({ feed }: { feed: PubMedResearchFeed }) {
         trailingAllWidths
       />
 
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3 lg:gap-5">
         {feed.studies.map((study, index) => (
           <a
             key={study.id}
             href={study.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="group flex min-h-[13rem] flex-col rounded-2xl border border-hairline bg-elevated p-5 transition-colors hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="group flex min-h-[11.75rem] flex-col rounded-2xl border border-rule bg-elevated p-4 transition-colors hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:p-5"
           >
             <div className="flex items-start justify-between gap-4">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand">
@@ -38,7 +38,7 @@ export function BlogResearchSection({ feed }: { feed: PubMedResearchFeed }) {
               </span>
               <span className="font-display text-xs font-semibold tabular-nums text-ink-3">0{index + 1}</span>
             </div>
-            <h3 lang="en" className="mt-5 line-clamp-3 font-display text-base font-bold leading-snug text-ink-1 group-hover:text-brand">
+            <h3 lang="en" className="mt-4 line-clamp-3 font-display text-[0.9375rem] font-bold leading-[1.4] text-ink-1 group-hover:text-brand sm:text-base">
               {study.title}
             </h3>
             <div className="mt-auto flex items-end justify-between gap-3 border-t border-rule pt-4">
@@ -52,7 +52,7 @@ export function BlogResearchSection({ feed }: { feed: PubMedResearchFeed }) {
         ))}
       </div>
 
-      <p className="mt-3 max-w-4xl text-xs leading-relaxed text-ink-3">
+      <p className="mt-4 max-w-4xl border-t border-rule pt-4 text-xs leading-relaxed text-ink-3">
         Veille documentaire en anglais, fournie à titre informatif. Elle ne remplace ni un avis médical ni les recommandations figurant sur l’étiquette d’un produit.{' '}
         <a
           href="https://www.ncbi.nlm.nih.gov/About/disclaimer.html"

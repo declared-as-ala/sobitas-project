@@ -146,6 +146,17 @@ export function SearchResultRow({
         <span className="line-clamp-2 text-[13.5px] font-medium leading-[1.3] text-ink-1 transition-colors group-hover:text-brand sm:text-[14.5px]">
           {product.designation_fr}
         </span>
+        {/* On phones the price belongs under the name. Keeping it in a right rail reduced the
+            actual reading column to ~160px on compact devices and made every long name look
+            broken. Desktop keeps the scan-friendly aligned price rail. */}
+        <span className="mt-1 flex items-baseline gap-1.5 whitespace-nowrap tabular-nums sm:hidden">
+          <span className={`text-[15px] font-bold leading-none ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
+            {Math.round(pd.finalPrice)} DT
+          </span>
+          {pd.hasPromo && pd.oldPrice != null && (
+            <span className="text-[11px] leading-none text-ink-3 line-through">{Math.round(pd.oldPrice)} DT</span>
+          )}
+        </span>
         {/* "En stock" is the one signal a shopper checks before clicking a search result — it is
             what makes a result actionable in a shop that sells out. The dot carries the state as
             well as the colour, because colour alone is not a signal (WCAG 1.4.1). */}
@@ -180,7 +191,7 @@ export function SearchResultRow({
       {/* `shrink-0` with no width cap let a four-digit price take 70px out of a 200px name on a
           phone. The column is stacked, right-aligned and nowrap, so a cap costs nothing and stops
           the one long price on the page from squeezing every name beside it. */}
-      <span className="flex shrink-0 flex-col items-end gap-0.5 whitespace-nowrap tabular-nums">
+      <span className="hidden shrink-0 flex-col items-end gap-0.5 whitespace-nowrap tabular-nums sm:flex">
         <span className={`text-[15.5px] font-bold leading-none sm:text-[17px] ${pd.hasPromo ? 'text-brand' : 'text-ink-1'}`}>
           {Math.round(pd.finalPrice)} DT
         </span>
@@ -204,7 +215,7 @@ function ResultSkeleton({ rows }: { rows: number }) {
             <Skeleton className="h-3.5 w-4/5 rounded" />
             <Skeleton className="h-2.5 w-24 rounded" />
           </div>
-          <Skeleton className="h-4 w-14 shrink-0 rounded" />
+          <Skeleton className="hidden h-4 w-14 shrink-0 rounded sm:block" />
         </div>
       ))}
       <span className="sr-only">Recherche en cours…</span>
@@ -228,32 +239,42 @@ export function SearchRestingPanel({
   suggestions: Product[];
   onPickTerm: (term: string) => void;
   onNavigate?: () => void;
-  /** Phone: the products are dropped and the terms become one scrollable row. */
+  /** Phone: terms become a rail and two useful products stay within the same compact sheet. */
   compact?: boolean;
 }) {
   if (compact) {
-    /* ── ONE LINE, NOT A WALL OF CHIPS ──────────────────────────────────────────────────────
-       Owner, 18/08/2026: *"find an innovative way to show popular searches without fully filling
-       the page and looking miserable."* Six 44px chips under a heading was ~180px of a screen
-       whose job is to accept a keystroke. One 36px scrollable row is 56px, and the page behind
-       stays visible. `-mx-1 px-1` lets the last chip be visibly cut — the affordance that says
-       there is more this way. */
     return (
-      <div className="flex items-center gap-2 overflow-x-auto px-3 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <span className="flex shrink-0 items-center gap-1 pr-0.5 text-[11px] font-semibold uppercase tracking-wide text-ink-3">
-          <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
-          Populaire
-        </span>
-        {POPULAR_SEARCHES.map((term) => (
-          <button
-            key={term}
-            type="button"
-            onClick={() => onPickTerm(term)}
-            className="flex h-9 shrink-0 items-center rounded-full border border-hairline bg-sunken px-3.5 text-[13px] font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
-          >
-            {term}
-          </button>
-        ))}
+      <div className="max-h-[calc(min(72dvh,36rem)-5.5rem)] overflow-y-auto overscroll-contain">
+        <div className="border-b border-hairline px-4 pb-3 pt-2">
+          <p className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.11em] text-ink-3">
+            <TrendingUp className="h-3.5 w-3.5" aria-hidden="true" />
+            Recherches populaires
+          </p>
+          <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {POPULAR_SEARCHES.map((term) => (
+              <button
+                key={term}
+                type="button"
+                onClick={() => onPickTerm(term)}
+                className="flex h-10 shrink-0 items-center rounded-full border border-hairline bg-sunken px-4 text-[13.5px] font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
+              >
+                {term}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {suggestions.length > 0 && (
+          <div className="px-2 pb-2 pt-3">
+            <div className="flex items-baseline justify-between gap-3 px-2 pb-1.5">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.11em] text-ink-3">Meilleures ventes</p>
+              <span className="text-[11px] text-ink-3">Disponibles maintenant</span>
+            </div>
+            {suggestions.slice(0, 2).map((product) => (
+              <SearchResultRow key={product.id} product={product} onNavigate={onNavigate} />
+            ))}
+          </div>
+        )}
       </div>
     );
   }
@@ -264,7 +285,7 @@ export function SearchRestingPanel({
     /* Roomier than the first pass (owner: *"you can make it bigger and more visible"*): 16px of
        panel padding instead of 12, a 32px gutter, and the two columns kept at ~1:1.15 so the
        product rows — which carry a thumbnail and two lines — get the wider half. */
-    <div className={`grid gap-x-8 gap-y-5 p-4 ${hasSuggestions ? 'sm:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]' : ''}`}>
+    <div className={`grid gap-x-10 gap-y-5 p-5 ${hasSuggestions ? 'sm:grid-cols-[minmax(14rem,0.7fr)_minmax(0,1.3fr)]' : ''}`}>
       <div className="min-w-0">
         <p className="px-2 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">
           Recherches populaires

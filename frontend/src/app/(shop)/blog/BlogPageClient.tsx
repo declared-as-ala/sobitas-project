@@ -142,22 +142,22 @@ export function BlogPageClient({
   return (
     <>
       <Section first spacing="default" width="wide">
-        <div className="grid gap-7 lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)] lg:items-end lg:gap-12">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.05fr)_minmax(28rem,0.95fr)] lg:items-center lg:gap-10">
           <div className="min-w-0">
             <span className="pt-kicker mb-3 inline-flex items-center gap-2.5 text-brand">
               <span className="h-px w-7 bg-brand" aria-hidden="true" />
               Le guide Protein.tn
             </span>
-            <h1 className="max-w-[18ch] font-display font-compressed text-[2.25rem] font-extrabold uppercase leading-[0.92] tracking-[-0.025em] text-ink-1 sm:text-5xl lg:text-[3.5rem]">
+            <h1 className="max-w-[18ch] font-display font-compressed text-[2.125rem] font-extrabold uppercase leading-[0.94] tracking-[-0.025em] text-ink-1 sm:text-5xl lg:text-[3.375rem]">
               Blog nutrition sportive & compléments en Tunisie
             </h1>
-            <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-2 sm:text-lg">
+            <p className="mt-3.5 max-w-2xl text-[15px] leading-7 text-ink-2 sm:text-[17px]">
               Des réponses claires pour comprendre la whey, la créatine, la nutrition et choisir selon votre objectif — sans jargon inutile.
             </p>
-            <div className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-ink-2">
-              <span className="rounded-full border border-hairline bg-elevated px-3 py-2 tabular-nums">{articles.length} guides</span>
-              <span className="rounded-full border border-hairline bg-elevated px-3 py-2">Français & arabe</span>
-              <span className="rounded-full border border-hairline bg-elevated px-3 py-2">Lecture gratuite</span>
+            <div className="mt-4 flex flex-wrap gap-2 text-xs font-semibold text-ink-2">
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-1.5 tabular-nums">{articles.length} guides</span>
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-1.5">Français & arabe</span>
+              <span className="rounded-full border border-hairline bg-elevated px-3 py-1.5">Lecture gratuite</span>
             </div>
           </div>
 
@@ -177,7 +177,7 @@ export function BlogPageClient({
                   key={topic.id}
                   type="button"
                   onClick={() => selectTopic(topic.id)}
-                  className={`group flex min-h-[88px] items-center justify-between gap-4 px-4 py-3 text-start transition-colors hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:px-5 ${
+                  className={`group flex min-h-[82px] items-center justify-between gap-4 px-4 py-3 text-start transition-colors hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus sm:px-5 ${
                     index > 0 ? 'border-t border-rule' : ''
                   } ${index === 1 ? 'sm:border-l sm:border-t-0' : ''} ${index === 3 ? 'sm:border-l' : ''}`}
                 >
@@ -196,9 +196,9 @@ export function BlogPageClient({
       {featuredArticles.length >= 3 && safeCurrentPage === 1 && (
         <Section surface="sunken" spacing="default" width="wide" aria-labelledby="featured-guides-title">
           <SectionHeader id="featured-guides-title" scale="2" kicker="À la une" title="Trois guides à lire maintenant" subtitle="Les publications les plus récentes, mises en avant sans masquer le reste de la bibliothèque." />
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.45fr)_minmax(24rem,0.85fr)] lg:gap-5">
+          <div className="grid gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(24rem,0.85fr)] lg:gap-6">
             <BlogCard article={featuredArticles[0]} excerpt={featuredArticles[0].excerpt} readingMinutes={featuredArticles[0].readingMinutes} eyebrow={topicName(featuredArticles[0].topicId)} variant="feature" priority />
-            <div className="grid gap-4">
+            <div className="grid gap-3.5 sm:grid-cols-2 lg:grid-cols-1">
               {featuredArticles.slice(1).map((article) => (
                 <BlogCard key={article.id} article={article} readingMinutes={article.readingMinutes} eyebrow={topicName(article.topicId)} variant="compact" />
               ))}
@@ -219,7 +219,7 @@ export function BlogPageClient({
             trailingAllWidths
           />
 
-          <div className="mb-5 overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
+          <div className="mb-5 overflow-hidden rounded-2xl border border-rule bg-elevated shadow-sm">
             <div className="grid gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(18rem,0.7fr)_minmax(0,1.3fr)] lg:items-center">
               <label className="relative block min-w-0">
                 <span className="sr-only">Rechercher dans le blog</span>
@@ -260,7 +260,7 @@ export function BlogPageClient({
               <button type="button" onClick={() => { setQuery(''); selectTopic('all'); }} className="mt-5 inline-flex min-h-11 items-center rounded-xl bg-brand px-5 text-sm font-semibold text-on-brand hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">Voir tous les guides</button>
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-5">
+            <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 xl:gap-6">
               {pageArticles.map((article) => (
                 <BlogCard key={article.id} article={article} excerpt={article.excerpt} readingMinutes={article.readingMinutes} eyebrow={topicName(article.topicId)} />
               ))}
@@ -278,7 +278,7 @@ export function BlogPageClient({
           )}
 
           {(blogCategoryLinks.length > 0 || blogTagLinks.length > 0) && (
-            <div className="mt-6 grid gap-4 rounded-2xl border border-hairline bg-elevated p-4 sm:p-5 lg:mt-8 lg:grid-cols-2">
+            <div className="mt-6 grid gap-5 rounded-2xl border border-rule bg-elevated p-4 sm:p-5 lg:mt-8 lg:grid-cols-2 lg:gap-0 lg:divide-x lg:divide-rule">
               {blogCategoryLinks.length > 0 && (
                 <nav className="min-w-0" aria-label="Catégories éditoriales">
                   <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"><FolderOpen className="h-4 w-4" aria-hidden="true" /> Catégories</span>
@@ -288,7 +288,7 @@ export function BlogPageClient({
                 </nav>
               )}
               {blogTagLinks.length > 0 && (
-                <nav className="min-w-0" aria-label="Sujets populaires">
+                <nav className="min-w-0 border-t border-rule pt-5 lg:border-t-0 lg:pl-5 lg:pt-0" aria-label="Sujets populaires">
                   <span className="mb-2 inline-flex items-center gap-2 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-brand"><Tag className="h-4 w-4" aria-hidden="true" /> Sujets populaires</span>
                   <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                     {blogTagLinks.map((tag) => <Link key={tag.slug} href={`/blog/tag/${tag.slug}`} className="inline-flex min-h-11 shrink-0 items-center rounded-xl border border-hairline bg-sunken px-3.5 text-sm text-ink-2 hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">{decodeHtmlEntities(tag.name)}</Link>)}
