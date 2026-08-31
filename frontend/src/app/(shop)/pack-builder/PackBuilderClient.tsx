@@ -19,6 +19,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { EmptyState } from '@/app/components/EmptyState';
@@ -54,14 +55,26 @@ const PACK_TIERS: { min: number; percent: number }[] = [
 function FocusedBuilderHeader() {
   return (
     <header className="border-b border-hairline bg-elevated">
-      <div className="max-w-site mx-auto flex min-h-[72px] items-center px-4 sm:px-6 lg:px-8">
+      <div className="max-w-site relative mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
         <LinkWithLoading
           href="/"
-          className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-2 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1"
+          className="inline-flex min-h-[44px] items-center gap-2 rounded-xl px-1.5 text-sm font-semibold text-ink-2 transition-colors [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1 sm:px-2"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
           Retour à la boutique
         </LinkWithLoading>
+        <Image
+          src="/logo.png"
+          alt="Protein.tn"
+          width={136}
+          height={36}
+          priority
+          className="h-auto w-[88px] shrink-0 md:absolute md:left-1/2 md:w-[104px] md:-translate-x-1/2"
+        />
+        <p className="hidden text-xs font-semibold text-ink-2 lg:block">
+          Pack sur mesure <span className="mx-1.5 text-hairline">•</span>
+          jusqu’à <span className="font-display text-base font-extrabold text-brand">−12%</span>
+        </p>
       </div>
     </header>
   );
@@ -291,7 +304,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
        become an edge rather than the only thing defining a card. */
     <div className="pt-no-chrome min-h-screen bg-sunken">
       <FocusedBuilderHeader />
-      <main className="max-w-site mx-auto px-4 pb-32 pt-4 sm:px-6 sm:pt-6 lg:h-[calc(100dvh-72px)] lg:overflow-hidden lg:px-8 lg:pb-5 lg:pt-5">
+      <main className="max-w-site mx-auto px-4 pb-32 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-16 lg:pt-4">
         <PackWizard
           groups={groups}
           pack={pack}

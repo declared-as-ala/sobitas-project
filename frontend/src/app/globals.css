@@ -769,18 +769,37 @@ body[data-page='product'] {
   .pt-pack-workspace {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 20rem;
-    align-items: stretch;
+    align-items: start;
     gap: 1.5rem;
     min-height: 0;
-    overflow: hidden;
+    overflow: visible;
   }
 
   .pt-pack-products-scroll {
     min-height: 0;
-    overflow-y: auto;
-    overscroll-behavior: contain;
     padding-inline-end: 0.5rem;
-    scrollbar-gutter: stable;
+  }
+
+  /* Keep these offsets explicit. The production utility allow-list intentionally omits generic
+     top-position helpers, which otherwise leaves sticky elements with `top: auto` and makes them
+     behave like ordinary blocks even though their computed position is sticky. */
+  .pt-pack-controls {
+    top: 0;
+  }
+
+  .pt-pack-summary {
+    top: 9.75rem;
+  }
+
+  /* The catalog uses the document scroller. A previous fixed-height workspace trapped the wheel
+     inside a subtle nested scroller and made the page look frozen; normal page scrolling is more
+     predictable, while the compact controls and pack total remain sticky beside the products. */
+  .pt-pack-controls::after {
+    content: "";
+    position: absolute;
+    inset: auto 0 -1px;
+    height: 1px;
+    background: rgb(var(--c-hairline));
   }
 }
 

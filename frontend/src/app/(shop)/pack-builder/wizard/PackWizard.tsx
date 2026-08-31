@@ -3,6 +3,7 @@
 /** A two-step buying tool: choose available products, then verify the pack. */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LazyMotion, MotionConfig, m, useReducedMotion } from 'motion/react';
+import Image from 'next/image';
 import { Check } from 'lucide-react';
 import type { Product } from '@/types';
 import type { PackGroup } from './steps';
@@ -18,6 +19,14 @@ const STAGES: { key: Stage; short: string; label: string }[] = [
   { key: 'build', short: '1', label: 'Produits' },
   { key: 'review', short: '2', label: 'Votre pack' },
 ];
+
+const CATEGORY_ART: Record<string, string> = {
+  'whey-proteine': '/images/pack-builder/categories/whey.webp',
+  creatine: '/images/pack-builder/categories/creatine.webp',
+  'gainers-proteines': '/images/pack-builder/categories/gainers.webp',
+  'prise-de-masse': '/images/pack-builder/categories/prise-de-masse.webp',
+  'pre-workout': '/images/pack-builder/categories/pre-workout.webp',
+};
 
 export interface PackWizardProps {
   groups: PackGroup[];
@@ -44,7 +53,7 @@ export interface PackWizardProps {
 function StageNav({ stage, hasItems, onChange }: { stage: Stage; hasItems: boolean; onChange: (stage: Stage) => void }) {
   const current = STAGES.findIndex((item) => item.key === stage);
   return (
-    <nav aria-label="Étapes de composition" className="mb-4 shrink-0">
+    <nav aria-label="Étapes de composition" className="mb-3 shrink-0">
       <ol className="grid grid-cols-2 overflow-hidden rounded-xl border border-hairline bg-elevated">
         {STAGES.map((item, index) => {
           const active = item.key === stage;
@@ -57,7 +66,7 @@ function StageNav({ stage, hasItems, onChange }: { stage: Stage; hasItems: boole
                 disabled={disabled}
                 aria-current={active ? 'step' : undefined}
                 onClick={() => onChange(item.key)}
-                className={`flex min-h-[52px] w-full items-center justify-center gap-2 px-2 text-sm font-semibold transition-colors ${
+                className={`flex min-h-[48px] w-full items-center justify-center gap-2 px-2 text-sm font-semibold transition-colors ${
                   active ? 'bg-brand text-on-brand' : 'text-ink-2 [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1'
                 } disabled:cursor-not-allowed disabled:opacity-45`}
               >
@@ -132,7 +141,7 @@ export function PackWizard(props: PackWizardProps) {
   return (
     <LazyMotion features={loadMotionFeatures} strict>
       <MotionConfig reducedMotion="user">
-        <div className="flex h-full min-h-0 flex-col">
+        <div className="flex min-h-0 flex-col">
           <StageNav stage={stage} hasItems={itemCount > 0} onChange={goToStage} />
           <AnimatePresence mode="wait" custom={direction}>
             <m.div
@@ -144,52 +153,60 @@ export function PackWizard(props: PackWizardProps) {
               initial="enter"
               animate="center"
               exit="exit"
-              className="min-h-0 flex-1 outline-none"
+              className="min-h-0 outline-none"
             >
               {stage === 'build' && activeGroup && (
-                <section aria-labelledby="pack-products-title" className="flex h-full min-h-0 flex-col">
-                  <div className="mb-3 shrink-0 lg:flex lg:items-end lg:justify-between lg:gap-6">
-                    <div>
-                      <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Pack sur mesure</p>
-                      <h1 id="pack-products-title" className="mt-1 font-display text-3xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-4xl">
-                        Composez votre pack
-                      </h1>
-                      <p className="mt-1.5 text-sm text-ink-2">Ajoutez des produits : votre remise augmente automatiquement.</p>
+                <section aria-labelledby="pack-products-title" className="flex min-h-0 flex-col">
+                  <div className="pt-pack-controls shrink-0 lg:sticky lg:top-0 lg:z-30 lg:bg-sunken lg:pb-3">
+                    <div className="mb-3 lg:flex lg:items-end lg:justify-between lg:gap-6">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-[0.18em] text-brand">Pack sur mesure</p>
+                        <h1 id="pack-products-title" className="mt-1 font-display text-3xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-4xl">
+                          Composez votre pack
+                        </h1>
+                        <p className="mt-1.5 text-sm text-ink-2">Ajoutez, comparez, économisez. La remise se calcule toute seule.</p>
+                      </div>
+                      <div className="scrollbar-hide -mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:mt-0 lg:px-0">
+                        <DiscountSteps tiers={tiers} />
+                      </div>
                     </div>
-                    <div className="scrollbar-hide -mx-4 mt-3 overflow-x-auto px-4 sm:-mx-6 sm:px-6 lg:mx-0 lg:mt-0 lg:px-0">
-                      <DiscountSteps tiers={tiers} />
+
+                    <div className="scrollbar-hide -mx-4 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
+                      <div className="flex min-w-max snap-x snap-mandatory gap-2" role="tablist" aria-label="Catégories du pack">
+                        {groups.map((group) => {
+                          const active = group.slug === activeGroup.slug;
+                          const selected = selectedByGroup[group.slug] ?? 0;
+                          const art = CATEGORY_ART[group.slug];
+                          return (
+                            <button
+                              key={group.slug}
+                              type="button"
+                              role="tab"
+                              aria-selected={active}
+                              onClick={() => setActiveSlug(group.slug)}
+                              className={`inline-flex min-h-[50px] snap-start items-center gap-2 rounded-xl border py-1.5 pl-1.5 pr-3 text-sm font-semibold transition-[border-color,background-color,color,transform] active:scale-[0.98] ${
+                                active ? 'border-brand bg-brand text-on-brand shadow-sm' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand/60 [@media(hover:hover)]:hover:text-brand'
+                              }`}
+                            >
+                              {art && (
+                                <span className={`relative h-9 w-9 shrink-0 rounded-lg ${active ? 'bg-elevated/95' : 'bg-sunken'}`} aria-hidden="true">
+                                  <Image src={art} alt="" fill sizes="36px" className="object-contain p-0.5" />
+                                </span>
+                              )}
+                              <span>{group.label}</span>
+                              {selected > 0 && (
+                                <span className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${active ? 'bg-elevated text-ink-1' : 'bg-brand text-on-brand'}`}>
+                                  {selected}
+                                </span>
+                              )}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
 
-                  <div className="scrollbar-hide -mx-4 mb-3 shrink-0 overflow-x-auto px-4 pb-1 sm:-mx-6 sm:px-6 lg:mx-0 lg:px-0">
-                    <div className="flex min-w-max gap-2" role="tablist" aria-label="Catégories du pack">
-                      {groups.map((group) => {
-                        const active = group.slug === activeGroup.slug;
-                        const selected = selectedByGroup[group.slug] ?? 0;
-                        return (
-                          <button
-                            key={group.slug}
-                            type="button"
-                            role="tab"
-                            aria-selected={active}
-                            onClick={() => setActiveSlug(group.slug)}
-                            className={`inline-flex min-h-[44px] items-center gap-2 rounded-full border px-4 text-sm font-semibold transition-colors ${
-                              active ? 'border-brand bg-brand text-on-brand' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand [@media(hover:hover)]:hover:text-brand'
-                            }`}
-                          >
-                            {group.label}
-                            {selected > 0 && (
-                              <span className={`flex h-6 min-w-6 items-center justify-center rounded-full px-1.5 text-[11px] font-bold tabular-nums ${active ? 'bg-elevated text-ink-1' : 'bg-brand text-on-brand'}`}>
-                                {selected}
-                              </span>
-                            )}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  <div className="pt-pack-workspace min-h-0 flex-1">
+                  <div className="pt-pack-workspace min-h-0 flex-1 pt-1">
                     <div role="tabpanel" aria-label={activeGroup.label} className="pt-pack-products-scroll min-w-0">
                       <div className="mb-3 flex items-end justify-between gap-4">
                         <div>

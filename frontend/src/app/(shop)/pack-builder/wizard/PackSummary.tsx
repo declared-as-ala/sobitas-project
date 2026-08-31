@@ -136,7 +136,7 @@ export function PackSummary({
 
   return (
     <>
-      <aside className="hidden lg:block" aria-label="Résumé du pack">
+      <aside className="pt-pack-summary hidden lg:sticky lg:block lg:self-start" aria-label="Résumé du pack">
         <div data-pack-target className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
           <div className="border-b border-hairline p-5">
             <div className="flex items-center justify-between gap-3">
