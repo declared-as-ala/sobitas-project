@@ -27,7 +27,7 @@ const escapeXml = (value) =>
     '"': '&quot;',
   })[character]);
 
-function desktopOverlay({ headline, promise, support }) {
+function desktopOverlay({ headline, headlineSize = 100, promise, support }) {
   return Buffer.from(`
     <svg width="2400" height="1000" viewBox="0 0 2400 1000" xmlns="http://www.w3.org/2000/svg">
       <defs>
@@ -38,15 +38,15 @@ function desktopOverlay({ headline, promise, support }) {
         </linearGradient>
       </defs>
       <rect width="1500" height="1000" fill="url(#readability)"/>
-      <rect x="176" y="278" width="88" height="8" rx="4" fill="${ORANGE}"/>
-      <text x="650" y="425" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
-        font-family="Tahoma, Arial, sans-serif" font-size="112" font-weight="800" fill="${WHITE}">${escapeXml(headline)}</text>
-      <text x="650" y="565" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
-        font-family="Tahoma, Arial, sans-serif" font-size="82" font-weight="800" fill="${ORANGE}">${escapeXml(promise)}</text>
-      <text x="650" y="665" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
-        font-family="Tahoma, Arial, sans-serif" font-size="36" font-weight="400" fill="${MUTED}">${escapeXml(support)}</text>
-      <circle cx="182" cy="772" r="5" fill="${ORANGE}"/>
-      <rect x="202" y="768" width="150" height="8" rx="4" fill="${ORANGE}" fill-opacity="0.55"/>
+      <rect x="340" y="278" width="88" height="8" rx="4" fill="${ORANGE}"/>
+      <text x="780" y="425" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
+        font-family="Tahoma, Arial, sans-serif" font-size="${headlineSize}" font-weight="800" fill="${WHITE}">${escapeXml(headline)}</text>
+      <text x="780" y="555" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
+        font-family="Tahoma, Arial, sans-serif" font-size="72" font-weight="800" fill="${ORANGE}">${escapeXml(promise)}</text>
+      <text x="780" y="650" text-anchor="middle" direction="rtl" unicode-bidi="bidi-override"
+        font-family="Tahoma, Arial, sans-serif" font-size="31" font-weight="400" fill="${MUTED}">${escapeXml(support)}</text>
+      <circle cx="346" cy="772" r="5" fill="${ORANGE}"/>
+      <rect x="366" y="768" width="150" height="8" rx="4" fill="${ORANGE}" fill-opacity="0.55"/>
     </svg>
   `);
 }
@@ -89,7 +89,7 @@ async function buildDesktop(input, filename, copy) {
     .resize(2400, 1000, { fit: 'cover', position: 'centre' })
     .composite([
       { input: desktopOverlay(copy), left: 0, top: 0 },
-      { input: logo, left: 176, top: 90 },
+      { input: logo, left: 340, top: 90 },
     ])
     .webp({ quality: 84, effort: 6, smartSubsample: true })
     .toFile(path.join(outputDirectory, filename));
@@ -109,6 +109,7 @@ async function buildMobile(input, filename, copy) {
 
 const returnCopy = {
   headline: 'ما عجبكش البرودوي؟',
+  headlineSize: 78,
   promise: 'بدّلو ولا رجّعو في 7 أيّام',
   support: 'كان ما ناسبكش، نبدّلوهولك ولا ترجّعو بكل سهولة.',
   supportLines: ['كان ما ناسبكش، نبدّلوهولك', 'ولا ترجّعو بكل سهولة.'],
