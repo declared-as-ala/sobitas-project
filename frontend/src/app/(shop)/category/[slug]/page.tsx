@@ -237,6 +237,7 @@ const META_TITLE_MAX_LEN = 65;
  */
 const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
   'proteines',
+  'whey-proteine',
   'creatine',
   'whey-isolate',
   'omega-3',
