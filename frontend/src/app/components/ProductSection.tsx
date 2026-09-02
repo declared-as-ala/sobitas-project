@@ -52,6 +52,8 @@ interface ProductSectionProps {
    * not here — see the three rules at the top of that file.
    */
   className?: string;
+  /** Use the denser card geometry intended for homepage merchandising. */
+  compactCards?: boolean;
 }
 
 export const ProductSection = memo(function ProductSection({
@@ -71,6 +73,7 @@ export const ProductSection = memo(function ProductSection({
   defer = false,
   last = false,
   className,
+  compactCards = false,
 }: ProductSectionProps) {
   return (
     /* This used to hardcode `bg-white py-12 dark:bg-gray-950 sm:py-16 lg:py-20` plus its own
@@ -94,7 +97,7 @@ export const ProductSection = memo(function ProductSection({
       />
 
       {/* Shared canonical ProductGrid (2 → 3 → 4, no orphan rows) */}
-      <ProductGrid>
+      <ProductGrid className={compactCards ? 'lg:gap-4 xl:gap-5' : undefined}>
         {products.map((product) => (
           <ProductCard
             key={product.id}
@@ -102,6 +105,7 @@ export const ProductSection = memo(function ProductSection({
             showBadge={showBadge}
             badgeText={badgeText}
             imageContext={imageContext}
+            variant={compactCards ? 'compact' : 'default'}
           />
         ))}
       </ProductGrid>

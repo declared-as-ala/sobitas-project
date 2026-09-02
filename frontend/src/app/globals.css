@@ -1277,6 +1277,37 @@ input[type="search"]::-webkit-search-results-decoration {
   padding-bottom: var(--checkout-cta-padding, 6.25rem);
 }
 
+@keyframes pt-review-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(calc(-50% - 0.375rem)); }
+}
+
+.pt-review-marquee {
+  animation: pt-review-marquee 110s linear infinite;
+  will-change: transform;
+}
+
+.pt-review-marquee-viewport:hover .pt-review-marquee,
+.pt-review-marquee-viewport:focus-within .pt-review-marquee {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pt-review-marquee {
+    animation: none;
+    transform: none;
+  }
+
+  .pt-review-marquee-viewport {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .pt-review-marquee-viewport::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @media (min-width: 640px) {
   .checkout-layout {
     gap: 1.5rem;

@@ -315,6 +315,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               /* No per-card badge: the h2 above already says these are the best sellers, and on a
                  124px phone thumbnail the pill covered ~40% of the packshot. See ProductCard. */
               showBadge={false}
+              compactCards
               /* ── 0.5em ON A PHONE (owner, 18/08/2026) ──────────────────────────────────────
                  `default` opens with `pt-4` (16px) on mobile, and that number was measured when
                  the band above was a sand-filled category section with its own bottom padding and
@@ -358,6 +359,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               title="Nouveaux produits"
               products={newProducts as any}
               showBadge={false}
+              compactCards
               defer
             />
           </>
@@ -389,6 +391,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               viewAllHref="/packs"
               viewAllLabel="Voir tous les packs"
               imageContext="packs"
+              compactCards
               surface="sunken"
               defer
             />

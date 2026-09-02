@@ -109,7 +109,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
     <Section
       surface="base"
       spacing="tight"
-      width="full"
+      width="wide"
       /* `lg:pt-0` is not redundant with `sm:pt-0`: the scale's own value at this size is
          `lg:py-6`, and a `lg:` utility beats an `sm:` one in the cascade regardless of which was
          written last. Measured before adding it — the band still reported 24px of padding-top at
@@ -123,7 +123,6 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
          right for prose and product grids; this band is photography that the owner wants running
          edge to edge, and 3px is the smallest gutter that still keeps the tiles' rounded corners
          off the screen edge. Both desktop steps are unchanged. */
-      containerClassName="px-[3px] sm:px-6 lg:px-8"
       aria-labelledby="category-rail-heading"
     >
       {/* SCALE 3, and no kicker (owner: "that's a big title — no need. I just want to show the
@@ -183,7 +182,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           3px on a phone (0.2em = 3.2px) with a 3px gutter, so the two columns and both margins
           are the same measure and the grid reads as centred rather than as two cards that happen
           to be near each other. */}
-      <ul className="grid grid-cols-2 gap-[3px] sm:grid-cols-3 sm:gap-[5px] xl:grid-cols-6">
+      <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
           const label = (category.designation_fr || '').trim();
@@ -227,7 +226,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                    `rounded-[8px]`, NOT `rounded-lg`: this config re-points `lg` at `var(--radius)`
                    (tailwind.config.ts), which resolves to 10px, so the obvious class would have
                    quietly shipped 10. Measured. */
-                className="group flex h-full flex-col overflow-hidden rounded-[8px] border border-hairline bg-elevated transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-rule hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
+                className="group flex h-full flex-col overflow-hidden rounded-xl border border-hairline bg-elevated shadow-sm transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus motion-reduce:transition-none motion-reduce:hover:translate-y-0"
               >
                 {/* `aspect-[4/3]` on phones, MATCHING the 4:3 source exactly, so nothing is
                     cropped in either axis. The old `16/10` (=1.60) was WIDER than the source
@@ -249,7 +248,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
                     5:4 takes the tile to 195px and the band to ~330px, and it is a better crop
                     besides: the source photography is 4:3 (1.333), so a square box cropped 25% off
                     the sides of every category cover. 5:4 (1.25) crops 6%. */}
-                <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken sm:aspect-[5/4]">
+                <div className="relative aspect-[4/3] w-full overflow-hidden bg-sunken">
                   {coverSrc ? (
                     <Image
                       src={coverSrc}

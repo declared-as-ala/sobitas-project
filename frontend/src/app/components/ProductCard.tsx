@@ -288,7 +288,7 @@ export const ProductCard = memo(function ProductCard({
     };
   }, [product, imageContext, locale]);
 
-  void variant;
+  const compact = variant === 'compact';
   void showDescription;
   void hideCountdown;
 
@@ -315,7 +315,7 @@ export const ProductCard = memo(function ProductCard({
       heart anchored to it would sit on top of the packshot instead of in the card's corner.
     */
     <>
-    <article className="pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-lg">
+    <article className={`pt-plate group font-poppins relative flex h-full w-full min-w-0 flex-row overflow-hidden border border-hairline shadow-sm transition-shadow duration-200 ease-out sm:flex-col [@media(hover:hover)]:hover:shadow-md ${compact ? 'rounded-xl' : 'rounded-2xl'}`}>
       {/* ── 104px UNDER 400px, 124 ABOVE IT (owner, 18/08/2026) ──────────────────────────
           *"on my iPhone 13 the cards are super good, but on smaller screens the text gets squeezed
           and trimmed."* An iPhone 13 is 390 CSS px. The phones under it in real traffic are 375,
@@ -348,6 +348,7 @@ export const ProductCard = memo(function ProductCard({
           scale={productData.imagePresentation.scale}
           product={product as any}
           priority={priority}
+          compact={compact}
           hoverImageSrc={(product as any).hover_image ?? null}
           sizes={imageSizes}
         />
@@ -473,7 +474,7 @@ export const ProductCard = memo(function ProductCard({
           · gap-2 → gap-1.5, py-4 → py-3.5 is NOT used (off the 4px lattice); padding stays 16px
         Combined with the 5:4 image frame this takes the desktop card from ~608px to ~465px.
       */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-2.5 py-2.5 min-[360px]:px-3 min-[360px]:py-3 sm:px-4 sm:py-4">
+      <div className={`flex min-h-0 min-w-0 flex-1 flex-col gap-1.5 px-2.5 py-2.5 min-[360px]:px-3 min-[360px]:py-3 ${compact ? 'sm:p-3.5' : 'sm:px-4 sm:py-4'}`}>
         {/* Brand + verified — only when the name resolved (grid payload carries brand_id only). */}
         {/* ── `pr-9` IS GONE, AND IT WAS 26% OF THE COLUMN ─────────────────────────────────
             It reserved 36px on the brand row and the title for a favourite button overlaying the
@@ -515,7 +516,7 @@ export const ProductCard = memo(function ProductCard({
 
                Scoped to exactly those two ranges. Everywhere else the reserved two-line box is
                correct and unchanged, so no card grows anywhere it was already fine. */
-            className="line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors max-[399px]:line-clamp-3 sm:min-h-[2.75rem] sm:text-[15px] md:text-[14px] lg:line-clamp-3 xl:line-clamp-2 xl:text-[15px] [@media(hover:hover)]:group-hover:text-brand"
+            className={`line-clamp-2 min-h-[2.375rem] text-[13px] font-bold leading-snug text-ink-1 transition-colors max-[399px]:line-clamp-3 sm:min-h-[2.75rem] sm:text-[15px] md:text-[14px] lg:line-clamp-3 xl:line-clamp-2 [@media(hover:hover)]:group-hover:text-brand ${compact ? 'xl:text-[14px]' : 'xl:text-[15px]'}`}
           >
             {productData.name}
           </h3>
@@ -527,7 +528,7 @@ export const ProductCard = memo(function ProductCard({
             plus `ml-auto` puts it at the right edge on a wide column and drops it under the price
             only on a genuinely narrow one. */}
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="whitespace-nowrap text-xl font-bold tabular-nums text-brand sm:text-2xl">
+          <span className={`whitespace-nowrap text-xl font-bold tabular-nums text-brand ${compact ? 'sm:text-xl' : 'sm:text-2xl'}`}>
             {Math.round(productData.priceDisplay.finalPrice)} DT
           </span>
           {productData.priceDisplay.hasPromo && productData.priceDisplay.oldPrice != null && (

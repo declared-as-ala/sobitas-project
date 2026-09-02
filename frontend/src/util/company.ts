@@ -91,9 +91,9 @@ export const GOOGLE_PROFILE = {
   /** The name on the profile, which differs from the site's own H1s. */
   name: 'PROTEIN.TN - PROTEINE TUNISIE',
   ratingValue: 4.9,
-  reviewCount: 1292,
-  reviewCountLabel: '1 290+',
-  ratingCheckedOn: '2026-08-31',
+  reviewCount: 1271,
+  reviewCountLabel: '1 270+',
+  ratingCheckedOn: '2026-09-02',
   /** The short link on the profile; resolves to the place page with the same place id. */
   url: 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6',
   placeId: 'ChIJsZHosBsTAhMRDLJJWPLg2lE',

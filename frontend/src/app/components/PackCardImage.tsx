@@ -47,6 +47,8 @@ interface PackCardImageProps {
    * what widening the cards was for. A surface that changes its column count must declare it here.
    */
   sizes?: string;
+  /** Shorter desktop frame used by dense merchandising rails such as the homepage. */
+  compact?: boolean;
 }
 
 export function PackCardImage({
@@ -62,6 +64,7 @@ export function PackCardImage({
   priority = false,
   surface = 'light',
   hoverImageSrc = null,
+  compact = false,
   sizes = '(max-width: 640px) 46vw, (max-width: 768px) 32vw, (max-width: 1024px) 26vw, (max-width: 1280px) 20vw, 16vw',
 }: PackCardImageProps) {
   const [hasError, setHasError] = useState(false);
@@ -127,7 +130,8 @@ export function PackCardImage({
         its products properly.
       */
       : 'bg-elevated',
-    productImageFrame(mode)
+    productImageFrame(mode),
+    compact && (isContain ? 'sm:aspect-[4/3]' : 'sm:h-[190px] lg:h-[210px]')
   );
 
   const imageClasses = cn(

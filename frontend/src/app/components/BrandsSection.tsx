@@ -73,7 +73,7 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
   */
   const className = `${
     hasLogo ? 'pt-logo-well' : 'pt-plate'
-  } group flex h-20 w-40 shrink-0 items-center justify-center rounded-xl border border-hairline px-3 transition-colors duration-200 hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`;
+  } group flex h-[4.5rem] w-36 shrink-0 items-center justify-center rounded-xl border border-hairline px-3 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`;
 
   if (!interactive) {
     return (

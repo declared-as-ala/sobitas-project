@@ -116,7 +116,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
       />
 
       {/* 1 → 2 → 3. `items-stretch` + `h-full` keep the three cards level when one title wraps. */}
-      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 lg:gap-6">
+      <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {displayArticles.map((article) => {
           // Strip tags before testing for emptiness: a description of "<p>&nbsp;</p>" is truthy
           // as a string but renders as nothing, which would leave a card with a blank grey block.
@@ -125,7 +125,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
           return (
           <li key={article.id} className="min-w-0">
-            <article className="group flex h-full flex-col overflow-hidden rounded-2xl border border-hairline bg-elevated transition-colors duration-200 hover:border-brand">
+            <article className="group flex h-full flex-col overflow-hidden rounded-xl border border-hairline bg-elevated shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-md">
               <LinkWithLoading
                 href={`/blog/${article.slug}`}
                 className="relative block aspect-[16/9] overflow-hidden bg-sunken"
@@ -150,7 +150,7 @@ export function BlogSection({ articles }: BlogSectionProps) {
 
               {/* 20px all round (24 from sm), against the old 8px. This is what makes the blog
                   cards sit in the same system as the product cards above them. */}
-              <div className="flex flex-1 flex-col p-5 sm:p-6">
+              <div className="flex flex-1 flex-col p-4 sm:p-5">
                 <p className="mb-2 inline-flex items-center gap-1.5 text-[11px] font-medium text-ink-3">
                   <Calendar className="h-3 w-3" aria-hidden="true" />
                   {article.created_at
