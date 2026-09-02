@@ -19,8 +19,17 @@ class OrderConfirmedAdminMail extends Mailable
     {
         $this->commande->loadMissing('details.product');
         $total = number_format((float) $this->commande->prix_ttc, 3, '.', ' ');
-        return $this
-            ->subject('[Admin] Nouvelle commande #' . $this->commande->numero . ' — ' . $total . ' TND')
-            ->view('emails.orders.confirmed-admin');
+        $name = trim((string) ($this->commande->livraison_nom ?: $this->commande->nom));
+        $mail = $this
+            ->subject('Nouvelle commande #' . $this->commande->numero . ' — ' . $total . ' TND' . ($name !== '' ? ' — ' . $name : ''))
+            ->view('emails.orders.confirmed-admin')
+            ->text('emails.orders.confirmed-admin-text');
+
+        $customerEmail = trim((string) ($this->commande->livraison_email ?: $this->commande->email));
+        if (filter_var($customerEmail, FILTER_VALIDATE_EMAIL)) {
+            $mail->replyTo($customerEmail, $name !== '' ? $name : 'Client Protein.tn');
+        }
+
+        return $mail;
     }
 }

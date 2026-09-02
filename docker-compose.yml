@@ -127,7 +127,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
-      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-bitoutawalid@gmail.com}
     networks:
       - sobitas-net
     expose:
@@ -249,7 +249,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
-      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-bitoutawalid@gmail.com}
     command: php artisan schedule:work
     networks:
       - sobitas-net
@@ -309,7 +309,7 @@ services:
       MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
-      ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-bitoutawalid@gmail.com}
     command: >
       php artisan queue:work redis
       --sleep=3

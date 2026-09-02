@@ -62,7 +62,7 @@ $replyToAddress = $defaultMailer === 'sendmail'
     : $emailAddress(env('MAIL_REPLY_TO'), $fromAddress);
 $adminEmails = array_values(array_unique(array_filter(array_map(
     static fn (string $value): string => $emailAddress($value),
-    array_map('trim', explode(',', (string) env('ADMIN_EMAILS', 'contact@protein.tn')))
+    array_map('trim', explode(',', (string) env('ADMIN_EMAILS', 'bitoutawalid@gmail.com')))
 ))));
 
 return [

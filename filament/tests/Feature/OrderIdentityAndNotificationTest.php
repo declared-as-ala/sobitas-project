@@ -8,10 +8,12 @@ use App\Models\Client;
 use App\Models\Commande;
 use App\Models\User;
 use App\Services\ClientService;
+use App\Services\OrderConfirmationDispatcher;
 use App\Services\TransactionalSmsText;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -197,6 +199,28 @@ class OrderIdentityAndNotificationTest extends TestCase
             'status' => 'sent',
             'attempts' => 1,
         ]);
+    }
+
+    public function test_order_dispatcher_queues_admin_notification_for_configured_mailbox(): void
+    {
+        Queue::fake();
+        config()->set('mail.admin_emails', ['bitoutawalid@gmail.com']);
+
+        $orderId = $this->insertOrder([
+            'numero' => '2026/ADMIN',
+            'email' => 'client@example.test',
+            'prix_ttc' => 299,
+            'etat' => Commande::STATUS_NEW,
+        ]);
+
+        app(OrderConfirmationDispatcher::class)->dispatch($orderId);
+
+        Queue::assertPushed(
+            SendOrderConfirmationEmailJob::class,
+            fn (SendOrderConfirmationEmailJob $job): bool => $job->commandeId === $orderId
+                && $job->recipientEmail === 'bitoutawalid@gmail.com'
+                && $job->audience === 'admin'
+        );
     }
 
     public function test_transactional_sms_copy_is_concise_and_does_not_expose_product_names(): void

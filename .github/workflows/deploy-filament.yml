@@ -197,6 +197,7 @@ jobs:
             upsert_secret MAIL_FROM_NAME Protein.tn
             upsert_secret MAIL_REPLY_TO contact@protein.tn
             upsert_secret FRONTEND_URL https://protein.tn
+            upsert_secret ADMIN_EMAILS bitoutawalid@gmail.com
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
@@ -396,6 +397,7 @@ jobs:
             upsert_secret MAIL_FROM_NAME Protein.tn
             upsert_secret MAIL_REPLY_TO contact@protein.tn
             upsert_secret FRONTEND_URL https://protein.tn
+            upsert_secret ADMIN_EMAILS bitoutawalid@gmail.com
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
