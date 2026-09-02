@@ -4,7 +4,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/app/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { CheckCircle2, Package, Truck, Home, FileText, Printer, Mail, Calendar, CreditCard, Wallet } from 'lucide-react';
+import { CheckCircle2, Package, Truck, Home, FileText, Printer, Calendar, Wallet } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/services/api';
@@ -458,293 +458,103 @@ export default function OrderConfirmationPage() {
   const subtotal = order.prix_ht || 0;
   const shipping = order.frais_livraison || 0;
   const total = order.prix_ttc || subtotal + shipping;
+  const explicitDiscount = Number(order.discount_ttc || order.discount_ht || order.remise || 0);
+  const discount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotal + shipping - total);
+  const customerName = [order.livraison_nom || order.nom, order.livraison_prenom || order.prenom].filter(Boolean).join(' ');
+  const customerEmail = order.livraison_email || order.email;
+  const customerPhone = order.livraison_phone || order.phone;
+  const address = order.livraison_adresse1 || order.adresse1;
+  const city = [order.livraison_ville || order.ville, order.livraison_region || order.region].filter(Boolean).join(', ');
+  const postalCode = order.livraison_code_postale || order.code_postale;
+  const paymentLabel = formatPaymentMethod(order.payment_method || (order.livraison === 1 ? 'cod' : 'card'));
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      
-      <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#f7f7f5] dark:bg-gray-950">
+      <main className="mx-auto max-w-[1040px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
         {/* Print Section - Hidden on screen, visible in print */}
         <div ref={printRef} className="hidden print:block">
           {/* This will be used for PDF generation */}
         </div>
 
-        {/* Success Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 dark:bg-green-900/20 mb-6">
-            <CheckCircle2 className="h-10 w-10 text-green-600 dark:text-green-400" aria-hidden="true" />
-          </div>
-
-          <h1 className="font-display uppercase tracking-tight text-3xl sm:text-4xl md:text-5xl text-gray-900 dark:text-white mb-4">
-            Merci. Votre commande a été reçue.
-          </h1>
-          <p className="text-lg text-gray-600 dark:text-gray-400 mb-6">
-            Nous avons bien reçu votre commande et vous en remercions.
-          </p>
-        </div>
-
-        {/* Order Summary Card */}
-        <Card className="mb-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <CardHeader className="bg-red-50 dark:bg-red-950/20 border-b border-gray-100 dark:border-gray-800">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900 dark:bg-gray-900">
+          <div className="flex flex-col gap-5 bg-emerald-50 px-5 py-6 dark:bg-emerald-950/25 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+            <div className="flex items-start gap-4">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm"><CheckCircle2 className="h-7 w-7" aria-hidden="true" /></span>
               <div>
-                <CardTitle className="font-display uppercase tracking-tight text-2xl text-gray-900 dark:text-white mb-2">Résumé de la commande</CardTitle>
-                <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600 dark:text-gray-400">
-                  <div className="flex items-center gap-2">
-                    <FileText className="h-4 w-4" />
-                    <span><strong>Numéro:</strong> {order.numero || `#${orderId}`}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span><strong>Date:</strong> {formatDate(order.created_at || null)}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Mail className="h-4 w-4" />
-                    <span><strong>Email:</strong> {order.email || 'N/A'}</span>
-                  </div>
-                </div>
-              </div>
-              <div className="text-left md:text-right">
-                <div className="text-sm text-gray-600 dark:text-gray-400 mb-1">Total</div>
-                <div className="font-display font-bold tracking-tight tabular-nums text-3xl text-red-600 dark:text-red-400">
-                  {total.toFixed(2)} TND
-                </div>
-                <div className="text-sm text-gray-500 dark:text-gray-500 mt-1">
-                  {order.livraison === 1 ? (
-                    <span className="flex items-center gap-1 justify-start md:justify-end mt-1">
-                      <Wallet className="h-4 w-4" />
-                      Paiement à la livraison
-                    </span>
-                  ) : (
-                    <span className="flex items-center gap-1 justify-start md:justify-end mt-1">
-                      <CreditCard className="h-4 w-4" />
-                      Carte Bancaire
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="p-6">
-            {order.livraison === 1 && (
-              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-800 rounded-xl">
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  <strong className="text-gray-900 dark:text-white">Paiement à la livraison:</strong> Payez en argent comptant à la livraison.
+                <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Commande enregistrée</p>
+                <h1 className="font-display text-2xl uppercase tracking-tight text-ink-1 sm:text-3xl">Merci, c’est confirmé.</h1>
+                <p className="mt-1 text-sm leading-6 text-ink-2">
+                  {customerEmail ? `Votre récapitulatif a été envoyé à ${customerEmail}.` : 'Notre équipe vous appellera pour confirmer la livraison.'}
                 </p>
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+            <div className="grid grid-cols-2 gap-3 sm:min-w-[250px]">
+              <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3 dark:border-emerald-900 dark:bg-gray-900"><span className="block text-xs text-ink-3">Commande</span><strong className="mt-0.5 block text-base text-ink-1">#{order.numero || orderId}</strong></div>
+              <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3 text-right dark:border-emerald-900 dark:bg-gray-900"><span className="block text-xs text-ink-3">Total</span><strong className="mt-0.5 block font-display text-lg tabular-nums text-brand">{total.toFixed(2)} DT</strong></div>
+            </div>
+          </div>
+        </section>
 
-        {/* Order Details */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
-          {/* Order Items - Takes 2 columns */}
-          <Card className="lg:col-span-2 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-            <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-              <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-                <Package className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-                Détails de la commande
+        <div className="my-5 grid gap-4 sm:grid-cols-3">
+          {[
+            ['1', 'Commande reçue', 'C’est fait'],
+            ['2', 'Confirmation', 'Nous vous appelons'],
+            ['3', 'Livraison', 'Sous 24–72 h'],
+          ].map(([step, title, text], index) => (
+            <div key={step} className="flex items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 dark:bg-gray-900">
+              <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-surface-subtle text-ink-2'}`}>{step}</span>
+              <div><p className="text-sm font-semibold text-ink-1">{title}</p><p className="text-xs text-ink-3">{text}</p></div>
+            </div>
+          ))}
+        </div>
+
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+          <Card className="overflow-hidden rounded-2xl border-line bg-white shadow-sm dark:bg-gray-900">
+            <CardHeader className="border-b border-line px-5 py-4 sm:px-6">
+              <CardTitle className="flex items-center justify-between gap-3 text-base text-ink-1">
+                <span className="flex items-center gap-2 font-display uppercase tracking-tight"><Package className="h-5 w-5 text-brand" aria-hidden="true" />Votre commande</span>
+                <span className="text-sm font-normal text-ink-3">{orderDetails.length} article{orderDetails.length > 1 ? 's' : ''}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
+            <CardContent className="p-0">
+              <div className="divide-y divide-line">
                 {orderDetails.map((detail) => {
                   const productName = detail.produit?.designation_fr || `Produit #${detail.produit_id}`;
-                  const productImage = detail.produit?.cover 
-                    ? getStorageUrl(detail.produit.cover) 
-                    : null;
-                  const itemTotal = (detail.prix_ttc || detail.prix_ht || 0);
-                  
+                  const productImage = detail.produit?.cover ? getStorageUrl(detail.produit.cover) : null;
+                  const itemTotal = detail.prix_ttc || detail.prix_ht || 0;
                   return (
-                    <div key={detail.id} className="flex items-start gap-4 p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                      {productImage && (
-                        <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
-                          <Image
-                            src={productImage}
-                            alt={productName}
-                            fill
-                            className="object-contain p-2"
-                            sizes="80px"
-                            unoptimized
-                          />
-                        </div>
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-gray-900 dark:text-white mb-1">
-                          {productName}
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">
-                          Quantité: {detail.qte} × {detail.prix_unitaire.toFixed(2)} TND
-                        </p>
-                      </div>
-                      <div className="text-right flex-shrink-0">
-                        <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
-                          {itemTotal.toFixed(2)} TND
-                        </p>
-                      </div>
+                    <div key={detail.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
+                      <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-subtle">{productImage && <Image src={productImage} alt="" fill className="object-contain p-1" sizes="56px" unoptimized />}</div>
+                      <div className="min-w-0 flex-1"><h3 className="line-clamp-2 text-sm font-semibold leading-5 text-ink-1">{productName}</h3><p className="mt-0.5 text-xs text-ink-3">Quantité : {detail.qte}</p></div>
+                      <p className="shrink-0 text-sm font-bold tabular-nums text-ink-1">{itemTotal.toFixed(2)} DT</p>
                     </div>
                   );
                 })}
               </div>
-
-              {/* Price Summary */}
-              <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-800 space-y-3">
-                <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                  <span>Sous-total</span>
-                  <span className="font-display font-semibold tabular-nums">{subtotal.toFixed(2)} TND</span>
-                </div>
-                <div className="flex justify-between text-gray-700 dark:text-gray-300">
-                  <span>Expédition</span>
-                  <span className={shipping === 0 ? 'text-green-600 dark:text-green-400 font-semibold' : 'font-display font-semibold tabular-nums'}>
-                    {shipping === 0 ? 'Livraison gratuite' : `${shipping} TND`}
-                  </span>
-                </div>
-                <div className="flex justify-between items-baseline pt-3 border-t border-gray-100 dark:border-gray-800">
-                  <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
-                  <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
-                    {total.toFixed(2)} TND
-                  </span>
-                </div>
+              <div className="space-y-2 border-t border-line bg-surface-subtle px-5 py-4 text-sm sm:px-6">
+                <div className="flex justify-between text-ink-2"><span>Sous-total</span><span className="font-semibold tabular-nums text-ink-1">{subtotal.toFixed(2)} DT</span></div>
+                {discount > 0 && <div className="flex justify-between text-emerald-700"><span>Remise</span><span className="font-semibold tabular-nums">−{discount.toFixed(2)} DT</span></div>}
+                <div className="flex justify-between text-ink-2"><span>Livraison</span><span className={shipping === 0 ? 'font-semibold text-emerald-700' : 'font-semibold tabular-nums text-ink-1'}>{shipping === 0 ? 'Gratuite' : `${shipping.toFixed(2)} DT`}</span></div>
+                <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3"><span className="font-display text-lg uppercase text-ink-1">Total</span><span className="font-display text-xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span></div>
               </div>
             </CardContent>
           </Card>
-
-          {/* Addresses - Takes 1 column */}
-          <div className="space-y-6">
-            {/* Billing Address */}
-            <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-              <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Adresse de facturation</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                  <p className="font-semibold text-gray-900 dark:text-white">
-                    {order.nom} {order.prenom}
-                  </p>
-                  <p>{order.adresse1}</p>
-                  {order.adresse2 && <p>{order.adresse2}</p>}
-                  <p>{order.ville}, {order.region}</p>
-                  <p>{order.code_postale}</p>
-                  <p>{order.pays || 'Tunisie'}</p>
-                  <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                    <p><strong>Téléphone:</strong> {order.phone}</p>
-                    <p><strong>Email:</strong> {order.email}</p>
-                  </div>
-                </div>
+          <aside className="space-y-4">
+            <Card className="rounded-2xl border-line bg-white shadow-sm dark:bg-gray-900">
+              <CardContent className="space-y-5 p-5">
+                <div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-1"><Truck className="h-4 w-4 text-brand" aria-hidden="true" />Livraison</div><div className="space-y-0.5 text-sm leading-5 text-ink-2">{customerName && <p className="font-semibold text-ink-1">{customerName}</p>}<p>{address}</p>{city && <p>{city}</p>}{postalCode && <p>{postalCode}</p>}<p className="pt-1 font-medium text-ink-1">{customerPhone}</p></div></div>
+                <div className="border-t border-line pt-4"><div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-1"><Wallet className="h-4 w-4 text-brand" aria-hidden="true" />Paiement</div><p className="text-sm text-ink-2">{paymentLabel}</p></div>
+                <div className="border-t border-line pt-4"><div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-1"><Calendar className="h-4 w-4 text-brand" aria-hidden="true" />Date</div><p className="text-sm text-ink-2">{formatDate(order.created_at || null)}</p></div>
               </CardContent>
             </Card>
-
-            {/* Shipping Address */}
-            {order.livraison === 1 && (
-              <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                  <CardTitle className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white flex items-center gap-2">
-                    <Truck className="h-4 w-4 text-red-600 dark:text-red-400" aria-hidden="true" />
-                    Adresse de livraison
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-sm text-gray-600 dark:text-gray-400 space-y-1">
-                    <p className="font-semibold text-gray-900 dark:text-white">
-                      {order.livraison_nom} {order.livraison_prenom}
-                    </p>
-                    <p>{order.livraison_adresse1}</p>
-                    {order.livraison_adresse2 && <p>{order.livraison_adresse2}</p>}
-                    <p>{order.livraison_ville}, {order.livraison_region}</p>
-                    <p>{order.livraison_code_postale}</p>
-                    <p>{order.pays || 'Tunisie'}</p>
-                    <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                      <p><strong>Téléphone:</strong> {order.livraison_phone}</p>
-                      <p><strong>Email:</strong> {order.livraison_email}</p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
+            <div className="grid gap-2">
+              <Button asChild size="lg" className="min-h-12 rounded-xl bg-brand font-display uppercase tracking-wide text-white hover:bg-brand-hover"><Link href="/shop"><Home className="mr-2 h-5 w-5" aria-hidden="true" />Continuer mes achats</Link></Button>
+              <Button asChild variant="outline" size="lg" className="min-h-12 rounded-xl"><Link href="/account/orders"><FileText className="mr-2 h-5 w-5" aria-hidden="true" />Mes commandes</Link></Button>
+              <Button onClick={handlePrintPDF} variant="ghost" size="lg" className="min-h-11 rounded-xl text-ink-2"><Printer className="mr-2 h-4 w-4" aria-hidden="true" />Imprimer le reçu</Button>
+            </div>
+          </aside>
         </div>
-
-        {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 mb-6">
-          <Button
-            size="lg"
-            className="flex-1 bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl"
-            onClick={handlePrintPDF}
-          >
-            <Printer className="h-5 w-5 mr-2" aria-hidden="true" />
-            Imprimer / PDF
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="flex-1 rounded-xl"
-            asChild
-          >
-            <Link href="/account/orders">
-              <FileText className="h-5 w-5 mr-2" aria-hidden="true" />
-              Voir mes commandes
-            </Link>
-          </Button>
-          <Button
-            size="lg"
-            variant="outline"
-            className="flex-1 rounded-xl"
-            asChild
-          >
-            <Link href="/shop">
-              <Home className="h-5 w-5 mr-2" aria-hidden="true" />
-              Continuer les achats
-            </Link>
-          </Button>
-        </div>
-
-        {/* Next Steps */}
-        <Card className="rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-          <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-            <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-              <Package className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-              Prochaines étapes
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
-                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">1</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Confirmation par email</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Vous recevrez un email de confirmation avec les détails de votre commande.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
-                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">2</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Traitement de la commande</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Nous préparons votre commande et vous tiendrons informé de son statut.
-                </p>
-              </div>
-            </div>
-            
-            <div className="flex items-start gap-4">
-              <div className="flex-shrink-0 w-8 h-8 rounded-full bg-red-50 dark:bg-red-950/40 flex items-center justify-center">
-                <span className="text-sm font-display font-bold text-red-600 dark:text-red-400">3</span>
-              </div>
-              <div>
-                <h3 className="font-semibold mb-1">Livraison</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">
-                  Votre commande sera livrée dans les 2-3 jours ouvrables.
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
       </main>
-
     </div>
   );
 }

@@ -577,201 +577,140 @@ export default function CheckoutPage() {
     const order = orderData.order;
     const details = orderData.orderDetails;
     const confirmationEmail = order?.livraison_email || order?.email;
+    const shipping = Number(order?.frais_livraison || 0);
+    const subtotal = Number(order?.prix_ht || 0);
+    const total = Number(order?.prix_ttc || 0);
+    const explicitDiscount = Number(order?.discount_ttc || order?.discount_ht || order?.remise || 0);
+    const discount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotal + shipping - total);
+    const deliveryName = [order?.livraison_nom || order?.nom, order?.livraison_prenom || order?.prenom]
+      .filter(Boolean)
+      .join(' ');
+    const deliveryCity = [order?.livraison_ville || order?.ville, order?.livraison_region || order?.region]
+      .filter(Boolean)
+      .join(', ');
 
     return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-        
-        <main className="max-w-[1160px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-12">
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400 lg:hidden mb-4">Étape 3 sur 3 — Confirmation</p>
-          <div className="hidden lg:flex items-center gap-2 mb-8">
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-500 flex items-center justify-center text-sm font-semibold">1</div>
-              <span className="text-sm font-medium text-gray-500">Panier</span>
+      <div className="min-h-screen bg-[#f7f7f5] dark:bg-gray-950">
+        <main className="mx-auto max-w-[1040px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
+          <section className="overflow-hidden rounded-2xl border border-emerald-200 bg-white shadow-sm dark:border-emerald-900 dark:bg-gray-900">
+            <div className="flex flex-col gap-5 bg-emerald-50 px-5 py-6 dark:bg-emerald-950/25 sm:flex-row sm:items-center sm:justify-between sm:px-7">
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-sm">
+                  <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-emerald-700 dark:text-emerald-300">Commande enregistrée</p>
+                  <h1 className="font-display text-2xl uppercase tracking-tight text-ink-1 sm:text-3xl">Merci, c’est confirmé.</h1>
+                  <p className="mt-1 text-sm leading-6 text-ink-2">
+                    {confirmationEmail
+                      ? `Le récapitulatif a été envoyé à ${confirmationEmail}.`
+                      : 'Notre équipe vous appellera pour confirmer la livraison.'}
+                  </p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3 sm:min-w-[250px]">
+                <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3 dark:border-emerald-900 dark:bg-gray-900">
+                  <span className="block text-xs text-ink-3">Commande</span>
+                  <strong className="mt-0.5 block text-base text-ink-1">#{order?.numero || ''}</strong>
+                </div>
+                <div className="rounded-xl border border-emerald-200 bg-white px-4 py-3 text-right dark:border-emerald-900 dark:bg-gray-900">
+                  <span className="block text-xs text-ink-3">Total</span>
+                  <strong className="mt-0.5 block font-display text-lg tabular-nums text-brand">{total.toFixed(2)} DT</strong>
+                </div>
+              </div>
             </div>
-            <div className="flex-1 h-0.5 bg-red-600 mx-2 max-w-[80px]" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-gray-300 dark:bg-gray-700 text-gray-500 flex items-center justify-center text-sm font-semibold">2</div>
-              <span className="text-sm font-medium text-gray-500">Livraison & Paiement</span>
-            </div>
-            <div className="flex-1 h-0.5 bg-red-600 mx-2 max-w-[80px]" />
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-red-600 text-white flex items-center justify-center text-sm font-semibold">3</div>
-              <span className="text-sm font-semibold text-gray-900 dark:text-white">Confirmation</span>
-            </div>
+          </section>
+
+          <div className="my-5 grid gap-4 sm:grid-cols-3">
+            {[
+              ['1', 'Commande reçue', 'C’est fait'],
+              ['2', 'Confirmation', 'Nous vous appelons'],
+              ['3', 'Livraison', 'Sous 24–72 h'],
+            ].map(([step, title, text], index) => (
+              <div key={step} className="flex items-center gap-3 rounded-xl border border-line bg-white px-4 py-3 dark:bg-gray-900">
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-emerald-100 text-emerald-700' : 'bg-surface-subtle text-ink-2'}`}>{step}</span>
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-ink-1">{title}</p>
+                  <p className="text-xs text-ink-3">{text}</p>
+                </div>
+              </div>
+            ))}
           </div>
 
-          {/* Confirmation Content */}
-          <div className="max-w-4xl mx-auto">
-            {/* Success Message */}
-            <Card className="mb-6 border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-950/20">
-              <CardContent className="pt-6">
-                <div className="text-center">
-                  <CheckCircle2 className="h-16 w-16 text-green-600 dark:text-green-400 mx-auto mb-4" aria-hidden="true" />
-                  <h1 className="font-display uppercase tracking-tight text-3xl text-gray-900 dark:text-white mb-2">
-                    Commande confirmée !
-                  </h1>
-                  <p className="text-lg text-gray-600 dark:text-gray-400 mb-4">
-                    Merci pour votre commande #{order?.numero || ''}
-                  </p>
-                  <p className="text-sm text-gray-500 dark:text-gray-500">
-                    {confirmationEmail
-                      ? `Un email de confirmation a été envoyé à ${confirmationEmail}`
-                      : 'Notre équipe vous contactera par téléphone pour confirmer la livraison.'}
-                  </p>
+          <div ref={printRef} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
+            <Card className="overflow-hidden rounded-2xl border-line bg-white shadow-sm dark:bg-gray-900">
+              <CardHeader className="border-b border-line px-5 py-4 sm:px-6">
+                <CardTitle className="flex items-center justify-between gap-3 text-base text-ink-1">
+                  <span className="flex items-center gap-2 font-display uppercase tracking-tight">
+                    <Package className="h-5 w-5 text-brand" aria-hidden="true" />
+                    Votre commande
+                  </span>
+                  <span className="text-sm font-normal text-ink-3">{details.length} article{details.length > 1 ? 's' : ''}</span>
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="divide-y divide-line">
+                  {details.map((detail: any) => {
+                    const productImage = detail.produit?.cover ? getStorageUrl(detail.produit.cover) : null;
+                    return (
+                      <div key={detail.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
+                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-subtle">
+                          {productImage && <Image src={productImage} alt="" fill className="object-contain p-1" sizes="56px" unoptimized />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink-1">{detail.produit?.designation_fr || 'Produit'}</p>
+                          <p className="mt-0.5 text-xs text-ink-3">Quantité : {detail.qte || 0}</p>
+                        </div>
+                        <p className="shrink-0 text-sm font-bold tabular-nums text-ink-1">{Number(detail.prix_ttc || 0).toFixed(2)} DT</p>
+                      </div>
+                    );
+                  })}
+                </div>
+                <div className="space-y-2 border-t border-line bg-surface-subtle px-5 py-4 text-sm sm:px-6">
+                  <div className="flex justify-between text-ink-2"><span>Sous-total</span><span className="font-semibold tabular-nums text-ink-1">{subtotal.toFixed(2)} DT</span></div>
+                  {discount > 0 && <div className="flex justify-between text-emerald-700"><span>Remise</span><span className="font-semibold tabular-nums">−{discount.toFixed(2)} DT</span></div>}
+                  <div className="flex justify-between text-ink-2"><span>Livraison</span><span className={shipping === 0 ? 'font-semibold text-emerald-700' : 'font-semibold tabular-nums text-ink-1'}>{shipping === 0 ? 'Gratuite' : `${shipping.toFixed(2)} DT`}</span></div>
+                  <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3"><span className="font-display text-lg uppercase text-ink-1">Total</span><span className="font-display text-xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span></div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Action Buttons */}
-            <div className="flex flex-wrap gap-4 mb-8 justify-center">
-              <Button
-                onClick={handlePrint}
-                variant="outline"
-                size="lg"
-                className="min-h-[48px] rounded-xl"
-              >
-                <Printer className="h-5 w-5 mr-2" aria-hidden="true" />
-                Imprimer
-              </Button>
-              <Button
-                asChild
-                size="lg"
-                className="bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide rounded-xl min-h-[48px]"
-              >
-                <Link href="/account/orders">
-                  <List className="h-5 w-5 mr-2" aria-hidden="true" />
-                  Voir toutes mes commandes
-                </Link>
-              </Button>
-              <Button
-                asChild
-                variant="outline"
-                size="lg"
-                className="min-h-[48px] rounded-xl"
-              >
-                <Link href="/shop">
-                  <ArrowRight className="h-5 w-5 mr-2" aria-hidden="true" />
-                  Continuer les achats
-                </Link>
-              </Button>
-            </div>
-
-            {/* Order Recap */}
-            <div ref={printRef}>
-              <Card className="mb-6 rounded-xl border border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm">
-                <CardHeader className="border-b border-gray-100 dark:border-gray-800">
-                  <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">
-                    <Package className="h-5 w-5 text-red-600 dark:text-red-400" aria-hidden="true" />
-                    Récapitulatif de la commande
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Order Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-4 border-b">
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Numéro de commande</p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">#{order?.numero || ''}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">Date de commande</p>
-                      <p className="text-lg font-semibold text-gray-900 dark:text-white">{formatDate(order?.created_at || null)}</p>
-                    </div>
-                  </div>
-
-                  {/* Order Items */}
+            <aside className="space-y-4">
+              <Card className="rounded-2xl border-line bg-white shadow-sm dark:bg-gray-900">
+                <CardContent className="space-y-5 p-5">
                   <div>
-                    <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-4">Produits commandés</h3>
-                    <div className="space-y-4">
-                      {details.map((detail: any) => {
-                        const productImage = detail.produit?.cover 
-                          ? getStorageUrl(detail.produit.cover) 
-                          : null;
-                        return (
-                          <div key={detail.id} className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 rounded-xl border border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
-                            {productImage && (
-                              <div className="relative w-20 h-20 flex-shrink-0 rounded-lg overflow-hidden bg-white dark:bg-gray-700">
-                                <Image
-                                  src={productImage}
-                                  alt={detail.produit?.designation_fr || 'Produit'}
-                                  fill
-                                  className="object-contain p-1"
-                                  sizes="80px"
-                                  unoptimized
-                                />
-                              </div>
-                            )}
-                            <div className="flex-1 min-w-0">
-                              <p className="font-medium text-gray-900 dark:text-white break-words">
-                                {detail.produit?.designation_fr || 'Produit'}
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400">
-                                Quantité: {detail.qte || 0}
-                              </p>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <p className="font-display font-bold tracking-tight tabular-nums text-gray-900 dark:text-white">
-                                {(detail.prix_ttc || 0).toFixed(2)} TND
-                              </p>
-                              <p className="text-sm text-gray-500 dark:text-gray-400 tabular-nums">
-                                {(detail.prix_unitaire || 0).toFixed(2)} TND / unité
-                              </p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {/* Order Summary */}
-                  <div className="border-t border-gray-100 dark:border-gray-800 pt-4 space-y-2">
-                    <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                      <span>Sous-total</span>
-                      <span className="font-display font-semibold tabular-nums text-gray-900 dark:text-white">{(order?.prix_ht || 0).toFixed(2)} TND</span>
-                    </div>
-                    <div className="flex justify-between text-gray-600 dark:text-gray-400">
-                      <span>Expédition</span>
-                      <span className={order?.frais_livraison ? 'font-display font-semibold tabular-nums text-gray-900 dark:text-white' : 'text-green-600 dark:text-green-400 font-semibold'}>
-                        {order?.frais_livraison ? `${order.frais_livraison} TND` : 'Livraison gratuite'}
-                      </span>
-                    </div>
-                    <div className="border-t border-gray-100 dark:border-gray-800 pt-2 flex justify-between items-baseline">
-                      <span className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white">Total</span>
-                      <span className="font-display font-bold tracking-tight tabular-nums text-lg text-red-600 dark:text-red-400">
-                        {(order?.prix_ttc || 0).toFixed(2)} TND
-                      </span>
-                    </div>
-                  </div>
-
-                  {/* Payment Method */}
-                  <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-2">Méthode de paiement</h3>
-                    <p className="text-gray-600 dark:text-gray-400">
-                      {paymentMethod === 'cod' ? 'Paiement à la livraison' : 'Carte Bancaire'}
-                    </p>
-                  </div>
-
-                  {/* Delivery Address (livraison only) */}
-                  <div className="border-t border-gray-100 dark:border-gray-800 pt-4">
-                    <h3 className="font-display uppercase tracking-tight text-lg text-gray-900 dark:text-white mb-2">Adresse de livraison</h3>
-                    <div className="text-gray-600 dark:text-gray-400">
-                      <p>{(order?.livraison_nom || order?.nom || '')} {(order?.livraison_prenom || order?.prenom || '')}</p>
+                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-1"><Truck className="h-4 w-4 text-brand" aria-hidden="true" />Livraison</div>
+                    <div className="space-y-0.5 text-sm leading-5 text-ink-2">
+                      {deliveryName && <p className="font-semibold text-ink-1">{deliveryName}</p>}
                       <p>{order?.livraison_adresse1 || order?.adresse1 || ''}</p>
-                      <p>{(order?.livraison_ville || order?.ville || '')}, {(order?.livraison_region || order?.region || '')}</p>
-                      {(order?.livraison_code_postale || order?.code_postale) && <p>{order?.livraison_code_postale || order?.code_postale || ''}</p>}
-                      <p className="mt-2">
-                        <strong>Téléphone:</strong> {order?.livraison_phone || order?.phone || ''}
-                      </p>
-                      <p>
-                        <strong>Email:</strong> {order?.livraison_email || order?.email || ''}
-                      </p>
+                      {deliveryCity && <p>{deliveryCity}</p>}
+                      {(order?.livraison_code_postale || order?.code_postale) && <p>{order?.livraison_code_postale || order?.code_postale}</p>}
+                      <p className="pt-1 font-medium text-ink-1">{order?.livraison_phone || order?.phone || ''}</p>
                     </div>
+                  </div>
+                  <div className="border-t border-line pt-4">
+                    <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-1"><Wallet className="h-4 w-4 text-brand" aria-hidden="true" />Paiement</div>
+                    <p className="text-sm text-ink-2">{paymentMethod === 'cod' ? 'À la livraison' : 'Carte bancaire'}</p>
                   </div>
                 </CardContent>
               </Card>
-            </div>
+
+              <div className="grid gap-2">
+                <Button asChild size="lg" className="min-h-12 rounded-xl bg-brand font-display uppercase tracking-wide text-white hover:bg-brand-hover">
+                  <Link href="/shop"><ArrowRight className="mr-2 h-5 w-5" aria-hidden="true" />Continuer mes achats</Link>
+                </Button>
+                {isAuthenticated && (
+                  <Button asChild variant="outline" size="lg" className="min-h-12 rounded-xl">
+                    <Link href="/account/orders"><List className="mr-2 h-5 w-5" aria-hidden="true" />Mes commandes</Link>
+                  </Button>
+                )}
+                <Button onClick={handlePrint} variant="ghost" size="lg" className="min-h-11 rounded-xl text-ink-2">
+                  <Printer className="mr-2 h-4 w-4" aria-hidden="true" />Imprimer le reçu
+                </Button>
+              </div>
+            </aside>
           </div>
         </main>
-
         <ScrollToTop />
       </div>
     );

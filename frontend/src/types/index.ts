@@ -411,6 +411,11 @@ export interface Order {
   etat: string;
   prix_ht: number;
   prix_ttc: number;
+  remise?: number;
+  discount_ht?: number;
+  discount_ttc?: number;
+  coupon_code_snapshot?: string;
+  payment_method?: 'cod' | 'card' | string;
   user_id?: number;
   created_at?: string;
   details?: OrderDetail[];

@@ -1,237 +1,77 @@
 @php
-    $details       = $commande->details->isNotEmpty() ? $commande->details : $commande->details()->with('product:id,designation_fr')->get();
-    $logoUrl       = url('/logo.png');
-    $orderUrl      = $commande->order_token
-        ? config('app.frontend_url', config('app.url')) . '/order-confirmation/' . $commande->id . '?token=' . urlencode($commande->order_token)
-        : config('app.frontend_url', config('app.url')) . '/order-confirmation/' . $commande->id;
-    $dateFormatted = $commande->created_at ? $commande->created_at->locale('fr_FR')->isoFormat('D MMMM YYYY [à] HH:mm') : now()->locale('fr_FR')->isoFormat('D MMMM YYYY [à] HH:mm');
-    $prenom        = trim($commande->livraison_prenom ?? $commande->prenom ?? $commande->livraison_nom ?? $commande->nom ?? '');
-    $nomComplet    = trim(($commande->livraison_nom ?? $commande->nom ?? '') . ' ' . ($commande->livraison_prenom ?? $commande->prenom ?? ''));
-    $adresse       = collect([
+    $details = $commande->details->isNotEmpty() ? $commande->details : $commande->details()->with('product:id,designation_fr')->get();
+    $logoUrl = url('/logo.png');
+    $orderUrl = $commande->order_token
+        ? config('app.frontend_url', config('app.url')).'/order-confirmation/'.$commande->id.'?token='.urlencode($commande->order_token)
+        : config('app.frontend_url', config('app.url')).'/order-confirmation/'.$commande->id;
+    $dateFormatted = $commande->created_at?->locale('fr_FR')->isoFormat('D MMMM YYYY [à] HH:mm');
+    $firstName = trim($commande->livraison_prenom ?? $commande->prenom ?? $commande->livraison_nom ?? $commande->nom ?? '');
+    $fullName = trim(($commande->livraison_nom ?? $commande->nom ?? '').' '.($commande->livraison_prenom ?? $commande->prenom ?? ''));
+    $address = collect([
         $commande->livraison_adresse1 ?? $commande->adresse1 ?? null,
-        $commande->livraison_ville    ?? $commande->ville    ?? null,
-        $commande->livraison_region   ?? $commande->region   ?? null,
+        $commande->livraison_ville ?? $commande->ville ?? null,
+        $commande->livraison_region ?? $commande->region ?? null,
         $commande->livraison_code_postale ?? $commande->code_postale ?? null,
-    ])->filter()->implode(', ') ?: null;
-    $phone       = $commande->livraison_phone ?? $commande->phone ?? null;
-    $sousTotal   = (float) ($commande->prix_ht ?? 0);
-    $remise      = (float) ($commande->remise ?? 0);
-    $discountHt  = (float) ($commande->discount_ht ?? 0);
-    $frais       = (float) ($commande->frais_livraison ?? 0);
-    $totalTtc    = (float) ($commande->prix_ttc ?? 0);
-    $paymentLabel = match ($commande->payment_method ?? '') {
-        'cod'  => 'Paiement à la livraison (espèces)',
-        'card' => 'Carte bancaire (en ligne)',
-        default => $commande->payment_method ?? 'Non précisé',
-    };
-    $coordonnee   = \App\Models\Coordinate::getCached();
-    $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@protein.tn';
+    ])->filter()->implode(', ');
+    $phone = $commande->livraison_phone ?? $commande->phone ?? null;
+    $subtotal = (float) ($commande->prix_ht ?? 0);
+    $shipping = (float) ($commande->frais_livraison ?? 0);
+    $total = (float) ($commande->prix_ttc ?? 0);
+    $discount = max(0, $subtotal + $shipping - $total);
+    $paymentLabel = ($commande->payment_method ?? '') === 'card' ? 'Carte bancaire' : 'Paiement à la livraison';
+    $coordinate = \App\Models\Coordinate::getCached();
+    $contactEmail = ($coordinate && !empty($coordinate->email)) ? $coordinate->email : 'contact@protein.tn';
 @endphp
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light">
-    <title>Merci pour votre commande #{{ $commande->numero }}</title>
-    <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-    <style type="text/css">
-        body { margin: 0; padding: 0; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
-        table { border-collapse: collapse; mso-table-lspace: 0; mso-table-rspace: 0; }
-        img { border: 0; height: auto; line-height: 100%; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
-        @media only screen and (max-width: 620px) {
-            .wrapper   { width: 100% !important; }
-            .pad       { padding: 20px 16px !important; }
-            .h-hero    { font-size: 24px !important; }
-            .steps-td  { display: block !important; width: 100% !important; padding: 12px 0 !important; text-align: center !important; }
-            .steps-sep { display: none !important; }
-            .product-name { font-size: 13px !important; }
-            .btn       { display: block !important; width: 100% !important; box-sizing: border-box !important; text-align: center !important; padding: 16px !important; }
-        }
+    <title>Commande #{{ $commande->numero }} confirmée</title>
+    <style>
+        body,table,td,p,h1,h2{margin:0;padding:0} table{border-collapse:collapse;mso-table-lspace:0;mso-table-rspace:0} img{border:0;display:block;height:auto}
+        @media(max-width:620px){.outer{padding:0!important}.shell{width:100%!important;border-radius:0!important}.pad{padding-left:18px!important;padding-right:18px!important}.hero-title{font-size:25px!important}.stat{display:block!important;width:auto!important;border-right:0!important;border-bottom:1px solid #e5e7eb!important;text-align:left!important}.product-price{white-space:nowrap}.button{display:block!important;text-align:center!important}}
     </style>
 </head>
-<body style="margin:0;padding:0;background-color:#f1f5f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#1e293b;">
-
-<table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-<tr><td align="center" style="padding:28px 12px 36px;">
-
-    <table role="presentation" class="wrapper" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;margin:0 auto;">
-
-        {{-- ── HERO HEADER ─────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:linear-gradient(150deg,#b91c1c 0%,#dc2626 45%,#c2410c 100%);border-radius:16px 16px 0 0;padding:36px 32px 32px;text-align:center;">
-                <img src="{{ $logoUrl }}" alt="Protein.tn" width="180" height="auto"
-                     style="display:block;max-width:180px;background:rgba(255,255,255,.95);padding:12px 16px;border-radius:14px;margin:0 auto 22px;">
-                <p style="margin:0 0 6px;font-size:28px;font-weight:800;color:#ffffff;letter-spacing:-.02em;" class="h-hero">
-                    Merci, {{ $prenom ?: 'cher client' }} !
-                </p>
-                <p style="margin:0;font-size:15px;color:rgba(255,255,255,.9);">
-                    Votre commande est bien enregistrée. Notre équipe vous appellera prochainement pour la confirmer avec vous.
-                </p>
-            </td>
-        </tr>
- 
-        {{-- ── ORDER BADGE ──────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#ffffff;padding:0 32px;" class="pad">
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="background:linear-gradient(135deg,#fff7ed,#fef2f2);border:1.5px solid #fecaca;border-radius:12px;margin-top:24px;">
-                    <tr>
-                        <td style="padding:18px 20px;">
-                            <table role="presentation" cellpadding="0" cellspacing="0" width="100%">
-                                <tr>
-                                    <td>
-                                        <p style="margin:0 0 4px;font-size:11px;font-weight:600;color:#9f1239;text-transform:uppercase;letter-spacing:.08em;">Référence de commande</p>
-                                        <p style="margin:0;font-size:22px;font-weight:700;color:#b91c1c;">#{{ $commande->numero }}</p>
-                                        <p style="margin:6px 0 0;font-size:13px;color:#6b7280;">{{ $dateFormatted }}</p>
-                                    </td>
-                                    <td align="right" style="vertical-align:top;">
-                                        <span style="display:inline-block;background:#dcfce7;color:#15803d;font-size:12px;font-weight:700;padding:6px 14px;border-radius:20px;white-space:nowrap;">✅ Confirmée</span>
-                                        <p style="margin:8px 0 0;font-size:13px;color:#6b7280;text-align:right;">{{ $paymentLabel }}</p>
-                                    </td>
-                                </tr>
-                            </table>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
- 
-        {{-- ── NEXT STEPS ───────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#ffffff;padding:20px 32px 4px;" class="pad">
-                <p style="margin:0 0 14px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">📋 Prochaines étapes</p>
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;margin-bottom:4px;">
-                    <tr>
-                        <td class="steps-td" style="padding:16px 14px;text-align:center;border-right:1px solid #f1f5f9;width:33%;">
-                            <p style="margin:0 0 6px;font-size:22px;">📬</p>
-                            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1e293b;">Confirmation</p>
-                            <p style="margin:0;font-size:11px;color:#64748b;">Commande enregistrée</p>
-                        </td>
-                        <td class="steps-sep" style="width:1px;background:#f1f5f9;"></td>
-                        <td class="steps-td" style="padding:16px 14px;text-align:center;border-right:1px solid #f1f5f9;width:33%;">
-                            <p style="margin:0 0 6px;font-size:22px;">📦</p>
-                            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1e293b;">Préparation</p>
-                            <p style="margin:0;font-size:11px;color:#64748b;">Votre colis est préparé</p>
-                        </td>
-                        <td class="steps-sep" style="width:1px;background:#f1f5f9;"></td>
-                        <td class="steps-td" style="padding:16px 14px;text-align:center;width:33%;">
-                            <p style="margin:0 0 6px;font-size:22px;">🚚</p>
-                            <p style="margin:0 0 4px;font-size:12px;font-weight:700;color:#1e293b;">Livraison</p>
-                            <p style="margin:0;font-size:11px;color:#64748b;">Livraison à votre adresse</p>
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
- 
-        {{-- ── PRODUCTS TABLE ───────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#ffffff;padding:20px 32px;" class="pad">
-                <p style="margin:0 0 12px;font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:.08em;">🛒 Votre commande</p>
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <thead>
-                        <tr style="background:#f8fafc;">
-                            <th style="padding:11px 14px;text-align:left;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Produit</th>
-                            <th style="padding:11px 14px;text-align:center;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Qté</th>
-                            <th style="padding:11px 14px;text-align:right;font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.05em;">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($details as $d)
-                        <tr style="border-top:1px solid #f1f5f9;">
-                            <td class="product-name" style="padding:12px 14px;font-size:14px;color:#1e293b;">{{ $d->product->designation_fr ?? '—' }}</td>
-                            <td style="padding:12px 14px;text-align:center;font-size:14px;color:#475569;">{{ $d->qte }}</td>
-                            <td style="padding:12px 14px;text-align:right;font-size:14px;font-weight:600;color:#0f172a;">{{ number_format($d->qte * $d->prix_unitaire, 3, '.', ' ') }} TND</td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </td>
-        </tr>
- 
-        {{-- ── TOTALS ────────────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#ffffff;padding:0 32px 24px;" class="pad">
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;">
-                    <tr>
-                        <td style="padding:10px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;">Sous-total</td>
-                        <td align="right" style="padding:10px 16px;font-size:13px;color:#1e293b;border-bottom:1px solid #f1f5f9;background:#f8fafc;">{{ number_format($sousTotal, 3, '.', ' ') }} TND</td>
-                    </tr>
-                    @if($remise > 0)
-                    <tr>
-                        <td style="padding:10px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;">Remise</td>
-                        <td align="right" style="padding:10px 16px;font-size:13px;color:#16a34a;border-bottom:1px solid #f1f5f9;background:#f8fafc;">−{{ number_format($remise, 3, '.', ' ') }} TND</td>
-                    </tr>
-                    @endif
-                    @if($discountHt > 0)
-                    <tr>
-                        <td style="padding:10px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;">
-                            🎁 Code promo @if($commande->coupon_code_snapshot)<span style="font-family:monospace;background:#ede9fe;color:#6d28d9;padding:1px 6px;border-radius:4px;font-size:12px;">{{ $commande->coupon_code_snapshot }}</span>@endif
-                        </td>
-                        <td align="right" style="padding:10px 16px;font-size:13px;color:#16a34a;border-bottom:1px solid #f1f5f9;background:#f8fafc;">−{{ number_format($discountHt, 3, '.', ' ') }} TND</td>
-                    </tr>
-                    @endif
-                    <tr>
-                        <td style="padding:10px 16px;font-size:13px;color:#64748b;border-bottom:1px solid #f1f5f9;background:#f8fafc;">Frais de livraison</td>
-                        <td align="right" style="padding:10px 16px;font-size:13px;border-bottom:1px solid #f1f5f9;background:#f8fafc;color:{{ $frais > 0 ? '#1e293b' : '#16a34a' }};">
-                            @if($frais > 0) {{ number_format($frais, 3, '.', ' ') }} TND @else 🎉 Gratuit @endif
-                        </td>
-                    </tr>
-                    <tr style="background:#fff7ed;">
-                        <td style="padding:14px 16px;font-size:16px;font-weight:700;color:#0f172a;">Total TTC</td>
-                        <td align="right" style="padding:14px 16px;font-size:18px;font-weight:800;color:#b91c1c;">{{ number_format($totalTtc, 3, '.', ' ') }} TND</td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
- 
-        {{-- ── DELIVERY INFO ─────────────────────────────────────────────────── --}}
-        @if($adresse || $phone)
-        <tr>
-            <td style="background:#ffffff;padding:0 32px 24px;" class="pad">
-                <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:18px 20px;">
-                    <tr>
-                        <td>
-                            <p style="margin:0 0 10px;font-size:11px;font-weight:700;color:#15803d;text-transform:uppercase;letter-spacing:.08em;">🚚 Adresse de livraison</p>
-                            @if($nomComplet)<p style="margin:0 0 4px;font-size:14px;font-weight:600;color:#1e293b;">{{ $nomComplet }}</p>@endif
-                            @if($adresse)<p style="margin:0 0 4px;font-size:13px;color:#374151;">{{ $adresse }}</p>@endif
-                            @if($phone)<p style="margin:0;font-size:13px;color:#374151;">📞 {{ $phone }}</p>@endif
-                        </td>
-                    </tr>
-                </table>
-            </td>
-        </tr>
-        @endif
- 
-        {{-- ── CONTACT ──────────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#ffffff;padding:0 32px 32px;text-align:center;" class="pad">
-                <p style="margin:0;font-size:12px;color:#94a3b8;">
-                    Un problème ? Contactez-nous : <a href="mailto:{{ $contactEmail }}" style="color:#b91c1c;text-decoration:none;">{{ $contactEmail }}</a>
-                </p>
-            </td>
-        </tr>
-        {{-- ── FOOTER ───────────────────────────────────────────────────────── --}}
-        <tr>
-            <td style="background:#0f172a;border-radius:0 0 16px 16px;padding:24px 32px;text-align:center;">
-                <p style="margin:0 0 6px;font-size:14px;font-weight:600;color:#f8fafc;">Merci pour votre confiance 🙏</p>
-                <p style="margin:0 0 14px;font-size:13px;color:#94a3b8;">
-                    L'équipe Protein.tn — <a href="mailto:{{ $contactEmail }}" style="color:#fb923c;text-decoration:none;">{{ $contactEmail }}</a>
-                </p>
-                <p style="margin:0;font-size:11px;color:#475569;">
-                    Cet email a été envoyé automatiquement suite à votre commande. Merci de ne pas répondre directement.
-                </p>
-            </td>
-        </tr>
-
+<body style="margin:0;background:#f3f4f6;color:#18181b;font-family:Arial,'Helvetica Neue',sans-serif;-webkit-text-size-adjust:100%;">
+<table role="presentation" width="100%"><tr><td class="outer" align="center" style="padding:28px 12px;">
+<table role="presentation" width="600" class="shell" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e5e7eb;border-radius:18px;overflow:hidden;">
+    <tr><td style="height:6px;background:#df3b05;font-size:0;line-height:0;">&nbsp;</td></tr>
+    <tr><td class="pad" style="padding:26px 32px 20px;"><img src="{{ $logoUrl }}" width="142" alt="Protein.tn" style="width:142px;max-width:142px;"></td></tr>
+    <tr><td class="pad" style="padding:8px 32px 24px;">
+        <table role="presentation" width="100%"><tr>
+            <td width="52" valign="top"><table role="presentation"><tr><td align="center" style="width:44px;height:44px;border-radius:22px;background:#eaf8ef;color:#16834a;font-size:25px;font-weight:bold;line-height:44px;">&#10003;</td></tr></table></td>
+            <td valign="top" style="padding-left:14px;"><p style="font-size:12px;font-weight:bold;letter-spacing:1.4px;text-transform:uppercase;color:#16834a;">Commande confirmée</p><h1 class="hero-title" style="margin-top:5px;font-size:29px;line-height:1.18;color:#111827;">Merci{{ $firstName ? ', '.$firstName : '' }}.</h1><p style="margin-top:7px;font-size:15px;line-height:22px;color:#52525b;">Votre commande est enregistrée. Nous vous appellerons pour confirmer la livraison.</p></td>
+        </tr></table>
+    </td></tr>
+    <tr><td class="pad" style="padding:0 32px 22px;">
+        <table role="presentation" width="100%" style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fafafa;"><tr>
+            <td class="stat" width="34%" style="padding:14px 16px;border-right:1px solid #e5e7eb;"><p style="font-size:11px;color:#71717a;">COMMANDE</p><p style="margin-top:4px;font-size:17px;font-weight:bold;color:#18181b;">#{{ $commande->numero }}</p></td>
+            <td class="stat" width="33%" style="padding:14px 16px;border-right:1px solid #e5e7eb;"><p style="font-size:11px;color:#71717a;">TOTAL</p><p style="margin-top:4px;font-size:17px;font-weight:bold;color:#df3b05;">{{ number_format($total,2,'.',' ') }} DT</p></td>
+            <td class="stat" width="33%" style="padding:14px 16px;"><p style="font-size:11px;color:#71717a;">PAIEMENT</p><p style="margin-top:4px;font-size:13px;font-weight:bold;line-height:18px;color:#18181b;">{{ $paymentLabel }}</p></td>
+        </tr></table><p style="margin-top:9px;font-size:12px;color:#71717a;">{{ $dateFormatted }}</p>
+    </td></tr>
+    <tr><td class="pad" style="padding:0 32px 22px;"><h2 style="font-size:13px;letter-spacing:.8px;text-transform:uppercase;color:#18181b;">La suite</h2><table role="presentation" width="100%" style="margin-top:11px;"><tr>
+        @foreach([['1','Reçue'],['2','Préparation'],['3','Livraison']] as $step)
+        <td width="33.33%" valign="top" style="padding-right:8px;"><table role="presentation"><tr><td align="center" style="width:26px;height:26px;border-radius:13px;background:{{ $loop->first ? '#df3b05' : '#f1f1f1' }};color:{{ $loop->first ? '#ffffff' : '#52525b' }};font-size:12px;font-weight:bold;line-height:26px;">{{ $step[0] }}</td><td style="padding-left:8px;font-size:12px;font-weight:bold;color:#3f3f46;">{{ $step[1] }}</td></tr></table></td>
+        @endforeach
+    </tr></table></td></tr>
+    <tr><td class="pad" style="padding:0 32px 22px;"><h2 style="font-size:13px;letter-spacing:.8px;text-transform:uppercase;color:#18181b;">Votre commande</h2><table role="presentation" width="100%" style="margin-top:11px;border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;">
+        @foreach($details as $detail)
+        <tr><td style="padding:13px 14px;border-bottom:{{ $loop->last ? '0' : '1px solid #eeeeee' }};font-size:13px;line-height:19px;color:#27272a;">{{ $detail->product->designation_fr ?? 'Produit' }}<br><span style="font-size:12px;color:#71717a;">Quantité : {{ $detail->qte }}</span></td><td class="product-price" align="right" style="padding:13px 14px;border-bottom:{{ $loop->last ? '0' : '1px solid #eeeeee' }};font-size:13px;font-weight:bold;color:#18181b;">{{ number_format($detail->qte * $detail->prix_unitaire,2,'.',' ') }} DT</td></tr>
+        @endforeach
     </table>
-</td></tr>
-</table>
-
-</body>
-</html>
+    <table role="presentation" width="100%" style="margin-top:10px;background:#fafafa;border-radius:12px;overflow:hidden;">
+        <tr><td style="padding:11px 14px;font-size:13px;color:#52525b;">Sous-total</td><td align="right" style="padding:11px 14px;font-size:13px;font-weight:bold;">{{ number_format($subtotal,2,'.',' ') }} DT</td></tr>
+        @if($discount > 0)<tr><td style="padding:4px 14px 11px;font-size:13px;color:#16834a;">Remise</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:#16834a;">-{{ number_format($discount,2,'.',' ') }} DT</td></tr>@endif
+        <tr><td style="padding:4px 14px 11px;font-size:13px;color:#52525b;">Livraison</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:{{ $shipping > 0 ? '#18181b' : '#16834a' }};">{{ $shipping > 0 ? number_format($shipping,2,'.',' ').' DT' : 'Gratuite' }}</td></tr>
+        <tr><td style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:16px;font-weight:bold;">Total</td><td align="right" style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:18px;font-weight:bold;color:#df3b05;">{{ number_format($total,2,'.',' ') }} DT</td></tr>
+    </table></td></tr>
+    @if($address || $phone)
+    <tr><td class="pad" style="padding:0 32px 22px;"><table role="presentation" width="100%" style="border-left:3px solid #df3b05;background:#fafafa;"><tr><td style="padding:14px 16px;"><p style="font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.7px;color:#52525b;">Livraison</p>@if($fullName)<p style="margin-top:7px;font-size:14px;font-weight:bold;color:#18181b;">{{ $fullName }}</p>@endif @if($address)<p style="margin-top:3px;font-size:13px;line-height:19px;color:#52525b;">{{ $address }}</p>@endif @if($phone)<p style="margin-top:3px;font-size:13px;color:#18181b;">{{ $phone }}</p>@endif</td></tr></table></td></tr>
+    @endif
+    <tr><td class="pad" style="padding:0 32px 28px;"><table role="presentation" width="100%"><tr><td align="center" style="background:#df3b05;border-radius:10px;"><a class="button" href="{{ $orderUrl }}" style="display:inline-block;padding:14px 24px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;">Voir ma commande</a></td></tr></table></td></tr>
+    <tr><td style="padding:21px 32px;background:#101114;text-align:center;"><p style="font-size:12px;line-height:18px;color:#d4d4d8;">Besoin d’aide ? <a href="mailto:{{ $contactEmail }}" style="color:#ff6a2a;text-decoration:none;">{{ $contactEmail }}</a></p><p style="margin-top:7px;font-size:11px;color:#71717a;">Protein.tn — compléments alimentaires en Tunisie</p></td></tr>
+</table></td></tr></table>
+</body></html>
