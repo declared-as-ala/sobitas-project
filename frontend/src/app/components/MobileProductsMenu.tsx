@@ -55,20 +55,18 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
     if (!open) setSelectedCategory(null);
   }, [open]);
 
-  const closedByBackRef = useRef(false);
-
-  useEffect(() => {
-    if (!open) { closedByBackRef.current = false; return; }
-    closedByBackRef.current = false;
-    const id = 'mobile-products-menu-' + Date.now();
-    window.history.pushState({ [id]: true }, '');
-    const onPopState = () => { closedByBackRef.current = true; onOpenChange(false); };
-    window.addEventListener('popstate', onPopState);
-    return () => {
-      window.removeEventListener('popstate', onPopState);
-      if (!closedByBackRef.current && window.history.state?.[id]) window.history.back();
-    };
-  }, [open, onOpenChange]);
+  /*
+   * Do not add the sheet to `window.history`.
+   *
+   * The old implementation pushed a second entry with the SAME URL whenever this menu opened.
+   * Navigating from the menu therefore produced A → A → B. Chrome Back correctly moved from B
+   * to the duplicate A entry, but the address and page did not visibly change on the following
+   * step, which made Back look broken. In some route-change timings the cleanup also called
+   * history.back() while Next was navigating, creating an additional race.
+   *
+   * The sheet already has explicit close and category-return controls plus Radix's Escape handling.
+   * Keeping overlays out of browser history makes every native Back action represent a real page.
+   */
 
   const subCategories = (selectedCategory?.sous_categories ?? []) as Array<{ id: number; slug: string; designation_fr: string }>;
 
