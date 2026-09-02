@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Mail\EmailVerificationOtpMail;
+use App\Models\User;
+use App\Notifications\ResetPasswordLink;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -60,6 +65,11 @@ class CustomerAuthFlowTest extends TestCase
             $table->timestamp('expires_at');
             $table->timestamp('consumed_at')->nullable();
             $table->timestamps();
+        });
+        Schema::create('password_reset_tokens', function (Blueprint $table): void {
+            $table->string('email')->primary();
+            $table->string('token');
+            $table->timestamp('created_at')->nullable();
         });
     }
 
@@ -119,5 +129,43 @@ class CustomerAuthFlowTest extends TestCase
 
         $this->assertDatabaseCount('users', 0);
         Mail::assertNothingSent();
+    }
+
+    public function test_customer_reset_email_always_targets_the_https_storefront(): void
+    {
+        config()->set('app.frontend_url', 'https://admin.protein.tn');
+        $user = new User(['name' => 'Client Test', 'email' => 'client@example.test']);
+
+        $mail = (new ResetPasswordLink('secure-token'))->toMail($user);
+        $url = (string) ($mail->viewData['url'] ?? '');
+
+        $this->assertStringStartsWith('https://protein.tn/reset-password?', $url);
+        $this->assertStringContainsString('token=secure-token', $url);
+        $this->assertStringContainsString('email=client%40example.test', $url);
+    }
+
+    public function test_customer_can_request_and_complete_a_password_reset(): void
+    {
+        Notification::fake();
+        $user = User::create([
+            'name' => 'Client Test',
+            'email' => 'client@example.test',
+            'phone' => '+21620123456',
+            'password' => 'OldPassword1',
+        ]);
+
+        $this->postJson('/api/forgot-password', ['email' => 'CLIENT@example.test'])
+            ->assertOk();
+        Notification::assertSentTo($user, ResetPasswordLink::class);
+
+        $token = Password::broker()->createToken($user);
+        $this->postJson('/api/reset-password', [
+            'email' => $user->email,
+            'token' => $token,
+            'password' => 'NewPassword2',
+            'password_confirmation' => 'NewPassword2',
+        ])->assertOk();
+
+        $this->assertTrue(Hash::check('NewPassword2', $user->fresh()->password));
     }
 }

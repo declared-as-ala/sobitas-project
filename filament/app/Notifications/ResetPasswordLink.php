@@ -2,6 +2,7 @@
 
 namespace App\Notifications;
 
+use App\Support\StorefrontUrl;
 use Illuminate\Bus\Queueable;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
@@ -40,8 +41,8 @@ class ResetPasswordLink extends Notification
     {
         $email = (string) ($notifiable->getEmailForPasswordReset() ?? $notifiable->email ?? '');
 
-        $url = rtrim((string) config('app.frontend_url', config('app.url')), '/')
-            . '/reset-password?token=' . urlencode($this->token)
+        $url = StorefrontUrl::to('/reset-password')
+            . '?token=' . urlencode($this->token)
             . '&email=' . urlencode($email);
 
         // Minutes, from the broker config, so the email cannot claim a different lifetime from
@@ -55,6 +56,11 @@ class ResetPasswordLink extends Notification
                 'url'          => $url,
                 'name'         => trim((string) ($notifiable->name ?? '')),
                 'expiryHours'  => max(1, (int) round($minutes / 60)),
+                'expiryMinutes' => $minutes,
+            ])
+            ->text('emails.auth.reset-password-text', [
+                'url' => $url,
+                'name' => trim((string) ($notifiable->name ?? '')),
                 'expiryMinutes' => $minutes,
             ]);
     }

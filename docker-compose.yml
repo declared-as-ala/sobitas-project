@@ -100,6 +100,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: https://admin.protein.tn
+      FRONTEND_URL: https://protein.tn
       ASSET_URL: https://admin.protein.tn
       FILESYSTEM_DISK: public
       FILESYSTEM_DRIVER: public
@@ -210,6 +211,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: https://admin.protein.tn
+      FRONTEND_URL: https://protein.tn
       CACHE_DRIVER: redis
       SESSION_DRIVER: redis
       QUEUE_CONNECTION: redis
@@ -283,6 +285,7 @@ services:
       APP_ENV: production
       APP_DEBUG: "false"
       APP_URL: https://admin.protein.tn
+      FRONTEND_URL: https://protein.tn
       FILESYSTEM_DISK: public
       FILESYSTEM_DRIVER: public
 

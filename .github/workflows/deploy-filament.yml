@@ -196,6 +196,7 @@ jobs:
             upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_USERNAME }}'
             upsert_secret MAIL_FROM_NAME Protein.tn
             upsert_secret MAIL_REPLY_TO contact@protein.tn
+            upsert_secret FRONTEND_URL https://protein.tn
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
@@ -394,6 +395,7 @@ jobs:
             upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_USERNAME }}'
             upsert_secret MAIL_FROM_NAME Protein.tn
             upsert_secret MAIL_REPLY_TO contact@protein.tn
+            upsert_secret FRONTEND_URL https://protein.tn
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
