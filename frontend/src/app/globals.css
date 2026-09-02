@@ -1273,7 +1273,7 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .checkout-main {
-  padding-top: 0.875rem;
+  padding-top: 0.25rem;
   padding-bottom: var(--checkout-cta-padding, 6.25rem);
 }
 
@@ -1283,7 +1283,7 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .checkout-main {
-    padding-top: 1.25rem;
+    padding-top: 0.5rem;
   }
 }
 
@@ -1318,7 +1318,7 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .checkout-main {
-    padding-top: 1.5rem;
+    padding-top: 0.625rem;
     padding-bottom: 2.5rem;
   }
 }

@@ -803,12 +803,12 @@ export default function CheckoutPage() {
             rather than the 1280px editorial rail. The form grows; the summary keeps a readable
             fixed range and remains sticky. */}
         <Container width="wide">
-          <header className="mb-4 border-b border-rule pb-4 sm:mb-5 sm:pb-5">
-            <div className="mb-3 flex items-center justify-between gap-4 sm:mb-4">
+          <header className="mb-3 border-b border-rule pb-3 sm:mb-4 sm:pb-4">
+            <div className="mb-2 flex items-center justify-between gap-4 sm:mb-3">
               <Button
                 variant="ghost"
                 onClick={() => currentStep === 2 ? router.push('/cart') : setCurrentStep(2)}
-                className="-ms-3 min-h-11 rounded-lg px-3 text-sm font-semibold text-ink-2 hover:bg-sunken hover:text-brand focus-visible:ring-focus"
+                className="-ms-2 min-h-10 rounded-lg px-2 text-sm font-semibold text-ink-2 hover:bg-sunken hover:text-brand focus-visible:ring-focus"
               >
                 <ArrowLeft className="me-2 h-4 w-4" aria-hidden="true" />
                 {currentStep === 2 ? 'Retour au panier' : 'Retour'}
@@ -824,14 +824,14 @@ export default function CheckoutPage() {
                 <span className="text-ink-3">3&nbsp; Confirmation</span>
               </nav>
             </div>
-            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+            <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
               <div>
-                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand sm:text-[11px]">Finaliser ma commande</p>
-                <h1 className="font-display text-[1.75rem] font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-3xl">
+                <p className="mb-1.5 hidden text-[11px] font-semibold uppercase tracking-[0.16em] text-brand sm:block">Finaliser ma commande</p>
+                <h1 className="font-display text-[1.65rem] font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-3xl">
                   Livraison &amp; paiement
                 </h1>
               </div>
-              <p className="max-w-md text-[13px] leading-snug text-ink-2 sm:text-end sm:text-sm">
+              <p className="hidden max-w-md text-end text-sm leading-snug text-ink-2 sm:block">
                 Vérifiez vos coordonnées, puis payez simplement à la réception.
               </p>
             </div>
@@ -842,24 +842,21 @@ export default function CheckoutPage() {
           <section className="checkout-form">
             <div>
               <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
-                <CardHeader className="border-b border-rule px-4 py-4 sm:px-6 sm:py-5 lg:px-7">
+                <CardHeader className="hidden border-b border-rule px-4 py-4 sm:block sm:px-5 sm:py-4 lg:px-6">
                   <CardTitle className="flex items-center gap-3 font-display text-lg font-extrabold uppercase tracking-tight text-ink-1 sm:text-xl">
                     <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand">
                       <Truck className="h-5 w-5" aria-hidden="true" />
                     </span>
                     Adresse de livraison
                   </CardTitle>
-                  <p className="mt-1.5 text-[13px] leading-snug text-ink-2">
-                    Les champs avec * sont obligatoires.
-                  </p>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-5 lg:p-6">
-                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+                <CardContent className="p-3.5 sm:p-5 lg:p-6">
+                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
                     {/* Contact */}
-                    <div className="space-y-3.5">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">01</span>
-                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Vos coordonnées</h2>
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sunken text-[11px] font-bold tabular-nums text-brand sm:h-7 sm:w-7 sm:text-xs">01</span>
+                        <h2 className="font-display text-base font-extrabold uppercase tracking-tight text-ink-1 sm:text-lg">Vos coordonnées</h2>
                       </div>
                       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                         <div className="space-y-1.5">
@@ -915,10 +912,10 @@ export default function CheckoutPage() {
                       </div>
 
                     {/* Adresse */}
-                    <div className="space-y-3.5 border-t border-rule pt-5 sm:pt-6">
-                      <div className="flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">02</span>
-                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Adresse</h2>
+                    <div className="space-y-3 border-t border-rule pt-4 sm:pt-5">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sunken text-[11px] font-bold tabular-nums text-brand sm:h-7 sm:w-7 sm:text-xs">02</span>
+                        <h2 className="font-display text-base font-extrabold uppercase tracking-tight text-ink-1 sm:text-lg">Adresse</h2>
                       </div>
                       <AddressSelector
                         gouvernorat={gouvernorat}
@@ -969,17 +966,17 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Paiement */}
-                    <div className="border-t border-rule pt-5 sm:pt-6">
-                      <div className="mb-3.5 flex items-center gap-3">
-                        <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">03</span>
-                        <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Paiement</h2>
+                    <div className="border-t border-rule pt-4 sm:pt-5">
+                      <div className="mb-3 flex items-center gap-2.5">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-lg bg-sunken text-[11px] font-bold tabular-nums text-brand sm:h-7 sm:w-7 sm:text-xs">03</span>
+                        <h2 className="font-display text-base font-extrabold uppercase tracking-tight text-ink-1 sm:text-lg">Paiement</h2>
                       </div>
                       <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'cod' | 'card')}>
                         <div className="space-y-2.5">
                           {/* Paiement à la livraison */}
                           <label
                             htmlFor="cod"
-                            className={`flex min-h-[64px] cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
+                            className={`flex min-h-[60px] cursor-pointer items-start gap-2.5 rounded-xl border p-3 transition-colors sm:gap-3 sm:p-3.5 ${
                               paymentMethod === 'cod'
                                 ? 'border-brand bg-brand-50'
                                 : 'border-hairline bg-canvas hover:border-rule-strong'
@@ -996,7 +993,8 @@ export default function CheckoutPage() {
                                     Paiement à la livraison
                                   </span>
                                   <p className="mt-0.5 text-[13px] leading-snug text-ink-2">
-                                    Payez au livreur en espèces ou par chèque, après réception de votre commande.
+                                    <span className="sm:hidden">Payez au livreur à la réception.</span>
+                                    <span className="hidden sm:inline">Payez au livreur en espèces ou par chèque, après réception de votre commande.</span>
                                   </p>
                                 </div>
                               </div>
@@ -1006,7 +1004,7 @@ export default function CheckoutPage() {
                           {/* Carte Bancaire — bientôt disponible (désactivé) */}
                           <div
                             aria-disabled="true"
-                            className="flex min-h-[58px] cursor-not-allowed items-center gap-3 rounded-xl border border-hairline bg-sunken p-3.5 opacity-60"
+                            className="hidden min-h-[58px] cursor-not-allowed items-center gap-3 rounded-xl border border-hairline bg-sunken p-3.5 opacity-60 sm:flex"
                           >
                             <RadioGroupItem value="card" id="card" disabled className="h-5 w-5 shrink-0" />
                             <div className="flex-1 w-full min-w-0">

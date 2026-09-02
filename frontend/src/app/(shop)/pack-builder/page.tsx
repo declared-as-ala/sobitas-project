@@ -8,7 +8,7 @@ import { PackBuilderClient, type PackBuilderGroup } from './PackBuilderClient';
 
 const TITLE = 'Composez votre pack — Protéine Tunisie';
 const DESC =
-  'Créez votre pack sur mesure : whey, créatine, gainers et plus. Plus vous ajoutez, plus vous économisez grâce à nos remises groupées progressives. Livraison partout en Tunisie.';
+  'Créez votre pack sur mesure parmi nos protéines, produits santé, perte de poids, prise de masse, performance et équipements. Plus vous ajoutez, plus vous économisez.';
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -32,13 +32,14 @@ export const metadata: Metadata = {
 // Bundle catalog is cache-safe; refresh in the background every 10 min.
 export const revalidate = 600;
 
-/** Key categories offered in the builder. Each is fetched independently and failures are skipped. */
+/** The six real shop departments. Each is fetched independently and failures are skipped. */
 const BUILDER_CATEGORIES: { slug: string; label: string }[] = [
-  { slug: 'whey-proteine', label: 'Whey protéine' },
-  { slug: 'creatine', label: 'Créatine' },
-  { slug: 'gainers-proteines', label: 'Gainers' },
+  { slug: 'sante-vitalite', label: 'Santé & vitalité' },
+  { slug: 'proteines', label: 'Protéines' },
+  { slug: 'perte-de-poids', label: 'Perte de poids' },
   { slug: 'prise-de-masse', label: 'Prise de masse' },
-  { slug: 'pre-workout', label: 'Pre-workout' },
+  { slug: 'performance', label: 'Performance' },
+  { slug: 'equipement', label: 'Équipement' },
 ];
 
 /** The builder combines individual products; pre-built bundles must never appear as ingredients. */
@@ -55,25 +56,7 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
       const res = await fetchCategoryOrSubCategory(slug);
       const products = ((res.data.products ?? []) as Product[]).filter(isPackBuilderProduct);
 
-      /**
-       * The category's OWN photograph, if the admin has one.
-       *
-       * ── WHY THIS IS THE CATEGORY'S OWN COVER AND NOT ITS PARENT'S ─────────────────────
-       * Owner: *"use the photos of the category that we used on the landing page."* The honest
-       * constraint is that four of these five slugs are SUBcategories and carry `cover: null` on
-       * the live API today — only the six top-level categories the landing page renders have
-       * photography, and `prise-de-masse` is the one slug here that is also one of those six.
-       *
-       * The tempting shortcut is to borrow the parent's picture. It does not survive the mapping:
-       * créatine and pre-workout both sit under `performance`, gainers and prise-de-masse both
-       * under `prise-de-masse`. Five steps would show three photographs, two of them twice — and
-       * the same picture on two different steps reads as a rendering fault, not as a design.
-       *
-       * So this reads the real field and renders nothing when it is empty. Upload a cover for
-       * `whey-proteine`, `creatine`, `gainers-proteines` or `pre-workout` in the admin and that
-       * step gets its banner on the next revalidation, with no code change. Until then those steps
-       * are a heading over a grid of twelve product photographs, which is not photograph-less.
-       */
+      /** Keep the department's own admin cover available to richer future presentations. */
       const rawCover =
         res.type === 'category'
           ? (res.data.category?.cover ?? null)
@@ -102,24 +85,7 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
     )
     .map((r) => r.value);
 
-  /**
-   * A product appears in exactly ONE group — the first that claims it.
-   *
-   * These slugs are not disjoint in the catalogue, and not by accident: `prise-de-masse` resolves
-   * to a PARENT category whose product list is a superset of the `gainers-proteines` subcategory
-   * beneath it. Verified against the live API — after the slice(0, 12) above, those two groups
-   * shared five product ids (542, 530, 463, 442, 440).
-   *
-   * Left alone that produced two visible defects, not one:
-   *   - the same tub was offered on two different wizard steps, so a visitor who added it on the
-   *     Gainers step met it again, unselected-looking in a fresh grid, on the Prise de masse step;
-   *   - the recap counted categories by asking which GROUPS held a selection, so a single item
-   *     reported as "2 catégories différentes" and was told it was a pack rather than an order.
-   *
-   * Deduping here, at the source, fixes both at once and keeps every downstream count honest by
-   * construction. Order matters and is the array order of BUILDER_CATEGORIES: a mass gainer lands
-   * in Gainers, which is the more specific of the two.
-   */
+  /** A product appears in exactly one department, keeping the recap and selection state honest. */
   const claimed = new Set<number>();
   return groups
     .map((group) => ({

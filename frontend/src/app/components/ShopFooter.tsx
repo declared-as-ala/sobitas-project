@@ -10,6 +10,7 @@ export function ShopFooter() {
   if (
     pathname === '/account' ||
     pathname.startsWith('/account/') ||
+    pathname === '/checkout' ||
     pathname === '/pack-builder' ||
     pathname.startsWith('/pack-builder/')
   ) {
