@@ -26,12 +26,23 @@ function loadEnv() {
 const env = loadEnv();
 const host = env.MAIL_HOST || 'smtp.gmail.com';
 const port = parseInt(env.MAIL_PORT || '587', 10);
-const user = env.MAIL_USERNAME || 'bitoutawalid@gmail.com';
-const rawPass = env.MAIL_PASSWORD || 'axnv xeod qwnv nnyl';
+const user = env.MAIL_USERNAME || '';
+const rawPass = env.MAIL_PASSWORD || '';
 const cleanPass = rawPass.replace(/\s+/g, '');
 const from = env.MAIL_FROM_ADDRESS || user;
 const fromName = env.MAIL_FROM_NAME || 'Protein.tn';
-const to = process.argv[2] || 'alamissaoui.dev@gmail.com';
+const to = process.argv[2] || (env.ADMIN_EMAILS || '').split(',')[0].trim();
+
+const missing = [
+  ['MAIL_USERNAME', user],
+  ['MAIL_PASSWORD', cleanPass],
+  ['recipient argument or ADMIN_EMAILS', to],
+].filter(([, value]) => !value).map(([name]) => name);
+
+if (missing.length > 0) {
+  console.error(`Missing SMTP configuration: ${missing.join(', ')}`);
+  process.exit(1);
+}
 
 console.log('========================================');
 console.log(' PROTEIN.TN SMTP TEST');
@@ -39,7 +50,7 @@ console.log('========================================');
 console.log(`Host: ${host}:${port}`);
 console.log(`Username: ${user}`);
 console.log(`Sender Name: ${fromName}`);
-console.log(`Password: ${cleanPass ? cleanPass.slice(0, 4) + '****' : '(empty)'}`);
+console.log('Password: configured');
 console.log(`Recipient: ${to}`);
 console.log('----------------------------------------\n');
 

@@ -185,12 +185,18 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # The application image contains a validated sendmail transport. Laravel normalizes
-            # its From/Reply-To address to contact@protein.tn, so stale VPS sender values cannot
-            # break order confirmation serialization. Keep this block branch-free because
-            # appleboy/ssh-action's script_stop rewriting is not compatible with shell case/if
-            # compound statements.
-            echo "✓ Using the image's validated local sendmail fallback"
+            [ -n '${{ secrets.MAIL_USERNAME }}' ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
+            [ -n '${{ secrets.MAIL_PASSWORD }}' ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
+            upsert_secret MAIL_MAILER smtp
+            upsert_secret MAIL_HOST smtp.gmail.com
+            upsert_secret MAIL_PORT 587
+            upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
+            upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
+            upsert_secret MAIL_ENCRYPTION tls
+            upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_USERNAME }}'
+            upsert_secret MAIL_FROM_NAME Protein.tn
+            upsert_secret MAIL_REPLY_TO contact@protein.tn
+            echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
@@ -258,10 +264,8 @@ jobs:
             fi
 
             echo "🩺 Checking SMTP and SMS configuration (no messages are sent)..."
-            # This is an observability check, not a deployment prerequisite. Production currently
-            # reports its legacy sendmail setup here; --strict intentionally exits non-zero for
-            # that warning. Let the warning remain prominent without preventing an unrelated image
-            # or Nginx rollout from reaching the server.
+            # This is an observability check, not a deployment prerequisite. Keep any provider
+            # warning prominent without preventing an unrelated image or Nginx rollout.
             if ! docker compose -f "$COMPOSE_FILE" run --rm backend-v2 php artisan notifications:doctor --strict --probe-sms; then
               echo "⚠️  Notification configuration needs attention; continuing the deploy."
             fi
@@ -366,11 +370,10 @@ jobs:
             upsert_secret() {
               SECRET_KEY="$1"
               SECRET_VALUE="$2"
-              if grep -q "^${SECRET_KEY}=" .env; then
-                sed -i "s|^${SECRET_KEY}=.*|${SECRET_KEY}=${SECRET_VALUE}|" .env
-              else
-                printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> .env
-              fi
+              SECRET_TMP=".env.tmp.$$"
+              grep -v "^${SECRET_KEY}=" .env > "$SECRET_TMP" || true
+              printf '%s=%s\n' "$SECRET_KEY" "$SECRET_VALUE" >> "$SECRET_TMP"
+              mv "$SECRET_TMP" .env
               chmod 600 .env
             }
 
@@ -380,9 +383,18 @@ jobs:
             upsert_secret SMS_SENDER_ID '${{ secrets.SMS_SENDER_ID }}'
             echo "✓ WinSMS credentials installed"
 
-            # Keep the retry path identical to attempt 1 without shell compound statements;
-            # script_stop injects a status guard after each source line.
-            echo "✓ Using the image's validated local sendmail fallback"
+            [ -n '${{ secrets.MAIL_USERNAME }}' ] || { echo "❌ MAIL_USERNAME GitHub secret is missing"; exit 1; }
+            [ -n '${{ secrets.MAIL_PASSWORD }}' ] || { echo "❌ MAIL_PASSWORD GitHub secret is missing"; exit 1; }
+            upsert_secret MAIL_MAILER smtp
+            upsert_secret MAIL_HOST smtp.gmail.com
+            upsert_secret MAIL_PORT 587
+            upsert_secret MAIL_USERNAME '${{ secrets.MAIL_USERNAME }}'
+            upsert_secret MAIL_PASSWORD '${{ secrets.MAIL_PASSWORD }}'
+            upsert_secret MAIL_ENCRYPTION tls
+            upsert_secret MAIL_FROM_ADDRESS '${{ secrets.MAIL_USERNAME }}'
+            upsert_secret MAIL_FROM_NAME Protein.tn
+            upsert_secret MAIL_REPLY_TO contact@protein.tn
+            echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
             echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin

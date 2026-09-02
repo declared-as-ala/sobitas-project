@@ -270,7 +270,8 @@ jobs:
             commerce-mail-smoke)
               # Privacy-safe production smoke test. It contains no order/customer data and is
               # delivered only to the first validated ADMIN_EMAILS address.
-              ARGS="notifications:doctor --strict --mailer=sendmail --send-test-email-to-admin"
+              # Use the production default mailer so this proves the transport customers use.
+              ARGS="notifications:doctor --strict --send-test-email-to-admin"
               WRITES=no
               ;;
             commerce-email-smoke)

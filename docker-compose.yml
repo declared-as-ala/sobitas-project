@@ -115,12 +115,15 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      # Use the VPS MTA that is installed and monitored with the application.
-      # Do not pin personal SMTP credentials in source control: an expired app
-      # password previously stopped every queued transactional email.
-      MAIL_MAILER: sendmail
-      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
-      MAIL_FROM_ADDRESS: contact@protein.tn
+      # SMTP credentials are installed into the VPS .env from GitHub Secrets by
+      # deploy-filament.yml. Never commit a Gmail app password here.
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
       ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
@@ -235,9 +238,13 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      MAIL_MAILER: sendmail
-      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
-      MAIL_FROM_ADDRESS: contact@protein.tn
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
       ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
@@ -290,9 +297,13 @@ services:
       REDIS_DB: 0
       REDIS_CACHE_DB: 1
 
-      MAIL_MAILER: sendmail
-      MAIL_SENDMAIL_PATH: /usr/sbin/sendmail -t -i
-      MAIL_FROM_ADDRESS: contact@protein.tn
+      MAIL_MAILER: ${MAIL_MAILER:-smtp}
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_ENCRYPTION: ${MAIL_ENCRYPTION:-tls}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-contact@protein.tn}
       MAIL_FROM_NAME: Protein.tn
       MAIL_REPLY_TO: contact@protein.tn
       ADMIN_EMAILS: ${ADMIN_EMAILS:-contact@protein.tn}
