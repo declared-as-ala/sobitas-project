@@ -71,8 +71,10 @@ export default function CheckoutPage() {
 
   // Form state: one address (adresse de livraison) only
   const [formData, setFormData] = useState({
-    livraison_nom: user?.name?.split(' ')[0] || '',
-    livraison_prenom: user?.name?.split(' ').slice(1).join(' ') || '',
+    // The backend keeps separate legacy columns, but checkout asks for one human-friendly full name.
+    // We store the complete value in livraison_nom and leave livraison_prenom empty for compatibility.
+    livraison_nom: user?.name || '',
+    livraison_prenom: '',
     livraison_email: user?.email || '',
     livraison_phone: '',
     pays: 'Tunisie',
@@ -296,9 +298,9 @@ export default function CheckoutPage() {
   }
 
   const validateForm = () => {
-    const required = ['livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone', 'livraison_adresse1'];
+    const required = ['livraison_nom', 'livraison_phone', 'livraison_adresse1'];
     for (const field of required) {
-      if (!formData[field as keyof typeof formData]) {
+      if (!String(formData[field as keyof typeof formData]).trim()) {
         toast.error('Veuillez remplir tous les champs obligatoires');
         return false;
       }
@@ -308,13 +310,13 @@ export default function CheckoutPage() {
       return false;
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.livraison_email)) {
+    if (formData.livraison_email.trim() && !emailRegex.test(formData.livraison_email.trim())) {
       toast.error('Email invalide');
       return false;
     }
-    const phoneDigits = formData.livraison_phone.replace(/\s/g, '');
-    const phoneRegex = /^(\+216|00216)?\s*[2-9]\d{7}$/;
-    if (!phoneRegex.test(phoneDigits) || phoneDigits.replace(/\D/g, '').length < 8) {
+    const normalizedPhone = formData.livraison_phone.replace(/[\s-]/g, '');
+    const phoneRegex = /^(?:(?:\+|00)216)?[2-9]\d{7}$/;
+    if (!phoneRegex.test(normalizedPhone)) {
       toast.error('Numéro de téléphone invalide (8 chiffres tunisiens, commençant par 2-9)');
       return false;
     }
@@ -334,10 +336,10 @@ export default function CheckoutPage() {
       // Same backend structure as commande rapide (see lib/orderPayload.ts)
       const orderPayload = buildBackendOrderPayload({
         livraison: {
-          livraison_nom: formData.livraison_nom,
+          livraison_nom: formData.livraison_nom.trim(),
           livraison_prenom: formData.livraison_prenom,
-          livraison_email: formData.livraison_email,
-          livraison_phone: formData.livraison_phone,
+          livraison_email: formData.livraison_email.trim() || undefined,
+          livraison_phone: formData.livraison_phone.trim(),
           livraison_region: formData.livraison_region,
           livraison_ville: formData.livraison_ville,
           livraison_code_postale: formData.livraison_code_postale || undefined,
@@ -574,6 +576,7 @@ export default function CheckoutPage() {
   if (currentStep === 3 && orderData) {
     const order = orderData.order;
     const details = orderData.orderDetails;
+    const confirmationEmail = order?.livraison_email || order?.email;
 
     return (
       <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -611,7 +614,9 @@ export default function CheckoutPage() {
                     Merci pour votre commande #{order?.numero || ''}
                   </p>
                   <p className="text-sm text-gray-500 dark:text-gray-500">
-                    Un email de confirmation a été envoyé à {order?.livraison_email || order?.email || user?.email}
+                    {confirmationEmail
+                      ? `Un email de confirmation a été envoyé à ${confirmationEmail}`
+                      : 'Notre équipe vous contactera par téléphone pour confirmer la livraison.'}
                   </p>
                 </div>
               </CardContent>
@@ -791,15 +796,15 @@ export default function CheckoutPage() {
     <div
       className={`checkout-viewport-root flex min-h-screen min-h-[100dvh] flex-col bg-canvas ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
       data-keyboard-open={keyboardOpen || undefined}
-      style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.5rem' : '9rem' }}
+      style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.25rem' : '6.25rem' }}
     >
       <main className="checkout-main flex-1">
         {/* Checkout is a primary task, so it uses the same 1600px site rail as the catalogue
             rather than the 1280px editorial rail. The form grows; the summary keeps a readable
             fixed range and remains sticky. */}
         <Container width="wide">
-          <header className="mb-5 border-b border-rule pb-5 sm:mb-7 sm:pb-6">
-            <div className="mb-5 flex items-center justify-between gap-4">
+          <header className="mb-4 border-b border-rule pb-4 sm:mb-5 sm:pb-5">
+            <div className="mb-3 flex items-center justify-between gap-4 sm:mb-4">
               <Button
                 variant="ghost"
                 onClick={() => currentStep === 2 ? router.push('/cart') : setCurrentStep(2)}
@@ -819,15 +824,15 @@ export default function CheckoutPage() {
                 <span className="text-ink-3">3&nbsp; Confirmation</span>
               </nav>
             </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
+            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-8">
               <div>
-                <p className="mb-2 text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Finaliser ma commande</p>
-                <h1 className="font-display text-3xl font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-4xl">
+                <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-brand sm:text-[11px]">Finaliser ma commande</p>
+                <h1 className="font-display text-[1.75rem] font-extrabold uppercase leading-none tracking-tight text-ink-1 sm:text-3xl">
                   Livraison &amp; paiement
                 </h1>
               </div>
-              <p className="max-w-md text-sm leading-relaxed text-ink-2 sm:text-end">
-                Vérifiez vos coordonnées. Vous paierez simplement à la réception.
+              <p className="max-w-md text-[13px] leading-snug text-ink-2 sm:text-end sm:text-sm">
+                Vérifiez vos coordonnées, puis payez simplement à la réception.
               </p>
             </div>
           </header>
@@ -837,67 +842,37 @@ export default function CheckoutPage() {
           <section className="checkout-form">
             <div>
               <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
-                <CardHeader className="border-b border-rule px-5 pb-5 pt-5 sm:px-7 sm:pt-6 lg:px-8">
-                  <CardTitle className="flex items-center gap-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1 sm:text-2xl">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand">
+                <CardHeader className="border-b border-rule px-4 py-4 sm:px-6 sm:py-5 lg:px-7">
+                  <CardTitle className="flex items-center gap-3 font-display text-lg font-extrabold uppercase tracking-tight text-ink-1 sm:text-xl">
+                    <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand">
                       <Truck className="h-5 w-5" aria-hidden="true" />
                     </span>
                     Adresse de livraison
                   </CardTitle>
-                  <p className="mt-2 text-sm leading-relaxed text-ink-2">
-                    Les champs marqués d’un astérisque sont nécessaires à la livraison.
+                  <p className="mt-1.5 text-[13px] leading-snug text-ink-2">
+                    Les champs avec * sont obligatoires.
                   </p>
                 </CardHeader>
-                <CardContent className="p-4 sm:p-6 lg:p-8">
-                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-7 lg:space-y-8">
+                <CardContent className="p-4 sm:p-5 lg:p-6">
+                  <form id="checkout-form" onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                     {/* Contact */}
-                    <div className="space-y-4">
+                    <div className="space-y-3.5">
                       <div className="flex items-center gap-3">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">01</span>
                         <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Vos coordonnées</h2>
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                         <div className="space-y-1.5">
                           <Label htmlFor="livraison_nom" className="text-sm font-semibold leading-snug text-ink-1">
-                            Nom <span className="text-brand">*</span>
+                            Nom complet <span className="text-brand">*</span>
                           </Label>
                           <Input
                             id="livraison_nom"
                             value={formData.livraison_nom}
                             onChange={(e) => handleInputChange('livraison_nom', e.target.value)}
-                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
-                            placeholder="Votre nom"
-                            required
-                          />
-                        </div>
-                        <div className="space-y-1.5">
-                          <Label htmlFor="livraison_prenom" className="text-sm font-semibold leading-snug text-ink-1">
-                            Prénom <span className="text-brand">*</span>
-                          </Label>
-                          <Input
-                            id="livraison_prenom"
-                            value={formData.livraison_prenom}
-                            onChange={(e) => handleInputChange('livraison_prenom', e.target.value)}
-                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
-                            placeholder="Votre prénom"
-                            required
-                          />
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
-                          <Label htmlFor="livraison_email" className="text-sm font-semibold leading-snug text-ink-1">
-                            Email <span className="text-brand">*</span>
-                          </Label>
-                          <Input
-                            id="livraison_email"
-                            type="email"
-                            value={formData.livraison_email}
-                            onChange={(e) => handleInputChange('livraison_email', e.target.value)}
-                            autoComplete="email"
-                            inputMode="email"
-                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
-                            placeholder="votre@email.com"
+                            autoComplete="name"
+                            className="h-11 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
+                            placeholder="Prénom et nom"
                             required
                           />
                         </div>
@@ -912,11 +887,26 @@ export default function CheckoutPage() {
                             onChange={(e) => handleInputChange('livraison_phone', e.target.value)}
                             inputMode="tel"
                             autoComplete="tel"
-                            className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
+                            className="h-11 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                             placeholder="+216 XX XXX XXX"
                             required
                           />
                         </div>
+                      </div>
+                      <div className="space-y-1.5">
+                          <Label htmlFor="livraison_email" className="text-sm font-semibold leading-snug text-ink-1">
+                            Email <span className="text-xs font-normal text-ink-3">(optionnel)</span>
+                          </Label>
+                          <Input
+                            id="livraison_email"
+                            type="email"
+                            value={formData.livraison_email}
+                            onChange={(e) => handleInputChange('livraison_email', e.target.value)}
+                            autoComplete="email"
+                            inputMode="email"
+                            className="h-11 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
+                            placeholder="Pour recevoir la confirmation par email"
+                          />
                       </div>
                       <div className="hidden">
                         <Label htmlFor="pays">Pays</Label>
@@ -925,7 +915,7 @@ export default function CheckoutPage() {
                       </div>
 
                     {/* Adresse */}
-                    <div className="space-y-4 border-t border-rule pt-6 lg:pt-8">
+                    <div className="space-y-3.5 border-t border-rule pt-5 sm:pt-6">
                       <div className="flex items-center gap-3">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">02</span>
                         <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Adresse</h2>
@@ -948,7 +938,7 @@ export default function CheckoutPage() {
                           id="livraison_adresse1"
                           value={formData.livraison_adresse1}
                           onChange={(e) => handleInputChange('livraison_adresse1', e.target.value)}
-                          className="h-12 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
+                          className="h-11 rounded-xl border-hairline bg-canvas text-base text-ink-1 shadow-none transition-colors hover:border-rule-strong focus-visible:border-brand focus-visible:ring-focus focus-visible:ring-offset-0"
                           placeholder="Rue, numéro, bâtiment..."
                           required
                         />
@@ -956,7 +946,7 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setShowOptionalFields(!showOptionalFields)}
-                        className="flex min-h-11 items-center gap-1 rounded-lg text-sm font-semibold leading-snug text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                        className="flex min-h-9 items-center gap-1 rounded-lg text-[13px] font-semibold leading-snug text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         aria-expanded={showOptionalFields}
                       >
                         {showOptionalFields ? <ChevronUp className="h-4 w-4" aria-hidden="true" /> : <ChevronDown className="h-4 w-4" aria-hidden="true" />}
@@ -979,17 +969,17 @@ export default function CheckoutPage() {
                     </div>
 
                     {/* Paiement */}
-                    <div className="border-t border-rule pt-6 lg:pt-8">
-                      <div className="mb-4 flex items-center gap-3">
+                    <div className="border-t border-rule pt-5 sm:pt-6">
+                      <div className="mb-3.5 flex items-center gap-3">
                         <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-sunken text-xs font-bold tabular-nums text-brand">03</span>
                         <h2 className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Paiement</h2>
                       </div>
                       <RadioGroup value={paymentMethod} onValueChange={(value) => setPaymentMethod(value as 'cod' | 'card')}>
-                        <div className="space-y-3">
+                        <div className="space-y-2.5">
                           {/* Paiement à la livraison */}
                           <label
                             htmlFor="cod"
-                            className={`flex min-h-[72px] cursor-pointer items-start gap-3 rounded-xl border p-4 transition-colors ${
+                            className={`flex min-h-[64px] cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-colors ${
                               paymentMethod === 'cod'
                                 ? 'border-brand bg-brand-50'
                                 : 'border-hairline bg-canvas hover:border-rule-strong'
@@ -1005,7 +995,7 @@ export default function CheckoutPage() {
                                   <span className="block font-semibold text-ink-1">
                                     Paiement à la livraison
                                   </span>
-                                  <p className="mt-1 text-sm leading-snug text-ink-2">
+                                  <p className="mt-0.5 text-[13px] leading-snug text-ink-2">
                                     Payez au livreur en espèces ou par chèque, après réception de votre commande.
                                   </p>
                                 </div>
@@ -1016,7 +1006,7 @@ export default function CheckoutPage() {
                           {/* Carte Bancaire — bientôt disponible (désactivé) */}
                           <div
                             aria-disabled="true"
-                            className="flex min-h-[64px] cursor-not-allowed items-center gap-3 rounded-xl border border-hairline bg-sunken p-4 opacity-60"
+                            className="flex min-h-[58px] cursor-not-allowed items-center gap-3 rounded-xl border border-hairline bg-sunken p-3.5 opacity-60"
                           >
                             <RadioGroupItem value="card" id="card" disabled className="h-5 w-5 shrink-0" />
                             <div className="flex-1 w-full min-w-0">
@@ -1044,7 +1034,7 @@ export default function CheckoutPage() {
                     <Button
                       type="submit"
                       size="lg"
-                      className="hidden h-12 w-full rounded-xl bg-brand font-display text-base font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50 lg:flex"
+                      className="hidden h-12 w-full rounded-xl bg-brand font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50 lg:flex"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -1066,21 +1056,21 @@ export default function CheckoutPage() {
           </section>
 
           {/* Order Summary */}
-          <aside className="checkout-summary" aria-label="Récapitulatif de la commande">
+          <aside className="checkout-summary hidden lg:block" aria-label="Récapitulatif de la commande">
             <div className="checkout-summary-inner">
               <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
-                <CardHeader className="border-b border-rule px-6 pb-5 pt-6">
+                <CardHeader className="border-b border-rule px-5 py-4">
                   <CardTitle className="flex items-center gap-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">
                     <ShoppingCart className="h-5 w-5 text-brand" aria-hidden="true" />
                     Récapitulatif
                   </CardTitle>
-                  <p className="mt-1 text-sm leading-snug text-ink-3">
+                  <p className="mt-0.5 text-xs leading-snug text-ink-3">
                     {items.length} {items.length === 1 ? 'article' : 'articles'}
                   </p>
                 </CardHeader>
-                <CardContent className="space-y-5 p-6">
+                <CardContent className="space-y-4 p-5">
                   {/* Items */}
-                  <div className="max-h-80 divide-y divide-hairline overflow-y-auto pe-1">
+                  <div className="max-h-72 divide-y divide-hairline overflow-y-auto pe-1">
                     {items.map((item) => {
                       const price = getEffectivePrice(item.product);
                       const productName = (item.product as any).designation_fr || (item.product as any).name;
@@ -1088,9 +1078,9 @@ export default function CheckoutPage() {
                         ? getStorageUrl((item.product as any).cover) 
                         : null;
                       return (
-                        <div key={item.product.id} className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
+                        <div key={item.product.id} className="flex items-center gap-3 py-2.5 first:pt-0 last:pb-0">
                           {productImage && (
-                            <div className="relative h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border border-hairline bg-sunken">
+                            <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-xl border border-hairline bg-sunken">
                               <Image
                                 src={productImage}
                                 alt={productName}
@@ -1120,10 +1110,10 @@ export default function CheckoutPage() {
                   </div>
 
                   {/* Code promo (summary column) */}
-                  <section className="checkout-coupon border-t border-rule pt-5" aria-labelledby="checkout-coupon-title">
+                  <section className="checkout-coupon border-t border-rule pt-4" aria-labelledby="checkout-coupon-title">
                     <h3
                       id="checkout-coupon-title"
-                      className="mb-3 flex items-center gap-2 font-display text-base font-extrabold uppercase tracking-tight text-ink-1"
+                      className="mb-2.5 flex items-center gap-2 font-display text-sm font-extrabold uppercase tracking-tight text-ink-1"
                     >
                       <Tag className="h-4 w-4 text-brand" aria-hidden="true" />
                       Code promo
@@ -1172,13 +1162,13 @@ export default function CheckoutPage() {
                             value={couponInput}
                             onChange={(e) => setCouponInput(e.target.value)}
                             placeholder="Ex: SOBI10"
-                            className="checkout-coupon-input h-12 rounded-xl border-hairline bg-canvas text-ink-1 focus-visible:ring-focus focus-visible:ring-offset-0"
+                            className="checkout-coupon-input h-11 rounded-xl border-hairline bg-canvas text-ink-1 focus-visible:ring-focus focus-visible:ring-offset-0"
                             onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleApplyCoupon())}
                           />
                           <Button
                             type="button"
                             variant="outline"
-                            className="checkout-coupon-button min-h-12 rounded-xl border-rule bg-elevated font-semibold text-brand hover:border-brand hover:bg-brand-50 focus-visible:ring-focus"
+                            className="checkout-coupon-button min-h-11 rounded-xl border-rule bg-elevated font-semibold text-brand hover:border-brand hover:bg-brand-50 focus-visible:ring-focus"
                             onClick={handleApplyCoupon}
                             disabled={isApplyingCoupon || !couponInput.trim()}
                           >
@@ -1285,7 +1275,7 @@ export default function CheckoutPage() {
                   )}
 
                   {/* Summary */}
-                  <div className="space-y-3 border-t border-rule pt-5 text-sm">
+                  <div className="space-y-2.5 border-t border-rule pt-4 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-ink-2">Sous-total</span>
                       <span className="font-display font-semibold tabular-nums text-ink-1">{totalPrice.toFixed(2)} DT</span>

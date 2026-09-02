@@ -7,7 +7,7 @@ import { ChevronUp, Loader2, Shield } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
 import { Container } from '@/app/components/layout/Container';
 
-export const CHECKOUT_CTA_HEIGHT_REM = 9;
+export const CHECKOUT_CTA_HEIGHT_REM = 6.25;
 
 interface CheckoutFooterCTAProps {
   keyboardOpen?: boolean;
@@ -43,17 +43,15 @@ export function CheckoutFooterCTA({
       aria-label="Passer la commande"
       aria-hidden={keyboardOpen}
     >
-      <Container className="flex flex-col justify-center py-2.5">
-        <div className="mb-2 flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-3">Total à payer</p>
-            <p className="truncate font-display text-xl font-extrabold tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</p>
-          </div>
-          <Sheet open={mobileSummaryOpen} onOpenChange={onMobileSummaryOpenChange}>
+      <Container className="flex items-center gap-2.5 py-2">
+        <Sheet open={mobileSummaryOpen} onOpenChange={onMobileSummaryOpenChange}>
             <SheetTrigger asChild>
-              <Button type="button" variant="ghost" size="sm" className="min-h-11 shrink-0 rounded-lg px-3 text-[13px] font-semibold text-brand hover:bg-brand-50 focus-visible:ring-focus">
-                Détails
-                <ChevronUp className="ms-1 h-4 w-4" aria-hidden="true" />
+              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-[0_1_44%] justify-between rounded-xl px-2.5 py-1.5 text-start hover:bg-brand-50 focus-visible:ring-focus">
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3">Total</span>
+                  <span className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</span>
+                </span>
+                <ChevronUp className="ms-1 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side="bottom" className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-hairline bg-elevated">
@@ -101,14 +99,13 @@ export function CheckoutFooterCTA({
                 </div>
               </div>
             </SheetContent>
-          </Sheet>
-        </div>
+        </Sheet>
 
         <Button
           type="button"
           onClick={onSubmit}
           disabled={isSubmitting}
-          className="checkout-cta-button flex h-12 w-full items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-brand font-display text-base font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50"
+          className="checkout-cta-button flex h-12 min-w-0 flex-1 items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-brand px-3 font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50"
         >
           {isSubmitting ? (
             <>
@@ -118,7 +115,7 @@ export function CheckoutFooterCTA({
           ) : (
             <>
               <Shield className="h-5 w-5 shrink-0" aria-hidden="true" />
-              <span>Passer la commande</span>
+              <span>Commander</span>
             </>
           )}
         </Button>

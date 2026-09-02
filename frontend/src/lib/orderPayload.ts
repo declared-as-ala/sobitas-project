@@ -18,8 +18,8 @@ export interface BackendCommandeFields {
   adresse2?: string;
   /** Livraison (delivery) – primary for backend */
   livraison_nom: string;
-  livraison_prenom: string;
-  livraison_email: string;
+  livraison_prenom?: string;
+  livraison_email?: string;
   livraison_phone: string;
   livraison_region: string;
   livraison_ville: string;
@@ -61,8 +61,8 @@ export interface BackendOrderPayload {
 export function buildBackendOrderPayload(params: {
   livraison: {
     livraison_nom: string;
-    livraison_prenom: string;
-    livraison_email: string;
+    livraison_prenom?: string;
+    livraison_email?: string;
     livraison_phone: string;
     livraison_region: string;
     livraison_ville: string;
@@ -83,8 +83,8 @@ export function buildBackendOrderPayload(params: {
   const { livraison, panier, user_id, m_remise, coupon_code, pack_discount, points_to_redeem } = params;
   const commande: BackendCommandeFields = {
     livraison_nom: livraison.livraison_nom,
-    livraison_prenom: livraison.livraison_prenom,
-    livraison_email: livraison.livraison_email,
+    livraison_prenom: livraison.livraison_prenom || undefined,
+    livraison_email: livraison.livraison_email || undefined,
     livraison_phone: livraison.livraison_phone,
     livraison_region: livraison.livraison_region,
     livraison_ville: livraison.livraison_ville,
@@ -97,8 +97,8 @@ export function buildBackendOrderPayload(params: {
     user_id,
     // Mirror livraison into client fields so backend has both (same as backend doc)
     nom: livraison.livraison_nom,
-    prenom: livraison.livraison_prenom,
-    email: livraison.livraison_email,
+    prenom: livraison.livraison_prenom || undefined,
+    email: livraison.livraison_email || undefined,
     phone: livraison.livraison_phone,
     pays: 'Tunisie',
     region: livraison.livraison_region,

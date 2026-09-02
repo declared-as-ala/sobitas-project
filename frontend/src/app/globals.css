@@ -1273,8 +1273,8 @@ input[type="search"]::-webkit-search-results-decoration {
 }
 
 .checkout-main {
-  padding-top: 1.5rem;
-  padding-bottom: var(--checkout-cta-padding, 9rem);
+  padding-top: 0.875rem;
+  padding-bottom: var(--checkout-cta-padding, 6.25rem);
 }
 
 @media (min-width: 640px) {
@@ -1283,14 +1283,14 @@ input[type="search"]::-webkit-search-results-decoration {
   }
 
   .checkout-main {
-    padding-top: 2rem;
+    padding-top: 1.25rem;
   }
 }
 
 /* Checkout owns the presentation of the shared address picker without changing its data flow. */
 .checkout-form [data-slot="select-trigger"],
 .checkout-form #code_postal {
-  min-height: 3rem;
+  min-height: 2.75rem;
   border-color: rgb(var(--c-hairline));
   background: rgb(var(--c-canvas));
   color: rgb(var(--c-ink-1));
@@ -1308,25 +1308,25 @@ input[type="search"]::-webkit-search-results-decoration {
 
 @media (min-width: 1024px) {
   .checkout-layout {
-    grid-template-columns: minmax(0, 1.45fr) minmax(360px, 400px);
-    gap: 1.5rem;
+    grid-template-columns: minmax(0, 1.5fr) minmax(360px, 400px);
+    gap: 1.25rem;
   }
 
   .checkout-summary-inner {
     position: sticky;
-    top: 1rem;
+    top: 0.75rem;
   }
 
   .checkout-main {
-    padding-top: 2.5rem;
-    padding-bottom: 3.5rem;
+    padding-top: 1.5rem;
+    padding-bottom: 2.5rem;
   }
 }
 
 @media (min-width: 1280px) {
   .checkout-layout {
     grid-template-columns: minmax(0, 1.65fr) minmax(400px, 440px);
-    gap: 2rem;
+    gap: 1.5rem;
   }
 }
 
@@ -1335,7 +1335,7 @@ input[type="search"]::-webkit-search-results-decoration {
   /* position, left, right, bottom, z-index in component */
 }
 .checkout-cta-footer .checkout-cta-button {
-  min-height: 52px;
+  min-height: 50px;
 }
 
 /* Hide CTA when keyboard is open: slide down so layout never breaks (iOS/Android). */

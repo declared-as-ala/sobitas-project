@@ -67,6 +67,12 @@ class CommandeController extends Controller
             'commande.email'    => ['nullable', 'email', 'max:255'],
             'commande.nom'      => ['nullable', 'string', 'max:255'],
             'commande.prenom'   => ['nullable', 'string', 'max:255'],
+            // Storefront checkout uses one full-name field. Legacy split-name columns remain
+            // supported, with the full value stored in livraison_nom/nom.
+            'commande.livraison_nom'    => ['required', 'string', 'max:255'],
+            'commande.livraison_prenom' => ['nullable', 'string', 'max:255'],
+            'commande.livraison_phone'  => ['required', 'string', 'max:20', 'regex:/^(?:(?:\+|00)216[\s-]?)?[2-9](?:[\s-]?\d){7}$/'],
+            'commande.livraison_email'  => ['nullable', 'email', 'max:255'],
             'commande.region'   => ['nullable', 'string', 'max:255'],
             'commande.frais_livraison' => ['nullable', 'numeric', 'min:0'], // never trust a negative shipping fee
             'panier'            => ['required', 'array', 'min:1'],

@@ -466,8 +466,8 @@ export interface OrderRequest {
     note?: string;
     user_id?: number;
     livraison_nom: string;
-    livraison_prenom: string;
-    livraison_email: string;
+    livraison_prenom?: string;
+    livraison_email?: string;
     livraison_phone: string;
     livraison_region: string;
     livraison_ville: string;
