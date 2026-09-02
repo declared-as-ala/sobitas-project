@@ -66,7 +66,11 @@ async function getGroups(): Promise<PackBuilderGroup[]> {
         slug,
         label,
         cover: rawCover ? getStorageUrl(rawCover) : null,
-        products: products.slice(0, 12),
+        // The pack builder is a catalogue tool, not a promotional shelf. Capping this list at 12
+        // made valid in-stock products impossible to add even though their category endpoint had
+        // already returned them. Product images are lazy-loaded in ProductPicker, so keeping the
+        // complete eligible list does not eagerly download every photograph.
+        products,
       };
     })
   );

@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, LazyMotion, MotionConfig, m, useReducedMotion } from 'motion/react';
 import Image from 'next/image';
-import { Check } from 'lucide-react';
+import { Check, Search, X } from 'lucide-react';
 import type { Product } from '@/types';
 import type { PackGroup } from './steps';
 import { ProductPicker } from './ProductPicker';
@@ -112,10 +112,38 @@ export function PackWizard(props: PackWizardProps) {
   const [stage, setStage] = useState<Stage>('build');
   const [direction, setDirection] = useState(1);
   const [activeSlug, setActiveSlug] = useState(groups[0]?.slug ?? '');
+  const [searchQuery, setSearchQuery] = useState('');
   const stageRef = useRef<HTMLDivElement>(null);
   const hasNavigated = useRef(false);
   const activeGroup = groups.find((group) => group.slug === activeSlug) ?? groups[0];
   const stageIndex = STAGES.findIndex((item) => item.key === stage);
+
+  const allProducts = useMemo(() => groups.flatMap((group) => group.products), [groups]);
+  const normalizedQuery = searchQuery
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLocaleLowerCase('fr');
+  const visibleProducts = useMemo(() => {
+    if (!normalizedQuery) return activeGroup.products;
+
+    return allProducts.filter((product) => {
+      const searchable = [
+        product.designation_fr,
+        product.designation_ar,
+        product.brand?.designation_fr,
+        product.sku,
+        product.code_product,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('fr');
+
+      return searchable.includes(normalizedQuery);
+    });
+  }, [activeGroup.products, allProducts, normalizedQuery]);
 
   const goToStage = useCallback((next: Stage) => {
     if (next === 'review' && itemCount === 0) return;
@@ -183,7 +211,10 @@ export function PackWizard(props: PackWizardProps) {
                               role="tab"
                               aria-selected={active}
                               aria-controls="pack-products-panel"
-                              onClick={() => setActiveSlug(group.slug)}
+                              onClick={() => {
+                                setActiveSlug(group.slug);
+                                setSearchQuery('');
+                              }}
                               className={`inline-flex min-h-[46px] snap-start items-center gap-2 rounded-xl border py-1 pl-1 pr-3 text-xs font-semibold transition-[border-color,background-color,color,box-shadow,transform] active:scale-[0.98] sm:text-sm ${
                                 active ? 'border-brand bg-brand text-on-brand shadow-[0_5px_16px_rgba(221,58,0,0.18)]' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand/60 [@media(hover:hover)]:hover:text-brand'
                               }`}
@@ -204,11 +235,54 @@ export function PackWizard(props: PackWizardProps) {
                         })}
                       </div>
                     </div>
+
+                    <div className="mt-1.5 flex items-center justify-end">
+                      <label htmlFor="pack-product-search" className="sr-only">
+                        Rechercher un produit dans le pack
+                      </label>
+                      <div className="relative w-full sm:w-[280px]">
+                        <Search
+                          className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-ink-3"
+                          aria-hidden="true"
+                        />
+                        <input
+                          id="pack-product-search"
+                          type="search"
+                          value={searchQuery}
+                          onChange={(event) => setSearchQuery(event.target.value)}
+                          placeholder="Rechercher un produit"
+                          autoComplete="off"
+                          className="h-10 w-full rounded-lg border border-hairline bg-elevated py-2 pl-9 pr-9 text-sm text-ink-1 outline-none transition-[border-color,box-shadow] placeholder:text-ink-3 focus:border-brand focus:ring-2 focus:ring-brand/15"
+                        />
+                        {searchQuery && (
+                          <button
+                            type="button"
+                            onClick={() => setSearchQuery('')}
+                            className="absolute right-1 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-md text-ink-3 transition-colors [@media(hover:hover)]:hover:bg-sunken [@media(hover:hover)]:hover:text-ink-1"
+                            aria-label="Effacer la recherche"
+                          >
+                            <X className="h-4 w-4" aria-hidden="true" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
                   <div className="pt-pack-workspace min-h-0 flex-1 pt-2">
-                    <div id="pack-products-panel" role="tabpanel" aria-label={activeGroup.label} className="pt-pack-products-scroll min-w-0">
-                      <ProductPicker products={activeGroup.products} pack={pack} onAdd={onAdd} onSetQty={onSetQty} calm={calm} />
+                    <div
+                      id="pack-products-panel"
+                      role="tabpanel"
+                      aria-label={normalizedQuery ? 'Résultats de recherche' : activeGroup.label}
+                      className="pt-pack-products-scroll min-w-0"
+                    >
+                      <ProductPicker
+                        products={visibleProducts}
+                        pack={pack}
+                        onAdd={onAdd}
+                        onSetQty={onSetQty}
+                        calm={calm}
+                        searchQuery={searchQuery.trim()}
+                      />
                     </div>
                     <PackSummary
                       entries={entries}

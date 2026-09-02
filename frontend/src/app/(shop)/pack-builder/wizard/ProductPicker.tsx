@@ -23,7 +23,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { m } from 'motion/react';
-import { Check, Minus, Package, Plus } from 'lucide-react';
+import { Check, Minus, Package, Plus, Search } from 'lucide-react';
 import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
@@ -36,6 +36,7 @@ export interface ProductPickerProps {
   onAdd: (product: Product, img: HTMLElement | null) => void;
   onSetQty: (product: Product, qty: number) => void;
   calm: boolean;
+  searchQuery?: string;
 }
 
 /**
@@ -270,13 +271,25 @@ const Tile = memo(function Tile({
   );
 });
 
-export function ProductPicker({ products, pack, onAdd, onSetQty, calm }: ProductPickerProps) {
+export function ProductPicker({ products, pack, onAdd, onSetQty, calm, searchQuery = '' }: ProductPickerProps) {
   // Stock can change after the server-rendered catalogue is cached. Filter again in the browser so
   // a stale category response never presents an unavailable product as a pack choice.
   const available = useMemo(
     () => products.filter((product) => getStockDisponible(product as never) > 0),
     [products]
   );
+
+  if (available.length === 0) {
+    return (
+      <div className="flex min-h-48 flex-col items-center justify-center rounded-xl border border-hairline bg-elevated px-5 text-center">
+        <Search className="mb-3 h-6 w-6 text-ink-3" aria-hidden="true" />
+        <p className="font-semibold text-ink-1">Aucun produit trouvé</p>
+        <p className="mt-1 text-sm text-ink-3">
+          {searchQuery ? `Essayez un autre nom que « ${searchQuery} ».` : 'Aucun produit disponible dans ce rayon.'}
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div data-pack-grid className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
