@@ -620,6 +620,7 @@ export interface AuthResponse {
 
 // Contact & Newsletter Types
 export interface ContactRequest {
+  product_id?: number;
   name: string;
   email: string;
   message: string;

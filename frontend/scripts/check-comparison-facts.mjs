@@ -1,0 +1,24 @@
+import assert from 'node:assert/strict';
+import { comparisonFacts } from '../src/util/productComparisonFacts.ts';
+
+let checks = 0;
+const check = (actual, expected) => { assert.deepEqual(actual, expected); checks++; };
+let facts = comparisonFacts({ nutrition_facts: { serving_quantity: 30, serving_unit: 'g', rows: [{ name: 'Protéines', quantity: 25, unit: 'g' }, { name: 'Dont sucres', quantity: 0, unit: 'g' }], claims: 'Sans gluten\nSans lactose' } });
+check(facts.protein, '25 g'); check(facts.sugars, '0 g'); check(facts.basis, 'Par portion de 30 g'); check(facts.gluten, 'Oui, indiqué sur la fiche'); check(facts.lactose, 'Oui, indiqué sur la fiche');
+facts = comparisonFacts({ source_facts: { content: { nutrition_html: '<p>Portion : 1 mesure (1/3 tasse) (37 g)</p><table><tr><td>Protéines</td><td>30 g</td><td>60%</td></tr><tr><td>Total des sucres</td><td>2 g</td></tr></table>' } } });
+check(facts.protein, '30 g'); check(facts.sugars, '2 g'); check(facts.basis, 'Par portion de 37 g');
+facts = comparisonFacts({ nutrition_facts: { rows: [{ name: 'Pour 1 portion de 30 g Nutriment Quantité Calories 110 kcal Protéines 27 g Dont sucres 0.3 g', quantity: 50, unit: null }] } });
+check(facts.protein, '27 g'); check(facts.energy, '110 kcal'); check(facts.sugars, '0,3 g');
+facts = comparisonFacts({ designation_fr: '100% WHEY 30g PROTEIN', description_fr: 'Gluten-free advertising', nutrition_facts: { other_ingredients: 'Contient du lait.' } });
+check(facts.protein, ''); check(facts.gluten, 'Non renseigné'); check(facts.lactose, 'Non renseigné');
+check(comparisonFacts({ nutrition_facts: { claims: 'Non garanti sans gluten' } }).gluten, 'Non renseigné');
+check(comparisonFacts({ nutrition_facts: { claims: 'Sans gluten', allergens: 'Peut contenir des traces de gluten.' } }).gluten, 'Traces possibles');
+check(comparisonFacts({ nutrition_facts: { claims: 'Sans gluten', allergens: 'Contient du gluten.' } }).gluten, 'Contient');
+facts = comparisonFacts({ nutrition_values: 'Pour 100 g | Par portion de 30 g | Protéines 80 g | 24 g | Sucres 5 g | 1.5 g' });
+check(facts.protein, ''); check(facts.sugars, ''); check(facts.basis, 'Base à vérifier sur la fiche');
+facts = comparisonFacts({ nutrition_values: 'Pour 100 g Protéines 80 g', source_facts: { content: { nutrition_html: 'Par portion de 30 g Protéines 24 g' } } });
+check(facts.protein, '80 g'); check(facts.basis, 'Pour 100 g');
+check(comparisonFacts({ nutrition_facts: { rows: [{ name: 'Protéines', quantity: 30, unit: 'kcal' }] } }).protein, '');
+check(comparisonFacts({ nutrition_values: 'Protein 60%' }).protein, '');
+check(comparisonFacts({ nutrition_facts: { claims: '<p>Sans gluten</p><p>Sans lactose</p>' } }).lactose, 'Oui, indiqué sur la fiche');
+console.log(`${checks} nutrition and allergen checks passed; no network, no catalogue writes.`);

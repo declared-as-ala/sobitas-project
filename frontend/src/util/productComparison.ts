@@ -23,6 +23,8 @@ import type { Product } from '@/types';
 import { getPriceDisplay } from './productPrice';
 import { isInStock } from './cartStock';
 import { getProductLink, getProductPrimarySubCategory } from './productUrl';
+import { comparisonFacts, type ComparisonFacts } from './productComparisonFacts';
+import { getProductStockStatus } from './cartStock';
 
 export type ComparisonRow = {
   id: number | string;
@@ -59,6 +61,8 @@ export type ComparisonRow = {
   hasPromo: boolean;
   inStock: boolean;
   isCurrent: boolean;
+  image: string;
+  facts: ComparisonFacts;
 };
 
 /**
@@ -143,6 +147,8 @@ export function buildComparison(
       hasPromo,
       inStock: isInStock(p),
       isCurrent,
+      image: p.cover || '',
+      facts: comparisonFacts(p),
     };
   };
 
@@ -150,18 +156,29 @@ export function buildComparison(
   const siblings = similar
     .filter((p) => {
       const key = String(p.id);
-      if (!p?.id || seen.has(key) || !p.designation_fr) return false;
+      if (!p?.id || seen.has(key) || !p.designation_fr || !isAvailableAlternative(p, product)) return false;
       seen.add(key);
       return true;
     })
     // Cheapest first: on a page about one product, the useful ordering of the alternatives is by
     // the thing the reader is weighing, not by whatever order the API returned.
-    .sort((a, b) => getPriceDisplay(a).finalPrice - getPriceDisplay(b).finalPrice)
+    .sort((a, b) => {
+      const category = getProductPrimarySubCategory(product)?.id || product.sous_categorie_id;
+      const same = (p: Product) => Number((getProductPrimarySubCategory(p)?.id || p.sous_categorie_id) === category);
+      return same(b) - same(a) || getPriceDisplay(a).finalPrice - getPriceDisplay(b).finalPrice;
+    })
     .slice(0, limit)
     .map((p) => row(p, false));
 
   // A table of one is not a comparison — it is the product page again, in a box.
-  if (siblings.length < 2) return [];
+  if (siblings.length < 1) return [];
 
   return [row(product, true), ...siblings];
+}
+
+/** A bundle is not a substitute for a single tub. Missing stock never means available. */
+export function isAvailableAlternative(candidate: Product, current: Product): boolean {
+  const stock = getProductStockStatus(candidate);
+  const isPack = (p: Product) => Number(p.pack) === 1 || /^pack\b/i.test(p.designation_fr || '');
+  return candidate.id !== current.id && !stock.isUnknown && !stock.isOutOfStock && !isPack(candidate);
 }
