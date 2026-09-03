@@ -67,6 +67,7 @@ on:
           - commerce-order-recovery-dry-run
           - commerce-flow-tests
           - notifications-status
+          - campaign-artwork-retire-dry-run
           # The three logs the scheduler redirects away from the container's stdout. Without
           # these, a pass that runs and decides to do nothing is indistinguishable from a pass
           # that is working.
@@ -139,6 +140,7 @@ on:
           # Selectively restores one missing storefront order and its line items from the newest
           # known-good pre-deploy snapshot. The dry-run variant must be reviewed first.
           - commerce-order-recovery-apply
+          - campaign-artwork-retire-apply
       confirm:
         description: "Writing tasks only (including commerce-order-recovery-apply): type APPLY"
         required: false
@@ -187,6 +189,14 @@ jobs:
           # A fixed token -> a fixed argv. Nothing the operator types reaches a shell.
           # WRITES=yes means "can touch the products table" and gates the backup below.
           case "$TASK" in
+            campaign-artwork-retire-dry-run)
+              ARGS="slides:retire-20260903"
+              WRITES=no
+              ;;
+            campaign-artwork-retire-apply)
+              ARGS="slides:retire-20260903 --apply"
+              WRITES=yes
+              ;;
             catalog-status)
               ARGS="catalog:iherb:hydrate --status"
               WRITES=no
@@ -1063,6 +1073,10 @@ jobs:
                 echo "================================================================"
                 echo "[X] COMMAND FAILED - artisan exited $RC. Its output is above."
                 echo "================================================================"
+                # The artwork retirement must never report success after a failed safety check.
+                if [ "${ARGS#slides:retire-20260903}" != "$ARGS" ]; then
+                  exit "$RC"
+                fi
                 exit 0
               fi
             fi
