@@ -145,6 +145,7 @@ class ProductRequestFlowTest extends TestCase
         foreach (['client' => new ContactAcknowledgementMail($contact), 'admin' => new ContactMessageMail($contact)] as $key => $mail) {
             $html = $mail->render();
             $this->assertStringContainsString('viewport', $html);
+            $this->assertStringContainsString('src="https://admin.protein.tn/logo.png"', $html);
             $this->assertStringContainsString('Isolate vanille', $html);
             $this->assertStringContainsString('Aucune commande ni paiement', $html);
             $this->assertStringNotContainsString('<script>', $html);

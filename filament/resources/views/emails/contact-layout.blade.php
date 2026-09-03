@@ -11,7 +11,7 @@
 <div style="display:none;max-height:0;overflow:hidden">{{ $product ? 'Prix et délai à confirmer avant toute commande.' : 'Votre message a été enregistré par Protein.tn.' }}</div>
 <table role="presentation" width="100%"><tr><td align="center" class="outer" style="padding:28px 12px">
 <table role="presentation" width="600" class="shell" style="width:600px;max-width:600px;background:#ffffff;border:1px solid #e8e5e1">
-<tr><td class="pad" style="padding:24px 28px;border-bottom:1px solid #e8e5e1"><a href="https://protein.tn"><img src="{{ url('/logo.png') }}" alt="Protein.tn" width="145" style="width:145px"></a></td></tr>
+<tr><td class="pad" style="padding:24px 28px;border-bottom:1px solid #e8e5e1"><a href="https://protein.tn"><img src="https://admin.protein.tn/logo.png" alt="Protein.tn" width="145" style="width:145px"></a></td></tr>
 <tr><td class="pad" style="padding:28px">
 <p style="font-size:12px;letter-spacing:1px;color:#d03b04;font-weight:700;margin-bottom:10px">{{ $product ? 'DEMANDE DE PRODUIT' : 'CONTACT' }} · N° {{ $contact->id }}</p>
 <h1 class="heading" style="font-size:28px;line-height:1.2;margin:0 0 16px;font-weight:700">{{ $title }}</h1>
