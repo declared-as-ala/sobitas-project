@@ -121,7 +121,7 @@ const fail = (where, msg) => {
   failures++;
 };
 
-const browser = await puppeteer.launch({ headless: 'new' });
+const browser = await puppeteer.launch({ headless: true, args: ['--no-sandbox'] });
 
 const ONLY = flag("scenarios", Object.keys(SCENARIOS));
 for (const [name, data] of Object.entries(SCENARIOS)) {

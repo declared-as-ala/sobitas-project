@@ -549,6 +549,8 @@ export interface User {
   points_value_dt?: number;
   email_verified?: boolean;
   phone_verified?: boolean;
+  welcome_bonus_eligible?: boolean;
+  welcome_bonus_awarded?: boolean;
   contact_verified?: boolean;
 }
 

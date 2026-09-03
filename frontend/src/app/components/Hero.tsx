@@ -77,7 +77,7 @@ interface HeroProps {
   bestSellers?: HeroBestSeller[];
 }
 
-function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
+function HeroPicture({ set, eager, contain = false }: { set: HeroImageSet; eager: boolean; contain?: boolean }) {
   return (
     <picture className="absolute inset-0 block h-full w-full">
       {set.sources.map((source) => (
@@ -101,7 +101,7 @@ function HeroPicture({ set, eager }: { set: HeroImageSet; eager: boolean }) {
         {...(eager
           ? { fetchPriority: 'high' as const, loading: 'eager' as const }
           : { fetchPriority: 'low' as const, loading: 'lazy' as const })}
-        className="h-full w-full object-cover object-center"
+        className={contain ? 'h-full w-full bg-black object-contain object-center' : 'h-full w-full object-cover object-center'}
       />
     </picture>
   );
@@ -152,7 +152,8 @@ function HeroSlideFrame({
          primary banner link stays visible (WCAG 2.4.7). */
       className="group absolute inset-0 block focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-inset focus-visible:ring-white"
     >
-      <HeroPicture set={set} eager={eager} />
+      {/* This text-led campaign must remain uncropped even in the narrow desktop carousel. */}
+      <HeroPicture set={set} eager={eager} contain={slide?.href === '/register?offer=welcome-15'} />
     </LinkWithLoading>
   );
 }

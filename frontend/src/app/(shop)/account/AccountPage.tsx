@@ -13,6 +13,7 @@ import { User, Package, Coins, MessageSquare } from 'lucide-react';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Section } from '@/app/components/layout/Section';
 import { AccountPageSkeleton } from './AccountSkeletons';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 /**
  * ── THE ACCOUNT, ON THE SITE'S OWN VOCABULARY (owner, 20/08/2026) ───────────────────────────
@@ -57,7 +58,7 @@ import { AccountPageSkeleton } from './AccountSkeletons';
  */
 export default function AccountPage({ initialSection = 'orders' }: { initialSection?: 'orders' | 'reviews' }) {
   const router = useRouter();
-  const { isAuthenticated, isLoading, fetchOrders } = useAuth();
+  const { user, isAuthenticated, isLoading, fetchOrders } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -87,6 +88,12 @@ export default function AccountPage({ initialSection = 'orders' }: { initialSect
         <PageHeader kicker="Espace client" title="Mon Compte" />
 
         <AccountSummary />
+        {user?.welcome_bonus_eligible && (
+          <LinkWithLoading href="/verify-phone" className="mt-4 flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-xl border border-hairline bg-elevated p-4 text-sm focus-visible:ring-2 focus-visible:ring-focus">
+            <span className="font-semibold text-ink-1">Votre cadeau : 15 DT en points</span>
+            <span className="font-semibold text-brand">Vérifier mon téléphone</span>
+          </LinkWithLoading>
+        )}
 
         <Tabs defaultValue={initialSection} className="mt-6 w-full">
           {/*

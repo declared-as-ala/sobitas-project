@@ -1657,6 +1657,16 @@ export const sendEmailVerificationOtp = async (): Promise<{ message: string }> =
   return response.data;
 };
 
+export const sendPhoneVerificationOtp = async (phone: string): Promise<{ message: string; phone: string; expires_in: number; resend_after: number }> => {
+  const response = await api.post('/phone-verification/send', { phone });
+  return response.data;
+};
+
+export const verifyPhoneOtp = async (code: string): Promise<{ message: string; phone_verified: boolean; bonus_awarded: boolean; bonus_points: number; points_value_dt: number }> => {
+  const response = await api.post('/phone-verification/verify', { code });
+  return response.data;
+};
+
 export const verifyEmailOtp = async (code: string): Promise<{ message: string; email_verified: boolean }> => {
   const response = await api.post<{ message: string; email_verified: boolean }>('/email-verification/verify', { code });
   return response.data;

@@ -46,8 +46,8 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace(user?.contact_verified ? '/' : '/verify-email');
-  }, [isAuthenticated, authLoading, router, user?.contact_verified]);
+    if (!authLoading && isAuthenticated) router.replace(user?.welcome_bonus_eligible ? '/verify-phone' : user?.contact_verified ? '/account' : '/verify-email');
+  }, [isAuthenticated, authLoading, router, user?.contact_verified, user?.welcome_bonus_eligible]);
 
   if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
@@ -95,11 +95,9 @@ export default function RegisterPage() {
         result.verification_email_sent === false ? 'failed' : 'sent',
       );
       toast.success('Compte créé', {
-        description: result.verification_email_sent === false
-          ? 'Demandez un nouveau code pour vérifier votre email.'
-          : 'Un code de vérification vient de vous être envoyé.',
+        description: 'Vérifiez votre téléphone pour débloquer votre cadeau.',
       });
-      router.replace('/verify-email');
+      router.replace('/verify-phone');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de l’inscription');
       /* `finally { setIsLoading(false) }` used to run on the SUCCESS path too, so the button
@@ -116,7 +114,7 @@ export default function RegisterPage() {
       toast.success('Compte créé !', {
         description: 'Bienvenue dans votre espace Protein.tn.',
       });
-      router.replace('/');
+      router.replace('/verify-phone');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Inscription Google impossible');
       setGoogleLoading(false);
@@ -126,11 +124,10 @@ export default function RegisterPage() {
   const busy = isLoading || googleLoading;
 
   return (
-    <AuthShell>
+    <AuthShell compact>
       <AuthCardHeader
         title="Créer mon compte"
-        subtitleDesktopOnly
-        subtitle="Vos commandes et vos points, au même endroit."
+        subtitle="15 DT offerts en points après vérification de votre téléphone."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -182,6 +179,10 @@ export default function RegisterPage() {
           minLength={8}
         />
 
+        <details className="text-xs leading-relaxed text-ink-2">
+          <summary className="min-h-11 cursor-pointer rounded-lg py-3 font-semibold focus-visible:ring-2 focus-visible:ring-focus">Conditions des 15 DT offerts</summary>
+          <p className="pb-3">300 points, une seule fois par compte et numéro. Utilisables sur vos achats, jusqu’à 50 % du montant des produits après remises, hors livraison. Non échangeables en espèces.</p>
+        </details>
         <AuthSubmit loading={isLoading} loadingLabel="Création…" disabled={busy}>
           Créer mon compte
         </AuthSubmit>

@@ -14,7 +14,7 @@ import { Container } from '@/app/components/layout/Container';
 
 const AUTH_ATHLETE = '/auth/protein-athlete-studio-v3.png';
 
-export function AuthShell({ children }: { children: ReactNode }) {
+export function AuthShell({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
@@ -23,9 +23,9 @@ export function AuthShell({ children }: { children: ReactNode }) {
       className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
     >
       <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
-        <main className="relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline">
+        <main className={cn('relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline', compact && 'lg:h-auto')}>
           <aside
-            className="relative h-56 shrink-0 overflow-hidden bg-brand-50 sm:h-64 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline"
+            className={cn('relative shrink-0 overflow-hidden bg-brand-50 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline', compact ? 'hidden lg:block' : 'h-56 sm:h-64')}
             aria-label="Athlète Protein.tn"
           >
             <Image
@@ -46,21 +46,22 @@ export function AuthShell({ children }: { children: ReactNode }) {
             </Link>
           </aside>
 
-          <div className="pt-plate relative z-20 mx-3 -mt-6 flex flex-col rounded-2xl px-6 py-4 shadow-card sm:mx-6 sm:-mt-7 sm:p-8 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[40rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-8">
+          <div className={cn('pt-plate relative z-20 mx-3 -mt-6 flex flex-col rounded-2xl px-6 py-4 shadow-card sm:mx-6 sm:-mt-7 sm:p-8 lg:order-1 lg:mx-0 lg:mt-0 lg:min-h-[40rem] lg:flex-1 lg:rounded-none lg:p-10 lg:shadow-none xl:p-12 [@media(min-width:1024px)_and_(max-height:800px)]:!p-8', compact && 'mx-0 mt-0 rounded-none px-5 shadow-none sm:mx-0 sm:mt-0')}>
             <div data-auth-header="" className="flex min-h-[44px] items-center gap-4 lg:justify-between">
               <Link
                 href="/"
-                className="group -ms-2 hidden min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:inline-flex"
+                aria-label="Retour à la boutique"
+                className={cn('group -ms-2 hidden min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-medium text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:inline-flex', compact && 'inline-flex min-w-11')}
               >
                 <ArrowLeft
                   className="h-4 w-4 shrink-0 transition-transform duration-200 group-hover:-translate-x-0.5"
                   aria-hidden="true"
                 />
-                Retour à la boutique
+                <span className={compact ? 'hidden sm:inline' : undefined}>Retour à la boutique</span>
               </Link>
               <Link
                 href="/"
-                className="flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:ms-auto"
+                className={cn('flex min-h-[44px] items-center rounded-lg transition-opacity hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:ms-auto', compact && 'ms-auto')}
                 aria-label="Protein.tn — Accueil"
               >
                 <Image
@@ -75,7 +76,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
               </Link>
             </div>
 
-            <div data-auth-body="" className="flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1">
+            <div data-auth-body="" className={cn('flex items-start pb-4 pt-6 lg:flex-1 lg:items-center lg:py-6 [@media(min-width:1024px)_and_(max-height:800px)]:!py-1', compact && 'pt-3')}>
               <div data-auth-card="" className="mx-auto w-full max-w-lg">
                 {children}
               </div>
@@ -85,7 +86,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
                 into a dashboard of generic trust badges. It explains the real value of signing
                 in, uses the same sand/brand language as the shop, and disappears on short laptop
                 viewports where the registration form needs every vertical pixel. */}
-            <aside
+            {!compact && <aside
               data-auth-benefit=""
               className="hidden items-center gap-4 rounded-2xl border border-hairline bg-sunken px-5 py-4 lg:flex [@media(min-width:1024px)_and_(max-height:800px)]:hidden"
               aria-label="Programme fidélité Protein.tn"
@@ -99,7 +100,7 @@ export function AuthShell({ children }: { children: ReactNode }) {
                   Chaque commande livrée vous rapporte <strong className="text-ink-1">5% en points</strong> à utiliser sur la suivante.
                 </span>
               </span>
-            </aside>
+            </aside>}
           </div>
         </main>
       </Container>

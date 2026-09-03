@@ -41,6 +41,7 @@ const EXCLUDED = new Map([
   ['login', 'auth; robots.txt disallow'],
   ['register', 'auth; robots.txt disallow'],
   ['verify-email', 'auth; one-time account verification, no indexable content'],
+  ['verify-phone', 'auth; private SMS verification and welcome credit, noindex'],
   ['forgot-password', 'auth; robots.txt disallow'],
   ['reset-password', 'auth; robots.txt disallow'],
   ['order-confirmation', 'per-order; robots.txt disallows /order-confirmation/'],
