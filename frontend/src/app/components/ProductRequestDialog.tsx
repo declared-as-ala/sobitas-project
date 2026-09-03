@@ -1,265 +1,97 @@
 'use client';
 
-/**
- * "Demander ce produit" — asked and answered WITHOUT leaving the product page.
- *
- * ── WHAT THIS REPLACES, AND HOW BIG IT IS ────────────────────────────────────────────────────
- * Owner: *"when a product is demandé, don't push to the contact us page, make a dialog inside
- * where he demands it."*
- *
- * `ProductCard` sent every back-order product to `/contact?produit={name}`. Its own comment
- * records the scale: **10,535 of 10,669 cards**. That is not an edge case, it is the default
- * state of the catalogue — so the site's most common product CTA was "go to a different page,
- * find the form, and type the product name back in from memory".
- *
- * Every step of that is a place to lose someone: a navigation, a page load, a general-purpose
- * form that does not know what they were looking at, and a message they have to compose
- * themselves. The product context is on screen at the moment of intent and then thrown away.
- *
- * ── WHY IT REUSES /contact RATHER THAN A NEW ENDPOINT ────────────────────────────────────────
- * `sendContact` already posts `{name, email, message}` and already works. A new endpoint would
- * mean a backend deploy, and the VPS is currently unreachable — so the version that ships today
- * is the one that changes no contract. The product, its price and its URL are composed INTO the
- * message, which means whoever reads the inbox gets more than the old flow gave them, not less.
- *
- * If a dedicated `product_requests` table is wanted later, this component is where the call
- * changes and nothing else moves.
- *
- * ── PHONE IS THE FIELD THAT MATTERS HERE ─────────────────────────────────────────────────────
- * This shop is cash-on-delivery and its customers are reached by phone; an email address is how
- * you file a request, a phone number is how you close one. So the phone is required and sits
- * first, and it is carried in the message body rather than in a new API field — same reason as
- * above. Email stays required only because the existing `/contact` validator expects it, which is
- * a constraint worth removing on the next backend pass, not worth guessing at while it is
- * unreachable.
- */
-
-import { useCallback, useState } from 'react';
-import { Mail, Loader2, Check, Phone, User, MessageSquare } from 'lucide-react';
-import { notify as toast } from '@/lib/notify';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/app/components/ui/sheet';
+import { useEffect, useRef, useState } from 'react';
+import { ArrowLeft, ArrowUpRight, Check, Loader2, X } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from '@/app/components/ui/sheet';
 import { Button } from '@/app/components/ui/button';
-import { sendContact } from '@/services/api';
+import { Skeleton } from '@/app/components/ui/skeleton';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { ComparisonProductImage } from '@/app/components/product/ComparisonProductImage';
+import { getSimilarProducts, sendContact } from '@/services/api';
+import { useAuth } from '@/contexts/AuthContext';
+import { buildComparison } from '@/util/productComparison';
+import { getProductPrimarySubCategory } from '@/util/productUrl';
+import { formatTnd } from '@/util/productPrice';
+import type { Product } from '@/types';
 
 export interface ProductRequestDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  productName: string;
-  /** Canonical path, so the message tells the reader exactly which product this is. */
-  productPath?: string;
-  /** Displayed price, purely so the request carries what the customer was looking at. */
-  priceText?: string;
+  open: boolean; onOpenChange: (open: boolean) => void; product: Product;
+  productName: string; productPath?: string; priceText?: string; alternatives?: Product[];
 }
 
-export function ProductRequestDialog({
-  open,
-  onOpenChange,
-  productName,
-  productPath,
-  priceText,
-}: ProductRequestDialogProps) {
-  const [name, setName] = useState('');
-  const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
+/** One bounded fetch on opening a card; PDP reuses its server-rendered alternatives. */
+export function ProductRequestDialog({ open, onOpenChange, product, productName, productPath, priceText, alternatives }: ProductRequestDialogProps) {
+  const { user } = useAuth();
+  const [products, setProducts] = useState(alternatives ?? []);
+  const [loading, setLoading] = useState(alternatives === undefined);
+  const [loadError, setLoadError] = useState(false);
+  const [step, setStep] = useState<'alternatives' | 'form' | 'sent'>('alternatives');
+  const [name, setName] = useState(user?.name ?? '');
+  const [phone, setPhone] = useState(user?.phone ?? '');
+  const [email, setEmail] = useState(user?.email ?? '');
   const [note, setNote] = useState('');
+  const [company, setCompany] = useState('');
   const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [error, setError] = useState('');
+  const firstField = useRef<HTMLInputElement>(null);
+  const sentHeading = useRef<HTMLParagraphElement>(null);
+  const subId = getProductPrimarySubCategory(product)?.id || product.sous_categorie_id;
+  useEffect(() => {
+    if (!open || alternatives !== undefined) return;
+    let active = true;
+    if (!subId) { setLoading(false); return; }
+    getSimilarProducts(subId).then(result => { if (active) setProducts(result.products); })
+      .catch(() => { if (active) setLoadError(true); }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [open, subId, alternatives]);
+  useEffect(() => { if (step === 'form') firstField.current?.focus(); if (step === 'sent') sentHeading.current?.focus(); }, [step]);
+  const rows = buildComparison(product, products, 3).filter(row => !row.isCurrent);
 
-  const reset = useCallback(() => {
-    setSent(false);
-    setSending(false);
-  }, []);
-
-  const handleSubmit = useCallback(
-    async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (sending) return;
-
-      setSending(true);
-      try {
-        /* The message is COMPOSED here rather than typed by the customer. The old flow asked a
-           person who had just found a product to describe it again in free text, which is how a
-           request arrives as "le produit vert 2kg" and cannot be actioned. */
-        const lines = [
-          `Demande de produit : ${productName}`,
-          productPath ? `Page : https://protein.tn${productPath}` : null,
-          priceText ? `Prix affiché : ${priceText}` : null,
-          `Téléphone : ${phone}`,
-          note.trim() ? `\nMessage du client :\n${note.trim()}` : null,
-        ].filter(Boolean);
-
-        await sendContact({ name, email, message: lines.join('\n') });
-
-        setSent(true);
-        toast.success('Demande envoyée. Nous vous rappelons rapidement.');
-      } catch {
-        /* Deliberately NOT closing on failure: the customer's typing is still in the form and
-           closing would discard it along with the only copy of their phone number. */
-        toast.error("L'envoi a échoué. Réessayez ou appelez-nous directement.");
-      } finally {
-        setSending(false);
-      }
-    },
-    [sending, name, email, phone, note, productName, productPath, priceText]
-  );
-
-  return (
-    <Sheet
-      open={open}
-      onOpenChange={(next) => {
-        onOpenChange(next);
-        if (!next) reset();
-      }}
-    >
-      {/* `bottom` on phones is the reachable edge for a one-handed grip, and this opens from a
-          card the thumb just touched. From `sm` it returns to the side sheet the rest of the site
-          uses, so it is not a new pattern on desktop. */}
-      <SheetContent
-        side="bottom"
-        className="max-h-[92dvh] overflow-y-auto rounded-t-2xl border-hairline bg-elevated sm:inset-y-0 sm:right-0 sm:h-full sm:max-w-md sm:rounded-none"
-      >
-        <SheetHeader className="px-5 pt-5">
-          <SheetTitle className="font-display font-compressed text-2xl font-extrabold uppercase tracking-tight text-ink-1">
-            Demander ce produit
-          </SheetTitle>
-          <SheetDescription className="text-sm text-ink-3">
-            {/* The product is NAMED here. The old destination was a blank form that had no idea
-                what the visitor had been looking at. */}
-            <span className="font-semibold text-ink-1">{productName}</span>
-            {priceText ? <> — {priceText}</> : null}
-          </SheetDescription>
-        </SheetHeader>
-
-        {sent ? (
-          <div className="flex flex-col items-center px-6 py-12 text-center">
-            <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-hairline bg-sunken">
-              <Check className="h-8 w-8 text-brand" aria-hidden="true" />
-            </div>
-            <p className="font-display font-compressed text-xl font-extrabold uppercase tracking-tight text-ink-1">
-              Demande envoyée
-            </p>
-            <p className="mt-2 max-w-[34ch] text-sm leading-relaxed text-ink-3">
-              Nous vérifions la disponibilité de <strong className="text-ink-1">{productName}</strong> et
-              nous vous rappelons sur le {phone}.
-            </p>
-            <Button
-              onClick={() => onOpenChange(false)}
-              className="mt-6 h-12 w-full max-w-xs rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
-            >
-              Continuer les achats
-            </Button>
-          </div>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-4 px-5 pb-[max(1.25rem,env(safe-area-inset-bottom))] pt-4">
-            <Field id="pr-name" label="Nom complet" icon={<User className="h-4 w-4" aria-hidden="true" />}>
-              <input
-                id="pr-name"
-                required
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                autoComplete="name"
-                className={INPUT}
-                placeholder="Votre nom"
-              />
-            </Field>
-
-            {/* FIRST after the name, and required: this is a cash-on-delivery shop and the phone
-                is how a request actually gets closed. */}
-            <Field id="pr-phone" label="Téléphone" icon={<Phone className="h-4 w-4" aria-hidden="true" />}>
-              <input
-                id="pr-phone"
-                required
-                type="tel"
-                inputMode="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                autoComplete="tel"
-                className={INPUT}
-                placeholder="+216 ..."
-              />
-            </Field>
-
-            <Field id="pr-email" label="Email" icon={<Mail className="h-4 w-4" aria-hidden="true" />}>
-              <input
-                id="pr-email"
-                required
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                className={INPUT}
-                placeholder="vous@exemple.com"
-              />
-            </Field>
-
-            <Field
-              id="pr-note"
-              label="Message (optionnel)"
-              icon={<MessageSquare className="h-4 w-4" aria-hidden="true" />}
-            >
-              <textarea
-                id="pr-note"
-                rows={3}
-                value={note}
-                onChange={(e) => setNote(e.target.value)}
-                className={`${INPUT} resize-none`}
-                placeholder="Quantité, arôme souhaité…"
-              />
-            </Field>
-
-            <Button
-              type="submit"
-              disabled={sending}
-              className="h-12 w-full rounded-xl bg-brand font-display font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover disabled:opacity-60"
-            >
-              {sending ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin motion-reduce:animate-none" aria-hidden="true" />
-                  Envoi…
-                </>
-              ) : (
-                'Envoyer la demande'
-              )}
-            </Button>
-
-            <p className="text-center text-xs leading-relaxed text-ink-3">
-              Livraison partout en Tunisie · Paiement à la livraison
-            </p>
-          </form>
-        )}
-      </SheetContent>
-    </Sheet>
-  );
+  const submit = async (event: React.FormEvent) => {
+    event.preventDefault(); if (sending) return;
+    if (!/^(?=(?:\D*\d){8,15}\D*$)[+0-9 ()-]{8,25}$/.test(phone.trim())) { setError('Indiquez un numéro de téléphone valide.'); return; }
+    setError(''); setSending(true);
+    try {
+      await sendContact({ name: name.trim(), email: email.trim(), phone: phone.trim(), product_id: product.id, company,
+        subject: 'Demande de produit', message: note.trim() || 'Je souhaite connaître le prix et le délai de ce produit.' });
+      setStep('sent');
+    } catch (e) {
+      const data = (e as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response?.data;
+      setError(Object.values(data?.errors ?? {}).flat()[0] || 'Envoi impossible. Vos informations sont conservées : réessayez ou appelez le 27 612 500.');
+    } finally { setSending(false); }
+  };
+  return <Sheet open={open} onOpenChange={next => { if (!sending) onOpenChange(next); }}>
+    <SheetContent side="bottom" showCloseButton={false} style={{ backgroundColor: 'rgb(var(--c-elevated))' }} className="max-h-[94dvh] gap-0 overflow-hidden rounded-t-2xl border-hairline bg-elevated sm:inset-y-0 sm:left-auto sm:right-0 sm:h-full sm:max-h-dvh sm:w-full sm:max-w-xl sm:rounded-none">
+      <SheetHeader className="shrink-0 border-b border-hairline p-4 pe-16 text-left sm:p-5 sm:pe-16">
+        <SheetTitle className="font-display text-2xl font-bold uppercase tracking-tight text-ink-1">{step === 'alternatives' ? 'Disponibles sans attendre' : step === 'sent' ? 'Demande reçue' : 'Demander ce produit'}</SheetTitle>
+        <SheetDescription className="text-sm text-ink-2">{step === 'alternatives' ? 'Avant de faire une demande, découvrez ces alternatives en stock.' : 'Nous vous confirmons le prix et le délai avant toute commande.'}</SheetDescription>
+        <SheetClose disabled={sending} className="absolute end-2 top-2 flex h-11 w-11 items-center justify-center rounded-lg text-ink-2 hover:bg-sunken focus-visible:ring-2 focus-visible:ring-focus" aria-label="Fermer"><X className="h-5 w-5" /></SheetClose>
+      </SheetHeader>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-5" data-request-body>
+        {step === 'alternatives' ? <>
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-3"><ComparisonProductImage src={product.cover || ''} name={productName} /><div className="min-w-0"><p className="text-xs text-ink-2">Votre sélection · Sur commande</p><p className="mt-1 text-sm font-semibold text-ink-1">{productName}</p>{priceText && <p className="mt-1 text-sm text-ink-2">{priceText}</p>}</div></div>
+          {loading ? <div role="status" aria-label="Recherche des alternatives" className="space-y-3"><Skeleton className="h-32 w-full rounded-xl" /><Skeleton className="h-32 w-full rounded-xl" /></div> : rows.length ? <div className="space-y-3" data-request-alternatives>{rows.map(row => <div key={row.id} className="rounded-xl border border-hairline p-3">
+            <div className="flex gap-3"><ComparisonProductImage src={row.image} name={row.name} /><div className="min-w-0 flex-1"><p className="text-xs font-medium text-ok">En stock</p><LinkWithLoading href={row.url} onClick={() => onOpenChange(false)} className="flex min-h-11 items-center text-sm font-semibold text-ink-1 hover:text-brand focus-visible:ring-2 focus-visible:ring-focus">{row.name}</LinkWithLoading><p className="text-xs text-ink-2">{[row.category, row.format].filter(Boolean).join(' · ')}</p></div></div>
+            <div className="mt-3 border-t border-hairline pt-3 text-xs text-ink-2">{row.facts.protein ? <p><strong className="text-ink-1">{row.facts.protein} de protéines</strong> · {row.facts.basis.toLowerCase()}</p> : <p>Valeurs nutritionnelles non renseignées</p>}<p className="mt-1">Sans gluten : {row.facts.gluten}</p></div>
+            <div className="mt-3 flex items-center justify-between gap-3"><strong className="font-display text-xl text-brand">{formatTnd(row.price)}</strong><LinkWithLoading href={row.url} onClick={() => onOpenChange(false)} className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-focus">Voir le produit<ArrowUpRight className="h-4 w-4" /></LinkWithLoading></div>
+          </div>)}</div> : <p className="py-4 text-sm text-ink-2">{loadError ? 'Les alternatives ne sont pas disponibles pour le moment. Vous pouvez continuer votre demande.' : 'Aucune alternative en stock pour le moment. Vous pouvez demander ce produit.'}</p>}
+          {rows.length > 0 && <p className="mt-3 text-xs text-ink-2">Vérifiez les ingrédients et la portion sur chaque fiche. Une alternative n’est pas une formule identique.</p>}
+        </> : step === 'sent' ? <div className="space-y-4 py-4"><Check className="h-10 w-10 text-ok" /><p ref={sentHeading} tabIndex={-1} className="text-lg font-semibold text-ink-1">Merci {name}, votre demande est enregistrée.</p><p className="text-sm text-ink-2">Nous vous recontactons au {phone} pour <strong>{productName}</strong>. Ce n’est pas encore une commande.</p><p className="text-sm text-ink-2">Un récapitulatif est prévu à {email}.</p><Button onClick={() => onOpenChange(false)} className="min-h-11 w-full hover:bg-brand-hover">Continuer les achats</Button></div> : <form id="product-request-form" onSubmit={submit} className="space-y-3">
+          <button disabled={sending} type="button" onClick={() => setStep('alternatives')} className="inline-flex min-h-11 items-center gap-2 rounded-lg text-sm text-ink-2 focus-visible:ring-2 focus-visible:ring-focus"><ArrowLeft className="h-4 w-4" />Revoir les alternatives</button>
+          <p className="rounded-lg bg-sunken p-3 text-sm font-semibold text-ink-1">{productName}</p>
+          {error && <p role="alert" className="rounded-lg border border-destructive/40 p-3 text-sm text-destructive">{error}</p>}
+          <label className="block text-sm font-medium text-ink-1">Nom complet<input disabled={sending} ref={firstField} required maxLength={100} autoComplete="name" value={name} onChange={e => setName(e.target.value)} className={INPUT} placeholder="Votre nom" /></label>
+          <label className="block text-sm font-medium text-ink-1">Téléphone<input disabled={sending} required type="tel" inputMode="tel" maxLength={25} autoComplete="tel" value={phone} onChange={e => setPhone(e.target.value)} className={INPUT} placeholder="20 000 000" /></label>
+          <label className="block text-sm font-medium text-ink-1">Email pour le récapitulatif<input disabled={sending} required type="email" maxLength={255} autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} className={INPUT} placeholder="vous@exemple.com" /></label>
+          <details><summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-brand focus-visible:ring-2 focus-visible:ring-focus">Ajouter une précision (optionnel)</summary><label className="block text-sm text-ink-2">Quantité, arôme ou question<textarea disabled={sending} rows={2} maxLength={2000} value={note} onChange={e => setNote(e.target.value)} className={INPUT} /></label></details>
+          <div hidden aria-hidden="true"><label>Société<input tabIndex={-1} autoComplete="off" value={company} onChange={e => setCompany(e.target.value)} /></label></div>
+          {productPath && <span className="sr-only">Produit : {productPath}</span>}
+        </form>}
+      </div>
+      {step !== 'sent' && <div className="shrink-0 border-t border-hairline bg-elevated p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
+        {step === 'alternatives' ? <Button variant="outline" onClick={() => setStep('form')} className="min-h-12 w-full whitespace-normal text-sm">Je préfère demander ce produit</Button> : <><Button form="product-request-form" type="submit" disabled={sending} className="min-h-12 w-full hover:bg-brand-hover">{sending ? <><Loader2 className="me-2 h-4 w-4 animate-spin" />Envoi…</> : 'Envoyer ma demande'}</Button><p className="mt-2 text-center text-xs text-ink-2">Sans paiement ni engagement.</p></>}
+      </div>}
+    </SheetContent>
+  </Sheet>;
 }
-
-const INPUT =
-  'w-full rounded-xl border border-hairline bg-sunken px-3 py-2.5 text-sm text-ink-1 outline-none transition-colors placeholder:text-ink-3 focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-focus';
-
-/** A labelled row. `<label htmlFor>` rather than a wrapping label, so the icon is not clickable text. */
-function Field({
-  id,
-  label,
-  icon,
-  children,
-}: {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div>
-      <label htmlFor={id} className="mb-1.5 flex items-center gap-2 text-sm font-medium text-ink-2">
-        <span className="text-ink-3">{icon}</span>
-        {label}
-      </label>
-      {children}
-    </div>
-  );
-}
+const INPUT = 'mt-1 block min-h-11 w-full rounded-lg border border-hairline bg-sunken px-3 py-2 text-base text-ink-1 placeholder:text-ink-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus';

@@ -1,129 +1,43 @@
-/**
- * "Comparer avec des produits similaires".
- *
- * ── WHAT WAS WRONG WITH IT ──────────────────────────────────────────────────────────────────
- * The data was right and the presentation was unusable on a phone. Six columns — Produit, Marque,
- * Catégorie, Format, Prix, Disponibilité — inside `overflow-x-auto` at 390px means the table is
- * roughly 2.3 screens wide and everything past "Marque" is off-screen behind a horizontal scroll
- * nobody discovers, on the 81% of this site's traffic that is mobile. A comparison you have to
- * scroll sideways to perform is not a comparison.
- *
- * There is still only ONE semantic table. Below `md`, CSS reflows each table row into a compact
- * two-column card; above it the exact same DOM remains the desktop comparison table. Brand and
- * format move into the mobile product cell instead of disappearing or forcing horizontal scroll.
- *
- * Content parity with `/x-crawler/product/[slug]` is unaffected: same helper, same rows, same
- * columns, same order. Googlebot is served that route, and a fact shown to one and not the other is
- * either invisible or cloaking — see util/productComparison.ts.
- */
-import Link from 'next/link';
-import { Check, Minus } from 'lucide-react';
+import { ArrowUpRight, Check, Minus } from 'lucide-react';
 import type { ComparisonRow } from '@/util/productComparison';
 import { formatTnd } from '@/util/productPrice';
-import { cn } from '@/app/components/ui/utils';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { ComparisonProductImage } from './ComparisonProductImage';
+import { ComparisonNutrition } from './ComparisonNutrition';
 import styles from './ProductComparisonTable.module.css';
 
-const HEAD_CELL = 'px-3 py-2.5 text-left font-display text-[11px] font-semibold uppercase tracking-wide text-ink-3';
-
 export function ProductComparisonTable({ rows }: { rows: ComparisonRow[] }) {
-  if (rows.length === 0) return null;
-
-  return (
-    <div className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-card">
-      <table className={cn(styles.table, 'text-sm')}>
-        <thead className={styles.head}>
-          <tr className="border-b border-hairline bg-sunken">
-            <th scope="col" className={HEAD_CELL}>Produit</th>
-            <th scope="col" className={cn(HEAD_CELL, 'hidden md:table-cell')}>Marque</th>
-            <th scope="col" className={cn(HEAD_CELL, 'hidden md:table-cell')}>Catégorie</th>
-            <th scope="col" className={cn(HEAD_CELL, 'hidden md:table-cell')}>Format</th>
-            <th scope="col" className={cn(HEAD_CELL, 'text-right')}>Prix</th>
-            <th scope="col" className={cn(HEAD_CELL, 'text-right')}>Stock</th>
-          </tr>
-        </thead>
-        <tbody className={styles.body}>
-          {rows.map((row) => {
-            /* The phone's substitute for the two dropped columns, assembled once so an empty brand
-               does not print a dangling separator. */
-            const subLine = [row.brand, row.format].filter(Boolean).join(' · ');
-
-            return (
-              <tr
-                key={row.id}
-                className={cn(
-                  styles.row,
-                  /* The current row is marked by a brand rule on its leading edge rather than by a
-                     tint alone: a tint has to be strong enough to survive both themes, and at that
-                     strength it fights the price column. A 2px rule reads at any contrast. */
-                  row.isCurrent && 'border-s-2 border-s-brand bg-sunken'
-                )}
-              >
-                <th scope="row" className="min-w-0 px-3 py-3 text-left font-normal">
-                  {row.isCurrent ? (
-                    <span aria-current="true" className="font-semibold text-ink-1">
-                      {row.name}
-                      <span className="ms-2 inline-block whitespace-nowrap rounded-full bg-brand px-2 py-0.5 align-middle font-display text-[10px] font-bold uppercase tracking-wide text-on-brand">
-                        Cette page
-                      </span>
-                    </span>
-                  ) : (
-                    <Link href={row.url} className="font-medium text-ink-1 underline-offset-2 hover:text-brand hover:underline">
-                      {row.name}
-                    </Link>
-                  )}
-                  {subLine && <span className="mt-0.5 block text-xs text-ink-3 md:hidden">{subLine}</span>}
-                </th>
-
-                <td className="hidden px-3 py-3 text-ink-2 md:table-cell">{row.brand || '—'}</td>
-                <td className="hidden px-3 py-3 md:table-cell">
-                  {row.category ? (
-                    row.categoryUrl ? (
-                      <Link href={row.categoryUrl} className="text-ink-2 underline-offset-2 hover:text-brand hover:underline">
-                        {row.category}
-                      </Link>
-                    ) : (
-                      <span className="text-ink-2">{row.category}</span>
-                    )
-                  ) : (
-                    '—'
-                  )}
-                </td>
-                <td className="hidden whitespace-nowrap px-3 py-3 text-ink-2 tabular-nums md:table-cell">{row.format || '—'}</td>
-
-                <td className="whitespace-nowrap px-3 py-3 text-right">
-                  <span className="font-display font-bold tabular-nums text-ink-1">{formatTnd(row.price)}</span>
-                  {row.oldPrice != null ? (
-                    <span className="mt-0.5 block text-xs text-ink-3 line-through tabular-nums">{formatTnd(row.oldPrice)}</span>
-                  ) : row.hasPromo ? (
-                    <span className="mt-0.5 block text-xs font-medium text-ok">promo</span>
-                  ) : null}
-                </td>
-
-                <td className={cn(styles.stock, 'whitespace-nowrap px-3 py-3')}>
-                  {/*
-                    Icon plus text, never colour alone. "En stock" green against "En rupture" red is
-                    invisible to the ~8% of men with a red-green deficiency, and this column is the
-                    one a shopper is scanning down.
-                  */}
-                  <span
-                    className={cn(
-                      'inline-flex items-center gap-1 text-xs font-medium',
-                      row.inStock ? 'text-ok' : 'text-ink-3'
-                    )}
-                  >
-                    {row.inStock ? (
-                      <Check className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    ) : (
-                      <Minus className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                    )}
-                    <span>{row.inStock ? 'En stock' : 'Sur commande'}</span>
-                  </span>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
+  if (!rows.length) return null;
+  return <div data-comparison>
+    <p className="mb-3 text-sm text-ink-2">Des alternatives en stock. Comparez aussi la taille des portions : les valeurs ne sont pas toujours données pour la même quantité.</p>
+    <div className="overflow-hidden rounded-xl border border-hairline bg-elevated">
+      <table className={styles.table}>
+        <caption className="sr-only">Produit consulté et alternatives disponibles</caption>
+        <thead className={styles.head}><tr>{['Produit', 'Valeurs nutritionnelles', 'Mentions de la fiche', 'Prix', 'Disponibilité'].map(label => <th key={label} scope="col" className="bg-sunken px-4 py-3 text-left text-xs font-semibold text-ink-2">{label}</th>)}</tr></thead>
+        <tbody className={styles.body}>{rows.map(row => <tr key={row.id} className={styles.row} data-current={row.isCurrent || undefined}>
+          <th scope="row" className={styles.product}>
+            <div className="flex items-start gap-3">
+              <ComparisonProductImage src={row.image} name={row.name} />
+              <div className="min-w-0">
+                {row.isCurrent ? <p aria-current="true" className="font-semibold text-ink-1">{row.name}</p> : <LinkWithLoading href={row.url} className="inline-flex min-h-11 items-center font-semibold text-ink-1 hover:text-brand focus-visible:ring-2 focus-visible:ring-focus">{row.name}</LinkWithLoading>}
+                <p className="mt-1 text-xs text-ink-2">{[row.brand, row.format].filter(Boolean).join(' · ')}</p>
+                {row.categoryUrl && <LinkWithLoading href={row.categoryUrl} className="inline-flex min-h-11 items-center text-xs text-ink-2 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-focus">{row.category}</LinkWithLoading>}
+                {row.isCurrent && <span className="mt-1 block text-xs font-semibold text-brand">Produit consulté</span>}
+              </div>
+            </div>
+          </th>
+          <td className={styles.nutrition}><ComparisonNutrition facts={row.facts} /></td>
+          <td className={styles.claims}>
+            <dl className="space-y-2 text-xs"><div><dt className="text-ink-2">Sans gluten</dt><dd className="mt-0.5 font-medium text-ink-1">{row.facts.gluten}</dd></div><div><dt className="text-ink-2">Sans lactose</dt><dd className="mt-0.5 font-medium text-ink-1">{row.facts.lactose}</dd></div></dl>
+          </td>
+          <td className={styles.price}><span className="whitespace-nowrap font-display text-xl font-bold text-brand">{formatTnd(row.price)}</span>{row.oldPrice != null && <span className="block text-xs text-ink-2 line-through">{formatTnd(row.oldPrice)}</span>}</td>
+          <td className={styles.stock}>
+            <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${row.inStock ? 'text-ok' : 'text-ink-2'}`}>{row.inStock ? <Check className="h-4 w-4" /> : <Minus className="h-4 w-4" />}{row.inStock ? 'En stock' : 'Sur commande'}</span>
+            {!row.isCurrent && <LinkWithLoading href={row.url} className="mt-2 flex min-h-11 items-center justify-center gap-1 rounded-lg bg-brand px-3 text-sm font-semibold text-on-brand hover:bg-brand-hover focus-visible:ring-2 focus-visible:ring-focus">Voir le produit<ArrowUpRight className="h-4 w-4 shrink-0" /></LinkWithLoading>}
+          </td>
+        </tr>)}</tbody>
       </table>
     </div>
-  );
+    <p className="mt-3 text-xs leading-relaxed text-ink-2">Informations issues des fiches produits. « Non renseigné » ne signifie pas « sans allergène ». Vérifiez l’étiquette du format et de l’arôme choisis.</p>
+  </div>;
 }

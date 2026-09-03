@@ -25,6 +25,7 @@ import { isInStock } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildComparison } from '@/util/productComparison';
+import { ComparisonNutrition } from '@/app/components/product/ComparisonNutrition';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
@@ -452,7 +453,7 @@ export function CrawlerProductView({
                     was avoidable — each row's own category is now a COLUMN, so the table shows the
                     truth per row instead of asserting a wrong one over all of them. */}
                 <caption className="pb-2 text-left text-gray-600">
-                  Produits similaires disponibles chez Protein.tn
+                  Produit consulté et alternatives en stock. Vérifiez la taille des portions et l’étiquette du format choisi.
                 </caption>
                 <thead>
                   <tr>
@@ -460,6 +461,8 @@ export function CrawlerProductView({
                     <th scope="col" className="border-b-2 p-2 text-left">Marque</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Catégorie</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Format</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Valeurs nutritionnelles</th>
+                    <th scope="col" className="border-b-2 p-2 text-left">Mentions de la fiche</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Prix</th>
                     <th scope="col" className="border-b-2 p-2 text-left">Disponibilité</th>
                   </tr>
@@ -468,6 +471,7 @@ export function CrawlerProductView({
                   {comparison.map((row) => (
                     <tr key={row.id}>
                       <th scope="row" className="border-b p-2 text-left font-normal">
+                        {row.image && <img src={getStorageUrl(row.image)} alt={row.name} width={80} height={80} loading="lazy" className="mb-2 h-20 w-20 object-contain" />}
                         {row.isCurrent ? (
                           <span aria-current="true"><strong>{row.name}</strong> (cette page)</span>
                         ) : (
@@ -485,18 +489,21 @@ export function CrawlerProductView({
                           : '—'}
                       </td>
                       <td className="border-b p-2">{row.format || '—'}</td>
+                      <td className="border-b p-2"><ComparisonNutrition facts={row.facts} /></td>
+                      <td className="border-b p-2">Sans gluten : {row.facts.gluten}<br />Sans lactose : {row.facts.lactose}</td>
                       <td className="border-b p-2">
                         {formatTnd(row.price)}
                         {/* "promo" alone never said promo FROM WHAT. The saving is the number the
                             reader came to this table for. */}
                         {row.oldPrice != null ? ` au lieu de ${formatTnd(row.oldPrice)}` : row.hasPromo ? ' (promo)' : ''}
                       </td>
-                      <td className="border-b p-2">{row.inStock ? 'En stock' : 'En rupture'}</td>
+                      <td className="border-b p-2">{row.inStock ? 'En stock' : 'Sur commande'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
+            <p className="mt-2 text-sm text-ink-2">« Non renseigné » ne signifie pas « sans allergène ». Une alternative n’est pas une formule identique.</p>
           </section>
         )}
 

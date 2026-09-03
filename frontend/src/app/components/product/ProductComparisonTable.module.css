@@ -1,65 +1,18 @@
-.table {
-  display: table;
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.head {
-  display: table-header-group;
-}
-
-.body {
-  display: table-row-group;
-}
-
-.row {
-  display: table-row;
-  vertical-align: top;
-  border-bottom: 1px solid rgb(var(--c-hairline));
-}
-
-.row:last-child {
-  border-bottom: 0;
-}
-
-.stock {
-  display: table-cell;
-  text-align: right;
-}
-
-@media (max-width: 767px) {
-  .table {
-    display: block;
-  }
-
-  .head {
-    display: none;
-  }
-
-  .body {
-    display: grid;
-    gap: 0.5rem;
-    padding: 0.5rem;
-  }
-
-  .row {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    align-items: start;
-    overflow: hidden;
-    border: 1px solid rgb(var(--c-hairline));
-    border-radius: calc(var(--radius) + 2px);
-    background: rgb(var(--c-elevated));
-  }
-
-  .row:last-child {
-    border-bottom: 1px solid rgb(var(--c-hairline));
-  }
-
-  .stock {
-    grid-column: 1 / -1;
-    border-top: 1px solid rgb(var(--c-hairline));
-    padding-block: 0.5rem;
-    text-align: left;
-  }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.row { vertical-align: top; border-top: 1px solid rgb(var(--c-hairline)); }
+.row[data-current] { background: rgb(var(--c-sunken)); }
+.product, .nutrition, .claims, .price, .stock { padding: 16px; text-align: start; font-weight: 400; }
+.product { width: 36%; }
+.stock { min-width: 150px; }
+@media (max-width: 1023px) {
+  .table, .body { display: block; }
+  .head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .head th { position: absolute; width: 1px; height: 1px; overflow: hidden; padding: 0; clip-path: inset(50%); }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .row:first-child { border-top: 0; }
+  .product { width: auto; grid-column: 1 / -1; padding-bottom: 8px; }
+  .nutrition, .claims { padding-top: 8px; padding-bottom: 12px; }
+  .claims { border-inline-start: 1px solid rgb(var(--c-hairline)); }
+  .price, .stock { border-top: 1px solid rgb(var(--c-hairline)); padding-top: 12px; }
+  .stock { min-width: 0; text-align: end; }
 }

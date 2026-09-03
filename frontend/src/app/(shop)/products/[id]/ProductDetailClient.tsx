@@ -2791,6 +2791,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       {requestOpen && (
         <ProductRequestDialog
           open={requestOpen}
+          product={product}
+          alternatives={similarProducts}
           onOpenChange={setRequestOpen}
           productName={product.designation_fr || 'Ce produit'}
           productPath={buildProductUrlPath(product)}

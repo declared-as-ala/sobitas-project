@@ -457,7 +457,7 @@ for (const { w, h, label } of WIDTHS) {
          being the entire source page. */
       descriptionChars: (document.querySelector('#pdp-description')?.textContent || '').replace(/\s+/g, ' ').trim().length,
       comparisonCols: (() => {
-        const head = qa('main thead th').filter((th) => getComputedStyle(th).display !== 'none');
+        const head = qa('main [data-comparison] thead th');
         return head.map((th) => th.textContent.trim());
       })(),
       /* Scoped to the comparison table's own thead. `main tbody tr` counted every row of the three
@@ -600,10 +600,6 @@ for (const { w, h, label } of WIDTHS) {
   });
 
   const desktop = w >= 1024;
-  /* The comparison table's own breakpoint is `md` (768px), not `lg`. It is the one component here
-     that changes shape at a different width from the page layout, deliberately: six narrow columns
-     fit a tablet and do not fit a phone. */
-  const wideTable = w >= 768;
 
   check(w, 'no horizontal page scroll', !m.bodyScrollX, m.bodyScrollX ? 'document scrolls sideways' : 'ok');
   check(w, 'nothing overflows', m.overflowing.length === 0, m.overflowing.join(' | ') || 'ok');
@@ -759,8 +755,8 @@ for (const { w, h, label } of WIDTHS) {
   );
   check(
     w,
-    wideTable ? 'comparison shows 6 columns' : 'comparison shows 3 columns',
-    m.comparisonCols.length === (wideTable ? 6 : 3),
+    'comparison retains all five data groups (mobile cards or desktop table)',
+    m.comparisonRows === 0 || m.comparisonCols.length === 5,
     m.comparisonCols.join(', ')
   );
   check(
