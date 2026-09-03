@@ -106,6 +106,17 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             vendor/bin/phpunit tests/Feature/ProductRequestFlowTest.php
 
+      - name: Test private guest checkout confirmation before production
+        run: |
+          set -e
+          docker run --rm --entrypoint php \
+            -e APP_ENV=testing -e APP_KEY=base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI= \
+            -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -e CACHE_STORE=array -e SESSION_DRIVER=array -e MAIL_MAILER=array \
+            -v "$PWD/filament/tests:/var/www/html/tests:ro" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            vendor/bin/phpunit tests/Feature/CheckoutGuestConfirmationTest.php
+
       - name: Save synthetic request email previews
         uses: actions/upload-artifact@v4
         with:

@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { validateCheckout, normalizeCheckoutPhone, checkoutServerErrors } from '../src/lib/checkoutValidation.ts';
+const valid = { livraison_nom: 'Client Test', livraison_phone: '20 123 456', livraison_email: '', gouvernorat: 'TUNIS', delegation: 'TUNIS', localite: 'CENTRE', livraison_adresse1: '12 rue Test' };
+let checks = 0;
+const check = (actual, expected) => { assert.deepEqual(actual, expected); checks++; };
+check(validateCheckout(valid), {});
+for (const phone of ['20123456', '+216 20 123 456', '00216 (20) 123-456', '٢٠١٢٣٤٥٦', '۲۰۱۲۳۴۵۶']) check(validateCheckout({ ...valid, livraison_phone: phone }), {});
+for (const phone of ['', '   ', '12345678', '2012345', '201234567', '+33 20123456', '20hello123456']) check(!!validateCheckout({ ...valid, livraison_phone: phone }).livraison_phone, true);
+for (const email of ['', '  ', 'client+commande@example.com']) check(validateCheckout({ ...valid, livraison_email: email }), {});
+for (const email of ['a@b', '@test.com', 'a @test.com', 'x'.repeat(250) + '@test.com']) check(!!validateCheckout({ ...valid, livraison_email: email }).livraison_email, true);
+for (const field of ['livraison_nom', 'livraison_adresse1', 'gouvernorat', 'delegation', 'localite']) check(!!validateCheckout({ ...valid, [field]: '' })[field], true);
+check(Object.keys(validateCheckout({ ...valid, gouvernorat: '', delegation: '', localite: '' })), ['gouvernorat']);
+check(Object.keys(validateCheckout({ ...valid, delegation: '', localite: '' })), ['delegation']);
+check(normalizeCheckoutPhone('+216 (20) 123-456'), '+21620123456');
+check(Object.keys(checkoutServerErrors({ 'commande.livraison_phone': ['invalid'], 'commande.email': ['invalid'], 'panier.0.quantite': ['stock'] })), ['livraison_phone', 'livraison_email']);
+check(checkoutServerErrors(null), {});
+console.log(`${checks} checkout validation checks passed (no network).`);

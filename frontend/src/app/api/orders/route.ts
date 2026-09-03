@@ -47,7 +47,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       console.error('[API Route] Backend error response:', data);
       return NextResponse.json(
-        { error: data.message || data.error || 'Erreur lors de la création de la commande' },
+        { error: data.message || data.error || 'Erreur lors de la création de la commande', errors: data.errors },
         { status: response.status }
       );
     }
@@ -64,12 +64,10 @@ export async function POST(request: NextRequest) {
     
     // Handle specific error types
     let errorMessage = 'Erreur lors de la création de la commande';
-    if (error.name === 'AbortError' || error.message?.includes('timeout')) {
-      errorMessage = 'Timeout: Le serveur met trop de temps à répondre. Veuillez réessayer.';
+    if (error.name === 'AbortError' || error.name === 'TimeoutError' || error.message?.includes('timeout')) {
+      errorMessage = 'La réponse prend plus de temps que prévu. Réessayez sans modifier votre commande.';
     } else if (error.message?.includes('fetch failed') || error.message?.includes('ECONNREFUSED')) {
       errorMessage = 'Impossible de se connecter au serveur. Vérifiez votre connexion.';
-    } else if (error.message) {
-      errorMessage = error.message;
     }
     
     return NextResponse.json(

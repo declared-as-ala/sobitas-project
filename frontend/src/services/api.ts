@@ -1467,6 +1467,7 @@ const ORDER_429_DELAYS = [400, 900];
 /** Uses Idempotency-Key header to prevent duplicate orders on 429 retry (same key for all attempts). */
 export const createOrder = async (orderData: BackendOrderPayload, existingIdempotencyKey?: string): Promise<{
   id: number;
+  order_token?: string;
   message: string;
   'alert-type': string;
 }> => {
@@ -1496,7 +1497,10 @@ export const createOrder = async (orderData: BackendOrderPayload, existingIdempo
   }
   if (!response.ok) {
     const error = await response.json().catch(() => ({}));
-    throw new Error((error as any).error || 'Erreur lors de la création de la commande');
+    throw Object.assign(new Error((error as any).error || 'Erreur lors de la création de la commande'), {
+      status: response.status,
+      fieldErrors: (error as any).errors,
+    });
   }
   return response.json();
 };

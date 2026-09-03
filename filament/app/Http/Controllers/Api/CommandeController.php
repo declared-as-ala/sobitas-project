@@ -403,6 +403,9 @@ class CommandeController extends Controller
         return response()->json([
             'id' => $commande->id,
             'numero' => $commande->numero,
+            // Only returned to the creator (or an identical idempotent retry). Guests without
+            // email need this capability to read their own server-calculated confirmation.
+            'order_token' => $commande->order_token,
             'message' => 'Merci pour votre commande',
             'alert-type' => 'success',
             'replayed' => $replayed,
@@ -419,7 +422,9 @@ class CommandeController extends Controller
             'id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville', 'etat',
             'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at',
             'coupon_code_snapshot', 'discount_ht', 'discount_ttc',
-            'user_id', 'client_id', 'livraison_email', 'livraison_phone'
+            'user_id', 'client_id', 'livraison_email', 'livraison_phone',
+            'livraison_nom', 'livraison_prenom', 'livraison_adresse1',
+            'livraison_region', 'livraison_ville', 'livraison_code_postale'
         )->find($id);
 
         if (! $facture) {
