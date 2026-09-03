@@ -68,7 +68,7 @@ final class CampaignArtwork20260903
                 }
                 self::putVerified('public', self::target($campaign['name'], $field), $bytes);
                 if (Storage::disk('public')->exists($old)) {
-                    self::putVerified('local', self::ARCHIVE.'/'.basename($old), Storage::disk('public')->get($old));
+                    self::putVerified('campaign-archive', self::ARCHIVE.'/'.basename($old), Storage::disk('public')->get($old));
                 }
             }
         }
@@ -122,10 +122,11 @@ final class CampaignArtwork20260903
                     continue;
                 }
                 $backup = self::ARCHIVE.'/'.basename($old);
-                if (! Storage::disk('local')->exists($backup)
-                    || ! hash_equals(hash('sha256', Storage::disk('public')->get($old)), hash('sha256', Storage::disk('local')->get($backup)))) {
-                    throw new RuntimeException('Verified private backup is required before retirement.');
-                }
+                // A previous deploy can legitimately lose the container-local archive while the
+                // persistent public upload survives. Refresh the private copy from the exact bytes
+                // that would be retired, then checksum it. This stays recoverable and never relies
+                // on a stale backup of an older file revision.
+                self::putVerified('campaign-archive', $backup, Storage::disk('public')->get($old));
                 $retire[] = $old;
             }
         }
@@ -146,10 +147,10 @@ final class CampaignArtwork20260903
         foreach (self::CAMPAIGNS as $campaign) {
             foreach ($campaign['old'] as $old) {
                 $backup = self::ARCHIVE.'/'.basename($old);
-                if (! Storage::disk('local')->exists($backup)) {
+                if (! Storage::disk('campaign-archive')->exists($backup)) {
                     throw new RuntimeException('A private campaign backup is missing.');
                 }
-                self::putVerified('public', $old, Storage::disk('local')->get($backup));
+                self::putVerified('public', $old, Storage::disk('campaign-archive')->get($backup));
             }
         }
         DB::transaction(function (): void {

@@ -20,7 +20,7 @@ class CampaignArtworkReleaseTest extends TestCase
         DB::purge('sqlite');
         DB::setDefaultConnection('sqlite');
         Storage::fake('public');
-        Storage::fake('local');
+        Storage::fake('campaign-archive');
         Http::preventStrayRequests();
         Schema::create('slides', function (Blueprint $table): void {
             $table->id();
@@ -69,7 +69,7 @@ class CampaignArtworkReleaseTest extends TestCase
                 $this->assertSame($target, $slide->{$field});
                 Storage::disk('public')->assertExists($old);
                 $this->assertSame(file_get_contents(Artwork::source($campaign['name'], $field)), Storage::disk('public')->get($target));
-                $this->assertSame('old-master:'.$old, Storage::disk('local')->get(Artwork::ARCHIVE.'/'.basename($old)));
+                $this->assertSame('old-master:'.$old, Storage::disk('campaign-archive')->get(Artwork::ARCHIVE.'/'.basename($old)));
             }
         }
     }
@@ -110,18 +110,17 @@ class CampaignArtworkReleaseTest extends TestCase
         $this->assertSame(13, count(Storage::disk('public')->allFiles()));
     }
 
-    public function test_missing_backup_prevents_any_retirement(): void
+    public function test_missing_backup_is_recreated_before_any_retirement(): void
     {
         Artwork::install();
         $this->mockHomepage();
-        Storage::disk('local')->delete(Artwork::ARCHIVE.'/welcome-bonus-mobile-v1.webp');
-        try {
-            Artwork::retire(true);
-            $this->fail('A verified backup is mandatory.');
-        } catch (RuntimeException $error) {
-            $this->assertStringContainsString('backup', $error->getMessage());
-        }
+        Storage::disk('campaign-archive')->delete(Artwork::ARCHIVE.'/welcome-bonus-mobile-v1.webp');
+        $this->assertSame(6, Artwork::retire(false));
         $this->assertSame(13, count(Storage::disk('public')->allFiles()));
+        $this->assertSame(
+            'old-master:slides/welcome-bonus-mobile-v1.webp',
+            Storage::disk('campaign-archive')->get(Artwork::ARCHIVE.'/welcome-bonus-mobile-v1.webp')
+        );
     }
 
     public function test_independent_admin_edit_is_not_overwritten_and_database_switch_is_atomic(): void

@@ -45,6 +45,14 @@ return [
             'visibility' => 'public',
         ],
 
+        // Persistent but never web-addressable: nginx blocks /storage/.campaign-archives/.
+        // This lives on the existing uploads volume so rollback assets survive container deploys.
+        'campaign-archive' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/.campaign-archives'),
+            'visibility' => 'private',
+        ],
+
         'product-images' => [
             'driver' => 'local',
             'root' => storage_path('app/public/product-images'),
