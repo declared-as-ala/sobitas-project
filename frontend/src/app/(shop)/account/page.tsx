@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   },
 };
 
-export default function Account() {
-  return <AccountPage />;
+export default async function Account({
+  searchParams,
+}: {
+  searchParams: Promise<{ section?: string }>;
+}) {
+  const params = await searchParams;
+  return <AccountPage initialSection={params.section === 'reviews' ? 'reviews' : 'orders'} />;
 }

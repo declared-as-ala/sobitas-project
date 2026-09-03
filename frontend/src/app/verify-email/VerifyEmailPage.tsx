@@ -35,8 +35,8 @@ export default function VerifyEmailPage() {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
-    if (!isLoading && user?.contact_verified) router.replace('/');
-  }, [isAuthenticated, isLoading, router, user?.contact_verified]);
+    if (!isLoading && user?.email_verified) router.replace('/account?section=reviews');
+  }, [isAuthenticated, isLoading, router, user?.email_verified]);
 
   useEffect(() => {
     const state = sessionStorage.getItem('protein:verification-email-delivery');
@@ -57,7 +57,7 @@ export default function VerifyEmailPage() {
       sessionStorage.removeItem('protein:verification-email-delivery');
       await refreshProfile();
       toast.success(result.message);
-      router.replace('/');
+      router.replace('/account?section=reviews');
     } catch (error: unknown) {
       toast.error(verificationError(error, 'code', 'Code incorrect ou expiré.'));
       setSubmitting(false);

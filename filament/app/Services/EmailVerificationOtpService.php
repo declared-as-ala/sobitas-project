@@ -7,6 +7,7 @@ use App\Models\EmailVerificationOtp;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\ValidationException;
 
@@ -48,7 +49,9 @@ class EmailVerificationOtpService
         });
 
         try {
-            Mail::to($user->email)->send(new EmailVerificationOtpMail($user, $code));
+            // The production stack has a dedicated Redis queue worker. Queueing removes the SMTP
+            // round-trip from registration/resend. Authentication mail is processed first.
+            Mail::to($user->email)->queue((new EmailVerificationOtpMail($user, $code))->onQueue('auth'));
         } catch (\Throwable $e) {
             // Do not make a transport failure consume the resend cooldown.
             $otp->delete();
@@ -95,6 +98,17 @@ class EmailVerificationOtpService
         }
         if ($result === 'invalid') {
             throw ValidationException::withMessages(['code' => 'Code incorrect.']);
+        }
+
+        // Verification must succeed even if legacy data is temporarily unavailable. Reconciliation
+        // is repeated by the authenticated "Mes avis" endpoint, so this is safely retryable.
+        try {
+            app(VerifiedCustomerReviewService::class)->reconcile($user->fresh());
+        } catch (\Throwable $e) {
+            Log::warning('Verified customer review reconciliation failed', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
+            ]);
         }
 
         return true;

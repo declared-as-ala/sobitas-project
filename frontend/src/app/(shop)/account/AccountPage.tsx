@@ -7,8 +7,9 @@ import { ProfileSection } from './ProfileSection';
 import { OrdersSection } from './OrdersSection';
 import { FidelitySection } from './FidelitySection';
 import { AccountSummary } from './AccountSummary';
+import { ReviewsSection } from './ReviewsSection';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/app/components/ui/tabs';
-import { User, Package, Coins } from 'lucide-react';
+import { User, Package, Coins, MessageSquare } from 'lucide-react';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Section } from '@/app/components/layout/Section';
 import { AccountPageSkeleton } from './AccountSkeletons';
@@ -54,7 +55,7 @@ import { AccountPageSkeleton } from './AccountSkeletons';
  * this UI — see the note in `AuthShell` about the two benefit rows that were cut for the same
  * reason.
  */
-export default function AccountPage() {
+export default function AccountPage({ initialSection = 'orders' }: { initialSection?: 'orders' | 'reviews' }) {
   const router = useRouter();
   const { isAuthenticated, isLoading, fetchOrders } = useAuth();
 
@@ -87,7 +88,7 @@ export default function AccountPage() {
 
         <AccountSummary />
 
-        <Tabs defaultValue="orders" className="mt-6 w-full">
+        <Tabs defaultValue={initialSection} className="mt-6 w-full">
           {/*
             The list is `bg-elevated` on a `bg-sunken` page, not the other way round: the page is
             the sand and the controls sit on white, which is the alternation the rest of the site
@@ -97,7 +98,7 @@ export default function AccountPage() {
             `min-h-[44px]` on the triggers: they were `py-2.5` around a 20px line, which lands at
             40px. Three of the four controls above the fold on this page were under the target.
           */}
-          <TabsList className="mb-6 grid h-auto w-full grid-cols-3 gap-1 rounded-xl border border-hairline bg-elevated p-1">
+          <TabsList className="mb-6 grid h-auto w-full grid-cols-4 gap-1 rounded-xl border border-hairline bg-elevated p-1">
             <TabsTrigger
               value="orders"
               className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg font-display text-[13px] font-bold uppercase tracking-wide text-ink-2 transition-colors data-[state=active]:bg-brand data-[state=active]:text-on-brand"
@@ -107,7 +108,15 @@ export default function AccountPage() {
                 edge — it rendered as "COMMAN…". The label is the part that carries meaning, so on
                 the narrowest phones the glyph is what goes. */}
               <Package className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />
-              <span className="truncate">Commandes</span>
+              <span className="sm:hidden">Achats</span>
+              <span className="hidden sm:inline">Commandes</span>
+            </TabsTrigger>
+            <TabsTrigger
+              value="reviews"
+              className="flex min-h-[44px] items-center justify-center gap-2 rounded-lg font-display text-[13px] font-bold uppercase tracking-wide text-ink-2 transition-colors data-[state=active]:bg-brand data-[state=active]:text-on-brand"
+            >
+              <MessageSquare className="hidden h-4 w-4 shrink-0 sm:block" aria-hidden="true" />
+              <span className="truncate">Avis</span>
             </TabsTrigger>
             <TabsTrigger
               value="fidelite"
@@ -127,6 +136,10 @@ export default function AccountPage() {
 
           <TabsContent value="orders">
             <OrdersSection />
+          </TabsContent>
+
+          <TabsContent value="reviews">
+            <ReviewsSection />
           </TabsContent>
 
           <TabsContent value="fidelite">

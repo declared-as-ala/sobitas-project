@@ -97,10 +97,10 @@ class CustomerAuthFlowTest extends TestCase
         ]);
 
         $code = null;
-        Mail::assertSent(EmailVerificationOtpMail::class, function (EmailVerificationOtpMail $mail) use (&$code): bool {
+        Mail::assertQueued(EmailVerificationOtpMail::class, function (EmailVerificationOtpMail $mail) use (&$code): bool {
             $code = $mail->code;
 
-            return $mail->hasTo('client@example.test');
+            return $mail->hasTo('client@example.test') && $mail->queue === 'auth';
         });
         $this->assertMatchesRegularExpression('/^\d{6}$/', (string) $code);
 

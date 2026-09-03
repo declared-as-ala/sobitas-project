@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Review;
 use App\Models\ReviewReply;
 use App\Models\User;
+use App\Services\VerifiedCustomerReviewService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -39,6 +40,46 @@ class ReviewThreadController extends Controller
 {
     use \App\Http\Controllers\Api\Concerns\CapturesReviewSignals;
 
+    /** All reviews belonging to the signed-in customer, including moderation-pending reviews. */
+    public function mine(Request $request, VerifiedCustomerReviewService $claimService): JsonResponse
+    {
+        /** @var User $user */
+        $user = $request->user();
+        if (! $user->hasVerifiedEmail()) {
+            return response()->json(['message' => 'Vérifiez votre adresse email pour retrouver vos avis.'], 403);
+        }
+
+        $claimService->reconcile($user);
+
+        $optional = array_values(array_filter(
+            ['stars', 'note', 'verified', 'commande_id', 'publier'],
+            fn (string $column) => Schema::hasColumn('reviews', $column)
+        ));
+        $columns = array_merge(['id', 'user_id', 'product_id', 'comment', 'created_at'], $optional);
+
+        $reviews = Review::query()
+            ->where('user_id', $user->getKey())
+            ->with('product:id,slug,designation_fr,cover')
+            ->latest()
+            ->get($columns);
+
+        return response()->json([
+            'reviews' => $reviews->map(fn (Review $review) => [
+                'id' => (int) $review->id,
+                'stars' => $this->starsOf($review),
+                'comment' => (string) $review->comment,
+                'verified_purchase' => $this->isAttested($review),
+                'status' => (int) ($review->publier ?? 0) === 1 ? 'published' : 'pending',
+                'created_at' => optional($review->created_at)->toIso8601String(),
+                'product' => $review->product ? [
+                    'id' => (int) $review->product->id,
+                    'slug' => $review->product->slug,
+                    'designation' => $review->product->designation_fr,
+                    'cover' => $review->product->cover,
+                ] : null,
+            ])->values(),
+        ]);
+    }
     /** Guest names are printed on a public page; this is a display name, not an identity. */
     private const NAME_MIN = 2;
 

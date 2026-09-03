@@ -51,7 +51,7 @@ const flag = (name, fallback) => {
 const BASE = (ARGV.find((a) => a.startsWith("http")) || "http://localhost:3000").replace(/\/$/, "");
 const WIDTHS = flag("widths", [320, 390, 768, 1024, 1440]).map(Number);
 const THEMES = flag("themes", ["light", "dark"]);
-const TABS = ['orders', 'fidelite', 'profile'];
+const TABS = ['orders', 'reviews', 'fidelite', 'profile'];
 /* --shots writes a full-page PNG per scenario/theme/width/tab into .snap/account. The measurements
    below catch geometry and leakage; they cannot tell you whether the page reads well, and this
    surface has no other way to be looked at because it is behind a login. */
@@ -84,12 +84,34 @@ const HISTORY = {
   ],
 };
 
+const REVIEWS = [
+  {
+    id: 201,
+    stars: 5,
+    comment: 'Produit authentique, bien emballé et livré rapidement.',
+    verified_purchase: true,
+    status: 'published',
+    created_at: '2026-08-07T12:00:00.000Z',
+    product: { id: 11, slug: 'nitrotech-whey-protein', designation: 'Nitrotech Whey Protein 1.81 kg', cover: null },
+  },
+  {
+    id: 202,
+    stars: 4,
+    comment: 'Bon goût et se mélange facilement.',
+    verified_purchase: false,
+    status: 'pending',
+    created_at: '2026-08-18T09:30:00.000Z',
+    product: { id: 12, slug: 'micronised-creatine', designation: 'Micronised Creatine Optimum Nutrition', cover: null },
+  },
+];
+
 const SCENARIOS = {
-  full: { user: USER, orders: ORDERS, history: HISTORY },
+  full: { user: USER, orders: ORDERS, history: HISTORY, reviews: REVIEWS },
   empty: {
     user: { ...USER, points_balance: 0, points_value_dt: 0 },
     orders: [],
     history: { balance: 0, value_dt: 0, transactions: [] },
+    reviews: [],
   },
 };
 
@@ -159,6 +181,7 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
         if (/\/profil(\?|$)/.test(url)) return json(data.user);
         if (url.includes('client_commandes')) return json(data.orders);
         if (url.includes('points/history')) return json(data.history);
+        if (url.includes('my-reviews')) return json({ reviews: data.reviews });
         return req.continue();
       });
 
@@ -209,6 +232,8 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
               .filter((t) => /^(livree|livre|nouvelle_commande|en_cours_de_[a-z]+|expidee|annuler|annulee|prete|retourner?|retournee)$/i.test(t));
 
             return {
+              tabRows: new Set([...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((el) => Math.round(el.getBoundingClientRect().top))).size,
+              tabStyle: document.querySelector('[role="tablist"]')?.className,
               overflow: doc.scrollWidth > doc.clientWidth + 1 ? `${doc.scrollWidth} > ${doc.clientWidth}` : null,
               small,
               rawStatus,
@@ -241,6 +266,7 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
           }
 
           if (report.overflow) fail(`${where} ${tab}`, `horizontal overflow: ${report.overflow}`);
+          if (report.tabRows !== 1) fail(`${where} ${tab}`, `account tabs must share one row: ${report.tabRows} rows (${report.tabStyle})`);
           if (report.small.length) fail(`${where} ${tab}`, `${report.small.length} control(s) under 44px: ${report.small.join(', ')}`);
           if (report.rawStatus.length) fail(`${where} ${tab}`, `raw database status rendered: ${report.rawStatus.join(', ')}`);
         }
@@ -260,6 +286,6 @@ await browser.close();
 console.log(
   failures
     ? `\nmeasure-account — ${failures} failure(s).`
-    : `\nmeasure-account — clean. 2 scenarios x ${WIDTHS.length} widths x ${THEMES.length} themes x ${TABS.length} tabs.`
+    : `\nmeasure-account — clean. ${Object.keys(SCENARIOS).filter((name) => ONLY.includes(name)).length} scenarios x ${WIDTHS.length} widths x ${THEMES.length} themes x ${TABS.length} tabs.`
 );
 process.exit(failures ? 1 : 0);

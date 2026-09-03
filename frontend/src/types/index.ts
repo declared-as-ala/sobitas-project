@@ -296,6 +296,17 @@ export interface MemberProfile {
   }>;
 }
 
+/** A signed-in customer's own review, including reviews still awaiting moderation. */
+export interface CustomerReview {
+  id: number;
+  stars: number;
+  comment: string;
+  verified_purchase: boolean;
+  status: 'published' | 'pending';
+  created_at?: string;
+  product: { id: number; slug: string; designation: string; cover?: string | null } | null;
+}
+
 // Slide types removed. This interface described columns (`titre`/`image`/`lien`) that never
 // matched what /slides actually returns (`title`/`cover`/`link`), which is why the old homepage
 // code papered over it with an `any` multi-key probe and sorted by an `ordre` field the API did

@@ -312,7 +312,8 @@ services:
       ADMIN_EMAILS: ${ADMIN_EMAILS:-bitoutawalid@gmail.com}
     command: >
       php artisan queue:work redis
-      --sleep=3
+      --queue=auth,default
+      --sleep=1
       --tries=3
       --max-time=3600
     networks:

@@ -33,6 +33,7 @@ import type {
   PointsHistory,
   ReviewReply,
   MemberProfile,
+  CustomerReview,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
@@ -1738,6 +1739,11 @@ export function normalizeClientOrdersPayload(body: unknown): Order[] {
 export const getClientOrders = async (): Promise<Order[]> => {
   const response = await api.get<unknown>('/client_commandes');
   return normalizeClientOrdersPayload(response.data);
+};
+
+export const getMyReviews = async (): Promise<CustomerReview[]> => {
+  const response = await api.get<{ reviews?: CustomerReview[] }>('/my-reviews');
+  return Array.isArray(response.data?.reviews) ? response.data.reviews : [];
 };
 
 export const getOrderDetail = async (id: number): Promise<{
