@@ -315,7 +315,7 @@ export function HeaderClient() {
   /** Second level of the sidebar accordion: which category has its sub-categories open (one at a
    *  time, so the list never becomes an unreadable wall on a phone). */
   const [openCategoryId, setOpenCategoryId] = useState<number | null>(null);
-  const { theme, setTheme } = useTheme();
+  const { resolvedTheme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
   const { navigation: ssrNavigation, categories: ssrCategories } = useSiteChrome();
@@ -741,10 +741,13 @@ export function HeaderClient() {
                 <button
                   type="button"
                   className="h-10 w-10 flex items-center justify-center rounded-lg text-ink-1 dark:text-gray-100 hover:bg-ink-1/[0.04] dark:hover:bg-white/5 transition-[background-color,transform] duration-200 active:scale-95 shrink-0"
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
                   aria-label="Changer le thème"
                 >
-                  {theme === 'dark' ? <Sun className="h-5 w-5" aria-hidden /> : <Moon className="h-5 w-5" aria-hidden />}
+                  {/* Identical SVG markup on server and client; CSS selects the known theme.
+                      Reading localStorage's theme during hydration replaced Moon with Sun. */}
+                  <Sun className="hidden h-5 w-5 dark:block" aria-hidden />
+                  <Moon className="h-5 w-5 dark:hidden" aria-hidden />
                 </button>
 
                 <DesktopFavoritesAction />
