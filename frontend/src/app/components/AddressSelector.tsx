@@ -1,6 +1,8 @@
 'use client';
 
-import { useState, useEffect, useMemo, memo, useCallback } from 'react';
+import { useState, useEffect, useMemo, memo, useCallback, useId } from 'react';
+import { CircleAlert, RotateCcw } from 'lucide-react';
+import { Button } from '@/app/components/ui/button';
 import { Label } from '@/app/components/ui/label';
 import {
   Select,
@@ -22,6 +24,10 @@ interface AddressSelectorProps {
   onLocaliteChange: (value: string, postalCode: string) => void;
   label?: string;
   required?: boolean;
+  /** Native controls reduce effort on phones; opt-in keeps other address forms unchanged. */
+  checkout?: boolean;
+  errors?: Partial<Record<'gouvernorat' | 'delegation' | 'localite', string>>;
+  onReadyChange?: (ready: boolean) => void;
 }
 
 function AddressSelectorComponent({
@@ -34,29 +40,44 @@ function AddressSelectorComponent({
   onLocaliteChange,
   label = 'Adresse',
   required = false,
+  checkout = false,
+  errors = {},
+  onReadyChange,
 }: AddressSelectorProps) {
   const [addressData, setAddressData] = useState<AddressData[]>([]);
   const [loading, setLoading] = useState(true);
   // Generate a unique ID for this component instance to ensure globally unique keys
-  const [instanceId] = useState(() => `addr-${Math.random().toString(36).substr(2, 9)}`);
+  const instanceId = useId();
+  const [loadFailed, setLoadFailed] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   useEffect(() => {
+    const controller = new AbortController();
+    let timedOut = false;
+    const timeout = setTimeout(() => { timedOut = true; controller.abort(); }, 15000);
+    setLoading(true);
+    setLoadFailed(false);
+    onReadyChange?.(false);
     // Load address data from JSON file
     const loadAddressData = async () => {
       try {
-        const response = await fetch('/data.json');
+        const response = await fetch('/data.json', { signal: controller.signal, cache: retry ? 'reload' : 'default' });
         if (!response.ok) throw new Error('Failed to load address data');
         const data = await response.json();
+        if (!Array.isArray(data) || !data.length) throw new Error('Empty address data');
         setAddressData(data);
+        onReadyChange?.(true);
       } catch (error) {
-        console.error('Error loading address data:', error);
+        if (!controller.signal.aborted || timedOut) setLoadFailed(true);
       } finally {
-        setLoading(false);
+        clearTimeout(timeout);
+        if (!controller.signal.aborted || timedOut) setLoading(false);
       }
     };
 
     loadAddressData();
-  }, []);
+    return () => { clearTimeout(timeout); controller.abort(); };
+  }, [retry, onReadyChange]);
 
   // Get unique gouvernorats - memoized with stable reference
   const gouvernorats = useMemo(() => {
@@ -194,10 +215,41 @@ function AddressSelectorComponent({
         <span className="sr-only" role="status">Chargement des données…</span>
         <div className="space-y-2" aria-hidden="true">
           <Skeleton className="h-4 w-28" />
-          <Skeleton className="h-10 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-xl" />
         </div>
       </div>
     );
+  }
+
+  if (loadFailed) return (
+    <div className="rounded-xl border border-destructive bg-elevated p-3 text-sm">
+      <p role="alert" className="flex items-start gap-2 text-destructive"><CircleAlert className="h-5 w-5 shrink-0" aria-hidden="true" />Impossible de charger les adresses.</p>
+      <Button id={checkout ? 'checkout-address-retry' : undefined} type="button" variant="outline" onClick={() => setRetry(value => value + 1)} className="mt-2 min-h-11 border-rule text-ink-1 hover:bg-sunken">
+        <RotateCcw className="me-2 h-4 w-4" aria-hidden="true" />Réessayer
+      </Button>
+    </div>
+  );
+
+  if (checkout) {
+    const nativeField = (id: 'gouvernorat' | 'delegation' | 'localite', title: string, value: string, options: { name: string; value: string }[], onChange: (value: string) => void) => (
+      <div className="min-w-0 space-y-1.5" data-checkout-field={id}>
+        <Label htmlFor={id} className="block text-sm font-semibold text-ink-1">{title} {required && <span className="text-ink-3" aria-hidden="true">*</span>}</Label>
+        <select id={id} name={id} value={value} required={required} onChange={event => onChange(event.target.value)}
+          aria-invalid={!!errors[id]} aria-describedby={errors[id] ? `${id}-error` : undefined}
+          className={`h-12 w-full rounded-xl border bg-canvas px-3 text-base text-ink-1 outline-none focus:ring-2 ${errors[id] ? 'border-destructive focus:ring-destructive' : 'border-rule-strong focus:border-brand focus:ring-focus'}`}>
+          <option value="">Choisir {title === 'Gouvernorat' ? 'le gouvernorat' : title === 'Délégation' ? 'la délégation' : 'la localité'}</option>
+          {options.map(option => <option key={option.value} value={option.value}>{option.name}</option>)}
+        </select>
+        {errors[id] && <p id={`${id}-error`} className="flex items-start gap-1.5 text-sm leading-5 text-destructive"><CircleAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />{errors[id]}</p>}
+        {!options.length && <p className="text-sm text-destructive">Aucun choix disponible. Sélectionnez une autre adresse ou réessayez.</p>}
+      </div>
+    );
+    return <div className="grid gap-3 sm:grid-cols-2">
+      <div className="sm:col-span-2">{nativeField('gouvernorat', 'Gouvernorat', gouvernorat, gouvernorats, onGouvernoratChange)}</div>
+      {gouvernorat && nativeField('delegation', 'Délégation', delegation, delegations, onDelegationChange)}
+      {delegation && nativeField('localite', 'Localité', localite, localites.map(loc => ({ name: loc.Name, value: loc.Value })), handleLocaliteChange)}
+      {codePostal && <p className="text-xs text-ink-3 sm:col-span-2">Code postal : {codePostal}</p>}
+    </div>;
   }
 
   return (
@@ -246,7 +298,7 @@ function AddressSelectorComponent({
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>
+                <SelectItem value="unavailable" disabled>
                   Aucune délégation disponible
                 </SelectItem>
               )}
@@ -280,7 +332,7 @@ function AddressSelectorComponent({
                   </SelectItem>
                 ))
               ) : (
-                <SelectItem value="" disabled>
+                <SelectItem value="unavailable" disabled>
                   Aucune localité disponible
                 </SelectItem>
               )}

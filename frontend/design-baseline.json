@@ -90,13 +90,6 @@
   "src/app/(shop)/category/[slug]/page.tsx": {
     "DS007": 2
   },
-  "src/app/(shop)/checkout/CheckoutPage.tsx": {
-    "DS001": 14,
-    "DS002": 44,
-    "DS003": 39,
-    "DS004": 14,
-    "DS011": 10
-  },
   "src/app/(shop)/faqs/FAQsPageClient.tsx": {
     "DS001": 6,
     "DS002": 11,

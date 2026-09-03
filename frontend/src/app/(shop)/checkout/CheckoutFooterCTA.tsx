@@ -2,8 +2,8 @@
 
 import Image from 'next/image';
 import { Button } from '@/app/components/ui/button';
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
-import { ChevronUp, Loader2, Shield } from 'lucide-react';
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/app/components/ui/sheet';
+import { ChevronUp, Loader2, Shield, X } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
 import { Container } from '@/app/components/layout/Container';
 
@@ -42,11 +42,12 @@ export function CheckoutFooterCTA({
       }}
       aria-label="Passer la commande"
       aria-hidden={keyboardOpen}
+      inert={keyboardOpen}
     >
       <Container className="flex items-center gap-2.5 py-2">
         <Sheet open={mobileSummaryOpen} onOpenChange={onMobileSummaryOpenChange}>
             <SheetTrigger asChild>
-              <Button type="button" variant="ghost" className="h-auto min-w-0 flex-[0_1_44%] justify-between rounded-xl px-2.5 py-1.5 text-start hover:bg-brand-50 focus-visible:ring-focus">
+              <Button type="button" variant="ghost" className="h-auto min-h-12 min-w-0 flex-[0_1_44%] justify-between rounded-xl px-2.5 py-1.5 text-start hover:bg-sunken focus-visible:ring-focus">
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3">Total</span>
                   <span className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</span>
@@ -54,13 +55,14 @@ export function CheckoutFooterCTA({
                 <ChevronUp className="ms-1 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="bottom" className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-hairline bg-elevated">
+            <SheetContent side="bottom" showCloseButton={false} style={{ backgroundColor: 'rgb(var(--c-elevated))' }} className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-hairline bg-elevated">
               <SheetHeader className="sr-only">
                 <SheetTitle>Récapitulatif de la commande</SheetTitle>
                 <SheetDescription>Articles, expédition et total de votre commande.</SheetDescription>
               </SheetHeader>
+              <SheetClose asChild><button type="button" aria-label="Fermer le récapitulatif" className="absolute end-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-elevated text-ink-2 hover:bg-sunken focus-visible:ring-2 focus-visible:ring-focus"><X className="h-5 w-5" aria-hidden="true" /></button></SheetClose>
               <div className="flex-1 overflow-y-auto p-5 pb-8">
-                <h3 className="mb-4 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">Votre commande</h3>
+                <h3 className="mb-4 pe-10 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">Votre commande</h3>
                 <div className="space-y-3 mb-6">
                   {items.map((item) => {
                     const price = getEffectivePrice(item.product);
@@ -86,6 +88,10 @@ export function CheckoutFooterCTA({
                     <span className="text-ink-2">Sous-total</span>
                     <span className="font-semibold text-ink-1">{totalPrice.toFixed(2)} DT</span>
                   </div>
+                  {totalPrice + shippingCost > finalTotal && <div className="flex justify-between text-sm">
+                    <span className="text-ink-2">Remises</span>
+                    <span className="font-semibold text-ok">−{Math.max(0, totalPrice + shippingCost - finalTotal).toFixed(2)} DT</span>
+                  </div>}
                   <div className="flex justify-between text-sm">
                     <span className="text-ink-2">Expédition</span>
                     <span className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>

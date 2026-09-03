@@ -1,0 +1,7 @@
+.form [aria-invalid="true"] {
+  border-color: rgb(var(--c-danger));
+  outline-color: rgb(var(--c-danger));
+}
+.form input, .form select, .form textarea, .form [tabindex="-1"] {
+  scroll-margin-block: 180px 120px;
+}
