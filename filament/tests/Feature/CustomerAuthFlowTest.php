@@ -86,6 +86,18 @@ class CustomerAuthFlowTest extends TestCase
         config()->set('welcome_bonus.enabled', true);
     }
 
+    public function test_welcome_migration_can_resume_without_erasing_claims(): void
+    {
+        DB::table('welcome_bonus_claims')->insert([
+            'user_id' => 98765, 'phone_hash' => str_repeat('a', 64),
+            'email_hash' => str_repeat('b', 64), 'points' => 300, 'created_at' => now(),
+        ]);
+        Schema::table('phone_verification_otps', fn (Blueprint $table) => $table->dropIndex(['user_id', 'created_at']));
+        (require database_path('migrations/2026_09_03_160000_add_phone_verification_welcome_bonus.php'))->up();
+        $this->assertDatabaseHas('welcome_bonus_claims', ['user_id' => 98765, 'points' => 300]);
+        $this->assertTrue(collect(Schema::getIndexes('phone_verification_otps'))->contains(fn ($index) => $index['columns'] === ['user_id', 'created_at']));
+    }
+
     public function test_customer_can_register_verify_email_and_login(): void
     {
         Mail::fake();

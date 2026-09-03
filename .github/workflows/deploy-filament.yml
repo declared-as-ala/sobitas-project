@@ -303,6 +303,10 @@ jobs:
               exit 1
             fi
 
+            # Entrypoint deliberately keeps the shop available if a migration fails.
+            # The deployment must nevertheless fail rather than report a false success.
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan migrate --force
+
             echo "📋 Refreshing shared public volume..."
             docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
 
@@ -486,6 +490,8 @@ jobs:
               docker compose -f "$COMPOSE_FILE" logs --tail=200 backend-v2 || true
               exit 1
             fi
+
+            docker compose -f "$COMPOSE_FILE" exec -T backend-v2 php artisan migrate --force
 
             echo "📋 Refreshing shared public volume..."
             docker compose -f "$COMPOSE_FILE" run --rm backend-v2-public-init
