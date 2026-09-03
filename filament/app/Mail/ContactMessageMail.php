@@ -40,7 +40,7 @@ class ContactMessageMail extends Mailable
         $name = trim((string) $this->contact->name) ?: 'Visiteur';
 
         $mail = $this
-            ->subject('[Contact] ' . $name . ' — protein.tn')
+            ->subject(($this->contact->requested_product ? '[Demande produit] ' : '[Contact] ') . $name . ' — Protein.tn')
             ->view('emails.contact-message');
 
         // Guarded: an invalid address here would throw and lose the notification for a message

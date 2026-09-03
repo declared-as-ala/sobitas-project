@@ -91,6 +91,28 @@ jobs:
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
             vendor/bin/phpunit tests/Feature/CustomerAuthFlowTest.php
 
+      - name: Test product alternatives and request emails before production
+        run: |
+          set -e
+          mkdir -p "$RUNNER_TEMP/mail-previews"
+          chmod 777 "$RUNNER_TEMP/mail-previews"
+          docker run --rm --entrypoint php \
+            -e APP_ENV=testing -e APP_KEY=base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI= \
+            -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -e CACHE_STORE=array -e SESSION_DRIVER=array -e MAIL_MAILER=array \
+            -e MAIL_PREVIEW_DIR=/tmp/mail-previews \
+            -v "$RUNNER_TEMP/mail-previews:/tmp/mail-previews" \
+            -v "$PWD/filament/tests:/var/www/html/tests:ro" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            vendor/bin/phpunit tests/Feature/ProductRequestFlowTest.php
+
+      - name: Save synthetic request email previews
+        uses: actions/upload-artifact@v4
+        with:
+          name: product-request-email-previews
+          path: ${{ runner.temp }}/mail-previews
+          retention-days: 7
+
       # Ship docker-compose.yml to the VPS before deploying.
       #
       # Nothing ever synced it. The server's copy is whatever was last placed there by hand, and

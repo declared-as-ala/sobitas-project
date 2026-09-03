@@ -1904,11 +1904,26 @@ class ApisController extends Controller
             'phone'   => ['nullable', 'string', 'max:40'],
             'subject' => ['nullable', 'string', 'max:150'],
             'company' => ['nullable', 'string', 'max:255'],
+            'product_id' => ['nullable', 'integer', 'exists:products,id'],
         ]);
 
         // Honeypot. Answer exactly as if it worked — see the docblock.
         if (filled($request->input('company'))) {
             return response()->json(['success' => 'Votre message a bien été envoyé']);
+        }
+
+        $requestedProduct = null;
+        if (! empty($validated['product_id'])) {
+            $product = Product::where('publier', 1)->with('sousCategorie:id,slug')->findOrFail($validated['product_id']);
+            $request->validate(['phone' => ['required', 'regex:/^(?=(?:\D*\d){8,15}\D*$)[+0-9 ()-]{8,25}$/']]);
+            // Resolve product identity and the link on the server. Never email a visitor-supplied URL.
+            $requestedProduct = [
+                'name' => $product->designation_fr,
+                'url' => 'https://protein.tn/'.($product->sousCategorie?->slug ?: 'shop').'/'.$product->slug,
+                'note' => $validated['message'],
+            ];
+            $validated['subject'] = 'Demande de produit';
+            $validated['message'] = 'Demande de produit : '.$requestedProduct['name']."\nPage : ".$requestedProduct['url']."\nTéléphone : ".$validated['phone']."\n\n".$validated['message'];
         }
 
         $attributes = [
@@ -1929,6 +1944,7 @@ class ApisController extends Controller
         // the phone number even on a server that has not run the migration yet.
         $contact->setAttribute('phone', $validated['phone'] ?? null);
         $contact->setAttribute('subject', $validated['subject'] ?? null);
+        $contact->setAttribute('requested_product', $requestedProduct);
 
         $adminEmails = array_values(array_filter((array) config('mail.admin_emails', [])));
         if ($adminEmails === []) {
@@ -2095,26 +2111,30 @@ class ApisController extends Controller
             return ['products' => []];
         }
 
-        $products = Product::where('sous_categorie_id', $sous_category->id)
-            ->where('publier', 1)
-            ->where('qte', '>', 0)
-            ->select(self::PRODUCT_LIST_COLUMNS)
+        // Bounded comparison payload only: do not add nutrition to every catalogue card.
+        $available = Product::where('publier', 1)->where('qte', '>', 0)
+            ->where(fn ($q) => $q->whereNull('rupture')->orWhere('rupture', 0))
+            ->where(fn ($q) => $q->whereNull('force_out_of_stock')->orWhere('force_out_of_stock', 0))
+            ->where(fn ($q) => $q->whereNull('pack')->orWhere('pack', 0))
+            ->where('designation_fr', 'not like', 'PACK %');
+        $columns = array_merge(self::PRODUCT_LIST_COLUMNS, ['nutrition_facts', 'nutrition_values']);
+        $products = (clone $available)->where('sous_categorie_id', $sous_category->id)
+            ->select($columns)
             ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'brand:id,designation_fr,logo', 'externalCatalogSource:id,product_id,source_gallery_images')
             ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
-            ->limit(4)
+            ->orderBy('id')->limit(6)
             ->get();
 
-        if ($products->count() < 4) {
+        if ($products->count() < 6) {
             $existingIds = $products->pluck('id');
 
-            $extra = Product::where('publier', 1)
-                ->where('qte', '>', 0)
+            $extra = (clone $available)
                 ->whereNotIn('id', $existingIds)
                 ->whereHas('sousCategorie', fn ($q) => $q->where('categorie_id', $sous_category->categorie_id))
-                ->select(self::PRODUCT_LIST_COLUMNS)
+                ->select($columns)
                 ->with('sousCategorie:id,slug,designation_fr,categorie_id', 'brand:id,designation_fr,logo', 'externalCatalogSource:id,product_id,source_gallery_images')
-            ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
-                ->limit(4 - $products->count())
+                ->withCount(['reviews' => fn ($q) => $q->where('publier', 1)])
+                ->orderBy('id')->limit(6 - $products->count())
                 ->get();
 
             $products = $products->merge($extra);

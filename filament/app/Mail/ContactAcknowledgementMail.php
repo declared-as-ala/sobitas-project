@@ -31,7 +31,7 @@ class ContactAcknowledgementMail extends Mailable
     public function build(): static
     {
         return $this
-            ->subject('Nous avons bien reçu votre message — Protein.tn')
+            ->subject($this->contact->requested_product ? 'Votre demande de produit est reçue — Protein.tn' : 'Nous avons bien reçu votre message — Protein.tn')
             ->view('emails.contact-acknowledgement');
     }
 }
