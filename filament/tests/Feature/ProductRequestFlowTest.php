@@ -141,6 +141,8 @@ class ProductRequestFlowTest extends TestCase
     {
         $contact = new Contact(['name' => 'Client Démonstration', 'email' => 'client@example.test', 'message' => '<script>alert(1)</script>', 'phone' => '20 000 000']);
         $contact->id = 123;
+        // Like sendContact: phone can be transient on the legacy contacts table.
+        $contact->phone = '20 000 000';
         $contact->requested_product = ['name' => 'Isolate vanille — 907 g', 'url' => 'https://protein.tn/whey-isolate/produit-1', 'note' => 'Une boîte, goût vanille. <script>alert(1)</script>'];
         foreach (['client' => new ContactAcknowledgementMail($contact), 'admin' => new ContactMessageMail($contact)] as $key => $mail) {
             $html = $mail->render();
@@ -148,6 +150,7 @@ class ProductRequestFlowTest extends TestCase
             $this->assertStringContainsString('src="https://admin.protein.tn/logo.png"', $html);
             $this->assertStringContainsString('Isolate vanille', $html);
             $this->assertStringContainsString('Aucune commande ni paiement', $html);
+            $this->assertStringContainsString('tel:20000000', $html);
             $this->assertStringNotContainsString('<script>', $html);
             $this->assertStringContainsString('&lt;script&gt;', $html);
             if ($dir = getenv('MAIL_PREVIEW_DIR')) {
