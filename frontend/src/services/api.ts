@@ -1661,8 +1661,23 @@ export const sendEmailVerificationOtp = async (): Promise<{ message: string }> =
   return response.data;
 };
 
-export const sendPhoneVerificationOtp = async (phone: string): Promise<{ message: string; phone: string; expires_in: number; resend_after: number }> => {
+export const sendPhoneVerificationOtp = async (phone: string): Promise<{ message: string; phone: string; masked_phone?: string; expires_in: number; resend_after: number; attempts_remaining?: number; already_verified?: boolean }> => {
   const response = await api.post('/phone-verification/send', { phone });
+  return response.data;
+};
+
+export interface PhoneVerificationStatus {
+  active: boolean;
+  phone_verified: boolean;
+  phone?: string;
+  masked_phone?: string;
+  expires_in?: number;
+  resend_after?: number;
+  attempts_remaining?: number;
+}
+
+export const getPhoneVerificationStatus = async (): Promise<PhoneVerificationStatus> => {
+  const response = await api.get<PhoneVerificationStatus>('/phone-verification/status');
   return response.data;
 };
 

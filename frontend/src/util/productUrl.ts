@@ -108,6 +108,7 @@ export function isReservedRouteSlug(slug: string): boolean {
     'register',
     'verify-email',
     'verify-phone',
+    'verify-account',
     'reset-password',
     'forgot-password',
     'order-confirmation',

@@ -14,6 +14,7 @@ class PhoneVerificationService
     public const RESEND_SECONDS = 60;
     public const BONUS_DT = 15;
     public const BONUS_POINTS = self::BONUS_DT * PointsService::REDEEM_POINTS_PER_DT;
+    public const MAX_ATTEMPTS = 5;
 
     public static function normalize(string $value): string
     {
@@ -93,6 +94,16 @@ class PhoneVerificationService
     public function send(User $user, string $phone, string $ip): array
     {
         $phone = self::normalize($phone);
+
+        if ($user->phone_verified_at !== null && hash_equals((string) $user->phone, $phone)) {
+            return $this->result($user->refresh(), false) + [
+                'already_verified' => true,
+                'expires_in' => 0,
+                'resend_after' => 0,
+                'masked_phone' => $this->mask($phone),
+            ];
+        }
+
         $phoneHash = self::fingerprint($phone);
         $ipHash = self::fingerprint($ip);
         $code = (string) random_int(100000, 999999);
@@ -106,9 +117,12 @@ class PhoneVerificationService
             if ((clone $recent)->where('created_at', '>', now()->subSeconds(self::RESEND_SECONDS))->exists()) {
                 throw ValidationException::withMessages(['phone' => 'Patientez une minute avant de renvoyer un code.']);
             }
-            if ((clone $recent)->where('created_at', '>=', now()->subHour())->count() >= 5
-                || (clone $recent)->where('created_at', '>=', now()->subDay())->count() >= 10
-                || (clone $query)->where('ip_hash', $ipHash)->where('created_at', '>=', now()->subHour())->count() >= 10
+            // Layered spending protection. A bot must pass registration/auth, then still hits
+            // per-account, per-phone, per-IP and shop-wide ceilings before a paid gateway call.
+            if ((clone $recent)->where('created_at', '>=', now()->subHour())->count() >= 3
+                || (clone $recent)->where('created_at', '>=', now()->subDay())->count() >= 5
+                || (clone $query)->where('ip_hash', $ipHash)->where('created_at', '>=', now()->subHour())->count() >= 5
+                || (clone $query)->where('ip_hash', $ipHash)->where('created_at', '>=', now()->subDay())->count() >= 15
                 || (clone $query)->where('created_at', '>=', now()->subDay())->count() >= (int) config('welcome_bonus.daily_sms_limit', 100)) {
                 throw ValidationException::withMessages(['phone' => 'Limite d’envoi atteinte. Réessayez plus tard ou contactez-nous.']);
             }
@@ -133,7 +147,59 @@ class PhoneVerificationService
             throw ValidationException::withMessages(['phone' => 'Le SMS n’a pas pu être confirmé. Réessayez dans une minute.']);
         }
         $expiresAt = \Illuminate\Support\Carbon::parse(DB::table('phone_verification_otps')->where('id', $otpId)->value('expires_at'));
-        return ['message' => 'Code envoyé par SMS.', 'expires_in' => max(0, (int) ceil(now()->diffInSeconds($expiresAt, false))), 'resend_after' => self::RESEND_SECONDS, 'phone' => $phone];
+        return [
+            'message' => 'Code envoyé par SMS.',
+            'expires_in' => max(0, (int) ceil(now()->diffInSeconds($expiresAt, false))),
+            'resend_after' => self::RESEND_SECONDS,
+            'phone' => $phone,
+            'masked_phone' => $this->mask($phone),
+            'attempts_remaining' => self::MAX_ATTEMPTS,
+        ];
+    }
+
+    /** Recover the active challenge after refresh without sending another paid SMS. */
+    public function status(User $user): array
+    {
+        if ($user->phone_verified_at !== null) {
+            return [
+                'active' => false,
+                'phone_verified' => true,
+                'phone' => $user->phone,
+                'masked_phone' => $this->mask((string) $user->phone),
+            ];
+        }
+
+        $otp = DB::table('phone_verification_otps')
+            ->where('user_id', $user->id)
+            ->where('status', 'sent')
+            ->whereNull('consumed_at')
+            ->orderByDesc('id')
+            ->first();
+        if (! $otp || now()->gte($otp->expires_at) || (int) $otp->attempts >= self::MAX_ATTEMPTS) {
+            return ['active' => false, 'phone_verified' => false];
+        }
+
+        $createdAt = \Illuminate\Support\Carbon::parse($otp->created_at);
+        return [
+            'active' => true,
+            'phone_verified' => false,
+            'phone' => $otp->phone,
+            'masked_phone' => $this->mask($otp->phone),
+            'expires_in' => max(0, (int) ceil(now()->diffInSeconds(\Illuminate\Support\Carbon::parse($otp->expires_at), false))),
+            'resend_after' => max(0, self::RESEND_SECONDS - (int) floor($createdAt->diffInSeconds(now()))),
+            'attempts_remaining' => max(0, self::MAX_ATTEMPTS - (int) $otp->attempts),
+        ];
+    }
+
+    private function mask(string $phone): string
+    {
+        try {
+            $normalized = self::normalize($phone);
+        } catch (ValidationException) {
+            return 'votre numéro';
+        }
+
+        return substr($normalized, 0, 7).' ** *** '.substr($normalized, -2);
     }
 
     public function verify(User $user, string $code): array
@@ -144,9 +210,15 @@ class PhoneVerificationService
             $otp = DB::table('phone_verification_otps')->where('user_id', $user->id)
                 ->whereNull('consumed_at')->orderByDesc('id')->lockForUpdate()->first();
             if (! $otp || $otp->status !== 'sent' || now()->gte($otp->expires_at)) return ['error' => 'Code expiré. Demandez un nouveau code.'];
-            if ($otp->attempts >= 5) return ['error' => 'Trop de tentatives. Demandez un nouveau code.'];
+            if ($otp->attempts >= self::MAX_ATTEMPTS) return ['error' => 'Trop de tentatives. Demandez un nouveau code.'];
             DB::table('phone_verification_otps')->where('id', $otp->id)->increment('attempts');
-            if (! Hash::check($code, $otp->code_hash)) return ['error' => 'Code incorrect. Vérifiez les 6 chiffres reçus.'];
+            if (! Hash::check($code, $otp->code_hash)) {
+                if (((int) $otp->attempts + 1) >= self::MAX_ATTEMPTS) {
+                    DB::table('phone_verification_otps')->where('id', $otp->id)->update(['consumed_at' => now()]);
+                    return ['error' => 'Trop de tentatives. Demandez un nouveau code.'];
+                }
+                return ['error' => 'Code incorrect. Vérifiez les 6 chiffres reçus.'];
+            }
 
             DB::table('phone_verification_otps')->where('id', $otp->id)->update(['consumed_at' => now()]);
             $locked->forceFill(['phone' => $otp->phone, 'phone_verified_at' => now()])->saveQuietly();

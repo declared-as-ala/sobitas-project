@@ -6,8 +6,9 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { Loader2, Save, User, Mail, Phone } from 'lucide-react';
+import { BadgeCheck, CircleAlert, Loader2, Save, User, Mail, Phone } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 export function ProfileSection() {
   const { user, updateProfile } = useAuth();
@@ -72,7 +73,7 @@ export function ProfileSection() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <div className="flex items-center justify-between gap-3"><Label htmlFor="email">Email</Label><span className={user?.email_verified ? 'inline-flex items-center gap-1 text-xs font-semibold text-ok' : 'inline-flex items-center gap-1 text-xs text-ink-3'}>{user?.email_verified ? <BadgeCheck className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}{user?.email_verified ? 'Vérifié' : 'Non vérifié'}</span></div>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-3" aria-hidden="true" />
               <Input
@@ -88,7 +89,7 @@ export function ProfileSection() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="phone">Téléphone</Label>
+            <div className="flex items-center justify-between gap-3"><Label htmlFor="phone">Téléphone</Label><span className={user?.phone_verified ? 'inline-flex items-center gap-1 text-xs font-semibold text-ok' : 'inline-flex items-center gap-1 text-xs text-ink-3'}>{user?.phone_verified ? <BadgeCheck className="h-4 w-4" /> : <CircleAlert className="h-4 w-4" />}{user?.phone_verified ? 'Vérifié' : 'Non vérifié'}</span></div>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-ink-3" aria-hidden="true" />
               <Input
@@ -99,7 +100,10 @@ export function ProfileSection() {
                 className="h-12 rounded-xl pl-10"
               />
             </div>
+            <p className="text-xs leading-relaxed text-ink-3">Modifier le numéro retire sa vérification jusqu’à la saisie d’un nouveau code SMS.</p>
           </div>
+
+          {!user?.phone_verified && <LinkWithLoading href="/verify-account" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-brand-50 px-4 text-sm font-semibold text-brand">Vérifier mon compte</LinkWithLoading>}
 
           <div className="pt-6 border-t border-hairline">
             <h3 className="font-display uppercase tracking-tight text-lg text-ink-1 mb-4">

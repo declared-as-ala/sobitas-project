@@ -553,6 +553,8 @@ export interface User {
   welcome_bonus_awarded?: boolean;
   welcome_bonus_status?: 'phone_required' | 'claimable' | 'awarded' | 'already_used' | 'not_eligible' | 'paused';
   contact_verified?: boolean;
+  verification_status?: 'unverified' | 'email_only' | 'phone_verified';
+  phone_verification_required?: boolean;
 }
 
 /** Line item returned by POST /pack/quote (server-computed from real product prices). */
@@ -598,7 +600,7 @@ export interface PointsHistory {
 }
 
 export interface LoginRequest {
-  email: string;
+  login: string;
   password: string;
 }
 
@@ -608,6 +610,7 @@ export interface RegisterRequest {
   phone: string;
   password: string;
   role_id: number;
+  website?: string;
 }
 
 export interface AuthResponse {
@@ -615,7 +618,11 @@ export interface AuthResponse {
   name: string;
   id: number;
   requires_verification?: boolean;
-  verification_email_sent?: boolean;
+  phone_verification_required?: boolean;
+  phone_verified?: boolean;
+  email_verified?: boolean;
+  contact_verified?: boolean;
+  preferred_verification?: 'phone' | null;
 }
 
 // Contact & Newsletter Types

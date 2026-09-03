@@ -12,7 +12,7 @@ interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<AuthResponse>;
   register: (data: RegisterRequest) => Promise<AuthResponse>;
   /** Sign in (or sign up, first time) with a Google ID token from GoogleSignInButton. */
-  loginWithGoogle: (credential: string) => Promise<void>;
+  loginWithGoogle: (credential: string) => Promise<AuthResponse>;
   logout: () => void;
   updateProfile: (data: Partial<User> & { password?: string }) => Promise<void>;
   refreshProfile: () => Promise<void>;
@@ -88,7 +88,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await establishSession(response.token, {
         id: response.id,
         name: response.name,
-        email: credentials.email,
+        ...(credentials.login.includes('@') ? { email: credentials.login } : {}),
       });
       return response;
     } catch (error: any) {
@@ -127,6 +127,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const response = await apiLoginWithGoogle(credential);
       await establishSession(response.token, { id: response.id, name: response.name });
+      return response;
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Connexion Google impossible');
     }
@@ -158,6 +159,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!current) return current;
       const updated = { ...current, phone: result.phone, phone_verified: result.phone_verified,
         contact_verified: result.phone_verified || !!current.email_verified,
+        verification_status: result.phone_verified ? 'phone_verified' as const : current.verification_status,
+        phone_verification_required: !result.phone_verified,
         points_balance: result.points_balance, points_value_dt: result.points_value_dt,
         welcome_bonus_status: result.bonus_status,
         welcome_bonus_awarded: result.bonus_status === 'awarded',
@@ -180,7 +183,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const applyEmailVerification = () => {
     setUser(current => {
       if (!current) return current;
-      const updated = { ...current, email_verified: true, contact_verified: true };
+      const updated = {
+        ...current,
+        email_verified: true,
+        contact_verified: true,
+        verification_status: current.phone_verified ? 'phone_verified' as const : 'email_only' as const,
+        phone_verification_required: !current.phone_verified,
+      };
       try { localStorage.setItem('user', JSON.stringify(updated)); } catch { /* Keep confirmed in-memory state. */ }
       return updated;
     });

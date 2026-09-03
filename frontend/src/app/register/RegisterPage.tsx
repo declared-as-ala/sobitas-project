@@ -15,6 +15,7 @@ import {
   AuthAlt,
 } from '@/app/components/AuthShell';
 import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
+import { RegistrationPanel } from '@/app/components/VerificationArtwork';
 
 /** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
  *  password before the request rather than surfacing a 422 the customer cannot read. */
@@ -46,8 +47,8 @@ export default function RegisterPage() {
   });
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace(user?.welcome_bonus_eligible ? '/verify-phone' : user?.contact_verified ? '/account' : '/verify-email');
-  }, [isAuthenticated, authLoading, router, user?.contact_verified, user?.welcome_bonus_eligible]);
+    if (!authLoading && isAuthenticated) router.replace(user?.phone_verified ? '/account' : '/verify-phone');
+  }, [isAuthenticated, authLoading, router, user?.phone_verified]);
 
   if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
@@ -83,17 +84,14 @@ export default function RegisterPage() {
 
     setIsLoading(true);
     try {
-      const result = await register({
+      await register({
         name,
         email: formData.email.trim().toLowerCase(),
         phone,
         password: formData.password,
         role_id: 2, // customer; the server sets this itself and never trusts the field
+        website: '',
       });
-      sessionStorage.setItem(
-        'protein:verification-email-delivery',
-        result.verification_email_sent === false ? 'failed' : 'sent',
-      );
       toast.success('Compte créé', {
         description: 'Vérifiez votre téléphone pour débloquer votre cadeau.',
       });
@@ -124,10 +122,11 @@ export default function RegisterPage() {
   const busy = isLoading || googleLoading;
 
   return (
-    <AuthShell compact>
+    <AuthShell artwork={<RegistrationPanel />}>
       <AuthCardHeader
+        kicker="Étape 1 sur 2"
         title="Créer mon compte"
-        subtitle="15 DT offerts en points après vérification de votre téléphone."
+        subtitle="Créez votre accès, puis confirmez votre numéro par SMS."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
@@ -140,6 +139,17 @@ export default function RegisterPage() {
           value={formData.name}
           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
           required
+        />
+
+        <input
+          type="text"
+          name="website"
+          value=""
+          onChange={() => undefined}
+          tabIndex={-1}
+          autoComplete="off"
+          aria-hidden="true"
+          className="pointer-events-none absolute h-px w-px overflow-hidden opacity-0"
         />
 
         <AuthField
@@ -184,7 +194,7 @@ export default function RegisterPage() {
           <p className="pb-3">300 points, une seule fois par compte et numéro. Utilisables sur vos achats, jusqu’à 50 % du montant des produits après remises, hors livraison. Non échangeables en espèces.</p>
         </details>
         <AuthSubmit loading={isLoading} loadingLabel="Création…" disabled={busy}>
-          Créer mon compte
+          Continuer vers le SMS
         </AuthSubmit>
       </form>
 

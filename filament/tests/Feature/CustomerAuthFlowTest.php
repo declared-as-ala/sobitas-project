@@ -99,7 +99,7 @@ class CustomerAuthFlowTest extends TestCase
         $this->assertTrue(collect(Schema::getIndexes('phone_verification_otps'))->contains(fn ($index) => $index['columns'] === ['user_id', 'created_at']));
     }
 
-    public function test_customer_can_register_verify_email_and_login(): void
+    public function test_registration_is_phone_first_and_email_remains_an_explicit_alternative(): void
     {
         Mail::fake();
 
@@ -112,7 +112,10 @@ class CustomerAuthFlowTest extends TestCase
 
         $register->assertCreated()
             ->assertJsonPath('requires_verification', true)
-            ->assertJsonPath('verification_email_sent', true);
+            ->assertJsonPath('phone_verification_required', true)
+            ->assertJsonPath('preferred_verification', 'phone')
+            ->assertJsonPath('email_verified', false)
+            ->assertJsonPath('phone_verified', false);
         $token = (string) $register->json('token');
         $this->assertNotSame('', $token);
         $this->assertDatabaseHas('users', [
@@ -121,6 +124,12 @@ class CustomerAuthFlowTest extends TestCase
             'role_id' => 2,
             'email_verified_at' => null,
         ]);
+
+        Mail::assertNothingQueued();
+
+        $this->withToken($token)
+            ->postJson('/api/email-verification/send')
+            ->assertOk();
 
         $code = null;
         Mail::assertQueued(EmailVerificationOtpMail::class, function (EmailVerificationOtpMail $mail) use (&$code): bool {
@@ -139,7 +148,14 @@ class CustomerAuthFlowTest extends TestCase
         $this->postJson('/api/login', [
             'email' => 'client@example.test',
             'password' => 'Protein123',
-        ])->assertOk()->assertJsonPath('requires_verification', false);
+        ])->assertOk()
+            ->assertJsonPath('requires_verification', false)
+            ->assertJsonPath('phone_verification_required', true);
+
+        $this->postJson('/api/login', [
+            'login' => '20 123 456',
+            'password' => 'Protein123',
+        ])->assertOk()->assertJsonPath('phone_verification_required', true);
     }
 
     public function test_registration_rejects_an_invalid_tunisian_phone(): void
@@ -264,6 +280,20 @@ class CustomerAuthFlowTest extends TestCase
         $this->sendPhoneCode($user);
         $this->assertNotNull(DB::table('phone_verification_otps')->where('id', $firstId)->value('consumed_at'));
         $this->assertDatabaseCount('phone_verification_otps', 2);
+    }
+
+    public function test_active_phone_challenge_can_be_restored_without_buying_another_sms(): void
+    {
+        $user = $this->phoneCustomer();
+        $this->sendPhoneCode($user);
+        $this->mock(\App\Services\SmsService::class)->shouldNotReceive('send_sms');
+
+        $this->withToken($user->createToken('test')->plainTextToken)
+            ->getJson('/api/phone-verification/status')
+            ->assertOk()
+            ->assertJsonPath('active', true)
+            ->assertJsonPath('phone_verified', false)
+            ->assertJsonPath('attempts_remaining', 5);
     }
 
     public function test_same_phone_cannot_receive_bonus_on_another_account_even_after_deletion(): void

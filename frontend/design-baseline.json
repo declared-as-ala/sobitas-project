@@ -116,11 +116,11 @@
     "DS007": 1
   },
   "src/app/(shop)/order-confirmation/[id]/page.tsx": {
-    "DS001": 20,
-    "DS002": 67,
-    "DS003": 39,
-    "DS004": 32,
-    "DS011": 28
+    "DS001": 15,
+    "DS002": 14,
+    "DS003": 1,
+    "DS006": 1,
+    "DS011": 2
   },
   "src/app/(shop)/packs/PacksPageClient.tsx": {
     "DS001": 2,

@@ -82,31 +82,34 @@ class ClientController extends Controller
 
     public function login(Request $request): JsonResponse
     {
-        $request->merge([
-            'email' => strtolower(trim((string) $request->input('email'))),
-        ]);
-
+        $identifier = trim((string) $request->input('login', $request->input('email')));
         $validated = $request->validate([
-            'email'    => ['required', 'email'],
             'password' => ['required'],
         ]);
+        if ($identifier === '') {
+            return response()->json(['message' => 'Saisissez votre email ou votre téléphone.'], 422);
+        }
+
+        if (str_contains($identifier, '@')) {
+            $user = User::query()->where('email', strtolower($identifier))->first();
+        } else {
+            $phone = $this->normalizeTunisianPhone($identifier);
+            if ($phone === null) {
+                return response()->json(['message' => 'Email ou numéro de téléphone invalide.'], 422);
+            }
+            $user = User::query()->where('phone', $phone)->first();
+        }
 
         // This is a token API endpoint, not a browser session login. Using
         // Auth::attempt() couples it to the configured session driver and can
         // fail before the Sanctum token is issued when session storage is unavailable.
-        $user = User::query()->where('email', $validated['email'])->first();
         if ($user !== null && Hash::check($validated['password'], $user->password)) {
             $accessToken = $user->createToken('authToken')->plainTextToken;
 
-            return response()->json([
-                'token' => $accessToken,
-                'name'  => $user->name,
-                'id'    => $user->id,
-                'requires_verification' => ! $user->hasVerifiedContact(),
-            ]);
+            return response()->json($this->authPayload($user, $accessToken));
         }
 
-        return response()->json(['message' => 'E-mail ou mot de passe incorrect.'], 401);
+        return response()->json(['message' => 'Email, téléphone ou mot de passe incorrect.'], 401);
     }
 
     public function register(Request $request): JsonResponse
@@ -130,6 +133,8 @@ class ClientController extends Controller
             ],
             'email'    => ['required', 'email', 'max:255', 'unique:users,email'],
             'password' => ['required', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
+            // Invisible honeypot used by the storefront. Humans never see or fill it.
+            'website'  => ['nullable', 'string', 'max:0'],
         ]);
 
         $phone = $this->normalizeTunisianPhone($validated['phone']);
@@ -150,24 +155,27 @@ class ClientController extends Controller
 
         $token = $user->createToken('authToken')->plainTextToken;
 
-        $verificationEmailSent = true;
-        try {
-            app(EmailVerificationOtpService::class)->send($user);
-        } catch (\Throwable $e) {
-            $verificationEmailSent = false;
-            Log::error('Registration verification email failed', [
-                'user_id' => $user->id,
-                'error' => $e->getMessage(),
-            ]);
-        }
+        // Phone is the primary proof. Do not spend mail quota or create two competing OTP
+        // journeys at registration; email verification remains available from the verification hub.
+        return response()->json($this->authPayload($user, $token), 201);
+    }
 
-        return response()->json([
+    private function authPayload(User $user, string $token): array
+    {
+        $phoneVerified = $user->phone_verified_at !== null;
+        $emailVerified = $user->hasVerifiedEmail();
+
+        return [
             'token' => $token,
-            'name'  => $user->name,
-            'id'    => $user->id,
-            'requires_verification' => true,
-            'verification_email_sent' => $verificationEmailSent,
-        ], 201);
+            'name' => $user->name,
+            'id' => $user->id,
+            'requires_verification' => ! ($phoneVerified || $emailVerified),
+            'phone_verification_required' => ! $phoneVerified,
+            'phone_verified' => $phoneVerified,
+            'email_verified' => $emailVerified,
+            'contact_verified' => $phoneVerified || $emailVerified,
+            'preferred_verification' => $phoneVerified ? null : 'phone',
+        ];
     }
 
     public function sendEmailVerificationOtp(Request $request): JsonResponse
@@ -325,11 +333,10 @@ class ClientController extends Controller
             $user->save();
         }
 
-        return response()->json([
-            'token' => $user->createToken('authToken')->plainTextToken,
-            'name'  => $user->name,
-            'id'    => $user->id,
-        ]);
+        return response()->json($this->authPayload(
+            $user,
+            $user->createToken('authToken')->plainTextToken
+        ));
     }
 
     /**
@@ -472,7 +479,14 @@ class ClientController extends Controller
 
         $validated = $request->validate([
             'name'     => ['sometimes', 'required', 'string', 'max:255'],
-            'phone'    => ['sometimes', 'string', 'max:20'],
+            'phone'    => [
+                'sometimes', 'string', 'max:20',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    if ($this->normalizeTunisianPhone((string) $value) === null) {
+                        $fail('Saisissez un numéro tunisien valide à 8 chiffres.');
+                    }
+                },
+            ],
             'email'    => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
         ]);
@@ -482,7 +496,7 @@ class ClientController extends Controller
         }
 
         if (isset($validated['phone'])) {
-            $user->phone = $validated['phone'];
+            $user->phone = $this->normalizeTunisianPhone($validated['phone']);
         }
 
         $emailChanged = false;
@@ -553,6 +567,10 @@ class ClientController extends Controller
             'email_verified'  => $user->hasVerifiedEmail(),
             'phone_verified'  => $user->phone_verified_at !== null,
             'contact_verified' => $user->hasVerifiedContact(),
+            'verification_status' => $user->phone_verified_at !== null
+                ? 'phone_verified'
+                : ($user->hasVerifiedEmail() ? 'email_only' : 'unverified'),
+            'phone_verification_required' => $user->phone_verified_at === null,
         ]);
     }
 

@@ -105,7 +105,8 @@ export default function VerifyEmailPage() {
         <VerifiedContactBadge label="Email vérifié" />
         <AuthCardHeader title="Votre email est confirmé" subtitle="Retrouvez vos avis et vos achats dans votre espace client." />
         <LinkWithLoading href="/account?section=reviews" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mes avis</LinkWithLoading>
-        {user?.welcome_bonus_eligible && <LinkWithLoading href="/verify-phone" className="flex min-h-11 items-center justify-center rounded-lg px-2 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">{user.phone_verified ? 'Recevoir mes 15 DT en points' : 'Vérifier mon téléphone pour recevoir 15 DT'}</LinkWithLoading>}
+        {!user?.phone_verified && <LinkWithLoading href="/verify-phone" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-brand-50 px-4 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Vérifier maintenant mon téléphone{user?.welcome_bonus_eligible ? ' et recevoir 15 DT' : ''}</LinkWithLoading>}
+        {user?.phone_verified && <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-lg px-2 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
       </div> : <>
       <AuthCardHeader
         title="Vérifiez votre email"
@@ -150,6 +151,7 @@ export default function VerifyEmailPage() {
           Changer de compte
         </button>
       </div>
+      <LinkWithLoading href="/verify-account" className="mt-2 flex min-h-11 items-center justify-center rounded-lg px-2 text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Choisir la vérification par téléphone</LinkWithLoading>
       </>}
     </AuthShell>
   );

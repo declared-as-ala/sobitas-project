@@ -13,8 +13,7 @@ import { User, Package, Coins, MessageSquare } from 'lucide-react';
 import { PageHeader } from '@/app/components/PageHeader';
 import { Section } from '@/app/components/layout/Section';
 import { AccountPageSkeleton } from './AccountSkeletons';
-import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { VerifiedAvatar, VerifiedContactBadge } from '@/app/components/VerificationArtwork';
+import { AccountVerificationCard } from './AccountVerificationCard';
 
 /**
  * ── THE ACCOUNT, ON THE SITE'S OWN VOCABULARY (owner, 20/08/2026) ───────────────────────────
@@ -59,7 +58,7 @@ import { VerifiedAvatar, VerifiedContactBadge } from '@/app/components/Verificat
  */
 export default function AccountPage({ initialSection = 'orders' }: { initialSection?: 'orders' | 'reviews' }) {
   const router = useRouter();
-  const { user, isAuthenticated, isLoading, fetchOrders } = useAuth();
+  const { isAuthenticated, isLoading, fetchOrders } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -88,24 +87,8 @@ export default function AccountPage({ initialSection = 'orders' }: { initialSect
       <Section as="div" spacing="default" first last>
         <PageHeader kicker="Espace client" title="Mon Compte" />
 
-        {(user?.phone_verified || user?.email_verified) && <div data-verified-identity className="mb-6 flex items-center gap-3">
-          <VerifiedAvatar name={user.name} />
-          <div className="min-w-0">
-            <p className="mb-2 break-words text-sm font-semibold text-ink-1">{user.name}</p>
-            <div className="flex flex-wrap gap-2">
-              {user.phone_verified && <VerifiedContactBadge label="Téléphone vérifié" />}
-              {user.email_verified && <VerifiedContactBadge label="Email vérifié" />}
-            </div>
-          </div>
-        </div>}
-
         <AccountSummary />
-        {user?.welcome_bonus_eligible && (
-          <LinkWithLoading href="/verify-phone" className="mt-4 flex min-h-11 flex-wrap items-center justify-between gap-2 rounded-xl border border-hairline bg-elevated p-4 text-sm focus-visible:ring-2 focus-visible:ring-focus">
-            <span className="font-semibold text-ink-1">Votre cadeau : 15 DT en points</span>
-            <span className="font-semibold text-brand">{user.phone_verified ? 'Recevoir mes 15 DT' : 'Vérifier mon téléphone'}</span>
-          </LinkWithLoading>
-        )}
+        <AccountVerificationCard />
 
         <Tabs defaultValue={initialSection} className="mt-6 w-full">
           {/*

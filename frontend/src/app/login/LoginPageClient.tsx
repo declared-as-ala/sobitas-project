@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { Mail, Lock } from 'lucide-react';
+import { AtSign, Lock } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import {
@@ -25,7 +25,7 @@ function LoginContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   /* `?email=` is set by the reset-password screen when it hands the customer back here, so they
      do not retype the address they just proved they own. */
-  const [formData, setFormData] = useState({ email: searchParams.get('email') ?? '', password: '' });
+  const [formData, setFormData] = useState({ login: searchParams.get('email') ?? '', password: '' });
 
   /*
     ── AN OPEN REDIRECT, CLOSED ──────────────────────────────────────────────────────────────
@@ -39,8 +39,8 @@ function LoginContent() {
   const redirectTo = raw.startsWith('/') && !raw.startsWith('//') ? raw : '/';
 
   useEffect(() => {
-    if (!authLoading && isAuthenticated) router.replace(user?.contact_verified ? redirectTo : '/verify-email');
-  }, [isAuthenticated, authLoading, router, redirectTo, user?.contact_verified]);
+    if (!authLoading && isAuthenticated) router.replace(user?.phone_verified ? redirectTo : '/verify-phone');
+  }, [isAuthenticated, authLoading, router, redirectTo, user?.phone_verified]);
 
   if (authLoading || isAuthenticated) return <LoadingSpinner />;
 
@@ -49,13 +49,13 @@ function LoginContent() {
     setIsLoading(true);
     try {
       const result = await login({
-        email: formData.email.trim().toLowerCase(),
+        login: formData.login.trim(),
         password: formData.password,
       });
       toast.success('Bienvenue !', {
         description: 'Votre espace client est prêt.',
       });
-      router.replace(result.requires_verification ? '/verify-email' : redirectTo);
+      router.replace(result.phone_verification_required ? '/verify-phone' : redirectTo);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Erreur lors de la connexion');
       setIsLoading(false);
@@ -65,11 +65,11 @@ function LoginContent() {
   const handleGoogle = async (credential: string) => {
     setGoogleLoading(true);
     try {
-      await loginWithGoogle(credential);
+      const result = await loginWithGoogle(credential);
       toast.success('Bienvenue !', {
         description: 'Votre espace client est prêt.',
       });
-      router.replace(redirectTo);
+      router.replace(result.phone_verification_required ? '/verify-phone' : redirectTo);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Connexion Google impossible');
       setGoogleLoading(false);
@@ -88,14 +88,14 @@ function LoginContent() {
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate={false}>
         <AuthField
-          label="Email"
-          Icon={Mail}
-          type="email"
-          inputMode="email"
-          placeholder="votre@email.com"
+          label="Email ou téléphone"
+          Icon={AtSign}
+          type="text"
+          inputMode="text"
+          placeholder="votre@email.com ou 20 000 000"
           autoComplete="username"
-          value={formData.email}
-          onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+          value={formData.login}
+          onChange={(e) => setFormData({ ...formData, login: e.target.value })}
           required
         />
 

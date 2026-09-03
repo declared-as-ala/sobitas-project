@@ -8,6 +8,11 @@ use Illuminate\Http\Request;
 
 class PhoneVerificationController extends Controller
 {
+    public function status(Request $request, PhoneVerificationService $service)
+    {
+        return response()->json($service->status($request->user()));
+    }
+
     public function claim(Request $request, PhoneVerificationService $service)
     {
         return response()->json($service->claimWelcomeBonus($request->user()));
