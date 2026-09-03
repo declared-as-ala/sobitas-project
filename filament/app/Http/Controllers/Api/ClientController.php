@@ -531,7 +531,9 @@ class ClientController extends Controller
 
     public function profil(): JsonResponse
     {
-        $user = Auth::user();
+        // Points are updated under a separate row lock by verification/checkout.
+        // A guard may still hold an older model instance: never serialize its balance.
+        $user = Auth::user()->refresh();
 
         // points_balance column may be absent/null on legacy users — default 0.
         $pointsBalance = (int) ($user->points_balance ?? 0);
