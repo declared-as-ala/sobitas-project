@@ -80,6 +80,17 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      - name: Test authentication and welcome credits before production
+        run: |
+          set -e
+          docker run --rm --entrypoint php \
+            -e APP_ENV=testing -e APP_KEY=base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI= \
+            -e DB_CONNECTION=sqlite -e DB_DATABASE=:memory: \
+            -e CACHE_STORE=array -e SESSION_DRIVER=array -e MAIL_MAILER=array \
+            -v "$PWD/filament/tests:/var/www/html/tests:ro" \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            vendor/bin/phpunit tests/Feature/CustomerAuthFlowTest.php
+
       # Ship docker-compose.yml to the VPS before deploying.
       #
       # Nothing ever synced it. The server's copy is whatever was last placed there by hand, and

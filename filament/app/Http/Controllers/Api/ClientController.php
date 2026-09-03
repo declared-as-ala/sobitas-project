@@ -144,6 +144,7 @@ class ClientController extends Controller
             'phone'    => $phone,
             'email'    => $validated['email'],
             'password' => Hash::make($validated['password']),
+            'welcome_bonus_eligible' => (bool) config('welcome_bonus.enabled'),
         ]);
         $user->save();
 
@@ -311,6 +312,7 @@ class ClientController extends Controller
                 'password'          => Hash::make(Str::random(64)),
                 'role_id'           => 2,
                 'email_verified_at' => now(),
+                'welcome_bonus_eligible' => (bool) config('welcome_bonus.enabled'),
             ];
             if ($hasGoogleColumn) {
                 $attributes['google_id'] = $googleId;
@@ -547,6 +549,8 @@ class ClientController extends Controller
             'email'           => $user->email,
             'phone'           => $user->phone,
             'points_balance'  => $pointsBalance,
+            'welcome_bonus_eligible' => (bool) $user->welcome_bonus_eligible,
+            'welcome_bonus_awarded' => $user->welcome_bonus_awarded_at !== null,
             'points_value_dt' => app(PointsService::class)->pointsToDt($pointsBalance),
             'email_verified'  => $user->hasVerifiedEmail(),
             'phone_verified'  => $user->phone_verified_at !== null,

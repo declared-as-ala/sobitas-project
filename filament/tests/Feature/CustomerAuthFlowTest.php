@@ -43,6 +43,7 @@ class CustomerAuthFlowTest extends TestCase
             $table->unsignedInteger('role_id')->default(2);
             $table->timestamp('email_verified_at')->nullable();
             $table->timestamp('phone_verified_at')->nullable();
+            $table->integer('points_balance')->default(0);
             $table->string('password');
             $table->rememberToken();
             $table->timestamps();
@@ -71,6 +72,18 @@ class CustomerAuthFlowTest extends TestCase
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
+        (require database_path('migrations/2026_09_03_160000_add_phone_verification_welcome_bonus.php'))->up();
+        Schema::create('user_point_transactions', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('commande_id')->nullable();
+            $table->string('type');
+            $table->integer('points');
+            $table->integer('balance_after');
+            $table->string('description')->nullable();
+            $table->timestamps();
+        });
+        config()->set('welcome_bonus.enabled', true);
     }
 
     public function test_customer_can_register_verify_email_and_login(): void
@@ -167,5 +180,154 @@ class CustomerAuthFlowTest extends TestCase
         ])->assertOk();
 
         $this->assertTrue(Hash::check('NewPassword2', $user->fresh()->password));
+    }
+
+    private function phoneCustomer(string $email = 'phone@example.test', bool $eligible = true): User
+    {
+        Mail::fake();
+        $user = new User(['name' => 'Client SMS', 'email' => $email, 'phone' => '+21620123456', 'password' => 'Protein123']);
+        $user->forceFill(['role_id' => 2, 'welcome_bonus_eligible' => $eligible])->save();
+        return $user;
+    }
+
+    private function sendPhoneCode(User $user, string $phone = '20 123 456'): string
+    {
+        $code = '';
+        $this->mock(\App\Services\SmsService::class)->shouldReceive('send_sms')->once()->andReturnUsing(function ($to, $message) use (&$code) {
+            preg_match('/\b(\d{6})\b/', $message, $match);
+            $code = $match[1];
+            $this->assertLessThanOrEqual(160, strlen($message));
+            return 'test-reference';
+        });
+        $result = app(\App\Services\PhoneVerificationService::class)->send($user, $phone, '192.0.2.1');
+        $this->assertSame(180, $result['expires_in']);
+        $otp = DB::table('phone_verification_otps')->latest('id')->first();
+        $this->assertNotSame($code, $otp->code_hash);
+        $this->assertTrue(Hash::check($code, $otp->code_hash));
+        return $code;
+    }
+
+    public function test_phone_proof_credits_exactly_300_points_and_cannot_replay(): void
+    {
+        $user = $this->phoneCustomer();
+        $code = $this->sendPhoneCode($user);
+        $this->withToken($user->createToken('test')->plainTextToken)
+            ->postJson('/api/phone-verification/verify', ['code' => $code])
+            ->assertOk()->assertJsonPath('bonus_awarded', true)->assertJsonPath('points_balance', 300)->assertJsonPath('points_value_dt', 15);
+        $this->assertNotNull($user->fresh()->phone_verified_at);
+        $this->assertNull($user->fresh()->email_verified_at);
+        $this->postJson('/api/phone-verification/verify', ['code' => $code])->assertUnprocessable();
+        $this->assertDatabaseCount('welcome_bonus_claims', 1);
+        $this->assertDatabaseCount('user_point_transactions', 1);
+    }
+
+    public function test_phone_code_expires_at_three_minutes(): void
+    {
+        $user = $this->phoneCustomer();
+        $code = $this->sendPhoneCode($user);
+        $this->travel(180)->seconds();
+        $this->withToken($user->createToken('test')->plainTextToken)->postJson('/api/phone-verification/verify', ['code' => $code])->assertUnprocessable();
+        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+    }
+
+    public function test_five_wrong_attempts_remain_consumed_and_block_correct_code(): void
+    {
+        $user = $this->phoneCustomer();
+        $code = $this->sendPhoneCode($user);
+        $this->withToken($user->createToken('test')->plainTextToken);
+        for ($i = 0; $i < 5; $i++) $this->postJson('/api/phone-verification/verify', ['code' => '000000'])->assertUnprocessable();
+        $this->assertSame(5, DB::table('phone_verification_otps')->value('attempts'));
+        $this->postJson('/api/phone-verification/verify', ['code' => $code])->assertUnprocessable();
+        $this->assertSame(0, $user->fresh()->points_balance);
+    }
+
+    public function test_resend_is_rate_limited_and_new_code_invalidates_old_challenge(): void
+    {
+        $user = $this->phoneCustomer();
+        $this->sendPhoneCode($user);
+        $firstId = DB::table('phone_verification_otps')->value('id');
+        $this->withToken($user->createToken('test')->plainTextToken)->postJson('/api/phone-verification/send', ['phone' => '+21620123456'])->assertUnprocessable();
+        $this->travel(61)->seconds();
+        $this->sendPhoneCode($user);
+        $this->assertNotNull(DB::table('phone_verification_otps')->where('id', $firstId)->value('consumed_at'));
+        $this->assertDatabaseCount('phone_verification_otps', 2);
+    }
+
+    public function test_same_phone_cannot_receive_bonus_on_another_account_even_after_deletion(): void
+    {
+        $first = $this->phoneCustomer();
+        $service = app(\App\Services\PhoneVerificationService::class);
+        $service->verify($first, $this->sendPhoneCode($first));
+        $first->delete();
+        $this->travel(61)->seconds();
+        $second = $this->phoneCustomer('second@example.test');
+        $result = $service->verify($second, $this->sendPhoneCode($second, '00216 20 123 456'));
+        $this->assertFalse($result['bonus_awarded']);
+        $this->assertNotNull($second->fresh()->phone_verified_at);
+        $this->assertSame(0, $second->fresh()->points_balance);
+        $this->assertDatabaseCount('welcome_bonus_claims', 1);
+    }
+
+    public function test_existing_customer_can_verify_but_does_not_receive_signup_bonus(): void
+    {
+        $user = $this->phoneCustomer('existing@example.test', false);
+        $result = app(\App\Services\PhoneVerificationService::class)->verify($user, $this->sendPhoneCode($user));
+        $this->assertFalse($result['bonus_awarded']);
+        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+        $user->refresh()->update(['phone' => '+21622123456']);
+        $this->assertNull($user->fresh()->phone_verified_at);
+    }
+
+    public function test_gateway_failure_never_leaves_a_usable_code_and_retains_cooldown(): void
+    {
+        $user = $this->phoneCustomer();
+        $this->mock(\App\Services\SmsService::class)->shouldReceive('send_sms')->once()->andThrow(new \RuntimeException('timeout'));
+        $this->withToken($user->createToken('test')->plainTextToken)->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnprocessable();
+        $this->assertDatabaseHas('phone_verification_otps', ['status' => 'failed']);
+        $this->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnprocessable();
+        $this->assertDatabaseCount('phone_verification_otps', 1);
+    }
+
+    public function test_phone_endpoints_require_authentication(): void
+    {
+        $this->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnauthorized();
+        $this->postJson('/api/phone-verification/verify', ['code' => '123456'])->assertUnauthorized();
+    }
+
+    public function test_new_phone_on_rewarded_account_does_not_pay_again(): void
+    {
+        $user = $this->phoneCustomer();
+        $service = app(\App\Services\PhoneVerificationService::class);
+        $service->verify($user, $this->sendPhoneCode($user));
+        $this->travel(61)->seconds();
+        $result = $service->verify($user, $this->sendPhoneCode($user, '22123456'));
+        $this->assertFalse($result['bonus_awarded']);
+        $this->assertSame(300, $user->fresh()->points_balance);
+        $this->assertDatabaseCount('user_point_transactions', 1);
+    }
+
+    public function test_failed_ledger_write_rolls_back_claim_and_verification(): void
+    {
+        $user = $this->phoneCustomer();
+        $code = $this->sendPhoneCode($user);
+        $this->mock(\App\Services\PointsService::class)->shouldReceive('record')->once()->andThrow(new \RuntimeException('ledger unavailable'));
+        try {
+            app(\App\Services\PhoneVerificationService::class)->verify($user, $code);
+            $this->fail('Expected ledger failure');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('ledger unavailable', $e->getMessage());
+        }
+        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+        $this->assertNull($user->fresh()->phone_verified_at);
+        $this->assertNull(DB::table('phone_verification_otps')->value('consumed_at'));
+    }
+
+    public function test_sms_spending_ceiling_blocks_before_contacting_gateway(): void
+    {
+        $user = $this->phoneCustomer();
+        config()->set('welcome_bonus.daily_sms_limit', 0);
+        $this->mock(\App\Services\SmsService::class)->shouldNotReceive('send_sms');
+        $this->withToken($user->createToken('test')->plainTextToken)->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnprocessable();
+        $this->assertDatabaseCount('phone_verification_otps', 0);
     }
 }

@@ -768,3 +768,12 @@ Schedule::command('products:faq-from-label --limit=300 --apply')
     ->dailyAt('03:10')
     ->withoutOverlapping(60)
     ->appendOutputTo(storage_path('logs/product-faq.log'));
+
+// Short-lived challenges are not a permanent customer-data archive. Financial claim hashes
+// remain separately so deleting old OTPs cannot re-enable a welcome credit.
+Schedule::call(function (): void {
+    if (\Illuminate\Support\Facades\Schema::hasTable('phone_verification_otps')) {
+        \Illuminate\Support\Facades\DB::table('phone_verification_otps')
+            ->where('created_at', '<', now()->subDays(7))->limit(1000)->delete();
+    }
+})->name('prune-phone-verification-codes')->dailyAt('04:20')->withoutOverlapping();

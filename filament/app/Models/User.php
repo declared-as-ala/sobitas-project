@@ -44,12 +44,24 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     protected $casts = [
         'email_verified_at' => 'datetime',
         'phone_verified_at' => 'datetime',
+        'welcome_bonus_eligible' => 'boolean',
+        'welcome_bonus_awarded_at' => 'datetime',
         'password' => 'hashed',
     ];
 
     public function hasVerifiedContact(): bool
     {
         return $this->hasVerifiedEmail() || $this->phone_verified_at !== null;
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (User $user): void {
+            // A timestamp never proves ownership of a newly edited phone number.
+            if ($user->isDirty('phone')) {
+                $user->phone_verified_at = null;
+            }
+        });
     }
 
     public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
