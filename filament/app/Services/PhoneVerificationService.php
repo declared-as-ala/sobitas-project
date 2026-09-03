@@ -31,6 +31,65 @@ class PhoneVerificationService
         return hash_hmac('sha256', $value, (string) config('app.key'));
     }
 
+    /** Read-only state shared by the profile, proof response and catch-up action. */
+    public function bonusStatus(User $user): string
+    {
+        if ($user->welcome_bonus_awarded_at || DB::table('welcome_bonus_claims')->where('user_id', $user->id)->exists()) return 'awarded';
+        if (! config('welcome_bonus.enabled')) return 'paused';
+        if ((int) $user->role_id !== 2 || (! config('welcome_bonus.include_existing_customers') && ! $user->welcome_bonus_eligible)) return 'not_eligible';
+        if (! $user->phone_verified_at) return 'phone_required';
+        try {
+            $phoneHash = self::fingerprint(self::normalize((string) $user->phone));
+        } catch (ValidationException $e) {
+            return 'phone_required';
+        }
+        $claimed = DB::table('welcome_bonus_claims')->where('phone_hash', $phoneHash)
+            ->orWhere('email_hash', self::fingerprint(strtolower(trim((string) $user->email))))->exists();
+        return $claimed ? 'already_used' : 'claimable';
+    }
+
+    /** Caller holds the user row lock. Claim + ledger + balance commit together. */
+    private function awardWelcomeBonus(User $user): bool
+    {
+        if ($this->bonusStatus($user) !== 'claimable') return false;
+        $claimed = DB::table('welcome_bonus_claims')->insertOrIgnore([
+            'user_id' => $user->id,
+            'phone_hash' => self::fingerprint(self::normalize((string) $user->phone)),
+            'email_hash' => self::fingerprint(strtolower(trim((string) $user->email))),
+            'points' => self::BONUS_POINTS, 'created_at' => now(),
+        ]);
+        if ($claimed !== 1) return false;
+        app(PointsService::class)->record($user, 'earn', self::BONUS_POINTS, 'Cadeau de bienvenue — 15 DT en points');
+        $user->forceFill(['welcome_bonus_awarded_at' => now(), 'welcome_bonus_eligible' => false])->saveQuietly();
+        return true;
+    }
+
+    private function result(User $user, bool $awarded): array
+    {
+        return [
+            'message' => $awarded ? '300 points ajoutés : 15 DT pour vos prochains achats.' : 'Votre téléphone est vérifié.',
+            'phone_verified' => $user->phone_verified_at !== null,
+            'phone' => $user->phone,
+            'bonus_awarded' => $awarded,
+            'bonus_status' => $this->bonusStatus($user),
+            'bonus_points' => $awarded ? self::BONUS_POINTS : 0,
+            'points_balance' => (int) $user->points_balance,
+            'points_value_dt' => app(PointsService::class)->pointsToDt((int) $user->points_balance),
+        ];
+    }
+
+    /** Explicit, idempotent catch-up for a phone already proved before offer expansion. */
+    public function claimWelcomeBonus(User $user): array
+    {
+        return DB::transaction(function () use ($user) {
+            $locked = User::whereKey($user->id)->lockForUpdate()->firstOrFail();
+            if (! $locked->phone_verified_at || $this->bonusStatus($locked) === 'phone_required') {
+                throw ValidationException::withMessages(['phone' => 'Vérifiez votre téléphone pour recevoir vos points.']);
+            }
+            return $this->result($locked, $this->awardWelcomeBonus($locked));
+        });
+    }
+
     public function send(User $user, string $phone, string $ip): array
     {
         $phone = self::normalize($phone);
@@ -91,28 +150,7 @@ class PhoneVerificationService
 
             DB::table('phone_verification_otps')->where('id', $otp->id)->update(['consumed_at' => now()]);
             $locked->forceFill(['phone' => $otp->phone, 'phone_verified_at' => now()])->saveQuietly();
-            $awarded = false;
-            if (config('welcome_bonus.enabled') && $locked->welcome_bonus_eligible && ! $locked->welcome_bonus_awarded_at && (int) $locked->role_id === 2) {
-                // Unique DB constraints are the financial boundary even across two accounts.
-                $claimed = DB::table('welcome_bonus_claims')->insertOrIgnore([
-                    'user_id' => $locked->id, 'phone_hash' => $otp->phone_hash,
-                    'email_hash' => self::fingerprint(strtolower(trim($locked->email))),
-                    'points' => self::BONUS_POINTS, 'created_at' => now(),
-                ]);
-                if ($claimed === 1) {
-                    app(PointsService::class)->record($locked, 'earn', self::BONUS_POINTS, 'Cadeau de bienvenue — 15 DT en points');
-                    $locked->forceFill(['welcome_bonus_awarded_at' => now()])->saveQuietly();
-                    $awarded = true;
-                }
-                $locked->forceFill(['welcome_bonus_eligible' => false])->saveQuietly();
-            }
-            return [
-                'message' => $awarded ? '300 points ajoutés : 15 DT pour vos prochains achats.' : 'Votre téléphone est vérifié.',
-                'phone_verified' => true, 'bonus_awarded' => $awarded,
-                'bonus_points' => $awarded ? self::BONUS_POINTS : 0,
-                'points_balance' => (int) $locked->points_balance,
-                'points_value_dt' => app(PointsService::class)->pointsToDt((int) $locked->points_balance),
-            ];
+            return $this->result($locked, $this->awardWelcomeBonus($locked));
         });
         if (isset($result['error'])) throw ValidationException::withMessages(['code' => $result['error']]);
         return $result;

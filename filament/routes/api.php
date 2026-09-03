@@ -182,6 +182,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::post('/phone-verification/send', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'send'])->middleware('throttle:5,60');
     Route::post('/phone-verification/verify', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'verify'])->middleware('throttle:10,1');
+    Route::post('/phone-verification/claim-bonus', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'claim'])->middleware('throttle:10,1');
     Route::get('/profil', [ClientController::class, 'profil']);
     Route::post('/email-verification/send', [ClientController::class, 'sendEmailVerificationOtp'])
         ->middleware('throttle:5,60');

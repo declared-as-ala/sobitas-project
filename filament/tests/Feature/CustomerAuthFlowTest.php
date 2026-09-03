@@ -84,6 +84,7 @@ class CustomerAuthFlowTest extends TestCase
             $table->timestamps();
         });
         config()->set('welcome_bonus.enabled', true);
+        config()->set('welcome_bonus.include_existing_customers', true);
     }
 
     public function test_welcome_migration_can_resume_without_erasing_claims(): void
@@ -280,12 +281,13 @@ class CustomerAuthFlowTest extends TestCase
         $this->assertDatabaseCount('welcome_bonus_claims', 1);
     }
 
-    public function test_existing_customer_can_verify_but_does_not_receive_signup_bonus(): void
+    public function test_existing_customer_receives_bonus_on_first_phone_proof(): void
     {
         $user = $this->phoneCustomer('existing@example.test', false);
         $result = app(\App\Services\PhoneVerificationService::class)->verify($user, $this->sendPhoneCode($user));
-        $this->assertFalse($result['bonus_awarded']);
-        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+        $this->assertTrue($result['bonus_awarded']);
+        $this->assertSame(300, $user->fresh()->points_balance);
+        $this->assertDatabaseCount('welcome_bonus_claims', 1);
         $user->refresh()->update(['phone' => '+21622123456']);
         $this->assertNull($user->fresh()->phone_verified_at);
     }
@@ -304,6 +306,7 @@ class CustomerAuthFlowTest extends TestCase
     {
         $this->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnauthorized();
         $this->postJson('/api/phone-verification/verify', ['code' => '123456'])->assertUnauthorized();
+        $this->postJson('/api/phone-verification/claim-bonus')->assertUnauthorized();
     }
 
     public function test_new_phone_on_rewarded_account_does_not_pay_again(): void
@@ -341,5 +344,102 @@ class CustomerAuthFlowTest extends TestCase
         $this->mock(\App\Services\SmsService::class)->shouldNotReceive('send_sms');
         $this->withToken($user->createToken('test')->plainTextToken)->postJson('/api/phone-verification/send', ['phone' => '20123456'])->assertUnprocessable();
         $this->assertDatabaseCount('phone_verification_otps', 0);
+    }
+
+    public function test_verified_legacy_customer_can_claim_without_another_sms_and_only_once(): void
+    {
+        $user = $this->phoneCustomer('legacy@example.test', false);
+        $user->forceFill(['phone_verified_at' => now(), 'points_balance' => 40])->saveQuietly();
+        $this->mock(\App\Services\SmsService::class)->shouldNotReceive('send_sms');
+        $this->withToken($user->createToken('test')->plainTextToken);
+        $this->getJson('/api/profil')->assertOk()->assertJsonPath('welcome_bonus_status', 'claimable')->assertJsonPath('welcome_bonus_eligible', true);
+        $this->postJson('/api/phone-verification/claim-bonus')->assertOk()
+            ->assertJsonPath('bonus_awarded', true)->assertJsonPath('bonus_status', 'awarded')
+            ->assertJsonPath('points_balance', 340)->assertJsonPath('points_value_dt', 17);
+        $this->postJson('/api/phone-verification/claim-bonus')->assertOk()
+            ->assertJsonPath('bonus_awarded', false)->assertJsonPath('points_balance', 340);
+        $this->getJson('/api/profil')->assertOk()->assertJsonPath('welcome_bonus_eligible', false)
+            ->assertJsonPath('welcome_bonus_awarded', true)->assertJsonPath('points_balance', 340);
+        $this->assertDatabaseCount('user_point_transactions', 1);
+        $this->assertDatabaseCount('phone_verification_otps', 0);
+    }
+
+    public function test_claim_cannot_bypass_phone_proof_even_with_verified_email(): void
+    {
+        $user = $this->phoneCustomer();
+        $user->forceFill(['email_verified_at' => now()])->saveQuietly();
+        $this->withToken($user->createToken('test')->plainTextToken)
+            ->postJson('/api/phone-verification/claim-bonus')->assertUnprocessable();
+        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+        $this->assertSame(0, $user->fresh()->points_balance);
+    }
+
+    public function test_claim_retains_phone_and_email_deduplication_for_legacy_accounts(): void
+    {
+        $service = app(\App\Services\PhoneVerificationService::class);
+        $first = $this->phoneCustomer('original@example.test', false);
+        $first->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        $this->assertTrue($service->claimWelcomeBonus($first)['bonus_awarded']);
+        $first->delete();
+        $samePhone = $this->phoneCustomer('different@example.test', false);
+        $samePhone->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        $this->assertSame('already_used', $service->claimWelcomeBonus($samePhone)['bonus_status']);
+        $sameEmail = $this->phoneCustomer('original@example.test', false);
+        $sameEmail->forceFill(['phone' => '+21622123456', 'phone_verified_at' => now()])->saveQuietly();
+        $this->assertSame('already_used', $service->claimWelcomeBonus($sameEmail)['bonus_status']);
+        $this->assertDatabaseCount('user_point_transactions', 1);
+    }
+
+    public function test_disabled_offer_and_admin_accounts_do_not_get_points(): void
+    {
+        $user = $this->phoneCustomer();
+        $user->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        $service = app(\App\Services\PhoneVerificationService::class);
+        config()->set('welcome_bonus.enabled', false);
+        $this->assertSame('paused', $service->claimWelcomeBonus($user)['bonus_status']);
+        config()->set('welcome_bonus.enabled', true);
+        $user->forceFill(['role_id' => 1])->saveQuietly();
+        $this->assertSame('not_eligible', $service->claimWelcomeBonus($user)['bonus_status']);
+        $this->assertDatabaseCount('user_point_transactions', 0);
+    }
+
+    public function test_catch_up_ledger_failure_rolls_back_and_can_be_retried(): void
+    {
+        $user = $this->phoneCustomer('catchup@example.test', false);
+        $user->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        $this->mock(\App\Services\PointsService::class)->shouldReceive('record')->once()->andThrow(new \RuntimeException('ledger unavailable'));
+        try {
+            app(\App\Services\PhoneVerificationService::class)->claimWelcomeBonus($user);
+            $this->fail('Expected ledger failure');
+        } catch (\RuntimeException $e) {
+            $this->assertSame('ledger unavailable', $e->getMessage());
+        }
+        $this->assertDatabaseCount('welcome_bonus_claims', 0);
+        $this->assertNull($user->fresh()->welcome_bonus_awarded_at);
+        $this->assertSame(0, $user->fresh()->points_balance);
+        $this->app->forgetInstance(\App\Services\PointsService::class);
+        $this->assertTrue(app(\App\Services\PhoneVerificationService::class)->claimWelcomeBonus($user)['bonus_awarded']);
+        $this->assertSame(300, $user->fresh()->points_balance);
+    }
+
+    public function test_changing_phone_revokes_proof_and_blocks_catch_up(): void
+    {
+        $user = $this->phoneCustomer('changed@example.test', false);
+        $user->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        $user->update(['phone' => '+21622123456']);
+        $this->withToken($user->createToken('test')->plainTextToken)
+            ->postJson('/api/phone-verification/claim-bonus')->assertUnprocessable();
+        $this->assertDatabaseCount('user_point_transactions', 0);
+    }
+
+    public function test_profile_edit_preserves_visible_balance_and_bonus_status(): void
+    {
+        $user = $this->phoneCustomer('profile@example.test', false);
+        $user->forceFill(['phone_verified_at' => now()])->saveQuietly();
+        app(\App\Services\PhoneVerificationService::class)->claimWelcomeBonus($user);
+        $this->withToken($user->createToken('test')->plainTextToken)
+            ->postJson('/api/update_profile', ['name' => 'Nouveau nom'])
+            ->assertOk()->assertJsonPath('points_balance', 300)->assertJsonPath('points_value_dt', 15)
+            ->assertJsonPath('welcome_bonus_status', 'awarded')->assertJsonPath('phone_verified', true);
     }
 }

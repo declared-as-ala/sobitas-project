@@ -524,15 +524,9 @@ class ClientController extends Controller
                 ->delete();
         }
 
-        return response()->json([
-            'id'    => $user->id,
-            'name'  => $user->name,
-            'email' => $user->email,
-            'phone' => $user->phone,
-            'email_verified' => $user->hasVerifiedEmail(),
-            'phone_verified' => $user->phone_verified_at !== null,
-            'contact_verified' => $user->hasVerifiedContact(),
-        ]);
+        // The frontend replaces its profile with this response. Keep the balance and
+        // offer state, otherwise editing a name visually erases the customer's points.
+        return $this->profil();
     }
 
     public function profil(): JsonResponse
@@ -541,6 +535,7 @@ class ClientController extends Controller
 
         // points_balance column may be absent/null on legacy users — default 0.
         $pointsBalance = (int) ($user->points_balance ?? 0);
+        $bonusStatus = app(\App\Services\PhoneVerificationService::class)->bonusStatus($user);
 
         // Never expose password hash or other sensitive fields
         return response()->json([
@@ -549,8 +544,9 @@ class ClientController extends Controller
             'email'           => $user->email,
             'phone'           => $user->phone,
             'points_balance'  => $pointsBalance,
-            'welcome_bonus_eligible' => (bool) $user->welcome_bonus_eligible,
-            'welcome_bonus_awarded' => $user->welcome_bonus_awarded_at !== null,
+            'welcome_bonus_eligible' => in_array($bonusStatus, ['phone_required', 'claimable'], true),
+            'welcome_bonus_awarded' => $bonusStatus === 'awarded',
+            'welcome_bonus_status' => $bonusStatus,
             'points_value_dt' => app(PointsService::class)->pointsToDt($pointsBalance),
             'email_verified'  => $user->hasVerifiedEmail(),
             'phone_verified'  => $user->phone_verified_at !== null,

@@ -8,6 +8,11 @@ use Illuminate\Http\Request;
 
 class PhoneVerificationController extends Controller
 {
+    public function claim(Request $request, PhoneVerificationService $service)
+    {
+        return response()->json($service->claimWelcomeBonus($request->user()));
+    }
+
     public function send(Request $request, PhoneVerificationService $service)
     {
         $data = $request->validate(['phone' => ['required', 'string', 'max:20']]);
