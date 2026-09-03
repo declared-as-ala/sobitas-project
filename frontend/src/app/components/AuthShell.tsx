@@ -14,28 +14,28 @@ import { Container } from '@/app/components/layout/Container';
 
 const AUTH_ATHLETE = '/auth/protein-athlete-studio-v3.png';
 
-export function AuthShell({ children, compact = false }: { children: ReactNode; compact?: boolean }) {
+export function AuthShell({ children, compact = false, artwork }: { children: ReactNode; compact?: boolean; artwork?: ReactNode }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
     <div
       dir="ltr"
-      className="pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2"
+      className={cn('pt-no-chrome flex min-h-dvh items-stretch bg-brand-50 lg:items-center lg:bg-sunken lg:py-5 [@media(min-width:1024px)_and_(max-height:800px)]:!py-2', artwork && 'bg-canvas')}
     >
       <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
-        <main className={cn('relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline', compact && 'lg:h-auto')}>
+        <main className={cn('relative flex w-full flex-col overflow-hidden bg-brand-50 shadow-card sm:rounded-3xl lg:h-[min(49rem,calc(100dvh-2.5rem))] lg:min-h-[40rem] lg:grid lg:grid-cols-2 lg:border lg:border-hairline', compact && 'lg:h-auto', artwork && 'bg-canvas')}>
           <aside
             className={cn('relative shrink-0 overflow-hidden bg-brand-50 lg:order-2 lg:h-auto lg:min-h-[40rem] lg:border-s lg:border-hairline', compact ? 'hidden lg:block' : 'h-56 sm:h-64')}
-            aria-label="Athlète Protein.tn"
+            aria-label={artwork ? 'Vérification Protein.tn' : 'Athlète Protein.tn'}
           >
-            <Image
+            {artwork ?? <Image
               src={AUTH_ATHLETE}
               alt="Athlète tunisienne portant le maillot Protein.tn"
               fill
               sizes="(min-width: 1024px) 50vw, 100vw"
               className="object-cover object-[center_4%] lg:object-[center_12%]"
               priority
-            />
+            />}
 
             <Link
               href="/"

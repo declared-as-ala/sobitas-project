@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
 import type { User, LoginRequest, RegisterRequest, Order, AuthResponse } from '@/types';
+import type { PhoneVerificationResult } from '@/services/api';
 
 interface AuthContextType {
   user: User | null;
@@ -15,6 +16,8 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (data: Partial<User> & { password?: string }) => Promise<void>;
   refreshProfile: () => Promise<void>;
+  applyPhoneVerification: (result: PhoneVerificationResult) => void;
+  applyEmailVerification: () => void;
   orders: Order[];
   ordersLoading: boolean;
   ordersError: string | null;
@@ -148,6 +151,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  // Use the committed server response immediately: a later GET failure must not
+  // leave the account showing its pre-verification balance or a missing badge.
+  const applyPhoneVerification = (result: PhoneVerificationResult) => {
+    setUser(current => {
+      if (!current) return current;
+      const updated = { ...current, phone: result.phone, phone_verified: result.phone_verified,
+        contact_verified: result.phone_verified || !!current.email_verified,
+        points_balance: result.points_balance, points_value_dt: result.points_value_dt,
+        welcome_bonus_status: result.bonus_status,
+        welcome_bonus_awarded: result.bonus_status === 'awarded',
+        welcome_bonus_eligible: ['phone_required', 'claimable'].includes(result.bonus_status) };
+      try { localStorage.setItem('user', JSON.stringify(updated)); } catch { /* In-memory state is sufficient. */ }
+      return updated;
+    });
+  };
+
   const updateProfile = async (data: Partial<User> & { password?: string }) => {
     try {
       const updated = await apiUpdateProfile(data);
@@ -156,6 +175,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error: any) {
       throw new Error(error.response?.data?.message || 'Update failed');
     }
+  };
+
+  const applyEmailVerification = () => {
+    setUser(current => {
+      if (!current) return current;
+      const updated = { ...current, email_verified: true, contact_verified: true };
+      try { localStorage.setItem('user', JSON.stringify(updated)); } catch { /* Keep confirmed in-memory state. */ }
+      return updated;
+    });
   };
 
   const fetchOrders = useCallback(async () => {
@@ -212,6 +240,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         logout,
         updateProfile,
         refreshProfile,
+        applyPhoneVerification,
+        applyEmailVerification,
         orders,
         ordersLoading,
         ordersError,

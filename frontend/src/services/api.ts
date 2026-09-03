@@ -1662,8 +1662,24 @@ export const sendPhoneVerificationOtp = async (phone: string): Promise<{ message
   return response.data;
 };
 
-export const verifyPhoneOtp = async (code: string): Promise<{ message: string; phone_verified: boolean; bonus_awarded: boolean; bonus_points: number; points_value_dt: number }> => {
+export interface PhoneVerificationResult {
+  message: string;
+  phone: string;
+  phone_verified: boolean;
+  bonus_awarded: boolean;
+  bonus_status: NonNullable<User['welcome_bonus_status']>;
+  bonus_points: number;
+  points_balance: number;
+  points_value_dt: number;
+}
+
+export const verifyPhoneOtp = async (code: string): Promise<PhoneVerificationResult> => {
   const response = await api.post('/phone-verification/verify', { code });
+  return response.data;
+};
+
+export const claimWelcomeBonus = async (): Promise<PhoneVerificationResult> => {
+  const response = await api.post('/phone-verification/claim-bonus');
   return response.data;
 };
 

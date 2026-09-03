@@ -551,6 +551,7 @@ export interface User {
   phone_verified?: boolean;
   welcome_bonus_eligible?: boolean;
   welcome_bonus_awarded?: boolean;
+  welcome_bonus_status?: 'phone_required' | 'claimable' | 'awarded' | 'already_used' | 'not_eligible' | 'paused';
   contact_verified?: boolean;
 }
 
