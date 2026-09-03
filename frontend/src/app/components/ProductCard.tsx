@@ -685,6 +685,7 @@ export const ProductCard = memo(function ProductCard({
       {requestOpen && (
         <ProductRequestDialog
           open={requestOpen}
+          product={product as ApiProduct}
           onOpenChange={setRequestOpen}
           productName={productData.name}
           productPath={buildProductUrlPath(product as any)}
