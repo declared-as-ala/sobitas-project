@@ -1,9 +1,11 @@
 'use client';
 
+import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { getPointsHistory } from '@/services/api';
 import { EARN_RATE, REDEEM_POINTS_PER_DT, CASHBACK_PERCENT } from '@/util/loyaltyPoints';
 import type { PointsHistory, PointsTransaction } from '@/types';
+import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Skeleton } from '@/app/components/ui/skeleton';
@@ -46,6 +48,7 @@ function formatDate(value: string): string {
 }
 
 export function FidelitySection() {
+  const { user } = useAuth();
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -70,27 +73,29 @@ export function FidelitySection() {
   }, []);
 
   const transactions = history?.transactions ?? [];
+  const balance = history?.balance ?? user?.points_balance ?? 0;
+  const valueDt = history?.value_dt ?? user?.points_value_dt ?? balance / REDEEM_POINTS_PER_DT;
 
   return (
     <div className="space-y-6">
-      {/*
-        ── THE BALANCE USED TO BE HERE TWICE ───────────────────────────────────────────────
-        This tab opened with a "Programme de fidélité" card showing the balance and its dinar
-        value in 36px type — directly under `AccountSummary`, which had just shown the same two
-        numbers. On a 390px screen that is the same "0 points / 0.00 DT" twice within 300px, and
-        the second one is the one a customer distrusts.
+      <section className="pt-slab relative overflow-hidden rounded-2xl p-6 shadow-card">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(220,58,0,0.3),transparent_38%)]" />
+        <div className="relative flex items-center justify-between gap-4">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-brand">Cagnotte Protein.tn</p>
+            <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1 sm:text-5xl">{balance.toLocaleString('fr-FR')} <span className="text-base text-brand">pts</span></p>
+            <p className="mt-1 text-sm tabular-nums text-ink-3">Valeur disponible : {valueDt.toFixed(2)} DT</p>
+          </div>
+          <Image src="/member/protein-point-coin.webp" alt="Pièce fidélité Protein.tn" width={112} height={112} className="h-24 w-24 shrink-0 object-contain sm:h-28 sm:w-28" />
+        </div>
+      </section>
 
-        The summary keeps the numbers, because they are true on all three tabs. What is left here
-        is the only thing that belongs to THIS tab and nowhere else: the rules of the programme,
-        and the ledger below. `balance` and `valueDt` are still computed above — the history fetch
-        is authoritative and the summary reads the profile — but they are no longer rendered here.
-      */}
       <div className="flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand/5 p-3.5">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
         <p className="text-[12.5px] leading-snug text-ink-2">
-          Gagnez {EARN_RATE} point par DT dépensé — soit {CASHBACK_PERCENT}% de chaque commande — et
+          Gagnez {EARN_RATE} point par DT de produits — soit {CASHBACK_PERCENT}% — et
           échangez {REDEEM_POINTS_PER_DT} points contre 1 DT de remise lors de votre prochaine
-          commande. Les points sont crédités une fois la commande livrée.
+          commande. Le calcul reste basé sur le prix des produits avant l’utilisation de vos points, puis le serveur crédite la cagnotte après livraison.
         </p>
       </div>
 

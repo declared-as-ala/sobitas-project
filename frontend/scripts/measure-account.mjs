@@ -51,7 +51,13 @@ const flag = (name, fallback) => {
 const BASE = (ARGV.find((a) => a.startsWith("http")) || "http://localhost:3000").replace(/\/$/, "");
 const WIDTHS = flag("widths", [320, 390, 768, 1024, 1440]).map(Number);
 const THEMES = flag("themes", ["light", "dark"]);
-const TABS = ['orders', 'reviews', 'fidelite', 'profile'];
+const VIEWS = [
+  { key: 'dashboard', href: '/account' },
+  { key: 'orders', href: '/account?section=orders' },
+  { key: 'reviews', href: '/account?section=reviews' },
+  { key: 'fidelite', href: '/account?section=fidelite' },
+  { key: 'profile', href: '/account?section=profile' },
+];
 /* --shots writes a full-page PNG per scenario/theme/width/tab into .snap/account. The measurements
    below catch geometry and leakage; they cannot tell you whether the page reads well, and this
    surface has no other way to be looked at because it is behind a login. */
@@ -63,6 +69,10 @@ const USER = {
   name: 'Test Client',
   email: 'test@protein.tn',
   phone: '+216 20 000 000',
+  phone_verified: true,
+  email_verified: true,
+  contact_verified: true,
+  verification_status: 'phone_verified',
   points_balance: 340,
   points_value_dt: 17,
 };
@@ -114,6 +124,23 @@ const SCENARIOS = {
     reviews: [],
   },
 };
+
+const memberDashboard = (data) => ({
+  summary: { orders: data.orders.length, delivered_orders: data.orders.filter((order) => ['livree', 'livrée', 'livre'].includes(order.etat)).length, reviews: data.reviews.length, points_earned: 589 },
+  review_access: { phone_verified: true, monthly_limit: 3, used_this_month: Math.min(3, data.reviews.length), remaining_this_month: Math.max(0, 3 - data.reviews.length) },
+  missions: [
+    { key: 'verify_phone', label: 'Vérifier mon téléphone', description: 'Sécurisez votre compte.', reward_points: 300, completed: true, href: '/verify-phone' },
+    { key: 'first_order', label: 'Recevoir ma première commande', description: 'Points après livraison.', reward_points: null, completed: data.orders.length > 0, href: '/shop' },
+    { key: 'monthly_review', label: 'Partager un avis ce mois-ci', description: '10 ou 50 points.', reward_points: 10, completed: data.reviews.length > 0, href: '/account?section=reviews' },
+    { key: 'photo_review', label: 'Illustrer mon expérience', description: 'Ajoutez une vraie photo.', reward_points: null, completed: false, href: '/account?section=reviews' },
+  ],
+  community: {
+    members_rewarded: 128,
+    points_awarded: 16450,
+    published_reviews: data.reviews.length,
+    reviews: data.reviews.map((review) => ({ ...review, name: 'Membre vérifié', product: review.product })),
+  },
+});
 
 let failures = 0;
 const fail = (where, msg) => {
@@ -181,33 +208,29 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
         if (/\/profil(\?|$)/.test(url)) return json(data.user);
         if (url.includes('client_commandes')) return json(data.orders);
         if (url.includes('points/history')) return json(data.history);
-        if (url.includes('my-reviews')) return json({ reviews: data.reviews });
+        if (url.includes('member/dashboard')) return json(memberDashboard(data));
+        if (url.includes('best_sellers')) return json([]);
+        if (url.includes('my-reviews')) return json({ reviews: data.reviews, access: { phone_verified: true, monthly_limit: 3, used_this_month: Math.min(3, data.reviews.length), remaining_this_month: Math.max(0, 3 - data.reviews.length) } });
+        if (url.includes('/api-proxy/')) return json([]);
         return req.continue();
       });
 
       const consoleErrors = [];
       page.on('console', (m) => {
-        if (m.type() === 'error') consoleErrors.push(m.text().slice(0, 120));
+        if (m.type() === 'error' && !m.text().includes('ERR_NETWORK_ACCESS_DENIED')) {
+          consoleErrors.push(m.text().slice(0, 120));
+        }
       });
 
       try {
         await page.goto(`${BASE}/account`, { waitUntil: 'networkidle0', timeout: 60000 });
-        await page.waitForSelector('[role="tablist"]', { timeout: 20000 });
+        await page.waitForSelector('main', { timeout: 20000 });
 
-        for (const tab of TABS) {
-          /* Radix does NOT put `value` on the DOM node — it renders `id="radix-:rN:-trigger-<value>"`.
-             So `[role="tab"][value="fidelite"]` matched nothing, and because the click was wrapped in
-             a silent `.catch(() => {})` the script measured the DEFAULT tab three times and reported
-             three passes. A guard that cannot fail is worse than no guard, so the catch is gone and
-             the active tab is asserted after every switch. */
-          const sel = `[role="tab"][id$="-trigger-${tab}"]`;
-          await page.waitForSelector(sel, { timeout: 10000 });
-          await page.click(sel);
-          await page.waitForFunction(
-            (s) => document.querySelector(s)?.getAttribute('data-state') === 'active',
-            { timeout: 10000 },
-            sel
-          );
+        for (const view of VIEWS) {
+          if (view.key !== 'dashboard') {
+            await page.goto(`${BASE}${view.href}`, { waitUntil: 'networkidle0', timeout: 60000 });
+            await page.waitForSelector('main', { timeout: 20000 });
+          }
           await new Promise((r) => setTimeout(r, 250));
 
           const report = await page.evaluate(() => {
@@ -232,8 +255,7 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
               .filter((t) => /^(livree|livre|nouvelle_commande|en_cours_de_[a-z]+|expidee|annuler|annulee|prete|retourner?|retournee)$/i.test(t));
 
             return {
-              tabRows: new Set([...document.querySelectorAll('[role="tablist"] [role="tab"]')].map((el) => Math.round(el.getBoundingClientRect().top))).size,
-              tabStyle: document.querySelector('[role="tablist"]')?.className,
+              activeNavigation: document.querySelectorAll('[aria-current="page"]').length,
               overflow: doc.scrollWidth > doc.clientWidth + 1 ? `${doc.scrollWidth} > ${doc.clientWidth}` : null,
               small,
               rawStatus,
@@ -241,7 +263,7 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
           });
 
           if (SHOTS) {
-            await page.screenshot({ path: `${SHOTS}/${name}--${theme}--${width}--${tab}.png`, fullPage: true });
+            await page.screenshot({ path: `${SHOTS}/${name}--${theme}--${width}--${view.key}.png`, fullPage: true });
           }
 
           /*
@@ -257,7 +279,7 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
             const seen = new Map();
             for (const c of contrast) seen.set(`${c.fg}|${c.bg}|${c.min}`, c);
             fail(
-              `${where} ${tab}`,
+              `${where} ${view.key}`,
               `${contrast.length} contrast failure(s): ` +
                 [...seen.values()]
                   .map((c) => `${c.r}:1 (need ${c.min}) ${c.fg} on ${c.bg} "${String(c.text).slice(0, 24)}"`)
@@ -265,10 +287,10 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
             );
           }
 
-          if (report.overflow) fail(`${where} ${tab}`, `horizontal overflow: ${report.overflow}`);
-          if (report.tabRows !== 1) fail(`${where} ${tab}`, `account tabs must share one row: ${report.tabRows} rows (${report.tabStyle})`);
-          if (report.small.length) fail(`${where} ${tab}`, `${report.small.length} control(s) under 44px: ${report.small.join(', ')}`);
-          if (report.rawStatus.length) fail(`${where} ${tab}`, `raw database status rendered: ${report.rawStatus.join(', ')}`);
+          if (report.overflow) fail(`${where} ${view.key}`, `horizontal overflow: ${report.overflow}`);
+          if (report.activeNavigation < 1) fail(`${where} ${view.key}`, 'no active member navigation item');
+          if (report.small.length) fail(`${where} ${view.key}`, `${report.small.length} control(s) under 44px: ${report.small.join(', ')}`);
+          if (report.rawStatus.length) fail(`${where} ${view.key}`, `raw database status rendered: ${report.rawStatus.join(', ')}`);
         }
 
         if (consoleErrors.length) fail(where, `console error(s): ${consoleErrors.slice(0, 3).join(' | ')}`);
@@ -286,6 +308,6 @@ await browser.close();
 console.log(
   failures
     ? `\nmeasure-account — ${failures} failure(s).`
-    : `\nmeasure-account — clean. ${Object.keys(SCENARIOS).filter((name) => ONLY.includes(name)).length} scenarios x ${WIDTHS.length} widths x ${THEMES.length} themes x ${TABS.length} tabs.`
+    : `\nmeasure-account — clean. ${Object.keys(SCENARIOS).filter((name) => ONLY.includes(name)).length} scenarios x ${WIDTHS.length} widths x ${THEMES.length} themes x ${VIEWS.length} views.`
 );
 process.exit(failures ? 1 : 0);

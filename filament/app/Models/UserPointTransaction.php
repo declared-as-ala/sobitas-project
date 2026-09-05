@@ -16,6 +16,8 @@ class UserPointTransaction extends Model
         'balance_after' => 'integer',
     ];
 
+    protected $hidden = ['idempotency_key'];
+
     // ── Relationships ────────────────────────────────────────────────────────
 
     public function user(): BelongsTo

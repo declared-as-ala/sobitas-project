@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { OrdersSection } from '../OrdersSection';
 import { OrdersPageSkeleton } from '../AccountSkeletons';
-import { PageHeader } from '@/app/components/PageHeader';
+import { Section } from '@/app/components/layout/Section';
 
 export default function OrdersPageClient() {
   const router = useRouter();
@@ -26,16 +26,15 @@ export default function OrdersPageClient() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12">
-        <div className="mb-8">
-          <PageHeader kicker="Espace client" title="Mes Commandes" />
-        </div>
-
-        <OrdersSection />
-      </main>
-
-    </div>
+    <main>
+    <Section as="div" width="wide" spacing="default" first last>
+      <header className="mb-5 border-b border-hairline pb-4 sm:mb-6 sm:pb-5">
+        <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-brand">Suivi</p>
+        <h1 className="mt-1 font-display text-3xl font-bold uppercase tracking-tight text-ink-1 sm:text-4xl">Mes commandes</h1>
+        <p className="mt-1.5 text-sm text-ink-2">Retrouvez vos achats et leur état de livraison.</p>
+      </header>
+      <OrdersSection />
+    </Section>
+    </main>
   );
 }

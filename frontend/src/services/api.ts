@@ -37,6 +37,7 @@ import type {
   ReviewAccess,
   ReviewDashboard,
   ReviewSubmitResult,
+  MemberDashboardData,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
@@ -1725,6 +1726,12 @@ export const packQuote = async (
 /** Loyalty-points balance + ledger for the authenticated user (auth:sanctum). */
 export const getPointsHistory = async (): Promise<PointsHistory> => {
   const response = await api.get<PointsHistory>('/points/history');
+  return response.data;
+};
+
+/** One compact, authenticated payload for the member home screen. */
+export const getMemberDashboard = async (): Promise<MemberDashboardData> => {
+  const response = await api.get<MemberDashboardData>('/member/dashboard');
   return response.data;
 };
 

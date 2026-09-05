@@ -1,5 +1,6 @@
 import { Metadata } from 'next';
 import AccountPage from './AccountPage';
+import { getLatestSportsNutritionResearch } from '@/services/pubmed';
 
 export const metadata: Metadata = {
   title: 'Mon Compte',
@@ -16,5 +17,8 @@ export default async function Account({
   searchParams: Promise<{ section?: string }>;
 }) {
   const params = await searchParams;
-  return <AccountPage initialSection={params.section === 'reviews' ? 'reviews' : 'orders'} />;
+  const allowed = ['orders', 'reviews', 'fidelite', 'profile'] as const;
+  const section = allowed.find((value) => value === params.section) || 'dashboard';
+  const research = await getLatestSportsNutritionResearch();
+  return <AccountPage initialSection={section} research={research} />;
 }

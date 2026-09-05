@@ -322,6 +322,20 @@ html[dir="rtl"] .mr-2 { margin-left: 0.5rem !important; }
 html[dir="rtl"] .mr-3 { margin-left: 0.75rem !important; }
 html[dir="rtl"] .mr-4 { margin-left: 1rem !important; }
 
+/* The member area is an application shell, independent from the storefront chrome.
+   Keep its fixed desktop rail and hero artwork dimensions explicit: these rules are
+   structural, and must never disappear during Tailwind's production class pruning. */
+@media (min-width: 1024px) {
+  .pt-member-content {
+    margin-left: 16rem;
+  }
+
+  .pt-member-companion {
+    width: 20rem;
+    height: 20rem;
+  }
+}
+
 html[dir="rtl"] .ml-1,
 html[dir="rtl"] .ml-1\.5,
 html[dir="rtl"] .ml-2,

@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\PointsController;
 use App\Http\Controllers\Api\ProductFeedController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewThreadController;
+use App\Http\Controllers\Api\MemberDashboardController;
 
 /*
 |--------------------------------------------------------------------------
@@ -192,6 +193,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/points/history', [PointsController::class, 'history']);
     Route::get('/client_commandes', [ClientController::class, 'client_commandes']);
     Route::get('/my-reviews', [ReviewThreadController::class, 'mine']);
+    Route::get('/member/dashboard', MemberDashboardController::class)->middleware('throttle:30,1');
     Route::get('/review-access', [ApisController::class, 'reviewAccess'])->middleware('throttle:30,1');
     Route::post('/update_profile', [ClientController::class, 'update_profile']);
     Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande'])->whereNumber('id');

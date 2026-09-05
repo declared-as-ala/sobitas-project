@@ -35,7 +35,7 @@ export function AccountVerificationCard() {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h2 id="verification-title" className="font-display text-lg font-bold uppercase text-ink-1">{phoneVerified ? 'Membre vérifié' : emailVerified ? 'Compte vérifié par email' : 'Compte à vérifier'}</h2>
-            <span className={verified ? 'rounded-full bg-ok/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-ok' : 'rounded-full bg-brand-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand'}>{verified ? 'Confirmé' : 'Action requise'}</span>
+            <span className={verified ? 'rounded-full border border-ok/30 bg-elevated px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-ok' : 'rounded-full bg-brand-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-brand'}>{verified ? 'Confirmé' : 'Action requise'}</span>
           </div>
           <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-2">
             {phoneVerified

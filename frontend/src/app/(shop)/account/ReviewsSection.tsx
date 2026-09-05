@@ -79,30 +79,37 @@ export function ReviewsSection() {
     );
   }
 
-  if (reviews.length === 0) {
-    return (
-      <div className="rounded-xl border border-hairline bg-elevated px-4 py-12 text-center shadow-sm">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-brand/10 text-brand" aria-hidden="true">
-          <MessageSquare className="h-6 w-6" />
-        </span>
-        <h2 className="mt-4 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Aucun avis</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">
-          Ouvrez la fiche d’un produit pour partager votre expérience. Un achat livré rapporte 50 points, un autre avis 10 points.
-        </p>
-      </div>
-    );
-  }
-
-  const verifiedCount = reviews.filter((review) => review.verified_purchase).length;
+  const monthlyLimit = Math.max(1, access?.monthly_limit ?? 3);
+  const usedThisMonth = Math.min(monthlyLimit, access?.used_this_month ?? 0);
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-hairline bg-elevated px-4 py-3 shadow-sm">
-        <div><p className="text-sm font-semibold text-ink-1">{reviews.length} avis</p><p className="mt-0.5 text-xs text-ink-3">{access.remaining_this_month} publication{access.remaining_this_month !== 1 ? 's' : ''} restante{access.remaining_this_month !== 1 ? 's' : ''} ce mois</p></div>
-        <div className="flex flex-wrap items-center gap-2"><p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ok"><BadgeCheck className="h-4 w-4" aria-hidden="true" />{verifiedCount} {verifiedCount === 1 ? 'achat vérifié' : 'achats vérifiés'}</p><span className="rounded-full border border-hairline bg-sunken px-2.5 py-1 text-xs font-semibold text-ink-2">{access.used_this_month}/{access.monthly_limit} ce mois</span></div>
+      <div className="grid overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm md:grid-cols-[1fr_auto]">
+        <div className="p-5 sm:p-6">
+          <div className="flex items-center justify-between gap-4">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Quota mensuel</p><p className="mt-1 text-sm font-semibold text-ink-1">{access.remaining_this_month} avis encore disponible{access.remaining_this_month !== 1 ? 's' : ''}</p></div>
+            <span className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">{usedThisMonth}/{monthlyLimit}</span>
+          </div>
+          <div className="mt-4 grid grid-cols-3 gap-2" aria-label={`${usedThisMonth} avis utilisés sur ${monthlyLimit}`}>
+            {Array.from({ length: monthlyLimit }).map((_, index) => (
+              <span key={index} className={`h-2 rounded-full ${index < usedThisMonth ? 'bg-brand' : 'bg-ink-1/10'}`} />
+            ))}
+          </div>
+        </div>
+        <div className="grid grid-cols-2 border-t border-hairline bg-sunken md:w-[290px] md:border-s md:border-t-0">
+          <div className="flex flex-col justify-center border-e border-hairline p-4"><p className="font-display text-2xl font-bold tabular-nums text-brand">10</p><p className="text-[11px] leading-snug text-ink-3">points par avis validé</p></div>
+          <div className="flex flex-col justify-center p-4"><p className="font-display text-2xl font-bold tabular-nums text-ok">50</p><p className="text-[11px] leading-snug text-ink-3">points si achat livré</p></div>
+        </div>
       </div>
 
-      <ul className="space-y-3">
+      {reviews.length === 0 ? (
+        <div className="rounded-2xl border border-hairline bg-elevated px-4 py-10 text-center shadow-sm">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-brand/10 text-brand" aria-hidden="true"><MessageSquare className="h-6 w-6" /></span>
+          <h2 className="mt-4 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Votre première contribution</h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">Ouvrez un produit que vous connaissez, donnez une note honnête et ajoutez une photo si vous le souhaitez.</p>
+          <Link href="/shop" className="mx-auto mt-5 inline-flex min-h-11 items-center justify-center rounded-xl bg-brand px-5 text-sm font-bold text-on-brand hover:bg-brand-hover">Choisir un produit</Link>
+        </div>
+      ) : <ul className="space-y-3">
         {reviews.map((review) => (
           <li key={review.id} className="rounded-xl border border-hairline bg-elevated p-4 shadow-sm sm:p-5">
             <div className="flex gap-3 sm:gap-4">
@@ -158,7 +165,7 @@ export function ReviewsSection() {
             </div>
           </li>
         ))}
-      </ul>
+      </ul>}
     </div>
   );
 }

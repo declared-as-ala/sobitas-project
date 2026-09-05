@@ -638,6 +638,39 @@ export interface PointsHistory {
   transactions: PointsTransaction[];
 }
 
+export interface MemberMission {
+  key: 'verify_phone' | 'first_order' | 'monthly_review' | 'photo_review';
+  label: string;
+  description: string;
+  reward_points: number | null;
+  completed: boolean;
+  href: string;
+}
+
+export interface MemberDashboardData {
+  summary: {
+    orders: number;
+    delivered_orders: number;
+    reviews: number;
+    points_earned: number;
+  };
+  review_access: ReviewAccess;
+  missions: MemberMission[];
+  community: {
+    members_rewarded: number;
+    points_awarded: number;
+    published_reviews: number;
+    reviews: Array<{
+      id: number;
+      stars: number;
+      comment: string;
+      name: string;
+      created_at?: string;
+      product: { slug: string; designation: string; cover?: string | null } | null;
+    }>;
+  };
+}
+
 export interface LoginRequest {
   login: string;
   password: string;

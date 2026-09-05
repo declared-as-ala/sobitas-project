@@ -220,11 +220,27 @@ class PointsService
             ->where('type', 'adjustment')->where('points', '>', 0)->exists();
 
         if ($earned > 0 && ! $hasClawback) {
-            $this->record($user, 'adjustment', -$earned, 'Annulation des points gagnés (commande ' . $label . ')', $commandeId);
+            $this->record(
+                $user,
+                'adjustment',
+                -$earned,
+                'Annulation des points gagnés (commande ' . $label . ')',
+                $commandeId,
+                null,
+                'order:'.$commandeId.':earn-reversal',
+            );
         }
         if ($redeemed < 0 && ! $hasRefund) {
             // -redeemed is a POSITIVE refund of the points that had been spent.
-            $this->record($user, 'adjustment', -$redeemed, 'Remboursement des points utilisés (commande ' . $label . ')', $commandeId);
+            $this->record(
+                $user,
+                'adjustment',
+                -$redeemed,
+                'Remboursement des points utilisés (commande ' . $label . ')',
+                $commandeId,
+                null,
+                'order:'.$commandeId.':redeem-refund',
+            );
         }
     }
 
@@ -249,7 +265,15 @@ class PointsService
                 }
             }
 
-            $this->record($user, 'earn', $points, $description ?? 'Points gagnés sur commande', $commandeId);
+            $this->record(
+                $user,
+                'earn',
+                $points,
+                $description ?? 'Points gagnés sur commande',
+                $commandeId,
+                null,
+                $commandeId !== null ? 'order:'.$commandeId.':earn' : null,
+            );
         } catch (\Throwable $e) {
             Log::error('PointsService.earn failed', [
                 'user_id'     => $user->getKey(),
@@ -286,17 +310,23 @@ class PointsService
                 return false;
             }
 
-            $already = UserPointTransaction::where('review_id', $reviewId)
-                ->where('type', 'earn')
-                ->exists();
-            if ($already) {
-                return false;
-            }
-
             $label = $productLabel ? (' — ' . Str::limit($productLabel, 60)) : '';
 
-            $tx = $this->record($user, 'earn', $points, 'Points pour votre avis' . $label, null);
-            $tx->forceFill(['review_id' => $reviewId])->saveQuietly();
+            // The idempotency key is checked while the user row is locked and is also protected
+            // by a UNIQUE database index. Two moderation workers can therefore race safely: one
+            // creates the credit, the other receives the existing row without moving the balance.
+            $tx = $this->record(
+                $user,
+                'earn',
+                $points,
+                'Points pour votre avis' . $label,
+                null,
+                $reviewId,
+                'review:'.$reviewId.':award',
+            );
+            if (! $tx->wasRecentlyCreated) {
+                return false;
+            }
 
             Log::info('Points awarded for review', [
                 'user_id'   => $user->getKey(),
@@ -343,8 +373,18 @@ class PointsService
                 return false;
             }
 
-            $tx = $this->record($user, 'adjustment', -$earned, 'Annulation des points d’avis (avis retiré)', null);
-            $tx->forceFill(['review_id' => $reviewId])->saveQuietly();
+            $tx = $this->record(
+                $user,
+                'adjustment',
+                -$earned,
+                'Annulation des points d’avis (avis retiré)',
+                null,
+                $reviewId,
+                'review:'.$reviewId.':reversal',
+            );
+            if (! $tx->wasRecentlyCreated) {
+                return false;
+            }
 
             return true;
         } catch (\Throwable $e) {
@@ -362,11 +402,30 @@ class PointsService
      * opened a transaction (nested = savepoint). A redemption that exceeds the
      * locked balance is rejected instead of being silently clamped.
      */
-    public function record(User $user, string $type, int $points, ?string $description = null, ?int $commandeId = null): UserPointTransaction
+    public function record(
+        User $user,
+        string $type,
+        int $points,
+        ?string $description = null,
+        ?int $commandeId = null,
+        ?int $reviewId = null,
+        ?string $idempotencyKey = null,
+    ): UserPointTransaction
     {
-        return DB::transaction(function () use ($user, $type, $points, $description, $commandeId) {
+        return DB::transaction(function () use ($user, $type, $points, $description, $commandeId, $reviewId, $idempotencyKey) {
             $locked = User::whereKey($user->getKey())->lockForUpdate()->first();
             $current = (int) ($locked?->points_balance ?? 0);
+
+            if ($idempotencyKey !== null && Schema::hasColumn('user_point_transactions', 'idempotency_key')) {
+                $existing = UserPointTransaction::query()
+                    ->where('idempotency_key', $idempotencyKey)
+                    ->first();
+                if ($existing) {
+                    $user->points_balance = $current;
+
+                    return $existing;
+                }
+            }
 
             if ($type === 'redeem' && $points >= 0) {
                 throw new \InvalidArgumentException('A loyalty redemption must debit points.');
@@ -388,6 +447,12 @@ class PointsService
             $tx = new UserPointTransaction();
             $tx->user_id = $user->getKey();
             $tx->commande_id = $commandeId;
+            if ($reviewId !== null && Schema::hasColumn('user_point_transactions', 'review_id')) {
+                $tx->review_id = $reviewId;
+            }
+            if ($idempotencyKey !== null && Schema::hasColumn('user_point_transactions', 'idempotency_key')) {
+                $tx->idempotency_key = $idempotencyKey;
+            }
             $tx->type = $type;
             $tx->points = $points;
             $tx->balance_after = $newBalance;

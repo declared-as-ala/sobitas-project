@@ -7,7 +7,12 @@ import { Header } from '@/app/components/Header';
 export function ShopHeader() {
   const pathname = usePathname();
 
-  if (pathname === '/pack-builder' || pathname.startsWith('/pack-builder/')) return null;
+  if (
+    pathname === '/pack-builder' ||
+    pathname.startsWith('/pack-builder/') ||
+    pathname === '/account' ||
+    pathname.startsWith('/account/')
+  ) return null;
 
   return <Header />;
 }

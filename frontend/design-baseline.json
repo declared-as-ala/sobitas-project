@@ -1,9 +1,4 @@
 {
-  "src/app/(shop)/account/orders/OrdersPageClient.tsx": {
-    "DS001": 2,
-    "DS002": 1,
-    "DS007": 1
-  },
   "src/app/(shop)/avis/[token]/AvisClient.tsx": {
     "DS001": 8,
     "DS002": 23,

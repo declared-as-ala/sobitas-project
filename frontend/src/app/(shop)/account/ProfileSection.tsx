@@ -103,7 +103,7 @@ export function ProfileSection() {
             <p className="text-xs leading-relaxed text-ink-3">Modifier le numéro retire sa vérification jusqu’à la saisie d’un nouveau code SMS.</p>
           </div>
 
-          {!user?.phone_verified && <LinkWithLoading href="/verify-account" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-brand-50 px-4 text-sm font-semibold text-brand">Vérifier mon compte</LinkWithLoading>}
+          {!user?.phone_verified && <LinkWithLoading href="/verify-account" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-elevated px-4 text-sm font-semibold text-brand">Vérifier mon compte</LinkWithLoading>}
 
           <div className="pt-6 border-t border-hairline">
             <h3 className="font-display uppercase tracking-tight text-lg text-ink-1 mb-4">
