@@ -21,6 +21,7 @@ class PopularProductNutrition20260905Test extends TestCase
         foreach ($records as $slug => $record) {
             $this->assertNotNull($validator->nutritionFacts($record), $slug.' has an invalid nutrition panel');
             $this->assertMatchesRegularExpression('#^https://#', $record['source_url'], $slug.' has no traceable HTTPS source');
+            $this->assertNotEmpty($record['rows'], $slug.' has no comparison facts');
         }
     }
 }

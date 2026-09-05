@@ -12,7 +12,8 @@ use RuntimeException;
  *
  * Values are deliberately stored per the named flavour/label instead of normalised to 100 g.
  * The frontend shows that basis beside every value, preventing a 25 g scoop being compared as if
- * it were a 45 g scoop. Existing admin-entered facts are never overwritten.
+ * it were a 45 g scoop. A richer admin-entered panel is never overwritten; a legacy panel with
+ * fewer declared rows is upgraded to the traceable manufacturer panel below.
  */
 final class PopularProductNutrition20260905
 {
@@ -89,12 +90,16 @@ final class PopularProductNutrition20260905
 
         DB::transaction(function () use ($validator, $records, &$updated): void {
             Product::query()->whereIn('slug', array_keys($records))->lockForUpdate()->get()->each(function (Product $product) use ($validator, $records, &$updated): void {
-                if (is_array($product->nutrition_facts) && $product->nutrition_facts !== []) {
-                    return;
-                }
                 $facts = $validator->nutritionFacts($records[$product->slug]);
                 if ($facts === null) {
                     throw new RuntimeException('Invalid curated nutrition panel for '.$product->slug);
+                }
+                $currentRows = is_array($product->nutrition_facts['rows'] ?? null)
+                    ? count($product->nutrition_facts['rows'])
+                    : 0;
+                $curatedRows = count($facts['rows'] ?? []);
+                if ($currentRows >= $curatedRows) {
+                    return;
                 }
                 $product->nutrition_facts = $facts;
                 $product->save();
@@ -110,27 +115,9 @@ final class PopularProductNutrition20260905
 
     public static function restore(): int
     {
-        $validator = app(ResearchValidator::class);
-        $records = self::records();
-        $restored = 0;
-
-        DB::transaction(function () use ($validator, $records, &$restored): void {
-            Product::query()->whereIn('slug', array_keys($records))->lockForUpdate()->get()->each(function (Product $product) use ($validator, $records, &$restored): void {
-                $expected = $validator->nutritionFacts($records[$product->slug]);
-                if ($expected === null || $product->nutrition_facts !== $expected) {
-                    return;
-                }
-                $product->nutrition_facts = null;
-                $product->nutrition_values = null;
-                $product->save();
-                $restored++;
-            });
-        });
-
-        ApiResponseCache::forget('product_details');
-        ApiResponseCache::forget('all_products');
-
-        return $restored;
+        // Published manufacturer facts are catalogue content, not disposable schema state. A
+        // rollback must never erase a panel that may since have been reviewed by an administrator.
+        return 0;
     }
 
     /** @param list<array{0: string, 1: int|float, 2: string}> $rows */
