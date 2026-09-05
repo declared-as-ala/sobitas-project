@@ -212,7 +212,7 @@ for (const theme of THEMES) {
        the phone bar were ONE control rendered at complementary widths, so re-adding either alone
        leaves a CTA at some widths and none at others. Counting at all twelve widths is what makes
        "we removed it" verifiable instead of "we removed the one we could see". */
-    if (m.offersLinks !== 0) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected 0 — this band shows, it does not sell`);
+    if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected 1 clear section CTA`);
     /* THE BANNER CEILING, AS A RATIO TO THE RAIL ABOVE IT.
        "Make it a banner, not a full section" is a height, so it is asserted rather than left to
        whoever looks at it next. It used to be asserted as a flat 320px, and that number was

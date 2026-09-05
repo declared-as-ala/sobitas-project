@@ -691,50 +691,6 @@ body[data-page='product'] {
   }
 }
 
-/* ==============================================================================================
- * VENTES FLASH — the two animations on the page, and why they are CSS.
- *
- * The owner asked for "animation with a flash" on the flash-sale band. The obvious reach is
- * framer-motion, and it is the wrong one here: `motion` currently has ZERO imports in this
- * codebase (Stage 3 of the plan removes it), so adopting it for a 4-line loop would re-introduce
- * a ~34 kB animation runtime AND a client boundary on a page whose other stated priority is
- * mobile performance. These two rules total well under 1 kB and run on the compositor.
- *
- * BOTH ARE GATED THREE WAYS, and each gate is deliberate:
- *   min-width: 1024px            phones do not run decorative loops. globals.css already clamps
- *                                every transition to 0.2s under 768px for INP reasons; a 2s
- *                                infinite animation would sit outside that clamp and keep the
- *                                compositor awake on exactly the devices that can least afford it.
- *   prefers-reduced-motion       WCAG 2.3.3. An infinite pulse is precisely what that query is for.
- *   transform/opacity only       no layout, no paint — these cannot cause a reflow.
- *
- * `will-change` is deliberately NOT set: it would promote two elements to their own layers for
- * the whole session to save a few milliseconds on an animation nobody is measuring.
- * ============================================================================================ */
-@media (min-width: 1024px) and (prefers-reduced-motion: no-preference) {
-  /* The flame beside "OFFRES LIMITÉES". Scale + opacity, 2s, so it reads as a slow flicker rather
-     than a blink — a fast pulse next to body copy is an accessibility problem and looks cheap. */
-  .pt-flame {
-    animation: pt-flame 2s ease-in-out infinite;
-    transform-origin: center bottom;
-  }
-
-}
-
-@keyframes pt-flame {
-  0%, 100% { transform: scale(1); opacity: 1; }
-  50% { transform: scale(1.18); opacity: 0.78; }
-}
-
-/* `.pt-tick` and its keyframes lived here and are deleted. It pulsed the countdown's seconds digit,
-   and it had exactly one consumer — VentesFlashSection — which stopped using it.
-   Two reasons it is not worth keeping for a future caller. Its trough was `opacity: .45` held by
-   `steps(1, end)`, which parks TEXT at roughly 2.5:1 for about a fifth of every second: a contrast
-   failure that arrives and leaves sixty times a minute, and an SC 2.2.2 (Pause/Stop/Hide) exposure
-   with no way to pause it. Raising the trough until it passes AA leaves nothing visibly animating.
-   And the band now shows a live clock only inside a 48h window, so most of the time there is no
-   ticking digit to decorate. */
-
 /* --------------------------------------------------------------------------
    PACK BUILDER — INTERACTION FEEDBACK
    --------------------------------------------------------------------------
