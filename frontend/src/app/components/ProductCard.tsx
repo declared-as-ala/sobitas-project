@@ -399,6 +399,10 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
+        <span className="pointer-events-none absolute right-2 top-10 z-10 inline-flex rounded-full border border-brand/20 bg-elevated/95 px-2 py-1 text-[10px] font-bold leading-none text-brand shadow-sm sm:right-3 sm:top-14 sm:text-[11px]">
+          <ProtinaAmount value={pointsForSpend(productData.priceDisplay.finalPrice)} signed />
+        </span>
+
         {/* ── REVIEWS ARE A STICKER ON THE PHOTOGRAPH, NOT A ROW OF THE CARD ────────────────
             Owner, 20/08/2026: *"on mobile and on desktop try to make the avis or stars in a
             better place — position absolute maybe, a tag or something, for a better look, and use
@@ -563,8 +567,6 @@ export const ProductCard = memo(function ProductCard({
             </span>
           )}
         </div>
-        <span className="text-[11px] font-semibold text-ink-3"><ProtinaAmount value={pointsForSpend(productData.priceDisplay.finalPrice)} signed /> à la livraison</span>
-
         {/* Trust chips. Stock is per-product and comes from getProductStockStatus — the exact
             label the detail page shows, including "Stock faible", which the card previously could
             not display at all because low_stock_threshold was never sent to it.

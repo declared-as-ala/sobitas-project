@@ -7,15 +7,9 @@ import {
   BadgeCheck,
   Check,
   ChevronRight,
-  FlaskConical,
-  PackageCheck,
   RefreshCw,
   ShieldCheck,
-  ShoppingBag,
-  Sparkles,
   Star,
-  Target,
-  TrendingUp,
 } from 'lucide-react';
 import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { useAuth } from '@/contexts/AuthContext';
@@ -76,15 +70,12 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
   const completedMissions = dashboard?.missions.filter((mission) => mission.completed).length ?? 0;
 
   return (
-    <div className="space-y-6 lg:space-y-8">
+    <div className="space-y-5 sm:space-y-6 lg:space-y-8">
       <section className="pt-slab relative isolate overflow-hidden rounded-2xl shadow-card">
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_72%_15%,rgba(220,58,0,0.32),transparent_36%),radial-gradient(circle_at_95%_82%,rgba(19,107,72,0.2),transparent_28%)]" />
-        <div className="absolute -left-20 top-10 h-52 w-52 rounded-full border border-brand/30" />
-        <div className="relative min-h-80 p-6 sm:p-8">
+        <div className="relative min-h-80 p-5 sm:p-6 lg:p-8">
           <div className="relative z-10 max-w-xl">
-            <p className="inline-flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
-              <Sparkles className="h-4 w-4" aria-hidden="true" /> Espace membre Protein.tn
-            </p>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand">Espace membre Protein.tn</p>
             <h1 className="mt-3 font-display text-3xl font-bold uppercase leading-[0.96] tracking-tight text-ink-1 sm:text-4xl lg:text-5xl">
               Marhbé, {shortName(user?.name)}
             </h1>
@@ -105,7 +96,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
 
             <div className="mt-6 flex flex-wrap gap-2">
               {!phoneVerified ? (
-                <Link href="/verify-phone" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-fill px-4 text-sm font-bold text-on-brand-fill hover:bg-brand-hover">
+                <Link href="/verify-phone" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-fill px-4 text-sm font-bold text-on-brand-fill transition-[filter] hover:brightness-95">
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Vérifier mon compte
                 </Link>
               ) : (
@@ -153,7 +144,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
           </button>
         </div>
       ) : (
-        <div className="grid gap-6 xl:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 xl:grid-cols-3">
           <section aria-labelledby="missions-title" className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm xl:col-span-2">
             <div className="flex items-center justify-between gap-4 border-b border-hairline px-5 py-4 sm:px-6">
               <div>
@@ -162,12 +153,12 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
               </div>
               <span className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">{completedMissions}/{dashboard.missions.length}</span>
             </div>
-            <ul className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4">
+            <ul className="grid gap-2 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4">
               {dashboard.missions.map((mission) => (
                 <li key={mission.key} className="min-w-0">
-                  <Link href={mission.href} className={`group relative flex min-h-[112px] items-start gap-3 overflow-hidden rounded-xl border p-4 transition-colors ${mission.completed ? 'border-ok/20 bg-ok/5' : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'}`}>
-                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${mission.completed ? 'bg-ok/10 text-ok' : 'bg-elevated text-brand shadow-sm'}`}>
-                      {mission.completed ? <Check className="h-5 w-5" aria-hidden="true" /> : <Target className="h-5 w-5" aria-hidden="true" />}
+                  <Link href={mission.href} className={`group flex min-h-[104px] items-start gap-3 rounded-xl border p-4 transition-colors ${mission.completed ? 'border-ok/20 bg-ok/5' : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'}`}>
+                    <span className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${mission.completed ? 'border-ok/30 bg-ok/10 text-ok' : 'border-brand/25 bg-elevated text-brand'}`}>
+                      {mission.completed ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : dashboard.missions.findIndex((item) => item.key === mission.key) + 1}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block text-sm font-semibold ${mission.completed ? 'text-ink-2 line-through decoration-ink-3/50' : 'text-ink-1'}`}>{mission.label}</span>
@@ -177,7 +168,6 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
                       <span className="shrink-0 rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold text-brand"><ProtinaAmount value={mission.reward_points} signed /></span>
                     )}
                     <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
-                    <span className="pointer-events-none absolute -bottom-10 -right-10 h-20 w-20 rounded-full border border-brand/10" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -185,10 +175,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
           </section>
 
           <section aria-labelledby="order-title" className="rounded-2xl border border-hairline bg-elevated p-5 shadow-sm sm:p-6">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand/10 text-brand">
-              <PackageCheck className="h-5 w-5" aria-hidden="true" />
-            </div>
-            <p className="mt-5 text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Dernière activité</p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Dernière activité</p>
             <h2 id="order-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">
               {latestOrder ? `Commande #${latestOrder.numero}` : 'Votre première commande'}
             </h2>
@@ -205,8 +192,8 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
             ) : (
               <>
                 <p className="mt-3 text-sm leading-relaxed text-ink-2">Découvrez une sélection authentique, livrée partout en Tunisie.</p>
-                <Link href="/shop" className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 text-sm font-bold text-on-brand hover:bg-brand-hover">
-                  Découvrir la boutique <ShoppingBag className="h-4 w-4" aria-hidden="true" />
+                <Link href="/shop" className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-xl bg-brand-fill px-4 text-sm font-bold text-on-brand-fill transition-[filter] hover:brightness-95">
+                  Découvrir la boutique
                 </Link>
               </>
             )}
@@ -228,20 +215,19 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
           </div>
           <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-3">
             {dashboard.community.reviews.map((review) => (
-              <li key={review.id} className="w-4/5 max-w-sm shrink-0 snap-start rounded-2xl border border-hairline bg-elevated p-4 shadow-sm sm:w-auto sm:max-w-none">
+              <li key={review.id} className="flex w-[88%] max-w-sm shrink-0 snap-start flex-col rounded-2xl border border-hairline bg-elevated p-4 shadow-sm sm:w-auto sm:max-w-none sm:p-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-1 text-warn" aria-label={`${review.stars} étoiles sur 5`}>
                     {Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-3.5 w-3.5 ${index < review.stars ? 'fill-current' : 'text-ink-1/15'}`} aria-hidden="true" />)}
                   </div>
-                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${review.author_status === 'verified_purchase' ? 'bg-ok/10 text-ok' : review.author_status === 'verified_member' ? 'bg-brand/10 text-brand' : 'bg-sunken text-ink-3'}`}>
-                    {review.author_status === 'verified_purchase' && <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${review.author_status === 'verified_purchase' ? 'bg-ok/10 text-ink-1' : review.author_status === 'verified_member' ? 'bg-brand/10 text-ink-1' : 'bg-sunken text-ink-3'}`}>
                     {review.author_status === 'verified_purchase' ? 'Achat vérifié' : review.author_status === 'verified_member' ? 'Membre vérifié' : review.author_status === 'member' ? 'Membre' : 'Anonyme'}
                   </span>
                 </div>
-                <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-2">“{review.comment}”</p>
-                <div className="mt-4 flex items-center gap-3 border-t border-hairline pt-3">
+                <p className="mt-4 line-clamp-4 min-h-[5rem] text-sm leading-5 text-ink-2">“{review.comment}”</p>
+                <div className="mt-auto flex items-center gap-3 border-t border-hairline pt-4">
                   {review.product?.cover && <span className="relative h-10 w-10 shrink-0 overflow-hidden rounded-lg bg-canvas"><Image src={getStorageUrl(review.product.cover)} alt="" fill sizes="40px" className="object-contain p-1" /></span>}
-                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-ink-1">{review.name}</p>{review.product && <Link href={`/products/${review.product.slug}`} className="mt-0.5 flex min-h-11 items-center truncate text-[11px] text-ink-3 hover:text-brand">{review.product.designation}</Link>}</div>
+                  <div className="min-w-0 flex-1"><p className="truncate text-xs font-bold text-ink-1">{review.name}</p>{review.product && <Link href={`/products/${review.product.slug}`} className="mt-1 flex min-h-11 items-start truncate pt-1 text-[11px] text-ink-3 hover:text-brand">{review.product.designation}</Link>}</div>
                 </div>
               </li>
             ))}
@@ -249,7 +235,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
         </section>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-5">
+      <div className="grid gap-4 sm:gap-6 xl:grid-cols-5">
         {products.length > 0 && (
           <section aria-labelledby="products-title" className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm xl:col-span-3">
             <div className="flex items-center justify-between border-b border-hairline px-5 py-4 sm:px-6">
@@ -270,40 +256,25 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
           </section>
         )}
 
-        <section aria-labelledby="research-title" className={`overflow-hidden rounded-2xl border border-hairline bg-sunken shadow-sm ${products.length === 0 ? 'xl:col-span-5' : 'xl:col-span-2'}`}>
-          <div className="flex items-start justify-between gap-3 border-b border-black/8 px-5 py-4 sm:px-6">
+        <section aria-labelledby="research-title" className={`overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm ${products.length === 0 ? 'xl:col-span-5' : 'xl:col-span-2'}`}>
+          <div className="flex items-start justify-between gap-3 border-b border-hairline px-5 py-4 sm:px-6">
             <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Veille nutrition sportive</p><h2 id="research-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">La recherche évolue</h2></div>
-            <span title={research.live ? 'Données PubMed actualisées' : 'Sélection scientifique de secours'} className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-brand"><FlaskConical className="h-4 w-4" /></span>
+            <span className="rounded-full bg-sunken px-2.5 py-1 text-[10px] font-semibold text-ink-3">{research.live ? 'Actualisé' : 'Sélection'}</span>
           </div>
-          <ol className="grid gap-3 p-3 sm:grid-cols-3 xl:grid-cols-1">
+          <ol className="divide-y divide-hairline px-5 sm:px-6">
             {research.studies.map((study, index) => (
-              <li key={study.id} className="overflow-hidden rounded-xl border border-black/8 bg-elevated">
-                <a href={study.url} target="_blank" rel="noreferrer" className="group grid min-h-full grid-rows-[92px_1fr] xl:grid-cols-[118px_1fr] xl:grid-rows-1">
-                  <span className="relative block overflow-hidden bg-black">
-                    <Image src="/member/research-covers-v1.webp" alt="" fill sizes="(max-width: 640px) 80vw, 160px" className="h-full max-w-none object-cover" style={{ objectPosition: `${index * 50}% center` }} />
-                    <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 font-display text-[10px] font-bold tabular-nums text-white">0{index + 1}</span>
-                  </span>
-                  <span className="flex min-w-0 gap-2 p-3"><span className="min-w-0 flex-1"><span className="line-clamp-3 text-sm font-semibold leading-snug text-ink-1 group-hover:text-brand">{study.title}</span><span className="mt-1 block truncate text-[11px] text-ink-3">{study.journal} · {study.publishedAt}</span></span><ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" /></span>
+              <li key={study.id}>
+                <a href={study.url} target="_blank" rel="noreferrer" className="group grid grid-cols-[28px_minmax(0,1fr)_16px] items-start gap-3 py-4">
+                  <span className="font-display text-xs font-bold tabular-nums text-brand">0{index + 1}</span>
+                  <span className="min-w-0"><span className="line-clamp-3 text-sm font-semibold leading-snug text-ink-1 group-hover:text-brand">{study.title}</span><span className="mt-1 block truncate text-[11px] text-ink-3">{study.journal} · {study.publishedAt}</span></span>
+                  <ArrowUpRight className="mt-0.5 h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
                 </a>
               </li>
             ))}
           </ol>
-          <p className="px-5 py-3 text-[10px] leading-relaxed text-ink-3 sm:px-6">Source : PubMed. Contenu informatif, sans remplacer un avis médical.</p>
+          <p className="border-t border-hairline px-5 py-3 text-[10px] leading-relaxed text-ink-3 sm:px-6">Source : PubMed. Contenu informatif, sans remplacer un avis médical.</p>
         </section>
       </div>
-
-      <section className="grid gap-3 sm:grid-cols-3" aria-label="Garanties de l’espace membre">
-        {[
-          { icon: ShieldCheck, title: 'Protinas protégées', text: 'Chaque mouvement est validé par le serveur.' },
-          { icon: Target, title: 'Avantages utiles', text: 'Vos missions reposent sur vos vraies actions.' },
-          { icon: TrendingUp, title: 'Progression claire', text: 'Commandes, avis et Protinas restent traçables.' },
-        ].map(({ icon: Icon, title, text }) => (
-          <div key={title} className="flex gap-3 rounded-2xl border border-hairline bg-elevated p-4">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ok/10 text-ok"><Icon className="h-4 w-4" aria-hidden="true" /></span>
-            <div><h3 className="text-sm font-bold text-ink-1">{title}</h3><p className="mt-0.5 text-xs leading-relaxed text-ink-3">{text}</p></div>
-          </div>
-        ))}
-      </section>
     </div>
   );
 }

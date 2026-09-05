@@ -58,7 +58,7 @@ export function MemberShell({ children }: { children: ReactNode }) {
                 <li key={key}>
                   <Link href={href} aria-current={active ? 'page' : undefined} className={cn(
                     'flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold transition-colors',
-                    active ? 'bg-brand-fill text-on-brand-fill shadow-sm' : 'text-ink-2 hover:bg-elevated hover:text-ink-1',
+                    active ? 'bg-brand-fill text-on-brand-fill shadow-sm' : 'text-ink-2 hover:bg-sunken hover:text-ink-1',
                   )}>
                     <Icon className="h-[18px] w-[18px] shrink-0" strokeWidth={1.9} aria-hidden="true" />
                     {label}
@@ -69,10 +69,10 @@ export function MemberShell({ children }: { children: ReactNode }) {
           </ul>
         </nav>
         <div className="mt-auto space-y-1 border-t border-hairline p-3">
-          <Link href="/" className="flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold text-ink-2 hover:bg-elevated hover:text-ink-1">
+          <Link href="/" className="flex min-h-11 items-center gap-3 rounded-xl px-3.5 text-sm font-semibold text-ink-2 hover:bg-sunken hover:text-ink-1">
             <Store className="h-[18px] w-[18px]" aria-hidden="true" />Retour à la boutique
           </Link>
-          <button type="button" onClick={logout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-sm font-semibold text-ink-3 hover:bg-elevated hover:text-ink-1">
+          <button type="button" onClick={logout} className="flex min-h-11 w-full items-center gap-3 rounded-xl px-3.5 text-sm font-semibold text-ink-3 hover:bg-sunken hover:text-ink-1">
             <LogOut className="h-[18px] w-[18px]" aria-hidden="true" />Déconnexion
           </button>
         </div>
