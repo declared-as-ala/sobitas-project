@@ -34,6 +34,8 @@ use App\Models\SiteNavigationItem;
 use App\Models\Slide;
 use App\Models\SousCategory;
 use App\Models\Tag;
+use App\Services\ReviewImageService;
+use App\Services\ReviewSubmissionService;
 use App\Filament\Support\ImagePath;
 use App\Support\CategorySeoEnvelope;
 use App\Support\MediaLibrary\MediaLibraryPayload;
@@ -746,6 +748,10 @@ class ApisController extends Controller
                  */
                 'reviews' => function ($q) {
                     $q->where('publier', 1)->with('user:id,name,avatar')->latest();
+
+                    if (Schema::hasTable('review_images')) {
+                        $q->with('images:id,review_id,path,width,height,position');
+                    }
 
                     /*
                      * GUARDED, and this guard is not decoration. `review_replies` is created by a
@@ -2187,12 +2193,30 @@ class ApisController extends Controller
             ->get();
     }
 
-    public function add_review(Request $request): JsonResponse
+    public function reviewAccess(Request $request, ReviewSubmissionService $reviews): JsonResponse
     {
+        $productId = $request->integer('product_id') ?: null;
+        if ($productId !== null && ! Product::query()->whereKey($productId)->where('publier', 1)->exists()) {
+            return response()->json(['message' => 'Produit introuvable.'], 404);
+        }
+
+        return response()->json($reviews->access($request->user(), $productId));
+    }
+
+    public function add_review(
+        Request $request,
+        ReviewSubmissionService $reviews,
+        ReviewImageService $images
+    ): JsonResponse
+    {
+        $maxImages = max(0, (int) config('reviews.member.max_images', 3));
+        $maxImageKb = max(1024, (int) config('reviews.member.max_image_mb', 5) * 1024);
         $validated = $request->validate([
             'product_id' => ['required', 'integer', 'exists:products,id'],
-            'stars'      => ['nullable', 'integer', 'min:1', 'max:5'],
-            'comment'    => ['required', 'string', 'max:1000'],
+            'stars'      => ['required', 'integer', 'min:1', 'max:5'],
+            'comment'    => ['required', 'string', 'min:15', 'max:1000'],
+            'images'     => ['sometimes', 'array', 'max:'.$maxImages],
+            'images.*'   => ['file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:'.$maxImageKb, 'dimensions:max_width=6000,max_height=6000'],
         ]);
 
         /*
@@ -2204,69 +2228,66 @@ class ApisController extends Controller
          * browser autofill does not recognise it.
          */
         if ($this->trippedHoneypot($request)) {
-            return response()->json(['id' => null], 201);
-        }
-
-        // Attach the order this review is about, when there is one.
-        //
-        // Without this, a review left on the product page is unattested BY CONSTRUCTION: it never
-        // gets a commande_id, never gets verified, and so can never satisfy Review::scopeAttested.
-        // The stars would have stayed empty no matter how many customers wrote one — only reviews
-        // arriving through the tokenised email link could ever count. That is a silent dead end,
-        // and it is the whole reason on-site reviews were worthless to the rating.
-        //
-        // Matched on EMAIL, not user id, deliberately. `auth:sanctum` authenticates User (the
-        // `users` table) while `commandes.user_id` is a FK to `clients` — different tables, so
-        // comparing the two ids would quietly match the wrong person or nobody at all.
-        $commandeId = $this->deliveredOrderIdForProduct(
-            Auth::user()?->email,
-            (int) $validated['product_id']
-        );
-
-        $review = Review::create([
-            ...$this->reviewSignalColumns($request, (string) $validated['comment']),
-            'user_id'     => Auth::id(),
-            'product_id'  => $validated['product_id'],
-            'stars'       => $validated['stars'] ?? 5,
-            'comment'     => $validated['comment'],
-            'publier'     => ($validated['stars'] ?? 5) >= 4 ? 1 : 0,
-            // `verified` is left alone on purpose — it means "an admin confirmed this", and an
-            // automatic order match is not that. scopeAttested accepts either signal, so a
-            // commande_id is enough to make the review count toward the rating.
-            'commande_id' => $commandeId,
-        ]);
-
-        return response()->json($review, 201);
-    }
-
-    /**
-     * Id of a DELIVERED order placed by this email that actually contained this product, or null.
-     * Newest first, so a repeat buyer's review attaches to their most recent purchase.
-     */
-    private function deliveredOrderIdForProduct(?string $email, int $productId): ?int
-    {
-        $email = is_string($email) ? trim($email) : '';
-        if ($email === '') {
-            return null;
+            return response()->json([
+                'message' => 'Merci, votre avis est en cours de vérification.',
+                'id' => null,
+                'published' => false,
+            ], 201);
         }
 
         try {
-            return Commande::query()
-                ->whereIn('etat', \App\Services\PointsService::DELIVERED_STATUSES)
-                ->where(fn ($q) => $q->where('email', $email)->orWhere('livraison_email', $email))
-                ->whereHas('details', fn ($d) => $d->where('produit_id', $productId))
-                ->orderByDesc('id')
-                ->value('id');
-        } catch (\Throwable $e) {
-            // Never let attestation lookup break a customer's submission — an unattested review
-            // is still a review worth keeping.
-            Log::warning('Review attestation lookup failed', [
-                'product_id' => $productId,
-                'error'      => $e->getMessage(),
+            $result = $reviews->create($request->user(), (int) $validated['product_id'], [
+                ...$this->reviewSignalColumns($request, (string) $validated['comment']),
+                'stars' => (int) $validated['stars'],
+                'comment' => trim((string) $validated['comment']),
+                'publier' => (int) $validated['stars'] >= 4 ? 1 : 0,
+            ], function (Review $review) use ($request, $images): void {
+                $images->store($review, $request->file('images', []));
+            });
+        } catch (\DomainException $error) {
+            return match ($error->getMessage()) {
+                'PHONE_VERIFICATION_REQUIRED' => response()->json([
+                    'message' => 'Vérifiez votre numéro de téléphone avant de publier un avis.',
+                    'code' => 'phone_verification_required',
+                ], 403),
+                'ALREADY_REVIEWED' => response()->json([
+                    'message' => 'Vous avez déjà donné votre avis sur ce produit.',
+                    'code' => 'already_reviewed',
+                ], 409),
+                'MONTHLY_LIMIT_REACHED' => response()->json([
+                    'message' => 'Vous avez utilisé vos 3 avis du mois. Votre quota sera renouvelé le mois prochain.',
+                    'code' => 'monthly_limit_reached',
+                ], 429),
+                default => throw $error,
+            };
+        } catch (\Throwable $error) {
+            Log::error('Member review submission failed', [
+                'user_id' => $request->user()?->getKey(),
+                'product_id' => $validated['product_id'],
+                'error' => $error->getMessage(),
             ]);
 
-            return null;
+            return response()->json([
+                'message' => 'Votre avis n’a pas pu être enregistré. Vérifiez vos photos puis réessayez.',
+            ], 422);
         }
+
+        /** @var Review $review */
+        $review = $result['review']->load('images');
+        $verifiedPurchase = ! empty($review->commande_id);
+        $reward = $verifiedPurchase
+            ? (int) config('reviews.points.verified_purchase_award', 50)
+            : (int) config('reviews.points.award', 10);
+
+        return response()->json([
+            'message' => 'Merci ! Votre avis est enregistré et sera vérifié rapidement.',
+            'id' => $review->id,
+            'published' => (int) $review->publier === 1,
+            'verified_purchase' => $verifiedPurchase,
+            'reward_points' => $reward,
+            'remaining_this_month' => $result['access']['remaining_this_month'],
+            'review' => $review,
+        ], 201);
     }
 
     public function seoPage(string $name)

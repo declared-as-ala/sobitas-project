@@ -249,9 +249,17 @@ export interface Review {
    * page can label a thread without one request per review. Absent (not 0) when the backend has
    * not been migrated yet — treat undefined as "unknown", never as "none".
    */
-  replies_count?: number;
-  created_at?: string;
-}
+    replies_count?: number;
+    images?: ReviewImage[];
+    created_at?: string;
+  }
+
+  export interface ReviewImage {
+    id: number;
+    path: string;
+    width?: number;
+    height?: number;
+  }
 
 /** One message in the thread under a review. Carries no rating and never touches aggregateRating. */
 export interface ReviewReply {
@@ -289,8 +297,9 @@ export interface MemberProfile {
   reviews: Array<{
     id: number;
     stars: number;
-    comment: string;
-    verified: boolean;
+      comment: string;
+      verified: boolean;
+      images?: ReviewImage[];
     created_at?: string;
     product: { id: number; slug: string; designation: string; cover?: string | null } | null;
   }>;
@@ -303,8 +312,38 @@ export interface CustomerReview {
   comment: string;
   verified_purchase: boolean;
   status: 'published' | 'pending';
+  points_awarded?: boolean;
+  reward_points?: number;
+  images?: ReviewImage[];
   created_at?: string;
   product: { id: number; slug: string; designation: string; cover?: string | null } | null;
+}
+
+export interface ReviewAccess {
+  phone_verified: boolean;
+  monthly_limit: number;
+  used_this_month: number;
+  remaining_this_month: number;
+  already_reviewed: boolean;
+  verified_purchase: boolean;
+  reward_points: number;
+  can_review: boolean;
+  resets_at: string;
+}
+
+export interface ReviewDashboard {
+  reviews: CustomerReview[];
+  access: ReviewAccess;
+}
+
+export interface ReviewSubmitResult {
+  message: string;
+  id: number;
+  published: boolean;
+  verified_purchase: boolean;
+  reward_points: number;
+  remaining_this_month: number;
+  review: Review;
 }
 
 // Slide types removed. This interface described columns (`titre`/`image`/`lien`) that never

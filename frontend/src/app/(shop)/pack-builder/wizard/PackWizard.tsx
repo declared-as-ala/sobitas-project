@@ -216,7 +216,7 @@ export function PackWizard(props: PackWizardProps) {
                                 setSearchQuery('');
                               }}
                               className={`inline-flex min-h-[46px] snap-start items-center gap-2 rounded-xl border py-1 pl-1 pr-3 text-xs font-semibold transition-[border-color,background-color,color,box-shadow,transform] active:scale-[0.98] sm:text-sm ${
-                                active ? 'border-brand bg-brand text-on-brand shadow-[0_5px_16px_rgba(221,58,0,0.18)]' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand/60 [@media(hover:hover)]:hover:text-brand'
+                                active ? 'border-brand bg-brand text-on-brand shadow-card' : 'border-hairline bg-elevated text-ink-2 [@media(hover:hover)]:hover:border-brand/60 [@media(hover:hover)]:hover:text-brand'
                               }`}
                             >
                               {art && (

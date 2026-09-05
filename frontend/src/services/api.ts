@@ -34,6 +34,9 @@ import type {
   ReviewReply,
   MemberProfile,
   CustomerReview,
+  ReviewAccess,
+  ReviewDashboard,
+  ReviewSubmitResult,
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
@@ -1786,9 +1789,14 @@ export const getClientOrders = async (): Promise<Order[]> => {
   return normalizeClientOrdersPayload(response.data);
 };
 
+export const getMyReviewDashboard = async (): Promise<ReviewDashboard> => {
+  const response = await api.get<ReviewDashboard>('/my-reviews');
+  return response.data;
+};
+
 export const getMyReviews = async (): Promise<CustomerReview[]> => {
-  const response = await api.get<{ reviews?: CustomerReview[] }>('/my-reviews');
-  return Array.isArray(response.data?.reviews) ? response.data.reviews : [];
+  const dashboard = await getMyReviewDashboard();
+  return Array.isArray(dashboard.reviews) ? dashboard.reviews : [];
 };
 
 export const getOrderDetail = async (id: number): Promise<{
@@ -1812,14 +1820,29 @@ export const getOrderDetail = async (id: number): Promise<{
  * Neither is a verdict on its own. A script can send a plausible `compose_ms`; almost none are
  * written to send one at all, and the server treats a missing value as its own (mild) signal.
  */
+export const getReviewAccess = async (productId?: number): Promise<ReviewAccess> => {
+  const response = await api.get<ReviewAccess>('/review-access', {
+    params: productId ? { product_id: productId } : undefined,
+  });
+  return response.data;
+};
+
 export const addReview = async (data: {
   product_id: number;
   stars: number;
-  comment?: string;
+  comment: string;
   compose_ms?: number;
   hp_field?: string;
-}): Promise<Review> => {
-  const response = await api.post<Review>('/add_review', data);
+  images?: File[];
+}): Promise<ReviewSubmitResult> => {
+  const body = new FormData();
+  body.append('product_id', String(data.product_id));
+  body.append('stars', String(data.stars));
+  body.append('comment', data.comment);
+  body.append('compose_ms', String(data.compose_ms ?? 0));
+  body.append('hp_field', data.hp_field ?? '');
+  data.images?.forEach((file) => body.append('images[]', file));
+  const response = await api.post<ReviewSubmitResult>('/add_review', body);
   return response.data;
 };
 

@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Reconnect reviews and delivered purchases after an account proves its email address.
+ * Reconnect reviews and delivered purchases after an account proves a contact channel.
  *
  * Email verification proves ownership of an address, not a purchase. A review receives purchase
  * evidence only when a delivered order owned by that verified address contains the reviewed
@@ -23,14 +23,11 @@ class VerifiedCustomerReviewService
     /** @return array{orders:int,reviews:int,verified_reviews:int} */
     public function reconcile(User $user): array
     {
-        if (! $user->hasVerifiedEmail()) {
+        if (! $user->hasVerifiedContact()) {
             return ['orders' => 0, 'reviews' => 0, 'verified_reviews' => 0];
         }
 
-        $email = strtolower(trim((string) $user->email));
-        if ($email === '') {
-            return ['orders' => 0, 'reviews' => 0, 'verified_reviews' => 0];
-        }
+        $email = $user->hasVerifiedEmail() ? strtolower(trim((string) $user->email)) : '';
 
         $orders = Commande::query()
             ->visibleToStorefrontUser($user)
@@ -113,7 +110,7 @@ class VerifiedCustomerReviewService
         return Review::query()->where(function ($query) use ($user, $email, $orderIds): void {
             $query->where('user_id', $user->getKey());
 
-            if (Schema::hasColumn('reviews', 'author_email')) {
+            if ($email !== '' && Schema::hasColumn('reviews', 'author_email')) {
                 $query->orWhere(function ($guest) use ($email): void {
                     $guest->whereNull('user_id')->whereRaw('LOWER(TRIM(author_email)) = ?', [$email]);
                 });

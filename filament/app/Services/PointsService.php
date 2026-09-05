@@ -246,9 +246,9 @@ class PointsService
      * The dedupe is on the LEDGER, not on `reviews.points_awarded`. The flag is a cache for
      * humans reading the table; the ledger is the money, and money is what must not double.
      */
-    public function awardForReview(User $user, int $reviewId, ?string $productLabel = null): bool
+    public function awardForReview(User $user, int $reviewId, ?string $productLabel = null, ?int $award = null): bool
     {
-        $points = (int) config('reviews.points.award', 0);
+        $points = $award ?? (int) config('reviews.points.award', 0);
         if ($points <= 0 || $reviewId <= 0) {
             return false;
         }

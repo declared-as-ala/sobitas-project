@@ -61,6 +61,11 @@ class Review extends Model
         return $this->hasMany(ReviewReply::class, 'review_id')->oldest();
     }
 
+    public function images(): HasMany
+    {
+        return $this->hasMany(ReviewImage::class)->orderBy('position');
+    }
+
     /**
      * The name to print above the review.
      *

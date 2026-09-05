@@ -15,6 +15,7 @@ import { buildProductUrl, buildProductUrlPath } from '@/util/productUrl';
 import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
+import { ReviewComposer } from '@/app/components/reviews/ReviewComposer';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
 import { ProductGallery } from '@/app/components/product/ProductGallery';
 import { ProductLabelGrid } from '@/app/components/product/ProductLabelGrid';
@@ -96,24 +97,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const [reviewStars, setReviewStars] = useState(0);
   const [reviewComment, setReviewComment] = useState('');
-  /** Display name for a review written without an account. Unused when signed in. */
   const [guestReviewName, setGuestReviewName] = useState('');
-  /*
-    ── ANTI-ABUSE, BECAUSE A REVIEW IS NOW WORTH MONEY ────────────────────────────────────────
-    A published review credits 50 loyalty points, redeemable at 20 to the dinar. That turns review
-    spam from a nuisance into a way to mint currency, so the submission carries two pieces of
-    evidence that it came from a person:
-
-      reviewHoneypot   a field no human can see. A script that fills every input it finds fills
-                       this one; the server then accepts the submission, stores nothing, and
-                       returns the ordinary success message — telling a bot it was caught tells
-                       whoever wrote it which field to skip.
-      reviewOpenedAt   when the form was opened. `Date.now()` at submit minus this is how long
-                       composing took, which the server scales against the text length. Three
-                       sentences in 900ms were not typed.
-
-    Neither decides anything alone — see ReviewAuthenticity for how they are weighed.
-  */
   const [reviewHoneypot, setReviewHoneypot] = useState('');
   const reviewOpenedAt = useRef<number | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
@@ -2441,6 +2425,21 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           {review.comment && (
                             <p className="mt-2 text-sm leading-relaxed text-ink-2">{review.comment}</p>
                           )}
+                          {review.images && review.images.length > 0 && (
+                            <ul className="mt-3 grid max-w-lg grid-cols-3 gap-2">
+                              {review.images.map((photo, index) => (
+                                <li key={photo.id} className="relative aspect-square overflow-hidden rounded-xl border border-hairline bg-sunken">
+                                  <Image
+                                    src={getStorageUrl(photo.path)}
+                                    alt={`Photo client ${index + 1}`}
+                                    fill
+                                    sizes="(max-width: 640px) 28vw, 160px"
+                                    className="object-cover"
+                                  />
+                                </li>
+                              ))}
+                            </ul>
+                          )}
 
                           {/*
                             The conversation. Collapsed to a single 44px row unless there is
@@ -2528,6 +2527,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   dark:border-red-900/50` quartet. The brand edge survives as a single
                   `border-brand` — it marks the one part of this section the reader can act on. */}
               {showReviewForm && (
+                <ReviewComposer
+                  productId={product.id}
+                  productName={product.designation_fr}
+                  onClose={() => setShowReviewForm(false)}
+                  onSubmitted={() => {
+                    setTimeout(async () => {
+                      try {
+                        const updated = await getProductDetails(productSlug || product.slug || String(product.id), true);
+                        setProduct(updated);
+                        setReviews(updated.reviews || []);
+                      } catch {
+                        router.refresh();
+                      }
+                    }, 600);
+                  }}
+                />
+              )}
+              {false && (
                 <div className="relative min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
                   <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
 

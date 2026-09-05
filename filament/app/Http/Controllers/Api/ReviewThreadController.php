@@ -7,6 +7,7 @@ use App\Models\Review;
 use App\Models\ReviewReply;
 use App\Models\User;
 use App\Services\VerifiedCustomerReviewService;
+use App\Services\ReviewSubmissionService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -41,18 +42,18 @@ class ReviewThreadController extends Controller
     use \App\Http\Controllers\Api\Concerns\CapturesReviewSignals;
 
     /** All reviews belonging to the signed-in customer, including moderation-pending reviews. */
-    public function mine(Request $request, VerifiedCustomerReviewService $claimService): JsonResponse
+    public function mine(
+        Request $request,
+        VerifiedCustomerReviewService $claimService,
+        ReviewSubmissionService $submissionService
+    ): JsonResponse
     {
         /** @var User $user */
         $user = $request->user();
-        if (! $user->hasVerifiedEmail()) {
-            return response()->json(['message' => 'Vérifiez votre adresse email pour retrouver vos avis.'], 403);
-        }
-
         $claimService->reconcile($user);
 
         $optional = array_values(array_filter(
-            ['stars', 'note', 'verified', 'commande_id', 'publier'],
+            ['stars', 'note', 'verified', 'commande_id', 'publier', 'points_awarded'],
             fn (string $column) => Schema::hasColumn('reviews', $column)
         ));
         $columns = array_merge(['id', 'user_id', 'product_id', 'comment', 'created_at'], $optional);
@@ -60,6 +61,7 @@ class ReviewThreadController extends Controller
         $reviews = Review::query()
             ->where('user_id', $user->getKey())
             ->with('product:id,slug,designation_fr,cover')
+            ->when(Schema::hasTable('review_images'), fn ($query) => $query->with('images:id,review_id,path,width,height,position'))
             ->latest()
             ->get($columns);
 
@@ -70,6 +72,18 @@ class ReviewThreadController extends Controller
                 'comment' => (string) $review->comment,
                 'verified_purchase' => $this->isAttested($review),
                 'status' => (int) ($review->publier ?? 0) === 1 ? 'published' : 'pending',
+                'points_awarded' => (bool) ($review->points_awarded ?? false),
+                'reward_points' => $this->isAttested($review)
+                    ? (int) config('reviews.points.verified_purchase_award', 50)
+                    : (int) config('reviews.points.award', 10),
+                'images' => $review->relationLoaded('images')
+                    ? $review->images->map(fn ($image) => [
+                        'id' => (int) $image->id,
+                        'path' => $image->path,
+                        'width' => (int) $image->width,
+                        'height' => (int) $image->height,
+                    ])->values()
+                    : [],
                 'created_at' => optional($review->created_at)->toIso8601String(),
                 'product' => $review->product ? [
                     'id' => (int) $review->product->id,
@@ -78,6 +92,7 @@ class ReviewThreadController extends Controller
                     'cover' => $review->product->cover,
                 ] : null,
             ])->values(),
+            'access' => $submissionService->access($user),
         ]);
     }
     /** Guest names are printed on a public page; this is a display name, not an identity. */
@@ -302,6 +317,7 @@ class ReviewThreadController extends Controller
             ->where('user_id', $id)
             ->where('publier', 1)
             ->with('product:id,slug,designation_fr,cover')
+            ->when(Schema::hasTable('review_images'), fn ($query) => $query->with('images:id,review_id,path,width,height,position'))
             ->latest()
             ->limit(50)
             ->get($columns);
@@ -326,6 +342,14 @@ class ReviewThreadController extends Controller
                 'stars'      => $this->starsOf($r),
                 'comment'    => (string) $r->comment,
                 'verified'   => $this->isAttested($r),
+                'images'     => $r->relationLoaded('images')
+                    ? $r->images->map(fn ($image) => [
+                        'id' => (int) $image->id,
+                        'path' => $image->path,
+                        'width' => (int) $image->width,
+                        'height' => (int) $image->height,
+                    ])->values()
+                    : [],
                 'created_at' => optional($r->created_at)->toIso8601String(),
                 'product'    => $r->product ? [
                     'id'          => (int) $r->product->id,

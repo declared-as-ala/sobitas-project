@@ -241,17 +241,28 @@ class Commande extends Model
     /**
      * Orders visible to an authenticated storefront account.
      *
-     * Exact email matching restores guest/legacy purchases made with the account's verified login
-     * address while keeping unrelated numeric Client/User ids from leaking another customer's order.
+     * Verified email or phone matching restores guest/legacy purchases while keeping unrelated
+     * numeric Client/User ids from leaking another customer's order.
      */
     public function scopeVisibleToStorefrontUser(Builder $query, User $user): Builder
     {
-        $email = strtolower(trim((string) $user->email));
+        $email = $user->hasVerifiedEmail() ? strtolower(trim((string) $user->email)) : '';
+        $digits = preg_replace('/\D+/', '', (string) $user->phone) ?? '';
+        if (str_starts_with($digits, '216') && strlen($digits) === 11) {
+            $digits = substr($digits, 3);
+        }
+        $phones = $user->phone_verified_at !== null && strlen($digits) === 8
+            ? [$digits, '216'.$digits]
+            : [];
         $mappedClientId = \Illuminate\Support\Facades\Schema::hasColumn('clients', 'user_id')
             ? Client::query()->where('user_id', $user->getKey())->value('id')
             : null;
 
-        return $query->where(function (Builder $orders) use ($user, $email, $mappedClientId): void {
+        if (! $mappedClientId && $email === '' && $phones === []) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        return $query->where(function (Builder $orders) use ($user, $email, $phones, $mappedClientId): void {
             // `commandes.user_id` historically stored a Client id. It is safe as an account
             // identity only when the same order is linked to the Client explicitly mapped to
             // this User; otherwise equal integers from different tables could leak an order.
@@ -264,6 +275,12 @@ class Commande extends Model
                 $method = $mappedClientId ? 'orWhereRaw' : 'whereRaw';
                 $orders->{$method}('LOWER(TRIM(email)) = ?', [$email])
                     ->orWhereRaw('LOWER(TRIM(livraison_email)) = ?', [$email]);
+            }
+            if ($phones !== []) {
+                $normalise = static fn (string $column): string =>
+                    "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE({$column}, ''), ' ', ''), '+', ''), '-', ''), '(', ''), ')', ''), '.', '')";
+                $orders->orWhereIn(\Illuminate\Support\Facades\DB::raw($normalise('phone')), $phones)
+                    ->orWhereIn(\Illuminate\Support\Facades\DB::raw($normalise('livraison_phone')), $phones);
             }
         });
     }

@@ -12,10 +12,22 @@ use App\Services\Seo\SeoNotifier;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class ReviewObserver
 {
+    public function deleted(Review $review): void
+    {
+        if (! Schema::hasTable('review_images')) {
+            return;
+        }
+
+        $paths = $review->images()->pluck('path')->filter()->all();
+        Storage::disk('public')->delete($paths);
+        $review->images()->delete();
+    }
+
     /**
      * On a new avis: (1) notify the panel of the new review, then (2) run AI
      * moderation AFTER the HTTP response so the customer's submission is never
@@ -88,11 +100,15 @@ class ReviewObserver
             }
 
             $user = User::find($userId);
-            if (! $user) {
+            if (! $user || $user->phone_verified_at === null) {
                 return;
             }
 
-            if ((int) config('reviews.points.award', 0) <= 0) {
+            $verifiedPurchase = (int) ($review->verified ?? 0) === 1 || ! empty($review->commande_id);
+            $award = $verifiedPurchase
+                ? (int) config('reviews.points.verified_purchase_award', 50)
+                : (int) config('reviews.points.award', 10);
+            if ($award <= 0) {
                 return;
             }
 
@@ -108,7 +124,8 @@ class ReviewObserver
             $awarded = app(PointsService::class)->awardForReview(
                 $user,
                 (int) $review->id,
-                optional($review->product)->designation_fr
+                optional($review->product)->designation_fr,
+                $award
             );
 
             if ($awarded && Schema::hasColumn('reviews', 'points_awarded')) {

@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Schema;
  * because a furious genuine review must be published.
  *
  * This class asks the question that only matters once reviews are PAID FOR: was this written by a
- * person who bought the product, or generated? A review can be perfectly publishable prose and
+ * person, or generated? A review can be perfectly publishable prose and
  * still be farmed, and the moderator has no reason to care about the difference. This one does,
  * because at 20 points to the dinar a fake review that clears both filters is minted money.
  *
@@ -38,8 +38,8 @@ use Illuminate\Support\Facades\Schema;
  *   MISMATCH       Five stars on text the classifier read as negative. Nobody types "ça m'a rendu
  *                  malade" and picks five stars — a generator that fills a rating separately from
  *                  a body does.
- *   NO PURCHASE    No delivered order behind it. Not proof of anything on its own, and NOT a
- *                  reason to hide the review — but an absolute bar on paying for it.
+ *   NO PURCHASE    No delivered order behind it. It receives the smaller member reward rather
+ *                  than the verified-purchase reward; it is never a reason to hide the review.
  *
  * ── WHAT A LOW SCORE DOES, AND WHAT IT MUST NEVER DO ────────────────────────────────────────
  * It withholds POINTS and, below the floor, holds the review for a human. It never silently
@@ -237,9 +237,8 @@ class ReviewAuthenticity
         }
 
         // ── 7. PURCHASE ─────────────────────────────────────────────────────────────────────
-        // Deliberately the LAST thing considered and deliberately not a large deduction: a guest
-        // review with no order behind it is perfectly legitimate and must stay readable. It is the
-        // `may_earn_points` gate below that treats it as absolute.
+        // Deliberately the LAST thing considered and deliberately not a large deduction: a review
+        // without an order is legitimate and may earn the smaller phone-verified member reward.
         $attested = (int) ($review->verified ?? 0) === 1 || ($review->commande_id ?? null) !== null;
         if (! $attested) {
             $signals[] = 'no_purchase';
@@ -251,14 +250,12 @@ class ReviewAuthenticity
 
         /*
          * ── THE PAYMENT GATE ────────────────────────────────────────────────────────────────
-         * BOTH conditions, and neither is negotiable.
-         *
-         * `attested` alone would pay for a one-word review from a real buyer farming their own
-         * order history. A high score alone would pay a stranger who wrote something plausible.
-         * Together they mean: somebody who bought this product, received it, and wrote something a
-         * human would recognise as written.
+         * The behavioural verdict decides whether the text is rewardable. Identity is checked by
+         * ReviewObserver (phone verified), while purchase evidence only selects the 10 or 50 point
+         * tier. Keeping those decisions separate prevents an email-only or guest review from being
+         * paid while still allowing a genuine phone-verified member review to earn 10 points.
          */
-        $mayEarn = $attested && $verdict === 'human';
+        $mayEarn = $verdict === 'human';
 
         return [
             'score'           => $score,

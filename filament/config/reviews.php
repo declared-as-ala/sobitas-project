@@ -110,13 +110,23 @@ return [
     | See ReviewAuthenticity for why either alone is a way to get paid for nothing.
     */
     'points' => [
-        'award' => (int) env('REVIEW_POINTS_AWARD', 50),
+        // A useful review from a phone-verified member.
+        'award' => (int) env('REVIEW_POINTS_AWARD', 10),
+
+        // A useful review linked to a delivered purchase.
+        'verified_purchase_award' => (int) env('REVIEW_VERIFIED_PURCHASE_POINTS_AWARD', 50),
 
         // Below this many characters a review is not paid for. Not a quality bar —
         // "Bon produit" is a fine review — but a rating with three characters
         // attached tells the next customer nothing, and paying for it is paying
         // for noise. ReviewAuthenticity applies the same number as a signal.
         'min_length' => (int) env('REVIEW_POINTS_MIN_LENGTH', 15),
+    ],
+
+    'member' => [
+        'max_per_month' => (int) env('REVIEW_MEMBER_MAX_PER_MONTH', 3),
+        'max_images' => (int) env('REVIEW_MAX_IMAGES', 3),
+        'max_image_mb' => (int) env('REVIEW_MAX_IMAGE_MB', 5),
     ],
 
     /*

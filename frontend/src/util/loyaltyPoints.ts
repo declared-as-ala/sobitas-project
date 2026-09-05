@@ -64,7 +64,8 @@ export const CASHBACK_PERCENT = Math.round((EARN_RATE / REDEEM_POINTS_PER_DT) * 
  * on a product you actually bought and received, and only when the authenticity check reads it as
  * human-written. See ReviewAuthenticity — both gates, or nothing.
  */
-export const REVIEW_POINTS_AWARD = 50;
+export const REVIEW_POINTS_AWARD = 10;
+export const VERIFIED_PURCHASE_REVIEW_POINTS_AWARD = 50;
 
 /**
  * Points earned on a goods amount in DT.

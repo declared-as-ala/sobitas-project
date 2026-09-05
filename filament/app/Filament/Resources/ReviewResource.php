@@ -46,12 +46,19 @@ class ReviewResource extends Resource
             ->modifyQueryUsing(fn (Builder $query) => $query->with([
                 'product:id,designation_fr',
                 'user:id,name',
+                'images:id,review_id,path,position',
             ]))
             ->columns([
                 Tables\Columns\TextColumn::make('product.designation_fr')->label('Produit')->limit(30)->searchable(),
                 Tables\Columns\TextColumn::make('user.name')->label('Utilisateur')->searchable(),
                 Tables\Columns\TextColumn::make('stars')->label('Note')->sortable(),
                 Tables\Columns\TextColumn::make('comment')->label('Commentaire')->limit(40),
+                Tables\Columns\ImageColumn::make('images.path')
+                    ->label('Photos')
+                    ->disk('public')
+                    ->stacked()
+                    ->circular()
+                    ->limit(3),
                 Tables\Columns\IconColumn::make('publier')->label('Publié')->boolean(),
                 /*
                  * ── THE AUTHENTICITY COLUMN IS THE POINT OF THIS TABLE NOW ──────────────────
@@ -116,7 +123,7 @@ class ReviewResource extends Resource
                     ->visible(fn (Review $record) => (int) $record->publier !== 1)
                     ->requiresConfirmation()
                     ->modalHeading('Publier cet avis')
-                    ->modalDescription('L’avis deviendra visible sur la fiche produit. Si l’achat est attesté et que le contrôle d’authenticité est favorable, les points de fidélité seront crédités à son auteur.')
+                    ->modalDescription('L’avis deviendra visible sur la fiche produit. Après le contrôle d’authenticité, 10 points seront crédités, ou 50 points si l’achat est attesté.')
                     ->action(fn (Review $record) => $record->update(['publier' => 1])),
 
                 Actions\Action::make('masquer')

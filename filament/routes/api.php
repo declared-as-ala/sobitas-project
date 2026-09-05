@@ -192,9 +192,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/points/history', [PointsController::class, 'history']);
     Route::get('/client_commandes', [ClientController::class, 'client_commandes']);
     Route::get('/my-reviews', [ReviewThreadController::class, 'mine']);
+    Route::get('/review-access', [ApisController::class, 'reviewAccess'])->middleware('throttle:30,1');
     Route::post('/update_profile', [ClientController::class, 'update_profile']);
     Route::post('/detail_commande/{id}', [ClientController::class, 'detail_commande'])->whereNumber('id');
-    Route::post('/add_review', [ApisController::class, 'add_review']);
+    Route::post('/add_review', [ApisController::class, 'add_review'])->middleware('throttle:6,1');
 });
 
 // ── Tokenized "verified purchase" review flow (PUBLIC — no login) ──────────────

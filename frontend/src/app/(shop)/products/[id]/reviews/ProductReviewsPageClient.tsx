@@ -2,6 +2,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -15,10 +16,11 @@ import {
   Loader2,
 } from 'lucide-react';
 import type { Product, Review } from '@/types';
-import { addReview } from '@/services/api';
+import { addReview, getStorageUrl } from '@/services/api';
 import { useAuth } from '@/contexts/AuthContext';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { notify as toast } from '@/lib/notify';
+import { ReviewComposer } from '@/app/components/reviews/ReviewComposer';
 
 
 interface ProductReviewsPageClientProps {
@@ -86,6 +88,7 @@ function ReviewCard({
               )}
             </>
           )}
+          {review.images && review.images.length > 0 && <ul className="mt-3 grid max-w-md grid-cols-3 gap-2">{review.images.map((photo, index) => <li key={photo.id} className="relative aspect-square overflow-hidden rounded-xl border border-hairline bg-sunken"><Image src={getStorageUrl(photo.path)} alt={`Photo client ${index + 1}`} fill sizes="140px" className="object-cover" /></li>)}</ul>}
           <p className="text-caption sm:text-xs leading-relaxed text-gray-500 dark:text-gray-400 mt-2 sm:mt-3">Avis à titre informatif, non médical.</p>
         </div>
       </div>
@@ -270,7 +273,7 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
                 })}
               </div>
 
-              {isAuthenticated && (
+              {(
                 <Button
                   onClick={() => setShowReviewForm(!showReviewForm)}
                   className="mt-6 w-full bg-red-600 hover:bg-red-700 text-white font-display uppercase tracking-wide font-semibold"
@@ -282,7 +285,19 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
             </div>
 
             {/* Write review form - appears directly after the button */}
-            {showReviewForm && isAuthenticated && (
+            {showReviewForm && (
+              <ReviewComposer
+                productId={product.id}
+                productName={product.designation_fr}
+                onClose={() => setShowReviewForm(false)}
+                onSubmitted={async () => {
+                  const { getProductDetails } = await import('@/services/api');
+                  const updated = await getProductDetails(product.slug, true);
+                  setReviews(updated.reviews || []);
+                }}
+              />
+            )}
+            {false && (
               <div className="p-4 sm:p-5 lg:p-6 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 min-w-0">
                 <h3 className="font-bold text-sm sm:text-base lg:text-lg text-gray-900 dark:text-white mb-2 sm:mb-3">Votre avis</h3>
                 <div className="space-y-2 sm:space-y-3">

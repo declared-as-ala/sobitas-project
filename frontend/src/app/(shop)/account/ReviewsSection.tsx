@@ -3,12 +3,12 @@
 import Image from 'next/image';
 import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Clock3, MessageSquare, RefreshCw } from 'lucide-react';
+import { BadgeCheck, Clock3, Coins, MessageSquare, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { StarRating } from '@/app/components/product/StarRating';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
-import { getMyReviews, getStorageUrl } from '@/services/api';
-import type { CustomerReview } from '@/types';
+import { getMyReviewDashboard, getStorageUrl } from '@/services/api';
+import type { CustomerReview, ReviewAccess } from '@/types';
 
 function formatDate(value?: string): string {
   if (!value) return '';
@@ -21,6 +21,7 @@ function formatDate(value?: string): string {
 
 export function ReviewsSection() {
   const [reviews, setReviews] = useState<CustomerReview[]>([]);
+  const [access, setAccess] = useState<ReviewAccess | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -28,12 +29,11 @@ export function ReviewsSection() {
     setLoading(true);
     setError(null);
     try {
-      setReviews(await getMyReviews());
-    } catch (requestError) {
-      const status = (requestError as { response?: { status?: number } })?.response?.status;
-      setError(status === 403
-        ? 'Vérifiez votre adresse email pour retrouver vos avis.'
-        : 'Impossible de charger vos avis pour le moment.');
+      const dashboard = await getMyReviewDashboard();
+      setReviews(Array.isArray(dashboard.reviews) ? dashboard.reviews : []);
+      setAccess(dashboard.access);
+    } catch {
+      setError('Impossible de charger vos avis pour le moment.');
     } finally {
       setLoading(false);
     }
@@ -68,6 +68,17 @@ export function ReviewsSection() {
     );
   }
 
+  if (!access?.phone_verified) {
+    return (
+      <div className="rounded-xl border border-hairline bg-elevated px-4 py-10 text-center shadow-sm">
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-brand/10 text-brand"><ShieldAlert className="h-6 w-6" /></span>
+        <h2 className="mt-4 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Avis réservés aux membres vérifiés</h2>
+        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">Vérifiez votre téléphone pour publier jusqu’à 3 avis par mois et recevoir des points.</p>
+        <Link href="/verify-phone" className="mx-auto mt-4 flex min-h-11 max-w-xs items-center justify-center rounded-xl bg-brand px-4 text-sm font-bold text-on-brand">Vérifier mon téléphone</Link>
+      </div>
+    );
+  }
+
   if (reviews.length === 0) {
     return (
       <div className="rounded-xl border border-hairline bg-elevated px-4 py-12 text-center shadow-sm">
@@ -76,7 +87,7 @@ export function ReviewsSection() {
         </span>
         <h2 className="mt-4 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Aucun avis</h2>
         <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">
-          Après avoir reçu une commande, vous pourrez partager votre expérience depuis la fiche du produit.
+          Ouvrez la fiche d’un produit pour partager votre expérience. Un achat livré rapporte 50 points, un autre avis 10 points.
         </p>
       </div>
     );
@@ -87,11 +98,8 @@ export function ReviewsSection() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-hairline bg-elevated px-4 py-3 shadow-sm">
-        <p className="text-sm font-semibold text-ink-1">{reviews.length} avis</p>
-        <p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ok">
-          <BadgeCheck className="h-4 w-4" aria-hidden="true" />
-          {verifiedCount} {verifiedCount === 1 ? 'achat vérifié' : 'achats vérifiés'}
-        </p>
+        <div><p className="text-sm font-semibold text-ink-1">{reviews.length} avis</p><p className="mt-0.5 text-xs text-ink-3">{access.remaining_this_month} publication{access.remaining_this_month !== 1 ? 's' : ''} restante{access.remaining_this_month !== 1 ? 's' : ''} ce mois</p></div>
+        <div className="flex flex-wrap items-center gap-2"><p className="inline-flex items-center gap-1.5 text-xs font-semibold text-ok"><BadgeCheck className="h-4 w-4" aria-hidden="true" />{verifiedCount} {verifiedCount === 1 ? 'achat vérifié' : 'achats vérifiés'}</p><span className="rounded-full border border-hairline bg-sunken px-2.5 py-1 text-xs font-semibold text-ink-2">{access.used_this_month}/{access.monthly_limit} ce mois</span></div>
       </div>
 
       <ul className="space-y-3">
@@ -143,7 +151,11 @@ export function ReviewsSection() {
             {review.comment && (
               <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-ink-2">{review.comment}</p>
             )}
-            <p className="mt-2 text-xs tabular-nums text-ink-3">{formatDate(review.created_at)}</p>
+            {review.images && review.images.length > 0 && <ul className="mt-3 grid max-w-md grid-cols-3 gap-2">{review.images.map((photo, index) => <li key={photo.id} className="relative aspect-square overflow-hidden rounded-xl border border-hairline bg-sunken"><Image src={getStorageUrl(photo.path)} alt={`Votre photo ${index + 1}`} fill sizes="140px" className="object-cover" /></li>)}</ul>}
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
+              <p className="text-xs tabular-nums text-ink-3">{formatDate(review.created_at)}</p>
+              <p className={`inline-flex items-center gap-1 text-xs font-semibold ${review.points_awarded ? 'text-ok' : 'text-ink-3'}`}><Coins className="h-3.5 w-3.5" />{review.points_awarded ? `+${review.reward_points ?? (review.verified_purchase ? 50 : 10)} points crédités` : `${review.reward_points ?? (review.verified_purchase ? 50 : 10)} points après validation`}</p>
+            </div>
           </li>
         ))}
       </ul>
