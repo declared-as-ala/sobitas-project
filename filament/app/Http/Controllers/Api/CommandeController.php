@@ -299,7 +299,7 @@ class CommandeController extends Controller
                 }
                 if (! $authUser->hasVerifiedContact()) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                        response()->json(['message' => 'Vérifiez votre email avant d’utiliser vos points.'], 422)
+                        response()->json(['message' => 'Vérifiez votre compte par téléphone ou par email avant d’utiliser vos points.'], 422)
                     );
                 }
 

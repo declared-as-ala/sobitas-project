@@ -21,18 +21,17 @@
  *
  *     netPaid = commande.prix_ttc - commande.frais_livraison
  *
- * and `prix_ttc` is set to `all_price_ht - totalDiscountHt + frais_livraison`. So the base is
- * **the goods total after every discount, with delivery excluded** — not the list price, and not
- * the amount handed to the driver.
+ * The backend restores the value of redeemed loyalty points before calculating the award. The
+ * base is therefore **the goods total after commercial discounts, but before loyalty points are
+ * spent, with delivery excluded** — never the reduced amount handed to the driver.
  *
  * Two consequences the UI has to respect and does:
  *
  *   1. Delivery never earns. Quoting points on a cart total that still contains the 8 DT delivery
  *      fee over-promises on every order under the free-shipping threshold.
- *   2. A coupon, a pack discount or points spent all REDUCE the points earned. So a figure quoted
- *      on a product page is exact only for a full-price order, which is why `pointsForProduct` is
- *      labelled "Gagnez" (a rate) and the cart figure — computed on the real post-discount
- *      subtotal — is the one that gets to be precise.
+ *   2. A coupon or pack discount reduces the points earned; redeeming old points does not. So a
+ *      figure quoted on a product page is exact only for a full-price order, while checkout uses
+ *      the real post-commercial-discount, pre-loyalty subtotal.
  *
  * ── AND THEY ARE CREDITED ON DELIVERY ───────────────────────────────────────────────────────
  * Not at checkout. `CommandeController` says why, and it is the right call for a cash-on-delivery
@@ -40,7 +39,7 @@
  * Every string in the UI that mentions earning therefore says "à la livraison". Do not shorten it.
  */
 
-/** Points credited per dinar of goods (delivery excluded, after discounts). */
+/** Points credited per dinar of goods (delivery excluded, before loyalty redemption). */
 export const EARN_RATE = 1;
 
 /** Points required for 1 DT of discount. */

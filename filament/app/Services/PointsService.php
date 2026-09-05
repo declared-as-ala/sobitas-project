@@ -13,7 +13,8 @@ use Illuminate\Support\Str;
 /**
  * Single source of truth for the loyalty points economy.
  *
- *   EARN_RATE            = 1  point earned per 1 DT of net-paid HT (floored).
+ *   EARN_RATE            = 1  point earned per 1 DT of product spend before
+ *                          loyalty redemption (floored; shipping excluded).
  *   REDEEM_POINTS_PER_DT = 20 points == 1 DT of discount.
  *   MAX_REDEEM_FRACTION  = 0.5 — points cover at most 50% of the
  *                          post-coupon, post-pack HT subtotal.
@@ -68,6 +69,23 @@ class PointsService
         }
 
         return (int) floor($netPaidHt * self::EARN_RATE);
+    }
+
+    /**
+     * Product spend eligible for new points.
+     *
+     * Redeemed points are a payment instrument, not a commercial discount: a
+     * customer spending an old reward still earns on the product price before
+     * that reward. Coupon and pack savings remain excluded. The original goods
+     * subtotal is a hard ceiling, so a malformed ledger can never inflate an
+     * order's reward beyond the server-priced products.
+     */
+    public function earnableSpend(float $orderTotal, float $shipping, int $redeemedPoints, float $grossProducts): float
+    {
+        $paidGoods = max(0, $orderTotal - max(0, $shipping));
+        $redeemedValue = $this->pointsToDt(abs(min(0, $redeemedPoints)));
+
+        return round(min(max(0, $grossProducts), $paidGoods + $redeemedValue), 3);
     }
 
     /**
@@ -137,7 +155,7 @@ class PointsService
      * `etat` changes. Best-effort — any throw is caught by the observer so it can
      * never block an admin status change.
      *
-     *   delivered            -> earn points on the net-paid HT (once per order).
+     *   delivered            -> earn on products before loyalty redemption (once per order).
      *   cancelled / returned -> claw back any earned points AND refund any
      *                           redeemed points (a cancelled order must never
      *                           cost the customer points).
@@ -159,12 +177,20 @@ class PointsService
         $etat = (string) $commande->etat;
 
         if (in_array($etat, self::DELIVERED_STATUSES, true)) {
-            $netPaidHt = max(0, (float) $commande->prix_ttc - (float) ($commande->frais_livraison ?? 0));
+            $redeemedPoints = (int) UserPointTransaction::where('commande_id', $commande->id)
+                ->where('type', 'redeem')
+                ->sum('points');
+            $earnableSpend = $this->earnableSpend(
+                (float) $commande->prix_ttc,
+                (float) ($commande->frais_livraison ?? 0),
+                $redeemedPoints,
+                (float) $commande->prix_ht
+            );
             // earn() dedupes per commande via the ledger, so re-saving a delivered
             // order will not credit the points twice.
             $this->earn(
                 $user,
-                $netPaidHt,
+                $earnableSpend,
                 (int) $commande->id,
                 'Points gagnés (commande ' . ($commande->numero ?? $commande->id) . ' livrée)'
             );
@@ -333,13 +359,21 @@ class PointsService
      *
      * Locks the user row (lockForUpdate) inside a transaction so concurrent
      * orders cannot race the balance. Works whether or not the caller already
-     * opened a transaction (nested = savepoint). Balance never goes negative.
+     * opened a transaction (nested = savepoint). A redemption that exceeds the
+     * locked balance is rejected instead of being silently clamped.
      */
     public function record(User $user, string $type, int $points, ?string $description = null, ?int $commandeId = null): UserPointTransaction
     {
         return DB::transaction(function () use ($user, $type, $points, $description, $commandeId) {
             $locked = User::whereKey($user->getKey())->lockForUpdate()->first();
             $current = (int) ($locked?->points_balance ?? 0);
+
+            if ($type === 'redeem' && $points >= 0) {
+                throw new \InvalidArgumentException('A loyalty redemption must debit points.');
+            }
+            if ($type === 'redeem' && abs($points) > $current) {
+                throw new \DomainException('Insufficient loyalty points balance.');
+            }
 
             $newBalance = $current + $points;
             if ($newBalance < 0) {

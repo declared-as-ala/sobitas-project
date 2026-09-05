@@ -35,8 +35,8 @@ import { cn } from '@/app/components/ui/utils';
  *      `title` carries that sentence on every instance. A customer who sees a number at checkout
  *      and no balance the next morning has been lied to by the UI.
  *   2. On a product it quotes `floor(price x qty)`, which is exact for a full-price order and an
- *      over-quote once a coupon lands. The CART figure is computed on the real post-discount,
- *      pre-delivery subtotal, so the number a customer checks hardest is the precise one.
+ *      over-quote once a coupon lands. The checkout figure is computed after commercial savings
+ *      but before loyalty redemption, so spending points never reduces the next reward.
  *
  * See `util/loyaltyPoints.ts` for why the base excludes delivery.
  */

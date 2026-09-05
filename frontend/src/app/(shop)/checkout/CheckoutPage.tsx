@@ -21,7 +21,8 @@ import Link from 'next/link';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
-import { REDEEM_POINTS_PER_DT, MAX_REDEEM_FRACTION } from '@/util/loyaltyPoints';
+import { MAX_REDEEM_FRACTION, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { LoyaltyPointsRedeemer } from '@/app/components/loyalty/LoyaltyPointsRedeemer';
 import { Container } from '@/app/components/layout/Container';
 import { CheckoutField } from './CheckoutField';
 import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, validateCheckout, type CheckoutErrors } from '@/lib/checkoutValidation';
@@ -1108,86 +1109,12 @@ export default function CheckoutPage() {
 
                   {/* Points de fidélité (utilisateurs connectés avec un solde) */}
                   {isAuthenticated && pointsBalance > 0 && (
-                    <section className="border-t border-rule pt-5" aria-labelledby="checkout-points-title">
-                      <h3
-                        id="checkout-points-title"
-                        className="mb-1 flex items-center gap-2 font-display text-base font-extrabold uppercase tracking-tight text-ink-1"
-                      >
-                        <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
-                        Utiliser mes points de fidélité
-                      </h3>
-                      <p className="mb-3 text-xs text-ink-3">
-                        Solde : <span className="font-semibold tabular-nums text-ink-1">{pointsBalance}</span> points
-                        {user?.points_value_dt != null && (
-                          <> (~{user.points_value_dt.toFixed(2)} DT)</>
-                        )}
-                        {' '}· 20 points = 1 DT
-                      </p>
-                      {maxRedeemablePoints > 0 ? (
-                        <div className="space-y-3 rounded-xl border border-hairline bg-sunken p-3">
-                          <div className="flex items-center gap-3">
-                            <input
-                              type="range"
-                              min={0}
-                              max={maxRedeemablePoints}
-                              step={REDEEM_POINTS_PER_DT}
-                              value={effectivePointsToRedeem}
-                              onChange={(e) => setPointsToRedeem(Number(e.target.value))}
-                              className="flex-1 accent-brand min-h-11 cursor-pointer"
-                              aria-label="Points de fidélité à utiliser"
-                            />
-                            <div className="flex items-center gap-1.5 shrink-0">
-                              <Input
-                                type="number"
-                                min={0}
-                                max={maxRedeemablePoints}
-                                value={effectivePointsToRedeem}
-                                onChange={(e) => {
-                                  const raw = Math.floor(Number(e.target.value) || 0);
-                                  setPointsToRedeem(Math.max(0, Math.min(raw, maxRedeemablePoints)));
-                                }}
-                                className="w-20 h-11 text-center rounded-lg tabular-nums"
-                                aria-label="Nombre de points à utiliser"
-                              />
-                              <span className="text-xs text-ink-3">pts</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center justify-between text-sm">
-                            <span className="text-ink-2">
-                              Remise fidélité <span className="text-xs text-ink-3">(estimée)</span>
-                            </span>
-                            <span className="font-display font-semibold tabular-nums text-ok">
-                              -{pointsDiscountDt.toFixed(2)} DT
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between gap-2">
-                            <button
-                              type="button"
-                              onClick={() => setPointsToRedeem(maxRedeemablePoints)}
-                              className="min-h-11 rounded text-xs font-semibold text-brand hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                            >
-                              Utiliser le maximum ({maxRedeemablePoints} pts)
-                            </button>
-                            {effectivePointsToRedeem > 0 && (
-                              <button
-                                type="button"
-                                onClick={() => setPointsToRedeem(0)}
-                                className="min-h-11 rounded text-xs font-semibold text-ink-3 hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                              >
-                                Réinitialiser
-                              </button>
-                            )}
-                          </div>
-                          <p className="text-[11px] leading-snug text-ink-3">
-                            Les points couvrent au maximum 50% du sous-total. Le décompte final est confirmé par le serveur.
-                          </p>
-                        </div>
-                      ) : (
-                        <p className="text-xs text-ink-3">
-                          Ajoutez des articles pour pouvoir utiliser vos points sur cette commande.
-                        </p>
-                      )}
-                    </section>
+                    <LoyaltyPointsRedeemer
+                      balance={pointsBalance}
+                      maxPoints={maxRedeemablePoints}
+                      value={effectivePointsToRedeem}
+                      onChange={setPointsToRedeem}
+                    />
                   )}
 
                   {/* Summary */}
@@ -1267,13 +1194,14 @@ export default function CheckoutPage() {
                       zero points — reached the final screen of the funnel without the word
                       "fidélité" on it once.
 
-                      `subtotalAfterPack - pointsDiscountDt` is the backend's earn base to the
-                      millime: goods after coupon, after pack, after points spent, delivery
-                      excluded. This is the one place in the site where the figure is not an
+                      `subtotalAfterPack` is the backend's earn base to the millime: goods after
+                      coupon and pack savings, but BEFORE points spent; delivery is excluded.
+                      Spending an existing reward never reduces the next reward. This is the one
+                      place in the site where the figure is not an
                       estimate, so it is the one place it is worth showing beside a real total.
                     */}
                     <LoyaltyEarnLine
-                      amountDt={Math.max(0, subtotalAfterPack - pointsDiscountDt)}
+                      amountDt={subtotalAfterPack}
                       variant="summary"
                       className="pt-1"
                     />
