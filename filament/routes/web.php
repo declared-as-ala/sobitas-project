@@ -9,7 +9,22 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('form', Form::class);
 
-Route::get('unsubscribe', function () {
+Route::get('newsletter/confirm', function () {
+    $confirmed = app(\App\Services\NewsletterSubscriptionService::class)->confirm(
+        (string) request('email'),
+        (string) request('token')
+    );
+
+    return response()->view('marketing.unsubscribe', [
+        'success' => $confirmed,
+        'message' => $confirmed
+            ? 'Votre inscription est confirmée. Bienvenue chez Protein.tn.'
+            : 'Ce lien est invalide ou expiré. Inscrivez-vous à nouveau depuis le site.',
+        'title' => $confirmed ? 'Inscription confirmée' : 'Lien expiré',
+    ], $confirmed ? 200 : 400);
+})->name('newsletter.confirm');
+
+Route::match(['get', 'post'], 'unsubscribe', function () {
     $token = request('t');
     $sign = request('s');
     if (!$token || !$sign) {
@@ -34,6 +49,9 @@ Route::get('unsubscribe', function () {
         $query->update(['email_unsubscribed_at' => now()]);
     } elseif ($query && $channel === 'sms') {
         $query->update(['sms_unsubscribed_at' => now()]);
+    }
+    if ($channel === 'email' && $recipient) {
+        app(\App\Services\NewsletterSubscriptionService::class)->unsubscribe($recipient);
     }
     return view('marketing.unsubscribe', ['success' => true, 'message' => 'Vous êtes désinscrit.']);
 })->name('unsubscribe');

@@ -12,6 +12,8 @@ class VerifyCsrfToken extends Middleware
      * @var array<int, string>
      */
     protected $except = [
-        //
+        // Gmail/RFC 8058 one-click unsubscribe is a server-to-server POST and cannot carry
+        // Laravel's browser CSRF token. The signed token in the URL is the authorization.
+        'unsubscribe',
     ];
 }

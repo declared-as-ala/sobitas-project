@@ -28,6 +28,11 @@ class ClientController extends Controller
     private const DEFAULT_PER_PAGE = 20;
     private const MAX_PER_PAGE = 100;
 
+    private function issueStorefrontToken(User $user): string
+    {
+        return $user->createToken('storefront', ['storefront'], now()->addDays(30))->plainTextToken;
+    }
+
     private function resolvePerPage(Request $request, int $default = self::DEFAULT_PER_PAGE): int
     {
         $perPage = (int) $request->query('per_page', $request->query('limit', $default));
@@ -104,7 +109,7 @@ class ClientController extends Controller
         // Auth::attempt() couples it to the configured session driver and can
         // fail before the Sanctum token is issued when session storage is unavailable.
         if ($user !== null && Hash::check($validated['password'], $user->password)) {
-            $accessToken = $user->createToken('authToken')->plainTextToken;
+            $accessToken = $this->issueStorefrontToken($user);
 
             return response()->json($this->authPayload($user, $accessToken));
         }
@@ -153,7 +158,7 @@ class ClientController extends Controller
         ]);
         $user->save();
 
-        $token = $user->createToken('authToken')->plainTextToken;
+        $token = $this->issueStorefrontToken($user);
 
         // Phone is the primary proof. Do not spend mail quota or create two competing OTP
         // journeys at registration; email verification remains available from the verification hub.
@@ -335,7 +340,7 @@ class ClientController extends Controller
 
         return response()->json($this->authPayload(
             $user,
-            $user->createToken('authToken')->plainTextToken
+            $this->issueStorefrontToken($user)
         ));
     }
 
@@ -476,6 +481,9 @@ class ClientController extends Controller
     public function update_profile(Request $request): JsonResponse
     {
         $user = Auth::user();
+        $oldEmail = strtolower((string) $user->email);
+        $subscriptions = app(\App\Services\NewsletterSubscriptionService::class);
+        $wasSubscribed = $subscriptions->isSubscribed($oldEmail);
 
         $validated = $request->validate([
             'name'     => ['sometimes', 'required', 'string', 'max:255'],
@@ -489,6 +497,7 @@ class ClientController extends Controller
             ],
             'email'    => ['sometimes', 'required', 'email', 'max:255', 'unique:users,email,' . $user->id],
             'password' => ['sometimes', 'nullable', 'string', 'min:8', 'regex:/[A-Za-z]/', 'regex:/[0-9]/'],
+            'marketing_email_opt_in' => ['sometimes', 'boolean'],
         ]);
 
         if (isset($validated['name'])) {
@@ -516,6 +525,22 @@ class ClientController extends Controller
         }
 
         $user->save();
+
+        if ($emailChanged) {
+            $subscriptions->unsubscribe($oldEmail);
+        }
+
+        if (array_key_exists('marketing_email_opt_in', $validated)) {
+            if ($validated['marketing_email_opt_in']) {
+                $user->hasVerifiedEmail()
+                    ? $subscriptions->subscribeVerified($user->email, 'account')
+                    : $subscriptions->request($user->email, 'account');
+            } else {
+                $subscriptions->unsubscribe($user->email);
+            }
+        } elseif ($emailChanged && $wasSubscribed) {
+            $subscriptions->request($user->email, 'account-email-change');
+        }
 
         if ($emailChanged) {
             try {
@@ -571,7 +596,18 @@ class ClientController extends Controller
                 ? 'phone_verified'
                 : ($user->hasVerifiedEmail() ? 'email_only' : 'unverified'),
             'phone_verification_required' => $user->phone_verified_at === null,
+            'marketing_email_opt_in' => app(\App\Services\NewsletterSubscriptionService::class)
+                ->isSubscribed($user->email),
+            'marketing_email_status' => app(\App\Services\NewsletterSubscriptionService::class)
+                ->status($user->email),
         ]);
+    }
+
+    public function logout(Request $request): JsonResponse
+    {
+        $request->user()?->currentAccessToken()?->delete();
+
+        return response()->json(['message' => 'Vous êtes déconnecté.']);
     }
 
     /**

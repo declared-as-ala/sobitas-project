@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { BadgeCheck, CircleAlert, Loader2, Save, User, Mail, Phone } from 'lucide-react';
+import { BadgeCheck, CircleAlert, Loader2, Save, User, Mail, Phone, Megaphone } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
@@ -19,7 +19,18 @@ export function ProfileSection() {
     phone: user?.phone || '',
     password: '',
     confirmPassword: '',
+    marketing_email_opt_in: user?.marketing_email_status === 'pending' || (user?.marketing_email_opt_in ?? false),
   });
+
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      name: user?.name || '',
+      email: user?.email || '',
+      phone: user?.phone || '',
+      marketing_email_opt_in: user?.marketing_email_status === 'pending' || (user?.marketing_email_opt_in ?? false),
+    }));
+  }, [user]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,6 +47,7 @@ export function ProfileSection() {
         name: formData.name,
         email: formData.email,
         phone: formData.phone,
+        marketing_email_opt_in: formData.marketing_email_opt_in,
         ...(formData.password && { password: formData.password }),
       });
       toast.success('Profil mis à jour avec succès !');
@@ -104,6 +116,24 @@ export function ProfileSection() {
           </div>
 
           {!user?.phone_verified && <LinkWithLoading href="/verify-account" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-elevated px-4 text-sm font-semibold text-brand">Vérifier mon compte</LinkWithLoading>}
+
+          <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-hairline bg-sunken p-4">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand"><Megaphone className="h-4 w-4" aria-hidden="true" /></span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-bold text-ink-1">Recevoir les offres utiles</span>
+              <span className="mt-1 block text-xs leading-relaxed text-ink-3">Nouveautés et promotions Protein.tn, au maximum une fois par semaine. Désinscription en un clic.</span>
+              {user?.marketing_email_status === 'pending' && (
+                <span className="mt-2 block text-xs font-semibold text-brand">Confirmation envoyée : ouvrez votre email pour activer les offres.</span>
+              )}
+            </span>
+            <input
+              type="checkbox"
+              checked={formData.marketing_email_opt_in}
+              onChange={(event) => setFormData({ ...formData, marketing_email_opt_in: event.target.checked })}
+              className="mt-2 h-5 w-5 shrink-0 accent-brand"
+              aria-label="Recevoir les offres Protein.tn par email"
+            />
+          </label>
 
           <div className="pt-6 border-t border-hairline">
             <h3 className="font-display uppercase tracking-tight text-lg text-ink-1 mb-4">

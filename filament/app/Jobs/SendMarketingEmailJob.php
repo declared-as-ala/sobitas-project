@@ -36,15 +36,29 @@ class SendMarketingEmailJob implements ShouldQueue
 
     public function handle(): void
     {
-        $log = MarketingService::createLog(
-            'email',
-            $this->templateId,
-            'email',
-            $this->toEmail,
-            $this->clientId,
-            'queued',
-            $this->campaignId
-        );
+        $idempotencyKey = 'email:'.($this->campaignId ?: 'manual').':'.hash('sha256', strtolower($this->toEmail));
+        $log = MarketingLog::firstOrCreate(['idempotency_key' => $idempotencyKey], [
+            'channel' => 'email',
+            'template_id' => $this->templateId,
+            'recipient_type' => 'email',
+            'recipient_value' => $this->toEmail,
+            'client_id' => $this->clientId,
+            'status' => 'queued',
+            'campaign_id' => $this->campaignId,
+        ]);
+
+        if ($log->status === 'sent' || $log->status === 'skipped') {
+            return;
+        }
+
+        if (! MarketingService::canEmailRecipient($this->toEmail, $this->clientId)) {
+            $log->update(['status' => 'skipped', 'error_message' => 'Recipient unsubscribed before delivery']);
+            if ($this->marketingCampaignId) {
+                \App\Models\MarketingCampaign::find($this->marketingCampaignId)?->incrementSkipped();
+            }
+
+            return;
+        }
 
         // Debug: same mailer/from as order emails (compare with SendOrderEmailJob log)
         Log::info('Campaign email: mailer and from (must match order emails)', [
@@ -81,10 +95,19 @@ class SendMarketingEmailJob implements ShouldQueue
                 'exception' => get_class($e),
             ]);
             $log->update(['status' => 'failed', 'error_message' => $message]);
-            if ($this->marketingCampaignId) {
-                \App\Models\MarketingCampaign::find($this->marketingCampaignId)?->incrementFailed();
-            }
             throw $e;
+        }
+    }
+
+    public function failed(\Throwable $exception): void
+    {
+        $idempotencyKey = 'email:'.($this->campaignId ?: 'manual').':'.hash('sha256', strtolower($this->toEmail));
+        MarketingLog::where('idempotency_key', $idempotencyKey)->update([
+            'status' => 'failed',
+            'error_message' => $exception->getMessage(),
+        ]);
+        if ($this->marketingCampaignId) {
+            \App\Models\MarketingCampaign::find($this->marketingCampaignId)?->incrementFailed();
         }
     }
 }

@@ -10,6 +10,7 @@ class MarketingLog extends Model
     protected $table = 'marketing_logs';
 
     protected $fillable = [
+        'idempotency_key',
         'channel',
         'template_id',
         'recipient_type',
@@ -38,6 +39,6 @@ class MarketingLog extends Model
 
     public static function statuses(): array
     {
-        return ['queued', 'sent', 'failed'];
+        return ['queued', 'sent', 'failed', 'skipped'];
     }
 }

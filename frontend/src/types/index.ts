@@ -605,6 +605,8 @@ export interface User {
   contact_verified?: boolean;
   verification_status?: 'unverified' | 'email_only' | 'phone_verified';
   phone_verification_required?: boolean;
+  marketing_email_opt_in?: boolean;
+  marketing_email_status?: 'unsubscribed' | 'pending' | 'subscribed';
 }
 
 /** Line item returned by POST /pack/quote (server-computed from real product prices). */

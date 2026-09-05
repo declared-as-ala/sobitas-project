@@ -23,7 +23,6 @@ use App\Mail\ContactMessageMail;
 use App\Models\Contact;
 use App\Models\Coordinate;
 use App\Models\Faq;
-use App\Models\Newsletter;
 use App\Models\Page;
 use App\Models\Product;
 use App\Models\Redirection;
@@ -1853,15 +1852,15 @@ class ApisController extends Controller
             'email' => ['required', 'email', 'max:255'],
         ]);
 
-        $email = $request->input('email');
+        $result = app(\App\Services\NewsletterSubscriptionService::class)
+            ->request((string) $request->input('email'));
 
-        if (Newsletter::where('email', $email)->exists()) {
-            return response()->json(['error' => 'Vous êtes déjà inscrit!'], 406);
-        }
-
-        Newsletter::create(['email' => $email]);
-
-        return response()->json(['success' => 'Merci de vous inscrire!']);
+        return response()->json([
+            'success' => $result['status'] === 'subscribed'
+                ? 'Vous êtes déjà inscrit à nos offres.'
+                : 'Vérifiez votre boîte mail pour confirmer votre inscription.',
+            'status' => $result['status'],
+        ]);
     }
 
     /**

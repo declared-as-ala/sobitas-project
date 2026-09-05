@@ -119,7 +119,7 @@ Route::post('/add_commande', [CommandeController::class, 'storeCommandeApi']);
 Route::post('/pack/quote', [PackController::class, 'quote']);
 Route::post('/coupons/apply', [CouponController::class, 'apply']);
 Route::post('/coupons/remove', [CouponController::class, 'remove']);
-Route::post('/newsletter', [ApisController::class, 'newsLetter']);
+Route::middleware('throttle:3,60')->post('/newsletter', [ApisController::class, 'newsLetter']);
 /*
  * Contact — PUBLIC, and it now sends two emails per call, which is exactly the shape a spam relay
  * looks for. 6/minute per IP: a person who mis-taps submit is unaffected, a script is not worth
@@ -181,6 +181,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/logout', [ClientController::class, 'logout'])->middleware('throttle:10,1');
     Route::get('/phone-verification/status', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'status'])->middleware('throttle:30,1');
     Route::post('/phone-verification/send', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'send'])->middleware('throttle:3,60');
     Route::post('/phone-verification/verify', [\App\Http\Controllers\Api\PhoneVerificationController::class, 'verify'])->middleware('throttle:10,1');

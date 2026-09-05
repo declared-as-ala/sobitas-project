@@ -29,7 +29,8 @@ class MarketingEmailMailable extends Mailable
         $replyToAddress = config('mail.reply_to.address', $fromAddress);
         $replyToName = config('mail.reply_to.name', $fromName);
 
-        $mailable = $this->from($fromAddress, $fromName)
+        $marketingFrom = config('marketing.from_address', $fromAddress) ?: $fromAddress;
+        $mailable = $this->from($marketingFrom, $fromName)
             ->replyTo($replyToAddress, $replyToName)
             ->subject($this->subjectLine)
             ->view('emails.marketing-html', [
@@ -46,6 +47,7 @@ class MarketingEmailMailable extends Mailable
             if ($this->unsubscribeUrl !== '') {
                 $message->getHeaders()->addTextHeader('List-Unsubscribe', '<' . $this->unsubscribeUrl . '>');
                 $message->getHeaders()->addTextHeader('List-Unsubscribe-Post', 'List-Unsubscribe=One-Click');
+                $message->getHeaders()->addTextHeader('List-ID', '<'.config('marketing.list_id', 'offers.protein.tn').'>');
             }
         });
 

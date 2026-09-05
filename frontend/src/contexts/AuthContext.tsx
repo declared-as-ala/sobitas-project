@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
+import { login as apiLogin, register as apiRegister, loginWithGoogle as apiLoginWithGoogle, logoutSession, getProfile, updateProfile as apiUpdateProfile, getClientOrders, getOrderDetail, normalizeClientOrdersPayload } from '@/services/api';
 import type { User, LoginRequest, RegisterRequest, Order, AuthResponse } from '@/types';
 import type { PhoneVerificationResult } from '@/services/api';
 
@@ -134,6 +134,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = () => {
+    // Clear locally even when offline, but revoke the server-side token whenever reachable.
+    void logoutSession().catch(() => undefined);
     clearStoredSession();
     setOrders([]);
     setOrdersError(null);

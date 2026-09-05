@@ -6,7 +6,9 @@ use App\Models\Client;
 use App\Models\MarketingLog;
 use App\Models\MarketingSetting;
 use App\Models\MarketingTemplate;
+use App\Models\Newsletter;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Schema;
 
 class MarketingService
 {
@@ -38,7 +40,7 @@ class MarketingService
             'c' => $channel,
             'r' => $recipient,
             'id' => $clientId,
-            'exp' => now()->addDays(30)->timestamp,
+            'exp' => now()->addYear()->timestamp,
         ];
         $token = base64_encode(json_encode($payload));
         $sign = hash_hmac('sha256', $token, config('app.key'));
@@ -124,6 +126,27 @@ class MarketingService
             return collect();
         }
         return $q->select('id', 'name', 'email')->get();
+    }
+
+    /** Re-check consent at delivery time; queued recipient snapshots are never authority. */
+    public static function canEmailRecipient(string $email, ?int $clientId = null): bool
+    {
+        $email = strtolower(trim($email));
+        if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return false;
+        }
+
+        if ($clientId !== null && Client::whereKey($clientId)->whereNotNull('email_unsubscribed_at')->exists()) {
+            return false;
+        }
+
+        if (! Schema::hasTable('newsletters') || ! Schema::hasColumn('newsletters', 'confirmed_at')) {
+            return true;
+        }
+
+        $newsletter = Newsletter::whereRaw('LOWER(email) = ?', [$email])->first();
+
+        return $newsletter === null || ($newsletter->confirmed_at !== null && $newsletter->unsubscribed_at === null);
     }
 
     public static function renderEmailHtml(MarketingTemplate $template, array $variables, string $unsubscribeUrl): string

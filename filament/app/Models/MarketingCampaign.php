@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 class MarketingCampaign extends Model
 {
     protected $fillable = [
+        'automation_key',
         'type',
         'template_key',
         'template_vars',
@@ -16,6 +17,7 @@ class MarketingCampaign extends Model
         'total',
         'sent',
         'failed',
+        'skipped',
         'status',
         'started_at',
         'finished_at',
@@ -39,7 +41,7 @@ class MarketingCampaign extends Model
         if ($this->total <= 0) {
             return 0;
         }
-        return (int) round(($this->sent + $this->failed) / $this->total * 100);
+        return (int) round(($this->sent + $this->failed + $this->skipped) / $this->total * 100);
     }
 
     public function isActive(): bool
@@ -69,9 +71,15 @@ class MarketingCampaign extends Model
         $this->checkFinished();
     }
 
+    public function incrementSkipped(): void
+    {
+        $this->increment('skipped');
+        $this->checkFinished();
+    }
+
     protected function checkFinished(): void
     {
-        if (($this->sent + $this->failed) >= $this->total) {
+        if (($this->sent + $this->failed + $this->skipped) >= $this->total) {
             $this->update([
                 'status' => $this->failed > 0 ? self::STATUS_FAILED : self::STATUS_DONE,
                 'finished_at' => now(),

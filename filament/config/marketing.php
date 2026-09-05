@@ -1,6 +1,10 @@
 <?php
 
 return [
+    'automation_enabled' => (bool) env('MARKETING_AUTOMATION_ENABLED', true),
+    'weekly_digest_limit' => (int) env('MARKETING_WEEKLY_DIGEST_LIMIT', 1000),
+    'from_address' => env('MARKETING_FROM_ADDRESS', env('MAIL_FROM_ADDRESS')),
+    'list_id' => env('MARKETING_LIST_ID', 'offers.protein.tn'),
     /*
     |--------------------------------------------------------------------------
     | Marketing send mode

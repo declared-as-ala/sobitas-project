@@ -56,6 +56,19 @@ Schedule::command('seo:audit-reviews')->weeklyOn(1, '05:00');
 // 10:00 local is deliberate: a review request that lands at 04:00 gets buried by morning mail.
 Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlapping();
 
+// One useful message per week, only to confirmed newsletter subscribers. The command owns a
+// week-key, so a scheduler restart or manual retry cannot create a duplicate campaign.
+Schedule::command('marketing:send-weekly-digest')
+    ->weeklyOn(5, '11:00')
+    ->timezone('Africa/Tunis')
+    ->name('marketing-weekly-digest')
+    ->onOneServer()
+    ->withoutOverlapping(60)
+    ->appendOutputTo(storage_path('logs/marketing-weekly-digest.log'))
+    ->onFailure(fn () => \Illuminate\Support\Facades\Log::error(
+        'Weekly marketing digest failed. See storage/logs/marketing-weekly-digest.log.'
+    ));
+
 /*
  * ── ARAMEX -> ORDER STATUS ─────────────────────────────────────────────────────────────────
  * The other half of the review engine, and the reason it had never fired: nothing marked orders

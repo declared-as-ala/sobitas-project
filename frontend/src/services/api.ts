@@ -1622,6 +1622,10 @@ export const loginWithGoogle = async (credential: string): Promise<AuthResponse>
   return response.data;
 };
 
+export const logoutSession = async (): Promise<void> => {
+  await api.post('/logout');
+};
+
 export const requestPasswordReset = async (email: string): Promise<{ message: string }> => {
   const response = await api.post<{ message: string }>('/forgot-password', { email });
   return response.data;
