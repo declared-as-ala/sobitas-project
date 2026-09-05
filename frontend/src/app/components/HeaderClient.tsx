@@ -12,7 +12,6 @@ import {
   Moon,
   Sun,
   Phone,
-  Package,
   MapPin,
   Truck,
   ChevronRight,
@@ -33,13 +32,6 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { useCartActions, useCartCount } from '@/app/contexts/CartContext';
 import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/app/components/ui/dropdown-menu';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
 import { getNavigationItems, getCategories } from '@/services/api';
@@ -340,7 +332,7 @@ export function HeaderClient() {
   // Mutators are stable. Badge subscriptions live in the four small action components above, so
   // changing a count no longer rerenders this full header.
   const { setCartDrawerOpen } = useCartActions();
-  const { isAuthenticated, user, logout } = useAuth();
+  const { isAuthenticated, logout } = useAuth();
 
   useEffect(() => {
     // Fallback only: when the server fetch failed (empty SSR nav), fetch client-side as before.
@@ -687,46 +679,15 @@ export function HeaderClient() {
               <div className="flex flex-shrink-0 items-center gap-0.5">
                 {MULTILOCALE_ENABLED && <LanguageSwitcher />}
 
-                {/* Compte — icon + french label. Keeps the auth dropdown when signed in. */}
+                {/* Account is a destination, not a menu: one click always opens the member app. */}
                 {isAuthenticated ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
-                        aria-label="Mon compte"
-                      >
-                        <User className="h-5 w-5" aria-hidden />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      className="pt-plate z-[9999] min-w-[200px] rounded-xl border border-hairline shadow-lg"
-                      sideOffset={8}
-                    >
-                      <div className="pt-plate px-3 py-2.5 border-b border-hairline">
-                        <p className="text-sm font-semibold truncate text-gray-900 dark:text-white">{user?.name}</p>
-                        <p className="text-xs text-muted-foreground truncate text-gray-600 dark:text-gray-400">{user?.email}</p>
-                      </div>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem asChild className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <Link href="/account">Mon Compte</Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem asChild className="text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800">
-                        <Link href="/account/orders">
-                          <Package className="h-4 w-4 mr-2" />
-                          Mes Commandes
-                        </Link>
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onClick={logout}
-                        className="text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20"
-                      >
-                        Déconnexion
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
+                  <LinkWithLoading
+                    href="/account"
+                    className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-ink-1 transition-[background-color,transform] duration-200 hover:bg-ink-1/[0.04] active:scale-95 dark:text-gray-100 dark:hover:bg-white/5"
+                    aria-label="Ouvrir mon espace membre"
+                  >
+                    <User className="h-5 w-5" aria-hidden />
+                  </LinkWithLoading>
                 ) : (
                   <Link
                     href="/login"
