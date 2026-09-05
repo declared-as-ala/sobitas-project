@@ -9,6 +9,7 @@ import { useCart } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
+import { ProtinaMark } from '@/app/components/loyalty/Protina';
 import { REVIEW_POINTS_AWARD, pointsToDt } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { buildProductUrl, buildProductUrlPath } from '@/util/productUrl';
@@ -1126,19 +1127,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               beside the description, the ingredients, the warnings and the traceability panel —
               which is the whole stretch of the page where somebody is deciding.
 
-              ── WHY IT IS SAFE HERE AND WAS NOT BEFORE ──────────────────────────────────────
-              This was considered and rejected a session ago, for a real reason: a sticky element
-              TALLER than the viewport pins its top and its bottom becomes permanently unreachable,
-              so the CTA would be off-screen forever on a short laptop. Two things changed.
-
               The header is no longer sticky on this template, so the offset is 16px rather than
-              130. And the whole column is not what sticks — only the buy box and the tags below it,
-              measured at 536px and 579px on the two products the page guard drives, against 752px
-              of usable height on a 1366x768 laptop.
-
-              `lg:max-h` + `overflow-y-auto` is the backstop for the product this was not measured
-              on: a buy box with six flavour chips that outgrows a short viewport scrolls inside
-              itself instead of hiding its own button. It costs nothing when it does not fire.
+              130. The whole page now owns vertical scrolling: the previous max-height backstop
+              created a second scrollbar inside the purchase card and made its final actions feel
+              hidden. A tall flavour list therefore expands naturally and remains reachable with
+              the browser's normal scroll and back/forward position restoration.
 
               `lg:self-stretch` on the column above is what gives this room to travel — with the
               grid's `items-start` the column is only as tall as its content and sticky has nothing
@@ -1158,7 +1151,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               ~1,000px the information column occupies, and it stops before the panel.
             */}
             <div className="lg:flex-1">
-              <div className="flex flex-col gap-4 lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
+              <div className="flex flex-col gap-3 lg:sticky lg:top-4">
             <div ref={buyBoxRef} data-buy-box="" className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
 
               {/* Price. One number, at a size nothing else on the page competes with. */}
@@ -2181,8 +2174,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           `id` moved from the inner div to the <section> so the anchor and the landmark are the
           same element - two ids for one destination is how they drift apart.
         */}
-        <section id="reviews" className="mx-auto w-full scroll-mt-24 lg:scroll-mt-36" aria-label="Avis clients">
-            <div className="min-w-0">
+        <section id="reviews" className="relative mx-auto w-full scroll-mt-24 overflow-hidden rounded-3xl border border-hairline bg-elevated shadow-card lg:scroll-mt-36" aria-label="Avis clients">
+            <div className="absolute inset-x-0 top-0 h-1 bg-brand" aria-hidden="true" />
+            <div className="min-w-0 p-4 sm:p-6 lg:p-8">
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               {/*
                 ── THE ASK SITS IN THE HEADER, AND THERE IS ONE OF IT ─────────────────────────
@@ -2195,10 +2189,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 also where it is useful: a visitor who has just read the rating is deciding whether
                 to contribute, and a visitor who scrolled past twelve reviews has stopped reading.
               */}
-              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-hairline pb-3 sm:pb-4">
+              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-hairline pb-4 sm:pb-5">
                 <div className="min-w-0">
+                  <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand"><MessageSquare className="h-4 w-4" aria-hidden="true" />La communauté Protein.tn</p>
                   <h2 className="font-display text-2xl font-bold uppercase leading-[0.95] tracking-tight text-ink-1 sm:text-3xl">
-                    Avis clients
+                    Des avis utiles, des achats identifiés
                   </h2>
                   {reviewCount > 0 && (
                     <div className="mt-2 flex items-center gap-2">
@@ -2252,7 +2247,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     five bars tell a reader whether a 4.3 is everyone agreeing or two people
                     fighting, and that is the question somebody scrolling to reviews is asking.
                   */}
-                  <div className="grid gap-5 rounded-2xl border border-hairline bg-sunken p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6">
+                  <div className="grid gap-5 rounded-2xl border border-hairline bg-sunken p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6 lg:grid-cols-[auto,minmax(240px,1fr),minmax(250px,0.8fr)]">
                     <div className="flex flex-col items-center sm:items-start sm:border-e sm:border-hairline sm:pe-8">
                       <div className="flex items-baseline gap-1.5">
                         <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-ink-1">
@@ -2293,6 +2288,13 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           </div>
                         );
                       })}
+                    </div>
+                    <div className="flex items-center gap-3 rounded-2xl border border-brand/20 bg-elevated p-4 lg:min-h-full">
+                      <ProtinaMark size="lg" decorative={false} />
+                      <div>
+                        <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-1">Votre expérience compte</p>
+                        <p className="mt-1 text-xs leading-relaxed text-ink-2">Publiez un avis éligible et recevez jusqu’à 50 Protinas. Un achat associé porte clairement le badge « Achat vérifié ».</p>
+                      </div>
                     </div>
                   </div>
 
@@ -2345,7 +2347,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     the right one: the name and the badge answer "who is this", the stars answer
                     "what did they think", and stacking them lets a reader scan either column alone.
                   */}
-                  <ul className="divide-y divide-hairline">
+                  <ul className="grid gap-3 sm:grid-cols-2">
                     {reviewsToShowOnPage.map((review) => {
                       /*
                         THREE sources, in this order, and the middle one is new.
@@ -2365,7 +2367,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                            the text. Colour only — a review is not a control and must not lift. */
                         <li
                           key={review.id}
-                          className="-mx-3 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-sunken sm:py-5"
+                          className="rounded-2xl border border-hairline bg-canvas p-4 transition-colors duration-150 hover:border-brand/30 hover:bg-sunken sm:p-5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -2503,20 +2505,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   buildAggregateRatingAndReviews uses to decide what may enter the structured data,
                   and this copy describes exactly that and nothing more.
                 */
-                <div className="rounded-2xl border border-hairline bg-sunken px-5 py-8 text-center sm:py-10">
-                  <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full border border-hairline bg-elevated">
-                    <MessageSquare className="h-5 w-5 text-ink-3" aria-hidden="true" />
+                <div className="grid overflow-hidden rounded-2xl border border-hairline bg-sunken sm:grid-cols-[1fr,auto] sm:items-center">
+                  <div className="px-5 py-6 text-center sm:px-6 sm:text-start">
+                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-hairline bg-elevated shadow-sm sm:mx-0">
+                      <MessageSquare className="h-5 w-5 text-brand" aria-hidden="true" />
+                    </div>
+                    <p className="font-display text-base font-bold uppercase tracking-wide text-ink-1">Partagez votre expérience</p>
+                    <p className="mx-auto mt-2 max-w-[52ch] text-sm leading-relaxed text-ink-3 sm:mx-0">Aidez un autre sportif à choisir. Les avis liés à une commande affichent la mention « Achat vérifié ».</p>
                   </div>
-                  <p className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
-                    Aucun avis pour le moment
-                  </p>
-                  <p className="mx-auto mt-2 max-w-[46ch] text-sm leading-relaxed text-ink-3">
-                    Soyez le premier à donner votre avis sur ce produit.
-                  </p>
-                  <p className="mx-auto mt-5 inline-flex max-w-full items-center gap-2 rounded-full border border-hairline bg-elevated px-3.5 py-2 text-start text-[12.5px] leading-snug text-ink-2">
-                    <BadgeCheck className="h-4 w-4 shrink-0 text-ok" aria-hidden="true" />
-                    Les avis rattachés à une commande portent la mention «&nbsp;Achat vérifié&nbsp;».
-                  </p>
+                  <div className="flex items-center justify-center gap-3 border-t border-hairline bg-elevated px-6 py-5 sm:h-full sm:border-s sm:border-t-0">
+                    <ProtinaMark size="lg" decorative={false} />
+                    <p className="max-w-[18ch] text-xs leading-relaxed text-ink-2"><strong className="block font-display text-sm uppercase text-ink-1">Jusqu’à 50 Protinas</strong>pour un avis éligible</p>
+                  </div>
                 </div>
               )}
 

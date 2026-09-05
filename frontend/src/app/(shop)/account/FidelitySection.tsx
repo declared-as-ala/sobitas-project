@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { getPointsHistory } from '@/services/api';
 import { EARN_RATE, REDEEM_POINTS_PER_DT, CASHBACK_PERCENT } from '@/util/loyaltyPoints';
@@ -12,7 +11,7 @@ import { Skeleton } from '@/app/components/ui/skeleton';
 import { Gift, TrendingUp, TrendingDown, Sparkles, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { ProtinaAmount } from '@/app/components/loyalty/Protina';
+import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
 
 const TYPE_META: Record<
   PointsTransaction['type'],
@@ -87,7 +86,7 @@ export function FidelitySection() {
             <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1 sm:text-5xl">{balance.toLocaleString('fr-FR')} <span className="text-base text-brand">Protinas</span></p>
             <p className="mt-1 text-sm tabular-nums text-ink-3">Valeur disponible : {valueDt.toFixed(2)} DT</p>
           </div>
-          <Image src="/member/protein-point-coin.webp" alt="Pièce fidélité Protein.tn" width={112} height={112} className="h-24 w-24 shrink-0 object-contain sm:h-28 sm:w-28" />
+          <ProtinaMark size="lg" className="h-24 w-24 sm:h-28 sm:w-28" decorative={false} />
         </div>
       </section>
 

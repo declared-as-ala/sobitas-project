@@ -3,8 +3,8 @@ import { comparisonFacts } from '../src/util/productComparisonFacts.ts';
 
 let checks = 0;
 const check = (actual, expected) => { assert.deepEqual(actual, expected); checks++; };
-let facts = comparisonFacts({ nutrition_facts: { serving_quantity: 30, serving_unit: 'g', rows: [{ name: 'Protéines', quantity: 25, unit: 'g' }, { name: 'Dont sucres', quantity: 0, unit: 'g' }], claims: 'Sans gluten\nSans lactose' } });
-check(facts.protein, '25 g'); check(facts.sugars, '0 g'); check(facts.basis, 'Par portion de 30 g'); check(facts.gluten, 'Oui, indiqué sur la fiche'); check(facts.lactose, 'Oui, indiqué sur la fiche');
+let facts = comparisonFacts({ nutrition_facts: { serving_quantity: 30, serving_unit: 'g', rows: [{ name: 'Protéines', quantity: 25, unit: 'g' }, { name: 'Glucides', quantity: 2.5, unit: 'g' }, { name: 'Dont sucres', quantity: 0, unit: 'g' }, { name: 'Matières grasses', quantity: 1.2, unit: 'g' }], claims: 'Sans gluten\nSans lactose' } });
+check(facts.protein, '25 g'); check(facts.carbohydrates, '2,5 g'); check(facts.sugars, '0 g'); check(facts.fat, '1,2 g'); check(facts.basis, 'Par portion de 30 g'); check(facts.gluten, 'Oui, indiqué sur la fiche'); check(facts.lactose, 'Oui, indiqué sur la fiche');
 facts = comparisonFacts({ source_facts: { content: { nutrition_html: '<p>Portion : 1 mesure (1/3 tasse) (37 g)</p><table><tr><td>Protéines</td><td>30 g</td><td>60%</td></tr><tr><td>Total des sucres</td><td>2 g</td></tr></table>' } } });
 check(facts.protein, '30 g'); check(facts.sugars, '2 g'); check(facts.basis, 'Par portion de 37 g');
 facts = comparisonFacts({ nutrition_facts: { rows: [{ name: 'Pour 1 portion de 30 g Nutriment Quantité Calories 110 kcal Protéines 27 g Dont sucres 0.3 g', quantity: 50, unit: null }] } });

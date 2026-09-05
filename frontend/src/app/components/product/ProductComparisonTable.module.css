@@ -1,18 +1,29 @@
-.table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.table { width: 100%; border-collapse: collapse; font-size: 14px; table-layout: fixed; }
 .row { vertical-align: top; border-top: 1px solid rgb(var(--c-hairline)); }
 .row[data-current] { background: rgb(var(--c-sunken)); }
 .product, .nutrition, .claims, .price, .stock { padding: 16px; text-align: start; font-weight: 400; }
-.product { width: 36%; }
+.product { width: 31%; }
+.nutrition { width: 23%; }
+.claims { width: 15%; }
+.price { width: 13%; }
 .stock { min-width: 150px; }
 @media (max-width: 1023px) {
   .table, .body { display: block; }
   .head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
   .head th { position: absolute; width: 1px; height: 1px; overflow: hidden; padding: 0; clip-path: inset(50%); }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin: 12px; overflow: hidden; border: 1px solid rgb(var(--c-hairline)); border-radius: 16px; background: rgb(var(--c-elevated)); }
   .row:first-child { border-top: 0; }
-  .product { width: auto; grid-column: 1 / -1; padding-bottom: 8px; }
+  .product { width: auto; grid-column: 1 / -1; padding: 14px; padding-bottom: 12px; background: rgb(var(--c-sunken)); }
   .nutrition, .claims { padding-top: 8px; padding-bottom: 12px; }
   .claims { border-inline-start: 1px solid rgb(var(--c-hairline)); }
   .price, .stock { border-top: 1px solid rgb(var(--c-hairline)); padding-top: 12px; }
   .stock { min-width: 0; text-align: end; }
+}
+@media (max-width: 639px) {
+  .row { grid-template-columns: minmax(0, 1fr); margin: 10px; }
+  .product, .nutrition, .claims, .price, .stock { width: auto; padding: 12px; }
+  .nutrition, .claims { border-top: 1px solid rgb(var(--c-hairline)); }
+  .claims { border-inline-start: 0; }
+  .price { display: flex; align-items: baseline; gap: 8px; }
+  .stock { text-align: start; }
 }

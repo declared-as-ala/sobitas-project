@@ -1,6 +1,17 @@
 import type { ComparisonFacts } from '@/util/productComparisonFacts';
 export function ComparisonNutrition({ facts }: { facts: ComparisonFacts }) {
-  return <div><p className="mb-2 text-xs text-ink-2">{facts.basis}</p><dl className="space-y-1 text-xs">
-    {[['Protéines', facts.protein], ['Sucres', facts.sugars], ['Énergie', facts.energy]].map(([label, value]) => <div key={label} className="flex flex-wrap justify-between gap-x-3"><dt className="text-ink-2">{label}</dt><dd className="font-semibold text-ink-1">{value || 'Non renseigné'}</dd></div>)}
-  </dl></div>;
+  const nutrients = [
+    ['Protéines', facts.protein],
+    ['Glucides', facts.carbohydrates],
+    ['Sucres', facts.sugars],
+    ['Lipides', facts.fat],
+    ['Énergie', facts.energy],
+  ];
+
+  return <div>
+    <p className="mb-2 text-[11px] font-medium text-ink-3">{facts.basis}</p>
+    <dl className="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs xl:block xl:space-y-1.5">
+      {nutrients.map(([label, value]) => <div key={label} className="flex min-w-0 justify-between gap-2"><dt className="text-ink-2">{label}</dt><dd className="truncate font-semibold text-ink-1">{value || '—'}</dd></div>)}
+    </dl>
+  </div>;
 }

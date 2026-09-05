@@ -1,6 +1,15 @@
 import type { Product } from '@/types';
 
-export type ComparisonFacts = { basis: string; protein: string; sugars: string; energy: string; gluten: string; lactose: string };
+export type ComparisonFacts = {
+  basis: string;
+  protein: string;
+  carbohydrates: string;
+  sugars: string;
+  fat: string;
+  energy: string;
+  gluten: string;
+  lactose: string;
+};
 const text = (value: unknown): string => typeof value === 'string' ? value.replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/g, ' ').replace(/&#0?39;|&apos;/g, "'").replace(/&amp;/g, '&').replace(/\s+/g, ' ').trim() : '';
 const folded = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 
@@ -44,5 +53,14 @@ export function comparisonFacts(product: Product): ComparisonFacts {
     if (statements.some(s => new RegExp(`^(?:sans ${name}|${name}[- ]free)(?:[.!]|$)`).test(s.trim()))) return 'Oui, indiqué sur la fiche';
     return 'Non renseigné';
   };
-  return { basis, protein: nutrient(['proteines', 'protein'], 'proteines|protein'), sugars: nutrient(['sucres', 'dont sucres', 'sugars', 'total sugars'], 'dont sucres|total des sucres|sucres|total sugars'), energy: nutrient(['energie', 'calories', 'energy'], 'energie|calories|energy', 'kcal|kj'), gluten: freeFrom('gluten'), lactose: freeFrom('lactose') };
+  return {
+    basis,
+    protein: nutrient(['proteines', 'protein'], 'proteines|protein'),
+    carbohydrates: nutrient(['glucides', 'carbohydrates', 'carbohydrate'], 'glucides|carbohydrates?|carbs'),
+    sugars: nutrient(['sucres', 'dont sucres', 'sugars', 'total sugars'], 'dont sucres|total des sucres|sucres|total sugars'),
+    fat: nutrient(['matieres grasses', 'lipides', 'fat', 'total fat'], 'matieres grasses|lipides|total fat|fat'),
+    energy: nutrient(['energie', 'calories', 'energy'], 'energie|calories|energy', 'kcal|kj'),
+    gluten: freeFrom('gluten'),
+    lactose: freeFrom('lactose'),
+  };
 }
