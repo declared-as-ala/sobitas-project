@@ -12,6 +12,7 @@ import { Skeleton } from '@/app/components/ui/skeleton';
 import { Gift, TrendingUp, TrendingDown, Sparkles, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 const TYPE_META: Record<
   PointsTransaction['type'],
@@ -82,8 +83,8 @@ export function FidelitySection() {
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_85%_20%,rgba(220,58,0,0.3),transparent_38%)]" />
         <div className="relative flex items-center justify-between gap-4">
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-brand">Cagnotte Protein.tn</p>
-            <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1 sm:text-5xl">{balance.toLocaleString('fr-FR')} <span className="text-base text-brand">pts</span></p>
+            <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-brand">Solde Protina</p>
+            <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1 sm:text-5xl">{balance.toLocaleString('fr-FR')} <span className="text-base text-brand">Protinas</span></p>
             <p className="mt-1 text-sm tabular-nums text-ink-3">Valeur disponible : {valueDt.toFixed(2)} DT</p>
           </div>
           <Image src="/member/protein-point-coin.webp" alt="Pièce fidélité Protein.tn" width={112} height={112} className="h-24 w-24 shrink-0 object-contain sm:h-28 sm:w-28" />
@@ -93,9 +94,9 @@ export function FidelitySection() {
       <div className="flex items-start gap-2.5 rounded-xl border border-brand/20 bg-brand/5 p-3.5">
         <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
         <p className="text-[12.5px] leading-snug text-ink-2">
-          Gagnez {EARN_RATE} point par DT de produits — soit {CASHBACK_PERCENT}% — et
-          échangez {REDEEM_POINTS_PER_DT} points contre 1 DT de remise lors de votre prochaine
-          commande. Le calcul reste basé sur le prix des produits avant l’utilisation de vos points, puis le serveur crédite la cagnotte après livraison.
+          Gagnez {EARN_RATE} Protina par DT de produits — soit {CASHBACK_PERCENT}% — et
+          échangez {REDEEM_POINTS_PER_DT} Protinas contre 1 DT de remise lors de votre prochaine
+          commande. Le calcul reste basé sur le prix des produits avant l’utilisation de vos Protinas, puis le serveur crédite votre solde après livraison.
         </p>
       </div>
 
@@ -104,7 +105,7 @@ export function FidelitySection() {
         <CardHeader className="border-b border-hairline">
           <CardTitle className="flex items-center gap-2 font-display uppercase tracking-tight text-lg text-ink-1">
             <History className="h-5 w-5 text-brand" aria-hidden="true" />
-            Historique des points
+            Historique Protina
           </CardTitle>
         </CardHeader>
         <CardContent className="p-4 sm:p-6">
@@ -120,7 +121,7 @@ export function FidelitySection() {
             <div className="py-8 text-center">
               <Gift className="mx-auto mb-3 h-10 w-10 text-ink-3" aria-hidden="true" />
               <p className="text-sm text-ink-3">
-                Aucune transaction pour le moment. Passez une commande pour commencer à cumuler des points.
+                Aucun mouvement pour le moment. Passez une commande pour commencer à gagner des Protinas.
               </p>
             </div>
           ) : (
@@ -170,8 +171,7 @@ export function FidelitySection() {
                           positive ? 'text-ok' : 'text-brand'
                         }`}
                       >
-                        {positive ? '+' : ''}
-                        {tx.points} pts
+                        <ProtinaAmount value={tx.points} signed />
                       </p>
                       <p className="text-xs tabular-nums text-ink-3">
                         Solde : {tx.balance_after}

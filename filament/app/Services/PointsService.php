@@ -192,7 +192,7 @@ class PointsService
                 $user,
                 $earnableSpend,
                 (int) $commande->id,
-                'Points gagnés (commande ' . ($commande->numero ?? $commande->id) . ' livrée)'
+                'Protinas gagnées (commande ' . ($commande->numero ?? $commande->id) . ' livrée)'
             );
 
             return;
@@ -224,7 +224,7 @@ class PointsService
                 $user,
                 'adjustment',
                 -$earned,
-                'Annulation des points gagnés (commande ' . $label . ')',
+                'Annulation des Protinas gagnées (commande ' . $label . ')',
                 $commandeId,
                 null,
                 'order:'.$commandeId.':earn-reversal',
@@ -236,7 +236,7 @@ class PointsService
                 $user,
                 'adjustment',
                 -$redeemed,
-                'Remboursement des points utilisés (commande ' . $label . ')',
+                'Remboursement des Protinas utilisées (commande ' . $label . ')',
                 $commandeId,
                 null,
                 'order:'.$commandeId.':redeem-refund',
@@ -269,7 +269,7 @@ class PointsService
                 $user,
                 'earn',
                 $points,
-                $description ?? 'Points gagnés sur commande',
+                $description ?? 'Protinas gagnées sur commande',
                 $commandeId,
                 null,
                 $commandeId !== null ? 'order:'.$commandeId.':earn' : null,
@@ -319,7 +319,7 @@ class PointsService
                 $user,
                 'earn',
                 $points,
-                'Points pour votre avis' . $label,
+                'Protinas pour votre avis' . $label,
                 null,
                 $reviewId,
                 'review:'.$reviewId.':award',
@@ -377,7 +377,7 @@ class PointsService
                 $user,
                 'adjustment',
                 -$earned,
-                'Annulation des points d’avis (avis retiré)',
+                'Annulation des Protinas d’avis (avis retiré)',
                 null,
                 $reviewId,
                 'review:'.$reviewId.':reversal',

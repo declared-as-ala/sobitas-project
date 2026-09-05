@@ -11,6 +11,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Link from 'next/link';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 export function OrdersSection() {
   const router = useRouter();
@@ -154,6 +155,13 @@ export function OrdersSection() {
                     <Truck className="h-3.5 w-3.5 text-brand" aria-hidden="true" />
                     Suivi Aramex disponible
                   </p>
+                )}
+                {order.protina && (order.protina.spent > 0 || order.protina.earned > 0 || order.protina.pending > 0) && (
+                  <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
+                    {order.protina.spent > 0 && <span className="rounded-full bg-brand/5 px-2.5 py-1 text-brand"><ProtinaAmount value={-order.protina.spent} /></span>}
+                    {order.protina.earned > 0 && <span className="rounded-full bg-ok/8 px-2.5 py-1 text-ok"><ProtinaAmount value={order.protina.earned} signed /> créditées</span>}
+                    {order.protina.pending > 0 && <span className="rounded-full bg-warn/8 px-2.5 py-1 text-warn"><ProtinaAmount value={order.protina.pending} signed /> à la livraison</span>}
+                  </div>
                 )}
               </div>
               <Button

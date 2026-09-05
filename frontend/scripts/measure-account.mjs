@@ -87,10 +87,10 @@ const HISTORY = {
   balance: 340,
   value_dt: 17,
   transactions: [
-    { id: 1, type: 'earn', points: 249, balance_after: 340, description: 'Points gagnés (commande CMD-2026-0101 livrée)', commande_id: 101, created_at: '2026-08-05 12:00:00' },
-    { id: 2, type: 'redeem', points: -60, balance_after: 91, description: 'Points utilisés sur commande CMD-2026-0102', commande_id: 102, created_at: '2026-08-11 15:40:00' },
+    { id: 1, type: 'earn', points: 249, balance_after: 340, description: 'Protinas gagnées (commande CMD-2026-0101 livrée)', commande_id: 101, created_at: '2026-08-05 12:00:00' },
+    { id: 2, type: 'redeem', points: -60, balance_after: 91, description: 'Protinas utilisées sur commande CMD-2026-0102', commande_id: 102, created_at: '2026-08-11 15:40:00' },
     { id: 3, type: 'adjustment', points: 40, balance_after: 151, description: 'Geste commercial', commande_id: null, created_at: '2026-08-12 08:00:00' },
-    { id: 4, type: 'expiry', points: -12, balance_after: 139, description: 'Points expirés', commande_id: null, created_at: '2026-08-13 08:00:00' },
+    { id: 4, type: 'expiry', points: -12, balance_after: 139, description: 'Protinas expirées', commande_id: null, created_at: '2026-08-13 08:00:00' },
   ],
 };
 
@@ -130,15 +130,15 @@ const memberDashboard = (data) => ({
   review_access: { phone_verified: true, monthly_limit: 3, used_this_month: Math.min(3, data.reviews.length), remaining_this_month: Math.max(0, 3 - data.reviews.length) },
   missions: [
     { key: 'verify_phone', label: 'Vérifier mon téléphone', description: 'Sécurisez votre compte.', reward_points: 300, completed: true, href: '/verify-phone' },
-    { key: 'first_order', label: 'Recevoir ma première commande', description: 'Points après livraison.', reward_points: null, completed: data.orders.length > 0, href: '/shop' },
-    { key: 'monthly_review', label: 'Partager un avis ce mois-ci', description: '10 ou 50 points.', reward_points: 10, completed: data.reviews.length > 0, href: '/account?section=reviews' },
+    { key: 'first_order', label: 'Recevoir ma première commande', description: 'Protinas après livraison.', reward_points: null, completed: data.orders.length > 0, href: '/shop' },
+    { key: 'monthly_review', label: 'Partager un avis ce mois-ci', description: '10 ou 50 Protinas.', reward_points: 10, completed: data.reviews.length > 0, href: '/account?section=reviews' },
     { key: 'photo_review', label: 'Illustrer mon expérience', description: 'Ajoutez une vraie photo.', reward_points: null, completed: false, href: '/account?section=reviews' },
   ],
   community: {
     members_rewarded: 128,
     points_awarded: 16450,
     published_reviews: data.reviews.length,
-    reviews: data.reviews.map((review) => ({ ...review, name: 'Membre vérifié', product: review.product })),
+    reviews: data.reviews.map((review) => ({ ...review, name: 'Membre vérifié', author_status: review.verified_purchase ? 'verified_purchase' : 'verified_member', product: review.product })),
   },
 });
 

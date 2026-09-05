@@ -7,7 +7,7 @@ import { Button } from '@/app/components/ui/button';
 import { Section } from '@/app/components/layout/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { ArrowLeft, Calendar, MapPin, Phone, Mail, Truck, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Calendar, MapPin, Phone, Mail, Truck, ExternalLink, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Image from 'next/image';
@@ -15,6 +15,7 @@ import { getStorageUrl } from '@/services/api';
 import type { Order, OrderDetail } from '@/types';
 import { PageHeader } from '@/app/components/PageHeader';
 import { OrderDetailSkeleton } from '../../AccountSkeletons';
+import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
 
 export default function OrderDetailPage() {
   const params = useParams();
@@ -173,15 +174,22 @@ export default function OrderDetailPage() {
                     {order.tracking?.number ? (
                       <>
                         <p className="mt-1 text-sm text-ink-2">Transporteur {order.tracking.carrier}</p>
+                        {order.tracking.status_label && <p className="mt-3 rounded-xl border border-ok/20 bg-ok/5 px-3 py-2 text-sm font-semibold text-ok">{order.tracking.status_label}</p>}
                         <p className="mt-2 break-all font-mono text-sm font-semibold tracking-wide text-ink-1">
                           {order.tracking.number}
                         </p>
+                        <div className="mt-4 space-y-3 border-s-2 border-hairline ps-4">
+                          <div className="relative"><CheckCircle2 className="absolute -left-[26px] top-0 h-4 w-4 rounded-full bg-elevated text-ok" /><p className="text-xs font-bold text-ink-1">Commande préparée</p></div>
+                          <div className="relative"><Truck className="absolute -left-[26px] top-0 h-4 w-4 bg-elevated text-brand" /><p className="text-xs font-bold text-ink-1">Remise à Aramex</p>{order.tracking.shipped_at && <p className="mt-0.5 text-[11px] text-ink-3">{new Date(order.tracking.shipped_at).toLocaleString('fr-FR')}</p>}</div>
+                          <div className="relative"><Clock3 className={`absolute -left-[26px] top-0 h-4 w-4 bg-elevated ${order.tracking.delivered_at ? 'text-ok' : 'text-ink-3'}`} /><p className="text-xs font-bold text-ink-1">Livraison</p><p className="mt-0.5 text-[11px] text-ink-3">{order.tracking.delivered_at ? new Date(order.tracking.delivered_at).toLocaleString('fr-FR') : 'En attente de la prochaine mise à jour'}</p></div>
+                        </div>
                         <Button asChild className="mt-4 min-h-[44px] w-full rounded-xl bg-brand font-display uppercase tracking-wide text-on-brand hover:bg-brand-hover">
                           <a href={order.tracking.url} target="_blank" rel="noopener noreferrer">
                             Suivre chez Aramex
                             <ExternalLink className="ml-2 h-4 w-4" aria-hidden="true" />
                           </a>
                         </Button>
+                        {order.tracking.synced_at && <p className="mt-2 text-center text-[10px] text-ink-3">Synchronisé avec Aramex le {new Date(order.tracking.synced_at).toLocaleString('fr-FR')}</p>}
                       </>
                     ) : (
                       <p className="mt-1 text-sm leading-relaxed text-ink-2">
@@ -216,6 +224,8 @@ export default function OrderDetailPage() {
                 </div>
               </CardContent>
             </Card>
+
+            {order.protina && <Card className="overflow-hidden rounded-xl border border-brand/20 bg-elevated shadow-sm"><CardContent className="relative p-5 pr-24 sm:p-6 sm:pr-28"><ProtinaMark size="lg" className="absolute right-5 top-5" decorative={false} /><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Mouvement sécurisé</p><h2 className="mt-1 font-display text-lg font-bold uppercase tracking-tight text-ink-1">Protinas de cette commande</h2><div className="mt-4 space-y-2 text-sm"><div className="flex justify-between gap-3 text-ink-2"><span>Utilisées au paiement</span><ProtinaAmount value={-order.protina.spent} className="font-bold text-brand" /></div><div className="flex justify-between gap-3 text-ink-2"><span>{order.protina.state === 'pending_delivery' ? 'À créditer à la livraison' : 'Créditées'}</span><ProtinaAmount value={order.protina.pending || order.protina.earned} signed className="font-bold text-ok" /></div></div><p className="mt-4 flex items-start gap-2 border-t border-hairline pt-3 text-xs leading-relaxed text-ink-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ok" />Le débit est enregistré une seule fois. En cas d’annulation, les Protinas utilisées sont automatiquement remboursées.</p></CardContent></Card>}
 
             <Card className="rounded-xl border border-hairline bg-elevated shadow-sm">
               <CardHeader className="border-b border-hairline">

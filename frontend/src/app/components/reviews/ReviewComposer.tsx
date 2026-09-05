@@ -2,13 +2,14 @@
 
 import Image from 'next/image';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeCheck, Camera, CheckCircle2, Clock3, Coins, Loader2, LockKeyhole, Star, Trash2 } from 'lucide-react';
+import { BadgeCheck, Camera, CheckCircle2, Clock3, Loader2, Star, Trash2, UserRound } from 'lucide-react';
 import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { Button } from '@/app/components/ui/button';
 import { useAuth } from '@/contexts/AuthContext';
-import { addReview, getReviewAccess } from '@/services/api';
+import { addGuestReview, addReview, getReviewAccess } from '@/services/api';
 import type { ReviewAccess, ReviewSubmitResult } from '@/types';
 import { notify as toast } from '@/lib/notify';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 const MAX_IMAGES = 3;
 const MAX_BYTES = 5 * 1024 * 1024;
@@ -31,6 +32,7 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
   const [loading, setLoading] = useState(isAuthenticated);
   const [stars, setStars] = useState(0);
   const [comment, setComment] = useState('');
+  const [guestName, setGuestName] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [honeypot, setHoneypot] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -76,14 +78,10 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
     if (comment.trim().length < 15) return toast.error('Écrivez au moins 15 caractères.');
     setSubmitting(true);
     try {
-      const result = await addReview({
-        product_id: productId,
-        stars,
-        comment: comment.trim(),
-        compose_ms: Date.now() - openedAt.current,
-        hp_field: honeypot,
-        images: files,
-      });
+      const result = isAuthenticated
+        ? await addReview({ product_id: productId, stars, comment: comment.trim(), compose_ms: Date.now() - openedAt.current, hp_field: honeypot, images: files })
+        : await addGuestReview({ product_id: productId, stars, comment: comment.trim(), author_name: guestName.trim() || undefined, compose_ms: Date.now() - openedAt.current, hp_field: honeypot, images: files })
+          .then((value) => ({ ...value, verified_purchase: false, reward_points: 0, remaining_this_month: 0, review: { id: value.id, stars, comment: comment.trim() } }));
       setSuccess(result);
       onSubmitted?.(result);
       toast.success(result.message);
@@ -99,35 +97,20 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
 
   if (authLoading || (isAuthenticated && (loading || !access))) return <div className="flex min-h-40 items-center justify-center rounded-xl border border-hairline bg-sunken"><Loader2 className="h-6 w-6 animate-spin text-brand" aria-label="Chargement" /></div>;
 
-  if (!isAuthenticated) {
-    return <ReviewState icon={LockKeyhole} title="Connectez-vous pour donner votre avis" text="Les avis sont réservés aux membres dont le téléphone est vérifié.">
-      <div className="grid gap-2 sm:grid-cols-2">
-        <Link href={`/login?redirect=${encodeURIComponent(`/products/${productId}`)}`} className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-bold text-on-brand">Se connecter</Link>
-        <Link href="/register" className="flex min-h-11 items-center justify-center rounded-xl border border-hairline bg-elevated px-4 text-sm font-semibold text-ink-1">Créer un compte</Link>
-      </div>
-    </ReviewState>;
-  }
-
-  if (!access?.phone_verified) {
-    return <ReviewState icon={BadgeCheck} title="Vérifiez votre téléphone" text="Cette étape rapide protège les avis et débloque vos récompenses.">
-      <Link href="/verify-phone" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 text-sm font-bold text-on-brand">Vérifier mon téléphone</Link>
-    </ReviewState>;
-  }
-
-  if (access.already_reviewed) {
+  if (isAuthenticated && access?.already_reviewed) {
     return <ReviewState icon={CheckCircle2} title="Avis déjà envoyé" text="Vous ne pouvez publier qu’un avis par produit.">
       <Link href="/account?section=reviews" className="flex min-h-11 items-center justify-center rounded-xl border border-hairline bg-elevated px-4 text-sm font-semibold text-ink-1">Voir mes avis</Link>
     </ReviewState>;
   }
 
-  if (access.remaining_this_month <= 0) {
+  if (isAuthenticated && access && access.remaining_this_month <= 0) {
     const reset = new Date(access.resets_at).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long' });
     return <ReviewState icon={Clock3} title="3 avis publiés ce mois-ci" text={`Votre quota sera renouvelé le ${reset}.`} />;
   }
 
   if (success) {
     return <ReviewState icon={CheckCircle2} title="Merci pour votre avis" text={success.published ? 'Votre avis est publié.' : 'Votre avis est enregistré et sera visible après vérification.'}>
-      <p className="rounded-xl border border-ok/30 bg-ok/5 px-3 py-2 text-sm font-semibold text-ok">{success.reward_points} points prévus après validation</p>
+      {success.reward_points > 0 && <p className="rounded-xl border border-ok/30 bg-ok/5 px-3 py-2 text-sm font-semibold text-ok"><ProtinaAmount value={success.reward_points} signed /> créditées après contrôle</p>}
     </ReviewState>;
   }
 
@@ -139,12 +122,13 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
           <p className="mt-1 max-w-xl text-sm leading-relaxed text-ink-2">Aidez un autre client à choisir {productName}.</p>
         </div>
         <div className="flex items-center gap-2">
-          <span className="rounded-full border border-hairline bg-elevated px-2.5 py-1 text-xs font-semibold text-ink-2">{access.remaining_this_month}/{access.monthly_limit} restants</span>
-          <span className="inline-flex items-center gap-1 rounded-full border border-brand/20 bg-brand/5 px-2.5 py-1 text-xs font-bold text-brand"><Coins className="h-3.5 w-3.5" />+{access.reward_points} points</span>
+          {isAuthenticated && access && <span className="rounded-full border border-hairline bg-elevated px-2.5 py-1 text-xs font-semibold text-ink-2">{access.remaining_this_month}/{access.monthly_limit} restants</span>}
+          {access?.reward_points ? <span className="inline-flex items-center rounded-full border border-brand/20 bg-brand/5 px-2.5 py-1 text-xs font-bold text-brand"><ProtinaAmount value={access.reward_points} signed /></span> : <span className="rounded-full border border-hairline bg-elevated px-2.5 py-1 text-xs font-semibold text-ink-2">Publication directe</span>}
         </div>
       </div>
 
-      {access.verified_purchase && <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ok"><BadgeCheck className="h-4 w-4" /> Achat vérifié détecté : récompense de 50 points</p>}
+      {access?.verified_purchase && <p className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-ok"><BadgeCheck className="h-4 w-4" /> Achat vérifié détecté : 50 Protinas après contrôle</p>}
+      {!isAuthenticated && <label htmlFor="review-guest-name" className="mt-4 block text-sm font-bold text-ink-1"><span className="inline-flex items-center gap-1.5"><UserRound className="h-4 w-4 text-brand" /> Nom affiché <span className="font-normal text-ink-3">(optionnel)</span></span><input id="review-guest-name" value={guestName} onChange={(event) => setGuestName(event.target.value.slice(0, 60))} className="mt-2 h-11 w-full rounded-xl border border-hairline bg-elevated px-3 text-base text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" placeholder="Anonyme" /></label>}
 
       <div className="pointer-events-none absolute h-px w-px overflow-hidden [clip-path:inset(50%)]" aria-hidden="true">
         <label htmlFor="review-website">Ne pas remplir</label>
@@ -169,10 +153,10 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
       </div>
 
       <div className="mt-5 grid gap-2 sm:grid-cols-[1fr_auto]">
-        <Button type="button" onClick={() => void submit()} disabled={submitting} className="min-h-12 rounded-xl bg-brand font-display font-bold uppercase tracking-wide text-on-brand hover:bg-brand-hover">{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Envoi…</> : `Publier mon avis · +${access.reward_points} points`}</Button>
+        <Button type="button" onClick={() => void submit()} disabled={submitting} className="min-h-12 rounded-xl bg-brand font-display font-bold uppercase tracking-wide text-on-brand hover:bg-brand-hover">{submitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Envoi…</> : access?.reward_points ? `Publier · +${access.reward_points} Protinas` : 'Publier mon avis'}</Button>
         <Button type="button" variant="outline" onClick={onClose} disabled={submitting} className="min-h-11 rounded-xl">Annuler</Button>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-ink-3">Les points sont crédités après validation. Une photo ne doit contenir aucune donnée personnelle.</p>
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">Publication immédiate. Les Protinas sont réservées aux membres dont le téléphone est vérifié et restent contrôlées contre les abus. Ne montrez aucune donnée personnelle sur les photos.</p>
     </div>
   );
 }

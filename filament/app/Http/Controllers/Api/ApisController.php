@@ -747,7 +747,7 @@ class ApisController extends Controller
                  * name from — without it every anonymous review would render as "Client".
                  */
                 'reviews' => function ($q) {
-                    $q->where('publier', 1)->with('user:id,name,avatar')->latest();
+                    $q->where('publier', 1)->with('user:id,name,avatar,phone_verified_at,role_id')->latest();
 
                     if (Schema::hasTable('review_images')) {
                         $q->with('images:id,review_id,path,width,height,position');
@@ -2240,16 +2240,14 @@ class ApisController extends Controller
                 ...$this->reviewSignalColumns($request, (string) $validated['comment']),
                 'stars' => (int) $validated['stars'],
                 'comment' => trim((string) $validated['comment']),
-                'publier' => (int) $validated['stars'] >= 4 ? 1 : 0,
+                // Clean reviews are visible immediately, independent of rating. The asynchronous
+                // safety pass may still remove spam/abuse; genuine criticism is never gated.
+                'publier' => 1,
             ], function (Review $review) use ($request, $images): void {
                 $images->store($review, $request->file('images', []));
             });
         } catch (\DomainException $error) {
             return match ($error->getMessage()) {
-                'PHONE_VERIFICATION_REQUIRED' => response()->json([
-                    'message' => 'Vérifiez votre numéro de téléphone avant de publier un avis.',
-                    'code' => 'phone_verification_required',
-                ], 403),
                 'ALREADY_REVIEWED' => response()->json([
                     'message' => 'Vous avez déjà donné votre avis sur ce produit.',
                     'code' => 'already_reviewed',
@@ -2275,12 +2273,12 @@ class ApisController extends Controller
         /** @var Review $review */
         $review = $result['review']->load('images');
         $verifiedPurchase = ! empty($review->commande_id);
-        $reward = $verifiedPurchase
+        $reward = $request->user()->phone_verified_at === null ? 0 : ($verifiedPurchase
             ? (int) config('reviews.points.verified_purchase_award', 50)
-            : (int) config('reviews.points.award', 10);
+            : (int) config('reviews.points.award', 10));
 
         return response()->json([
-            'message' => 'Merci ! Votre avis est enregistré et sera vérifié rapidement.',
+            'message' => 'Merci ! Votre avis est publié.',
             'id' => $review->id,
             'published' => (int) $review->publier === 1,
             'verified_purchase' => $verifiedPurchase,

@@ -19,7 +19,7 @@ const SECTION_COPY: Record<AccountSection, { eyebrow: string; title: string; des
   dashboard: { eyebrow: 'Vue d’ensemble', title: 'Mon tableau de bord', description: 'Votre activité Protein.tn, réunie au même endroit.' },
   orders: { eyebrow: 'Suivi', title: 'Mes commandes', description: 'Retrouvez vos achats et leur état de livraison.' },
   reviews: { eyebrow: 'Communauté', title: 'Mes avis', description: 'Partagez votre expérience et suivez vos récompenses.' },
-  fidelite: { eyebrow: 'Avantages', title: 'Mes points', description: 'Consultez votre cagnotte et chaque mouvement.' },
+  fidelite: { eyebrow: 'Avantages', title: 'Mes Protinas', description: 'Consultez votre solde et chaque mouvement sécurisé.' },
   profile: { eyebrow: 'Compte', title: 'Mon profil', description: 'Gérez vos informations et votre niveau de vérification.' },
 };
 

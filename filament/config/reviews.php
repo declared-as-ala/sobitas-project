@@ -67,11 +67,9 @@ return [
     |--------------------------------------------------------------------------
     | AI review moderation (Groq LLM)
     |--------------------------------------------------------------------------
-    | The star-gate alone auto-publishes every 4–5★ review and holds 1–3★. That
-    | lets a spammy / fake / abusive 5★ go live automatically — the exact thing
-    | that risks a Google rich-result (review-snippet) penalty. This layer vets
-    | every new review with the LLM (falling back to rule checks when no AI key
-    | is present) so only GENUINE reviews stay published.
+    | Reviews are published immediately for a simple submission flow. This layer
+    | vets new reviews with the LLM (falling back to rule checks when no AI key is
+    | present) and can remove spammy, abusive or off-topic content after submission.
     */
     'moderation' => [
         // Master switch. When on AND a Groq key is present, each new review is
@@ -84,11 +82,8 @@ return [
         // admin. This is the protection that stops a bad 5★ from sitting live.
         'demote_bad' => (bool) env('REVIEW_AI_DEMOTE_BAD', true),
 
-        // When a HELD (1–3★) review is judged genuine + on-topic, also publish it
-        // automatically. Default OFF: genuine negatives are surfaced to the admin
-        // as "recommend publish" but a human keeps the final say. NOTE: never
-        // silently suppress genuine negative reviews — that is review-gating and
-        // itself violates consumer-protection / platform rules.
+        // Retained for backwards compatibility with legacy held reviews. New
+        // storefront submissions already begin published regardless of rating.
         'auto_publish_genuine' => (bool) env('REVIEW_AI_AUTOPUBLISH_GENUINE', false),
     ],
 
@@ -170,11 +165,8 @@ return [
     'guest' => [
         'enabled' => (bool) env('REVIEW_GUEST_ENABLED', true),
 
-        // Guest reviews are held until the moderator clears them, and unlike replies there is no
-        // switch to skip that. A star rating from an unauthenticated stranger is the single
-        // easiest thing on this site to abuse, and the legacy backlog — 203 published reviews with
-        // no purchase behind any of them, which had to be unpublished wholesale — is what that
-        // abuse looks like after the fact.
+        // Guests publish directly, but stay excluded from aggregate ratings and JSON-LD. The
+        // hourly throttle, honeypot, signal capture and automated moderation remain active.
         'max_per_hour' => (int) env('REVIEW_GUEST_MAX_PER_HOUR', 3),
     ],
 ];

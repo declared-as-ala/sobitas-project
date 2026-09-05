@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { Coins } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
-import { pointsForSpend, pointsToDt, formatPoints, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { pointsForSpend, pointsToDt, formatProtinas, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { cn } from '@/app/components/ui/utils';
+import { ProtinaMark } from './Protina';
 
 /**
  * ── "GAGNEZ 179 POINTS" — THE LOYALTY PROGRAMME, WHERE THE DECISION IS MADE ─────────────────
@@ -44,7 +44,7 @@ import { cn } from '@/app/components/ui/utils';
 /** Below this, the reward is worth less than a dinar and is not worth a row of the page. */
 const REDEEM_FLOOR = REDEEM_POINTS_PER_DT;
 
-const EARN_TITLE = 'Points crédités une fois la commande livrée. 20 points = 1 DT de remise.';
+const EARN_TITLE = 'Protinas créditées une fois la commande livrée. 20 Protinas = 1 DT de remise.';
 
 interface LoyaltyEarnLineProps {
   /** Goods amount in DT — price x quantity, or a cart subtotal excluding delivery. */
@@ -76,13 +76,11 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
         className
       )}
     >
-      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-lg bg-elevated text-brand">
-        <Coins className="h-3.5 w-3.5" strokeWidth={2} aria-hidden="true" />
-      </span>
+      <ProtinaMark size="sm" />
       <p className="min-w-0">
         {isAuthenticated ? (
           <>
-            <span className="font-semibold text-ink-1">Gagnez {formatPoints(points)}</span>{' '}
+            <span className="font-semibold text-ink-1">Gagnez {formatProtinas(points)}</span>{' '}
             <span aria-hidden="true">·</span>{' '}
             <span className="tabular-nums">{formatTnd(valueDt)}</span>
           </>
@@ -95,7 +93,7 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
               Créez un compte
             </Link>{' '}
             <span aria-hidden="true"> · </span>
-            <span className="font-semibold tabular-nums text-ink-1">{formatPoints(points)}</span>{' '}
+            <span className="font-semibold tabular-nums text-ink-1">{formatProtinas(points)}</span>{' '}
             <span aria-hidden="true">·</span>{' '}
             <span className="tabular-nums">{formatTnd(valueDt)}</span>
           </>

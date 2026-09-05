@@ -3,12 +3,13 @@
 import Image from 'next/image';
 import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { useEffect, useState } from 'react';
-import { BadgeCheck, Clock3, Coins, MessageSquare, RefreshCw, ShieldAlert } from 'lucide-react';
+import { BadgeCheck, Clock3, MessageSquare, RefreshCw, ShieldAlert } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
 import { StarRating } from '@/app/components/product/StarRating';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { getMyReviewDashboard, getStorageUrl } from '@/services/api';
 import type { CustomerReview, ReviewAccess } from '@/types';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 function formatDate(value?: string): string {
   if (!value) return '';
@@ -68,26 +69,17 @@ export function ReviewsSection() {
     );
   }
 
-  if (!access?.phone_verified) {
-    return (
-      <div className="rounded-xl border border-hairline bg-elevated px-4 py-10 text-center shadow-sm">
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-xl bg-brand/10 text-brand"><ShieldAlert className="h-6 w-6" /></span>
-        <h2 className="mt-4 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Avis réservés aux membres vérifiés</h2>
-        <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-ink-2">Vérifiez votre téléphone pour publier jusqu’à 3 avis par mois et recevoir des points.</p>
-        <Link href="/verify-phone" className="mx-auto mt-4 flex min-h-11 max-w-xs items-center justify-center rounded-xl bg-brand px-4 text-sm font-bold text-on-brand">Vérifier mon téléphone</Link>
-      </div>
-    );
-  }
-
   const monthlyLimit = Math.max(1, access?.monthly_limit ?? 3);
   const usedThisMonth = Math.min(monthlyLimit, access?.used_this_month ?? 0);
+  const remainingThisMonth = Math.max(0, access?.remaining_this_month ?? monthlyLimit);
 
   return (
     <div className="space-y-4">
+      {!access?.phone_verified && <div className="flex flex-col gap-3 rounded-2xl border border-brand/20 bg-brand/5 p-4 sm:flex-row sm:items-center"><span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-elevated text-brand"><ShieldAlert className="h-5 w-5" /></span><div className="min-w-0 flex-1"><p className="text-sm font-bold text-ink-1">Vos avis peuvent être publiés dès maintenant</p><p className="mt-0.5 text-xs leading-relaxed text-ink-2">Vérifiez votre téléphone seulement si vous souhaitez gagner des Protinas.</p></div><Link href="/verify-phone" className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-brand px-4 text-sm font-bold text-on-brand">Vérifier et gagner</Link></div>}
       <div className="grid overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm md:grid-cols-[1fr_auto]">
         <div className="p-5 sm:p-6">
           <div className="flex items-center justify-between gap-4">
-            <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Quota mensuel</p><p className="mt-1 text-sm font-semibold text-ink-1">{access.remaining_this_month} avis encore disponible{access.remaining_this_month !== 1 ? 's' : ''}</p></div>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Quota mensuel</p><p className="mt-1 text-sm font-semibold text-ink-1">{remainingThisMonth} avis encore disponible{remainingThisMonth !== 1 ? 's' : ''}</p></div>
             <span className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">{usedThisMonth}/{monthlyLimit}</span>
           </div>
           <div className="mt-4 grid grid-cols-3 gap-2" aria-label={`${usedThisMonth} avis utilisés sur ${monthlyLimit}`}>
@@ -97,8 +89,8 @@ export function ReviewsSection() {
           </div>
         </div>
         <div className="grid grid-cols-2 border-t border-hairline bg-sunken md:w-[290px] md:border-s md:border-t-0">
-          <div className="flex flex-col justify-center border-e border-hairline p-4"><p className="font-display text-2xl font-bold tabular-nums text-brand">10</p><p className="text-[11px] leading-snug text-ink-3">points par avis validé</p></div>
-          <div className="flex flex-col justify-center p-4"><p className="font-display text-2xl font-bold tabular-nums text-ok">50</p><p className="text-[11px] leading-snug text-ink-3">points si achat livré</p></div>
+          <div className="flex flex-col justify-center border-e border-hairline p-4"><p className="font-display text-2xl font-bold tabular-nums text-brand">10</p><p className="text-[11px] leading-snug text-ink-3">Protinas par avis éligible</p></div>
+          <div className="flex flex-col justify-center p-4"><p className="font-display text-2xl font-bold tabular-nums text-ok">50</p><p className="text-[11px] leading-snug text-ink-3">Protinas si achat livré</p></div>
         </div>
       </div>
 
@@ -148,7 +140,7 @@ export function ReviewsSection() {
                   {review.status === 'pending' && (
                     <span className="inline-flex items-center gap-1 rounded-full border border-warn/40 bg-elevated px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warn">
                       <Clock3 className="h-3 w-3" aria-hidden="true" />
-                      En vérification
+                      Retiré du public
                     </span>
                   )}
                 </div>
@@ -161,7 +153,7 @@ export function ReviewsSection() {
             {review.images && review.images.length > 0 && <ul className="mt-3 grid max-w-md grid-cols-3 gap-2">{review.images.map((photo, index) => <li key={photo.id} className="relative aspect-square overflow-hidden rounded-xl border border-hairline bg-sunken"><Image src={getStorageUrl(photo.path)} alt={`Votre photo ${index + 1}`} fill sizes="140px" className="object-cover" /></li>)}</ul>}
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-hairline pt-3">
               <p className="text-xs tabular-nums text-ink-3">{formatDate(review.created_at)}</p>
-              <p className={`inline-flex items-center gap-1 text-xs font-semibold ${review.points_awarded ? 'text-ok' : 'text-ink-3'}`}><Coins className="h-3.5 w-3.5" />{review.points_awarded ? `+${review.reward_points ?? (review.verified_purchase ? 50 : 10)} points crédités` : `${review.reward_points ?? (review.verified_purchase ? 50 : 10)} points après validation`}</p>
+              <p className={`text-xs font-semibold ${review.points_awarded ? 'text-ok' : 'text-ink-3'}`}>{review.points_awarded ? <><ProtinaAmount value={review.reward_points ?? (review.verified_purchase ? 50 : 10)} signed /> créditées</> : access?.phone_verified ? `${review.reward_points ?? (review.verified_purchase ? 50 : 10)} Protinas après contrôle` : 'Aucune récompense sans téléphone vérifié'}</p>
             </div>
           </li>
         ))}

@@ -11,6 +11,7 @@ import { getOrderDetails, getStorageUrl, getSiteLogoUrlResolved } from '@/servic
 import type { Order } from '@/types';
 import { notify as toast } from '@/lib/notify';
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
+import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
 
 interface OrderDetail {
   id: number;
@@ -540,6 +541,7 @@ export default function OrderConfirmationPage() {
             </CardContent>
           </Card>
           <aside className="space-y-4">
+            <OrderProtinaSummary order={order} />
             <Card className="rounded-2xl border-line bg-white shadow-sm dark:bg-gray-900">
               <CardContent className="space-y-5 p-5">
                 <div><div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-1"><Truck className="h-4 w-4 text-brand" aria-hidden="true" />Livraison</div><div className="space-y-0.5 text-sm leading-5 text-ink-2">{customerName && <p className="font-semibold text-ink-1">{customerName}</p>}<p>{address}</p>{city && <p>{city}</p>}{postalCode && <p>{postalCode}</p>}<p className="pt-1 font-medium text-ink-1">{customerPhone}</p></div></div>

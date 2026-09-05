@@ -238,6 +238,8 @@ export interface Review {
     id: number;
     name: string;
     avatar?: string;
+    phone_verified_at?: string | null;
+    role_id?: number;
   };
   /**
    * Display name of a reviewer with NO account. `user` is null on these rows, so without this the
@@ -321,6 +323,7 @@ export interface CustomerReview {
 
 export interface ReviewAccess {
   phone_verified: boolean;
+  reward_eligible?: boolean;
   monthly_limit: number;
   used_this_month: number;
   remaining_this_month: number;
@@ -480,14 +483,22 @@ export interface Order {
   livraison_adresse1?: string;
   livraison_adresse2?: string;
   tracking?: OrderTracking | null;
+  protina?: {
+    spent: number;
+    earned: number;
+    pending: number;
+    state: 'credited' | 'pending_delivery' | 'none';
+  };
 }
 
 export interface OrderTracking {
   carrier: 'Aramex';
   number: string;
   status?: string | null;
+  status_label?: string | null;
   shipped_at?: string | null;
   delivered_at?: string | null;
+  synced_at?: string | null;
   url: string;
 }
 
@@ -639,7 +650,7 @@ export interface PointsHistory {
 }
 
 export interface MemberMission {
-  key: 'verify_phone' | 'first_order' | 'monthly_review' | 'photo_review';
+  key: 'verify_phone' | 'first_order' | 'monthly_review' | 'photo_review' | 'verified_review' | 'complete_profile' | 'first_redemption';
   label: string;
   description: string;
   reward_points: number | null;
@@ -665,6 +676,7 @@ export interface MemberDashboardData {
       stars: number;
       comment: string;
       name: string;
+      author_status: 'verified_purchase' | 'verified_member' | 'member' | 'anonymous';
       created_at?: string;
       product: { slug: string; designation: string; cover?: string | null } | null;
     }>;

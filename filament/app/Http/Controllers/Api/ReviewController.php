@@ -68,7 +68,7 @@ class ReviewController extends Controller
      * Create a review from an order token. Validates the product belongs to the
      * order, dedupes one review per order+product, attributes to the order's User
      * when it is a real account (else anonymous), marks it verified, and
-     * auto-publishes 4–5★ (1–3★ held for moderation, mirroring add_review).
+     * publishes immediately; the asynchronous safety pass may still remove spam or abuse.
      */
     public function storeByToken(Request $request): JsonResponse
     {
@@ -114,7 +114,7 @@ class ReviewController extends Controller
             'product_id' => $data['product_id'],
             'stars'      => $stars,
             'comment'    => $data['comment'],
-            'publier'    => $stars >= 4 ? 1 : 0,
+            'publier'    => 1,
         ];
 
         // Schema-defensive extras (only write columns that actually exist).

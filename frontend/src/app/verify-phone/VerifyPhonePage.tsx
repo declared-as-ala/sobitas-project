@@ -123,15 +123,15 @@ export default function VerifyPhonePage() {
       {complete ? (
         <div data-phone-success className="space-y-4">
           <VerifiedContactBadge label="Téléphone vérifié" />
-          <AuthCardHeader kicker="Vérification terminée" title={success?.bonus_awarded ? 'Vos 15 DT sont là' : claimable ? 'Vos 15 DT vous attendent' : 'Vous êtes vérifié'} subtitle={awarded ? 'Votre cadeau de 300 points a bien été crédité.' : claimable ? 'Votre numéro est déjà confirmé. Aucun nouveau SMS nécessaire.' : noBonusMessage} />
+          <AuthCardHeader kicker="Vérification terminée" title={success?.bonus_awarded ? 'Vos 15 DT sont là' : claimable ? 'Vos 15 DT vous attendent' : 'Vous êtes vérifié'} subtitle={awarded ? 'Votre cadeau de 300 Protinas a bien été crédité.' : claimable ? 'Votre numéro est déjà confirmé. Aucun nouveau SMS nécessaire.' : noBonusMessage} />
           {(awarded || claimable) && <div className="rounded-xl border border-hairline bg-sunken p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-sm font-medium text-ink-2">{claimable ? 'Cadeau à recevoir' : 'Solde disponible'}</span>
               <strong data-reward-balance className="font-display text-3xl font-bold tracking-tight text-brand">{claimable ? '15' : (success?.points_value_dt ?? user.points_value_dt ?? 0).toLocaleString('fr-FR', { maximumFractionDigits: 3 })} DT</strong>
             </div>
-            <p className="mt-1 text-end text-sm text-ink-2">{claimable ? '300' : success?.points_balance ?? user.points_balance ?? 0} points</p>
+            <p className="mt-1 text-end text-sm text-ink-2">{claimable ? '300' : success?.points_balance ?? user.points_balance ?? 0} Protinas</p>
           </div>}
-          {claimable ? <AuthSubmit type="button" onClick={claim} loading={busy} loadingLabel="Ajout des points…">Recevoir mes 15 DT</AuthSubmit> : <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
+          {claimable ? <AuthSubmit type="button" onClick={claim} loading={busy} loadingLabel="Ajout des Protinas…">Recevoir mes 15 DT</AuthSubmit> : <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
           {(awarded || claimable) && <p className="text-xs leading-relaxed text-ink-2">Utilisables au paiement, jusqu’à 50 % du montant des produits après remises, hors livraison. Un seul cadeau par client et numéro.</p>}
           {!user.email_verified && <p className="text-center text-xs text-ink-3">Votre email reste optionnel. Votre compte est déjà vérifié.</p>}
         </div>
@@ -142,7 +142,7 @@ export default function VerifyPhonePage() {
             <span className="h-px w-8 bg-rule" />
             <span className={delivery ? 'flex items-center justify-end gap-2 text-brand' : 'flex items-center justify-end gap-2'}><span className="flex h-6 w-6 items-center justify-center rounded-full border border-hairline">2</span> Code</span>
           </div>
-          <AuthCardHeader kicker="Sécurité du compte" title={delivery ? 'Entrez le code' : 'Vérifiez votre téléphone'} subtitle={delivery ? `SMS envoyé au ${delivery.maskedPhone}` : user.welcome_bonus_eligible ? 'Confirmez votre numéro et recevez immédiatement 15 DT en points.' : 'Confirmez votre numéro avec un code SMS personnel.'} />
+          <AuthCardHeader kicker="Sécurité du compte" title={delivery ? 'Entrez le code' : 'Vérifiez votre téléphone'} subtitle={delivery ? `SMS envoyé au ${delivery.maskedPhone}` : user.welcome_bonus_eligible ? 'Confirmez votre numéro et recevez immédiatement 15 DT en Protinas.' : 'Confirmez votre numéro avec un code SMS personnel.'} />
           {delivery ? (
             <form onSubmit={verify} className="space-y-4">
               <AuthField label="Code à 6 chiffres" Icon={KeyRound} inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000 000" required className="text-center font-display text-2xl font-bold tracking-[0.28em]" />

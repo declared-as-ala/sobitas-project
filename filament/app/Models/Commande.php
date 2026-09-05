@@ -295,6 +295,12 @@ class Commande extends Model
         return $this->hasMany(CommandeDetail::class, 'commande_id');
     }
 
+    /** Auditable Protina movements attached to this order. */
+    public function pointTransactions(): HasMany
+    {
+        return $this->hasMany(UserPointTransaction::class, 'commande_id');
+    }
+
     public function factures(): HasMany
     {
         return $this->hasMany(Facture::class, 'commande_id');

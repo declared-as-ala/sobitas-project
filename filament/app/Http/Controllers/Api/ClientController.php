@@ -584,11 +584,11 @@ class ClientController extends Controller
         $user = $request->user();
         $commandes = Commande::query()
             ->visibleToStorefrontUser($user)
-            ->select('id', 'numero', 'etat', 'prix_ttc', 'created_at', 'region', 'ville')
+            ->select('id', 'numero', 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at', 'region', 'ville')
             // latestShipment is an ofMany relation. A relation-level column projection makes
             // MySQL generate an unqualified `commande_id` beside the ofMany subquery join and
             // crashes the whole account page with "Column commande_id is ambiguous".
-            ->with('latestShipment')
+            ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
             ->latest()
             ->paginate($perPage);
 
@@ -608,7 +608,7 @@ class ClientController extends Controller
                 'livraison_code_postale', 'livraison_adresse1', 'livraison_adresse2', 'note',
                 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at'
             )
-            ->with('latestShipment')
+            ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
             ->first();
 
         if (! $commande) {
@@ -630,15 +630,42 @@ class ClientController extends Controller
     {
         $shipment = $commande->latestShipment;
 
+        $movements = $commande->relationLoaded('pointTransactions') ? $commande->pointTransactions : collect();
+        $spent = abs((int) $movements->where('type', 'redeem')->sum('points'));
+        $earned = max(0, (int) $movements->where('type', 'earn')->sum('points'));
+        $isDelivered = in_array((string) $commande->etat, \App\Services\PointsService::DELIVERED_STATUSES, true);
+        $isClosed = $isDelivered || in_array((string) $commande->etat, \App\Services\PointsService::CANCELLED_STATUSES, true);
+        $pending = 0;
+        if (! $isClosed) {
+            $points = app(\App\Services\PointsService::class);
+            $pending = $points->earnForSpend($points->earnableSpend(
+                (float) $commande->prix_ttc,
+                (float) ($commande->frais_livraison ?? 0),
+                -$spent,
+                (float) $commande->prix_ht
+            ));
+        }
+
+        $commande->setAttribute('protina', [
+            'spent' => $spent,
+            'earned' => $earned,
+            'pending' => $pending,
+            'state' => $earned > 0 ? 'credited' : ($pending > 0 ? 'pending_delivery' : 'none'),
+        ]);
+
         $commande->setAttribute('tracking', $shipment ? [
             'carrier' => 'Aramex',
             'number' => (string) $shipment->aramex_hawb,
             'status' => $shipment->aramex_status ?: null,
+            'status_label' => $shipment->aramex_status
+                ? (\App\Support\Aramex\AramexStatusCodes::describe((string) $shipment->aramex_status) ?: 'Mise à jour reçue')
+                : null,
             'shipped_at' => $shipment->aramex_pushed_at?->toIso8601String(),
             'delivered_at' => $shipment->aramex_delivered_at?->toIso8601String(),
+            'synced_at' => $shipment->updated_at?->toIso8601String(),
             'url' => 'https://www.aramex.com/tn/en/track/track-results-new?ShipmentNumber=' . rawurlencode((string) $shipment->aramex_hawb),
         ] : null);
-        $commande->makeHidden('latestShipment');
+        $commande->makeHidden(['latestShipment', 'pointTransactions']);
 
         return $commande;
     }

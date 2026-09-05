@@ -83,7 +83,7 @@ function LoginContent() {
       <AuthCardHeader
         title="Connexion"
         subtitleDesktopOnly
-        subtitle="Vos commandes et vos points vous attendent."
+        subtitle="Vos commandes et vos Protinas vous attendent."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4" noValidate={false}>

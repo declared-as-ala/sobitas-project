@@ -106,6 +106,9 @@ export function maxRedeemablePoints(balancePoints: number, subtotalDt: number): 
 }
 
 /** A points figure as the shop writes it: "179 points", "1 point". */
-export function formatPoints(points: number): string {
-  return `${points} ${points === 1 ? 'point' : 'points'}`;
+export function formatProtinas(points: number): string {
+  return `${points.toLocaleString('fr-FR')} ${points === 1 ? 'Protina' : 'Protinas'}`;
 }
+
+/** Kept for API-era callers; user-facing copy should prefer formatProtinas. */
+export const formatPoints = formatProtinas;

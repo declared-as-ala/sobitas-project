@@ -1,16 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Coins, PackageCheck, ArrowRight } from 'lucide-react';
+import { PackageCheck, ArrowRight } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import {
   pointsToDt,
-  formatPoints,
+  formatProtinas,
   REDEEM_POINTS_PER_DT,
   CASHBACK_PERCENT,
 } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
+import { ProtinaMark } from '@/app/components/loyalty/Protina';
 
 /**
  * ── THE ACCOUNT'S ANSWER TO "WHAT DO I HAVE HERE?" ──────────────────────────────────────────
@@ -52,14 +53,14 @@ export function AccountSummary() {
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand/10 text-brand"
             aria-hidden="true"
           >
-            <Coins className="h-5 w-5" strokeWidth={2} />
+            <ProtinaMark size="md" />
           </span>
           <div className="min-w-0">
             <p className="text-[12px] font-semibold uppercase tracking-[0.08em] text-ink-3">
-              Solde fidélité
+              Solde Protina
             </p>
             <p className="font-display text-2xl font-bold leading-tight tracking-tight tabular-nums text-ink-1">
-              {formatPoints(balance)}
+              {formatProtinas(balance)}
             </p>
             <p className="text-[12.5px] tabular-nums text-ink-3">≈ {formatTnd(valueDt)} de remise</p>
           </div>
@@ -95,14 +96,14 @@ export function AccountSummary() {
               href="/shop"
               className="inline-flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-4 font-display text-[13px] font-bold uppercase tracking-[0.06em] text-on-brand transition-[background-color,transform] duration-150 hover:bg-brand-hover active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus motion-reduce:transition-none motion-reduce:active:scale-100"
             >
-              Utiliser mes points
+              Utiliser mes Protinas
               <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
             </Link>
           ) : (
             <p className="text-[12.5px] leading-snug text-ink-3">
               Chaque commande livrée vous rapporte{' '}
               <span className="font-semibold text-ink-1">{CASHBACK_PERCENT}%</span> de son montant
-              en points, à déduire de la suivante.
+              en Protinas, à déduire de la suivante.
             </p>
           )}
         </div>

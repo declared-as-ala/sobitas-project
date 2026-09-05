@@ -73,9 +73,11 @@ class ReviewThreadController extends Controller
                 'verified_purchase' => $this->isAttested($review),
                 'status' => (int) ($review->publier ?? 0) === 1 ? 'published' : 'pending',
                 'points_awarded' => (bool) ($review->points_awarded ?? false),
-                'reward_points' => $this->isAttested($review)
-                    ? (int) config('reviews.points.verified_purchase_award', 50)
-                    : (int) config('reviews.points.award', 10),
+                'reward_points' => $user->phone_verified_at === null
+                    ? 0
+                    : ($this->isAttested($review)
+                        ? (int) config('reviews.points.verified_purchase_award', 50)
+                        : (int) config('reviews.points.award', 10)),
                 'images' => $review->relationLoaded('images')
                     ? $review->images->map(fn ($image) => [
                         'id' => (int) $image->id,
@@ -218,12 +220,12 @@ class ReviewThreadController extends Controller
     /**
      * A review from somebody with no account.
      *
-     * Held until the moderator clears it, with no config switch to skip that — see
-     * `config/reviews.php`. And `verified` / `commande_id` are never written here, so even once
-     * published the review is readable but invisible to `scopeAttested`, to the product's star
-     * average and to its structured data.
+     * Published immediately for a low-friction customer flow. `verified` / `commande_id` are never
+     * written here, so the review is readable but remains invisible to `scopeAttested`, to the
+     * product's star average and to its structured data. Automated moderation can still remove
+     * unsafe content after submission.
      */
-    public function storeGuestReview(Request $request): JsonResponse
+    public function storeGuestReview(Request $request, \App\Services\ReviewImageService $images): JsonResponse
     {
         if (! (bool) config('reviews.guest.enabled', true)) {
             return response()->json(['message' => 'Les avis sans compte sont temporairement désactivés.'], 503);
@@ -233,13 +235,15 @@ class ReviewThreadController extends Controller
             'product_id'   => ['required', 'integer', 'exists:products,id'],
             'stars'        => ['required', 'integer', 'min:1', 'max:5'],
             'comment'      => ['required', 'string', 'min:10', 'max:1000'],
-            'author_name'  => ['required', 'string', 'min:' . self::NAME_MIN, 'max:' . self::NAME_MAX],
+            'author_name'  => ['nullable', 'string', 'min:' . self::NAME_MIN, 'max:' . self::NAME_MAX],
             'author_email' => ['nullable', 'email', 'max:190'],
+            'images'       => ['sometimes', 'array', 'max:'.max(0, (int) config('reviews.member.max_images', 3))],
+            'images.*'     => ['file', 'image', 'mimes:jpeg,jpg,png,webp', 'max:'.(max(1, (int) config('reviews.member.max_image_mb', 5)) * 1024), 'dimensions:max_width=6000,max_height=6000'],
         ]);
 
         if ($this->trippedHoneypot($request)) {
             // Ordinary success, no row — see the note on add_review.
-            return response()->json(['message' => 'Merci pour votre avis ! Il sera publié après vérification.', 'published' => false, 'id' => null], 201);
+            return response()->json(['message' => 'Merci ! Votre avis est publié.', 'published' => true, 'id' => null], 201);
         }
 
         $identity = $this->identityKey($request, null);
@@ -254,7 +258,7 @@ class ReviewThreadController extends Controller
             'product_id' => (int) $data['product_id'],
             'stars'      => (int) $data['stars'],
             'comment'    => trim((string) $data['comment']),
-            'publier'    => 0,
+            'publier'    => 1,
         ];
 
         // Schema-defensive, exactly like ReviewController::storeByToken: this legacy table differs
@@ -262,7 +266,7 @@ class ReviewThreadController extends Controller
         foreach (
             [
                 'note'         => (int) $data['stars'],
-                'author_name'  => trim((string) $data['author_name']),
+                'author_name'  => trim((string) ($data['author_name'] ?? '')) ?: 'Anonyme',
                 'author_email' => $data['author_email'] ?? null,
                 'ip_hash'      => $this->ipHash($request),
             ] as $col => $value
@@ -273,10 +277,11 @@ class ReviewThreadController extends Controller
         }
 
         $review = Review::create($payload);
+        $images->store($review, $request->file('images', []));
 
         return response()->json([
-            'message'   => 'Merci pour votre avis ! Il sera publié après vérification.',
-            'published' => false,
+            'message'   => 'Merci ! Votre avis est publié.',
+            'published' => true,
             'id'        => $review->id,
         ], 201);
     }

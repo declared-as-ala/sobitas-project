@@ -107,7 +107,7 @@ export default function AvisClient({ token }: { token: string }) {
       });
       update(p.product_id, { submitting: false, done: true });
       toast.success(
-        res.published ? 'Merci ! Votre avis est publié.' : 'Merci ! Votre avis sera publié après validation.'
+        res.published ? 'Merci ! Votre avis est publié.' : 'Merci ! Votre avis a bien été reçu.'
       );
     } catch (e: unknown) {
       update(p.product_id, { submitting: false });

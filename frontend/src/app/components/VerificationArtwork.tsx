@@ -29,7 +29,7 @@ export function VerificationPanel({ kind }: { kind: 'phone' | 'email' | 'success
   return <div className="flex h-full flex-col items-center justify-center bg-sunken p-8 text-center">
     <VerificationArtwork kind={kind} />
     <p className="font-display text-2xl font-bold uppercase tracking-tight text-ink-1">{kind === 'success' ? 'Bienvenue dans l’équipe' : 'Votre compte, bien à vous'}</p>
-    <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-2">{kind === 'success' ? 'Votre statut et vos points vous suivent dans votre espace client.' : 'Un code personnel pour confirmer vos coordonnées et protéger votre compte.'}</p>
+    <p className="mt-3 max-w-xs text-sm leading-relaxed text-ink-2">{kind === 'success' ? 'Votre statut et vos Protinas vous suivent dans votre espace client.' : 'Un code personnel pour confirmer vos coordonnées et protéger votre compte.'}</p>
   </div>;
 }
 
@@ -52,7 +52,7 @@ export function RegistrationPanel() {
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <CircleDollarSign className="h-6 w-6 text-brand-300" aria-hidden="true" />
         <strong className="mt-3 block font-display text-2xl">15 DT offerts</strong>
-        <span className="mt-1 block text-xs text-ink-2">300 points après vérification</span>
+        <span className="mt-1 block text-xs text-ink-2">300 Protinas après vérification</span>
       </div>
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <ShieldCheck className="h-6 w-6 text-ok" aria-hidden="true" />

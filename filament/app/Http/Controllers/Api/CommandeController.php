@@ -294,7 +294,7 @@ class CommandeController extends Controller
             if ($requestedPoints > 0) {
                 if (! $authUser) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                        response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos points de fidélité.'], 422)
+                        response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos Protinas.'], 422)
                     );
                 }
                 if (! $authUser->hasVerifiedContact()) {
@@ -307,7 +307,7 @@ class CommandeController extends Controller
                 $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
                 if ($requestedPoints > $lockedBalance) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException(
-                        response()->json(['message' => 'Points insuffisants'], 422)
+                        response()->json(['message' => 'Solde Protina insuffisant'], 422)
                     );
                 }
 
@@ -325,8 +325,10 @@ class CommandeController extends Controller
                         $authUser,
                         'redeem',
                         -$pointsConsumed,
-                        'Points utilisés sur commande ' . $new_facture->numero,
-                        $new_facture->id
+                        'Protinas utilisées sur commande ' . $new_facture->numero,
+                        $new_facture->id,
+                        null,
+                        'order:'.$new_facture->id.':redeem'
                     );
                 }
             }

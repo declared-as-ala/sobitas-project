@@ -664,13 +664,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     }
 
     if (!isAuthenticated) {
-      // The guest endpoint requires both, and failing here with a specific message beats a 422
-      // rendered as "Envoi impossible". The comment minimum is the backend's own (10 characters):
-      // a star with no words is not a review anybody can read, and it is what a bot submits.
-      if (guestReviewName.trim().length < 2) {
-        toast.error('Indiquez un nom à afficher avec votre avis.');
-        return;
-      }
       if (reviewComment.trim().length < 10) {
         toast.error('Écrivez quelques mots sur le produit (10 caractères minimum).');
         return;
@@ -682,7 +675,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           product_id: product.id,
           stars: reviewStars,
           comment: reviewComment.trim(),
-          author_name: guestReviewName.trim(),
+          author_name: guestReviewName.trim() || undefined,
           compose_ms: composeMs(),
           hp_field: reviewHoneypot,
         });
@@ -690,10 +683,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         setReviewComment('');
         setGuestReviewName('');
         setShowReviewForm(false);
-        // No optimistic insert. A guest review is ALWAYS held, so showing it in the list would be
-        // the UI asserting something false about a row that is not published — and the next
-        // refetch would silently delete it from under the author.
-        toast.success(res.message || 'Merci ! Votre avis sera publié après vérification.');
+        toast.success(res.message || 'Merci ! Votre avis est publié.');
       } catch (e: unknown) {
         const status = (e as { response?: { status?: number } })?.response?.status;
         const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -721,9 +711,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         hp_field: reviewHoneypot,
       });
 
-      // Backend logic: reviews with stars >= 4 are automatically published (publier = 1)
-      // Reviews with stars < 4 are not published (publier = 0) and need moderation
-      const isPublished = reviewStars >= 4;
+      const isPublished = newReview.published;
 
       // Reset form immediately for better UX
       setReviewStars(0);
@@ -793,7 +781,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
         }, 1000); // Wait 1 second for backend to commit transaction and propagate
       } else {
         // Review not published (stars < 4) - will be moderated
-        toast.success('Avis ajouté avec succès ! Il sera publié après modération.');
+        toast.success('Votre avis a bien été reçu.');
         // Still refresh to ensure UI is in sync
         setTimeout(() => {
           router.refresh();
@@ -2408,6 +2396,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                   Achat vérifié
                                 </span>
                               )}
+                              {!(review.verified === 1 || review.verified === true || review.commande_id != null) && review.user?.phone_verified_at && (
+                                <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand/25 bg-brand/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
+                                  <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden="true" /> Membre vérifié
+                                </span>
+                              )}
+                              {!(review.verified === 1 || review.verified === true || review.commande_id != null) && review.user && !review.user.phone_verified_at && (
+                                <span className="shrink-0 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Membre</span>
+                              )}
+                              {!review.user && <span className="shrink-0 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Anonyme</span>}
                             </div>
                             <span className="shrink-0 text-xs tabular-nums text-ink-3">
                               {review.created_at
@@ -2600,7 +2597,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       <span>
                         Un avis publié sur un produit que vous avez commandé et reçu vous rapporte{' '}
                         <span className="font-semibold text-ink-1">
-                          {REVIEW_POINTS_AWARD} points
+                          {REVIEW_POINTS_AWARD} Protinas
                         </span>{' '}
                         ({formatTnd(pointsToDt(REVIEW_POINTS_AWARD))}).
                       </span>
@@ -2611,21 +2608,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     {!isAuthenticated && (
                       <div>
                         <label htmlFor="guest-review-name" className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">
-                          Votre nom *
+                          Nom affiché <span className="font-normal text-ink-3">(optionnel)</span>
                         </label>
                         <input
                           id="guest-review-name"
                           value={guestReviewName}
                           onChange={(e) => setGuestReviewName(e.target.value.slice(0, 60))}
-                          placeholder="Prénom ou pseudo"
+                          placeholder="Anonyme"
                           className="min-h-[44px] w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         />
-                        {/* Said plainly and up front, because it is true and because finding out
-                            later feels like being ignored. It is also the honest framing of the
-                            trade: no account, so no proof of purchase, so a human looks first. */}
                         <p className="mt-1.5 text-xs leading-snug text-ink-3">
-                          Sans compte, votre avis est publié après vérification et n’est pas compté
-                          dans la note du produit.{' '}
+                          Votre avis est publié immédiatement. Sans preuve d’achat, il n’influence pas
+                          la note vérifiée du produit.{' '}
                           <Link href="/login" className="font-semibold text-brand underline-offset-2 hover:underline">
                             Se connecter
                           </Link>

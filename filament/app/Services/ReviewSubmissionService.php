@@ -25,15 +25,16 @@ class ReviewSubmissionService
 
         return [
             'phone_verified' => $phoneVerified,
+            'reward_eligible' => $phoneVerified,
             'monthly_limit' => $limit,
             'used_this_month' => $used,
             'remaining_this_month' => max(0, $limit - $used),
             'already_reviewed' => $existing,
             'verified_purchase' => $orderId !== null,
-            'reward_points' => $orderId !== null
+            'reward_points' => ! $phoneVerified ? 0 : ($orderId !== null
                 ? (int) config('reviews.points.verified_purchase_award', 50)
-                : (int) config('reviews.points.award', 10),
-            'can_review' => $phoneVerified && $used < $limit && ! $existing,
+                : (int) config('reviews.points.award', 10)),
+            'can_review' => $used < $limit && ! $existing,
             'resets_at' => now()->endOfMonth()->toIso8601String(),
         ];
     }
@@ -53,9 +54,6 @@ class ReviewSubmissionService
             $locked = User::query()->whereKey($user->getKey())->lockForUpdate()->firstOrFail();
             $access = $this->access($locked, $productId);
 
-            if (! $access['phone_verified']) {
-                throw new \DomainException('PHONE_VERIFICATION_REQUIRED');
-            }
             if ($access['already_reviewed']) {
                 throw new \DomainException('ALREADY_REVIEWED');
             }

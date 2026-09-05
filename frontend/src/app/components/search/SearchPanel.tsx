@@ -9,6 +9,8 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { isInStock } from '@/util/cartStock';
 import type { Product } from '@/types';
+import { pointsForSpend } from '@/util/loyaltyPoints';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 /**
  * Everything the search panel can show, on both surfaces.
@@ -185,6 +187,7 @@ export function SearchResultRow({
               <span className="whitespace-nowrap font-semibold text-brand">Économisez {saving} DT</span>
             </>
           )}
+          <span className="whitespace-nowrap font-semibold text-ink-3"><ProtinaAmount value={pointsForSpend(pd.finalPrice)} signed /></span>
         </span>
       </span>
 

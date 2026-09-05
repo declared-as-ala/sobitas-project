@@ -23,7 +23,7 @@ const items = [
   { key: 'dashboard', label: 'Accueil', href: '/account', icon: Home },
   { key: 'orders', label: 'Commandes', href: '/account?section=orders', icon: Package },
   { key: 'reviews', label: 'Mes avis', href: '/account?section=reviews', icon: MessageSquareText },
-  { key: 'fidelite', label: 'Mes points', href: '/account?section=fidelite', icon: Coins },
+  { key: 'fidelite', label: 'Mes Protinas', href: '/account?section=fidelite', icon: Coins },
   { key: 'profile', label: 'Profil', href: '/account?section=profile', icon: Settings },
 ] as const;
 

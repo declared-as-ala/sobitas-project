@@ -56,7 +56,7 @@ export function AccountVerificationCard() {
     </div>
     {user.welcome_bonus_eligible && !phoneVerified && <div className="flex items-center gap-3 border-t border-hairline bg-brand-50 px-4 py-3 text-sm text-ink-2 sm:px-5">
       <Gift className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-      <p><strong className="text-ink-1">15 DT vous attendent.</strong> Confirmez votre téléphone pour recevoir 300 points.</p>
+      <p><strong className="text-ink-1">15 DT vous attendent.</strong> Confirmez votre téléphone pour recevoir 300 Protinas.</p>
     </div>}
   </section>;
 }

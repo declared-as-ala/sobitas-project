@@ -7,7 +7,6 @@ import {
   BadgeCheck,
   Check,
   ChevronRight,
-  Circle,
   FlaskConical,
   PackageCheck,
   RefreshCw,
@@ -25,6 +24,7 @@ import { getEffectivePrice } from '@/util/productPrice';
 import { pointsToDt } from '@/util/loyaltyPoints';
 import type { MemberDashboardData, Product } from '@/types';
 import type { PubMedResearchFeed } from '@/services/pubmed';
+import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
 
 const formatter = new Intl.NumberFormat('fr-FR');
 
@@ -94,20 +94,13 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
 
             <div className="mt-6 flex flex-wrap items-end gap-5">
               <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-3">Votre cagnotte</p>
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-ink-3">Votre solde Protina</p>
                 <p className="mt-1 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1">
-                  {formatter.format(balance)} <span className="text-base text-brand">pts</span>
+                  {formatter.format(balance)} <span className="text-base text-brand">Protinas</span>
                 </p>
                 <p className="text-sm tabular-nums text-ink-3">soit {valueDt.toFixed(2)} DT à utiliser</p>
               </div>
-              <Image
-                src="/member/protein-point-coin.webp"
-                alt="Pièce fidélité Protein.tn"
-                width={76}
-                height={76}
-                className="h-[68px] w-[68px] object-contain"
-                priority
-              />
+              <ProtinaMark size="lg" className="h-[68px] w-[68px]" decorative={false} />
             </div>
 
             <div className="mt-6 flex flex-wrap gap-2">
@@ -169,21 +162,22 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
               </div>
               <span className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">{completedMissions}/{dashboard.missions.length}</span>
             </div>
-            <ul className="divide-y divide-hairline">
+            <ul className="grid gap-3 p-3 sm:grid-cols-2 sm:p-4">
               {dashboard.missions.map((mission) => (
-                <li key={mission.key}>
-                  <Link href={mission.href} className="group flex min-h-[76px] items-center gap-3 px-5 py-3.5 hover:bg-sunken sm:px-6">
-                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${mission.completed ? 'bg-ok/10 text-ok' : 'bg-brand/10 text-brand'}`}>
-                      {mission.completed ? <Check className="h-4 w-4" aria-hidden="true" /> : <Circle className="h-4 w-4" aria-hidden="true" />}
+                <li key={mission.key} className="min-w-0">
+                  <Link href={mission.href} className={`group relative flex min-h-[112px] items-start gap-3 overflow-hidden rounded-xl border p-4 transition-colors ${mission.completed ? 'border-ok/20 bg-ok/5' : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'}`}>
+                    <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${mission.completed ? 'bg-ok/10 text-ok' : 'bg-elevated text-brand shadow-sm'}`}>
+                      {mission.completed ? <Check className="h-5 w-5" aria-hidden="true" /> : <Target className="h-5 w-5" aria-hidden="true" />}
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block text-sm font-semibold ${mission.completed ? 'text-ink-2 line-through decoration-ink-3/50' : 'text-ink-1'}`}>{mission.label}</span>
                       <span className="mt-0.5 block text-xs leading-snug text-ink-3">{mission.description}</span>
                     </span>
                     {mission.reward_points !== null && mission.reward_points > 0 && (
-                      <span className="shrink-0 rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold tabular-nums text-brand">+{mission.reward_points} pts</span>
+                      <span className="shrink-0 rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold text-brand"><ProtinaAmount value={mission.reward_points} signed /></span>
                     )}
-                    <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
+                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
+                    <span className="pointer-events-none absolute -bottom-10 -right-10 h-20 w-20 rounded-full border border-brand/10" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
@@ -224,12 +218,12 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
         <section aria-labelledby="community-title">
           <div className="mb-4 flex items-end justify-between gap-4">
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Communauté vérifiée</p>
+              <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">La communauté Protein.tn</p>
               <h2 id="community-title" className="mt-1 font-display text-2xl font-bold uppercase tracking-tight text-ink-1">Les membres en parlent</h2>
             </div>
             <div className="hidden gap-4 text-right sm:flex">
-              <div><p className="font-display text-lg font-bold tabular-nums text-ink-1">{formatter.format(dashboard.community.published_reviews)}</p><p className="text-[10px] uppercase tracking-wide text-ink-3">avis vérifiés</p></div>
-              <div><p className="font-display text-lg font-bold tabular-nums text-ink-1">{formatter.format(dashboard.community.points_awarded)}</p><p className="text-[10px] uppercase tracking-wide text-ink-3">points gagnés</p></div>
+              <div><p className="font-display text-lg font-bold tabular-nums text-ink-1">{formatter.format(dashboard.community.published_reviews)}</p><p className="text-[10px] uppercase tracking-wide text-ink-3">avis publiés</p></div>
+              <div><p className="font-display text-lg font-bold tabular-nums text-ink-1">{formatter.format(dashboard.community.points_awarded)}</p><p className="text-[10px] uppercase tracking-wide text-ink-3">Protinas gagnées</p></div>
             </div>
           </div>
           <ul className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 sm:mx-0 sm:grid sm:grid-cols-2 sm:overflow-visible sm:px-0 xl:grid-cols-3">
@@ -239,7 +233,10 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
                   <div className="flex items-center gap-1 text-warn" aria-label={`${review.stars} étoiles sur 5`}>
                     {Array.from({ length: 5 }).map((_, index) => <Star key={index} className={`h-3.5 w-3.5 ${index < review.stars ? 'fill-current' : 'text-ink-1/15'}`} aria-hidden="true" />)}
                   </div>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-ok"><BadgeCheck className="h-3.5 w-3.5" /> Vérifié</span>
+                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-wide ${review.author_status === 'verified_purchase' ? 'bg-ok/10 text-ok' : review.author_status === 'verified_member' ? 'bg-brand/10 text-brand' : 'bg-sunken text-ink-3'}`}>
+                    {review.author_status === 'verified_purchase' && <BadgeCheck className="h-3.5 w-3.5" aria-hidden="true" />}
+                    {review.author_status === 'verified_purchase' ? 'Achat vérifié' : review.author_status === 'verified_member' ? 'Membre vérifié' : review.author_status === 'member' ? 'Membre' : 'Anonyme'}
+                  </span>
                 </div>
                 <p className="mt-3 line-clamp-3 text-sm leading-relaxed text-ink-2">“{review.comment}”</p>
                 <div className="mt-4 flex items-center gap-3 border-t border-hairline pt-3">
@@ -278,13 +275,15 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
             <div><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Veille nutrition sportive</p><h2 id="research-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">La recherche évolue</h2></div>
             <span title={research.live ? 'Données PubMed actualisées' : 'Sélection scientifique de secours'} className="flex h-9 w-9 items-center justify-center rounded-full bg-elevated text-brand"><FlaskConical className="h-4 w-4" /></span>
           </div>
-          <ol className="divide-y divide-black/8">
+          <ol className="grid gap-3 p-3 sm:grid-cols-3 xl:grid-cols-1">
             {research.studies.map((study, index) => (
-              <li key={study.id}>
-                <a href={study.url} target="_blank" rel="noreferrer" className="group flex gap-3 px-5 py-4 hover:bg-elevated sm:px-6">
-                  <span className="font-display text-xs font-bold tabular-nums text-brand">0{index + 1}</span>
-                  <span className="min-w-0 flex-1"><span className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1 group-hover:text-brand">{study.title}</span><span className="mt-1 block truncate text-[11px] text-ink-3">{study.journal} · {study.publishedAt}</span></span>
-                  <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
+              <li key={study.id} className="overflow-hidden rounded-xl border border-black/8 bg-elevated">
+                <a href={study.url} target="_blank" rel="noreferrer" className="group grid min-h-full grid-rows-[92px_1fr] xl:grid-cols-[118px_1fr] xl:grid-rows-1">
+                  <span className="relative block overflow-hidden bg-black">
+                    <Image src="/member/research-covers-v1.webp" alt="" fill sizes="(max-width: 640px) 80vw, 160px" className="h-full max-w-none object-cover" style={{ objectPosition: `${index * 50}% center` }} />
+                    <span className="absolute left-2 top-2 rounded-full bg-black/70 px-2 py-1 font-display text-[10px] font-bold tabular-nums text-white">0{index + 1}</span>
+                  </span>
+                  <span className="flex min-w-0 gap-2 p-3"><span className="min-w-0 flex-1"><span className="line-clamp-3 text-sm font-semibold leading-snug text-ink-1 group-hover:text-brand">{study.title}</span><span className="mt-1 block truncate text-[11px] text-ink-3">{study.journal} · {study.publishedAt}</span></span><ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" /></span>
                 </a>
               </li>
             ))}
@@ -295,9 +294,9 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
 
       <section className="grid gap-3 sm:grid-cols-3" aria-label="Garanties de l’espace membre">
         {[
-          { icon: ShieldCheck, title: 'Solde protégé', text: 'Chaque mouvement est validé par le serveur.' },
+          { icon: ShieldCheck, title: 'Protinas protégées', text: 'Chaque mouvement est validé par le serveur.' },
           { icon: Target, title: 'Avantages utiles', text: 'Vos missions reposent sur vos vraies actions.' },
-          { icon: TrendingUp, title: 'Progression claire', text: 'Commandes, avis et points restent traçables.' },
+          { icon: TrendingUp, title: 'Progression claire', text: 'Commandes, avis et Protinas restent traçables.' },
         ].map(({ icon: Icon, title, text }) => (
           <div key={title} className="flex gap-3 rounded-2xl border border-hairline bg-elevated p-4">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-ok/10 text-ok"><Icon className="h-4 w-4" aria-hidden="true" /></span>

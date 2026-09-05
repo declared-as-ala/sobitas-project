@@ -18,6 +18,8 @@ import { buildProductAlt } from '@/util/productAlt';
 import { useState, useMemo, memo, useCallback, startTransition } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedField, localizedName } from '@/i18n/content';
+import { pointsForSpend } from '@/util/loyaltyPoints';
+import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 type Product = ApiProduct | {
   id: number;
   name?: string;
@@ -561,6 +563,7 @@ export const ProductCard = memo(function ProductCard({
             </span>
           )}
         </div>
+        <span className="text-[11px] font-semibold text-ink-3"><ProtinaAmount value={pointsForSpend(productData.priceDisplay.finalPrice)} signed /> à la livraison</span>
 
         {/* Trust chips. Stock is per-product and comes from getProductStockStatus — the exact
             label the detail page shows, including "Stock faible", which the card previously could

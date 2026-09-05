@@ -1906,12 +1906,22 @@ export const addGuestReview = async (data: {
   product_id: number;
   stars: number;
   comment: string;
-  author_name: string;
+  author_name?: string;
   author_email?: string;
   compose_ms?: number;
   hp_field?: string;
+  images?: File[];
 }): Promise<{ message: string; published: boolean; id: number }> => {
-  const response = await api.post('/reviews/guest', data);
+  const body = new FormData();
+  body.append('product_id', String(data.product_id));
+  body.append('stars', String(data.stars));
+  body.append('comment', data.comment);
+  if (data.author_name?.trim()) body.append('author_name', data.author_name.trim());
+  if (data.author_email?.trim()) body.append('author_email', data.author_email.trim());
+  body.append('compose_ms', String(data.compose_ms ?? 0));
+  body.append('hp_field', data.hp_field ?? '');
+  data.images?.forEach((file) => body.append('images[]', file));
+  const response = await api.post('/reviews/guest', body);
   return response.data;
 };
 

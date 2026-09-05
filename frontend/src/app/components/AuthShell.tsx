@@ -97,7 +97,7 @@ export function AuthShell({ children, compact = false, artwork }: { children: Re
               <span className="min-w-0">
                 <span className="pt-kicker block text-brand">Programme fidélité</span>
                 <span className="mt-1 block text-sm leading-snug text-ink-2">
-                  Chaque commande livrée vous rapporte <strong className="text-ink-1">5% en points</strong> à utiliser sur la suivante.
+                  Chaque commande livrée vous rapporte <strong className="text-ink-1">5% en Protinas</strong> à utiliser sur la suivante.
                 </span>
               </span>
             </aside>}

@@ -191,7 +191,7 @@ export default function RegisterPage() {
 
         <details className="text-xs leading-relaxed text-ink-2">
           <summary className="min-h-11 cursor-pointer rounded-lg py-3 font-semibold focus-visible:ring-2 focus-visible:ring-focus">Conditions des 15 DT offerts</summary>
-          <p className="pb-3">300 points, une seule fois par compte et numéro. Utilisables sur vos achats, jusqu’à 50 % du montant des produits après remises, hors livraison. Non échangeables en espèces.</p>
+          <p className="pb-3">300 Protinas, une seule fois par compte et numéro. Utilisables sur vos achats, jusqu’à 50 % du montant des produits après remises, hors livraison. Non échangeables en espèces.</p>
         </details>
         <AuthSubmit loading={isLoading} loadingLabel="Création…" disabled={busy}>
           Continuer vers le SMS

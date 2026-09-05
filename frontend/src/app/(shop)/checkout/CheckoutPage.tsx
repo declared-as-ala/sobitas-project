@@ -28,6 +28,7 @@ import { CheckoutField } from './CheckoutField';
 import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, validateCheckout, type CheckoutErrors } from '@/lib/checkoutValidation';
 import styles from './checkout.module.css';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
 
 const FREE_SHIPPING_THRESHOLD = 300;
 
@@ -720,6 +721,7 @@ export default function CheckoutPage() {
             </Card>
 
             <aside className="space-y-4">
+              <OrderProtinaSummary order={order} />
               <Card className="rounded-2xl border-line bg-elevated shadow-sm">
                 <CardContent className="space-y-5 p-5">
                   <div>

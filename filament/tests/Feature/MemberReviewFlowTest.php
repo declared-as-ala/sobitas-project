@@ -66,12 +66,19 @@ class MemberReviewFlowTest extends TestCase
         Review::unsetEventDispatcher();
     }
 
-    public function test_phone_verification_is_required(): void
+    public function test_unverified_member_can_publish_but_cannot_earn_points(): void
     {
         $user = $this->user(false);
-        $this->expectException(\DomainException::class);
-        $this->expectExceptionMessage('PHONE_VERIFICATION_REQUIRED');
-        app(ReviewSubmissionService::class)->create($user, 10, $this->attributes());
+        $service = app(ReviewSubmissionService::class);
+        $access = $service->access($user, 10);
+
+        $this->assertTrue($access['can_review']);
+        $this->assertFalse($access['reward_eligible']);
+        $this->assertSame(0, $access['reward_points']);
+
+        $created = $service->create($user, 10, $this->attributes());
+        $this->assertSame(1, (int) $created['review']->publier);
+        $this->assertSame($user->getKey(), (int) $created['review']->user_id);
     }
 
     public function test_member_cannot_create_more_than_three_reviews_per_month(): void
