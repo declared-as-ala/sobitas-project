@@ -44,6 +44,15 @@ const REVIEWS = [
     author_name: null,
     replies_count: 2,
     created_at: NOW,
+    /* Customer photographs, added 07/09/2026 with the review photo strip. Without them the
+       strip renders nothing and a feature whose entire justification is "shoppers trust
+       customer photos more than studio ones" ships having never been looked at — which is the
+       exact failure this whole file exists to prevent. Paths point at real storage objects so
+       next/image resolves them the way production will. */
+    images: [
+      { id: 501, path: 'produits/pRB766NPSwqXiPMmkLVvRzdLR3ZijGBZSB9g7MfU.jpg' },
+      { id: 502, path: 'produits/pRB766NPSwqXiPMmkLVvRzdLR3ZijGBZSB9g7MfU.jpg' },
+    ],
   },
   {
     id: 9002,

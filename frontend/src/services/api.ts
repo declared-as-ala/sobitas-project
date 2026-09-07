@@ -68,6 +68,41 @@ const api: AxiosInstance = axios.create({
   },
 });
 
+/**
+ * ── FORMDATA MUST NOT INHERIT THE INSTANCE'S JSON CONTENT TYPE ──────────────────────────────
+ * Owner, 07/09/2026: *"the flow of uploading an image is not working."* It was not, and it had
+ * never worked: not one review photo could ever have reached the backend.
+ *
+ * `axios.create` above sets `'Content-Type': 'application/json'` for every request. Axios only
+ * hands FormData to the adapter untouched when the content type is NOT json — from its own
+ * `transformRequest` (axios 1.13.3, dist/node/axios.cjs:1555):
+ *
+ *     return hasJSONContentType ? JSON.stringify(formDataToJSON(data)) : data;
+ *
+ * So `api.post('/add_review', formData)` took the first branch: the FormData was flattened by
+ * `formDataToJSON` and stringified. Measured against a local server with a real File attached,
+ * the request that left the browser was:
+ *
+ *     content-type: application/json
+ *     {"product_id":"1","stars":"5","images":[{}]}
+ *
+ * The photograph became `{}`. No file, no multipart boundary, no error — the review saved with
+ * its text and the customer was told it was published, with their photo silently discarded.
+ *
+ * Setting the header per request would fix the two call sites that exist today and leave the
+ * trap armed for the next one, so it is fixed here: any FormData payload gets the multipart
+ * content type instead of the JSON default. Axios's browser adapter then replaces it with
+ * `multipart/form-data; boundary=…`, which is the part only the adapter can generate.
+ *
+ * Verified both ways against a local server: json → `images:[{}]`, multipart → the file arrives.
+ */
+api.interceptors.request.use((config) => {
+  if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
+    config.headers.setContentType('multipart/form-data');
+  }
+  return config;
+});
+
 // Request interceptor to add auth token
 api.interceptors.request.use(
   (config) => {

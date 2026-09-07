@@ -101,6 +101,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [descExpanded, setDescExpanded] = useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent');
+  /* 0 = every rating. Set by tapping a bar in the distribution, which until 07/09/2026 drew a
+     chart nobody could act on — see the block that renders it. */
+  const [starFilter, setStarFilter] = useState(0);
   const { openQuickOrder } = useQuickOrder();
   /** Selected aroma for display; add to cart / command use this or first aroma. */
   const [selectedAromaId, setSelectedAromaId] = useState<number | null>(null);
@@ -242,12 +245,32 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       const db = b.created_at ? new Date(b.created_at).getTime() : 0;
       return db - da;
     };
-    const list = [...reviews];
+    const list = starFilter ? reviews.filter((r) => r.stars === starFilter) : [...reviews];
     if (reviewSort === 'best') return list.sort((a, b) => b.stars - a.stars || byDate(a, b));
     if (reviewSort === 'worst') return list.sort((a, b) => a.stars - b.stars || byDate(a, b));
     return list.sort(byDate);
-  }, [reviews, reviewSort]);
+  }, [reviews, reviewSort, starFilter]);
   const reviewsToShowOnPage = sortedReviews.slice(0, visibleReviewCount);
+
+  /*
+    ── EVERY CUSTOMER PHOTO ON THE PAGE, FLATTENED ───────────────────────────────────────────
+    Baymard's research on review sections puts reviewer-submitted images at the top of what
+    shoppers actually use them for: they are how somebody checks that the studio photography is
+    honest, and they are judged more trustworthy precisely because they are worse photographs.
+    Their guidance is a dedicated gallery at the head of the section, and navigation from an
+    image back to the review it belongs to — which is what `reviewId` carries here.
+  */
+  const reviewPhotos = useMemo(
+    () =>
+      reviews.flatMap((review) =>
+        (review.images || []).map((photo) => ({
+          key: `${review.id}-${photo.id}`,
+          reviewId: review.id,
+          path: photo.path,
+        }))
+      ),
+    [reviews]
+  );
 
   /** Filament stores product FAQ as JSON array `{ q, a }[]` on `faq`; exposed as-is from `GET /product_details/{slug}`. */
   const productFaqItems = useMemo(() => {
@@ -465,7 +488,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   useEffect(() => {
     setVisibleReviewCount(REVIEW_PAGE_SIZE);
-  }, [reviews.length, REVIEW_PAGE_SIZE]);
+  }, [reviews.length, REVIEW_PAGE_SIZE, starFilter]);
 
   const stripHtml = (html: string | null | undefined): string => {
     if (!html) return '';
@@ -2113,13 +2136,83 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     nothing to distribute. Same reasoning the sort control below already uses at
                     `reviewCount > 1`, one notch higher because three is where a shape appears.
                   */}
+                  {/*
+                    ── THE CUSTOMER PHOTO STRIP ──────────────────────────────────────────────
+                    New on 07/09/2026, and it is the one thing this section was missing rather
+                    than doing badly. Photographs taken by customers were rendered only inside
+                    the review that carried them, three or four screens down, so the most
+                    persuasive evidence on the page was also the least likely to be seen.
+
+                    A tap scrolls to the review it belongs to — Baymard's "navigate across
+                    reviews via reviewer images" — rather than opening a lightbox, because the
+                    photo on its own answers "is it real" and the sentence beside it answers
+                    "was it any good", and a viewer that hides the second is the wrong trade.
+                  */}
+                  {reviewPhotos.length > 0 && (
+                    <ul className="-mx-1 flex snap-x snap-mandatory gap-2 overflow-x-auto px-1 pb-1">
+                      {reviewPhotos.slice(0, 12).map((photo) => (
+                        <li key={photo.key} className="snap-start">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setStarFilter(0);
+                              requestAnimationFrame(() => {
+                                document.getElementById(`review-${photo.reviewId}`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                              });
+                            }}
+                            className="relative block h-20 w-20 overflow-hidden rounded-xl border border-hairline bg-sunken transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:h-24 sm:w-24"
+                            aria-label="Voir l’avis correspondant à cette photo"
+                          >
+                            <Image
+                              src={getStorageUrl(photo.path)}
+                              alt=""
+                              fill
+                              sizes="96px"
+                              className="object-cover"
+                            />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+
                   {reviewCount >= 3 && (
-                    <div className="space-y-1.5 rounded-2xl border border-hairline bg-sunken p-3 sm:p-4">
+                    /* `space-y-0` and a 44px row, not 24px rows with a gap. Turning these into
+                       controls made them targets, and `measure-reviews` failed all five at 24px
+                       before this shipped. DESIGN_SYSTEM's rule is that a visually small control
+                       gets its target back with padding rather than by shrinking the target, so
+                       each row is min-h-11 with the bar centred in it and the former gap absorbed
+                       into that height — the block grows ~70px and every rating is now tappable. */
+                    <div className="rounded-2xl border border-hairline bg-sunken p-2 sm:p-3">
                       {[5, 4, 3, 2, 1].map((starLevel) => {
                         const count = reviews.filter(r => r.stars === starLevel).length;
                         const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
+                        const active = starFilter === starLevel;
                         return (
-                          <div key={starLevel} className="flex items-center gap-2">
+                          /*
+                            A BUTTON, NOT A DIV. The bars have always drawn the right numbers and
+                            done nothing with them: a chart of "how many people said 4 stars" that
+                            you cannot press to read those four-star reviews is decoration sitting
+                            in the one place a reader is deciding what to read next. Tapping a row
+                            filters the list below; tapping the active row clears it.
+
+                            A row with no reviews behind it stays inert rather than becoming a
+                            control that leads to an empty list.
+                          */
+                          <button
+                            key={starLevel}
+                            type="button"
+                            disabled={count === 0}
+                            aria-pressed={active}
+                            onClick={() => setStarFilter(active ? 0 : starLevel)}
+                            className={`flex min-h-11 w-full items-center gap-2 rounded-lg px-1.5 text-start transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+                              count === 0
+                                ? 'cursor-default opacity-60'
+                                : active
+                                  ? 'bg-brand/10'
+                                  : 'hover:bg-elevated'
+                            }`}
+                          >
                             <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
                               {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
@@ -2140,10 +2233,27 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               />
                             </div>
                             <span className="w-7 shrink-0 text-right text-xs text-ink-3 tabular-nums">{count}</span>
-                          </div>
+                          </button>
                         );
                       })}
                     </div>
+                  )}
+
+                  {/* The escape hatch. A filtered list that does not say it is filtered is how a
+                      reader concludes the product has one review. */}
+                  {starFilter > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setStarFilter(0)}
+                      className="inline-flex min-h-11 items-center gap-2 rounded-full border border-brand/30 bg-brand/5 px-3.5 text-xs font-semibold text-ink-1 transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      <span className="inline-flex items-center gap-1">
+                        {starFilter} <Star className="h-3 w-3 fill-current text-amber-400" aria-hidden="true" />
+                      </span>
+                      <span className="text-ink-3">· {sortedReviews.length} avis</span>
+                      <X className="h-3.5 w-3.5 text-ink-3" aria-hidden="true" />
+                      <span className="sr-only">Retirer le filtre</span>
+                    </button>
                   )}
 
                   {/* The order is the reader's choice from two reviews up - below that there is
@@ -2223,7 +2333,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                            not a control and must not lift. */
                         <li
                           key={review.id}
-                          className="-mx-3 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-sunken sm:py-5"
+                          id={`review-${review.id}`}
+                          className="-mx-3 scroll-mt-24 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-sunken sm:py-5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">

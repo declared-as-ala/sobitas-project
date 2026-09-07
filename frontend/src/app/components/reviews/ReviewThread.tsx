@@ -271,6 +271,22 @@ export function ReviewThread({
           )}
 
           {showForm && (
+            /*
+              ── THE REPLY BOX, HALVED (07/09/2026) ────────────────────────────────────────
+              It was a labelled two-field form inside a review inside a product page: a "Réponse
+              à …" caption, a "Votre nom" label over an input, a "Votre réponse" label over a
+              textarea, a permanent 0/1000 counter, two equal-width buttons and a line of
+              moderation small print. Roughly 350px of chrome on a 390px phone, to send one
+              sentence — and it opens INSIDE the thread, so every one of those pixels pushes the
+              next review further down the page.
+
+              The labels became placeholders (the caption above already says who is being
+              answered, and a placeholder on a single-purpose box is not the failure case
+              placeholder-as-label usually is — there is one field and its own heading is one
+              line up). The counter appears only near the limit. The moderation note is gone:
+              the appended reply already carries an "En vérification" chip, which says the same
+              thing at the moment it becomes true instead of before it is relevant.
+            */
             <div className="rounded-xl border border-hairline bg-sunken p-3">
               <p className="mb-2 text-xs text-ink-3">
                 {replyTo ? (
@@ -279,21 +295,21 @@ export function ReviewThread({
                   </>
                 ) : (
                   <>
-                    Réponse à l’avis de <span className="font-medium text-ink-2">{reviewerName}</span>
+                    Réponse à <span className="font-medium text-ink-2">{reviewerName}</span>
                   </>
                 )}
               </p>
 
               {!isAuthenticated && (
                 <div className="mb-2">
-                  <label htmlFor={`${formId}-name`} className="mb-1 block text-xs font-semibold text-ink-1">
+                  <label htmlFor={`${formId}-name`} className="sr-only">
                     Votre nom
                   </label>
                   <Input
                     id={`${formId}-name`}
                     value={guestName}
                     onChange={(e) => setGuestName(e.target.value.slice(0, NAME_MAX))}
-                    placeholder="Prénom ou pseudo"
+                    placeholder="Votre nom"
                     className="h-11 rounded-lg border-hairline bg-canvas"
                   />
                 </div>
@@ -319,7 +335,7 @@ export function ReviewThread({
                 onChange={(e) => setReplyHoneypot(e.target.value)}
               />
 
-              <label htmlFor={`${formId}-body`} className="mb-1 block text-xs font-semibold text-ink-1">
+              <label htmlFor={`${formId}-body`} className="sr-only">
                 Votre réponse
               </label>
               <Textarea
@@ -327,19 +343,21 @@ export function ReviewThread({
                 value={body}
                 onChange={(e) => setBody(e.target.value.slice(0, BODY_MAX))}
                 rows={3}
-                placeholder="Posez une question ou partagez votre expérience…"
+                placeholder="Votre réponse…"
                 data-reply-body
                 className="rounded-lg border-hairline bg-canvas"
               />
-              <p className="mt-1 text-end text-[11px] tabular-nums text-ink-3">
-                {body.length}/{BODY_MAX}
-              </p>
+              {body.length > BODY_MAX - 100 && (
+                <p className="mt-1 text-end text-[11px] tabular-nums text-ink-3">
+                  {body.length}/{BODY_MAX}
+                </p>
+              )}
 
-              <div className="mt-2 flex flex-wrap gap-2">
+              <div className="mt-2 flex items-center gap-2">
                 <Button
                   onClick={submit}
                   disabled={submitting}
-                  className="min-h-[44px] rounded-lg bg-brand font-display text-[13px] font-bold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
+                  className="min-h-[44px] flex-1 rounded-lg bg-brand font-display text-[13px] font-bold uppercase tracking-wide text-on-brand hover:bg-brand-hover"
                 >
                   {submitting ? (
                     <>
@@ -347,24 +365,22 @@ export function ReviewThread({
                       Envoi…
                     </>
                   ) : (
-                    'Publier ma réponse'
+                    'Publier'
                   )}
                 </Button>
+                {/* Ghost, not `outline`. Two bordered buttons side by side read as two choices of
+                    equal standing; cancelling a reply is not one. */}
                 <Button
-                  variant="outline"
+                  variant="ghost"
                   onClick={() => {
                     setShowForm(false);
                     setReplyTo(null);
                   }}
-                  className="min-h-[44px] rounded-lg border-hairline text-[13px]"
+                  className="min-h-[44px] shrink-0 rounded-lg px-3 text-[13px] text-ink-2"
                 >
                   Annuler
                 </Button>
               </div>
-
-              <p className="mt-2 text-[11px] leading-snug text-ink-3">
-                Les réponses sont vérifiées automatiquement avant publication.
-              </p>
             </div>
           )}
         </div>
