@@ -29,7 +29,7 @@ import { AromaSelect } from '@/app/components/product/AromaSelect';
 import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins, Camera, UserRound } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -2059,7 +2059,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           same element - two ids for one destination is how they drift apart.
         */}
         <section id="reviews" className="relative mx-auto w-full scroll-mt-24 overflow-hidden rounded-3xl border border-hairline bg-elevated shadow-card lg:scroll-mt-36" aria-label="Avis clients">
-            <div className="absolute inset-x-0 top-0 h-1 bg-brand" aria-hidden="true" />
             <div className="min-w-0 p-4 sm:p-6 lg:p-8">
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               {/*
@@ -2115,6 +2114,64 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </div>
                 )}
               </div>
+
+              {/*
+                ── THE COMPOSER SITS AT THE TOP, AS A BOX YOU CAN TYPE IN ────────────────────
+                Owner, 07/09/2026: *"the écrire un avis button — make it not a button and not at
+                the bottom, make it directly an input like in Facebook comments, and can directly
+                upload an image."*
+
+                It was a prompt row at the FOOT, which is where a comment composer belongs when
+                the thread is the point. This catalogue is the case where that is wrong: not one
+                product has more than a couple of published reviews, so "after the conversation"
+                is four lines down an otherwise empty section, and the control that GROWS the
+                section was placed behind the emptiness it is meant to fix.
+
+                So it is the first thing in the section now, shaped like the box it opens rather
+                than like a button: a round mark, a line of placeholder text, and a camera. That
+                shape is read as "type here" before any label is.
+
+                IT IS STILL INERT UNTIL TOUCHED, and that part is not cosmetic. `ReviewComposer`
+                calls `getReviewAccess` on mount for a signed-in visitor — a round trip answering
+                "have you already reviewed this, how many of your three remain this month".
+                Rendering it open would fire that on every product page view by every member
+                across 11,263 pages to decorate a form almost nobody fills. One tap in, it fires
+                when its answer first matters, and the composer owns the "Avis déjà envoyé" and
+                quota states from there.
+
+                The camera opens the same composer. It cannot open a file picker directly — the
+                picker has to be triggered by a user gesture on the input that will receive the
+                file, and that input does not exist until the composer mounts — so pretending
+                otherwise would swallow the tap. It sets the intent and the composer takes over.
+              */}
+              {!showReviewForm && (
+                <div className="flex items-center gap-2.5 rounded-2xl border border-hairline bg-elevated p-2.5">
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-3" aria-hidden="true">
+                    <UserRound className="h-5 w-5" />
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewForm(true)}
+                    /* A stable hook for `measure-reviews`, which has to open this composer to
+                       check the honeypot inside it. It used to find the entry point by matching
+                       the words "Écrire un avis"; renaming the control to a placeholder broke
+                       that and the guard reported an unguarded submission path. Copy is not a
+                       selector. */
+                    data-review-compose
+                    className="min-h-11 min-w-0 flex-1 rounded-full border border-hairline bg-sunken px-4 text-start text-sm text-ink-3 transition-colors hover:border-brand/40 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    Partagez votre avis sur ce produit…
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowReviewForm(true)}
+                    aria-label="Ajouter une photo à votre avis"
+                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  >
+                    <Camera className="h-5 w-5" aria-hidden="true" />
+                  </button>
+                </div>
+              )}
 
               {reviewCount > 0 ? (
                 <>
@@ -2501,51 +2558,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </p>
               )}
 
-              {/*
-                ── THE COMPOSER, AT THE FOOT, BEHIND A PROMPT ROW ────────────────────────────
-                This is the shape every comment thread uses: an inert box that says what it is
-                for, which becomes the real form once you touch it. It is deliberately NOT the
-                full composer rendered open.
-
-                THE REASON IS A REQUEST, NOT TASTE. `ReviewComposer` calls `getReviewAccess` on
-                mount for a signed-in visitor — a round trip that answers "have you already
-                reviewed this, and how many of your three are left this month". Rendering it
-                open would fire that on every product page view by every member, on 11,263
-                pages, to decorate a form almost nobody fills. Behind the prompt it fires on
-                intent, which is also when its answer first matters: the composer owns the
-                "Avis déjà envoyé" and "3 avis publiés ce mois-ci" states, so a visitor who has
-                already reviewed learns it here, one tap in, instead of being told so by a
-                disabled control they never asked about.
-
-                THE PROTINA CHIP IS THE ONE THAT SURVIVED. It was a 56px coin in a panel at the
-                top of the section and another in the empty state; here it sits on the control
-                that earns it, which is the only place a reward is an incentive rather than an
-                advertisement. `sm:` only — at 390 the row is already name + sentence, and a
-                third element turns it into two lines of chrome above a form.
-              */}
-              {!showReviewForm && (
-                <button
-                  type="button"
-                  onClick={() => setShowReviewForm(true)}
-                  className="group flex w-full items-center gap-3 rounded-2xl border border-hairline bg-elevated p-3 text-start transition-colors hover:border-brand/40 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:p-3.5"
-                >
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-hairline bg-sunken text-ink-3 transition-colors group-hover:border-brand/40 group-hover:text-brand">
-                    <MessageSquare className="h-[18px] w-[18px]" aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-display text-sm font-bold uppercase tracking-wide text-ink-1">
-                      Écrire un avis
-                    </span>
-                    <span className="mt-0.5 block text-xs leading-snug text-ink-3">
-                      Notez ce produit et aidez un autre sportif à choisir.
-                    </span>
-                  </span>
-                  <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brand/20 bg-brand/5 px-2.5 py-1 text-[11px] font-bold text-brand sm:inline-flex">
-                    <ProtinaMark size="xs" />
-                    Jusqu'à 50
-                  </span>
-                </button>
-              )}
 
               {showReviewForm && (
                 <ReviewComposer

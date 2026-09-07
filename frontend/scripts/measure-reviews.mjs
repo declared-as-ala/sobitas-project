@@ -265,10 +265,13 @@ for (const theme of THEMES) {
         keyboard or screen-reader user reaching it is the same disaster as a sighted one.
       */
       const honeypot = await page.evaluate(() => {
-        const openBtn = [...document.querySelectorAll('button')].find((b) =>
-          /écrire un avis/i.test((b.textContent || '').trim())
-        );
-        if (!openBtn) return { missing: 'no "Écrire un avis" button' };
+        /* `[data-review-compose]` first, the old copy match as a fallback. The composer's entry
+           point was renamed from a button reading "Écrire un avis" to a Facebook-style
+           placeholder row on 07/09/2026, and a guard that finds its target by reading French
+           marketing copy reports a security failure every time somebody rewrites a label. */
+        const openBtn = document.querySelector('[data-review-compose]')
+          || [...document.querySelectorAll('button')].find((b) => /écrire un avis/i.test((b.textContent || '').trim()));
+        if (!openBtn) return { missing: 'no review composer entry point ([data-review-compose])' };
         openBtn.click();
         return null;
       });
