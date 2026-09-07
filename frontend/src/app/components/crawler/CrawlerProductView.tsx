@@ -26,6 +26,7 @@ import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildComparison } from '@/util/productComparison';
 import { ComparisonNutrition } from '@/app/components/product/ComparisonNutrition';
+import { visibleNutrients } from '@/util/productComparisonFacts';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
@@ -85,6 +86,11 @@ export function CrawlerProductView({
     .filter((f) => f.q && f.a);
   const sku = product.sku || product.code_product || String(product.id);
   const comparison = buildComparison(product, similarProducts);
+  /* Googlebot was shown the same false rows as a customer: "Protéines —" on six creatines, with a
+     caption inviting a choice based on facts. Structured emptiness is worse here than on the
+     customer view, because it is what a crawler reads as the page's actual nutrition coverage.
+     Same rule, same source of truth — see productComparisonFacts.visibleNutrients. */
+  const comparisonNutrients = visibleNutrients(comparison.map((row) => row.facts));
   const subCategoryName = getProductPrimarySubCategory(product)?.designation_fr ?? '';
   const officialVideoId = videoId(product.official_video);
   /*
@@ -489,7 +495,7 @@ export function CrawlerProductView({
                           : '—'}
                       </td>
                       <td className="border-b p-2">{row.format || '—'}</td>
-                      <td className="border-b p-2"><ComparisonNutrition facts={row.facts} /></td>
+                      <td className="border-b p-2"><ComparisonNutrition facts={row.facts} nutrients={comparisonNutrients} /></td>
                       <td className="border-b p-2">Sans gluten : {row.facts.gluten}<br />Sans lactose : {row.facts.lactose}</td>
                       <td className="border-b p-2">
                         {formatTnd(row.price)}

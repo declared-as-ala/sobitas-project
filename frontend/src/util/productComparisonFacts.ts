@@ -1,5 +1,52 @@
 import type { Product } from '@/types';
 
+/**
+ * ── WHICH NUTRIENTS ARE WORTH A ROW, PER TABLE ──────────────────────────────────────────────
+ * Owner, 07/09/2026: *"if a product doesn't have something, make it smart — creatine can't have
+ * protein."*
+ *
+ * Measured on `/creatine/creatine-real-pharm-300g` at 390px before this existed: the table was
+ * **3 294px tall** for six rows, and **30 of its 42 fact cells were an em-dash — 71 %**. The five
+ * nutrient labels printed on that page were Protéines, Glucides, Sucres, Lipides, Énergie, on
+ * creatine monohydrate.
+ *
+ * And the footnote under the table said a dash means *"le fabricant ne communique pas cette
+ * valeur"*. On a creatine page that is not true. Nobody withheld the protein content of creatine
+ * monohydrate; there is none to withhold. The table was stating a fact about the manufacturer
+ * that was really a fact about chemistry, 30 times.
+ *
+ * The fix is not a hardcoded map of category → nutrients, which would need a new branch for every
+ * product family this shop ever adds and would be wrong the first time a category is mixed. It is
+ * to ask the products themselves: a nutrient earns a row when **at least one of the compared
+ * products declares a value for it**. Six creatines declare no protein between them, so no protein
+ * row is drawn. A whey compared against whey keeps all five. A creatine-with-carbs blend in the
+ * set brings the carbohydrate row back for everyone, which is correct — there the blank IS a real
+ * difference between the products.
+ *
+ * When nothing survives, the caller drops the nutrition column outright rather than printing an
+ * empty one, and the comparison becomes brand, format, tolerance, price and availability — which
+ * on a shelf of creatine monohydrate is the entire real comparison anyway.
+ */
+export const COMPARISON_NUTRIENTS = [
+  { key: 'protein', label: 'Protéines' },
+  { key: 'carbohydrates', label: 'Glucides' },
+  { key: 'sugars', label: 'Sucres' },
+  { key: 'fat', label: 'Lipides' },
+  { key: 'energy', label: 'Énergie' },
+] as const;
+
+export type ComparisonNutrientKey = (typeof COMPARISON_NUTRIENTS)[number]['key'];
+
+/** True when this product declares at least one of the compared nutrients. */
+export function declaresNutrition(facts: ComparisonFacts): boolean {
+  return COMPARISON_NUTRIENTS.some(({ key }) => Boolean(facts[key]));
+}
+
+/** The nutrients at least one product in the table declares, in canonical order. */
+export function visibleNutrients(all: ComparisonFacts[]): readonly { key: ComparisonNutrientKey; label: string }[] {
+  return COMPARISON_NUTRIENTS.filter(({ key }) => all.some((facts) => Boolean(facts[key])));
+}
+
 export type ComparisonFacts = {
   basis: string;
   protein: string;

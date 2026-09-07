@@ -7,23 +7,74 @@
 .claims { width: 15%; }
 .price { width: 13%; }
 .stock { min-width: 150px; }
-@media (max-width: 1023px) {
-  .table, .body { display: block; }
-  .head { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .head th { position: absolute; width: 1px; height: 1px; overflow: hidden; padding: 0; clip-path: inset(50%); }
-  .row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin: 12px; overflow: hidden; border: 1px solid rgb(var(--c-hairline)); border-radius: 16px; background: rgb(var(--c-elevated)); }
-  .row:first-child { border-top: 0; }
-  .product { width: auto; grid-column: 1 / -1; padding: 14px; padding-bottom: 12px; background: rgb(var(--c-sunken)); }
-  .nutrition, .claims { padding-top: 8px; padding-bottom: 12px; }
-  .claims { border-inline-start: 1px solid rgb(var(--c-hairline)); }
-  .price, .stock { border-top: 1px solid rgb(var(--c-hairline)); padding-top: 12px; }
-  .stock { min-width: 0; text-align: end; }
+
+/* Four columns instead of five, so the space the nutrition column held goes back to the product
+   name and the action rather than leaving a gap. See ProductComparisonTable.tsx for when this
+   applies — a table whose products declare no comparable nutrient at all.
+   ── ANYTHING THAT SETS A COLUMN WIDTH BELONGS INSIDE A BREAKPOINT ──────────────────────────
+   Written unscoped, these also applied on a phone: `.table[data-columns='lean'] .product` (0,2,1)
+   outranks `.product` (0,1,0), and a media query adds no specificity, so they beat the mobile
+   `width: auto`. Measured at 390px — the product header rendered in a 24px column and
+   "Real Pharm · 300 g" wrapped one character per line. */
+@media (min-width: 1024px) {
+  .table[data-columns='lean'] .product { width: 42%; }
+  .table[data-columns='lean'] .claims { width: 20%; }
+  .table[data-columns='lean'] .price { width: 14%; }
 }
+
+/*
+ * ── BELOW 1024 IT STAYS A TABLE AND SCROLLS SIDEWAYS ────────────────────────────────────────
+ * Owner, 07/09/2026: *"make it more user friendly and mobile responsive."*
+ *
+ * It used to break each row into a stacked card. Measured on the creatine page at 390px that was
+ * 3 294px for six products — four screens — and after the nutrient pruning still 2 471px. But the
+ * height was the smaller problem. **A stack of cards is not a comparison.** Every value a shopper
+ * wants to weigh against another sat a full screen away from it, so "which of these is cheaper, or
+ * has more protein, or is in stock" meant scrolling and remembering. The section is called
+ * "Comparer" and its mobile layout was the one shape that makes comparing impossible.
+ *
+ * So the table stays a table and the viewport moves across it instead. Products remain rows, the
+ * product column is pinned, and Nutrition / Tolérance / Prix / Choisir scroll under the thumb.
+ * Scanning DOWN a column now compares one attribute across all six products, which is the question
+ * this table exists to answer.
+ *
+ * The header row comes back with it. A sticky-column table needs one: once a value has scrolled
+ * away from its heading, an unlabelled "21 g" is not a fact about anything.
+ */
+@media (max-width: 1023px) {
+  .scroller { overflow-x: auto; overscroll-behavior-x: contain; }
+  .table { table-layout: auto; min-width: 680px; }
+  .product, .nutrition, .claims, .price, .stock { padding: 12px; }
+
+  /* The pinned column. The background is not optional — a transparent sticky cell lets the
+     scrolling columns slide visibly underneath it, and the row's own `data-current` tint has to be
+     repeated here for the same reason. */
+  .product {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    width: 200px;
+    min-width: 200px;
+    background: rgb(var(--c-elevated));
+    border-inline-end: 1px solid rgb(var(--c-hairline));
+  }
+  .row[data-current] .product { background: rgb(var(--c-sunken)); }
+
+  .head th { position: sticky; top: 0; z-index: 2; white-space: nowrap; }
+  /* The corner cell sits on both sticky axes, so it has to outrank each of them. */
+  .head th:first-child { inset-inline-start: 0; z-index: 3; width: 200px; min-width: 200px; }
+
+  .nutrition { min-width: 168px; }
+  .claims { min-width: 132px; }
+  .price { min-width: 96px; }
+  .stock { min-width: 148px; }
+}
+
 @media (max-width: 639px) {
-  .row { grid-template-columns: minmax(0, 1fr); margin: 10px; }
-  .product, .nutrition, .claims, .price, .stock { width: auto; padding: 12px; }
-  .nutrition, .claims { border-top: 1px solid rgb(var(--c-hairline)); }
-  .claims { border-inline-start: 0; }
-  .price { display: flex; align-items: baseline; gap: 8px; }
-  .stock { text-align: start; }
+  /* One notch narrower on a phone, so a second scrolling column is visible beside the pinned one
+     rather than a sliver of one — seeing another value is the entire point of the layout. */
+  .table { min-width: 620px; }
+  .product, .head th:first-child { width: 164px; min-width: 164px; }
+  .nutrition { min-width: 152px; }
+  .claims { min-width: 124px; }
 }
