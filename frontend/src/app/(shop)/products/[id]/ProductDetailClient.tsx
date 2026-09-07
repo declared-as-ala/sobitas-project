@@ -96,13 +96,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const [quantity, setQuantity] = useState(1);
   const [requestOpen, setRequestOpen] = useState(false);
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
-  const [reviewStars, setReviewStars] = useState(0);
-  const [reviewComment, setReviewComment] = useState('');
-  const [guestReviewName, setGuestReviewName] = useState('');
-  const [reviewHoneypot, setReviewHoneypot] = useState('');
   const reviewOpenedAt = useRef<number | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
-  const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [descExpanded, setDescExpanded] = useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent');
@@ -658,145 +653,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   const composeMs = () => (reviewOpenedAt.current ? Math.max(0, Date.now() - reviewOpenedAt.current) : 0);
 
-  const handleSubmitReview = async () => {
-    if (reviewStars === 0) {
-      toast.error('Veuillez sélectionner une note');
-      return;
-    }
-
-    if (!isAuthenticated) {
-      if (reviewComment.trim().length < 10) {
-        toast.error('Écrivez quelques mots sur le produit (10 caractères minimum).');
-        return;
-      }
-
-      setIsSubmittingReview(true);
-      try {
-        const res = await addGuestReview({
-          product_id: product.id,
-          stars: reviewStars,
-          comment: reviewComment.trim(),
-          author_name: guestReviewName.trim() || undefined,
-          compose_ms: composeMs(),
-          hp_field: reviewHoneypot,
-        });
-        setReviewStars(0);
-        setReviewComment('');
-        setGuestReviewName('');
-        setShowReviewForm(false);
-        toast.success(res.message || 'Merci ! Votre avis est publié.');
-      } catch (e: unknown) {
-        const status = (e as { response?: { status?: number } })?.response?.status;
-        const message = (e as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        toast.error(
-          message ||
-            (status === 429
-              ? 'Vous avez déjà envoyé plusieurs avis. Réessayez plus tard.'
-              : 'Envoi impossible pour le moment.')
-        );
-      } finally {
-        setIsSubmittingReview(false);
-      }
-      return;
-    }
-
-    setIsSubmittingReview(true);
-
-    try {
-      // Submit review to backend
-      const newReview = await addReview({
-        product_id: product.id,
-        stars: reviewStars,
-        comment: reviewComment,
-        compose_ms: composeMs(),
-        hp_field: reviewHoneypot,
-      });
-
-      const isPublished = newReview.published;
-
-      // Reset form immediately for better UX
-      setReviewStars(0);
-      setReviewComment('');
-      setShowReviewForm(false);
-
-      if (isPublished) {
-        // Optimistically add the review to UI immediately (will be replaced by server data)
-        if (user) {
-          const optimisticReview: Review = {
-            id: Date.now(), // Temporary ID
-            stars: reviewStars,
-            comment: reviewComment || undefined,
-            publier: 1,
-            created_at: new Date().toISOString(),
-            user: {
-              id: user.id,
-              name: user.name || 'Vous',
-              avatar: user.avatar,
-            },
-          };
-          setReviews(prev => [...prev, optimisticReview]);
-        }
-
-        // For published reviews, refetch product data to get the complete review with user info
-        // Add a small delay to ensure backend transaction is committed
-        setTimeout(async () => {
-          try {
-            // Use the slug from URL params for reliable refetching
-            const slugToUse = productSlug || product.slug || product.id.toString();
-
-            // Refetch with cache busting to ensure fresh data
-            const updatedProduct = await getProductDetails(slugToUse, true);
-
-            // Update product state with fresh data from backend
-            setProduct(updatedProduct);
-
-            // Backend's reviews() relationship already filters by publier = 1
-            const publishedReviews = updatedProduct.reviews || [];
-            setReviews(publishedReviews);
-
-            const newReviewCount = publishedReviews.length;
-            const oldReviewCount = reviews.length;
-
-            if (newReviewCount > oldReviewCount) {
-              toast.success(`Avis publié avec succès ! (${newReviewCount} avis)`);
-            } else if (newReviewCount === oldReviewCount && newReviewCount > 0) {
-              // Review count stayed same but we have reviews - might be a timing issue
-              toast.success('Avis ajouté avec succès !');
-              // Force a full page refresh to ensure consistency
-              setTimeout(() => {
-                router.refresh();
-              }, 1000);
-            } else {
-              toast.success('Avis ajouté avec succès !');
-              // If count didn't increase, force a full page refresh
-              router.refresh();
-            }
-          } catch (fetchError: any) {
-            console.error('Error refetching product:', fetchError);
-            // If refetch fails, use router.refresh() as fallback to reload server component
-            toast.success('Avis ajouté avec succès !');
-            setTimeout(() => {
-              router.refresh();
-            }, 1000);
-          }
-        }, 1000); // Wait 1 second for backend to commit transaction and propagate
-      } else {
-        // Review not published (stars < 4) - will be moderated
-        toast.success('Votre avis a bien été reçu.');
-        // Still refresh to ensure UI is in sync
-        setTimeout(() => {
-          router.refresh();
-        }, 500);
-      }
-
-    } catch (error: any) {
-      console.error('Error adding review:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Erreur lors de l\'ajout de l\'avis';
-      toast.error(errorMessage);
-    } finally {
-      setIsSubmittingReview(false);
-    }
-  };
+  /* `handleSubmitReview` and the five pieces of state it owned were removed on 07/09/2026
+     with the dead `{false && …}` form below the reviews section: the last thing that called
+     it was that switched-off form. Submission lives in `ReviewComposer`, which owns its own
+     state, its own honeypot and its own compose-time measurement. `reviewOpenedAt` /
+     `composeMs` stay — they still time how long the form has been open for the composer. */
 
   const handleShare = () => {
     const base = typeof window !== 'undefined' ? window.location.origin + window.location.pathname + window.location.search : '';
@@ -2189,76 +2050,71 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 also where it is useful: a visitor who has just read the rating is deciding whether
                 to contribute, and a visitor who scrolled past twelve reviews has stopped reading.
               */}
-              <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-3 border-b border-hairline pb-4 sm:pb-5">
+              {/*
+                -- THE ASK MOVED TO THE FOOT, WHERE A CONVERSATION PUTS IT --------------------
+                Owner, 07/09/2026: *"make it look like commenting on a post -- put a place to
+                write the review directly at the bottom."*
+
+                It was a top-right "ÉCRIRE UN AVIS" button, argued for on the grounds that a
+                visitor who has just read the rating is deciding whether to contribute. Measured
+                on a real product at 1440, this section was 539px tall for ONE two-line review:
+                109px of heading, 154px of score card, 185px of review, 20px of footer. Two
+                thirds of it was chrome, and the single control that grows the section sat above
+                every word a reader came for, competing with the h2 for the same corner.
+
+                Every surface people actually write comments on does the opposite: the composer
+                is the LAST thing in the thread, because writing is what you do after reading. So
+                the header is now identity plus the score, the composer is a prompt row at the
+                foot, and the button that used to live here is gone rather than duplicated.
+              */}
+              <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-hairline pb-3 sm:pb-4">
                 <div className="min-w-0">
-                  <p className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand"><MessageSquare className="h-4 w-4" aria-hidden="true" />La communauté Protein.tn</p>
-                  <h2 className="font-display text-2xl font-bold uppercase leading-[0.95] tracking-tight text-ink-1 sm:text-3xl">
+                  <p className="mb-1.5 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-brand"><MessageSquare className="h-4 w-4" aria-hidden="true" />La communauté Protein.tn</p>
+                  <h2 className="font-display text-xl font-bold uppercase leading-[1.05] tracking-tight text-ink-1 sm:text-2xl">
                     Des avis utiles, des achats identifiés
                   </h2>
-                  {reviewCount > 0 && (
-                    <div className="mt-2 flex items-center gap-2">
-                      <StarRating rating={rating} size="md" />
-                      <span className="text-sm text-ink-2 tabular-nums">
-                        {rating.toFixed(1)} sur 5 · {reviewCount} avis
-                      </span>
-                    </div>
-                  )}
                 </div>
 
-                {isAuthenticated ? (
-                  <Button
-                    onClick={() => setShowReviewForm(!showReviewForm)}
-                    className="min-h-[44px] w-full font-display font-semibold uppercase tracking-wide sm:w-auto"
-                    size="default"
-                  >
-                    {showReviewForm ? 'Annuler' : 'Écrire un avis'}
-                  </Button>
-                ) : (
-                  /*
-                    This was "Connectez-vous pour laisser un avis" and it went to /login. Asking
-                    somebody who has just formed an opinion to create an account first is how a
-                    review is lost — so the button now opens the same form, and the form asks for a
-                    name instead of a password. What changes is where the submission goes and
-                    whether it can touch the rating, not whether it is accepted.
-                  */
-                  <Button
-                    onClick={() => setShowReviewForm(!showReviewForm)}
-                    variant="outline"
-                    className="min-h-[44px] w-full border-brand font-display font-semibold uppercase tracking-wide text-brand hover:bg-brand hover:text-on-brand sm:w-auto"
-                    size="default"
-                  >
-                    {showReviewForm ? 'Annuler' : 'Écrire un avis'}
-                  </Button>
+                {/* The score, inline. It was a 154px card of its own directly below this heading:
+                    a 48px numeral, its own stars and "Basé sur N avis", none of which needs a
+                    slab to be legible. Beside the title it costs no vertical space at all. */}
+                {reviewCount > 0 && (
+                  <div className="flex items-center gap-3">
+                    <span className="font-display text-4xl font-bold leading-none tracking-tight tabular-nums text-ink-1">
+                      {rating.toFixed(1)}
+                    </span>
+                    <div className="min-w-0">
+                      <StarRating rating={rating} size="sm" />
+                      <p className="mt-1 text-xs tabular-nums text-ink-3">
+                        {reviewCount} avis · sur 5
+                      </p>
+                    </div>
+                  </div>
                 )}
               </div>
 
               {reviewCount > 0 ? (
                 <>
                   {/*
-                    The score and its distribution.
+                    -- THE DISTRIBUTION, AND ONLY WHEN IT DISTRIBUTES ANYTHING ---------------
+                    Two panels were deleted from this block, not restyled.
 
-                    Written in TOKENS now — it carried `bg-gray-50/60 dark:bg-gray-900/40`,
-                    `border-gray-200 dark:border-gray-800` and `dark:sm:border-gray-800`, which is
-                    five hand-maintained colour pairs on one card. `bg-sunken` and `border-hairline`
-                    resolve correctly in both themes with no `dark:` variant at all, and the design
-                    lint has been counting those pairs against this file since the day it shipped.
+                    THE SCORE PANEL moved into the heading above: same numbers, no slab.
 
-                    The reference storefront prints only "4.3 out of 5". The distribution stays:
-                    five bars tell a reader whether a 4.3 is everyone agreeing or two people
-                    fighting, and that is the question somebody scrolling to reviews is asking.
+                    THE "VOTRE EXPÉRIENCE COMPTE" PANEL is gone from here entirely. It was an
+                    advertisement for the loyalty programme placed at the TOP of a section whose
+                    job is to let a reader read other people opinions, and it asked for an action
+                    the page offered no way to take from that spot. The same fact -- up to 50
+                    Protinas for an eligible review -- is now on the composer prompt at the foot,
+                    which is the moment it is an incentive rather than an interruption.
+
+                    AND THE BARS THEMSELVES ARE CONDITIONAL. Five bars under a single review is
+                    one full row and four empty ones: it draws a distribution of a set that has
+                    nothing to distribute. Same reasoning the sort control below already uses at
+                    `reviewCount > 1`, one notch higher because three is where a shape appears.
                   */}
-                  <div className="grid gap-5 rounded-2xl border border-hairline bg-sunken p-4 sm:grid-cols-[auto,1fr] sm:items-center sm:gap-8 sm:p-6 lg:grid-cols-[auto,minmax(240px,1fr),minmax(250px,0.8fr)]">
-                    <div className="flex flex-col items-center sm:items-start sm:border-e sm:border-hairline sm:pe-8">
-                      <div className="flex items-baseline gap-1.5">
-                        <span className="font-display font-bold tracking-tight tabular-nums text-5xl text-ink-1">
-                          {rating > 0 ? rating.toFixed(1) : '–'}
-                        </span>
-                        <span className="text-ink-3 text-base tabular-nums">/ 5</span>
-                      </div>
-                      <StarRating rating={rating} size="lg" className="mt-1.5 gap-1" />
-                      <p className="mt-2 text-xs sm:text-sm text-ink-3">Basé sur {reviewCount} avis</p>
-                    </div>
-                    <div className="space-y-1.5">
+                  {reviewCount >= 3 && (
+                    <div className="space-y-1.5 rounded-2xl border border-hairline bg-sunken p-3 sm:p-4">
                       {[5, 4, 3, 2, 1].map((starLevel) => {
                         const count = reviews.filter(r => r.stars === starLevel).length;
                         const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
@@ -2267,18 +2123,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                             <span className="flex w-9 shrink-0 items-center gap-0.5 text-xs text-ink-2 tabular-nums">
                               {starLevel} <Star className="h-3 w-3 fill-current text-amber-400" />
                             </span>
-                            {/* The TRACK is `bg-rule` (#D6D2CC, 1.51:1 — the band-seam grey), not `bg-rule-strong`
-                                  (#8C8C92, 3.34:1 — the brand-wall grey). At rule-strong the empty
-                                  portion of the bar was darker and heavier than the amber fill, so
-                                  the eye read the GREY as the data: a distribution where one review
-                                  in three is five stars looked like a mostly-full dark bar with a
-                                  short highlight on it. An empty track is structure, not a value. */}
+                            {/* The TRACK is `bg-rule` (#D6D2CC, 1.51:1 -- the band-seam grey), not
+                                `bg-rule-strong` (#8C8C92, 3.34:1 -- the brand-wall grey). At
+                                rule-strong the empty portion was darker and heavier than the amber
+                                fill, so the eye read the GREY as the data. An empty track is
+                                structure, not a value. */}
                             <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule">
-                              {/* `transition-[width]`, not `transition-all`: DESIGN_SYSTEM §9 asks
-                                  for named properties because `all` also animates `ring-color`,
-                                  so a focus ring fades in instead of appearing. 500ms because
-                                  this bar changes when the SORT changes, and a bar that jumps
-                                  reads as a re-render rather than as the same data reordered. */}
+                              {/* `transition-[width]`, not `transition-all`: DESIGN_SYSTEM 9 asks
+                                  for named properties because `all` also animates `ring-color`, so
+                                  a focus ring fades in instead of appearing. 500ms because this
+                                  bar changes when the SORT changes, and a bar that jumps reads as
+                                  a re-render rather than the same data reordered. */}
                               <div
                                 className="h-full rounded-full bg-amber-400 transition-[width] duration-500 ease-out motion-reduce:transition-none"
                                 style={{ width: `${pct}%` }}
@@ -2289,19 +2144,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         );
                       })}
                     </div>
-                    <div className="flex items-center gap-3 rounded-2xl border border-brand/20 bg-elevated p-4 lg:min-h-full">
-                      <ProtinaMark size="lg" decorative={false} />
-                      <div>
-                        <p className="font-display text-sm font-bold uppercase tracking-wide text-ink-1">Votre expérience compte</p>
-                        <p className="mt-1 text-xs leading-relaxed text-ink-2">Publiez un avis éligible et recevez jusqu’à 50 Protinas. Un achat associé porte clairement le badge « Achat vérifié ».</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Removed: fabricated "Ce que disent les clients" summary + hardcoded
-                      "Points forts des avis" badges. They rendered identical, invented review
-                      sentiment on EVERY product regardless of real reviews — a trust liability and
-                      a Google review-content policy risk. The real, per-product reviews render below. */}
+                  )}
 
                   {/* The order is the reader's choice from two reviews up - below that there is
                       nothing to sort and the control would be furniture. */}
@@ -2347,7 +2190,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     the right one: the name and the badge answer "who is this", the stars answer
                     "what did they think", and stacking them lets a reader scan either column alone.
                   */}
-                  <ul className="grid gap-3 sm:grid-cols-2">
+                  {/* A COLUMN SEPARATED BY RULES, NOT A GRID OF CARDS. It was
+                      `grid gap-3 sm:grid-cols-2`: two columns of bordered, rounded, padded tiles,
+                      the catalogue own shape applied to prose. Two consequences. A reader had to
+                      pick a column and come back for the other, so the reviews stopped being in
+                      an order; and a review whose body ran three lines sat beside one of ten,
+                      leaving a hole that the border then drew a box around.
+
+                      A thread is one column, and separation is a 1px rule (DESIGN_SYSTEM 4 -- a
+                      colour change plus a rule, never emptiness). */}
+                  <ul className="divide-y divide-hairline">
                     {reviewsToShowOnPage.map((review) => {
                       /*
                         THREE sources, in this order, and the middle one is new.
@@ -2364,10 +2216,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         /* A hover plate that bleeds past the text column, so a row highlights as a
                            ROW rather than as a rectangle inset inside a list. `-mx-3 px-3` is the
                            same trick the applied-filter chips use to grow a target without moving
-                           the text. Colour only — a review is not a control and must not lift. */
+                           the text — and here it is what lets a bordered card become a message:
+                           the padding that used to be inside a box is now the row's own gutter,
+                           the `divide-y` on the list draws the only separator, and the plate still
+                           reaches the full width of the column on hover. Colour only — a review is
+                           not a control and must not lift. */
                         <li
                           key={review.id}
-                          className="rounded-2xl border border-hairline bg-canvas p-4 transition-colors duration-150 hover:border-brand/30 hover:bg-sunken sm:p-5"
+                          className="-mx-3 rounded-xl px-3 py-4 transition-colors duration-150 hover:bg-sunken sm:py-5"
                         >
                           <div className="flex items-start justify-between gap-3">
                             <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
@@ -2505,24 +2361,81 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   buildAggregateRatingAndReviews uses to decide what may enter the structured data,
                   and this copy describes exactly that and nothing more.
                 */
-                <div className="grid overflow-hidden rounded-2xl border border-hairline bg-sunken sm:grid-cols-[1fr,auto] sm:items-center">
-                  <div className="px-5 py-6 text-center sm:px-6 sm:text-start">
-                    <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-2xl border border-hairline bg-elevated shadow-sm sm:mx-0">
-                      <MessageSquare className="h-5 w-5 text-brand" aria-hidden="true" />
-                    </div>
-                    <p className="font-display text-base font-bold uppercase tracking-wide text-ink-1">Partagez votre expérience</p>
-                    <p className="mx-auto mt-2 max-w-[52ch] text-sm leading-relaxed text-ink-3 sm:mx-0">Aidez un autre sportif à choisir. Les avis liés à une commande affichent la mention « Achat vérifié ».</p>
-                  </div>
-                  <div className="flex items-center justify-center gap-3 border-t border-hairline bg-elevated px-6 py-5 sm:h-full sm:border-s sm:border-t-0">
-                    <ProtinaMark size="lg" decorative={false} />
-                    <p className="max-w-[18ch] text-xs leading-relaxed text-ink-2"><strong className="block font-display text-sm uppercase text-ink-1">Jusqu’à 50 Protinas</strong>pour un avis éligible</p>
-                  </div>
-                </div>
+                /*
+                  ── AND IT SHRANK AGAIN, BECAUSE THE COMPOSER IS NOW DIRECTLY BELOW IT ───────
+                  It was a two-panel slab: a 48px icon tile, a heading, a sentence, and a second
+                  panel beside it holding a 56px coin and "Jusqu'à 50 Protinas". Every one of
+                  those said *write a review*, on a page where the only way to write one was a
+                  button 300px above. That slab and the prompt row below it are now the same
+                  message printed twice, ~40px apart, and the prompt row is the one you can act
+                  on — so this branch keeps only the fact the prompt cannot carry: what the
+                  badge on somebody else's review will mean when the first one arrives.
+
+                  It stays deliberately quiet. Every product in this catalogue is in this state:
+                  1,082 orders exist and none is marked `livree`, so the review-request pipeline
+                  has never fired and not one product has a published review. A loud "BE THE
+                  FIRST!" repeated across 11,263 pages reads as a shop with no customers.
+
+                  THE WORDING IS LOAD-BEARING. It says reviews from an order CARRY A BADGE. It
+                  does not say only buyers may review, because that is not true of this backend:
+                  `ClientController` publishes any authenticated review of 4 stars or more,
+                  purchase or no purchase. The badge test in the row above
+                  (`verified === 1 || commande_id != null`) is the same one
+                  buildAggregateRatingAndReviews uses to decide what may enter the structured
+                  data, and this copy describes exactly that and nothing more.
+                */
+                <p className="flex items-start gap-2.5 text-sm leading-relaxed text-ink-3">
+                  <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />
+                  <span>Aucun avis pour le moment. Les avis liés à une commande affichent la mention « Achat vérifié ».</span>
+                </p>
               )}
 
-              {/* Review form. Tokens, not a `bg-gray-50 dark:bg-gray-800/50` + `border-red-200
-                  dark:border-red-900/50` quartet. The brand edge survives as a single
-                  `border-brand` — it marks the one part of this section the reader can act on. */}
+              {/*
+                ── THE COMPOSER, AT THE FOOT, BEHIND A PROMPT ROW ────────────────────────────
+                This is the shape every comment thread uses: an inert box that says what it is
+                for, which becomes the real form once you touch it. It is deliberately NOT the
+                full composer rendered open.
+
+                THE REASON IS A REQUEST, NOT TASTE. `ReviewComposer` calls `getReviewAccess` on
+                mount for a signed-in visitor — a round trip that answers "have you already
+                reviewed this, and how many of your three are left this month". Rendering it
+                open would fire that on every product page view by every member, on 11,263
+                pages, to decorate a form almost nobody fills. Behind the prompt it fires on
+                intent, which is also when its answer first matters: the composer owns the
+                "Avis déjà envoyé" and "3 avis publiés ce mois-ci" states, so a visitor who has
+                already reviewed learns it here, one tap in, instead of being told so by a
+                disabled control they never asked about.
+
+                THE PROTINA CHIP IS THE ONE THAT SURVIVED. It was a 56px coin in a panel at the
+                top of the section and another in the empty state; here it sits on the control
+                that earns it, which is the only place a reward is an incentive rather than an
+                advertisement. `sm:` only — at 390 the row is already name + sentence, and a
+                third element turns it into two lines of chrome above a form.
+              */}
+              {!showReviewForm && (
+                <button
+                  type="button"
+                  onClick={() => setShowReviewForm(true)}
+                  className="group flex w-full items-center gap-3 rounded-2xl border border-hairline bg-elevated p-3 text-start transition-colors hover:border-brand/40 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:p-3.5"
+                >
+                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full border border-hairline bg-sunken text-ink-3 transition-colors group-hover:border-brand/40 group-hover:text-brand">
+                    <MessageSquare className="h-[18px] w-[18px]" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-display text-sm font-bold uppercase tracking-wide text-ink-1">
+                      Écrire un avis
+                    </span>
+                    <span className="mt-0.5 block text-xs leading-snug text-ink-3">
+                      Notez ce produit et aidez un autre sportif à choisir.
+                    </span>
+                  </span>
+                  <span className="hidden shrink-0 items-center gap-1.5 rounded-full border border-brand/20 bg-brand/5 px-2.5 py-1 text-[11px] font-bold text-brand sm:inline-flex">
+                    <ProtinaMark size="xs" />
+                    Jusqu'à 50
+                  </span>
+                </button>
+              )}
+
               {showReviewForm && (
                 <ReviewComposer
                   productId={product.id}
@@ -2540,117 +2453,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     }, 600);
                   }}
                 />
-              )}
-              {false && (
-                <div className="relative min-w-0 rounded-xl border border-brand bg-sunken p-3 sm:p-4 lg:p-5">
-                  <h4 className="font-bold mb-2 sm:mb-3 text-xs sm:text-sm lg:text-base text-ink-1">Votre avis</h4>
-
-                  {/*
-                    THE HONEYPOT. Four separate reasons a person never reaches it: it is moved off
-                    the visible page rather than `display:none` (some bots skip hidden inputs),
-                    removed from the tab order, hidden from assistive technology, and told not to
-                    autofill. The last one is the failure mode this technique actually has — an
-                    autofilled honeypot silently discards a real customer's review — which is also
-                    why the field is named `hp_field` and not `website` or `company`.
-                  */}
-                  <div className="pointer-events-none absolute" aria-hidden="true">
-                    <label htmlFor="hp_field" className="absolute h-px w-px overflow-hidden [clip-path:inset(50%)]">
-                      Ne pas remplir
-                    </label>
-                    <input
-                      id="hp_field"
-                      name="hp_field"
-                      type="text"
-                      tabIndex={-1}
-                      autoComplete="off"
-                      /* The clip is on the INPUT, not on a wrapper. Clipping the wrapper hides the
-                         field visually but leaves the input's own box at full size — measured at
-                         5160px², which measure-reviews failed, correctly: "is it inside something
-                         hidden" and "is it unreachable" are different questions, and only the
-                         second one is the guarantee this needs.
-
-                         `clip-path` rather than `-left-[9999px]`, because the off-screen trick
-                         assumes LTR and this site renders Arabic — in RTL a -9999px offset puts the
-                         field on the visible side of the page. And not `display:none`, which is the
-                         one form of hiding some bots are written to skip. */
-                      className="absolute h-px w-px overflow-hidden border-0 p-0 opacity-0 [clip-path:inset(50%)]"
-                      value={reviewHoneypot}
-                      onChange={(e) => setReviewHoneypot(e.target.value)}
-                    />
-                  </div>
-
-                  {/*
-                    ── THE REWARD, STATED WITH ITS CONDITION ATTACHED ─────────────────────────
-                    A review pays 50 points. Saying that without the condition would be the more
-                    persuasive sentence and the wrong one: the points are only credited for a
-                    product you actually bought and received, so somebody who writes a review on a
-                    product they browsed would be told they had earned something and then not be
-                    paid. That is worse than never mentioning it.
-
-                    Shown to signed-in customers only. A guest cannot earn — there is no account to
-                    credit — and the guest branch below already explains what their review does and
-                    does not do.
-                  */}
-                  {isAuthenticated && (
-                    <p className="mb-3 flex items-start gap-2 rounded-lg border border-brand/20 bg-brand/5 p-2.5 text-[12.5px] leading-snug text-ink-2">
-                      <Coins className="mt-px h-4 w-4 shrink-0 text-brand" strokeWidth={2} aria-hidden="true" />
-                      <span>
-                        Un avis publié sur un produit que vous avez commandé et reçu vous rapporte{' '}
-                        <span className="font-semibold text-ink-1">
-                          {REVIEW_POINTS_AWARD} Protinas
-                        </span>{' '}
-                        ({formatTnd(pointsToDt(REVIEW_POINTS_AWARD))}).
-                      </span>
-                    </p>
-                  )}
-
-                  <div className="space-y-2 sm:space-y-3">
-                    {!isAuthenticated && (
-                      <div>
-                        <label htmlFor="guest-review-name" className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">
-                          Nom affiché <span className="font-normal text-ink-3">(optionnel)</span>
-                        </label>
-                        <input
-                          id="guest-review-name"
-                          value={guestReviewName}
-                          onChange={(e) => setGuestReviewName(e.target.value.slice(0, 60))}
-                          placeholder="Anonyme"
-                          className="min-h-[44px] w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                        />
-                        <p className="mt-1.5 text-xs leading-snug text-ink-3">
-                          Votre avis est publié immédiatement. Sans preuve d’achat, il n’influence pas
-                          la note vérifiée du produit.{' '}
-                          <Link href="/login" className="font-semibold text-brand underline-offset-2 hover:underline">
-                            Se connecter
-                          </Link>
-                        </p>
-                      </div>
-                    )}
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold mb-2 text-ink-1">Note *</label>
-                      <div className="flex gap-1">
-                        {[1, 2, 3, 4, 5].map((star) => (
-                          <button key={star} onClick={() => setReviewStars(star)} className="focus:outline-none min-h-[44px] min-w-[44px] flex items-center justify-center" aria-label={`Noter ${star} étoile${star > 1 ? 's' : ''}`}>
-                            <Star className={`h-6 w-6 fill-current ${star <= reviewStars ? 'text-amber-400' : 'text-hairline'}`} />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="block text-xs sm:text-sm font-semibold mb-1 text-ink-1">
-                        {isAuthenticated ? 'Commentaire (optionnel)' : 'Commentaire *'}
-                      </label>
-                      <textarea value={reviewComment} onChange={(e) => { if (e.target.value.length <= 500) setReviewComment(e.target.value); }} className="w-full min-w-0 rounded-lg border border-hairline bg-elevated p-3 text-sm text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" rows={3} placeholder="Partagez votre expérience..." maxLength={500} />
-                      <p className="text-xs mt-0.5 text-ink-3">{reviewComment.length}/500</p>
-                    </div>
-                    <div className="flex gap-2">
-                      <Button onClick={handleSubmitReview} disabled={reviewStars === 0 || isSubmittingReview} className="flex-1 bg-brand hover:bg-brand-hover text-on-brand font-display uppercase tracking-wide font-semibold" size="sm">
-                        {isSubmittingReview ? <><Loader2 className="h-4 w-4 mr-1 animate-spin" /> Publication...</> : 'Publier'}
-                      </Button>
-                      <Button variant="outline" size="sm" onClick={() => { setShowReviewForm(false); setReviewStars(0); setReviewComment(''); setGuestReviewName(''); }}>Annuler</Button>
-                    </div>
-                  </div>
-                </div>
               )}
             </div>
           </div>

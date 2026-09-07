@@ -48,7 +48,24 @@ export function DeferredToaster() {
   if (!mounted) return null;
   return (
     <Toaster
-      position={isDesktop ? 'top-right' : 'top-center'}
+      /*
+        ── BOTTOM, ON BOTH BREAKPOINTS, AND THAT IS A MEASUREMENT ──────────────────────────
+        Owner, 07/09/2026: *"the toasts are broken — show them in a good place that doesn't
+        noise the user."*
+
+        It was `top-right` / `top-center` at a 10-20px offset. Measured on a product page, the
+        sticky header spans y=36→101 on a 390px phone and ends at y=150 at 1440 — so the toast
+        was landing squarely ON it. Screenshotted at 390: "Produit ajouté au panier" sitting
+        across the logo and the search field, with its own top edge against the viewport edge.
+        The header is the one strip that has to stay legible while a shopper decides what to
+        do next, and it is also the strip the toast was covering every single time.
+
+        The bottom is free. The only fixed furniture down there is the 57px MobileTabBar, and
+        the offsets below clear it explicitly rather than hoping. It is also nearer the action:
+        on a phone, add-to-cart is the sticky bar, so the confirmation now appears beside the
+        control that produced it instead of a screen away from it.
+      */
+      position={isDesktop ? 'bottom-right' : 'bottom-center'}
       dir="ltr"
       className="sonner-toaster"
       duration={4400}
@@ -56,8 +73,13 @@ export function DeferredToaster() {
       visibleToasts={2}
       expand={false}
       closeButton
-      offset={{ top: 20, right: 20 }}
-      mobileOffset={{ top: 10, left: 8, right: 8 }}
+      offset={{ bottom: 24, right: 24 }}
+      /*
+        64px clears the 57px tab bar with a 7px gap, plus whatever the device reserves for its
+        home indicator. /checkout hides the tab bar and puts its own ~74px CTA footer there
+        instead, so the toast rides just above that too rather than needing a per-route value.
+      */
+      mobileOffset={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))', left: '12px', right: '12px' }}
       swipeDirections={isDesktop ? ['right'] : ['left', 'right']}
       toastOptions={{
         classNames: {

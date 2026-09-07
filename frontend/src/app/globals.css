@@ -1073,16 +1073,37 @@ body[data-page='product'] {
  * Sonner owns stacking and swipe behaviour; this layer owns only the Protein.tn visual system.
  */
 .sonner-toaster {
-  --width: 22rem;
+  --width: 21rem;
 }
 
+/*
+ * ── DO NOT PUT `position` ON THIS RULE ─────────────────────────────────────────────────────
+ * This block used to open with `position: relative`, and it must not.
+ *
+ * Sonner's own base rule is `[data-sonner-toast] { position: absolute; transform: var(--y) }`,
+ * and the whole stack is driven from there: each toast is laid out against the toaster as
+ * containing block, offset by its `--index`, and animated by swapping `--y` between
+ * `translateY(-100%)` and `translateY(0)`. `.sonner-toaster [data-sonner-toast].pt-toast`
+ * outranks sonner's single-attribute selector, so `relative` put every toast back into normal
+ * flow while sonner carried on applying transforms written for absolute ones. With one toast
+ * on screen that mostly survives; with two it is the stacking that breaks, which is the case
+ * nobody looks at (`visibleToasts={2}`, so it is reachable).
+ *
+ * It was presumably added so the absolutely-positioned close button had a containing block.
+ * It never needed one: sonner's own `position: absolute` already provides it.
+ *
+ * The rule for this file: restyle the plate — never touch the layout sonner owns.
+ */
 .sonner-toaster [data-sonner-toast].pt-toast {
   --pt-toast-status: var(--c-brand);
-  position: relative;
-  min-height: 3.75rem;
+  min-height: 3.25rem;
   gap: 0.625rem;
-  padding: 0.625rem 3rem 0.625rem 0.625rem;
+  padding: 0.5rem 2.75rem 0.5rem 0.5rem;
   border: 1px solid rgb(var(--c-hairline));
+  /* The status colour earns a job instead of only tinting a 32px icon square: a 3px leading
+     edge is readable before the icon is, which is what a glanceable confirmation needs. Inline
+     so it flips side in RTL with the rest of the layout. */
+  border-inline-start: 3px solid rgb(var(--pt-toast-status));
   border-radius: 0.75rem;
   background: rgb(var(--c-elevated));
   color: rgb(var(--c-ink-1));
@@ -1103,13 +1124,14 @@ body[data-page='product'] {
 
 .sonner-toaster [data-sonner-toast].pt-toast .pt-toast__icon {
   display: grid;
-  width: 2rem;
-  height: 2rem;
-  flex: 0 0 2rem;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 1.75rem;
   place-items: center;
-  border: 1px solid rgb(var(--pt-toast-status) / 0.36);
   border-radius: 0.625rem;
-  background: rgb(var(--c-elevated));
+  /* No border here any more. Two concentric status-coloured outlines 8px apart (this one and
+     the plate's leading edge) read as decoration rather than as a signal; the tint carries it. */
+  background: rgb(var(--pt-toast-status) / 0.1);
   color: rgb(var(--pt-toast-status));
 }
 
@@ -1169,7 +1191,7 @@ body[data-page='product'] {
   inset-block-start: 50% !important;
   inset-inline-start: auto !important;
   inset-inline-end: 0.125rem !important;
-  width: 2.75rem !important;
+  width: 2.5rem !important;
   height: 2.75rem !important;
   transform: translateY(-50%) !important;
   border: 0 !important;
@@ -1195,8 +1217,8 @@ body[data-page='product'] {
 
 @media (max-width: 640px) {
   .sonner-toaster [data-sonner-toast] {
-    width: calc(100vw - 1rem) !important;
-    max-width: 22rem !important;
+    width: calc(100vw - 1.5rem) !important;
+    max-width: 26rem !important;
   }
 }
 

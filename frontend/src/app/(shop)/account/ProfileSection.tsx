@@ -6,7 +6,7 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { BadgeCheck, CircleAlert, Loader2, Save, User, Mail, Phone, Megaphone } from 'lucide-react';
+import { BadgeCheck, Check, CircleAlert, Loader2, Save, User, Mail, Phone, Megaphone } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
@@ -126,13 +126,44 @@ export function ProfileSection() {
                 <span className="mt-2 block text-xs font-semibold text-brand">Confirmation envoyée : ouvrez votre email pour activer les offres.</span>
               )}
             </span>
-            <input
-              type="checkbox"
-              checked={formData.marketing_email_opt_in}
-              onChange={(event) => setFormData({ ...formData, marketing_email_opt_in: event.target.checked })}
-              className="mt-2 h-5 w-5 shrink-0 accent-brand"
-              aria-label="Recevoir les offres Protein.tn par email"
-            />
+            {/*
+              ── A 20px CONSENT CONTROL, ON THE ONE PAGE PEOPLE OPEN ONE-HANDED ──────────────
+              `measure-account` failed this at every width in both themes and for both
+              fixtures — 20 identical failures, one cause: `input:Recevoir les offres
+              Protein.(20px)`. It was `h-5 w-5`, a native checkbox, and it is the control that
+              turns email marketing on and off. A mis-tap here either signs somebody up for
+              mail they did not ask for or silently drops a consent they did give.
+
+              The enclosing <label> is the whole card, so the tap already worked. That is not
+              the same claim: WCAG 2.5.8 is about the TARGET, and a guard that reads the input
+              cannot see a lane drawn by a parent. Rather than argue with the measurement, the
+              input now IS 44x44.
+
+              WHICH MEANS IT CANNOT STAY NATIVE. Chrome ignores border, padding and outline on
+              `input[type=checkbox]` — measured all three, the box stays 20px — and the only
+              thing that grows it is an explicit width/height, which also scales the tick into
+              a 44px glyph. So the input is `appearance-none`, sized 44x44, laid over a 20px
+              box that draws the state. Same markup, same handler, same label; the visible
+              checkbox is the size it always was and the target is finally the size it claimed.
+            */}
+            <span className="relative mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center">
+              <input
+                type="checkbox"
+                checked={formData.marketing_email_opt_in}
+                onChange={(event) => setFormData({ ...formData, marketing_email_opt_in: event.target.checked })}
+                className="peer absolute inset-0 h-11 w-11 cursor-pointer appearance-none rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label="Recevoir les offres Protein.tn par email"
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none flex h-5 w-5 items-center justify-center rounded-md border border-rule bg-canvas text-on-brand transition-colors peer-checked:border-brand peer-checked:bg-brand peer-checked:[&>svg]:opacity-100"
+              >
+                {/* `[&>svg]` on the parent, not `peer-checked:` on the icon: `peer-*` compiles
+                    to a sibling combinator, and the icon is a descendant of the peer's sibling,
+                    not a sibling itself — written the other way it silently never matches. */}
+                <Check className="h-3.5 w-3.5 opacity-0 transition-opacity" strokeWidth={3} aria-hidden="true" />
+              </span>
+            </span>
           </label>
 
           <div className="pt-6 border-t border-hairline">

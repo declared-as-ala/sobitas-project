@@ -949,6 +949,48 @@ export default function CheckoutPage() {
                     </div>
                     </fieldset>
 
+                    {/*
+                      ── PROTINAS ON A PHONE, WHICH THIS PAGE DID NOT HAVE ──────────────────
+                      Owner, 07/09/2026: *"on mobile on /checkout we don't have the Protinas
+                      use components."* Correct, and it was total: every loyalty control on
+                      this page lived in `<aside className="checkout-summary hidden lg:block">`
+                      together with the coupon field and the totals. Below 1024px that aside is
+                      display:none, and the mobile replacement — the CTA footer's bottom sheet
+                      — carries items, shipping and a total, and nothing else. So a member on a
+                      phone could see a Protina balance everywhere on the site except the one
+                      screen where it converts into money, and had no way to spend it.
+
+                      That is most of this shop's traffic. It is not a styling gap.
+
+                      IT GOES IN THE FORM, NOT IN THE SHEET. The sheet is a summary a shopper
+                      opens to check a number and closes; redeeming points is a decision, it
+                      changes the total, and a decision buried behind a chevron is one nobody
+                      makes. Here it sits in the same column as the address and the payment
+                      method, which is where the other decisions on this page already are.
+
+                      `lg:hidden` and the aside's `hidden lg:block` are exact complements, so
+                      exactly one of the two renders at every width and the redeemed value can
+                      never be edited in two places at once. Both drive the same
+                      `pointsToRedeem` state — this is a second view of one control, not a
+                      second control.
+                    */}
+                    <section className="space-y-3 border-t border-rule pt-4 lg:hidden" aria-label="Protinas">
+                      {isAuthenticated && pointsBalance > 0 && (
+                        <LoyaltyPointsRedeemer
+                          balance={pointsBalance}
+                          maxPoints={maxRedeemablePoints}
+                          value={effectivePointsToRedeem}
+                          onChange={setPointsToRedeem}
+                          className="border-0 pt-0"
+                        />
+                      )}
+                      {/* The earn line renders for signed-out visitors too, where it is the
+                          offer rather than a statement of fact — see LoyaltyEarnLine. That is
+                          the one argument for an account this shop can honestly make at
+                          checkout, and the phone never saw it. */}
+                      <LoyaltyEarnLine amountDt={subtotalAfterPack} variant="summary" />
+                    </section>
+
                     {/* Desktop submit - hidden on mobile (sticky bar CTA on mobile) */}
                     <Button
                       type="submit"

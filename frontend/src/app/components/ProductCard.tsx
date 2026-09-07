@@ -18,8 +18,6 @@ import { buildProductAlt } from '@/util/productAlt';
 import { useState, useMemo, memo, useCallback, startTransition } from 'react';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedField, localizedName } from '@/i18n/content';
-import { pointsForSpend } from '@/util/loyaltyPoints';
-import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 type Product = ApiProduct | {
   id: number;
   name?: string;
@@ -399,10 +397,24 @@ export const ProductCard = memo(function ProductCard({
           )}
         </div>
 
-        <span className="pointer-events-none absolute right-2 top-10 z-10 inline-flex rounded-full border border-brand/20 bg-elevated/95 px-2 py-1 text-[10px] font-bold leading-none text-brand shadow-sm sm:right-3 sm:top-14 sm:text-[11px]">
-          <ProtinaAmount value={pointsForSpend(productData.priceDisplay.finalPrice)} signed />
-        </span>
+        {/* ── NO PROTINA PILL HERE (owner, 07/09/2026) ────────────────────────────────────
+            A "+12 Protinas" pill sat on every packshot, at `top-10 right-2`, directly under the
+            discount badge. Three things were wrong with it and only the first is cosmetic.
 
+            IT COMPETED WITH THE DISCOUNT. Two pills stacked in the same corner of a 124px phone
+            thumbnail, one of them brand-coloured, and the eye cannot rank them — so −7%, the fact
+            that actually moves a purchase, lost the corner it owns.
+
+            IT WAS UNREADABLE AT CARD SCALE. `text-[10px]` plus a 16px coin plus "Protinas" is
+            about 90px of content in a column that is 124px wide on a phone; it clipped the
+            packshot on exactly the products whose photography sells them.
+
+            IT IS THE WRONG MOMENT. The earn figure is an argument for a PURCHASE, and it is made
+            properly on the product page by `LoyaltyEarnLine`, next to the price and above the
+            add-to-cart — see that file's header for why that placement is the whole point. On a
+            listing card it is a number a shopper cannot act on, repeated 24 times down a grid.
+
+            The programme is unchanged. It is stated where the decision is made, once. */}
         {/* ── REVIEWS ARE A STICKER ON THE PHOTOGRAPH, NOT A ROW OF THE CARD ────────────────
             Owner, 20/08/2026: *"on mobile and on desktop try to make the avis or stars in a
             better place — position absolute maybe, a tag or something, for a better look, and use

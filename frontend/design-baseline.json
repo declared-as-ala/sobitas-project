@@ -224,13 +224,12 @@
     "DS011": 2
   },
   "src/app/components/HeaderClient.tsx": {
-    "DS001": 20,
-    "DS002": 22,
-    "DS003": 23,
+    "DS001": 16,
+    "DS002": 17,
+    "DS003": 16,
     "DS004": 2,
     "DS005": 2,
-    "DS006": 1,
-    "DS011": 4
+    "DS006": 1
   },
   "src/app/components/InstallAppBanner.tsx": {
     "DS001": 14,
