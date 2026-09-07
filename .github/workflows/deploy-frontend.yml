@@ -113,10 +113,38 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+      # ── THE VPS PULLS WITH THE RUNNER'S OWN TOKEN, NOT A HAND-ROTATED PAT ──────────────
+      #
+      # On 07/09/2026 this deploy failed with every build step green:
+      #
+      #   Log in to GHCR            ✓     (runner, secrets.GITHUB_TOKEN)
+      #   Build and Push Docker     ✓     (image reached ghcr.io)
+      #   Deploy to VPS             ✗     err: Get "https://ghcr.io/v2/": denied: denied
+      #                                   err: ... manifests/latest": denied: denied
+      #
+      # `GHCR_PAT` was last set on 08/08/2026 — exactly 30 days earlier, the default expiry of
+      # a classic PAT. So the two halves of this job authenticated to GHCR with two different
+      # credentials, one of them on a rotation nobody was tracking, and the half that shipped
+      # to customers was the half on the perishable one. The build kept going green while the
+      # live site silently stopped moving.
+      #
+      # `GITHUB_TOKEN` is the fix rather than a fresher PAT. It is minted per run and dies with
+      # the job, so it cannot expire between deploys; this job already holds `packages: write`
+      # and already used it to PUSH the very image the next line pulls. Forwarding it also
+      # REMOVES a long-lived credential from the VPS instead of adding one — the old script
+      # handed the server a PAT valid for 30 days, this one hands it a token valid for minutes,
+      # and `docker logout` at the end leaves nothing behind at all.
+      #
+      # `envs:` is how appleboy/ssh-action gets a value into the remote shell without
+      # interpolating a secret directly into the script text.
       - name: Deploy to VPS
         id: push_to_vps
         uses: appleboy/ssh-action@v1.0.3
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         with:
+          envs: GHCR_TOKEN,GHCR_USER
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
@@ -140,12 +168,13 @@ jobs:
             APP_DIR="/root/sobitas-project"
             cd "$APP_DIR"
 
-            echo "🔐 Logging in to GHCR..."
-            # Non-fatal: if the GHCR_PAT secret is expired/invalid, a login failure must NOT
-            # abort the deploy when the image is public. The `docker pull` below stays strict
-            # under `set -e`, so a genuinely unreachable image still fails honestly (no false success).
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin \
-              || echo "⚠️  GHCR login failed (token likely expired) — continuing; pull will succeed only if the image is public."
+            echo "🔐 Logging in to GHCR as $GHCR_USER..."
+            # Strict now, and deliberately so. This used to be non-fatal on the theory that a
+            # public image needs no login — but the pull then failed two lines later with a bare
+            # `denied: denied`, which reads as a missing image rather than a bad credential. The
+            # token is minted for this run, so a failure here is a real problem worth stopping on
+            # and naming, not something to shrug past.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             echo "📦 Pull latest frontend image..."
             docker pull ghcr.io/declared-as-ala/sobitas-frontend:latest
@@ -155,6 +184,11 @@ jobs:
 
             echo "🧹 Cleaning unused images..."
             docker image prune -f || true
+
+            # Leave no credential on the server. The token is dead by the time the job ends
+            # anyway, but a stale entry in ~/.docker/config.json is what makes the NEXT failure
+            # confusing to read.
+            docker logout ghcr.io || true
 
             echo "✅ Frontend deploy done"
 
