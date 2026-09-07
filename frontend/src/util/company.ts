@@ -97,4 +97,14 @@ export const GOOGLE_PROFILE = {
   /** The short link on the profile; resolves to the place page with the same place id. */
   url: 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6',
   placeId: 'ChIJsZHosBsTAhMRDLJJWPLg2lE',
+  /**
+   * The direct "write a review" destination, not the profile.
+   *
+   * Owner, 07/09/2026: clicking through should land somewhere a customer can *post* a review.
+   * `maps.app.goo.gl/...` opens the listing, where leaving one is three taps further in behind a
+   * "Reviews" tab. `search.google.com/local/writereview` opens the compose dialog straight away
+   * against this place id — it is Google's own documented entry point and the one every "leave us
+   * a review" card printed on a shop counter uses.
+   */
+  writeReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJsZHosBsTAhMRDLJJWPLg2lE',
 } as const;

@@ -209,6 +209,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
           .map(withBrand);
 
   const discountBand = flashSales.length > 0 ? flashSales : promoFallback;
+  /* The band's own best discount, so the orange strip below states a number this page can prove
+     rather than a hardcoded 30. `getPriceDisplay` is the same reader the cards use, so the figure
+     in the banner and the figure on the card can never disagree. */
+  const promoMaxDiscount = discountBand.reduce((best, item) => {
+    const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(item as never);
+    if (!hasPromo || !oldPrice || oldPrice <= finalPrice) return best;
+    const percent = ((oldPrice - finalPrice) / oldPrice) * 100;
+    return percent > best ? percent : best;
+  }, 0);
 
   return (
     /* overflow-x-clip, NOT overflow-x-hidden. `hidden` makes this div a scroll container (a
@@ -400,7 +409,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
         {/* Below the fold - idle-loaded client islands */}
         <div className="pt-defer">
-          <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} />
+          <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} promoCount={discountBand.length} promoMaxDiscount={promoMaxDiscount} />
         </div>
 
         {/* SEO text block – visible, crawlable content near bottom of homepage.

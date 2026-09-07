@@ -31,7 +31,27 @@ import { ArrowRight, Flame } from 'lucide-react';
  *
  * Zero-JS server component, unchanged.
  */
-export function PromoBanner() {
+/**
+ * ── THE NUMBER IS NOW THE CATALOGUE'S, NOT A STRING ─────────────────────────────────────────
+ * Owner, 07/09/2026: redesign this banner.
+ *
+ * "Jusqu'à −30% sur une sélection" was hardcoded. Two problems, and the first is not design.
+ *
+ * IT IS AN UNCHECKED CLAIM. Nothing tied that 30 to what is actually discounted, so the day the
+ * best promotion is 22% the band overstates it, and the day it is 40% the band undersells the
+ * shop's own best offer. A price claim that no code can falsify is one nobody notices going
+ * wrong.
+ *
+ * AND "UNE SÉLECTION" IS NOT A QUANTITY. It is the vaguest possible word for the thing a shopper
+ * is deciding whether to click. `count` makes it concrete — "38 produits" is a reason to look,
+ * "une sélection" is wallpaper.
+ *
+ * Both fall back to the previous copy when the caller passes nothing, so the About page and any
+ * other surface that renders this bare is unchanged.
+ */
+export function PromoBanner({ count, maxDiscount }: { count?: number; maxDiscount?: number } = {}) {
+  const discount = maxDiscount && maxDiscount > 0 ? Math.round(maxDiscount) : 30;
+  const scope = count && count > 1 ? `${count} produits` : 'une sélection';
   return (
     /* `tight` (32/40/48), not `strip` (12/16). `strip` is defined as "anything exactly one row
        tall" and this band is not — it carries a 40/56px headline. At 16px of padding the −30%
@@ -55,8 +75,7 @@ export function PromoBanner() {
           </span>
           <h2 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 text-balance lg:text-[2.5rem]">
             Jusqu&apos;à{' '}
-            <span className="text-[2.5rem] leading-[0.9] lg:text-[3.5rem]">−30%</span> sur une
-            sélection
+            <span className="text-[2.5rem] leading-[0.9] lg:text-[3.5rem]">−{discount}%</span> sur {scope}
           </h2>
         </div>
 

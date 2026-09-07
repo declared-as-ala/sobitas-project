@@ -17,10 +17,10 @@ const ScrollToTop = dynamic(
   { ssr: false, loading: () => null }
 );
 
-export function HomeDeferredSections({ articles, brands }: { articles: Article[]; brands?: Brand[] }) {
+export function HomeDeferredSections({ articles, brands, promoCount, promoMaxDiscount }: { articles: Article[]; brands?: Brand[]; promoCount?: number; promoMaxDiscount?: number }) {
   return (
     <>
-      <PromoBanner />
+      <PromoBanner count={promoCount} maxDiscount={promoMaxDiscount} />
       <BlogSection articles={articles} />
       <BrandsSection brands={brands} />
       <GoogleReviewsSection />
