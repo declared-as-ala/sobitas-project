@@ -145,29 +145,114 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
         </div>
       ) : (
         <div className="grid gap-4 sm:gap-6 xl:grid-cols-3">
+          {/*
+            ── MES MISSIONS ────────────────────────────────────────────────────────────────
+            Owner, 07/09/2026: *"redesign this component, better layout, more responsive on
+            mobile and desktop."* Measured first, with the real seven-mission payload:
+
+              1440   title 116px / 2 lines   "Vérifier mon téléphone"        (22 chars, has a chip)
+              1440   title 248px / 1 line    "Recevoir ma première commande" (29 chars, no chip)
+
+            THE LONGEST LABEL ON THE PAGE FIT ON ONE LINE AND A SHORTER ONE WRAPPED. The card
+            was a four-child flex row — badge, text, reward chip, chevron — so the chip took
+            its ~120px out of the title's column. A title's width therefore depended on
+            whether that mission happened to pay Protinas, which is unrelated to how long it
+            is. Exactly the two missions with rewards were the two that wrapped.
+
+            That also drove the height spread: 104–142px at 1440 and 104–159px at 390, because
+            `min-h-[104px]` is a floor and nothing made siblings agree. The screenshot's ragged
+            two-column grid is that number.
+
+            SO THE CHIP LEFT THE TITLE'S ROW. The card is now a column — title row, then
+            description, then the reward on its own line — and the title gets the full width
+            minus the badge and the chevron at every breakpoint, whether or not there is a
+            reward. `h-full` on the link makes cards in a row match, which a min-height never
+            can.
+
+            THE NUMBERS ARE GONE, and that is the other half of the fix. The badge printed the
+            mission's index, but only when it was NOT complete — so the screenshot reads 2, 4,
+            5, 7 with checks where 1, 3 and 6 should be, and the numbering looks broken. It was
+            never a sequence anyway: nothing stops you using Protinas before you add a photo to
+            a review. A checklist gets a state, not a rank — a check when done, an empty ring
+            when not. (It also drops a `findIndex` that ran inside the map, once per mission.)
+
+            AND `line-through` IS GONE from completed labels. Struck-through text means void or
+            cancelled; these are the ones you achieved. Done now reads as the green plate, the
+            check, and a quieter ink — three cues, none of which says "disregard this".
+
+            The bare `3/7` pill became a real progress bar. Same number, plus the thing a
+            fraction cannot show at a glance: how far along the row actually is.
+          */}
           <section aria-labelledby="missions-title" className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm xl:col-span-2">
-            <div className="flex items-center justify-between gap-4 border-b border-hairline px-5 py-4 sm:px-6">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">À votre rythme</p>
-                <h2 id="missions-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Mes missions</h2>
+            <div className="border-b border-hairline px-4 py-4 sm:px-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">À votre rythme</p>
+                  <h2 id="missions-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Mes missions</h2>
+                </div>
+                <span className="shrink-0 rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">
+                  {completedMissions}/{dashboard.missions.length}
+                </span>
               </div>
-              <span className="rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">{completedMissions}/{dashboard.missions.length}</span>
+              {/* `bg-rule` track, not `bg-rule-strong` — the same reasoning as the review
+                  distribution bars: at rule-strong the empty portion outweighs the fill and the
+                  eye reads the grey as the value. An empty track is structure. */}
+              <div
+                className="mt-3 h-1.5 overflow-hidden rounded-full bg-rule"
+                role="progressbar"
+                aria-valuemin={0}
+                aria-valuemax={dashboard.missions.length}
+                aria-valuenow={completedMissions}
+                aria-label={`${completedMissions} missions terminées sur ${dashboard.missions.length}`}
+              >
+                <div
+                  className="h-full rounded-full bg-ok transition-[width] duration-500 ease-out motion-reduce:transition-none"
+                  style={{ width: `${dashboard.missions.length ? (completedMissions / dashboard.missions.length) * 100 : 0}%` }}
+                />
+              </div>
             </div>
             <ul className="grid gap-2 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4">
               {dashboard.missions.map((mission) => (
                 <li key={mission.key} className="min-w-0">
-                  <Link href={mission.href} className={`group flex min-h-[104px] items-start gap-3 rounded-xl border p-4 transition-colors ${mission.completed ? 'border-ok/20 bg-ok/5' : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'}`}>
-                    <span className={`mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border text-[10px] font-bold ${mission.completed ? 'border-ok/30 bg-ok/10 text-ok' : 'border-brand/25 bg-elevated text-brand'}`}>
-                      {mission.completed ? <Check className="h-3.5 w-3.5" aria-hidden="true" /> : dashboard.missions.findIndex((item) => item.key === mission.key) + 1}
+                  <Link
+                    href={mission.href}
+                    aria-label={mission.completed ? `${mission.label} — terminée` : mission.label}
+                    className={`group flex h-full flex-col gap-2 rounded-xl border p-3.5 transition-colors sm:p-4 ${
+                      mission.completed
+                        ? 'border-ok/20 bg-ok/5'
+                        : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'
+                    }`}
+                  >
+                    <span className="flex items-start gap-2.5">
+                      <span
+                        className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          mission.completed ? 'border-ok/40 bg-ok/10 text-ok' : 'border-rule-strong/50 bg-elevated'
+                        }`}
+                      >
+                        {mission.completed && <Check className="h-3 w-3" aria-hidden="true" />}
+                      </span>
+                      {/* The title owns the row now. `text-pretty` keeps a two-line label from
+                          leaving one orphaned word when it does wrap at 320. */}
+                      <span className={`min-w-0 flex-1 text-pretty text-sm font-semibold leading-snug ${mission.completed ? 'text-ink-2' : 'text-ink-1'}`}>
+                        {mission.label}
+                      </span>
+                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
                     </span>
-                    <span className="min-w-0 flex-1">
-                      <span className={`block text-sm font-semibold ${mission.completed ? 'text-ink-2 line-through decoration-ink-3/50' : 'text-ink-1'}`}>{mission.label}</span>
-                      <span className="mt-0.5 block text-xs leading-snug text-ink-3">{mission.description}</span>
-                    </span>
+
+                    {/* Clamped to two lines. These come from the API and vary from 38 to 74
+                        characters; unclamped, one long description sets the height of an entire
+                        row of cards. */}
+                    <span className="line-clamp-2 ps-[30px] text-xs leading-snug text-ink-3">{mission.description}</span>
+
                     {mission.reward_points !== null && mission.reward_points > 0 && (
-                      <span className="shrink-0 rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold text-brand"><ProtinaAmount value={mission.reward_points} signed /></span>
+                      /* `mt-auto` pins the reward to the foot of the card, so in a row where one
+                         card has a reward and its neighbour does not, the two still line up. */
+                      <span className="mt-auto flex ps-[30px] pt-0.5">
+                        <span className="inline-flex rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold text-brand">
+                          <ProtinaAmount value={mission.reward_points} signed />
+                        </span>
+                      </span>
                     )}
-                    <ChevronRight className="mt-1 h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
                   </Link>
                 </li>
               ))}
