@@ -17,11 +17,11 @@ const SELECTED_BRANDS = 24;
 const SKELETON_TILES = SELECTED_BRANDS;
 
 // Content-box reservations are measured separately from Section padding and its seam.
-const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_344px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_319px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_448px]';
+const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_256px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_231px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_316px]';
 const RAIL_LAYOUT = 'scrollbar-hide grid grid-flow-col grid-rows-2 auto-cols-[44%] gap-px overflow-x-auto snap-x snap-proximity rounded-xl border border-rule-strong bg-rule-strong sm:auto-cols-[24%] lg:grid-flow-row lg:grid-rows-none lg:grid-cols-8 lg:auto-cols-auto lg:overflow-hidden';
 const TILE_LAYOUT = 'flex h-full min-w-0 flex-col bg-elevated';
 
-/** Original artwork, a readable caption and one crawlable link per brand. */
+/** Original artwork and one named, crawlable link per brand. */
 function BrandTile({ brand }: { brand: Brand }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
@@ -47,15 +47,11 @@ function BrandTile({ brand }: { brand: Brand }) {
     );
 
   // Keep the real artwork on its existing frozen white well, without filters or cropping.
-  // Captions and missing-logo notices use the theme surface; neither impersonates a wordmark.
+  // Missing-logo notices use the theme surface; the link's accessible name always survives.
   const content = (
     <>
       <span className={`${hasLogo ? 'pt-logo-well' : 'bg-elevated'} flex h-20 shrink-0 items-center justify-center px-4`}>
         {inner}
-      </span>
-      <span className="flex min-h-11 items-center justify-between gap-2 px-3 text-xs font-medium text-ink-2 transition-colors group-hover:text-brand group-focus-visible:text-brand">
-        <span className="line-clamp-2">{brand.designation_fr}</span>
-        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
       </span>
     </>
   );
@@ -115,9 +111,6 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
             <div key={i} className="min-w-0">
               <div className={TILE_LAYOUT}>
                 <Skeleton className="h-20 w-full rounded-none" />
-                <div className="flex h-11 items-center px-3">
-                  <Skeleton className="h-3 w-24" />
-                </div>
               </div>
             </div>
           ))}

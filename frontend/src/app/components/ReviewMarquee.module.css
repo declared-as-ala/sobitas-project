@@ -1,0 +1,75 @@
+.row {
+  overflow: hidden;
+  padding: 4px;
+}
+
+.track {
+  display: flex;
+  gap: 12px;
+  width: max-content;
+  animation: travel 120s linear infinite;
+}
+
+.track > li {
+  flex: 0 0 272px;
+  width: 272px;
+}
+
+.reverse {
+  animation-direction: reverse;
+}
+
+.row:hover .track {
+  animation-play-state: paused;
+}
+
+/* Native scrolling keeps every original link reachable, even halfway through a loop.
+ * Focus owns this stationary layout until the reader leaves the row. */
+.row:focus-within {
+  overflow-x: auto;
+}
+
+.row:focus-within .track {
+  animation: none;
+  transform: none;
+}
+
+.row:focus-within [data-review-copy] {
+  display: none;
+}
+
+@keyframes travel {
+  to { transform: translateX(calc(-50% - 6px)); }
+}
+
+@media (min-width: 768px) {
+  .track > li {
+    flex-basis: 304px;
+    width: 304px;
+  }
+}
+
+/* All twenty quotes wrap into the page; no clipping, scroll chase or duplicate content. */
+@media (prefers-reduced-motion: reduce) {
+  .row,
+  .row:focus-within {
+    overflow: visible;
+  }
+
+  .row .track {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 272px), 1fr));
+    width: auto;
+    animation: none;
+    transform: none;
+  }
+
+  .track > li {
+    width: auto;
+    min-width: 0;
+  }
+
+  .track [data-review-copy] {
+    display: none;
+  }
+}

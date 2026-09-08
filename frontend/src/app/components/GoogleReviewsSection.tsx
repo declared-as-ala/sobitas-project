@@ -3,7 +3,7 @@ import { GOOGLE_BUSINESS_REVIEWS } from '@/content/googleBusinessReviews';
 import { GOOGLE_PROFILE } from '@/util/company';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { ReviewReveal } from '@/app/components/ReviewReveal';
+import { ReviewMarquee } from '@/app/components/ReviewMarquee';
 
 type GoogleReviewsSectionProps = {
   surface?: 'base' | 'sunken';
@@ -11,8 +11,7 @@ type GoogleReviewsSectionProps = {
   context?: 'home' | 'about';
 };
 
-/** Three rows at every breakpoint: 3×1 on a phone, 3×2 from `sm`, 3×3 from `lg`. */
-const ROWS = 3;
+const REVIEW_ROWS = [GOOGLE_BUSINESS_REVIEWS.slice(0, 10), GOOGLE_BUSINESS_REVIEWS.slice(10)];
 
 /**
  * ── THE GOOGLE PROFILE, AS AUTHORITY ────────────────────────────────────────────────────────
@@ -37,10 +36,9 @@ const ROWS = 3;
  * putting them in a className would be both a DS006 violation and a lie about where they came
  * from.
  *
- * THREE ROWS INSTEAD OF A MARQUEE. The single scrolling row showed two cards at a time and moved
- * on its own, so a reader who wanted to finish a sentence had to chase it. A static grid shows
- * nine on a desktop and three on a phone, all readable, none moving — and it drops the
- * `pt-review-marquee` animation, its `data-motion` opt-out and the mask gradient with it.
+ * Owner, 08/09/2026: two compact moving rows. Opposite directions distinguish the two rows
+ * without making them look like one sliding block. Hover pauses; keyboard focus uses a native
+ * stationary rail; reduced motion expands every original quote into a readable static grid.
  */
 export function GoogleReviewsSection({
   surface = 'base',
@@ -123,11 +121,14 @@ export function GoogleReviewsSection({
         </div>
       </div>
 
-      <ReviewReveal>
-        {GOOGLE_BUSINESS_REVIEWS.slice(0, ROWS * 3).map((review) => (
-          <ReviewCard key={`${review.author}-${review.excerpt}`} review={review} />
+      <div className="space-y-1">
+        {REVIEW_ROWS.map((reviews, row) => (
+          <ReviewMarquee key={row} reverse={row === 1}>
+            {reviews.map((review) => <ReviewCard key={review.author} review={review} />)}
+            {reviews.map((review) => <ReviewCard key={`copy-${review.author}`} review={review} copy />)}
+          </ReviewMarquee>
         ))}
-      </ReviewReveal>
+      </div>
 
       <p className="mt-3 text-xs leading-relaxed text-ink-3">
         Extraits de notre profil public Google Maps, vérifiés le 2 septembre 2026. Avis affichés dans leur langue d’origine.
@@ -157,15 +158,17 @@ function GoogleMark({ className }: { className?: string }) {
 
 type GoogleReview = (typeof GOOGLE_BUSINESS_REVIEWS)[number];
 
-function ReviewCard({ review }: { review: GoogleReview }) {
+function ReviewCard({ review, copy = false }: { review: GoogleReview; copy?: boolean }) {
   return (
-    <li data-motion="review-reveal">
+    <li lang={review.language} aria-hidden={copy || undefined} data-review-copy={copy || undefined}>
       <a
         href={GOOGLE_PROFILE.url}
         target="_blank"
         rel="noopener noreferrer"
+        tabIndex={copy ? -1 : undefined}
+        lang="fr"
         aria-label={`Lire l’avis de ${review.author} sur Google`}
-        className="group flex h-full flex-col rounded-xl border border-hairline bg-elevated p-4 shadow-sm transition-[border-color,box-shadow] hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="group flex h-full flex-col rounded-xl border border-hairline bg-elevated p-3 transition-colors hover:border-brand/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         <div className="flex items-center justify-between gap-3">
           {/* Gold, not `text-ok` green. This section's whole function is borrowed authority from
@@ -180,15 +183,15 @@ function ReviewCard({ review }: { review: GoogleReview }) {
           </div>
           <GoogleMark className="h-4 w-4 shrink-0" />
         </div>
-        <blockquote lang={review.language} dir="auto" className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-ink-1">
+        <blockquote lang={review.language} dir="auto" className="mt-2 flex-1 text-sm leading-snug text-ink-1">
           “{review.excerpt}”
         </blockquote>
-        <div className="mt-3 flex items-end justify-between gap-3 border-t border-hairline pt-3">
+        <div className="mt-2 flex items-end justify-between gap-3">
           <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink-1">{review.author}</p>
+            <p className="text-xs font-semibold text-ink-1">{review.author}</p>
             <p className="mt-0.5 text-xs text-ink-3">{review.dateLabel}</p>
           </div>
-          <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
+          <ArrowUpRight className="h-4 w-4 shrink-0 text-ink-3 group-hover:text-brand" aria-hidden="true" />
         </div>
       </a>
     </li>
