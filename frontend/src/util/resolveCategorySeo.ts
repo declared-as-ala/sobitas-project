@@ -427,6 +427,40 @@ const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
   // reviewed copy in content/categories/performance.json could not reach the page without this
   // entry. It narrows the hub to objectives and links DOWN to /pre-workout instead of competing.
   'performance',
+  /*
+   * ── SEVEN MICRONUTRIENT PAGES ADDED 08/09/2026, FROM SEARCH CONSOLE (last 3 months) ──────────
+   * Each of these renders a CMS title that names the category but not the query, and each earns
+   * impressions it converts at ~0%. Measured, not assumed (protein.tn/Queries.csv + Pages.csv,
+   * Search type = Web, last 3 months):
+   *
+   *     /caseine      141 impr,  0 clicks  (0.00%)  pos 27.8   CMS title: "Caséine en Tunisie"
+   *     /collagene    123 impr,  2 clicks  (1.63%)  pos 31.2   CMS title: "Collagène en Tunisie"
+   *     /magnesium     89 impr,  2 clicks  (2.25%)  pos 18.8   + 179 impr / 2 clicks on
+   *                                                            "magnesium (bis)glycinate
+   *                                                            weightworld" at pos 4.6–9.5
+   *     /vitamines     61 impr,  1 click   (1.64%)  pos 29.9   + "one a day" 148 impr, 0 clicks
+   *     /l-arginine    88 impr,  5 clicks  (5.68%)  pos 18.9   "arginine prix tunisie" 40 impr,
+   *                                                            0 clicks, pos 8.2
+   *     /zinc          31 impr,  1 click   (3.23%)  pos 26.1   + "zinc (bisglycinate)
+   *                                                            weightworld" 129 impr / 2 clicks
+   *     /mineraux      23 impr,  0 clicks  (0.00%)  pos  3.8   — position 3.8 and nobody clicks
+   *
+   * The reviewed titles live in content/categories/*.json and name the form the searcher typed
+   * (bisglycinate, picolinate, marin, One A Day, électrolytes). Without this entry mergeCategorySeo
+   * keeps the CMS title and the edit is invisible — the same trap /prise-de-masse hit above.
+   *
+   * Their JSON h1/metaTitle/metaDescription were rewritten in the same change: they previously
+   * carried a 🇹🇳 flag emoji and a frozen floor price ("dès 70 DT") that would have shipped into
+   * the SERP snippet the moment the slug was curated, so promoting the slug without rewriting the
+   * copy would have been a downgrade, not a fix.
+   */
+  'caseine',
+  'collagene',
+  'magnesium',
+  'vitamines',
+  'l-arginine',
+  'zinc',
+  'mineraux',
 ]);
 
 export function mergeCategorySeoForSlug(

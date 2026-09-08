@@ -495,6 +495,87 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     ],
   },
 
+  /**
+   * WeightWorld — the brand page with the widest gap between what it ranks for and what its
+   * title says, measured in Search Console (last 3 months, Web):
+   *
+   *     /weightworld                    432 impr,  43 clicks,  9.95%,  pos 6.3
+   *     "weightworld tunisie"           346 impr,  39 clicks, 11.27%,  pos 6.5
+   *     "omega 3 weightworld"           109 impr,   0 clicks,  0.00%,  pos 8.8
+   *     "weightworld omega 3"           100 impr,   0 clicks,  0.00%,  pos 8.9
+   *     "weightworld omega 3 tunisie"    94 impr,   6 clicks,  6.38%,  pos 7.1
+   *     "zinc weightworld"               72 impr,   0 clicks,  0.00%,  pos 9.4
+   *     "magnesium bisglycinate ww"      56 impr,   1 click,   1.79%,  pos 6.7
+   *     "weightworld magnesium glycinate"52 impr,   0 clicks,  0.00%,  pos 9.5
+   *
+   * Fifteen WeightWorld-named queries carry ~1,127 impressions at positions 4.6–9.5 and return
+   * 50 clicks between them. Without an entry here the page falls through to buildBrandMetaTitle's
+   * generic string and served, verbatim, on 08/09/2026:
+   *
+   *     title  weightworld — Protéines & Compléments en Tunisie | Protéine Tunisie
+   *     desc   Découvrez tous les produits weightworld en Tunisie : qualité premium,
+   *            produits 100% authentiques, livraison rapide.
+   *
+   * Two things wrong with that at once. The brand name is lower-cased because it comes straight
+   * from `brand.designation_fr`, and the title promises "Protéines" — which WeightWorld does not
+   * sell here. The six references on /weightworld are a fish oil, a magnesium, a zinc, a
+   * vitamin D3+K2, a multivitamin and an ashwagandha. The searcher typing "omega 3 weightworld"
+   * is shown a line about protein powder, and 0 of 109 click.
+   *
+   * ── DATA FLOOR ───────────────────────────────────────────────────────────────────────────────
+   * Like GSN, Ultimate Nutrition and C4 above, every WeightWorld SKU returns no transcribed
+   * label: /product_details for the fish oil, the magnesium and the zinc all carry a Product
+   * schema with price and availability and no `nutrition_values`. So NO per-portion figure — no
+   * EPA/DHA split, no elemental magnesium — is quoted anywhere below. Family, format and unit
+   * count are read off the product grid this page renders, and the copy says the pot's own label
+   * is the reference.
+   */
+  weightworld: {
+    metaTitle: 'WeightWorld Tunisie | Omega 3, Magnésium & Zinc — Protein.tn',
+    metaDescription:
+      'WeightWorld en Tunisie : omega 3 fish oil 240 softgels, magnésium bisglycinate + B6, zinc bisglycinate 400 comprimés et vitamine D3 + K2. Livraison 24–72h.',
+    h1: 'WeightWorld en Tunisie : oméga 3, magnésium, zinc et vitamines',
+    introHtml:
+      '<p><strong>WeightWorld en Tunisie</strong> est une gamme de micronutriments, pas de protéines en poudre. Six références sont référencées sur Protein.tn : <strong>Omega 3 Fish Oil</strong> en 240 capsules molles, <strong>Magnesium Bisglycinate + Vitamine B6</strong> dosé à 1422 mg par prise annoncée sur l’étiquette, <strong>Zinc Bisglycinate</strong> en 400 comprimés, <strong>Vegan Vitamin D3 + K2</strong> en 365 comprimés, <strong>Multivitamines et Minéraux</strong> en 400 comprimés et <strong>Ashwagandha KSM-66</strong> en 180 comprimés à 1500 mg. Les grands conditionnements — 240, 365, 400 comprimés — correspondent à des cures longues plutôt qu’à un essai. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
+    howToChooseTitle: 'Quel produit WeightWorld choisir ?',
+    howToChooseBody:
+      '<p>Le choix se fait par besoin, pas par gamme. L’<strong>Omega 3 Fish Oil</strong> (240 softgels) est une huile de poisson en capsule molle, à prendre au cours d’un repas ; c’est la référence la plus recherchée de la marque en Tunisie. Le <strong>Magnesium Bisglycinate + Vitamine B6</strong> retient une forme chélatée, généralement choisie pour sa tolérance digestive par rapport à l’oxyde ; le <strong>Zinc Bisglycinate</strong> (400 comprimés) suit la même logique de forme.</p>' +
+      '<p>La <strong>Vegan Vitamin D3 + K2</strong> associe les deux vitamines dans un même comprimé et convient à un régime végétalien, ce que ne permet pas une D3 d’origine lanoline. Les <strong>Multivitamines et Minéraux</strong> (400 comprimés) couvrent un socle large plutôt qu’un besoin isolé : elles font double emploi avec un zinc ou une D3 pris à côté, donc l’un ou l’autre. L’<strong>Ashwagandha KSM-66</strong> (180 comprimés, 1500 mg) sort du champ des minéraux et se choisit indépendamment. Vérifiez toujours l’étiquette du format retenu : les valeurs déclarées y figurent référence par référence.</p>',
+    faqs: [
+      {
+        question: 'Quels produits WeightWorld sont disponibles en Tunisie ?',
+        answer:
+          'Protein.tn référence six produits WeightWorld : Omega 3 Fish Oil 240 softgels, Magnesium Bisglycinate + Vitamine B6 1422 mg, Zinc Bisglycinate 400 comprimés, Vegan Vitamin D3 + K2 365 comprimés, Multivitamines et Minéraux 400 comprimés et Ashwagandha KSM-66 180 comprimés. La grille de produits de cette page indique les références effectivement proposées.',
+      },
+      {
+        question: 'WeightWorld vend-il de la whey ou des protéines en poudre ?',
+        answer:
+          'Non. La gamme WeightWorld référencée sur Protein.tn ne contient aucune protéine en poudre : ce sont des vitamines, des minéraux, une huile de poisson et une plante. Pour une whey ou un gainer, passez par les catégories protéines du site.',
+      },
+      {
+        question: 'Quelle est la différence entre le magnésium bisglycinate et les autres formes ?',
+        answer:
+          'Le bisglycinate est une forme chélatée, c’est-à-dire liée à la glycine. C’est le critère sur lequel se joue le choix entre les magnésiums de notre catalogue — bisglycinate, glycinate, citrate ou L-thréonate — davantage que la marque. La quantité de magnésium apportée par comprimé figure sur l’étiquette de chaque référence.',
+      },
+      {
+        question: 'Quel est le prix des produits WeightWorld en Tunisie ?',
+        answer:
+          'Le prix dépend du produit, du format et des promotions en cours. La grille de produits de cette page affiche le prix et la disponibilité actuels de chaque référence WeightWorld vendue sur Protein.tn.',
+      },
+      {
+        question: 'Comment commander WeightWorld en Tunisie ?',
+        answer:
+          'Choisissez le produit et le format disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'omega-3', name: 'Oméga 3 en Tunisie', url: '/omega-3' },
+      { slug: 'magnesium', name: 'Magnésium en Tunisie', url: '/magnesium' },
+      { slug: 'zinc', name: 'Zinc en Tunisie', url: '/zinc' },
+      { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
+    ],
+  },
+
   'c4-cellucor': {
     metaTitle: 'C4 / Cellucor Tunisie | Pre-Workout, C4 Whey & Créatine',
     metaDescription:
