@@ -83,7 +83,7 @@ async function buildMaster() {
   const { data, info } = await sharp(cleanMark)
     .ensureAlpha()
     .trim()
-    .resize(276, 276, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .resize(324, 324, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
     .raw()
     .toBuffer({ resolveWithObject: true });
   for (let offset = 0; offset < data.length; offset += 4) {
@@ -93,7 +93,7 @@ async function buildMaster() {
   }
   const whiteMark = await sharp(data, { raw: info }).png().toBuffer();
   const circle = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><circle cx="256" cy="256" r="240" fill="${brandOrange}"/></svg>`);
-  return sharp(circle).composite([{ input: whiteMark, left: 118, top: 118 }]).png().toBuffer();
+  return sharp(circle).composite([{ input: whiteMark, left: 94, top: 94 }]).png().toBuffer();
 }
 
 const master = await buildMaster();
