@@ -30,7 +30,7 @@ export function BrandSeoDetails({ entry }: { entry: BrandSeoEntry }) {
           className="mt-3 text-sm leading-relaxed text-ink-2 sm:text-base"
           dangerouslySetInnerHTML={{ __html: entry.howToChooseBody }}
         />
-        <nav aria-label="Comparer les catégories Dymatize" className="mt-5 flex flex-wrap gap-2">
+        <nav aria-label="Comparer les catégories de la marque" className="mt-5 flex flex-wrap gap-2">
           {entry.relatedCategories.map((link) => (
             <Link
               key={link.slug}
@@ -45,7 +45,13 @@ export function BrandSeoDetails({ entry }: { entry: BrandSeoEntry }) {
 
       <section className="rounded-2xl border border-hairline bg-sunken p-4 sm:p-6" aria-labelledby="brand-faq-heading">
         <h2 id="brand-faq-heading" className="font-display text-xl font-extrabold uppercase tracking-tight text-ink-1 sm:text-2xl">
-          Questions sur Dymatize
+          {/* Generic, not "Questions sur Dymatize". This string was hardcoded while only one
+              brand had an entry, so it was invisible: the moment a second entry existed, five
+              brand pages rendered "Questions sur Dymatize" above their own FAQ. It also disagreed
+              with the crawler route, which says "Questions fréquentes" — and a human/bot wording
+              divergence is the exact drift brandMeta.ts's header warns separates dynamic
+              rendering from cloaking. Both views now say the same thing. */}
+          Questions fréquentes
         </h2>
         <div className="mt-3 divide-y divide-hairline">
           {entry.faqs.map((faq) => (
