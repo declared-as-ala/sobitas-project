@@ -1,7 +1,7 @@
 'use client';
 
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowRight, Clock3 } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import { FlashDealCard } from './FlashDealCard';
 import { LinkWithLoading } from './LinkWithLoading';
 import { Section } from './layout/Section';
@@ -65,16 +65,14 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
   ];
 
   return (
-    <div ref={rootRef} className="flex min-w-0 flex-col items-start gap-3" aria-hidden="true">
-      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-2">
-        <Clock3 className="h-4 w-4 text-brand" aria-hidden="true" />
-        Prochaine fin d’offre dans
-      </span>
-      <div className="pt-slab flex items-center gap-1 rounded-xl px-3 py-3 sm:gap-1.5 sm:px-4">
+    // The absolute deadline labels this clock. Keep a single timer and the deliberate SSR
+    // placeholders: only the client can supply an honest remaining duration.
+    <div ref={rootRef} className="shrink-0" aria-hidden="true">
+      <div className="pt-slab flex items-center gap-1 rounded-xl p-2 sm:px-3">
         {segments.map((segment, index) => (
-          <div key={segment.label} className="flex items-center gap-1 sm:gap-1.5">
-            <span className="flex min-w-11 flex-col items-center sm:min-w-12">
-              <span className="font-display text-3xl font-bold tabular-nums leading-none text-ink-1">
+          <div key={segment.label} className="flex items-center gap-1">
+            <span className="flex min-w-7 flex-col items-center sm:min-w-9">
+              <span className="font-display text-2xl font-bold tabular-nums leading-none text-ink-1 sm:text-3xl">
                 {segment.value == null ? '--' : String(segment.value).padStart(2, '0')}
               </span>
               <span className="mt-1 text-[10px] font-semibold uppercase leading-none tracking-wide text-ink-2">
@@ -91,9 +89,9 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
 
 function FlashDeadline({ expirationDate }: { expirationDate: Date }) {
   return (
-    <span className="text-xs text-ink-2">
-      Prochaine échéance :{' '}
-      <time dateTime={expirationDate.toISOString()}>
+    <span className="min-w-32 flex-1 text-xs text-ink-2 sm:flex-initial">
+      <span className="block font-semibold">Prochaine échéance</span>
+      <time className="block" dateTime={expirationDate.toISOString()}>
         {expirationDate.toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis' })}
       </time>
     </span>
@@ -148,30 +146,42 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     // Four stateful cards render directly: deadline/empty states have different heights, so a
     // single deferred placeholder would move the page whenever the offer changes.
     <Section id="ventes-flash" surface="sunken" spacing="tight" width="wide" aria-labelledby="ventes-flash-heading">
-      <SectionHeader
-        id="ventes-flash-heading"
-        title={earliestExpiration || !offers.length ? 'Ventes flash' : 'Meilleures promos'}
-        scale="1"
-        viewAllHref="/offres"
-        viewAllLabel="Voir toutes les offres"
-      />
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 sm:block">
+        <SectionHeader
+          id="ventes-flash-heading"
+          title={earliestExpiration || !offers.length ? 'Ventes flash' : 'Meilleures promos'}
+          scale="1"
+          viewAllHref="/offres"
+          viewAllLabel="Voir toutes les offres"
+        />
+        {/* One mobile CTA, beside the title rather than repeated beneath the cards. */}
+        <LinkWithLoading
+          href="/offres"
+          loadingMessage="Chargement des offres"
+          className="-mt-2 inline-flex min-h-11 items-center gap-2 rounded-xl text-sm font-semibold text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:hidden"
+        >
+          Voir les offres <ArrowRight className="h-4 w-4" aria-hidden="true" />
+        </LinkWithLoading>
+      </div>
       {offers.length > 0 ? (
         <>
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-6">
-            <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-              <p className="font-display font-extrabold uppercase leading-none text-brand">
-                <span className="mb-2 block text-xs font-semibold tracking-wide">Jusqu’à</span>
-                <span className="text-5xl sm:text-6xl">−{maxDiscount}%</span>
+          {/* Two aligned groups, 16px apart on phones and sharing the desktop row. The maxima
+              remain independent: the deepest percentage need not be the largest dinar saving. */}
+          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
+            <div className="flex min-w-0 items-center gap-4">
+              <p className="shrink-0 font-display font-extrabold uppercase leading-none text-brand">
+                <span className="mb-1 block text-xs font-semibold tracking-wide">Jusqu’à</span>
+                <span className="text-4xl sm:text-5xl">−{maxDiscount}%</span>
               </p>
-              <div className="border-l border-rule pl-6">
-                <p className="text-sm font-semibold text-ink-1">Jusqu’à {formatTnd(maxSaving)} d’économie</p>
-                <p className="mt-1 text-sm text-ink-2">Sur une sélection de {offers.length} produit{offers.length > 1 ? 's' : ''}</p>
-              </div>
+              <p className="min-w-0 text-sm text-ink-2">
+                <span className="block font-semibold text-ink-1">Jusqu’à {formatTnd(maxSaving)} d’économie</span>
+                Sur {offers.length} produit{offers.length > 1 ? 's' : ''} sélectionné{offers.length > 1 ? 's' : ''}
+              </p>
             </div>
             {earliestExpiration && (
-              <div className="flex flex-col gap-2">
-                <CountdownDisplay expirationDate={earliestExpiration} />
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
                 <FlashDeadline expirationDate={earliestExpiration} />
+                <CountdownDisplay expirationDate={earliestExpiration} />
               </div>
             )}
           </div>
@@ -186,13 +196,6 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       ) : (
         <p className="text-sm text-ink-2">Aucune vente flash en cours. Retrouvez nos produits et les offres disponibles dans la boutique.</p>
       )}
-      <LinkWithLoading
-        href="/offres"
-        loadingMessage="Chargement des offres"
-        className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-xl text-sm font-semibold text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:hidden"
-      >
-        Voir toutes les offres <ArrowRight className="h-4 w-4" aria-hidden="true" />
-      </LinkWithLoading>
     </Section>
   );
 });

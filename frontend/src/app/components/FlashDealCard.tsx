@@ -63,16 +63,18 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
   }, [addToCart, atLimit, image, outOfStock, price.finalPrice, product, stock]);
 
   return (
-    <article className="pt-plate group relative flex h-full min-w-0 flex-col gap-4 rounded-xl border border-hairline bg-elevated p-4 transition-colors [@media(hover:hover)]:hover:border-brand/50">
+    // Keep price, saving, per-product deadline and the full purchase target. The shorter image
+    // well and a shared 12px rhythm recover space without reducing product or price typography.
+    <article className="pt-plate group relative flex h-full min-w-0 flex-col gap-3 rounded-xl border border-hairline bg-elevated p-4 transition-colors [@media(hover:hover)]:hover:border-brand/50">
       {discount > 0 && (
         <span className="absolute left-6 top-6 z-10 rounded-lg bg-brand px-2 py-1 font-display text-lg font-bold tabular-nums leading-none text-on-brand">−{discount}%</span>
       )}
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement du produit"
-        className="flex w-full min-w-0 flex-1 flex-col gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="flex w-full min-w-0 flex-1 flex-col gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
-        <div className="pt-logo-well relative h-48 w-full shrink-0 sm:h-56 overflow-hidden rounded-lg">
+        <div className="pt-logo-well relative h-40 w-full shrink-0 overflow-hidden rounded-lg">
           {image ? (
             <Image
               src={image}
@@ -93,17 +95,17 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
             <p className="mt-2 text-xs font-semibold text-ink-3">Rupture de stock</p>
           ) : (
             <>
-              <div className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
+              <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-2">
                 <span className="font-display text-3xl font-extrabold tabular-nums leading-none text-brand">{formatTnd(price.finalPrice)}</span>
                 {price.hasPromo && price.oldPrice != null && <span className="text-sm tabular-nums text-ink-3 line-through">{formatTnd(price.oldPrice)}</span>}
+                {saved > 0 && <span className="text-sm font-semibold text-ink-1">Économie : <span className="text-brand">{formatTnd(saved)}</span></span>}
               </div>
-              {saved > 0 && <p className="mt-3 text-sm font-semibold text-ink-1">Vous économisez <span className="text-brand">{formatTnd(saved)}</span></p>}
             </>
           )}
         </div>
       </LinkWithLoading>
       {price.hasPromo && deadline != null && (
-        <p className="w-full border-t border-hairline pt-3 text-xs text-ink-2">
+        <p className="w-full border-t border-hairline pt-2 text-xs text-ink-2">
           Fin le <time dateTime={new Date(deadline).toISOString()}>{new Date(deadline).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis' })}</time>
         </p>
       )}
