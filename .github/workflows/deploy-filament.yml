@@ -137,7 +137,9 @@ jobs:
             -e CACHE_STORE=array -e SESSION_DRIVER=array -e MAIL_MAILER=array \
             -v "$PWD/filament/tests:/var/www/html/tests:ro" \
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
-            vendor/bin/phpunit tests/Feature/CampaignArtworkReleaseTest.php
+            vendor/bin/phpunit \
+              tests/Feature/CampaignArtworkReleaseTest.php \
+              tests/Feature/CampaignArtworkProductsReleaseTest.php
 
       - name: Save synthetic request email previews
         uses: actions/upload-artifact@v4
