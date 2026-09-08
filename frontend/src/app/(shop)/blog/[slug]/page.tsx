@@ -243,6 +243,16 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         }
       : article;
 
+    // Keep the explicit pillar link inside the prose delivered in the initial HTML, even when
+    // taxonomy fetching fails. Preserve the CMS body and its French/fallback field selection.
+    if (seoOverlay?.bodyLinkHtml) {
+      if (displayArticle.description_fr) {
+        displayArticle.description_fr += seoOverlay.bodyLinkHtml;
+      } else if (displayArticle.description) {
+        displayArticle.description += seoOverlay.bodyLinkHtml;
+      }
+    }
+
     /*
      * ── LINK TARGETS FOR IN-CONTENT LINKS ────────────────────────────────────────────────────
      * Built on the server so the anchors are in the initial HTML. That is the whole point: the

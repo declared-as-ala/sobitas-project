@@ -21,6 +21,10 @@ CODEX="$(resolve_codex)"
 
 SANDBOX="workspace-write"
 MODEL=""
+# Repeatable `-c key=value`, forwarded to codex verbatim. Added 08/09/2026 so the planner can set
+# `model_reasoning_effort` per task — a design or security brief is worth more thinking than a
+# mechanical one, and that is a decision the brief author should be able to make.
+CONFIG=()
 CMD="${1:-}"; shift || true
 
 case "$CMD" in
@@ -44,6 +48,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     -s|--sandbox) SANDBOX="$2"; shift 2 ;;
     -m|--model)   MODEL="$2";   shift 2 ;;
+    -c|--config)  CONFIG+=(-c "$2"); shift 2 ;;
     *) echo "unknown arg: $1" >&2; exit 2 ;;
   esac
 done
@@ -57,6 +62,7 @@ cp "$BRIEF" "$OUT/brief-$(date +%H%M%S).md" 2>/dev/null || true
 
 ARGS=(exec -C "$REPO_ROOT" -s "$SANDBOX" -o "$OUT/last.md" --color never)
 [ -n "$MODEL" ] && ARGS+=(-m "$MODEL")
+[ ${#CONFIG[@]} -gt 0 ] && ARGS+=("${CONFIG[@]}")
 
 git -C "$REPO_ROOT" rev-parse HEAD > "$OUT/base-sha.txt" 2>/dev/null
 

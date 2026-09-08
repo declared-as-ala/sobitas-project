@@ -8,6 +8,8 @@ export interface BlogSeoEntry {
   headline?: string;
   /** Optional search snippet aligned with the refreshed article. */
   metaDescription?: string;
+  /** Contextual link paragraph appended inside the article body; trusted editorial HTML only. */
+  bodyLinkHtml?: string;
   /** ISO date for a substantive editorial refresh reflected in Article schema. */
   dateModified?: string;
   /** Localized labels for non-French articles. */
@@ -243,6 +245,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   // ── Creatine commercial intent blog posts ─────────────────────────────────
 
   'prix-de-la-creatine-en-tunisie': {
+    bodyLinkHtml: '<p>Pour comparer les offres avec ces critères, consultez les <a href="/creatine">prix et formats des créatines disponibles en Tunisie</a>.</p>',
     faqs: [
       { question: "Quel est le prix moyen de la créatine en Tunisie ?", answer: "Le prix de la créatine monohydrate en Tunisie commence à environ 29 DT pour un format 300 g et monte jusqu'à 120–150 DT pour les formats 1 kg de marques premium comme Optimum Nutrition ou MuscleTech. Le format et la marque influencent fortement le prix au gramme." },
       { question: "Comment comparer les prix de la créatine selon le format ?", answer: "Calculez toujours le prix au gramme (prix total ÷ poids net en grammes). Un format 1 kg est généralement 30 à 40 % moins cher au gramme qu'un 300 g. Les formats Creapure® sont un peu plus chers mais garantissent une pureté maximale." },
@@ -255,6 +258,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   'ou-acheter-de-la-creatine-en-tunisie': {
+    bodyLinkHtml: '<p>Après avoir vérifié les informations du vendeur et de la référence choisie, retrouvez la <a href="/creatine">sélection de créatines disponibles chez Protein.tn</a>.</p>',
     faqs: [
       { question: "Où acheter de la créatine fiable en Tunisie ?", answer: "Privilegiez les distributeurs officiels qui importent directement avec numéros de lot traçables. Protein.tn est une référence en Tunisie avec plus de 15 ans d'expérience, des produits 100 % originaux et une livraison dans tous les gouvernorats." },
       { question: "Comment éviter les contrefaçons de créatine en Tunisie ?", answer: "Achetez uniquement auprès de sites ou magasins agréés. Vérifiez la présence d'un sceau de sécurité, d'un numéro de lot et d'une date de péremption. Méfiez-vous des prix anormalement bas et des emballages sans mention d'importateur officiel." },
@@ -267,6 +271,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   'creatine-tunisie': {
+    bodyLinkHtml: '<p>Pour passer de ces conseils au choix d’un produit, consultez les <a href="/creatine">créatines disponibles en Tunisie, leurs formats et leurs prix</a>.</p>',
     faqs: [
       { question: "Quels sont les bienfaits prouvés de la créatine ?", answer: "La créatine augmente les réserves de phosphocréatine dans les muscles, ce qui améliore la production d'ATP lors des efforts courts et intenses. Résultat : plus de force, plus de répétitions, une meilleure récupération inter-séries et une volumisation cellulaire. Ces effets sont validés par des centaines d'études." },
       { question: "Quelle est la dose de créatine recommandée ?", answer: "3 à 5 g par jour en prise continue est la dose standard recommandée. La régularité prime sur le timing : peu importe si vous la prenez avant ou après l'entraînement, l'essentiel est de ne pas oublier les jours de repos." },
@@ -276,6 +281,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { anchor: 'créatine monohydrate Tunisie', href: '/creatine' },
       { anchor: 'whey protein tunisie', href: '/whey-proteine' },
     ],
+  },
+
+  'creatine-tunisie-tout-ce-que-vous-devez-savoir': {
+    bodyLinkHtml: '<p>Pour retrouver les produits évoqués dans ce guide, consultez notre <a href="/creatine">catalogue de créatines en Tunisie</a>.</p>',
+    faqs: [],
+    internalLinks: [],
   },
 
   'creatine-tunisie-guide-complet-bienfaits-et-meilleures-marques-disponibles': {
