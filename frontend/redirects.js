@@ -336,6 +336,19 @@ function buildRedirects() {
     // Broad whey aliases belong on the full commercial category, not the isolate-only subset.
     p('/whey', '/whey-proteine'),
     p('/whey-protein', '/whey-proteine'),
+    /*
+     * /whey-tunisie was missing from this list and resolved at RUNTIME to /whey-isolate — measured
+     * against production on 08/09/2026 with a Googlebot UA: `308 -> https://protein.tn/whey-isolate`.
+     * No rule in this file produced it, which is why it survived: the slug reaches the category
+     * route, matches a record whose canonical slug is the isolate subset, and redirects there.
+     *
+     * That is the wrong intent. `whey tunisie` (260/mo, commercial) is a general whey query, not an
+     * isolate query — housenutrition.tn ranks 1 for it with a general whey category while our own
+     * /whey-proteine sits at 55. Sending the alias to the isolate-only subset answers a narrower
+     * question than the searcher asked. An explicit rule here also stops the destination drifting
+     * with the taxonomy, which is how it got here.
+     */
+    p('/whey-tunisie', '/whey-proteine'),
     p('/proteines-en-poudre', '/proteines'),
     p('/proteine-en-poudre', '/proteines'),
     p('/proteines-completes', '/proteines'),
