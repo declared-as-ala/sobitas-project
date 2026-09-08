@@ -444,8 +444,36 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       description: descTrimmed,
       ...(allKeywords ? { keywords: allKeywords } : {}),
       alternates: { canonical: canonicalUrl },
-      // Always index resolved categories — never trust admin noindex for live categories
-      robots: { index: true, follow: true },
+      /*
+       * ── PAGE 1 IS INDEXED. ?page=2 AND BEYOND ARE `noindex, follow` ──────────────────────────
+       * The first clause is unchanged and still says what it always said: a resolved category or
+       * subcategory is indexable no matter what the admin's own robots flag claims, because a live
+       * listing accidentally flagged noindex in Filament is how ranking surfaces disappear.
+       *
+       * The second clause is new, and it is the same directive /shop's generateMetadata emits for
+       * the same reason — read the long note there. A paged listing carries the page-1 H1 and
+       * ~310 words of shared furniture; its only unique content is twelve tiles that each already
+       * have an indexable URL of their own. Across the site 473 of 1,107 indexable listing URLs are
+       * pagination, and every one of them competes with the canonical listing for the query the
+       * canonical listing should win.
+       *
+       * `follow` STAYS TRUE and that is the whole point of choosing this directive over any other.
+       * /sante-vitalite holds 8,849 products; ?page=2…N is the only path to the ones past the
+       * twenty-fourth, and this route lost `generateStaticParams` specifically so that path could
+       * exist (see app/[slug]/page.tsx). noindex removes the near-duplicate from the index;
+       * follow keeps the crawl path through it wide open. Never write nofollow here.
+       *
+       * The self-canonical above is deliberately NOT collapsed to page 1 — noindex and canonical
+       * answer different questions, and pointing every page of the series at /{slug} would tell
+       * Google the deep products' listing does not exist. Self-canonical + noindex,follow is the
+       * shape Google has recommended since rel=prev/next was retired in 2019; no rel=prev/next is
+       * emitted here or anywhere else.
+       *
+       * This is read by BOTH views: /{slug} delegates its metadata here, and so does
+       * /x-crawler/category/[slug] — the route middleware rewrites Googlebot to. One edit, no
+       * drift between what a shopper and a crawler are told.
+       */
+      robots: metaQuery.page > 1 ? { index: false, follow: true } : { index: true, follow: true },
       openGraph: {
         title: ogTitleMeta,
         description: ogDescMeta.slice(0, 200),

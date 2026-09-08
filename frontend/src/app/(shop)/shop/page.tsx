@@ -72,11 +72,16 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
 
   /*
    * ── ?page=N BEYOND THE END IS A 308, AND IT HAS TO BE DECIDED **HERE** ────────────────────
-   * `page` is deliberately absent from next.config's FACET_KEYS — that is what keeps the 470 real
-   * paginated pages indexable — and the root layout defaults to index/follow. So before this,
-   * `GET /shop?page=5000` answered 200, rendered "Aucun résultat", and declared itself canonical
-   * and indexable: an unbounded space of indexable empty pages hanging off the site's most
-   * important listing URL.
+   * `page` is deliberately absent from next.config's FACET_KEYS, and the root layout defaults to
+   * index/follow. So before this, `GET /shop?page=5000` answered 200, rendered "Aucun résultat",
+   * and declared itself canonical and indexable: an unbounded space of indexable empty pages
+   * hanging off the site's most important listing URL.
+   *
+   * (The 470 REAL page numbers are noindex,follow now too — see the robots note at the return
+   * below — but that is decided HERE rather than by adding `page` to FACET_KEYS, because those
+   * header rules only match `source: '/shop'` and every category and subcategory listing paginates
+   * as well. One rule in generateMetadata covers /shop, /{category} and /{subcategory}, and the
+   * same object is what /x-crawler/shop re-exports, so the bot and the shopper cannot disagree.)
    *
    * THE FIRST ATTEMPT PUT THIS IN THE PAGE BODY AND IT SILENTLY DID NOT WORK. `permanentRedirect`
    * throws NEXT_REDIRECT, and in the page component that throw happens after `await getShopData`
@@ -146,10 +151,38 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
   return {
     title: { absolute: title },
     description,
-    // See the overflow note above: the status line cannot be owned from here, so the head is what
-    // stops ?page=99999 being an indexable empty page. Absent (index/follow from the layout) on
-    // every real page number.
-    ...(overflowedTo !== null ? { robots: { index: false, follow: true } } : {}),
+    /*
+     * ── EVERY ?page=N, N ≥ 2, IS `noindex, follow`. PAGE 1 IS UNTOUCHED ───────────────────────
+     * This widens a directive that already existed one line below for the overflow case
+     * (?page=99999). It is the SAME mechanism for the same reason — the status line cannot be
+     * owned from here (see the long note above), so the head is where the indexing decision is
+     * made — applied to the whole tail of the series rather than only to the part past the end.
+     *
+     * WHY. 473 of the site's 1,107 indexable listing URLs are pagination. They average ~310 words,
+     * they carry the page-1 H1 verbatim, and their only unique content is twelve product tiles
+     * that each have their own indexable URL already. So the index holds 473 near-duplicates of
+     * /shop, all answering the same query, all competing with the one URL that should win it —
+     * which is this site's central diagnosis (docs/seo-opportunity-map.md), not a theoretical risk.
+     *
+     * `follow: true` IS THE LOAD-BEARING HALF and must stay. The pager is the only crawl path to
+     * the 11,263rd product: /shop links page 2, page 2 links page 3, and nothing else on the site
+     * links the middle of that chain. `noindex, nofollow` would close it and orphan the tail of the
+     * catalogue. `noindex, follow` keeps every one of those anchors crawlable while removing the
+     * page itself from the index — the pages stay a road, they stop being a destination.
+     *
+     * WHAT IS DELIBERATELY NOT CHANGED:
+     *   • The self-canonical. A paged view is not a duplicate of page 1 and must not claim to be
+     *     (see the canonical note above); noindex and rel=canonical answer two different questions
+     *     and pointing ?page=7 at /shop would tell Google those twelve products' listing does not
+     *     exist. Self-canonical + noindex,follow is Google's own post-rel=prev/next shape.
+     *   • rel=prev/next. Retired in 2019, not reintroduced.
+     *   • Page 1: `isPaged` is false at page 1, so the key is absent from the object entirely and
+     *     the root layout's index/follow applies exactly as before, byte for byte.
+     *
+     * The overflow case (?page=99999) is a strict subset of this — `overflowedTo` is only ever set
+     * when `isPaged` — so it keeps its directive and keeps its last-page canonical below.
+     */
+    ...(isPaged ? { robots: { index: false, follow: true } } : {}),
     alternates: { canonical },
     openGraph: {
       title: { absolute: title },

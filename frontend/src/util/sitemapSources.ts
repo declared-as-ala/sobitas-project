@@ -321,6 +321,26 @@ export const STATIC_ROUTES: ReadonlyArray<{ path: string; changeFrequency: NonNu
  * middle of the catalogue meant walking roughly 235 hops from page 1. Googlebot does not do that,
  * which is how ~11,000 products came to sit behind a listing chain nothing crawled.
  *
+ * ── UNWIRED ON 08/09/2026. THE PARAGRAPH BELOW IS NOW FALSE, AND IS KEPT SO THE REVERSAL READS ─
+ * It used to say these URLs are legitimately indexable, and while that was true they belonged in
+ * a sitemap. It is no longer true: /shop and every category listing now emit `noindex, follow`
+ * for `?page=2` and beyond, because 473 of 1,107 indexable listing URLs were pagination sharing
+ * one H1 and ~310 words of furniture with the canonical listing they were competing against.
+ *
+ * A sitemap that submits a noindex URL is a contradiction Google reports back as an error —
+ * "Submitted URL marked 'noindex'", 473 of them, in the same Coverage report the owner reads to
+ * find real problems. So this source is no longer in SITEMAP_SOURCES.
+ *
+ * WHAT REPLACES IT AS THE CRAWL PATH: nothing had to. `follow` stays true on every paged URL, so
+ * the pager chain is still walkable, and — the reason this is safe — `productsSource` emits all
+ * 11,263 product URLs into the sitemap DIRECTLY. The discovery problem this source was built for
+ * ("~11,000 products behind a listing chain nothing crawled") is solved by that source, not by
+ * this one. This was scaffolding that outlived the hole it was propping up.
+ *
+ * The definition is left in place, unreferenced: if listing pagination is ever made indexable
+ * again, re-adding the id to SITEMAP_SOURCES is the whole change.
+ *
+ * ── THE ORIGINAL RATIONALE, LEFT VERBATIM ────────────────────────────────────────────────────
  * These URLs are legitimately indexable: `page` is deliberately absent from next.config's
  * FACET_KEYS, each page self-canonicalises (a paged view is not a duplicate — it holds products
  * that appear on no other URL), and /shop now 308s anything past the end rather than serving an
@@ -854,7 +874,8 @@ const blogTagsSource: SitemapSource = {
  */
 export const SITEMAP_SOURCES: ReadonlyArray<SitemapSource> = [
   staticSource,
-  shopPaginationSource,
+  // shopPaginationSource is deliberately absent — see its docblock. Those URLs are `noindex` now,
+  // and submitting a noindex URL earns a Coverage error, not an indexed page.
   // Products first among the data sources: it is the only thing that knows which brands and which
   // subcategories have something to sell, and the two listing sources below refuse to submit an
   // empty listing page. `needs` makes that a runtime assertion rather than a comment about order.
