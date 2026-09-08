@@ -31,6 +31,7 @@ import {
   buildProductJsonLd,
   buildBreadcrumbListSchema,
   buildFAQPageSchemaFromProductFaq,
+  buildWebPageSchema,
   sanitizeBackendProductJsonLd,
 } from '@/util/structuredData';
 import { buildVideoObjectSchema } from '@/util/officialVideo';
@@ -222,7 +223,25 @@ export default async function CrawlerProductPage({ params }: PageProps) {
     apiLd != null && typeof apiLd === 'object' && Object.keys(apiLd).length > 0
       ? sanitizeBackendProductJsonLd(product, apiLd, canonicalUrl) ?? buildProductJsonLd(product, canonicalUrl)
       : buildProductJsonLd(product, canonicalUrl);
-  const breadcrumbSchema = buildBreadcrumbListSchema(getProductBreadcrumbs(product), BASE_URL);
+  const breadcrumbSchema = buildBreadcrumbListSchema(getProductBreadcrumbs(product), BASE_URL, { pageUrl: canonicalUrl });
+  /**
+   * ── THE WEBPAGE NODE WAS ON THE HUMAN PDP ONLY ─────────────────────────────────────────────
+   * Measured on production 08/09/2026 with `?__crawler=1` (the query flag forces this route past
+   * the CDN's URL-keyed cache, which otherwise hands a bot response to a browser and hides the
+   * difference entirely):
+   *
+   *     /vitamines/platinum-multivitamin-90-tabs            7 blobs, incl. WebPage
+   *     /vitamines/platinum-multivitamin-90-tabs?__crawler=1  6 blobs, no WebPage
+   *
+   * Same builder, same arguments, same canonical URL as app/(shop)/[slug]/[productSlug] — this is
+   * the drift the crawler route has had four times now, not a new node. It is also the graph hub:
+   * it carries `breadcrumb` and `isPartOf`, which is what ties the Product, the trail and the
+   * sitewide WebSite together instead of leaving four unrelated blobs on one page.
+   */
+  const webPageSchema = buildWebPageSchema(product.designation_fr, canonicalUrl, BASE_URL, {
+    description: (product.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
+    withBreadcrumb: true,
+  });
   const faqSchema = buildFAQPageSchemaFromProductFaq(product.faq);
   // Only emitted when a validated official video id is present; see util/officialVideo.ts.
   const videoSchema = buildVideoObjectSchema(product?.official_video, product?.designation_fr ?? '', canonicalUrl);
@@ -233,6 +252,7 @@ export default async function CrawlerProductPage({ params }: PageProps) {
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }} />
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}

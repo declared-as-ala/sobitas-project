@@ -15,13 +15,14 @@ import {
 } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
-import { isReservedRouteSlug, buildProductUrlPath } from '@/util/productUrl';
+import { isReservedRouteSlug } from '@/util/productUrl';
 import { retiredSlugDestination } from '@/util/retiredSlug';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
-import { buildCollectionPageSchema, buildItemListSchema, buildBreadcrumbListSchema, buildWebPageSchema, buildFAQPageSchemaFromQA } from '@/util/structuredData';
+import { buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
@@ -112,8 +113,6 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   // different titles ("-" vs "—", "Compléments Tunisie" vs "Compléments en Tunisie").
   const title = buildBrandMetaTitle(brand.designation_fr);
   const description = buildBrandMetaDescription(brand.designation_fr);
-  const ogImage = '/slides/home-hero-web.webp';
-  const ogAlt = `${brand.designation_fr} — Protéine Tunisie`;
 
   return {
     // absolute: the brand title already ends with "| Protéine Tunisie"; without this the root
@@ -121,19 +120,9 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
     title: { absolute: title },
     description,
     alternates: { canonical },
-    openGraph: {
-      title,
-      description,
-      url: canonical,
-      type: 'website',
-      images: [{ url: ogImage, width: 1200, height: 630, alt: ogAlt }],
-    },
-    twitter: {
-      card: 'summary_large_image',
-      title,
-      description,
-      images: [ogImage],
-    },
+    // Shared with the crawler route, which emitted no openGraph at all and therefore fell back to
+    // the site-wide banner — see buildBrandSocialMetadata.
+    ...buildBrandSocialMetadata(brand.designation_fr, canonical),
   };
 }
 
@@ -196,37 +185,25 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
     // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
     const baseUrl = getBaseUrl();
     const brandSeo = getBrandSeoEntry(cleanSlug);
-    const brandTitle = buildBrandMetaTitle(brand.designation_fr);
-    const brandDesc = brandSeo?.metaDescription || `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
-    const breadcrumbSchema = buildBreadcrumbListSchema(
-      [
-        { name: 'Accueil', url: '/' },
-        { name: 'Boutique', url: '/shop' },
-        { name: brand.designation_fr, url: `/${cleanSlug}` },
-      ],
-      baseUrl
-    );
-    const collectionSchema = buildCollectionPageSchema(brandTitle, `/${cleanSlug}`, baseUrl, { description: brandDesc });
-    const brandProducts = Array.isArray(brandProductsList) ? brandProductsList : [];
-    const itemListSchema = brandProducts.length > 0
-      ? buildItemListSchema(
-          brandProducts.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
-          baseUrl,
-          { name: `Produits ${brand.designation_fr}` }
-        )
-      : null;
-    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
+    // Shared with x-crawler/category, which serves this same URL to bots — the two had drifted to
+    // different CollectionPage names and only one of them carried the curated description.
+    // See util/brandJsonLd.ts.
+    const brandSchemas = buildBrandLandingSchemas({
+      brand,
+      products: Array.isArray(brandProductsList) ? brandProductsList : [],
+      slug: cleanSlug,
+      baseUrl,
+    });
 
     return (
       <>
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(collectionSchema) }} />
-        {itemListSchema && (
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
-        )}
-        {faqSchema && (
-          <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
-        )}
+        {brandSchemas.map((schema, i) => (
+          <script
+            key={`brand-ld-${cleanSlug}-${i}`}
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          />
+        ))}
         <ShopPageClient
           productsData={productsData}
           categories={categories}
@@ -249,10 +226,11 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
     const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
-    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description, withBreadcrumb: true });
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || cleanSlug}` }],
-      baseUrl
+      baseUrl,
+      { pageUrl: canonical }
     );
     return (
       <>

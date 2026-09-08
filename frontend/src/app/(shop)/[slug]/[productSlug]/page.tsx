@@ -15,7 +15,7 @@ import {
   validateStructuredData,
 } from '@/util/structuredData';
 import { buildVideoObjectSchema } from '@/util/officialVideo';
-import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildProductCanonicalUrl, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 import { productDescription, productTitle } from '@/util/productMetaDescription';
@@ -293,11 +293,16 @@ export default async function NewProductPage({ params }: PageProps) {
 
   // Build breadcrumbs using the utility
   const breadcrumbItems = getProductBreadcrumbs(product);
-  const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
+  // canonicalUrl, not buildProductUrlPath: x-crawler/product builds the same two nodes from
+  // buildProductCanonicalUrl, and the page node's @id / breadcrumb reference must resolve to the
+  // same identifiers in both views or the graph reconnects differently for Google than for a
+  // shopper. Both resolve to the same absolute URL; sharing one source removes the chance to drift.
+  const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl, { pageUrl: canonicalUrl });
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
-  
-  const webPageSchema = buildWebPageSchema(product.designation_fr, buildProductUrlPath(product), baseUrl, {
+
+  const webPageSchema = buildWebPageSchema(product.designation_fr, canonicalUrl, baseUrl, {
     description: (product.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
+    withBreadcrumb: true,
   });
 
   // FAQPage ONLY from the product's own FAQ (which the page renders). The old

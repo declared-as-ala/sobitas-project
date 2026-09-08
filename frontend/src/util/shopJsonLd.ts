@@ -52,13 +52,21 @@ export function buildShopSchemas({
       { name: 'Accueil', url: '/' },
       { name: 'Boutique', url: '/shop' },
     ],
-    baseUrl
+    baseUrl,
+    // The paginated path, matching the CollectionPage url and rel=canonical — see bug 1 above.
+    { pageUrl: canonicalPath }
   );
 
   // The page number belongs in the NAME as well as the url: two CollectionPages with identical
   // names and different urls is exactly the duplicate signal self-canonicalising pagination is
   // meant to avoid sending.
   const pageSuffix = currentPage > 1 ? ` — Page ${currentPage}` : '';
+
+  const enriched = enrichProductsWithSubcategory(
+    products as never,
+    categories as never
+  ) as Array<{ designation_fr?: string }>;
+
   const collection = buildCollectionPageSchema(
     `Boutique Protéines & Compléments en Tunisie${pageSuffix}`,
     canonicalPath,
@@ -66,13 +74,10 @@ export function buildShopSchemas({
     {
       description:
         'Découvrez nos protéines, créatine, gainer et BCAA en Tunisie. Large choix, livraison rapide.',
+      withBreadcrumb: true,
+      withItemList: enriched.length > 0,
     }
   );
-
-  const enriched = enrichProductsWithSubcategory(
-    products as never,
-    categories as never
-  ) as Array<{ designation_fr?: string }>;
 
   /*
    * No `offers` and no per-item price.
@@ -90,7 +95,7 @@ export function buildShopSchemas({
             url: getProductLink(p as never),
           })),
           baseUrl,
-          { name: `Boutique${pageSuffix}` }
+          { name: `Boutique${pageSuffix}`, pageUrl: canonicalPath }
         )
       : null;
 

@@ -546,8 +546,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             ]
           : [{ name: subCrumbName, url: `/${canonicalSlug}` }]),
       ];
-      const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
-      validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
       const pageTitle = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
       const collectionDesc =
         (merged.metaDescription ||
@@ -559,10 +557,10 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
         `/${canonicalSlug}`
       );
-      const collectionPageSchema = buildCollectionPageSchema(pageTitle, collectionPath, baseUrl, {
-        description: collectionDesc,
-      });
-      validateStructuredData(collectionPageSchema, 'CollectionPage');
+      // pageUrl is the PAGINATED path, the same one the CollectionPage and rel=canonical carry, so
+      // /creatine?page=2 wires its own trail and list rather than page 1's.
+      const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl, { pageUrl: collectionPath });
+      validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
       // Structured data must describe the CURRENT paginated listing. `sub.products` is always the
       // API's fixed first page, so using it here made /creatine?page=2 self-canonical but gave it
       // page 1's ItemList and Product entities. Besides mismatching the visible grid, every page in
@@ -572,7 +570,13 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
-      const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle }) : null;
+      const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle, pageUrl: collectionPath }) : null;
+      const collectionPageSchema = buildCollectionPageSchema(pageTitle, collectionPath, baseUrl, {
+        description: collectionDesc,
+        withBreadcrumb: true,
+        withItemList: itemListSchema != null,
+      });
+      validateStructuredData(collectionPageSchema, 'CollectionPage');
       const productSchemas = currentPageProducts
         .slice(0, 6)
         .map((p: any) => buildProductSchema(p, baseUrl))
@@ -729,8 +733,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         { name: 'Accueil', url: '/' },
         { name: catCrumbName, url: `/${canonicalSlug}` },
       ];
-      const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
-      validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
       const pageTitleCat = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       const collectionDescCat =
         (mergedCat.metaDescription ||
@@ -742,10 +744,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
         `/${canonicalSlug}`
       );
-      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, collectionPathCat, baseUrl, {
-        description: collectionDescCat,
-      });
-      validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
+      const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl, { pageUrl: collectionPathCat });
+      validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
       // As in the subcategory branch, schema follows the current page rather than the taxonomy
       // endpoint's permanently fixed page-1 sample.
       const currentPageProductsCat = (productsData.products ?? []) as any[];
@@ -753,7 +753,13 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
-      const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat }) : null;
+      const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat, pageUrl: collectionPathCat }) : null;
+      const collectionPageSchemaCat = buildCollectionPageSchema(pageTitleCat, collectionPathCat, baseUrl, {
+        description: collectionDescCat,
+        withBreadcrumb: true,
+        withItemList: itemListSchemaCat != null,
+      });
+      validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
       const productSchemasCat = currentPageProductsCat
         .slice(0, 6)
         .map((p: any) => buildProductSchema(p, baseUrl))

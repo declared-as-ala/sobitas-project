@@ -190,14 +190,21 @@ export default async function Home() {
     HOME_TITLE,
     '/',
     baseUrl,
-    { description: 'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.' }
+    {
+      description: 'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.',
+      withBreadcrumb: true,
+      withItemList: featuredUnique.length > 0,
+      // The home page is the Organization's own page — the one relation on this site that is
+      // unambiguously true, and the node layout.tsx already ships is what it points at.
+      about: { '@id': `${baseUrl.replace(/\/$/, '')}/#organization` },
+    }
   );
-  const breadcrumbSchema = buildBreadcrumbListSchema([{ name: 'Accueil', url: '/' }], baseUrl);
+  const breadcrumbSchema = buildBreadcrumbListSchema([{ name: 'Accueil', url: '/' }], baseUrl, { pageUrl: '/' });
   const itemListSchema = featuredUnique.length > 0
     ? buildItemListSchema(
         featuredUnique.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
         baseUrl,
-        { name: 'Produits en vedette' }
+        { name: 'Produits en vedette', pageUrl: '/' }
       )
     : null;
 

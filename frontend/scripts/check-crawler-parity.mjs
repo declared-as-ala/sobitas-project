@@ -42,12 +42,25 @@ const BROWSER =
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
 
 /* Products chosen because they carry a curated Search Console title, a formulaic backend
-   description, or both — i.e. exactly the fields that have drifted before. */
+   description, or both — i.e. exactly the fields that have drifted before.
+
+   The last two are a CATEGORY and a BRAND, added when the JSON-LD comparison went in: middleware
+   rewrites all three page shapes to /x-crawler/**, but only the product route was ever checked,
+   and the brand and category routes had each drifted in their own way (see schemaSummary above).
+
+   ── RUN THIS AGAINST A LOCAL SERVER ──────────────────────────────────────────────────────────
+   `--base https://protein.tn` is nearly useless for this: the rewrite is invisible to the CDN, so
+   both requests hit ONE cache entry keyed on the URL and whichever variant got cached is returned
+   to both user agents — the two views come back identical no matter how far apart they are. That
+   is exactly how these divergences survived. Against 127.0.0.1 there is no such cache. To probe
+   production anyway, append ?__crawler=1 (a distinct URL, and the flag isCrawler.ts exposes). */
 const DEFAULT_ROUTES = [
   '/omega-3/omega-3-fish-oil-240-softgel-weightworld',
   '/creatine/creatine-monohydrate-300g-ultimate-nutrition',
   '/glutamine/thorne-l-glutamine-90-gelules',
   '/mass-gainers/serious-mass-2-7-kg',
+  '/whey-proteine',
+  '/biotech-usa',
 ];
 
 const ROUTES = (arg('routes', '') || '').trim()
@@ -70,19 +83,54 @@ const pick = (html, re) => {
   return m ? decode(m[1]) : null;
 };
 
+/**
+ * ── THE STRUCTURED DATA DIVERGED TOO, AND NOTHING WAS WATCHING IT ───────────────────────────
+ * The four fields above were the ones that had drifted when this script was written. On
+ * 08/09/2026 the JSON-LD was measured the same way and had drifted in three more places:
+ *
+ *   /vitamines/platinum-multivitamin-90-tabs   browser: 7 blobs incl. WebPage | bot: 6, no WebPage
+ *   /whey-proteine                             browser: 8 blobs + 6 Product  | bot: 8, 0 Product
+ *   /biotech-usa   CollectionPage name  browser "BioTech USA Tunisie | Pure Whey…"  bot "Produits BIOTECH USA"
+ *                  CollectionPage description  browser: curated copy           bot: absent
+ *
+ * So this compares the emitted graph as well: the multiset of node types, and — because a node
+ * can be present and still say something different — the name/description of every page-level
+ * node. Deliberately NOT a full deep-equal of the JSON: a listing's ItemList legitimately differs
+ * between two renders of a rotating catalogue, and a guard that cries wolf gets switched off.
+ */
+function schemaSummary(html) {
+  const re = /<script[^>]*type="application\/ld\+json"[^>]*>([\s\S]*?)<\/script>/gi;
+  const types = [];
+  const pageNodes = [];
+  let m;
+  while ((m = re.exec(html))) {
+    let node;
+    try { node = JSON.parse(m[1].trim()); } catch { types.push('UNPARSEABLE'); continue; }
+    for (const n of Array.isArray(node) ? node : node['@graph'] ? node['@graph'] : [node]) {
+      const t = [].concat(n['@type'] ?? '??').join('+');
+      types.push(t);
+      if (/Page$/.test(t)) pageNodes.push(`${t}|${decode(n.name ?? '')}|${decode(n.description ?? '')}`);
+    }
+  }
+  return { types: types.sort().join(','), pageNodes: pageNodes.sort().join(' ~ ') };
+}
+
 async function fetchAs(url, ua) {
   const res = await fetch(url, { headers: { 'User-Agent': ua }, redirect: 'follow' });
   const html = await res.text();
+  const schema = schemaSummary(html);
   return {
     status: res.status,
     title: pick(html, /<title>([\s\S]*?)<\/title>/i),
     description: pick(html, /<meta\s+name="description"\s+content="([\s\S]*?)"/i),
     canonical: pick(html, /<link\s+rel="canonical"\s+href="([^"]*)"/i),
     ogImage: pick(html, /<meta\s+property="og:image"\s+content="([^"]*)"/i),
+    schemaTypes: schema.types,
+    schemaPageNodes: schema.pageNodes,
   };
 }
 
-const FIELDS = ['title', 'description', 'canonical', 'ogImage'];
+const FIELDS = ['title', 'description', 'canonical', 'ogImage', 'schemaTypes', 'schemaPageNodes'];
 
 let failures = 0;
 for (const route of ROUTES) {

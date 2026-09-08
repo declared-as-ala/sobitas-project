@@ -20,6 +20,42 @@ const PRODUCTION_ORIGIN = 'https://protein.tn';
 const SITE_BRAND_NAME = 'Protéine Tunisie';
 
 /**
+ * Every name this ONE entity is known by.
+ *
+ * Deliberately the same set the Organization and WebSite nodes already publish as
+ * `name` + `alternateName` — the trading name, the legal name (SOBITAS), the domain, and the
+ * Arabic name — because anywhere the site has to answer "is this string us?" it must answer
+ * consistently. It did not: buildArticleSchema compared a CMS byline against SITE_BRAND_NAME
+ * alone and therefore typed the brand as a Person on all 223 blog posts. See the note there.
+ */
+const SITE_BRAND_ALIASES: readonly string[] = [
+  SITE_BRAND_NAME,
+  'Proteine Tunisie',
+  'Protein Tunisie',
+  'Protein.tn',
+  'protein.tn',
+  'SOBITAS',
+  AR_BRAND_SUFFIX,
+];
+
+/** Accent- and punctuation-insensitive, and Unicode-aware so the Arabic name survives folding. */
+function foldBrandName(value: string): string {
+  return String(value ?? '')
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .replace(/[^\p{L}\p{N}]+/gu, '')
+    .toLowerCase();
+}
+
+const SITE_BRAND_ALIAS_KEYS = new Set(SITE_BRAND_ALIASES.map(foldBrandName).filter(Boolean));
+
+/** True when `value` names this business rather than a third party (or a human byline). */
+export function isSiteBrandName(value: unknown): boolean {
+  const key = foldBrandName(String(value ?? ''));
+  return key.length > 0 && SITE_BRAND_ALIAS_KEYS.has(key);
+}
+
+/**
  * Store-wide return policy, emitted on every product Offer.
  * The Google Merchant / Search return-policy enhancement uses this; gating it behind a
  * per-product backend flag (which is set on 0 products) is what produced the Search Console
@@ -533,8 +569,18 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     image: dedupedImages.length > 0 ? dedupedImages : undefined,
     sku,
     productID: sku,
+    /* `@id` matches the sanitizeBackendProductJsonLd path exactly (same brandNameToSlug, same
+       bare brand-page URL). The two builders answer the SAME product URL — backend blob present
+       or not — and they disagreed here: the sanitize path has identified the brand entity since
+       12/08/2026 while this fallback named it anonymously, so which products joined the brand
+       graph depended on whether Laravel had a json_ld_product row for them. The brand page now
+       defines this identifier (buildBrandSchema), so the reference resolves. */
     brand: (product.schema?.brand || product.brand?.designation_fr)
-      ? { '@type': 'Brand', name: product.schema?.brand || product.brand?.designation_fr }
+      ? {
+          '@type': 'Brand',
+          '@id': `${PRODUCTION_ORIGIN}/${encodeURIComponent(brandNameToSlug(String(product.schema?.brand || product.brand?.designation_fr)))}`,
+          name: product.schema?.brand || product.brand?.designation_fr,
+        }
       : undefined,
     offers: offersPayload,
   };
@@ -797,12 +843,19 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
  */
 export function buildBreadcrumbListSchema(
   items: BreadcrumbItem[],
-  baseUrl: string
+  baseUrl: string,
+  /** The page this trail belongs to. Supplying it gives the list the `@id` that the page node's
+   *  `breadcrumb` property points at — see the note above buildPageNode. */
+  options?: { pageUrl?: string }
 ): object {
   const base = baseUrl.replace(/\/$/, '');
+  const pageUrl = options?.pageUrl
+    ? (options.pageUrl.startsWith('http') ? options.pageUrl : `${base}${options.pageUrl.startsWith('/') ? options.pageUrl : '/' + options.pageUrl}`)
+    : null;
   return {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
+    '@id': pageUrl ? pageNodeIds(pageUrl).breadcrumb : undefined,
     itemListElement: items.map((item, index) => ({
       '@type': 'ListItem',
       position: index + 1,
@@ -1076,25 +1129,81 @@ export function buildSiteNavigationSchema(baseUrl: string): object {
 }
 
 /**
+ * ── THE PAGE-LEVEL NODES ARE THE HUB OF THE GRAPH, NOT FOUR MORE ISLANDS ────────────────────
+ *
+ * Every listing page publishes four blobs — BreadcrumbList, CollectionPage, ItemList, FAQPage —
+ * and before this they shared not one identifier between them. Measured live on 08/09/2026,
+ * `/whey-proteine` as Googlebot: `BreadcrumbList` had no `@id`, `ItemList` had no `@id`, and the
+ * `CollectionPage` said `isPartOf: { "@type": "WebSite", url: "https://protein.tn" }` — an
+ * ANONYMOUS second WebSite node sitting beside the real one that layout.tsx emits with
+ * `@id: https://protein.tn/#website`. Two nodes, same site, no relation between them.
+ *
+ * The fix is not more properties, it is the SAME identifiers. Google resolves `@id` references
+ * within a page, so a `{ "@id": "…/#website" }` stub joins the page to the sitewide Organization
+ * and WebSite that are already on it, and `breadcrumb`/`mainEntity` join it to the two lists it
+ * already publishes. Nothing new is asserted — the same facts stop being anonymous.
+ *
+ * FRAGMENTS, DELIBERATELY: `#webpage`, `#breadcrumb`, `#itemlist`, `#faq`. A node's `@id` must
+ * identify THAT node, so the page-level node cannot take the bare page URL — that URL is already
+ * this site's identifier for the *product* (`#product`) and for a *brand* entity (the brand @id
+ * every product's `brand` node carries). Distinct fragments are what keep them from merging.
+ */
+function pageNodeIds(fullUrl: string) {
+  return {
+    webPage: `${fullUrl}#webpage`,
+    breadcrumb: `${fullUrl}#breadcrumb`,
+    itemList: `${fullUrl}#itemlist`,
+    faq: `${fullUrl}#faq`,
+  };
+}
+
+/** Shared options for the page-level nodes below. Every reference is opt-in: a caller that does
+ *  not emit a BreadcrumbList must not claim one exists. */
+type PageNodeOptions = {
+  description?: string;
+  /** Emit `breadcrumb: {@id}` — pass true ONLY when this page also renders the BreadcrumbList. */
+  withBreadcrumb?: boolean;
+  /** Emit `mainEntity: {@id}` pointing at this page's ItemList — same rule. */
+  withItemList?: boolean;
+  /** A real entity this page is about (e.g. the Brand on a brand landing). Emitted inline. */
+  about?: object;
+};
+
+function buildPageNode(
+  type: 'WebPage' | 'CollectionPage',
+  name: string,
+  url: string,
+  baseUrl: string,
+  options?: PageNodeOptions
+): object {
+  const base = baseUrl.replace(/\/$/, '');
+  const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
+  const ids = pageNodeIds(fullUrl);
+  return {
+    '@context': 'https://schema.org',
+    '@type': type,
+    '@id': ids.webPage,
+    name,
+    url: fullUrl,
+    description: options?.description || undefined,
+    inLanguage: 'fr-TN',
+    isPartOf: { '@id': `${base}/#website` },
+    breadcrumb: options?.withBreadcrumb ? { '@id': ids.breadcrumb } : undefined,
+    mainEntity: options?.withItemList ? { '@id': ids.itemList } : undefined,
+    about: options?.about,
+  };
+}
+
+/**
  * WebPage schema for generic pages (name, description, url).
  */
 export function buildWebPageSchema(
   name: string,
   url: string,
   baseUrl: string,
-  options?: { description?: string }
+  options?: PageNodeOptions
 ): object {
-  const base = baseUrl.replace(/\/$/, '');
-  const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'WebPage',
-    name,
-    url: fullUrl,
-    description: options?.description || undefined,
-    inLanguage: 'fr-TN',
-    isPartOf: { '@type': 'WebSite', url: base },
-  };
+  return buildPageNode('WebPage', name, url, baseUrl, options);
 }
 
 /**
@@ -1104,33 +1213,30 @@ export function buildCollectionPageSchema(
   name: string,
   url: string,
   baseUrl: string,
-  options?: { description?: string }
+  options?: PageNodeOptions
 ): object {
-  const base = baseUrl.replace(/\/$/, '');
-  const fullUrl = url.startsWith('http') ? url : `${base}${url.startsWith('/') ? url : '/' + url}`;
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'CollectionPage',
-    name,
-    url: fullUrl,
-    description: options?.description || undefined,
-    inLanguage: 'fr-TN',
-    isPartOf: { '@type': 'WebSite', url: base },
-  };
+  return buildPageNode('CollectionPage', name, url, baseUrl, options);
 }
 
 /**
  * ItemList schema for category pages (list of products).
+ *
+ * `options.pageUrl` gives the list the `@id` the page node points at with `mainEntity`. Pass the
+ * SAME url string the CollectionPage/WebPage was built with, or the reference dangles.
  */
 export function buildItemListSchema(
   items: Array<{ name: string; url: string }>,
   baseUrl: string,
-  options?: { name?: string; description?: string }
+  options?: { name?: string; description?: string; pageUrl?: string }
 ): object {
   const base = baseUrl.replace(/\/$/, '');
+  const pageUrl = options?.pageUrl
+    ? (options.pageUrl.startsWith('http') ? options.pageUrl : `${base}${options.pageUrl.startsWith('/') ? options.pageUrl : '/' + options.pageUrl}`)
+    : null;
   return {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
+    '@id': pageUrl ? pageNodeIds(pageUrl).itemList : undefined,
     name: options?.name || 'Produits',
     description: options?.description || undefined,
     numberOfItems: items.length,
@@ -1144,6 +1250,49 @@ export function buildItemListSchema(
       name: item.name,
       url: item.url.startsWith('http') ? item.url : `${base}${item.url.startsWith('/') ? item.url : '/' + item.url}`,
     })),
+  };
+}
+
+/**
+ * The Brand entity a brand landing page is about.
+ *
+ * ── WHY THIS NODE DID NOT EXIST, AND WHY IT SHOULD ──────────────────────────────────────────
+ * Every product on the site already names its manufacturer:
+ *
+ *     "brand": { "@type": "Brand", "@id": "https://protein.tn/biotech-usa", "name": "BIOTECH USA" }
+ *
+ * …and `/biotech-usa` is a real 200 page listing that brand's catalogue. But that page described
+ * itself only as a CollectionPage. So thousands of products pointed at an identifier that NOTHING
+ * on the site ever defined — a reference with no referent, which is the one thing an `@id` cannot
+ * usefully be. Defining the Brand here, on its own page, with the identifier the products already
+ * use, is what turns those references into a graph.
+ *
+ * `@id` is the bare brand-page URL, NOT a `#brand` fragment: that is the identifier
+ * sanitizeBackendProductJsonLd has emitted since 12/08/2026 and it is derived from
+ * `brandNameToSlug`, the same function that decides the page's real URL. Inventing a second
+ * identifier here would have re-created the very drift that fix was for.
+ *
+ * FOUR PROPERTIES, ON PURPOSE. This is an identity claim, not a profile. `logo` was considered
+ * and left out: no Google feature reads Brand.logo, and FeaturedBrands.tsx carries an onError
+ * fallback precisely because some admin logos 404 — so it would be an unread property that can
+ * also be wrong. `description` likewise: nothing consumes it. Padding the node would make the
+ * blob bigger without making the graph better.
+ */
+export function buildBrandSchema(
+  brand: { designation_fr?: string },
+  baseUrl: string
+): object | null {
+  const name = String(brand?.designation_fr ?? '').trim();
+  if (!name) return null;
+  const base = baseUrl.replace(/\/$/, '');
+  const slug = brandNameToSlug(name);
+  if (!slug) return null;
+  const url = `${base}/${encodeURIComponent(slug)}`;
+  return {
+    '@type': 'Brand',
+    '@id': url,
+    name,
+    url,
   };
 }
 
@@ -1204,10 +1353,34 @@ export function buildArticleSchema(article: {
     : `${base}/logo.png`;
   const published = article.schema?.date_published || article.created_at || undefined;
   const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
-  // Author is Organization when it's the brand (the default for every article); Person only for a
-  // genuine human byline. A brand name under @type Person is a structured-data smell.
+  /**
+   * ── EVERY ARTICLE ON THE SITE WAS SIGNED BY A PERSON CALLED "PROTEIN.TN" ──────────────────
+   *
+   * The rule below was already right — Organization for the brand, Person only for a genuine
+   * human byline, because "a brand name under @type Person is a structured-data smell". The
+   * COMPARISON was wrong: it tested the CMS value against `SITE_BRAND_NAME` alone, which is
+   * "Protéine Tunisie". The CMS does not store that string. It stores "Protein.tn".
+   *
+   * Measured on production 08/09/2026 by fetching all 223 URLs in sitemaps/blog.xml as Googlebot
+   * and parsing their JSON-LD:
+   *
+   *     author["@type"]  Person: 223 / 223
+   *     author.name      "Protein.tn": 223 / 223
+   *
+   * So the site told Google that a person named Protein.tn wrote every one of its articles, and
+   * that this person is unrelated to the Organization sitting three script tags above — no `@id`,
+   * no `url`, nothing to connect the byline to the publisher. Google's Article guidance asks the
+   * author to be "the person or organization that wrote the article"; an E-E-A-T signal pointing
+   * at a person who does not exist is worse than none.
+   *
+   * Matching is done on a NORMALISED comparison (accent-folded, punctuation-stripped) so
+   * "Protein.tn", "protein tn", "Protéine Tunisie", "Proteine Tunisie" and "SOBITAS" — every name
+   * this one entity is actually known by, the same set the Organization node declares as
+   * `name`/`alternateName` — all resolve to the Organization. A real human byline entered in the
+   * CMS still gets @type Person, unchanged.
+   */
   const rawAuthor = String(article.seo?.author || article.schema?.author || '').trim();
-  const author = rawAuthor && rawAuthor !== SITE_BRAND_NAME
+  const author = rawAuthor && !isSiteBrandName(rawAuthor)
     ? { '@type': 'Person', name: rawAuthor }
     : {
         '@type': 'Organization',
@@ -1231,7 +1404,22 @@ export function buildArticleSchema(article: {
     author,
     articleSection: section,
     keywords,
-    publisher: { '@type': 'Organization', name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/icon.png` } },
+    /* `@id` added, name + logo KEPT. The reference joins this publisher to the Organization node
+       layout.tsx already puts on the same page (it was an anonymous duplicate before); the two
+       properties stay because Google's Article documentation names publisher.name and
+       publisher.logo, and a consumer that does not follow @id references would otherwise lose
+       them.
+
+       THE LOGO IS /logo.png, NOT /icon.png. Adding the `@id` made this node and the sitewide
+       Organization one entity, and the two then disagreed about that entity's logo: the
+       Organization node has said `${base}/logo.png` all along (so does LocalBusiness), while this
+       said `${base}/icon.png` — the 512×512 app icon, which the LocalBusiness node uses as its
+       `image`, not as its logo. One entity cannot have two logos; the graph now states the one
+       the rest of the site already stated. */
+    publisher: { '@type': 'Organization', '@id': `${base}/#organization`, name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/logo.png` } },
+    // Same reasoning as the listing pages: the article belongs to the WebSite node that is
+    // already on the page, rather than to a second, anonymous one.
+    isPartOf: { '@id': `${base}/#website` },
     // Detected per article, not hard-coded. 31 of the 100 blog posts are written in Arabic and
     // every one of them declared inLanguage "fr-TN", which tells Google to evaluate Arabic prose
     // against French queries. The CMS content_lang column exists for this and is NULL on all of

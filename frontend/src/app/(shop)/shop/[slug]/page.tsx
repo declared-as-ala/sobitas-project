@@ -253,10 +253,11 @@ export default async function ShopProductPage({ params }: PageProps) {
     ? buildProductUrlPath(safeProduct) 
     : `/shop/${safeProduct.slug || cleanSlug}`;
   breadcrumbItems.push({ name: safeProduct.designation_fr || safeProduct.slug || 'Produit', url: productUrl });
-  const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl);
+  const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl, { pageUrl: productUrl });
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
   const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, productUrl, baseUrl, {
     description: (safeProduct.description_fr || '').replace(/<[^>]*>/g, ' ').trim().slice(0, 200),
+    withBreadcrumb: true,
   });
 
   const faqSchema = buildFAQPageSchemaFromProductFaq(safeProduct.faq);

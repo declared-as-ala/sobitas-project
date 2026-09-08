@@ -45,12 +45,13 @@ import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeoForSlug } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
-import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildProductSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
@@ -146,6 +147,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         description: buildBrandMetaDescription(brand.designation_fr),
         alternates: { canonical },
         robots: { index: brandProductCount > 0, follow: true },
+        // This route declared no openGraph at all, so every brand page handed crawlers and link
+        // unfurlers the site-wide /og-banner.jpg while a browser got the reviewed hero image.
+        // Shared with the human route now — see buildBrandSocialMetadata.
+        ...buildBrandSocialMetadata(brand.designation_fr, canonical),
       };
     }
     const page = await findPageBySlug(cleanSlug);
@@ -257,16 +262,18 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
       .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
       .filter((p) => p.url && p.url !== '/shop/');
 
-    const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl);
     const collectionPath = buildShopUrl(
       { ...listingQuery, page: serverPagination.currentPage },
       `/${cleanSlug}`
     );
+    const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl, { pageUrl: collectionPath });
     const collectionSchema = buildCollectionPageSchema(title, collectionPath, baseUrl, {
       description: merged.metaDescription?.trim() || undefined,
+      withBreadcrumb: true,
+      withItemList: productListItems.length > 0,
     });
     const itemListSchema = productListItems.length > 0
-      ? buildItemListSchema(productListItems, baseUrl, { name: title })
+      ? buildItemListSchema(productListItems, baseUrl, { name: title, pageUrl: collectionPath })
       : null;
     // FAQPage was emitted on the human page only, so the rich-result eligibility never reached
     // the crawler — Google saw zero FAQ markup on these pages. Safe to emit here because the same
@@ -274,6 +281,25 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     // on-page content is a structured-data violation, not a shortcut.
     const faqs = merged.faqs ?? [];
     const faqSchema = faqs.length ? buildFAQPageSchemaFromQA(faqs) : null;
+    /*
+     * ── THE PRODUCT NODES WERE ON THE HUMAN PAGE ONLY ─────────────────────────────────────────
+     * app/(shop)/category/[slug] emits full Product markup for the first six products of the grid;
+     * this route emitted none. Measured on production 08/09/2026 (`?__crawler=1` forces this route
+     * past the CDN's URL-keyed cache):
+     *
+     *     /whey-proteine                 8 blobs + 6 Product   (browser)
+     *     /whey-proteine?__crawler=1     8 blobs, 0 Product    (Googlebot)
+     *     /creatine                      same, both
+     *
+     * So the one view Google reads carried the least. Same builder, same slice, same six products
+     * CrawlerCategoryView already renders as visible cards with their prices — Google's merchant
+     * listing guidance covers exactly this case, and the nodes' canonical URLs point at the PDPs
+     * rather than at this page, so they consolidate to the product rather than competing with it.
+     */
+    const productSchemas = products
+      .slice(0, 6)
+      .map((p) => buildProductSchema(p, baseUrl))
+      .filter(Boolean) as object[];
 
     return (
       <>
@@ -281,6 +307,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
         {ldScript(collectionSchema, 'cp')}
         {itemListSchema && ldScript(itemListSchema, 'il')}
         {faqSchema && ldScript(faqSchema, 'faq')}
+        {productSchemas.map((schema, i) => ldScript(schema, `product-ld-${i}`))}
         <CrawlerCategoryView
           title={title}
           introHtml={introHtml}
@@ -323,24 +350,16 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
       { name: 'Boutique', url: '/shop' },
       { name: title, url: `/${cleanSlug}` },
     ];
-    const productListItems = products
-      .filter((p) => p && p.designation_fr)
-      .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
-      .filter((p) => p.url && p.url !== '/shop/');
-    const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl);
-    const collectionSchema = buildCollectionPageSchema(`Produits ${title}`, `/${cleanSlug}`, baseUrl);
-    const itemListSchema = productListItems.length > 0
-      ? buildItemListSchema(productListItems, baseUrl, { name: title })
-      : null;
     const brandSeo = getBrandSeoEntry(cleanSlug);
-    const faqSchema = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
+    /* Shared with app/(shop)/[slug], which serves this same URL to humans. This route used to
+       build its own CollectionPage as `Produits ${title}` with no description, while the human
+       route used the curated title and the brandSeoConfig description — so the copy written for
+       search engines was the one thing the search engine never saw. See util/brandJsonLd.ts. */
+    const brandSchemas = buildBrandLandingSchemas({ brand, products, slug: cleanSlug, baseUrl });
 
     return (
       <>
-        {ldScript(breadcrumbSchema, 'bc')}
-        {ldScript(collectionSchema, 'cp')}
-        {itemListSchema && ldScript(itemListSchema, 'il')}
-        {faqSchema && ldScript(faqSchema, 'faq')}
+        {brandSchemas.map((schema, i) => ldScript(schema, `brand-ld-${i}`))}
         <CrawlerCategoryView
           title={title}
           headingOverride={brandSeo?.h1}
@@ -371,10 +390,11 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
-    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description, withBreadcrumb: true });
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || cleanSlug}` }],
-      baseUrl
+      baseUrl,
+      { pageUrl: canonical }
     );
     return (
       <>

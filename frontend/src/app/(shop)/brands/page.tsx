@@ -98,7 +98,8 @@ export default async function BrandsPage() {
       { name: 'Accueil', url: '/' },
       { name: 'Marques', url: '/brands' },
     ],
-    BASE_URL
+    BASE_URL,
+    { pageUrl: '/brands' }
   );
   const collectionSchema = buildCollectionPageSchema(
     'Toutes nos marques de compléments alimentaires',
@@ -107,6 +108,8 @@ export default async function BrandsPage() {
     {
       description:
         'Répertoire alphabétique des marques de protéines et compléments alimentaires disponibles en Tunisie, avec le nombre de produits et la disponibilité de chacune.',
+      withBreadcrumb: true,
+      withItemList: featured.length > 0,
     }
   );
   /*
@@ -120,7 +123,7 @@ export default async function BrandsPage() {
       ? buildItemListSchema(
           featured.slice(0, 20).map((b) => ({ name: b.name, url: `/${b.slug}` })),
           BASE_URL,
-          { name: 'Marques en vedette' }
+          { name: 'Marques en vedette', pageUrl: '/brands' }
         )
       : null;
   // The same array the page renders visibly, which is the condition Google puts on FAQPage.

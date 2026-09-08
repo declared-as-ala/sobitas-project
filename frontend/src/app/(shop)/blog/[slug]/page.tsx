@@ -314,7 +314,10 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         { name: arabic ? 'المدونة' : 'Blog', url: '/blog' },
         { name: displayArticle.designation_fr || displayArticle.slug || 'Article', url: blogHref(displayArticle.slug || slug) },
       ],
-      baseUrl
+      baseUrl,
+      // Same identifier the BlogPosting's mainEntityOfPage carries, so the trail attaches to this
+      // article's page rather than floating unattached beside it.
+      { pageUrl: blogHref(displayArticle.slug || slug) }
     );
 
     return (

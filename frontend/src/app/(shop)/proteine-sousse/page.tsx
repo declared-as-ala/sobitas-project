@@ -5,7 +5,6 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
   buildWebPageSchema,
-  buildLocalBusinessSchema,
   buildFAQPageSchemaFromQA,
   buildItemListSchema,
 } from '@/util/structuredData';
@@ -75,24 +74,41 @@ const FAQ: Array<{ question: string; answer: string }> = [
 export default function ProteineSoussePage() {
   const baseUrl = getBaseUrl();
 
-  const webPageSchema = buildWebPageSchema(TITLE, '/proteine-sousse', baseUrl, { description: DESCRIPTION });
+  /**
+   * ── THE SECOND LOCALBUSINESS NODE IS GONE; THE PAGE POINTS AT THE FIRST ONE INSTEAD ────────
+   *
+   * app/layout.tsx already emits buildLocalBusinessSchema(baseUrl) on every page of the site,
+   * `@id: {base}/#localbusiness`. This page called the SAME builder with the SAME argument, so
+   * production served two byte-identical LocalBusiness blobs — ~1.6 KB of duplicated address,
+   * geo, opening hours and 25 areaServed entries — under one identifier. Verified live on
+   * 08/09/2026: /proteine-sousse returned 9 JSON-LD blocks, two of them LocalBusiness.
+   *
+   * Nothing is lost by removing it. Google merges nodes sharing an `@id`, so the store was never
+   * described twice, only transmitted twice. What the page actually needed to say is what it now
+   * says: this document is ABOUT that business — which is a relation, not a copy.
+   */
+  const webPageSchema = buildWebPageSchema(TITLE, '/proteine-sousse', baseUrl, {
+    description: DESCRIPTION,
+    withBreadcrumb: true,
+    withItemList: true,
+    about: { '@id': `${baseUrl.replace(/\/$/, '')}/#localbusiness` },
+  });
   const breadcrumbSchema = buildBreadcrumbListSchema(
     [{ name: 'Accueil', url: '/' }, { name: 'Protéine à Sousse', url: '/proteine-sousse' }],
-    baseUrl
+    baseUrl,
+    { pageUrl: '/proteine-sousse' }
   );
-  const localBusinessSchema = buildLocalBusinessSchema(baseUrl);
   const faqSchema = buildFAQPageSchemaFromQA(FAQ);
   const itemListSchema = buildItemListSchema(
     CATEGORY_LINKS.map((c) => ({ name: c.name, url: c.href })),
     baseUrl,
-    { name: 'Catégories de compléments — Sousse' }
+    { name: 'Catégories de compléments — Sousse', pageUrl: '/proteine-sousse' }
   );
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(localBusinessSchema) }} />
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}

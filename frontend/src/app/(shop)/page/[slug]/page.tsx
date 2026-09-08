@@ -77,10 +77,11 @@ export default async function DynamicPage({ params }: PageProps) {
     const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(page.slug || apiSlug)}`);
     const rawDesc = page.meta_description ?? page.excerpt ?? '';
     const description = rawDesc ? String(rawDesc).replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 300) : undefined;
-    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description });
+    const webPageSchema = buildWebPageSchema(page.title || 'Page', canonical, baseUrl, { description, withBreadcrumb: true });
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [{ name: 'Accueil', url: '/' }, { name: page.title || 'Page', url: `/${page.slug || apiSlug}` }],
-      baseUrl
+      baseUrl,
+      { pageUrl: canonical }
     );
     return (
       <>
