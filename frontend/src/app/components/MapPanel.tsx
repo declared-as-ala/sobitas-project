@@ -86,7 +86,7 @@ export function MapPanel({
               type="button"
               onClick={() => setOpen(false)}
               aria-expanded
-              className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-rule px-3.5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-rule px-3.5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
               Masquer la carte
             </button>
@@ -95,7 +95,7 @@ export function MapPanel({
             href={mapsHref}
             target="_blank"
             rel="noopener noreferrer"
-            className="inline-flex min-h-[40px] items-center gap-1.5 rounded-xl border border-rule px-3.5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+            className="inline-flex min-h-11 items-center gap-1.5 rounded-xl border border-rule px-3.5 text-[13px] font-semibold text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
           >
             Itinéraire
             <ArrowUpRight className="h-4 w-4 shrink-0" aria-hidden="true" />

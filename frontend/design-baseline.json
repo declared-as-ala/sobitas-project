@@ -25,11 +25,11 @@
     "DS008": 1
   },
   "src/app/(shop)/blog/[slug]/ArticleDetailClient.tsx": {
-    "DS001": 10,
-    "DS002": 18,
-    "DS003": 24,
-    "DS004": 10,
-    "DS011": 30
+    "DS001": 4,
+    "DS002": 9,
+    "DS003": 18,
+    "DS004": 4,
+    "DS011": 18
   },
   "src/app/(shop)/blog/[slug]/loading.tsx": {
     "DS001": 4,
@@ -126,17 +126,12 @@
     "DS004": 2,
     "DS008": 2
   },
-  "src/app/(shop)/products/[id]/ProductDetailClient.tsx": {
-    "DS001": 2,
-    "DS002": 1,
-    "DS011": 2
-  },
   "src/app/(shop)/products/[id]/reviews/ProductReviewsPageClient.tsx": {
-    "DS001": 20,
-    "DS002": 41,
-    "DS003": 37,
+    "DS001": 18,
+    "DS002": 38,
+    "DS003": 33,
     "DS004": 14,
-    "DS011": 11
+    "DS011": 10
   },
   "src/app/(shop)/proteine-sousse/page.tsx": {
     "DS001": 11,
@@ -191,8 +186,7 @@
     "DS001": 2,
     "DS002": 3,
     "DS003": 1,
-    "DS004": 2,
-    "DS011": 10
+    "DS004": 2
   },
   "src/app/components/CategoryGrid.tsx": {
     "DS001": 4,
@@ -251,12 +245,6 @@
     "DS004": 3,
     "DS011": 9
   },
-  "src/app/components/NotFoundContent.tsx": {
-    "DS002": 7,
-    "DS003": 6,
-    "DS004": 2,
-    "DS011": 10
-  },
   "src/app/components/PackCardImage.tsx": {
     "DS001": 2,
     "DS002": 2,
@@ -286,9 +274,6 @@
   },
   "src/app/components/SearchBar.tsx": {
     "DS005": 1
-  },
-  "src/app/components/ShopBreadcrumbs.tsx": {
-    "DS011": 4
   },
   "src/app/components/crawler/CrawlerCategoryView.tsx": {
     "DS003": 2,

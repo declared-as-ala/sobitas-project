@@ -99,7 +99,23 @@ const ProductFavoriteButton = memo(function ProductFavoriteButton({ product }: {
         event.stopPropagation();
         toggleFavorite(toFavoriteProduct(product));
       }}
-      className={`pointer-events-auto z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-elevated transition-transform hover:scale-105 sm:absolute sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:rounded-full sm:border-0 sm:shadow-md sm:ring-1 sm:ring-hairline ${
+      /*
+        ── THE 36px PILL KEEPS ITS LOOK AND GETS ITS TARGET BACK ─────────────────────────────
+        `measure-card` reports this control at 44×44 up to 430px and 36×36 from 640 — the `sm:h-9
+        sm:w-9` that turns it into a floating pill on the packshot also takes it 8px under the
+        44px floor DESIGN_SYSTEM.md sets with no breakpoint exemption.
+
+        The pill is the right SIZE — it is decoration over a photograph and growing it would eat
+        the packshot — so the target is restored the way the design system says to restore one: a
+        box that extends past the visual edge. It is an `::after` rather than `-m-1 p-1` because
+        the element is `absolute` from `sm` up, where padding would move the visible circle
+        instead of growing the hit area around it. Below `sm` the button is a real 44px row item
+        and the pseudo does nothing.
+
+        It also had no focus ring. Every other control on this card and in the gallery carries
+        `ring-focus`; this one fell back to the browser's default outline.
+      */
+      className={`pointer-events-auto z-20 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-hairline bg-elevated transition-transform hover:scale-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:absolute sm:right-3 sm:top-3 sm:h-9 sm:w-9 sm:rounded-full sm:border-0 sm:shadow-md sm:ring-1 sm:ring-hairline sm:after:absolute sm:after:-inset-1 sm:after:content-[''] ${
         favorite ? 'border-brand/40' : ''
       }`}
       aria-label={favorite ? 'Retirer des favoris' : 'Ajouter aux favoris'}
@@ -509,7 +525,15 @@ export const ProductCard = memo(function ProductCard({
           </div>
         )}
 
-        <LinkWithLoading href={buildProductUrlPath(product as any)} className="block min-w-0" loadingMessage="Chargement">
+        {/* `ring-focus` — the card's two links (this one and the packshot overlay in
+            PackCardImage) were the only navigation on the site still falling back to the
+            browser's default outline. `rounded-md` so the ring follows the text block rather
+            than drawing a square around a two-line clamp. */}
+        <LinkWithLoading
+          href={buildProductUrlPath(product as any)}
+          className="block min-w-0 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          loadingMessage="Chargement"
+        >
           <h3
             title={productData.name}
             /* 13px in a 173px phone column, 15 from `sm`. The `min-h` is the two-line reservation

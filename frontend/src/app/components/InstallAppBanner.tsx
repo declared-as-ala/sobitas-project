@@ -187,11 +187,17 @@ export function InstallAppBanner() {
           Installer
         </button>
 
-        {/* Dismiss */}
+        {/* Dismiss — 44, not 40.
+            `check-tap-targets` reported a 40×40 "Fermer" on EVERY route it walked at 320 and 390,
+            and it is this one: the banner is fixed to the bottom of every mobile page, so the one
+            control under the floor was also the most universally present control on the phone
+            site. Its two neighbours in this row were already at 44 (the icon is h-11, the CTA is
+            min-h-[44px]) — it was the odd one out in its own flex row, not a considered smaller
+            size. The 4px it takes back comes out of the truncating label column. */}
         <button
           onClick={dismiss}
           aria-label="Fermer"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
           <X className="h-5 w-5" />
         </button>
@@ -220,7 +226,8 @@ export function InstallAppBanner() {
                   <p className="text-xs text-gray-500 dark:text-gray-400">protein.tn</p>
                 </div>
               </div>
-              <button onClick={dismiss} aria-label="Fermer" className="rounded-full p-2 text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+              {/* Same control, same floor: `p-2` around an 18px glyph is a 36px box. */}
+              <button onClick={dismiss} aria-label="Fermer" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
                 <X className="h-5 w-5" />
               </button>
             </div>

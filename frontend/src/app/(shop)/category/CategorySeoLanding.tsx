@@ -159,7 +159,27 @@ export function CategorySeoLanding({
           </div>
 
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.65fr)]">
-            <div className="prose prose-neutral max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]">
+            {/*
+              ── `dark:prose-invert` IS NOT DECORATION, IT IS THE ONLY THING PAINTING THE BOLD ──
+              `audit-contrast` on /creatine in dark mode: `#171717 on #141416`, 1.03:1, TEN TIMES.
+              Every one of them was a `<strong>` inside this block.
+
+              `text-ink-2` on the wrapper only sets the container's own colour. The typography
+              plugin paints nested elements from its OWN variables, and `prose-neutral` hardcodes
+              `--tw-prose-bold: #171717` — a near-black that never learns about the theme. On
+              `bg-elevated` in dark mode that is black on black: the lead-in of every bullet in
+              "Bien choisir…" — the words a shopper scans to find their own case — rendered
+              invisible, while the sentence after each one read fine.
+
+              Invisible to `lint:design` (no banned substring), invisible to review (the class
+              string says `text-ink-2`), and invisible in a light-mode screenshot. It is the same
+              failure mode as the 16 white-on-white badges, one theme over.
+
+              `prose-invert` flips the whole variable set, which is what ArticleDetailClient
+              already does for the same reason — the explicit `prose-headings:` / `prose-a:`
+              overrides below still win, so nothing else moves.
+            */}
+            <div className="prose prose-neutral dark:prose-invert max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]">
               {hasHowTo ? renderContent(howToChooseBody!) : hasIntro ? renderContent(intro!) : null}
             </div>
             <aside className="rounded-xl bg-sunken p-4 sm:p-5" aria-label="Pourquoi commander chez Protein.tn">
@@ -186,7 +206,10 @@ export function CategorySeoLanding({
                 <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
               </summary>
               <article
-                className="prose prose-neutral mt-4 max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]"
+                /* Same block, same reason — see the note on the guide column above. This one is
+                   inside a closed <details>, so the audit never opened it: it was carrying the
+                   identical 1.03:1 bold and no guard could have said so. */
+                className="prose prose-neutral dark:prose-invert mt-4 max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]"
                 dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
               />
             </details>

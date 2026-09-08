@@ -111,6 +111,29 @@ function splitContentForMiddleInsert(html: string): [string, string] {
   return [html, ''];
 }
 
+/**
+ * ── ONE PILL, NOT THREE ──────────────────────────────────────────────────────────────────────
+ * The bottom of an article ends in three rows of taxonomy links — shop categories, article
+ * categories, tags — and each row had its own hand-written class string. On one page, at once:
+ *
+ *   px-3   py-1.5  bg-white     text-gray-800  hover:border-red-300   (no min-height)
+ *   px-3.5 py-1.5  bg-white     text-gray-800  hover:border-red-600   min-h-9
+ *   px-3   py-1    bg-gray-50   text-gray-700  hover:border-red-600   (no min-height)
+ *
+ * Three paddings, two grounds, two inks and two hover colours for what a reader sees as one kind
+ * of thing repeated fifteen times. `check-tap-targets` measured the tallest of them at 34px and
+ * the shortest at 26 — all three under the 44px floor.
+ *
+ * The shape comes from `BrandSeoLanding`'s category pill, which is the same control on another
+ * page and already correct: `min-h-11`, `border-hairline`, ink and brand tokens. The only
+ * distinction worth keeping is ground — a tag is quieter than a category — so that is the one
+ * thing the variant changes.
+ */
+const TAXONOMY_PILL =
+  'inline-flex min-h-11 items-center rounded-full border border-hairline px-4 text-sm font-medium ' +
+  'text-ink-1 transition-colors hover:border-brand hover:text-brand ' +
+  'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus';
+
 const CHATGPT_BASE = 'https://chat.openai.com/';
 /** Max length for ChatGPT ?q= param (browser URL limits); longer prompts go to clipboard only */
 const CHATGPT_QUERY_MAX_LEN = 2000;
@@ -377,7 +400,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                       <li key={c.slug}>
                         <Link
                           href={`/${encodeURIComponent(c.slug)}`}
-                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 hover:border-red-300 hover:text-red-600 dark:hover:border-red-800 dark:hover:text-red-400 transition-colors"
+                          className={`${TAXONOMY_PILL} bg-elevated`}
                         >
                           {c.slug.replace(/-/g, ' ').replace(/\b\w/g, (ch) => ch.toUpperCase())}
                         </Link>
@@ -401,7 +424,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                         <Link
                           key={c.slug}
                           href={`/blog/category/${c.slug}`}
-                          className="inline-flex min-h-9 items-center rounded-full border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 px-3.5 py-1.5 text-sm font-medium text-gray-800 dark:text-gray-100 transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                          className={`${TAXONOMY_PILL} bg-elevated`}
                         >
                           {decodeHtmlEntities(c.name)}
                         </Link>
@@ -418,7 +441,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                         <Link
                           key={t.slug}
                           href={`/blog/tag/${t.slug}`}
-                          className="inline-flex items-center rounded-full border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/60 px-3 py-1 text-sm text-gray-700 dark:text-gray-300 transition-colors hover:border-red-600 hover:text-red-600 dark:hover:border-red-400 dark:hover:text-red-400"
+                          className={`${TAXONOMY_PILL} bg-sunken`}
                         >
                           {decodeHtmlEntities(t.name)}
                         </Link>

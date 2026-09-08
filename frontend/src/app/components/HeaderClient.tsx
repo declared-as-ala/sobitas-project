@@ -887,8 +887,11 @@ export function HeaderClient() {
                   className="h-8 w-auto object-contain"
                 />
               </Link>
+              {/* 44 and a focus ring, matching every other close on the site. This one was 36px
+                  with no ring of its own — the first control a keyboard user reaches inside the
+                  mobile menu, showing only the browser's default outline. */}
               <SheetClose
-                className="flex h-9 w-9 items-center justify-center rounded-xl text-ink-3 hover:bg-sunken hover:text-ink-1 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-colors"
+                className="flex h-11 w-11 items-center justify-center rounded-xl text-ink-3 hover:bg-sunken hover:text-ink-1 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                 aria-label="Fermer le menu"
               >
                 <X className="h-5 w-5" aria-hidden />
@@ -1155,7 +1158,7 @@ export function HeaderClient() {
                                                 <Link
                                                   href={catHref}
                                                   onClick={closeMobileMenu}
-                                                  className="flex items-center gap-2 min-h-[40px] rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-brand transition-colors hover:bg-sunken dark:hover:bg-gray-800"
+                                                  className="flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-brand transition-colors hover:bg-sunken dark:hover:bg-gray-800"
                                                 >
                                                   <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, 'Tout voir')}</span>
                                                   <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
@@ -1171,7 +1174,7 @@ export function HeaderClient() {
                                                       onClick={closeMobileMenu}
                                                       aria-current={subActive ? 'page' : undefined}
                                                       className={cn(
-                                                        'flex items-center gap-2 min-h-[40px] rounded-xl pl-[4.5rem] pr-3 text-[13px] transition-colors',
+                                                        'flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] transition-colors',
                                                         subActive
                                                           ? 'font-semibold text-brand'
                                                           : 'text-ink-2 hover:bg-sunken dark:text-gray-400 dark:hover:bg-gray-800'

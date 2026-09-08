@@ -310,7 +310,7 @@ export default function AboutPageContent({
                       <li key={s.id}>
                         <a
                           href={`#${s.id}`}
-                          className="-ml-px flex min-h-[40px] items-center border-l-2 border-transparent py-1.5 pl-3.5 text-[13px] leading-snug text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                          className="-ml-px flex min-h-11 items-center border-l-2 border-transparent py-1.5 pl-3.5 text-[13px] leading-snug text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                         >
                           {s.title}
                         </a>

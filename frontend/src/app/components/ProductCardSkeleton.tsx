@@ -22,13 +22,27 @@ export function ProductCardSkeleton({ mode = 'contain' }: { mode?: ProductImageM
     // Row on phones, column from `sm` — must mirror ProductCard's own `flex-row sm:flex-col`
     // exactly, or the skeleton→card swap changes the layout direction mid-load.
     <div className="pt-plate flex h-full w-full min-w-0 flex-row overflow-hidden rounded-2xl border border-hairline shadow-sm sm:flex-col">
-      <div className="w-[124px] shrink-0 self-stretch sm:w-auto sm:self-auto">
+      {/*
+        ── THE 320px BREAKPOINT WAS MISSING FROM BOTH HALVES OF THIS FILE ────────────────────
+        This file's whole contract is "geometry must match ProductCard's body EXACTLY", and it had
+        stopped matching at the one width where a shift is most expensive. ProductCard's image
+        column is `w-[104px] min-[360px]:w-[124px]`; this reserved a flat 124. On a 320px phone —
+        the width `measure-card` exists because of — every card in the grid jumped 20px sideways
+        the moment the skeleton was replaced, on the two rows a shopper reads.
+
+        Same story one line down: the body was `px-3 py-3` against the card's
+        `px-2.5 py-2.5 min-[360px]:px-3`, another 2px on each edge below 360.
+
+        There is no shared constant for either value, which is why this drifted when ProductCard
+        gained its small-phone step and this file did not. Kept in lockstep by hand, again.
+      */}
+      <div className="w-[104px] shrink-0 self-stretch min-[360px]:w-[124px] sm:w-auto sm:self-auto">
         <Skeleton className={cn('w-full rounded-none', productImageFrame(mode))} />
       </div>
       {/* Geometry must match ProductCard's body EXACTLY or the skeleton→card swap shifts layout.
           Four rows now, not six — the savings pill moved onto the price row and the third trust
           chip is gone. Kept in lockstep by hand; there is no shared definition for the body. */}
-      <div className="flex flex-1 flex-col gap-1.5 px-3 py-3 sm:px-4 sm:py-4">
+      <div className="flex flex-1 flex-col gap-1.5 px-2.5 py-2.5 min-[360px]:px-3 min-[360px]:py-3 sm:px-4 sm:py-4">
         {/* Title: two lines ≈ 44px, matching the card's min-h-[2.75rem] title box. */}
         <Skeleton className="h-4 w-full" />
         <Skeleton className="h-4 w-3/4" />

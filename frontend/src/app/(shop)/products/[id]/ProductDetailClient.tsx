@@ -780,7 +780,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <li className="flex shrink-0 items-center gap-x-1.5">
                   <Link
                     href={breadcrumbItems[breadcrumbItems.length - 2].url}
-                    className="-my-2 inline-flex min-h-[40px] items-center gap-1.5 whitespace-nowrap py-2 font-semibold text-brand underline-offset-4 hover:underline"
+                    /* `min-h-11` (44), not `min-h-[40px]`. The `-my-2 py-2` idiom here was already
+                       the right shape — a link given its target back without changing the row —
+                       it was just aimed 4px under the floor. `min-h-[40px]` was the codebase's
+                       only second spelling of this decision, in six places; they now all say 44. */
+                    className="-my-2 inline-flex min-h-11 items-center gap-1.5 whitespace-nowrap py-2 font-semibold text-brand underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   >
                     <ArrowLeft className="h-4 w-4 shrink-0" aria-hidden />
                     Retour
@@ -792,7 +796,17 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <li key={i} className="flex shrink-0 items-center gap-x-1.5">
                   {i > 0 && <ChevronRight className="h-3.5 w-3.5 text-ink-3 shrink-0" aria-hidden />}
                   {i < breadcrumbItems.length - 1 ? (
-                    <Link href={item.url} className="whitespace-nowrap hover:text-red-600 dark:hover:text-red-400 underline-offset-2 hover:underline">
+                    /* Same three changes as `ShopBreadcrumbs` — this is the site's OTHER
+                       breadcrumb and it had drifted the same three ways. `check-tap-targets`
+                       measured this link at 91×16 at both 320 and 390; `-my-3 py-3` takes the box
+                       to 44 and hands the height straight back, so the scroller's row is
+                       unchanged (the negative margin is vertical only, the `gap-x-1.5` between
+                       crumbs is not touched). `hover:text-brand` replaces a manual dark pair of
+                       the legacy `red` alias, and the ring replaces the browser default. */
+                    <Link
+                      href={item.url}
+                      className="-my-3.5 inline-flex items-center whitespace-nowrap rounded-md py-3.5 underline-offset-2 transition-colors hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
                       {item.name}
                     </Link>
                   ) : (
@@ -1745,7 +1759,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                               <button
                                 type="button"
                                 onClick={() => setNutritionLightbox(0)}
-                                className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-hairline shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in"
+                                className="relative group block w-full max-w-lg mx-auto rounded-xl overflow-hidden border border-hairline shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                                 aria-label="Agrandir l'image nutritionnelle"
                               >
                                 <Image
@@ -1757,7 +1771,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                   quality={90}
                                 />
                                 <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                                  <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={32} />
+                                  <ZoomIn className="h-8 w-8 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" aria-hidden="true" />
                                 </div>
                               </button>
                             ) : (
@@ -1767,7 +1781,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                     key={idx}
                                     type="button"
                                     onClick={() => setNutritionLightbox(idx)}
-                                    className="relative group aspect-square rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in bg-gray-50 dark:bg-gray-800"
+                                    /* `bg-sunken`, not `bg-gray-50 dark:bg-gray-800`: one
+                                       theme-aware token for the plate a transparent nutrition
+                                       PNG sits on. The pair it replaces was the light value and
+                                       a hand-picked dark one that did not match the sibling
+                                       single-image frame above (which is `border-hairline` on the
+                                       page surface), so two thumbnails of the same thing had two
+                                       different grounds. */
+                                    className="relative group aspect-square rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 cursor-zoom-in bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
                                     aria-label={`Image nutritionnelle ${idx + 1}`}
                                   >
                                     <Image
@@ -1779,7 +1800,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                       quality={90}
                                     />
                                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-200 flex items-center justify-center">
-                                      <ZoomIn className="text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" size={20} />
+                                      <ZoomIn className="h-5 w-5 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 drop-shadow-lg" aria-hidden="true" />
                                     </div>
                                   </button>
                                 ))}
@@ -1848,19 +1869,36 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         {/* Lightbox */}
                         {nutritionLightbox >= 0 && (
                           <div
-                            className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
+                            /* `pt-scrim` rather than `bg-black/90`: the scope paints its own
+                               near-black at 86% AND re-points the tokens underneath it, which is
+                               what lets the controls inside be written in `text-ink-1` /
+                               `border-hairline` / `ring-focus` and resolve against a dark surface.
+                               Same scope, same z-50, as ProductGallery's lightbox — whose header
+                               comment already names this one as the thing it matches. */
+                            className="pt-scrim fixed inset-0 z-50 flex items-center justify-center"
                             onClick={() => setNutritionLightbox(-1)}
                             role="dialog"
                             aria-modal="true"
                             aria-label="Visionneuse d'image nutritionnelle"
                           >
+                            {/*
+                              ── THE SECOND LIGHTBOX ON THIS PAGE NOW MATCHES THE FIRST ────────
+                              `components/product/ProductGallery.tsx` is the canonical lightbox and
+                              this is a hand-rolled twin of it, three tabs down the same page. It
+                              had drifted on every dimension a control has: `p-2` around a 22px
+                              glyph (a 38px box, and the chevrons a 42px one — both under the 44px
+                              floor), lucide `size={22}` / `size={26}` instead of the `h-N w-N`
+                              lattice, and no focus ring at all where the gallery carries
+                              ring-focus. Copying the gallery's class string is the fix; a second
+                              spelling of "the close button of a lightbox" is the defect.
+                            */}
                             <button
                               type="button"
                               onClick={() => setNutritionLightbox(-1)}
-                              className="absolute top-4 right-4 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                              className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               aria-label="Fermer"
                             >
-                              <X size={22} />
+                              <X className="h-6 w-6" />
                             </button>
 
                             {nutritionImages.length > 1 && (
@@ -1868,18 +1906,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox - 1 + nutritionImages.length) % nutritionImages.length); }}
-                                  className="absolute left-3 sm:left-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                  className="absolute left-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:left-6"
                                   aria-label="Image précédente"
                                 >
-                                  <ChevronLeft size={26} />
+                                  <ChevronLeft className="h-6 w-6" />
                                 </button>
                                 <button
                                   type="button"
                                   onClick={(e) => { e.stopPropagation(); setNutritionLightbox((nutritionLightbox + 1) % nutritionImages.length); }}
-                                  className="absolute right-3 sm:right-6 text-white/80 hover:text-white bg-black/30 hover:bg-black/60 rounded-full p-2 transition-colors z-10"
+                                  className="absolute right-3 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-hairline text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:right-6"
                                   aria-label="Image suivante"
                                 >
-                                  <ChevronRight size={26} />
+                                  <ChevronRight className="h-6 w-6" />
                                 </button>
                               </>
                             )}
@@ -1896,8 +1934,12 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 className="max-w-[90vw] max-h-[90vh] w-auto h-auto object-contain rounded-lg shadow-2xl"
                                 quality={90}
                               />
+                              {/* Same counter as the photo lightbox: a bordered pill in scope
+                                  ink, not `text-white/70` on a second black plate stacked on
+                                  the scrim. White at 70% over an 86% scrim was 5.4:1 where the
+                                  gallery's is 13.9:1, for the same one line of text. */}
                               {nutritionImages.length > 1 && (
-                                <span className="absolute bottom-3 left-1/2 -translate-x-1/2 text-white/70 text-xs bg-black/40 px-2 py-0.5 rounded-full">
+                                <span className="absolute bottom-6 left-1/2 -translate-x-1/2 rounded-full border border-hairline px-3 py-1 text-sm tabular-nums text-ink-1">
                                   {nutritionLightbox + 1} / {nutritionImages.length}
                                 </span>
                               )}

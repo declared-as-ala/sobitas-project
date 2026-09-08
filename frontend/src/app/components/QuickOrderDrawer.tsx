@@ -355,7 +355,10 @@ export function QuickOrderDrawer({
               </DialogPrimitive.Description>
             </div>
             <DialogPrimitive.Close
-              className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 hover:text-ink-1 hover:bg-sunken focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2"
+              /* `focus-visible`, not `focus`: on a mouse click this was painting a 2px ring the
+                 pointer user never asked for, on the one control that closes the dialog. Every
+                 other close on the site uses focus-visible. */
+              className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 hover:text-ink-1 hover:bg-sunken focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
               aria-label="Fermer"
             >
               <X className="h-5 w-5" />

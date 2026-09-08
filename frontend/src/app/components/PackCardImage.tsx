@@ -156,7 +156,10 @@ export function PackCardImage({
     >
       <LinkWithLoading
         href={productHref}
-        className="absolute inset-0 block"
+        /* `ring-inset`: the link is `absolute inset-0` inside a frame with `overflow-hidden`, so
+           an outset ring is clipped away and a keyboard user sees nothing. Hero.tsx's identical
+           full-bleed overlay link already uses the inset form for exactly this reason. */
+        className="absolute inset-0 block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus"
         aria-label={`Voir ${productName}`}
         loadingMessage="Chargement"
       >

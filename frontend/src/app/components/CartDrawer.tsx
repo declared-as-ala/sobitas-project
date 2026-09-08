@@ -140,8 +140,11 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 </span>
               )}
             </DrawerTitle>
+            {/* 44, like every other drawer/sheet close on the site (the filters sheet, the quick
+                order dialog, the review composer, the checkout recap). This one was 36 — the only
+                one — on the panel a shopper closes most often. */}
             <DrawerClose
-              className="-me-1.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+              className="-me-1.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
               aria-label="Fermer le panier"
             >
               <X className="h-5 w-5" aria-hidden="true" />
@@ -500,7 +503,11 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                     does not, which is HOW CLOSE you are. 4px instead of 6. */}
                 <div className="h-1 w-full overflow-hidden rounded-full bg-hairline">
                   <div
-                    className="h-full rounded-full bg-brand transition-all duration-300"
+                    /* `transition-[width]`, not `transition-all` — the third progress bar on the
+                       site and the third spelling of the same animation. Named properties are
+                       what DESIGN_SYSTEM §9 asks for, and `motion-reduce` is what the other two
+                       carry. Only the width ever changes here. */
+                    className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out motion-reduce:transition-none"
                     style={{ width: `${Math.min(100, (totalPrice / 300) * 100)}%` }}
                   />
                 </div>

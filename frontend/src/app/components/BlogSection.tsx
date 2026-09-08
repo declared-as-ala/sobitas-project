@@ -159,7 +159,12 @@ export function BlogSection({ articles }: BlogSectionProps) {
                     An empty excerpt simply lets `mt-auto` on the link below close the gap. */}
                 {excerpt && (
                   <div
-                    className="prose prose-neutral prose-sm mb-4 hidden max-w-none text-sm leading-6 text-ink-2 sm:line-clamp-2"
+                    /* `dark:prose-invert` — the excerpt is admin HTML and may contain a
+                       `<strong>`, which `prose-neutral` paints from `--tw-prose-bold` (#171717)
+                       rather than from the `text-ink-2` on this element. Measured black-on-black
+                       at 1.03:1 in the identical block on /creatine; this one only escaped the
+                       audit because no current excerpt happens to carry bold. */
+                    className="prose prose-neutral dark:prose-invert prose-sm mb-4 hidden max-w-none text-sm leading-6 text-ink-2 sm:line-clamp-2"
                     dangerouslySetInnerHTML={{ __html: excerpt }}
                   />
                 )}

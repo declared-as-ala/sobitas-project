@@ -1671,7 +1671,9 @@ function ShopContent({
                       type="button"
                       onClick={() => setShowFilters(false)}
                       aria-label="Fermer les filtres"
-                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1"
+                      /* The only sheet close on the site without its own focus ring — every
+                         sibling (cart drawer, quick order, review composer) carries ring-focus. */
+                      className="-mr-2 flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                     >
                       <X className="h-5 w-5" aria-hidden="true" />
                     </button>

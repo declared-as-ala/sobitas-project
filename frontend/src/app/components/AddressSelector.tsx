@@ -253,14 +253,28 @@ function AddressSelectorComponent({
   }
 
   return (
+    /*
+      ── THE SAME THREE SELECTS HAD TWO DIFFERENT FOCUS RINGS ────────────────────────────────
+      They carried `focus:border-red-500 focus:ring-red-500/30`. Inside checkout that is never
+      what you see: globals.css has a `.checkout-form [data-slot="select-trigger"]:focus-visible`
+      rule painting the brand border and `--c-focus`. Outside it — the quick-order drawer, the
+      other place this component renders — there is no such rule, so the identical control focused
+      red-500 there and brand here.
+
+      The tokens now say it once, in the component, so both surfaces agree. `red-500` is also not
+      the accent: `--c-brand` is the 600 step, and `red` is only a legacy alias for `brand`.
+
+      `focus-visible` rather than `focus`, matching the checkout rule it now mirrors: a select
+      opened with the mouse should not paint a keyboard ring.
+    */
     <div className="space-y-5">
       {/* Gouvernorat */}
       <div className="space-y-2">
         <Label htmlFor="gouvernorat" className="text-sm font-medium block">
-          Gouvernorat {required && <span className="text-red-500">*</span>}
+          Gouvernorat {required && <span className="text-ink-3" aria-hidden="true">*</span>}
         </Label>
         <Select value={gouvernorat} onValueChange={onGouvernoratChange}>
-          <SelectTrigger id="gouvernorat" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
+          <SelectTrigger id="gouvernorat" className="w-full rounded-xl focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-focus/35">
             <SelectValue placeholder="Sélectionnez le gouvernorat" />
           </SelectTrigger>
           <SelectContent side="bottom" position="popper">
@@ -277,14 +291,14 @@ function AddressSelectorComponent({
       {gouvernorat && (
         <div className="space-y-2">
           <Label htmlFor="delegation" className="text-sm font-medium block">
-            Délégation {required && <span className="text-red-500">*</span>}
+            Délégation {required && <span className="text-ink-3" aria-hidden="true">*</span>}
           </Label>
           <Select
             value={delegation ? `${instanceId}-${delegation}` : ''}
             onValueChange={handleDelegationChange}
             disabled={!gouvernorat}
           >
-            <SelectTrigger id="delegation" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
+            <SelectTrigger id="delegation" className="w-full rounded-xl focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-focus/35">
               <SelectValue placeholder="Sélectionnez la délégation" />
             </SelectTrigger>
             <SelectContent side="bottom" position="popper">
@@ -311,14 +325,14 @@ function AddressSelectorComponent({
       {delegation && (
         <div className="space-y-2">
           <Label htmlFor="localite" className="text-sm font-medium block">
-            Localité {required && <span className="text-red-500">*</span>}
+            Localité {required && <span className="text-ink-3" aria-hidden="true">*</span>}
           </Label>
           <Select
             value={localite ? `${instanceId}-${localite}` : ''}
             onValueChange={handleLocaliteValueChange}
             disabled={!delegation}
           >
-            <SelectTrigger id="localite" className="w-full rounded-xl focus:border-red-500 focus:ring-red-500/30">
+            <SelectTrigger id="localite" className="w-full rounded-xl focus-visible:border-brand focus-visible:ring-2 focus-visible:ring-focus/35">
               <SelectValue placeholder="Sélectionnez la localité" />
             </SelectTrigger>
             <SelectContent side="bottom" position="popper">
@@ -345,7 +359,7 @@ function AddressSelectorComponent({
       {codePostal && (
         <div>
           <Label htmlFor="code_postal" className="text-sm font-medium">
-            Code Postal {required && <span className="text-red-500">*</span>}
+            Code Postal {required && <span className="text-ink-3" aria-hidden="true">*</span>}
           </Label>
           <input
             type="text"

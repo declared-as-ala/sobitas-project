@@ -253,21 +253,36 @@ export function ProductReviewsPageClient({ product }: ProductReviewsPageClientPr
                   const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
                   return (
                     <div key={star} className="flex items-center gap-2 min-w-0">
+                      {/*
+                        ── THE SAME HISTOGRAM AS THE PDP'S, SPELLED THE SAME WAY ──────────────
+                        `ProductDetailClient` renders this exact control — a star-rating
+                        distribution with a clickable row per star — and the two had drifted on
+                        every value: an amber fill there against `bg-red-600` here (so the same
+                        data was orange on one page and brand-red on the other), `bg-rule` for the
+                        empty track against `bg-gray-200 dark:bg-gray-700`, and
+                        `transition-[width] duration-500` against a bare `transition-all` with no
+                        duration and no `motion-reduce` opt-out.
+
+                        The PDP version carries the reasoning (why the track is `rule` and not
+                        `rule-strong`, why the properties are named); this one now carries the
+                        same class strings so the two cannot disagree again. The row also gains
+                        the focus ring its twin has.
+                      */}
                       <button
                         type="button"
                         onClick={() => toggleStarFilter(star)}
-                        className="flex items-center gap-1 w-16 text-left min-h-[44px] shrink-0"
+                        className="flex min-h-11 w-16 shrink-0 items-center gap-1 rounded-lg text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       >
-                        <span className="text-sm text-gray-700 dark:text-gray-300">{star}</span>
+                        <span className="text-sm text-ink-2 tabular-nums">{star}</span>
                         <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
                       </button>
-                      <div className="flex-1 h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div className="h-2 flex-1 overflow-hidden rounded-full bg-rule">
                         <div
-                          className="h-full bg-red-600 rounded-full transition-all"
+                          className="h-full rounded-full bg-amber-400 transition-[width] duration-500 ease-out motion-reduce:transition-none"
                           style={{ width: `${pct}%` }}
                         />
                       </div>
-                      <span className="text-sm text-gray-600 dark:text-gray-400 w-12 text-right shrink-0">{count}</span>
+                      <span className="w-12 shrink-0 text-right text-sm text-ink-3 tabular-nums">{count}</span>
                     </div>
                   );
                 })}

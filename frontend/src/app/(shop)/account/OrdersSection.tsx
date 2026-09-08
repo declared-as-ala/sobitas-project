@@ -157,10 +157,30 @@ export function OrdersSection() {
                   </p>
                 )}
                 {order.protina && (order.protina.spent > 0 || order.protina.earned > 0 || order.protina.pending > 0) && (
+                  /*
+                    ── TWO OF THESE THREE CHIPS HAD NO BACKGROUND AT ALL ───────────────────
+                    `bg-ok/8` and `bg-warn/8` emit NOTHING. Tailwind's opacity modifier reads
+                    the `opacity` scale, and 8 is not on it — so the class name is dropped
+                    silently, with no error and no warning, exactly like the `text-on-brand`
+                    that once rendered a CTA at 1.37:1. Grep the compiled CSS: the escaped
+                    `bg-ok/10` and `bg-ok/5` selectors are there; `bg-ok/8` is not.
+
+                    The result was three chips in one row where one was a pill and two were bare
+                    coloured words with padding around them — visible in a screenshot, invisible
+                    in the source, and unreachable by `audit-contrast` because this page is
+                    behind a login.
+
+                    Rather than pick a valid tint, they take the shape this file already uses
+                    for its ORDER STATUS badges twenty lines up: `border border-X/40 bg-elevated
+                    text-X`. That is the design system's status chip, and the reason is measured
+                    — `text-ok` on a 10% `ok` tint is 4.39:1 in light mode, under AA, while the
+                    same ink on the untinted plate is 5.02:1. It also lifts the brand chip off
+                    4.53:1 (it was the only one of the three whose tint did emit) to 4.87.
+                  */
                   <div className="mt-2 flex flex-wrap gap-2 text-xs font-semibold">
-                    {order.protina.spent > 0 && <span className="rounded-full bg-brand/5 px-2.5 py-1 text-brand"><ProtinaAmount value={-order.protina.spent} /></span>}
-                    {order.protina.earned > 0 && <span className="rounded-full bg-ok/8 px-2.5 py-1 text-ok"><ProtinaAmount value={order.protina.earned} signed /> créditées</span>}
-                    {order.protina.pending > 0 && <span className="rounded-full bg-warn/8 px-2.5 py-1 text-warn"><ProtinaAmount value={order.protina.pending} signed /> à la livraison</span>}
+                    {order.protina.spent > 0 && <span className="rounded-full border border-brand/40 bg-elevated px-2.5 py-1 text-brand"><ProtinaAmount value={-order.protina.spent} /></span>}
+                    {order.protina.earned > 0 && <span className="rounded-full border border-ok/40 bg-elevated px-2.5 py-1 text-ok"><ProtinaAmount value={order.protina.earned} signed /> créditées</span>}
+                    {order.protina.pending > 0 && <span className="rounded-full border border-warn/40 bg-elevated px-2.5 py-1 text-warn"><ProtinaAmount value={order.protina.pending} signed /> à la livraison</span>}
                   </div>
                 )}
               </div>

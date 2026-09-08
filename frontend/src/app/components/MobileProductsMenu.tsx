@@ -113,7 +113,8 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                 variant="ghost"
                 size="icon"
                 onClick={handleClose}
-                className="h-10 w-10 shrink-0 -mr-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                /* 44, not 40 — the site's close-control size. */
+                className="h-11 w-11 shrink-0 -mr-1 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
                 aria-label="Fermer"
               >
                 <X className="h-5 w-5" />
