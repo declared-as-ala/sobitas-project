@@ -9,7 +9,7 @@ import { OPENING_HOURS } from '@/util/company';
 import { resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
-import { isInStock, getProductStockStatus } from '@/util/cartStock';
+import { getProductStockStatus } from '@/util/cartStock';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
 import { productSourceGallery } from '@/util/productSourceFacts';
 import { cleanSourceText } from '@/util/sourceBoilerplate';
@@ -21,7 +21,7 @@ const SITE_BRAND_NAME = 'Protéine Tunisie';
 
 /**
  * Store-wide return policy, emitted on every product Offer.
- * Google Merchant / Search "return policy" enhancement requires this; gating it behind a
+ * The Google Merchant / Search return-policy enhancement uses this; gating it behind a
  * per-product backend flag (which is set on 0 products) is what produced the Search Console
  * warning "Your products are missing a return policy". These terms must match the human-readable
  * policy page at /page/politique-de-remboursement.
@@ -36,8 +36,7 @@ const SITE_BRAND_NAME = 'Protéine Tunisie';
 type ReturnPolicyCategoryEnum =
   | 'https://schema.org/MerchantReturnFiniteReturnWindow'
   | 'https://schema.org/MerchantReturnNotPermitted'
-  | 'https://schema.org/MerchantReturnUnlimitedWindow'
-  | 'https://schema.org/MerchantReturnUnspecified';
+  | 'https://schema.org/MerchantReturnUnlimitedWindow';
 
 type ReturnMethodEnum =
   | 'https://schema.org/ReturnAtKiosk'
@@ -46,8 +45,6 @@ type ReturnMethodEnum =
 
 type ReturnFeesEnum =
   | 'https://schema.org/FreeReturn'
-  | 'https://schema.org/OriginalShippingFees'
-  | 'https://schema.org/RestockingFees'
   | 'https://schema.org/ReturnFeesCustomerResponsibility'
   | 'https://schema.org/ReturnShippingFees';
 
@@ -100,32 +97,30 @@ const SHIPPING_DESTINATION = { '@type': 'DefinedRegion', addressCountry: 'TN' } 
  *
  * The trade-off, stated rather than hidden: shippingDetails is a RECOMMENDED field for merchant
  * listings, so out-of-stock products may show "missing field shippingDetails" as a non-critical
- * Search Console warning. That is the correct side to be wrong on — an out-of-stock item is not
- * eligible for a merchant listing anyway, so the field buys nothing, while a shipping promise we
- * cannot keep is a claim about the real world. Everything Google actually requires on the Offer —
- * price, priceCurrency, availability, itemCondition, url, hasMerchantReturnPolicy — stays
- * unconditional.
+ * Search Console warning. Do not invent a shipping promise to remove that warning. Price and
+ * currency are required for merchant listings; availability, condition, URL, shipping and return
+ * details are recommended enhancements, not a guarantee that Google will display the result.
  */
 /**
  * schema.org availability, with BackOrder for the catalogue the shop does not physically hold.
  *
- * Three states, not two. 10,535 of 10,669 published products are imported catalogue entries with
- * qte=0 — they were never in stock and never sold out. Declaring those OutOfStock is both wrong and
- * expensive: OutOfStock forfeits Google merchant-listing and free-product-listing eligibility, while
- * BackOrder ("orderable but not in stock") keeps it.
+ * Mirror the page's stock states. BackOrder means orderable but not in stock; changing the enum
+ * cannot establish fulfilment or merchant eligibility. The owner must substantiate orderability.
  *
  * OutOfStock is reserved for `force_out_of_stock`, the owner's explicit "do not sell this" switch.
  * That distinction is the whole point — a blanket BackOrder would advertise as obtainable the one
  * category of product the owner has deliberately marked unobtainable.
  */
-function availabilityFor(product: Parameters<typeof getProductStockStatus>[0]): string {
+function availabilityFor(product: Parameters<typeof getProductStockStatus>[0]): string | undefined {
   const status = getProductStockStatus(product);
+  if (status.isUnknown) return undefined;
   if (!status.isOutOfStock) return 'https://schema.org/InStock';
   return status.isBackOrder ? 'https://schema.org/BackOrder' : 'https://schema.org/OutOfStock';
 }
 
 function buildShippingDetails(product: Product, price: number): Record<string, unknown> | null {
-  if (!isInStock(product)) return null;
+  const status = getProductStockStatus(product);
+  if (status.isUnknown || status.isOutOfStock) return null;
 
   return {
     '@type': 'OfferShippingDetails',
@@ -211,26 +206,25 @@ function stripHtml(html: string, maxLen: number = 500): string {
  */
 function parsePriceForSchema(value: unknown): number | null {
   if (value == null) return null;
-  if (typeof value === 'number' && Number.isFinite(value) && value >= 0) return value;
-  const s = String(value).replace(/,/g, '.').replace(/[^\d.-]/g, '').trim();
+  if (typeof value === 'number') return Number.isFinite(value) && value >= 0 ? value : null;
+  if (typeof value !== 'string') return null;
+  const s = value.trim().replace(/\s*(?:TND|DT)$/i, '').replace(/\s/g, '').replace(',', '.');
   if (!s) return null;
-  const n = parseFloat(s);
+  if (!/^\d+(?:\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
   return Number.isFinite(n) && n >= 0 ? n : null;
 }
 
-/** Schema price: effective selling price (promo if active), normalized. Fallback: product.prix then 0. Never null. */
-function getSchemaPrice(product: Product): number {
-  const effective = getEffectivePrice(product);
-  let num = parsePriceForSchema(effective);
-  if (num === null) num = parsePriceForSchema((product as { prix?: number }).prix);
-  if (num === null) num = 0;
-  return num;
+/** Never turn missing/broken commerce data into an invented free Offer. */
+function getSchemaPrice(product: Product): number | null {
+  if (product.prix == null && (product as { price?: unknown }).price == null && !hasValidPromo(product)) return null;
+  return parsePriceForSchema(getEffectivePrice(product));
 }
 
 /** Format price for schema.org: numeric string only (no "DT", no spaces). Google requirement. */
 function formatSchemaPrice(price: number): string {
-  const n = Math.round(price * 100) / 100;
-  return Number.isInteger(n) ? String(n) : n.toFixed(2);
+  // TND has three fractional digits; match formatTnd rather than rounding millimes away.
+  return String(Math.round(price * 1000) / 1000);
 }
 
 /** True if string looks like a storage path (e.g. produits/.../file.webp), not alt text or description. */
@@ -249,7 +243,13 @@ function isValidImageUrl(url: string): boolean {
   const t = url.trim();
   if (t.length > 500) return false;
   if (/\s/.test(t)) return false;
-  return t.startsWith('http://') || t.startsWith('https://');
+  try {
+    const parsed = new URL(t);
+    return ['http:', 'https:'].includes(parsed.protocol) && !parsed.username && !parsed.password
+      && !/^(localhost|127\.|0\.|10\.|192\.168\.|\[::1\])/i.test(parsed.hostname);
+  } catch {
+    return false;
+  }
 }
 
 function normalizeProductionUrl(url: string, fallbackPath: string = '/'): string {
@@ -278,7 +278,12 @@ function normalizeJsonLdImages(input: unknown): string[] {
     .map((value) => {
       if (typeof value !== 'string' || !value.trim()) return null;
       const trimmed = value.trim();
-      if (/^https?:\/\//i.test(trimmed)) return normalizeProductionUrl(trimmed);
+      if (/^https?:\/\//i.test(trimmed)) {
+        // Validate before normalization: a malformed absolute URL must not become the homepage.
+        if (!isValidImageUrl(trimmed)) return null;
+        return new URL(trimmed).toString();
+      }
+      if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return null;
       if (looksLikeImagePath(trimmed)) {
         const storageUrl = getStorageUrl(trimmed);
         return storageUrl && isValidImageUrl(storageUrl) ? normalizeProductionUrl(storageUrl) : null;
@@ -286,6 +291,34 @@ function normalizeJsonLdImages(input: unknown): string[] {
       return null;
     })
     .filter((value): value is string => !!value);
+}
+
+const PRODUCT_CONDITIONS = new Set([
+  'https://schema.org/NewCondition', 'https://schema.org/UsedCondition',
+  'https://schema.org/RefurbishedCondition', 'https://schema.org/DamagedCondition',
+]);
+
+function productCondition(product: Product): string | undefined {
+  const value = product.schema?.item_condition;
+  return value ? (PRODUCT_CONDITIONS.has(value) ? value : undefined) : 'https://schema.org/NewCondition';
+}
+
+function schemaDate(value: unknown): string | undefined {
+  if (typeof value !== 'string') return undefined;
+  const day = value.trim().slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return undefined;
+  const parsed = new Date(`${day}T00:00:00Z`);
+  return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === day ? day : undefined;
+}
+
+/** Preserve explicit expiry (including expired data); an active promo cannot outlive its end. */
+function offerExpiry(product: Product): string | undefined {
+  const declared = product.schema?.price_valid_until ?? product.price_valid_until;
+  const promo = hasValidPromo(product) ? schemaDate(product.promo_expiration_date) : undefined;
+  const expiry = declared ? schemaDate(declared) : undefined;
+  if (promo) return expiry && expiry < promo ? expiry : promo;
+  // Invalid supplied dates are omitted, not replaced by an invented valid date.
+  return declared ? expiry : defaultPriceValidUntil();
 }
 
 function sanitizeFaqEntries(
@@ -305,7 +338,7 @@ function sanitizeFaqEntries(
  * Builds Product JSON-LD for Google Rich Results (Product snippets).
  * Use buildProductJsonLd(product, canonicalUrl) so offers.url matches rel=canonical.
  * Always includes valid offers with price (normalized), availability, itemCondition.
- * `priceValidUntil` is only set when the API provides a real promo/end date (never a synthetic +1 year).
+ * `priceValidUntil` preserves a declared expiry, bounded by an active promo, or the existing default horizon.
  * Only adds aggregateRating/review when we have real data; author is always Person type.
  */
 export function buildProductSchema(product: Product, baseUrl: string): object | null {
@@ -412,12 +445,13 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
 }
 
 export function buildProductJsonLd(product: Product, canonicalUrl: string): object | null {
+  canonicalUrl = normalizeProductionUrl(canonicalUrl, `/shop/${product.slug || product.id}`);
   /*
    * ── EVERY PHOTOGRAPH WE HOLD, NOT JUST THE COVER (owner, 16/08/2026) ────────────────────────
    *
    * 6,437 products carry 23,293 photographs between them and this schema was declaring ONE.
    *
-   * `image` is a REQUIRED field for Product rich results, and Google's own guidance asks for
+   * `image` is required for merchant listings, and Google's own guidance asks for
    * several images per product — different angles, the label, the packaging — because that is what
    * lets a result qualify for the image-rich treatments in Search and in Google Images. Sending one
    * URL when eight exist is the difference between an eligible listing and a minimal one, on
@@ -437,23 +471,13 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
    */
   const galleryImages = productSourceGallery(product as Parameters<typeof productSourceGallery>[0]);
   // Main product cover first so Google uses it as primary image in Product rich results.
-  const rawImages = [product.schema?.image, product.seo?.image, product.cover, ...galleryImages, (product as { alt_cover?: string }).alt_cover].filter(Boolean) as string[];
-  const imagePaths = rawImages.filter((path) => looksLikeImagePath(path));
-  if (imagePaths.length === 0 && product.cover) imagePaths.push(product.cover);
-  const imageArray = imagePaths
-    .map((path) => getStorageUrl(path))
-    .filter((url) => isValidImageUrl(url));
+  const rawImages = [product.cover, product.schema?.image, product.seo?.image, ...galleryImages, (product as { alt_cover?: string }).alt_cover];
+  const imageArray = normalizeJsonLdImages(rawImages);
   const dedupedImages = [...new Set(imageArray)];
   // Authoritative Offer price = the effective (promo-aware) selling price, so structured data
-  // matches the price the user sees and the sanitizeBackendProductJsonLd path. Fall back to the
-  // backend's declared schema.price only when the effective price is unavailable.
-  const effectivePrice = getSchemaPrice(product);
-  const price = (Number.isFinite(effectivePrice) && effectivePrice > 0)
-    ? effectivePrice
-    : (parsePriceForSchema(product.schema?.price) ?? effectivePrice);
-  const availability =
-    product.schema?.availability
-    ?? availabilityFor(product);
+  // matches the price the user sees and the sanitizeBackendProductJsonLd path.
+  const price = getSchemaPrice(product);
+  const availability = availabilityFor(product);
   const description = stripHtml(
     product.seo?.description || product.seo_description || product.meta_description || product.description_cover || product.description_fr || '',
     500
@@ -466,7 +490,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
         ? String(product.code_product).trim()
     : String(product.id);
 
-  if (!Number.isFinite(price) || price < 0) {
+  if (price === null || !Number.isFinite(price) || price < 0) {
     if (process.env.NODE_ENV === 'development' && typeof window === 'undefined') {
       console.warn('[structured-data] Product', product.id, 'has no valid price; skipping Product JSON-LD');
     }
@@ -479,7 +503,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     priceCurrency: 'TND',
     price: formatSchemaPrice(price),
     availability,
-    itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
+    itemCondition: productCondition(product),
     seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
@@ -490,25 +514,23 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
 
   // On an active promo, the sale price is only valid until the promo expires — tell Google so it
   // doesn't keep showing a stale sale price after the promotion ends.
-  const untilRaw = product.schema?.price_valid_until
-    ?? product.price_valid_until
-    ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
-  const until = untilRaw != null && String(untilRaw).trim() !== '' ? String(untilRaw).trim().slice(0, 10) : '';
-  // Always emit a horizon: the promo's real expiry when there is one, else a rolling year.
-  offersPayload.priceValidUntil = until || defaultPriceValidUntil();
+  offersPayload.priceValidUntil = offerExpiry(product);
   // validFrom: stable date (product creation) — GSC "Missing field validFrom" on promo offers.
   const createdAt = (product as { created_at?: unknown }).created_at;
-  const validFrom = typeof createdAt === 'string' ? createdAt.slice(0, 10) : '';
+  const validFrom = schemaDate(createdAt);
   if (validFrom) offersPayload.validFrom = validFrom;
 
   const schema: Record<string, unknown> = {
     '@context': 'https://schema.org',
     '@type': 'Product',
+    '@id': `${canonicalUrl}#product`,
+    url: canonicalUrl,
+    mainEntityOfPage: canonicalUrl,
     name: cleanSchemaName(product.designation_fr),
     // Never empty (GSC "Missing field description") — see factualProductDescription.
     description: description || factualProductDescription(product),
-    // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
-    image: dedupedImages.length > 0 ? dedupedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
+    // Missing photography is a data defect. A site banner is not a photograph of this product.
+    image: dedupedImages.length > 0 ? dedupedImages : undefined,
     sku,
     productID: sku,
     brand: (product.schema?.brand || product.brand?.designation_fr)
@@ -593,16 +615,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   const normalizedImages = [
     ...new Set(
       normalizeJsonLdImages([
-        source.image ?? product.schema?.image ?? product.seo?.image ?? product.cover,
+        product.cover, product.schema?.image, product.seo?.image, source.image,
         ...productSourceGallery(product as Parameters<typeof productSourceGallery>[0]),
       ].flat())
     ),
   ];
   const sku = (product.schema?.sku || product.sku || product.code_product || product.id)?.toString();
-  const availability =
-    (typeof product.schema?.availability === 'string' && product.schema.availability) ||
-    availabilityFor(product);
+  const availability = availabilityFor(product);
   const priceNumber = getSchemaPrice(product);
+  if (priceNumber === null) return null;
   const price = formatSchemaPrice(priceNumber);
   /**
    * The brand, or NO brand node at all.
@@ -618,16 +639,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
    */
   const realBrand = (product.schema?.brand || product.brand?.designation_fr || '').toString().trim();
 
-  const offersInput =
-    (source.offers && typeof source.offers === 'object' ? source.offers : null) as Record<string, unknown> | null;
+  // Rebuild the Offer: spreading it preserves stale priceSpecification, validThrough and @id,
+  // or numeric array keys when the backend sends several offers.
   const offers: Record<string, unknown> = {
-    ...(offersInput ?? {}),
     '@type': 'Offer',
     url: canonical,
-    priceCurrency: (product.schema?.price_currency || 'TND').toString(),
+    priceCurrency: 'TND',
     price,
     availability,
-    itemCondition: product.schema?.item_condition || 'https://schema.org/NewCondition',
+    itemCondition: productCondition(product),
     seller: {
       '@type': 'Organization',
       '@id': `${PRODUCTION_ORIGIN}/#organization`,
@@ -637,26 +657,21 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
-  // In-stock only — see buildShippingDetails. The `delete` matters as much as the assignment: the
-  // backend Offer arrives through `...offersInput` and can carry its own shippingDetails, so simply
-  // not setting ours would let the upstream delivery promise survive on an out-of-stock product.
+  // Only the known-stock delivery terms, never the backend's potentially stale promise.
   const sanitizeShipping = buildShippingDetails(product, priceNumber);
   if (sanitizeShipping) offers.shippingDetails = sanitizeShipping;
   else delete offers.shippingDetails;
 
   // Mirror buildProductJsonLd: on an active promo the sale price expires with the promo.
-  const sanitizeUntilRaw = product.schema?.price_valid_until
-    ?? product.price_valid_until
-    ?? (hasValidPromo(product) ? product.promo_expiration_date : undefined);
-  const sanitizeUntil = sanitizeUntilRaw != null && String(sanitizeUntilRaw).trim() !== ''
-    ? String(sanitizeUntilRaw).trim().slice(0, 10) : '';
-  offers.priceValidUntil = sanitizeUntil || defaultPriceValidUntil();
+  offers.priceValidUntil = offerExpiry(product);
   const sanitizeCreatedAt = (product as { created_at?: unknown }).created_at;
-  const sanitizeValidFrom = typeof sanitizeCreatedAt === 'string' ? sanitizeCreatedAt.slice(0, 10) : '';
+  const sanitizeValidFrom = schemaDate(sanitizeCreatedAt);
   if (sanitizeValidFrom) offers.validFrom = sanitizeValidFrom;
 
   const sanitized: Record<string, unknown> = {
-    ...source,
+    // Keep source identifiers, not arbitrary nested entities or a second Product graph.
+    ...Object.fromEntries(['gtin', 'gtin8', 'gtin12', 'gtin13', 'gtin14', 'mpn'].flatMap((key) =>
+      source[key] != null ? [[key, source[key]]] : [])),
     '@context': 'https://schema.org',
     '@type': 'Product',
     '@id': `${canonical}#product`,
@@ -665,8 +680,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     mainEntityOfPage: canonical,
     sku,
     productID: sku,
-    // image is REQUIRED for Product rich results — last-resort brand banner beats an invalid item.
-    image: normalizedImages.length > 0 ? normalizedImages : [`${PRODUCTION_ORIGIN}/og-banner.jpg`],
+    image: normalizedImages.length > 0 ? normalizedImages : undefined,
     description:
       stripHtml(
         product.seo?.description || product.meta_description || product.meta_description_fr || product.description_cover || product.description_fr || '',
@@ -690,8 +704,8 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
        *     emitted   https://protein.tn/nature's-way   -> 404
        *     the page  https://protein.tn/nature-s-way   -> 200
        *
-       * An `@id` is an identifier Google resolves and follows; pointing it at a 404 tells Google
-       * the brand entity does not exist, on every product of that brand. Apostrophes, ampersands
+       * An `@id` identifies an entity; it need not be dereferenceable, but when we use a public
+       * brand page as its identifier the URL should match that page. Apostrophes, ampersands
        * and dots are common in supplement brand names (Nature's Way, Doctor's Best, Nature's
        * Bounty), so this was not one product — it was a whole class of them.
        *
@@ -726,7 +740,15 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     }));
   }
 
-  if (product.gtin?.trim()) sanitized.gtin = product.gtin.trim();
+  if (product.gtin?.trim()) {
+    sanitized.gtin = product.gtin.trim();
+    // A refreshed barcode must not coexist with the backend graph's stale typed barcode.
+    for (const key of ['gtin8', 'gtin12', 'gtin13', 'gtin14']) {
+      if (sanitized[key] != null && String(sanitized[key]).padStart(14, '0') !== product.gtin.trim().padStart(14, '0')) {
+        delete sanitized[key];
+      }
+    }
+  }
   if (product.mpn?.trim()) sanitized.mpn = product.mpn.trim();
   /*
    * -- THE SOURCE RETAILER'S NAME MUST NOT BE IN OUR STRUCTURED DATA ------------------------
@@ -743,8 +765,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
   if (typeof sanitized.description === 'string') {
     const cleaned = cleanSourceText(sanitized.description).trim();
     /*
-     * FALL BACK, never delete. `description` is required for a Product rich result and an absent
-     * one is a "Missing field description" error in Search Console — so the cut must not be able
+     * FALL BACK, never delete. `description` is recommended for a Product rich result, so the cut must not be able
      * to create one. It can: a product whose description_fr is nothing but the transcribed notice
      * would clean down to an empty string. `factualProductDescription` is the same never-empty
      * generator the other builder ends its chain with.
@@ -1291,9 +1312,9 @@ export type StructuredDataType =
   | 'WebSite'
   | 'CollectionPage';
 
-/** Required fields per type for Google rich results (simplified checklist). */
+/** Simplified required fields; Product uses the merchant-listing Offer path. */
 const REQUIRED: Record<StructuredDataType, string[]> = {
-  Product: ['name', 'image', 'offers', 'offers.price', 'offers.priceCurrency', 'offers.availability', 'offers.url'],
+  Product: ['name', 'image', 'offers', 'offers.price', 'offers.priceCurrency'],
   BreadcrumbList: ['itemListElement'],
   Organization: ['name', 'url'],
   FAQPage: ['mainEntity'],
@@ -1340,8 +1361,6 @@ export function validateStructuredData(
     else {
       if (offers.price === undefined || offers.price === null) errors.push('Product.offers: missing price');
       if (!offers.priceCurrency) errors.push('Product.offers: missing priceCurrency');
-      if (!offers.availability) errors.push('Product.offers: missing availability');
-      if (!offers.url) errors.push('Product.offers: missing url');
     }
   } else if (type === 'BreadcrumbList') {
     const list = s.itemListElement as unknown[] | undefined;

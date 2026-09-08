@@ -21,6 +21,7 @@
  */
 
 import type { Metadata } from 'next';
+import { productDescription, productTitle } from '@/util/productMetaDescription';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getSimilarProducts } from '@/services/api';
@@ -35,7 +36,6 @@ import {
 import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
 import { retiredSlugDestination } from '@/util/retiredSlug';
-import { htmlToText } from '@/util/sanitizeProductHtml';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 
@@ -84,13 +84,24 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const product = await getCachedProductDetails(slug);
     if (!product?.id) return { robots: { index: false, follow: true } };
     const canonical = buildProductCanonicalUrl(product);
-    const title =
-      product.seo?.title?.trim() ||
-      `${product.designation_fr} – Prix Tunisie & Livraison Rapide | Protéine Tunisie`;
-    const description =
-      product.seo?.description?.trim() ||
-      htmlToText(product.description_fr, 160) ||
-      `Acheter ${product.designation_fr} en Tunisie. Prix, avis et livraison rapide.`;
+    // Same builder as the human route: the curated Search-Console titles must reach Google,
+    // which is the only audience that ever renders this route. See productTitle's header.
+    const title = productTitle(product);
+    /*
+     * -- THE CRAWLER VIEW IS THE ONLY ONE GOOGLE READS, SO IT GETS THE SAME DESCRIPTION --------
+     * This route is what middleware rewrites a crawler user-agent to. It used to take
+     * `product.seo.description` raw, which is the backend's own template — measured live on
+     * 08/09/2026, the two views disagreed on the same URL:
+     *
+     *   browser   "Complément alimentaire … riche en EPA et DHA … Prix : 179 DT."
+     *   Googlebot "Omega 3 fish oil 240 softgel - weightworld — Oméga 3 en Tunisie. Livraison…"
+     *
+     * So the whole meta-description rewrite shipped to shoppers and NOT to the search engine it
+     * was written for — on /omega-3/omega-3-fish-oil-240-softgel-weightworld, the exact page the
+     * work cites (4,122 impressions, 0.7% CTR, position 7.4). Any future metadata change on the
+     * normal product route has to be made here too, or it does not reach Google.
+     */
+    const description = productDescription(product, product.designation_fr ?? slug ?? 'Produit');
     return {
       title: { absolute: title },
       description,

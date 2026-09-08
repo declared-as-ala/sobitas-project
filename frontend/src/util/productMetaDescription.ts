@@ -128,3 +128,46 @@ export function productDescription(product: Product, productName: string): strin
   if (plain) return `${plain} Prix Tunisie. Livraison 24-72h. Protéine Tunisie.`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protéine Tunisie.`;
 }
+
+/**
+ * SHARED WITH THE CRAWLER ROUTE ON PURPOSE.
+ *
+ * `x-crawler/product/[...slug]` is what middleware rewrites a bot to, and it used to build its
+ * own title from `product.seo.title`. So the curated map below — assembled from a Search Console
+ * export precisely to raise CTR — was served to browsers and never to Google. Measured on
+ * 08/09/2026, the same URL answered differently by user agent:
+ *
+ *   browser   "Omega 3 Fish Oil WeightWorld 240 capsules – Prix Tunisie"   (the curated one)
+ *   Googlebot "Omega 3 fish oil 240 softgel - weightworld – Prix Tunisie"  (the backend's)
+ *
+ * Both routes now call this, so a title change cannot reach one audience and miss the other.
+ */
+export function productTitle(product: Product): string {
+  /*
+   * Search Console opportunity titles (3-month export, 31/08/2026).
+   *
+   * These are deliberately limited to products with meaningful impressions where the imported
+   * catalogue title does not answer the actual query.  They do not invent discounts, stock or
+   * delivery promises; price and availability remain in Product/Offer structured data.  Keeping
+   * this as a small reviewed map also avoids turning every PDP into the same keyword template.
+   */
+  const searchOpportunityTitles: Record<string, string> = {
+    'omega-3-fish-oil-240-softgel-weightworld':
+      'Omega 3 Fish Oil WeightWorld 240 capsules – Prix Tunisie',
+    '100-whey-gold-standard-2-27kg':
+      'Gold Standard Whey 2,27 kg – Prix Tunisie | Protein.tn',
+    'anabolic-whey-80-2-25kg-proactive':
+      'Anabolic Whey 80 ProActive 2,25 kg – Prix Tunisie',
+    'serious-mass-2-7-kg':
+      'Serious Mass 2,7 kg – Prix Tunisie | Optimum Nutrition',
+    'serious-mass-5-45-kg-optimum-nutrition':
+      'Serious Mass 5,45 kg – Prix Tunisie | Optimum Nutrition',
+  };
+  const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
+  if (opportunityTitle) return opportunityTitle;
+
+  const explicit = product.seo?.title || product.seo_title || product.meta_title;
+  if (explicit?.trim()) return explicit.trim();
+  const name = product.designation_fr ?? product.slug ?? 'Produit';
+  return `${name} – Prix Tunisie & Livraison Rapide | Protéine Tunisie`;
+}

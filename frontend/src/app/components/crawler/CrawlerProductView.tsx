@@ -21,7 +21,7 @@
 
 import { getStorageUrl } from '@/services/api';
 import { formatTnd, getPriceDisplay } from '@/util/productPrice';
-import { isInStock } from '@/util/cartStock';
+import { getProductStockStatus } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildComparison } from '@/util/productComparison';
@@ -53,7 +53,8 @@ export function CrawlerProductView({
 }) {
   const breadcrumbs = getProductBreadcrumbs(product);
   const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(product);
-  const inStock = isInStock(product);
+  const stockStatus = getProductStockStatus(product);
+  const inStock = !stockStatus.isUnknown && !stockStatus.isOutOfStock;
   const brandName = product.brand?.designation_fr;
   const cover = product.cover ? getStorageUrl(product.cover) : '';
   /*
@@ -173,7 +174,7 @@ export function CrawlerProductView({
           </p>
           <p className="mt-1">
             Disponibilité :{' '}
-            <strong>{inStock ? 'En stock' : 'En rupture de stock'}</strong>
+            <strong>{stockStatus.isUnknown ? 'Disponibilité à confirmer' : stockStatus.stockLabel}</strong>
             {inStock ? ' · Livraison 24-72h partout en Tunisie.' : ''}
           </p>
           <p className="mt-1 text-sm text-gray-600">
