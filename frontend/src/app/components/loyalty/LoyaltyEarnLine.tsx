@@ -76,7 +76,7 @@ export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: Loyalt
         className
       )}
     >
-      <ProtinaMark size="sm" />
+      <ProtinaMark size="md" />
       <p className="min-w-0">
         {isAuthenticated ? (
           <>

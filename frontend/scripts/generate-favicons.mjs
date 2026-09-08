@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 /**
- * Generate the Protein.tn favicon set from one vector master.
+ * Generate the Protein.tn favicon set from the original brand mark.
  *
  * The orange disc keeps the mark readable against both light and dark browser chrome, while the
  * white Protein.tn “P” remains recognisable down to 16 px. Transparent corners are intentional.
@@ -15,18 +15,91 @@ const sharp = require('sharp');
 
 const root = path.resolve(import.meta.dirname, '..');
 const publicDir = path.join(root, 'public');
+const markSource = path.join(root, 'scripts', 'favicon-p-mark.png');
 const brandOrange = '#e63b05';
 
-const faviconSvg = `
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Protein.tn">
-  <circle cx="256" cy="256" r="240" fill="${brandOrange}"/>
-  <path fill="#fff" fill-rule="evenodd" d="M139 404 221 116h171c31 0 49 25 40 56l-28 99c-9 31-34 50-65 50H228l-17 59-72 24Zm116-220-21 73h93c9 0 16-6 19-15l11-39c3-11-2-19-14-19h-88Z"/>
-</svg>`.trim();
+async function loadCleanMark() {
+  const { data, info } = await sharp(markSource).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pixelCount = info.width * info.height;
 
-await fs.writeFile(path.join(publicDir, 'favicon.svg'), `${faviconSvg}\n`, 'utf8');
+  // The archived brand mark was exported on a flat neutral preview background. Recover its
+  // transparency from the orange colour contrast before isolating the connected “P” glyph.
+  let hasTransparency = false;
+  for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+    if (data[pixel * 4 + 3] < 250) {
+      hasTransparency = true;
+      break;
+    }
+  }
+  if (!hasTransparency) {
+    for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+      const offset = pixel * 4;
+      const red = data[offset];
+      const green = data[offset + 1];
+      const blue = data[offset + 2];
+      const orangeChroma = Math.max(0, ((red - green) / 161 + (red - blue) / 224) / 2);
+      data[offset + 3] = Math.max(0, Math.min(255, Math.round((orangeChroma - 0.015) * 280)));
+    }
+  }
+
+  const visited = new Uint8Array(pixelCount);
+  let largest = [];
+
+  for (let seed = 0; seed < pixelCount; seed += 1) {
+    if (visited[seed] || data[seed * 4 + 3] <= 24) continue;
+    const component = [];
+    const stack = [seed];
+    visited[seed] = 1;
+    while (stack.length) {
+      const current = stack.pop();
+      component.push(current);
+      const x = current % info.width;
+      const y = Math.floor(current / info.width);
+      const neighbours = [
+        x > 0 ? current - 1 : -1,
+        x + 1 < info.width ? current + 1 : -1,
+        y > 0 ? current - info.width : -1,
+        y + 1 < info.height ? current + info.width : -1,
+      ];
+      for (const next of neighbours) {
+        if (next < 0 || visited[next] || data[next * 4 + 3] <= 24) continue;
+        visited[next] = 1;
+        stack.push(next);
+      }
+    }
+    if (component.length > largest.length) largest = component;
+  }
+
+  const keep = new Uint8Array(pixelCount);
+  for (const pixel of largest) keep[pixel] = 1;
+  for (let pixel = 0; pixel < pixelCount; pixel += 1) {
+    if (!keep[pixel]) data[pixel * 4 + 3] = 0;
+  }
+  return sharp(data, { raw: info }).png().toBuffer();
+}
+
+async function buildMaster() {
+  const cleanMark = await loadCleanMark();
+  const { data, info } = await sharp(cleanMark)
+    .ensureAlpha()
+    .trim()
+    .resize(276, 276, { fit: 'contain', background: { r: 0, g: 0, b: 0, alpha: 0 } })
+    .raw()
+    .toBuffer({ resolveWithObject: true });
+  for (let offset = 0; offset < data.length; offset += 4) {
+    data[offset] = 255;
+    data[offset + 1] = 255;
+    data[offset + 2] = 255;
+  }
+  const whiteMark = await sharp(data, { raw: info }).png().toBuffer();
+  const circle = Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512"><circle cx="256" cy="256" r="240" fill="${brandOrange}"/></svg>`);
+  return sharp(circle).composite([{ input: whiteMark, left: 118, top: 118 }]).png().toBuffer();
+}
+
+const master = await buildMaster();
 
 async function render(size, filename) {
-  const buffer = await sharp(Buffer.from(faviconSvg))
+  const buffer = await sharp(master)
     .resize(size, size)
     .png({ compressionLevel: 9, palette: true })
     .toBuffer();
