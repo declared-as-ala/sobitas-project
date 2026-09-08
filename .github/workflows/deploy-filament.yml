@@ -200,8 +200,17 @@ jobs:
       - name: Deploy to VPS (attempt 1)
         id: deploy_attempt_1
         continue-on-error: true
+        # GHCR_PAT expired and every VPS pull died on `denied: denied` while the SSH
+        # connection itself was fine — the workflow then blamed VPS_PASSWORD, which was
+        # correct all along. deploy-frontend.yml was fixed this way on 21/08/2026 and this
+        # file was missed. GITHUB_TOKEN is minted per run, cannot expire, and already has
+        # packages:write on this job, so there is no secret left to rotate.
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         uses: appleboy/ssh-action@v1.0.3
         with:
+          envs: GHCR_TOKEN,GHCR_USER
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
@@ -269,7 +278,7 @@ jobs:
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             echo "🧹 Docker cleanup (old dangling images only)..."
             docker image prune -f || true
@@ -409,8 +418,17 @@ jobs:
         # line. The run still fails there — this changes which message the owner reads, not
         # whether a broken deploy is reported as broken.
         continue-on-error: true
+        # GHCR_PAT expired and every VPS pull died on `denied: denied` while the SSH
+        # connection itself was fine — the workflow then blamed VPS_PASSWORD, which was
+        # correct all along. deploy-frontend.yml was fixed this way on 21/08/2026 and this
+        # file was missed. GITHUB_TOKEN is minted per run, cannot expire, and already has
+        # packages:write on this job, so there is no secret left to rotate.
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GHCR_USER: ${{ github.actor }}
         uses: appleboy/ssh-action@v1.0.3
         with:
+          envs: GHCR_TOKEN,GHCR_USER
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           password: ${{ secrets.VPS_PASSWORD }}
@@ -473,7 +491,7 @@ jobs:
             echo "✓ Gmail SMTP credentials installed"
 
             echo "🔐 Logging in to GHCR..."
-            echo "${{ secrets.GHCR_PAT }}" | docker login ghcr.io -u declared-as-ala --password-stdin
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             echo "🧹 Docker cleanup (old dangling images only)..."
             docker image prune -f || true
