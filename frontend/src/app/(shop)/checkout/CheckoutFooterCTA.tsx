@@ -50,7 +50,7 @@ export function CheckoutFooterCTA({
               <Button type="button" variant="ghost" className="h-auto min-h-12 min-w-0 flex-[0_1_44%] justify-between rounded-xl px-2.5 py-1.5 text-start hover:bg-sunken focus-visible:ring-focus">
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3">Total</span>
-                  <span className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</span>
+                  <span dir="ltr" className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</span>
                 </span>
                 <ChevronUp className="ms-1 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
               </Button>
@@ -76,8 +76,8 @@ export function CheckoutFooterCTA({
                           </div>
                         )}
                         <div className="flex-1 min-w-0">
-                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1">{productName}</p>
-                          <p className="text-xs text-ink-3">Qté&nbsp;: {item.quantity} · {(price * item.quantity).toFixed(2)} DT</p>
+                          <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1"><bdi dir="auto">{productName}</bdi></p>
+                          <p className="text-xs text-ink-3">Qté&nbsp;: <bdi dir="ltr">{item.quantity}</bdi> · <bdi dir="ltr">{(price * item.quantity).toFixed(2)} DT</bdi></p>
                         </div>
                       </div>
                     );
@@ -86,21 +86,21 @@ export function CheckoutFooterCTA({
                 <div className="space-y-2 border-t border-rule pt-4">
                   <div className="flex justify-between text-sm">
                     <span className="text-ink-2">Sous-total</span>
-                    <span className="font-semibold text-ink-1">{totalPrice.toFixed(2)} DT</span>
+                    <span dir="ltr" className="font-semibold text-ink-1">{totalPrice.toFixed(2)} DT</span>
                   </div>
                   {totalPrice + shippingCost > finalTotal && <div className="flex justify-between text-sm">
                     <span className="text-ink-2">Remises</span>
-                    <span className="font-semibold text-ok">−{Math.max(0, totalPrice + shippingCost - finalTotal).toFixed(2)} DT</span>
+                    <span dir="ltr" className="font-semibold text-ok">−{Math.max(0, totalPrice + shippingCost - finalTotal).toFixed(2)} DT</span>
                   </div>}
                   <div className="flex justify-between text-sm">
                     <span className="text-ink-2">Expédition</span>
-                    <span className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>
+                    <span dir="ltr" className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>
                       {shippingCost === 0 ? 'Gratuite' : `${shippingCost} DT`}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between border-t border-rule pt-3">
                     <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
-                    <span className="font-display text-xl font-extrabold tracking-tight tabular-nums text-brand">{finalTotal.toFixed(2)} DT</span>
+                    <span dir="ltr" className="font-display text-xl font-extrabold tracking-tight tabular-nums text-brand">{finalTotal.toFixed(2)} DT</span>
                   </div>
                 </div>
               </div>

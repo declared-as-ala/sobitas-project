@@ -18,7 +18,7 @@ export function CheckoutField({ label, icon: Icon, error, ...input }: ComponentP
       {label}{input.required ? <span className="text-ink-3" aria-hidden="true">*</span> : <span className="font-normal text-ink-3">(optionnel)</span>}
     </Label>
     <Input {...input} aria-invalid={!!error} aria-describedby={error ? `${input.id}-error` : undefined}
-      className={`h-12 rounded-xl bg-canvas !text-base text-ink-1 shadow-none placeholder:text-ink-3 focus-visible:ring-offset-0 ${error ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive' : 'border-rule-strong focus-visible:border-brand focus-visible:ring-focus'}`} />
+      className={`h-12 rounded-xl bg-canvas text-start [unicode-bidi:isolate] !text-base text-ink-1 shadow-none placeholder:text-ink-3 focus-visible:ring-offset-0 ${error ? 'border-destructive focus-visible:border-destructive focus-visible:ring-destructive' : 'border-rule-strong focus-visible:border-brand focus-visible:ring-focus'}`} />
     <CheckoutFieldError id={input.id} message={error} />
   </div>;
 }

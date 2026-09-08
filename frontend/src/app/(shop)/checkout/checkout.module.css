@@ -2,6 +2,15 @@
   border-color: rgb(var(--c-danger));
   outline-color: rgb(var(--c-danger));
 }
+.main { padding-top: 0.5rem; }
+.form bdi { unicode-bidi: isolate; }
+@media (min-width: 1024px) {
+  .main { padding-top: 1rem; }
+  .layout { grid-template-columns: minmax(0, 1.5fr) minmax(360px, 440px); align-items: start; }
+  /* The aside must stretch for its inner sticky summary to have a scrolling range. */
+  .layout > aside { align-self: stretch; }
+  .layout > aside > div { top: 10rem; }
+}
 .form input, .form select, .form textarea, .form [tabindex="-1"] {
   scroll-margin-block: 180px 120px;
 }

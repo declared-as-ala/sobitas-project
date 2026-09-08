@@ -13,16 +13,18 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { ArrowLeft, ShoppingCart, Shield, Truck, CheckCircle2, Loader2, Wallet, Printer, List, ArrowRight, Package, Tag, X, Gift, Percent, UserRound, Phone, Mail, MapPin, CircleAlert } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Shield, Truck, Loader2, Wallet, Printer, List, Tag, X, Gift, Percent, UserRound, Phone, Mail, MapPin, CircleAlert } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import Link from 'next/link';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
 import { MAX_REDEEM_FRACTION, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
 import { LoyaltyPointsRedeemer } from '@/app/components/loyalty/LoyaltyPointsRedeemer';
+import { Section } from '@/app/components/layout/Section';
+import { OrderDocument } from '@/app/components/order/OrderDocument';
+import { printOrderDocument } from '@/app/components/order/printOrderDocument';
 import { Container } from '@/app/components/layout/Container';
 import { CheckoutField } from './CheckoutField';
 import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, validateCheckout, type CheckoutErrors } from '@/lib/checkoutValidation';
@@ -43,7 +45,6 @@ export default function CheckoutPage() {
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(2);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOrderComplete, setIsOrderComplete] = useState(false);
-  const paymentMethod = 'cod';
   const submitLock = useRef(false);
   const touchedFields = useRef(new Set<string>());
   const [fieldErrors, setFieldErrors] = useState<CheckoutErrors>({});
@@ -498,268 +499,30 @@ export default function CheckoutPage() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('fr-FR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    });
-  };
-
   const handlePrint = async () => {
-    if (!printRef.current || !orderData) return;
-
+    const document = printRef.current?.querySelector<HTMLElement>('[data-order-document]');
+    if (!document || !orderData) return;
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast.error('Veuillez autoriser les pop-ups pour imprimer');
       return;
     }
-
     const logoUrl = await getSiteLogoUrlResolved();
-    const order = orderData.order;
-    const details = orderData.orderDetails;
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Commande #${order?.numero || ''}</title>
-          <style>
-            @media print {
-              @page { margin: 20mm; size: A4; }
-              body { margin: 0; padding: 0; font-family: Arial, sans-serif; color: #000; background: #fff; }
-            }
-            body { margin: 0; padding: 20px; font-family: Arial, sans-serif; color: #1f2937; background: #fff; line-height: 1.6; }
-            .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 3px solid #DA3E06; }
-            .logo { height: 60px; width: auto; }
-            .order-number { font-size: 24px; font-weight: bold; color: #DA3E06; margin-bottom: 5px; }
-            .confirmation-message { text-align: center; margin: 30px 0; padding: 20px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px; }
-            .section { margin: 30px 0; }
-            .section-title { font-size: 20px; font-weight: bold; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 2px solid #e5e7eb; }
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-            th { background: #f9fafb; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #e5e7eb; }
-            td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-            .summary-row { display: flex; justify-content: space-between; padding: 8px 0; }
-            .summary-total { font-weight: bold; font-size: 18px; border-top: 2px solid #e5e7eb; padding-top: 10px; margin-top: 10px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <img src="${logoUrl}" alt="Logo" class="logo" />
-            <div>
-              <div class="order-number">Commande #${order?.numero || ''}</div>
-              <div>Date: ${formatDate(order?.created_at || null)}</div>
-            </div>
-          </div>
-          <div class="confirmation-message">
-            <h1><svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:6px;"><polyline points="20 6 9 17 4 12"></polyline></svg>Commande confirmée</h1>
-            <p>Merci pour votre commande !</p>
-          </div>
-          <div class="section">
-            <div class="section-title">Détails de la commande</div>
-            <table>
-              <thead>
-                <tr>
-                  <th>Produit</th>
-                  <th>Quantité</th>
-                  <th>Prix unitaire</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${details.map((detail: any) => `
-                  <tr>
-                    <td>${detail.produit?.designation_fr || 'Produit'}</td>
-                    <td>${detail.qte || 0}</td>
-                    <td>${(detail.prix_unitaire || 0).toFixed(2)} TND</td>
-                    <td>${(detail.prix_ttc || 0).toFixed(2)} TND</td>
-                  </tr>
-                `).join('')}
-              </tbody>
-            </table>
-            <div style="margin-top: 20px;">
-              <div class="summary-row">
-                <span>Sous-total:</span>
-                <span>${(order?.prix_ht || 0).toFixed(2)} TND</span>
-              </div>
-              ${(order as any)?.coupon_code_snapshot && (order as any)?.discount_ht ? `
-                <div class="summary-row">
-                  <span>Code promo (${(order as any).coupon_code_snapshot}):</span>
-                  <span style="color: #16a34a;">-${((order as any).discount_ttc ?? (order as any).discount_ht ?? 0).toFixed(2)} TND</span>
-                </div>
-              ` : ''}
-              ${order?.frais_livraison ? `
-                <div class="summary-row">
-                  <span>Expédition:</span>
-                  <span>${order.frais_livraison} TND</span>
-                </div>
-              ` : `
-                <div class="summary-row">
-                  <span>Expédition:</span>
-                  <span style="color: #16a34a;">Livraison gratuite</span>
-                </div>
-              `}
-              <div class="summary-row summary-total">
-                <span>Total:</span>
-                <span>${(order?.prix_ttc || 0).toFixed(2)} TND</span>
-              </div>
-            </div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
-    printWindow.focus();
-    setTimeout(() => {
-      printWindow.print();
-    }, 250);
+    await printOrderDocument(printWindow, document, logoUrl);
   };
 
-  // Step 3: Confirmation - Show this even if cart is empty (order already placed)
   if (currentStep === 3 && orderData) {
-    const order = orderData.order;
-    const details = orderData.orderDetails;
-    const confirmationEmail = order?.livraison_email || order?.email;
-    const shipping = Number(order?.frais_livraison || 0);
-    const subtotal = Number(order?.prix_ht || 0);
-    const total = Number(order?.prix_ttc || 0);
-    const explicitDiscount = Number(order?.discount_ttc || order?.discount_ht || order?.remise || 0);
-    const discount = explicitDiscount > 0 ? explicitDiscount : Math.max(0, subtotal + shipping - total);
-    const deliveryName = [order?.livraison_nom || order?.nom, order?.livraison_prenom || order?.prenom]
-      .filter(Boolean)
-      .join(' ');
-    const deliveryCity = [order?.livraison_ville || order?.ville, order?.livraison_region || order?.region]
-      .filter(Boolean)
-      .join(', ');
-
-    return (
-      <div className="min-h-screen bg-sunken">
-        <main className="mx-auto max-w-[1040px] px-4 py-5 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
-          <section className="overflow-hidden rounded-2xl border border-ok/40 bg-elevated shadow-sm">
-            <div className="flex flex-col gap-5 bg-elevated px-5 py-6 sm:flex-row sm:items-center sm:justify-between sm:px-7">
-              <div className="flex items-start gap-4">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-elevated text-ok shadow-sm">
-                  <CheckCircle2 className="h-7 w-7" aria-hidden="true" />
-                </span>
-                <div>
-                  <p className="mb-1 text-xs font-bold uppercase tracking-[0.16em] text-ok">Commande enregistrée</p>
-                  <h1 className="font-display text-2xl uppercase tracking-tight text-ink-1 sm:text-3xl">Merci, c’est confirmé.</h1>
-                  <p className="mt-1 text-sm leading-6 text-ink-2">
-                    {confirmationEmail
-                      ? `Le récapitulatif a été envoyé à ${confirmationEmail}.`
-                      : 'Notre équipe vous appellera pour confirmer la livraison.'}
-                  </p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3 sm:min-w-[250px]">
-                <div className="rounded-xl border border-ok/40 bg-elevated px-4 py-3">
-                  <span className="block text-xs text-ink-3">Commande</span>
-                  <strong className="mt-0.5 block text-base text-ink-1">#{order?.numero || ''}</strong>
-                </div>
-                <div className="rounded-xl border border-ok/40 bg-elevated px-4 py-3 text-right">
-                  <span className="block text-xs text-ink-3">Total</span>
-                  <strong className="mt-0.5 block font-display text-lg tabular-nums text-brand">{total.toFixed(2)} DT</strong>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <div className="my-5 grid gap-4 sm:grid-cols-3">
-            {[
-              ['1', 'Commande reçue', 'C’est fait'],
-              ['2', 'Confirmation', 'Nous vous appelons'],
-              ['3', 'Livraison', 'Sous 24–72 h'],
-            ].map(([step, title, text], index) => (
-              <div key={step} className="flex items-center gap-3 rounded-xl border border-line bg-elevated px-4 py-3">
-                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-bold ${index === 0 ? 'bg-elevated text-ok' : 'bg-surface-subtle text-ink-2'}`}>{step}</span>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-ink-1">{title}</p>
-                  <p className="text-xs text-ink-3">{text}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div ref={printRef} className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_300px]">
-            <Card className="overflow-hidden rounded-2xl border-line bg-elevated shadow-sm">
-              <CardHeader className="border-b border-line px-5 py-4 sm:px-6">
-                <CardTitle className="flex items-center justify-between gap-3 text-base text-ink-1">
-                  <span className="flex items-center gap-2 font-display uppercase tracking-tight">
-                    <Package className="h-5 w-5 text-brand" aria-hidden="true" />
-                    Votre commande
-                  </span>
-                  <span className="text-sm font-normal text-ink-3">{details.length} article{details.length > 1 ? 's' : ''}</span>
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y divide-line">
-                  {details.map((detail: any) => {
-                    const productImage = detail.produit?.cover ? getStorageUrl(detail.produit.cover) : null;
-                    return (
-                      <div key={detail.id} className="flex items-center gap-3 px-4 py-3 sm:px-6">
-                        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-surface-subtle">
-                          {productImage && <Image src={productImage} alt="" fill className="object-contain p-1" sizes="56px" unoptimized />}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <p className="line-clamp-2 text-sm font-semibold leading-5 text-ink-1">{detail.produit?.designation_fr || 'Produit'}</p>
-                          <p className="mt-0.5 text-xs text-ink-3">Quantité : {detail.qte || 0}</p>
-                        </div>
-                        <p className="shrink-0 text-sm font-bold tabular-nums text-ink-1">{Number(detail.prix_ttc || 0).toFixed(2)} DT</p>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="space-y-2 border-t border-line bg-surface-subtle px-5 py-4 text-sm sm:px-6">
-                  <div className="flex justify-between text-ink-2"><span>Sous-total</span><span className="font-semibold tabular-nums text-ink-1">{subtotal.toFixed(2)} DT</span></div>
-                  {discount > 0 && <div className="flex justify-between text-ok"><span>Remise</span><span className="font-semibold tabular-nums">−{discount.toFixed(2)} DT</span></div>}
-                  <div className="flex justify-between text-ink-2"><span>Livraison</span><span className={shipping === 0 ? 'font-semibold text-ok' : 'font-semibold tabular-nums text-ink-1'}>{shipping === 0 ? 'Gratuite' : `${shipping.toFixed(2)} DT`}</span></div>
-                  <div className="mt-3 flex items-baseline justify-between border-t border-line pt-3"><span className="font-display text-lg uppercase text-ink-1">Total</span><span className="font-display text-xl font-bold tabular-nums text-brand">{total.toFixed(2)} DT</span></div>
-                </div>
-              </CardContent>
-            </Card>
-
-            <aside className="space-y-4">
-              <OrderProtinaSummary order={order} />
-              <Card className="rounded-2xl border-line bg-elevated shadow-sm">
-                <CardContent className="space-y-5 p-5">
-                  <div>
-                    <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-ink-1"><Truck className="h-4 w-4 text-brand" aria-hidden="true" />Livraison</div>
-                    <div className="space-y-0.5 text-sm leading-5 text-ink-2">
-                      {deliveryName && <p className="font-semibold text-ink-1">{deliveryName}</p>}
-                      <p>{order?.livraison_adresse1 || order?.adresse1 || ''}</p>
-                      {deliveryCity && <p>{deliveryCity}</p>}
-                      {(order?.livraison_code_postale || order?.code_postale) && <p>{order?.livraison_code_postale || order?.code_postale}</p>}
-                      <p className="pt-1 font-medium text-ink-1">{order?.livraison_phone || order?.phone || ''}</p>
-                    </div>
-                  </div>
-                  <div className="border-t border-line pt-4">
-                    <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-ink-1"><Wallet className="h-4 w-4 text-brand" aria-hidden="true" />Paiement</div>
-                    <p className="text-sm text-ink-2">{paymentMethod === 'cod' ? 'À la livraison' : 'Carte bancaire'}</p>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <div className="grid gap-2">
-                <Button asChild size="lg" className="min-h-12 rounded-xl bg-brand font-display uppercase tracking-wide text-on-brand hover:bg-brand-hover">
-                  <Link href="/shop"><ArrowRight className="mr-2 h-5 w-5" aria-hidden="true" />Continuer mes achats</Link>
-                </Button>
-                {isAuthenticated && (
-                  <Button asChild variant="outline" size="lg" className="min-h-12 rounded-xl">
-                    <Link href="/account/orders"><List className="mr-2 h-5 w-5" aria-hidden="true" />Mes commandes</Link>
-                  </Button>
-                )}
-                <Button onClick={handlePrint} variant="ghost" size="lg" className="min-h-11 rounded-xl text-ink-2">
-                  <Printer className="mr-2 h-4 w-4" aria-hidden="true" />Imprimer le reçu
-                </Button>
-              </div>
-            </aside>
-          </div>
-        </main>
-        <ScrollToTop />
-      </div>
-    );
+    return <main className="bg-sunken">
+      <Section spacing="default" first last width="narrow">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+          <LinkWithLoading href="/shop" className="inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-ink-2"><ArrowLeft className="h-4 w-4" aria-hidden="true" />Continuer mes achats</LinkWithLoading>
+          <Button onClick={handlePrint} className="min-h-11 rounded-xl bg-brand text-on-brand hover:bg-brand-hover"><Printer className="me-2 h-4 w-4" aria-hidden="true" />Imprimer le bon de commande</Button>
+        </div>
+        <div ref={printRef}><OrderDocument order={orderData.order} details={orderData.orderDetails} /></div>
+        <div className="mt-4"><OrderProtinaSummary order={orderData.order} /></div>
+        {isAuthenticated && <LinkWithLoading href="/account/orders" className="mt-4 inline-flex min-h-11 items-center gap-2 text-sm font-semibold text-ink-2"><List className="h-4 w-4" aria-hidden="true" />Mes commandes</LinkWithLoading>}
+      </Section>
+    </main>;
   }
 
   // While the cart rehydrates from localStorage, show a light placeholder instead of null — otherwise
@@ -779,11 +542,12 @@ export default function CheckoutPage() {
 
   return (
     <div
-      className={`checkout-viewport-root flex min-h-screen min-h-[100dvh] flex-col bg-canvas ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
+      className={`checkout-viewport-root flex min-h-screen min-h-[100dvh] flex-col bg-sunken ${keyboardOpen ? 'isKeyboardOpen' : ''}`}
       data-keyboard-open={keyboardOpen || undefined}
       style={{ ['--checkout-cta-padding' as string]: keyboardOpen ? '1.25rem' : '6.25rem' }}
     >
-      <main className="checkout-main flex-1">
+      <main className={`checkout-main flex-1 ${styles.main}`}>
+        <Section spacing="stage" container={false} first last>
         {/* Checkout is a primary task, so it uses the same 1600px site rail as the catalogue
             rather than the 1280px editorial rail. The form grows; the summary keeps a readable
             fixed range and remains sticky. */}
@@ -821,12 +585,12 @@ export default function CheckoutPage() {
             </div>
           </header>
 
-          <div className="checkout-layout">
+          <div className={`checkout-layout ${styles.layout}`}>
           {/* Checkout Form */}
           <section className="checkout-form">
             <div>
-              <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
-                <CardContent className="p-3.5 sm:p-5 lg:p-6">
+              <Card className="gap-0 overflow-hidden rounded-xl border-hairline bg-elevated shadow-sm">
+                <CardContent className="p-4 sm:p-5 lg:p-6">
                   <form id="checkout-form" noValidate onSubmit={handleSubmit} aria-busy={isSubmitting}
                     className={styles.form}>
                     <p role="status" aria-live="polite" className="sr-only">
@@ -843,8 +607,9 @@ export default function CheckoutPage() {
                         <UserRound className="h-5 w-5 text-brand" aria-hidden="true" />
                         <h2 className="font-display text-base font-extrabold uppercase tracking-tight text-ink-1 sm:text-lg">Vos coordonnées</h2>
                       </div>
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 sm:gap-4">
                           <CheckoutField icon={UserRound} label="Nom complet" error={fieldErrors.livraison_nom}
+                            dir="auto"
                             id="livraison_nom"
                             name="name"
                             value={formData.livraison_nom}
@@ -855,6 +620,7 @@ export default function CheckoutPage() {
                             required
                           />
                           <CheckoutField icon={Phone} label="Téléphone" error={fieldErrors.livraison_phone}
+                            dir="ltr"
                             id="livraison_phone"
                             name="tel"
                             type="tel"
@@ -866,8 +632,8 @@ export default function CheckoutPage() {
                             maxLength={30}
                             required
                           />
-                      </div>
                           <CheckoutField icon={Mail} label="Email" error={fieldErrors.livraison_email}
+                            dir="ltr"
                             id="livraison_email"
                             name="email"
                             type="email"
@@ -880,6 +646,7 @@ export default function CheckoutPage() {
                             spellCheck={false}
                             placeholder="vous@exemple.com"
                           />
+                      </div>
                       <div className="hidden">
                         <Label htmlFor="pays">Pays</Label>
                         <Input id="pays" value={formData.pays} readOnly className="sr-only" />
@@ -906,6 +673,7 @@ export default function CheckoutPage() {
                         required
                       />
                         <CheckoutField icon={MapPin} label="Rue et numéro" error={fieldErrors.livraison_adresse1}
+                          dir="auto"
                           id="livraison_adresse1"
                           name="street-address"
                           autoComplete="street-address"
@@ -929,10 +697,11 @@ export default function CheckoutPage() {
                               Note de livraison <span className="text-xs font-normal text-ink-3">(optionnel)</span>
                             </Label>
                             <textarea
+                              dir="auto"
                               id="note"
                               value={formData.note}
                               onChange={(e) => handleInputChange('note', e.target.value)}
-                              className="min-h-24 w-full resize-none rounded-xl border border-hairline bg-canvas p-3.5 text-base leading-snug text-ink-1 outline-none transition-colors placeholder:text-ink-3 hover:border-rule-strong focus:border-brand focus:ring-2 focus:ring-focus"
+                              className="[unicode-bidi:isolate] text-start min-h-24 w-full resize-none rounded-xl border border-hairline bg-canvas p-3.5 text-base leading-snug text-ink-1 outline-none transition-colors placeholder:text-ink-3 hover:border-rule-strong focus:border-brand focus:ring-2 focus:ring-focus"
                               placeholder="Consignes de livraison, instructions..."
                             />
                         </div>
@@ -995,7 +764,7 @@ export default function CheckoutPage() {
                     <Button
                       type="submit"
                       size="lg"
-                      className="mt-4 flex h-12 w-full rounded-xl bg-brand font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50"
+                      className="mt-4 hidden h-12 w-full lg:flex rounded-xl bg-brand font-display text-sm font-semibold uppercase tracking-wide text-on-brand transition-colors hover:bg-brand-hover focus-visible:ring-focus focus-visible:ring-offset-elevated disabled:opacity-50"
                       disabled={isSubmitting}
                     >
                       {isSubmitting ? (
@@ -1019,7 +788,7 @@ export default function CheckoutPage() {
           {/* Order Summary */}
           <aside className="checkout-summary hidden lg:block" inert={isSubmitting} aria-label="Récapitulatif de la commande">
             <div className="checkout-summary-inner">
-              <Card className="gap-0 overflow-hidden rounded-2xl border-hairline bg-elevated shadow-card">
+              <Card className="gap-0 overflow-hidden rounded-xl border-hairline bg-elevated shadow-sm">
                 <CardHeader className="border-b border-rule px-5 py-4">
                   <CardTitle className="flex items-center gap-3 font-display text-xl font-extrabold uppercase tracking-tight text-ink-1">
                     <ShoppingCart className="h-5 w-5 text-brand" aria-hidden="true" />
@@ -1054,13 +823,13 @@ export default function CheckoutPage() {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="mb-1 line-clamp-2 text-sm font-semibold leading-snug text-ink-1">
-                              {productName}
+                              <bdi dir="auto">{productName}</bdi>
                             </p>
                             <div className="flex items-center justify-between">
                               <p className="text-xs text-ink-3">
-                                Qté: {item.quantity}
+                                Qté : <bdi dir="ltr">{item.quantity}</bdi>
                               </p>
-                              <p className="font-display text-sm font-bold tracking-tight tabular-nums text-brand">
+                              <p dir="ltr" className="font-display text-sm font-bold tracking-tight tabular-nums text-brand">
                                 {(price * item.quantity).toFixed(2)} DT
                               </p>
                             </div>
@@ -1083,9 +852,9 @@ export default function CheckoutPage() {
                       <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-sunken p-3">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-medium text-ok">
-                            {appliedCoupon.code} appliqué
+                            <bdi dir="auto">{appliedCoupon.code}</bdi> appliqué
                             {appliedCoupon.discount_ht > 0 && (
-                              <span className="ms-1 text-ok">
+                              <span dir="ltr" className="ms-1 text-ok">
                                 (-{appliedCoupon.discount_ttc.toFixed(2)} DT)
                               </span>
                             )}
@@ -1119,6 +888,7 @@ export default function CheckoutPage() {
                         </Label>
                         <div className="checkout-coupon-row">
                           <Input
+                            dir="auto"
                             id="coupon_code"
                             value={couponInput}
                             onChange={(e) => setCouponInput(e.target.value)}
@@ -1165,12 +935,12 @@ export default function CheckoutPage() {
                   <div className="space-y-2.5 border-t border-rule pt-4 text-sm">
                     <div className="flex justify-between items-center">
                       <span className="text-ink-2">Sous-total</span>
-                      <span className="font-display font-semibold tabular-nums text-ink-1">{totalPrice.toFixed(2)} DT</span>
+                      <span dir="ltr" className="font-display font-semibold tabular-nums text-ink-1">{totalPrice.toFixed(2)} DT</span>
                     </div>
                     {appliedCoupon && appliedCoupon.discount_ht > 0 && (
                       <div className="flex justify-between items-center">
-                        <span className="text-ink-2">Remise ({appliedCoupon.code})</span>
-                        <span className="font-display font-semibold tabular-nums text-ok">
+                        <span className="text-ink-2">Remise (<bdi dir="auto">{appliedCoupon.code}</bdi>)</span>
+                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
                           -{appliedCoupon.discount_ttc.toFixed(2)} DT
                         </span>
                       </div>
@@ -1181,7 +951,7 @@ export default function CheckoutPage() {
                           <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
                           Remise pack{packQuoteData?.tier_label ? ` (${packQuoteData.tier_label})` : ''}
                         </span>
-                        <span className="font-display font-semibold tabular-nums text-ok">
+                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
                           -{packDiscountAmount.toFixed(2)} DT
                         </span>
                       </div>
@@ -1192,14 +962,14 @@ export default function CheckoutPage() {
                           <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
                           Remise fidélité <span className="text-xs text-ink-3">(estimée)</span>
                         </span>
-                        <span className="font-display font-semibold tabular-nums text-ok">
+                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
                           -{pointsDiscountDt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
                     <div className="flex justify-between items-center">
                       <span className="text-ink-2">Expédition</span>
-                      <span className={`font-display font-semibold tabular-nums ${(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? 'text-ok' : 'text-ink-1'}`}>
+                      <span dir="ltr" className={`font-display font-semibold tabular-nums ${(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? 'text-ok' : 'text-ink-1'}`}>
                         {(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? (
                           <span className="flex items-center gap-1">
                             <Truck className="h-4 w-4" aria-hidden="true" />
@@ -1220,7 +990,7 @@ export default function CheckoutPage() {
                     )}
                     <div className="flex items-baseline justify-between border-t border-rule pt-4">
                       <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
-                      <span className="font-display text-2xl font-extrabold tracking-tight tabular-nums text-brand">
+                      <span dir="ltr" className="font-display text-2xl font-extrabold tracking-tight tabular-nums text-brand">
                         {finalTotal.toFixed(2)} DT
                       </span>
                     </div>
@@ -1257,6 +1027,7 @@ export default function CheckoutPage() {
           </aside>
         </div>
         </Container>
+        </Section>
       </main>
 
       <CheckoutFooterCTA
