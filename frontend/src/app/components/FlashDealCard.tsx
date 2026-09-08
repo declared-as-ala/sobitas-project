@@ -7,7 +7,7 @@ import { notify as toast } from '@/lib/notify';
 import { LinkWithLoading } from './LinkWithLoading';
 import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
 import { getStorageUrl } from '@/services/api';
-import { getPriceDisplay } from '@/util/productPrice';
+import { formatTnd, getPriceDisplay, parsePromoDate } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { buildProductAlt } from '@/util/productAlt';
@@ -36,6 +36,8 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
   const saved = price.hasPromo && price.oldPrice != null ? Math.max(0, price.oldPrice - price.finalPrice) : 0;
   const discount = price.hasPromo && price.oldPrice ? Math.round((saved / price.oldPrice) * 100) : 0;
 
+  const deadline = parsePromoDate(product.promo_expiration_date);
+
   const handleAdd = useCallback((event: React.MouseEvent) => {
     event.preventDefault();
     event.stopPropagation();
@@ -61,53 +63,59 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
   }, [addToCart, atLimit, image, outOfStock, price.finalPrice, product, stock]);
 
   return (
-    <article className="pt-plate group relative flex h-full min-w-0 items-center gap-3 rounded-xl border border-hairline bg-elevated p-3 transition-colors [@media(hover:hover)]:hover:border-brand/50">
+    <article className="pt-plate group relative flex h-full min-w-0 flex-col gap-4 rounded-xl border border-hairline bg-elevated p-4 transition-colors [@media(hover:hover)]:hover:border-brand/50">
       {discount > 0 && (
-        <span className="absolute left-3 top-2 z-10 rounded-lg bg-brand px-2 py-1 font-display text-xs font-bold tabular-nums leading-none text-on-brand">−{discount}%</span>
+        <span className="absolute left-6 top-6 z-10 rounded-lg bg-brand px-2 py-1 font-display text-lg font-bold tabular-nums leading-none text-on-brand">−{discount}%</span>
       )}
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement du produit"
-        className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+        className="flex w-full min-w-0 flex-1 flex-col gap-4 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
-        <div className="pt-logo-well relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
+        <div className="pt-logo-well relative h-48 w-full shrink-0 sm:h-56 overflow-hidden rounded-lg">
           {image ? (
             <Image
               src={image}
               alt={buildProductAlt(product, { name })}
               fill
-              sizes="80px"
+              sizes="(max-width: 639px) 80vw, (max-width: 1279px) 45vw, 320px"
               quality={80}
               loading="lazy"
-              className={`object-contain p-1.5 transition-transform duration-200 motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.04] ${outOfStock ? 'opacity-45' : ''}`}
+              className={`object-contain p-4 transition-transform duration-200 motion-reduce:transition-none [@media(hover:hover)]:group-hover:scale-[1.04] ${outOfStock ? 'opacity-45' : ''}`}
             />
           ) : (
             <span className="flex h-full items-center justify-center font-display text-xl font-bold text-ink-3/40" aria-hidden="true">{name.charAt(0)}</span>
           )}
         </div>
-        <div className="min-w-0 flex-1 py-1">
-          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand">{name}</h3>
+        <div className="w-full min-w-0 flex-1">
+          <h3 className="line-clamp-2 min-h-12 text-base font-semibold leading-6 text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand">{name}</h3>
           {outOfStock ? (
             <p className="mt-2 text-xs font-semibold text-ink-3">Rupture de stock</p>
           ) : (
             <>
               <div className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
-                <span className="font-display text-xl font-extrabold tabular-nums leading-none text-brand">{Math.round(price.finalPrice)} DT</span>
-                {price.hasPromo && price.oldPrice != null && <span className="text-xs tabular-nums text-ink-3 line-through">{Math.round(price.oldPrice)} DT</span>}
+                <span className="font-display text-3xl font-extrabold tabular-nums leading-none text-brand">{formatTnd(price.finalPrice)}</span>
+                {price.hasPromo && price.oldPrice != null && <span className="text-sm tabular-nums text-ink-3 line-through">{formatTnd(price.oldPrice)}</span>}
               </div>
-              {saved > 0 && <p className="mt-1 text-xs leading-4 text-ink-2">Vous économisez {Math.round(saved)} DT</p>}
+              {saved > 0 && <p className="mt-3 text-sm font-semibold text-ink-1">Vous économisez <span className="text-brand">{formatTnd(saved)}</span></p>}
             </>
           )}
         </div>
       </LinkWithLoading>
+      {price.hasPromo && deadline != null && (
+        <p className="w-full border-t border-hairline pt-3 text-xs text-ink-2">
+          Fin le <time dateTime={new Date(deadline).toISOString()}>{new Date(deadline).toLocaleString('fr-FR', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis' })}</time>
+        </p>
+      )}
       <button
         type="button"
         onClick={handleAdd}
         aria-disabled={outOfStock || atLimit || undefined}
         aria-label={outOfStock ? `${name} — rupture de stock` : atLimit ? `Stock maximum atteint pour ${name}` : `Ajouter ${name} au panier`}
-        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 ${outOfStock || atLimit ? 'cursor-not-allowed bg-sunken text-ink-3' : 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'}`}
+        className={`flex min-h-11 w-full shrink-0 items-center justify-center gap-2 px-3 text-sm font-semibold rounded-xl transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 ${outOfStock || atLimit ? 'cursor-not-allowed bg-sunken text-ink-3' : 'bg-brand text-on-brand [@media(hover:hover)]:hover:bg-brand-hover'}`}
       >
         {justAdded ? <Check className="h-5 w-5" aria-hidden="true" /> : <ShoppingCart className="h-5 w-5" aria-hidden="true" />}
+        {outOfStock ? 'Rupture de stock' : atLimit ? 'Stock maximum atteint' : justAdded ? 'Ajouté au panier' : 'Ajouter au panier'}
       </button>
     </article>
   );

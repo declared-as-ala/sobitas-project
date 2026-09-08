@@ -3,9 +3,9 @@
   "metaTitle": "Intra-Workout Tunisie 🇹🇳 Pendant l'Entraînement | Protein.tn",
   "metaDescription": "Achetez vos compléments intra-workout en Tunisie : BCAA, électrolytes, glucides. Restez performant pendant l'effort. Livraison 24h Tunis, Sousse, Sfax.",
   "ogImage": "https://protein.tn/favicon-512x512.png",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>nutrition intra-workout</strong> maintient votre performance pendant l'entraînement. BCAA, électrolytes, glucides à chaîne ramifiée — tout pour rester hydraté, énergisé et éviter le catabolisme. Sur <strong>Protein.tn</strong>, retrouvez notre sélection intra-workout en Tunisie.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Intra-Workout Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\"><strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>nutrition intra-workout</strong> maintient votre performance pendant l'entraînement. BCAA, électrolytes, glucides à chaîne ramifiée — tout pour rester hydraté, énergisé et éviter le catabolisme. Sur <strong>Protein.tn</strong>, retrouvez notre sélection intra-workout en Tunisie.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Intra-Workout Tunisie : Prix et Livraison</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\"><strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
   "howToChooseTitle": "Comment choisir son intra-workout ?",
-  "howToChooseBody": "• <strong>BCAA</strong> : 5-10g pendant l'entraînement pour prévenir le catabolisme.\n• <strong>Électrolytes</strong> : sodium, potassium, magnésium pour l'hydratation.\n• <strong>Glucides</strong> : pour maintenir l'énergie pendant les séances longues.\n• <strong>Citrulline</strong> : pour le pump et le flux sanguin.\n• <strong>Format</strong> : poudre à mélanger dans votre gourde.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie.",
+  "howToChooseBody": "<ul><li><strong>BCAA</strong> : 5-10g pendant l'entraînement pour prévenir le catabolisme.</li><li><strong>Électrolytes</strong> : sodium, potassium, magnésium pour l'hydratation.</li><li><strong>Glucides</strong> : pour maintenir l'énergie pendant les séances longues.</li><li><strong>Citrulline</strong> : pour le pump et le flux sanguin.</li><li><strong>Format</strong> : poudre à mélanger dans votre gourde.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [
     {
       "question": "Qu'est-ce qu'un complément intra-workout ?",
@@ -16,6 +16,12 @@
       "answer": "Utiles pour les entraînements à jeun ou les séances longues (>1h30). Sinon, une bonne whey post-workout suffit."
     }
   ],
-  "relatedCategorySlugs": ["pre-workout", "post-workout", "bcaa", "citrulline", "proteine-whey"],
+  "relatedCategorySlugs": [
+    "pre-workout",
+    "post-workout",
+    "bcaa",
+    "citrulline",
+    "proteine-whey"
+  ],
   "bestProductSlugs": []
 }

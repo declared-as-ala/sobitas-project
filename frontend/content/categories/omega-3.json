@@ -5,7 +5,7 @@
   "ogImage": "https://protein.tn/favicon-512x512.png",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>oméga-3</strong> sont des acides gras essentiels que votre corps ne peut pas produire seul. Ils sont indispensables pour la santé cardiovasculaire, le fonctionnement cérébral et la réduction de l'inflammation. Sur <strong>Protein.tn</strong>, nous proposons les meilleures marques d'oméga-3 en Tunisie : Optimum Nutrition, BioTech USA, Real Pharm, Scitec Nutrition — en huile de poisson, capsules molles et haute concentration EPA/DHA.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Pourquoi prendre de l'oméga-3 en Tunisie ?</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">L'alimentation tunisienne est riche en grains et en huiles végétales, mais souvent pauvre en oméga-3 d'origine marine (poissons gras). Une supplémentation en oméga-3 de qualité vous apporte :</p>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>EPA (acide eicosapentaénoïque)</strong> : anti-inflammatoire naturel, idéal pour les sportifs et les douleurs articulaires</li>\n  <li><strong>DHA (acide docosahexaénoïque)</strong> : essentiel pour le cerveau, la mémoire et la vision</li>\n  <li><strong>Soutien cardiovasculaire</strong> : aide à maintenir un cœur en bonne santé et une tension normale</li>\n  <li><strong>Immunité renforcée</strong> : les oméga-3 modulent le système immunitaire</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Omega 3 Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix de l'oméga-3 en Tunisie</strong> varie selon la concentration et le nombre de gélules : à partir de 45 DT pour 60 gélules (1000 mg) et jusqu'à 150 DT pour les formats haute concentration (3000 mg) en 120–200 gélules. <strong>Protein.tn</strong> vous livre 24–72h à Tunis, Sousse, Sfax, Monastir, Nabeul et partout en Tunisie. Paiement à la livraison disponible.</p>",
   "howToChooseTitle": "Comment choisir son oméga-3 en Tunisie ?",
-  "howToChooseBody": "• <strong>EPA + DHA</strong> : regardez le dosage combiné. Un bon oméga-3 sport contient au moins 600 mg d'EPA et 400 mg de DHA par dose.\n• <strong>Concentration</strong> : plus elle est élevée, moins vous avez de gélules à prendre.\n• <strong>Origine</strong> : huile de poisson sauvage (anchois, sardines, maquereau) — privilégiez les marques qui testent la pureté et l'absence de métaux lourds.\n• <strong>Forme</strong> : triglycérides naturels (TG) mieux absorbés que les esters éthyliques (EE).\n• <strong>Certification</strong> : recherchez IFOS ou GOED pour la pureté.\n• <strong>Marques</strong> : Optimum Nutrition, BioTech USA, Real Pharm — disponibles sur Protein.tn.\n• <strong>Livraison</strong> : 24–72h partout en Tunisie, paiement à la livraison.",
+  "howToChooseBody": "<ul><li><strong>EPA + DHA</strong> : regardez le dosage combiné. Un bon oméga-3 sport contient au moins 600 mg d'EPA et 400 mg de DHA par dose.</li><li><strong>Concentration</strong> : plus elle est élevée, moins vous avez de gélules à prendre.</li><li><strong>Origine</strong> : huile de poisson sauvage (anchois, sardines, maquereau) — privilégiez les marques qui testent la pureté et l'absence de métaux lourds.</li><li><strong>Forme</strong> : triglycérides naturels (TG) mieux absorbés que les esters éthyliques (EE).</li><li><strong>Certification</strong> : recherchez IFOS ou GOED pour la pureté.</li><li><strong>Marques</strong> : Optimum Nutrition, BioTech USA, Real Pharm — disponibles sur Protein.tn.</li><li><strong>Livraison</strong> : 24–72h partout en Tunisie, paiement à la livraison.</li></ul>",
   "faqs": [
     {
       "question": "Où acheter de l'oméga-3 en Tunisie ?",
@@ -28,6 +28,16 @@
       "answer": "Oui — toutes nos marques (Optimum Nutrition, BioTech USA, Real Pharm) sont des leaders mondiaux avec des tests de pureté rigoureux. Produits 100 % originaux."
     }
   ],
-  "relatedCategorySlugs": ["vitamines", "mineraux", "zinc", "magnesium", "collagene"],
-  "bestProductSlugs": ["omega-3-1000mg", "omega-3-optimum-nutrition", "omega-3-biotech-usa"]
+  "relatedCategorySlugs": [
+    "vitamines",
+    "mineraux",
+    "zinc",
+    "magnesium",
+    "collagene"
+  ],
+  "bestProductSlugs": [
+    "omega-3-1000mg",
+    "omega-3-optimum-nutrition",
+    "omega-3-biotech-usa"
+  ]
 }

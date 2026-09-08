@@ -5,8 +5,13 @@
   "ogImage": "https://protein.tn/favicon-512x512.png",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>bandes de soutien musculaire</strong> offrent compression et maintien pour les articulations pendant l'effort. Genoux, coudes, poignets, chevilles — Protégez vos articulations et améliorez vos performances. Sur <strong>Protein.tn</strong>, retrouvez notre sélection en Tunisie.</p>",
   "howToChooseTitle": "Comment choisir ses bandes de soutien ?",
-  "howToChooseBody": "• <strong>Genoux</strong> : pour les squats et les charges lourdes.\n• <strong>Coudes</strong> : pour le développé couché et les dips.\n• <strong>Poignets</strong> : pour le développé militaire et la stabilité.\n• <strong>Matériau</strong> : néoprène pour la chaleur, élastique pour le maintien.\n• <strong>Taille</strong> : mesurez la circonférence de l'articulation.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie.",
+  "howToChooseBody": "<ul><li><strong>Genoux</strong> : pour les squats et les charges lourdes.</li><li><strong>Coudes</strong> : pour le développé couché et les dips.</li><li><strong>Poignets</strong> : pour le développé militaire et la stabilité.</li><li><strong>Matériau</strong> : néoprène pour la chaleur, élastique pour le maintien.</li><li><strong>Taille</strong> : mesurez la circonférence de l'articulation.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [],
-  "relatedCategorySlugs": ["ceinture-de-musculation", "gants-de-musculation-et-fitness", "equipement-cardio-fitness", "materiel-de-musculation"],
+  "relatedCategorySlugs": [
+    "ceinture-de-musculation",
+    "gants-de-musculation-et-fitness",
+    "equipement-cardio-fitness",
+    "materiel-de-musculation"
+  ],
   "bestProductSlugs": []
 }

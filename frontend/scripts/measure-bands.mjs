@@ -23,7 +23,7 @@ const one = (name, fallback) => {
   return i === -1 ? fallback : argv[i + 1];
 };
 
-const BASE = one('base', 'http://localhost:3000').replace(/\/$/, '');
+const BASE = one('base', argv.find(arg => /^https?:\/\//.test(arg)) || 'http://localhost:3000').replace(/\/$/, '');
 const ROUTE = one('route', '/');
 const WIDTH = Number(one('width', '1440'));
 const THEME = one('theme', 'light');
@@ -46,6 +46,7 @@ const LEGAL = {
      EIGHT off-scale paddings, all of them the same legitimate 8px bottom. Eight false failures is
      how a guard teaches people to stop reading it. Anyone touching SPACING must touch this. */
   390: { strip: 12, tight: 20, default: 16, feature: 24, stage: 0, zero: 0, mobileBottom: 8, heroBottom: 4 },
+  768: { strip: 16, tight: 20, default: 24, feature: 32, stage: 0 },
   /* Updated 18/08/2026 with the scale itself: `lg` came down one 8px notch across the board when
      the owner asked for tighter desktop bands. tight 32->24, default 40->32, feature 48->40. */
   1440: { strip: 16, tight: 24, default: 32, feature: 40, stage: 0 },
@@ -130,7 +131,7 @@ const bands = await page.evaluate(() => {
   });
 });
 
-const legal = LEGAL[WIDTH] || LEGAL[1440];
+const legal = WIDTH < 640 ? LEGAL[390] : WIDTH < 1024 ? LEGAL[768] : LEGAL[1440];
 const legalValues = new Set(Object.values(legal));
 
 /**

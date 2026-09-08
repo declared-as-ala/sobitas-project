@@ -13,24 +13,16 @@ import { buildBrandAlt } from '@/util/productAlt';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
 /** Keep the same 24 selected brands; a native rail needs no duplicate animation tiles. */
-const MARQUEE_BRANDS = 24;
-const SKELETON_TILES = 10;
+const SELECTED_BRANDS = 24;
+const SKELETON_TILES = SELECTED_BRANDS;
 
-// Content-box estimates, excluding Section padding and its 1px seam. The framed rail is
-// 106px (64px logo + 40px caption + 2px border), 42px taller than the previous rail.
-// Expected band heights: ~228px at 320/390, ~227px at 1440, including the mobile link.
-const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_198px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_174px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_178px]';
-const RAIL_LAYOUT = 'scrollbar-hide flex flex-nowrap overflow-x-auto snap-x snap-proximity rounded-xl border border-hairline bg-elevated';
-const TILE_LAYOUT = 'flex w-40 shrink-0 flex-col';
+// Content-box reservations are measured separately from Section padding and its seam.
+const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_344px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_319px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_448px]';
+const RAIL_LAYOUT = 'scrollbar-hide grid grid-flow-col grid-rows-2 auto-cols-[44%] gap-px overflow-x-auto snap-x snap-proximity rounded-xl border border-rule-strong bg-rule-strong sm:auto-cols-[24%] lg:grid-flow-row lg:grid-rows-none lg:grid-cols-8 lg:auto-cols-auto lg:overflow-hidden';
+const TILE_LAYOUT = 'flex h-full min-w-0 flex-col bg-elevated';
 
-/**
- * One brand plate.
- *
- * `interactive={false}` renders the same box WITHOUT a link, for the duplicated half of the track:
- * the copy exists to make the loop seamless, and duplicating 24 crawlable <a href> on the homepage
- * would double this band's internal-link count for zero benefit to a reader or to Google.
- */
-function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: boolean }) {
+/** Original artwork, a readable caption and one crawlable link per brand. */
+function BrandTile({ brand }: { brand: Brand }) {
   const [imageError, setImageError] = useState(false);
   const logoUrl = brand.logo ? getStorageUrl(brand.logo) : null;
   const hasLogo = Boolean(logoUrl) && !imageError;
@@ -39,11 +31,11 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
     logoUrl && !imageError ? (
       <Image
         src={logoUrl}
-        alt={interactive ? buildBrandAlt(brand.designation_fr, brand.alt_cover) : ''}
+        alt={buildBrandAlt(brand.designation_fr, brand.alt_cover)}
         width={200}
         height={100}
         sizes="130px"
-        className="max-h-10 max-w-full object-contain"
+        className="max-h-14 max-w-full object-contain"
         loading="lazy"
         onError={() => setImageError(true)}
       />
@@ -58,24 +50,16 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
   // Captions and missing-logo notices use the theme surface; neither impersonates a wordmark.
   const content = (
     <>
-      <span className={`${hasLogo ? 'pt-logo-well' : 'bg-elevated'} flex h-16 shrink-0 items-center justify-center px-4`}>
+      <span className={`${hasLogo ? 'pt-logo-well' : 'bg-elevated'} flex h-20 shrink-0 items-center justify-center px-4`}>
         {inner}
       </span>
-      <span className="flex h-10 items-center justify-between gap-2 px-3 text-xs font-medium text-ink-2 transition-colors group-hover:text-brand group-focus-visible:text-brand">
+      <span className="flex min-h-11 items-center justify-between gap-2 px-3 text-xs font-medium text-ink-2 transition-colors group-hover:text-brand group-focus-visible:text-brand">
         <span className="line-clamp-2">{brand.designation_fr}</span>
         <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
       </span>
     </>
   );
   const className = `${TILE_LAYOUT} group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus`;
-
-  if (!interactive) {
-    return (
-      <div className={className} aria-hidden="true">
-        {content}
-      </div>
-    );
-  }
 
   return (
     <LinkWithLoading
@@ -116,10 +100,10 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
 
   /* Logos first, and only fall back to the raw list if the API stops sending them — as before. `slice` AFTER the filter, or the filter would run on twelve alphabetical names and
      return two. */
-  const marqueeBrands = useMemo(() => {
+  const selectedBrands = useMemo(() => {
     const withLogo = brands.filter((b) => Boolean(b.logo));
     const source = withLogo.length >= 8 ? withLogo : brands;
-    return source.slice(0, MARQUEE_BRANDS);
+    return source.slice(0, SELECTED_BRANDS);
   }, [brands]);
 
   if (isLoading) {
@@ -128,10 +112,10 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
         <SectionHeader title="Nos marques partenaires" scale="3" viewAllHref="/brands" viewAllLabel="Toutes les marques" />
         <div className={RAIL_LAYOUT} aria-hidden="true">
           {Array.from({ length: SKELETON_TILES }).map((_, i) => (
-            <div key={i} className="shrink-0 border-r border-rule-strong last:border-r-0">
+            <div key={i} className="min-w-0">
               <div className={TILE_LAYOUT}>
-                <Skeleton className="h-16 w-full rounded-none" />
-                <div className="flex h-10 items-center px-3">
+                <Skeleton className="h-20 w-full rounded-none" />
+                <div className="flex h-11 items-center px-3">
                   <Skeleton className="h-3 w-24" />
                 </div>
               </div>
@@ -143,7 +127,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
     );
   }
 
-  if (marqueeBrands.length === 0) return null;
+  if (selectedBrands.length === 0) return null;
 
   return (
     <Section surface="sunken" spacing="tight" width="wide" defer className={BAND_LAYOUT}>
@@ -158,11 +142,11 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
         scale="3"
       />
 
-      {/* One framed roster, with captions for recognition and every original brand link.
-          Native overflow leaves a partial next tile visible; no mask hides clickable artwork. */}
+      {/* All 24 marks form a credential wall on desktop. On phones, two rows retain
+          readable artwork and a partial next column signals native horizontal scrolling. */}
       <ul className={RAIL_LAYOUT} aria-label="Marques partenaires" role="list">
-        {marqueeBrands.map((brand) => (
-          <li key={brand.id} className="shrink-0 snap-start border-r border-rule-strong last:border-r-0">
+        {selectedBrands.map((brand) => (
+          <li key={brand.id} className="min-w-0 snap-start">
             <BrandTile brand={brand} />
           </li>
         ))}

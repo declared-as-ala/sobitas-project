@@ -73,7 +73,9 @@ export function BlogSection({ articles }: BlogSectionProps) {
   const displayArticles = articles.slice(0, MAX_ARTICLES);
 
   return (
-    <Section spacing="tight" width="wide" defer className="[&.pt-defer]:[contain-intrinsic-size:auto_504px]">
+    // Measured content boxes (padding + seam excluded): 540 / 512 / 718 / 406px
+    // at 320 / 390 / 768 / 1440. Desktop band height is 455px, not the reservation.
+    <Section spacing="tight" width="wide" defer className="[&.pt-defer]:[contain-intrinsic-size:auto_512px] max-[359px]:[&.pt-defer]:[contain-intrinsic-size:auto_540px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_718px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_406px]">
       {/* Subtitle removed. "Conseils d'experts en nutrition, entraînement et santé pour optimiser
           vos performances" is a description of a blog, and the reader is looking at three article
           titles that describe themselves. It cost a line of body copy plus its margin at the top

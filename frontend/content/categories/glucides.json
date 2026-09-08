@@ -5,8 +5,13 @@
   "ogImage": "https://protein.tn/favicon-512x512.png",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>glucides sportifs</strong> sont essentiels pour fournir l'énergie nécessaire à l'entraînement et reconstituer les réserves de glycogène après l'effort. Maltodextrine, dextrose, waxy maize — sur <strong>Protein.tn</strong>, retrouvez les meilleurs glucides pour sportifs en Tunisie.</p>",
   "howToChooseTitle": "Comment choisir ses glucides sportifs ?",
-  "howToChooseBody": "• <strong>Maltodextrine</strong> : index glycémique moyen, énergie durable.\n• <strong>Dextrose</strong> : index glycémique élevé, idéal post-workout.\n• <strong>Waxy Maize</strong> : amidon de maïs cireux, digestion facile.\n• <strong>Timing</strong> : glucides simples post-workout, complexes avant.\n• <strong>Dosage</strong> : 30-60 g selon l'intensité et la durée.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie.",
+  "howToChooseBody": "<ul><li><strong>Maltodextrine</strong> : index glycémique moyen, énergie durable.</li><li><strong>Dextrose</strong> : index glycémique élevé, idéal post-workout.</li><li><strong>Waxy Maize</strong> : amidon de maïs cireux, digestion facile.</li><li><strong>Timing</strong> : glucides simples post-workout, complexes avant.</li><li><strong>Dosage</strong> : 30-60 g selon l'intensité et la durée.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [],
-  "relatedCategorySlugs": ["mass-gainers", "gainers-proteines", "prise-de-masse", "proteine-whey"],
+  "relatedCategorySlugs": [
+    "mass-gainers",
+    "gainers-proteines",
+    "prise-de-masse",
+    "proteine-whey"
+  ],
   "bestProductSlugs": []
 }

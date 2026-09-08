@@ -5,7 +5,7 @@
   "ogImage": "https://protein.tn/favicon-512x512.png",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>zinc</strong> est un minéral essentiel qui joue un rôle crucial dans plus de 300 réactions enzymatiques dans le corps. Il est indispensable pour le système immunitaire, la production de testostérone, la synthèse des protéines et la récupération musculaire. Sur <strong>Protein.tn</strong>, découvrez notre sélection de zinc en Tunisie : bisglycinate, picolinate, gluconate, en gélules et comprimés.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Pourquoi prendre du zinc en Tunisie ?</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Immunité renforcée</strong> : le zinc est essentiel pour la défense immunitaire, surtout en hiver</li>\n  <li><strong>Testostérone</strong> : une carence en zinc est liée à une baisse de testostérone</li>\n  <li><strong>Récupération musculaire</strong> : accélère la réparation des tissus après l'entraînement</li>\n  <li><strong>Synthèse protéique</strong> : essentiel pour la construction musculaire</li>\n  <li><strong>Santé de la peau</strong> : aide contre l'acné et les problèmes cutanés</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Zinc Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix du zinc en Tunisie</strong> : à partir de 25 DT pour 60-100 gélules (15-25 mg). Zinc bisglycinate entre 30 et 55 DT. Formats haute dose (50 mg) entre 35 et 65 DT. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison possible.</p>",
   "howToChooseTitle": "Comment choisir son zinc en Tunisie ?",
-  "howToChooseBody": "• <strong>Zinc bisglycinate</strong> : meilleure absorption, idéal pour une supplémentation quotidienne.\n• <strong>Zinc picolinate</strong> : excellente biodisponibilité, bien étudié.\n• <strong>Zinc gluconate</strong> : bon rapport qualité-prix, le plus courant.\n• <strong>Dosage</strong> : 15-30 mg par jour pour un adulte. Maximum 40 mg/jour.\n• <strong>Avec nourriture</strong> : prenez le zinc avec un repas pour éviter les nausées.\n• <strong>Association</strong> : zinc + magnésium + vitamine B6 = ZMA, idéal pour le sommeil.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.",
+  "howToChooseBody": "<ul><li><strong>Zinc bisglycinate</strong> : meilleure absorption, idéal pour une supplémentation quotidienne.</li><li><strong>Zinc picolinate</strong> : excellente biodisponibilité, bien étudié.</li><li><strong>Zinc gluconate</strong> : bon rapport qualité-prix, le plus courant.</li><li><strong>Dosage</strong> : 15-30 mg par jour pour un adulte. Maximum 40 mg/jour.</li><li><strong>Avec nourriture</strong> : prenez le zinc avec un repas pour éviter les nausées.</li><li><strong>Association</strong> : zinc + magnésium + vitamine B6 = ZMA, idéal pour le sommeil.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.</li></ul>",
   "faqs": [
     {
       "question": "Où acheter du zinc en Tunisie ?",
@@ -28,6 +28,17 @@
       "answer": "Baisse d'immunité, chute de cheveux, peau terne, ongles fragiles, fatigue, baisse de libido, difficultés de récupération."
     }
   ],
-  "relatedCategorySlugs": ["magnesium", "zma", "vitamines", "mineraux", "boosters-hormonaux"],
-  "bestProductSlugs": ["zinc-bisglycinate", "zinc-picolinate", "zinc-optimum-nutrition", "zma"]
+  "relatedCategorySlugs": [
+    "magnesium",
+    "zma",
+    "vitamines",
+    "mineraux",
+    "boosters-hormonaux"
+  ],
+  "bestProductSlugs": [
+    "zinc-bisglycinate",
+    "zinc-picolinate",
+    "zinc-optimum-nutrition",
+    "zma"
+  ]
 }

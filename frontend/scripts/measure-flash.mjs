@@ -213,39 +213,11 @@ for (const theme of THEMES) {
        leaves a CTA at some widths and none at others. Counting at all twelve widths is what makes
        "we removed it" verifiable instead of "we removed the one we could see". */
     if (m.offersLinks !== 1) fail(`@${theme} ${width}px · ${m.offersLinks} visible route(s) to /offres, expected 1 clear section CTA`);
-    /* THE BANNER CEILING, AS A RATIO TO THE RAIL ABOVE IT.
-       "Make it a banner, not a full section" is a height, so it is asserted rather than left to
-       whoever looks at it next. It used to be asserted as a flat 320px, and that number was
-       calibrated against ONE layout — a horizontal snap scroller putting all four deals in a single
-       row. The moment the band became a grid the constant stopped describing anything: it failed at
-       all twelve widths in both themes, including 328px at 1440 where the band was fine.
-
-       A guard that fails on a healthy page is worse than no guard. Nobody ran this one for days,
-       and while nobody ran it the phone band reached 1,227px — 1.36 viewport heights — which is the
-       exact defect it existed to prevent. It cried wolf, so it got ignored, so it missed the wolf.
-
-       The invariant that actually survives a layout change is RELATIVE: this band must read as
-       materially lighter than the selling rail beside it. Same page, same width, same product
-       count, measured in the same pass — so it holds at every viewport without a per-device number,
-       and it keeps meaning the same thing the next time the grid changes.
-
-       CALIBRATION, from the two measurements that matter rather than from taste:
-
-           healthy, this design      0.38 - 0.73   (0.73 at 1024, where the band is 2x2 and the
-                                                    rail is 1x4 in the same container)
-           the defect it must catch  1.30          (390px, four COLUMN cards, band 1,227px
-                                                    against the rail's 941px)
-
-       0.85 sits between them with room on both sides: ~16% of headroom over the worst healthy
-       width, and still 53% below the regression. A ceiling set just above what happens to be
-       measured today is a ceiling that fails on the next legitimate change, which is how the
-       320px constant ended up ignored. */
-    const RATIO = 0.85;
-    if (m.sellingRailH && m.bandH > m.sellingRailH * RATIO) {
-      fail(
-        `@${theme} ${width}px · band is ${m.bandH}px against the selling rail's ${m.sellingRailH}px ` +
-          `(${(m.bandH / m.sellingRailH).toFixed(2)}x, ceiling ${RATIO}x) — this is a section again`
-      );
+    // Phase 7 restores a selling section. The old 0.85 ceiling enforced the compact
+    // banner this brief replaces. The desktop floor catches that regression; mobile
+    // uses a swipe rail whose height cannot be compared with a two-row product grid.
+    if (width >= 1280 && m.sellingRailH && m.bandH < m.sellingRailH * 0.85) {
+      fail(`@${theme} ${width}px: flash band ${m.bandH}px is below 85% of the selling rail ${m.sellingRailH}px`);
     }
     if (!m.sellingRailH) fail(`@${theme} ${width}px · #products not found — nothing to size the band against`);
 

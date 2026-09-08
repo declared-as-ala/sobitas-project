@@ -3,6 +3,7 @@ import { GOOGLE_BUSINESS_REVIEWS } from '@/content/googleBusinessReviews';
 import { GOOGLE_PROFILE } from '@/util/company';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
+import { ReviewReveal } from '@/app/components/ReviewReveal';
 
 type GoogleReviewsSectionProps = {
   surface?: 'base' | 'sunken';
@@ -122,11 +123,11 @@ export function GoogleReviewsSection({
         </div>
       </div>
 
-      <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3" role="list">
+      <ReviewReveal>
         {GOOGLE_BUSINESS_REVIEWS.slice(0, ROWS * 3).map((review) => (
           <ReviewCard key={`${review.author}-${review.excerpt}`} review={review} />
         ))}
-      </ul>
+      </ReviewReveal>
 
       <p className="mt-3 text-xs leading-relaxed text-ink-3">
         Extraits de notre profil public Google Maps, vérifiés le 2 septembre 2026. Avis affichés dans leur langue d’origine.
@@ -158,7 +159,7 @@ type GoogleReview = (typeof GOOGLE_BUSINESS_REVIEWS)[number];
 
 function ReviewCard({ review }: { review: GoogleReview }) {
   return (
-    <li>
+    <li data-motion="review-reveal">
       <a
         href={GOOGLE_PROFILE.url}
         target="_blank"
@@ -167,14 +168,19 @@ function ReviewCard({ review }: { review: GoogleReview }) {
         className="group flex h-full flex-col rounded-xl border border-hairline bg-elevated p-4 shadow-sm transition-[border-color,box-shadow] hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-0.5 text-ok" aria-label="5 étoiles sur 5">
+          {/* Gold, not `text-ok` green. This section's whole function is borrowed authority from
+              Google — it carries Google's four-colour mark two lines up — and Google renders its
+              own rating stars gold. Green is this site's trust colour, but on a card claiming to
+              quote Google it reads as "not actually Google". Matches `StarRating.tsx` and the
+              header rating above. Reverting is this one token. */}
+          <div className="flex items-center gap-0.5 text-amber-400" aria-label="5 étoiles sur 5">
             {Array.from({ length: 5 }).map((_, index) => (
               <Star key={index} className="h-3.5 w-3.5 fill-current" strokeWidth={1.5} aria-hidden="true" />
             ))}
           </div>
           <GoogleMark className="h-4 w-4 shrink-0" />
         </div>
-        <blockquote lang={review.language} className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-ink-1">
+        <blockquote lang={review.language} dir="auto" className="mt-3 line-clamp-3 flex-1 text-sm leading-relaxed text-ink-1">
           “{review.excerpt}”
         </blockquote>
         <div className="mt-3 flex items-end justify-between gap-3 border-t border-hairline pt-3">

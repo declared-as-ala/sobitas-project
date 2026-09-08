@@ -5,7 +5,7 @@
   "ogImage": "https://protein.tn/favicon-512x512.png",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>bêta-alanine</strong> est un acide aminé non essentiel qui augmente les niveaux de carnosine dans les muscles. La carnosine agit comme un tampon contre l'acidité musculaire (lactate), retardant la fatigue et améliorant l'endurance. Sur <strong>Protein.tn</strong>, achetez votre bêta-alanine en Tunisie : poudre micronisée, gélules, et stacks pré-workout. Marques Optimum, BioTech, Scitec.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Les bienfaits de la bêta-alanine</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Endurance</strong> : retarde la fatigue musculaire, permet plus de répétitions</li>\n  <li><strong>Force</strong> : améliore la puissance et la force en musculation</li>\n  <li><strong>Pump</strong> : sensation de pompe musculaire accrue pendant l'effort</li>\n  <li><strong>Récupération</strong> : réduit les courbatures et accélère la récupération</li>\n  <li><strong>Synergie</strong> : fonctionne parfaitement avec la créatine pour des gains optimaux</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Bêta-Alanine Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix de la bêta-alanine en Tunisie</strong> : poudre à partir de 35 DT (200-500 g), gélules entre 40 et 70 DT pour 60-120 gélules. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
   "howToChooseTitle": "Comment choisir la bêta-alanine en Tunisie ?",
-  "howToChooseBody": "• <strong>Format poudre</strong> : meilleur rapport qualité-prix. Dosage précis avec une cuillère doseuse.\n• <strong>Format gélules</strong> : pratique pour transporter, pas de goût.\n• <strong>Dosage</strong> : 3-5 g par jour, répartis en 2-3 prises de 1-2 g.\n• <strong>Synergie</strong> : associez avec la créatine pour des résultats optimaux.\n• <strong>Attention</strong> : la bêta-alanine peut causer des picotements bénins (paresthésie) — c'est normal et sans danger.\n• <strong>Timing</strong> : prenez-la avant l'entraînement pour des effets optimaux.\n• <strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.",
+  "howToChooseBody": "<ul><li><strong>Format poudre</strong> : meilleur rapport qualité-prix. Dosage précis avec une cuillère doseuse.</li><li><strong>Format gélules</strong> : pratique pour transporter, pas de goût.</li><li><strong>Dosage</strong> : 3-5 g par jour, répartis en 2-3 prises de 1-2 g.</li><li><strong>Synergie</strong> : associez avec la créatine pour des résultats optimaux.</li><li><strong>Attention</strong> : la bêta-alanine peut causer des picotements bénins (paresthésie) — c'est normal et sans danger.</li><li><strong>Timing</strong> : prenez-la avant l'entraînement pour des effets optimaux.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.</li></ul>",
   "faqs": [
     {
       "question": "Où acheter de la bêta-alanine en Tunisie ?",
@@ -24,6 +24,16 @@
       "answer": "Oui, c'est l'une des combinaisons les plus efficaces pour la force et la masse musculaire. Elles agissent par des mécanismes différents et complémentaires."
     }
   ],
-  "relatedCategorySlugs": ["creatine", "pre-workout", "citrulline", "l-arginine", "bcaa"],
-  "bestProductSlugs": ["beta-alanine-poudre", "beta-alanine-gelules", "beta-alanine-optimum-nutrition"]
+  "relatedCategorySlugs": [
+    "creatine",
+    "pre-workout",
+    "citrulline",
+    "l-arginine",
+    "bcaa"
+  ],
+  "bestProductSlugs": [
+    "beta-alanine-poudre",
+    "beta-alanine-gelules",
+    "beta-alanine-optimum-nutrition"
+  ]
 }
