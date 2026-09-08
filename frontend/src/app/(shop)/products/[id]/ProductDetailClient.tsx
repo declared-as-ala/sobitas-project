@@ -1048,8 +1048,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               <div className="flex flex-col gap-3 lg:sticky lg:top-4">
             <div ref={buyBoxRef} data-buy-box="" className="rounded-2xl border border-hairline bg-elevated p-4 shadow-card sm:p-5">
 
+              {/*
+                Desktop purchase hierarchy (08/09/2026): price + reward, product facts, actions,
+                then reassurance. `contents` leaves the mobile formatting context intact; every
+                layout override starts at lg, where gallery and buy column sit side by side.
+                The reward keeps its 56px mark and arithmetic, but loses its separate panel.
+              */}
+              <div className="contents lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-4 lg:gap-y-1.5">
               {/* Price. One number, at a size nothing else on the page competes with. */}
-              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1 lg:col-start-1 lg:row-start-1">
                 <span className="font-display text-[2rem] font-bold leading-none tracking-tight tabular-nums text-brand sm:text-[2.5rem]">
                   {displayPrice} DT
                 </span>
@@ -1065,26 +1072,29 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 )}
               </div>
               {oldPrice && (
-                <p className="mt-1.5 text-xs font-semibold tabular-nums text-ok">
+                <p className="mt-1.5 text-xs font-semibold tabular-nums text-ok lg:col-start-1 lg:row-start-2 lg:mt-0">
                   Vous économisez {(oldPrice - displayPrice).toFixed(2)} DT
                 </p>
               )}
 
               {/*
-                ── THE LOYALTY LINE, DIRECTLY UNDER THE PRICE ────────────────────────────────
+                ── THE LOYALTY LINE, WITH THE PRICE ────────────────────────────────
                 This shop has run a 5% points programme the whole time and had never said so on a
                 product page. The figure lived behind a login, in the third tab of `/account` —
                 visible only to somebody who had already bought and already knew.
 
-                It goes here, between the price and the buy controls, because that is the span of
+                It stays below the price on mobile and beside it on desktop, in the span of
                 page where the number is still being weighed. `displayPrice * quantity` rather
                 than the unit price, so raising the stepper raises the reward in the same gesture
                 that raises the cost — the same pairing the "Total" line below the stepper makes.
               */}
-              <LoyaltyEarnLine amountDt={displayPrice * quantity} className="mt-3" />
+              <LoyaltyEarnLine amountDt={displayPrice * quantity} className="mt-3 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:w-auto lg:justify-self-end lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:[&>p]:text-end lg:[&>p]:text-xs lg:[&>p]:leading-snug lg:[&>p>span:last-child]:whitespace-nowrap" />
+              </div>
+
+              <div className="contents lg:mt-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-3 lg:gap-y-3 lg:border-t lg:border-rule-strong lg:pt-4">
 
               {/* Reference and barcode, where a buyer looks for them. One call site now, not two. */}
-              <ProductIdentifiers product={product} className="mt-2.5" />
+              <ProductIdentifiers product={product} className="mt-2.5 lg:mt-0 lg:min-w-0 lg:flex-1" />
 
               {/*
                 Stock, next to the control it qualifies rather than floated as a badge beside the
@@ -1101,7 +1111,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 return (
                   <p
                     className={cn(
-                      'mt-3 flex items-center gap-1.5 border-t border-hairline pt-3 text-sm font-semibold',
+                      'mt-3 flex items-center gap-1.5 border-t border-hairline pt-3 text-sm font-semibold lg:-order-1 lg:mt-0 lg:border-0 lg:pt-0',
                       stockStatus.isOutOfStock ? 'text-ink-3' : stockStatus.isLowStock ? 'text-warn' : 'text-ok'
                     )}
                   >
@@ -1116,8 +1126,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
               {/* Arômes */}
               {product.aromes && product.aromes.length > 0 && (
-                <div className="mt-4">
-                  <p className="mb-2 text-sm font-semibold text-ink-1">Arôme</p>
+                <div className="mt-4 lg:mt-0 lg:flex lg:basis-full lg:items-center lg:gap-3 lg:[&>button]:w-auto lg:[&>button]:min-w-0 lg:[&>button]:flex-1">
+                  <p className="mb-2 text-sm font-semibold text-ink-1 lg:mb-0">Arôme</p>
                   <AromaSelect
                     aromas={product.aromes}
                     selectedId={selectedAromaId}
@@ -1126,8 +1136,10 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
+              </div>
+
               {/* Quantity + running total */}
-              <div className="mt-4 flex items-center justify-between gap-3">
+              <div className="mt-4 flex items-center justify-between gap-3 lg:border-t lg:border-rule-strong lg:pt-4">
                 <div className="flex items-center gap-2.5">
                   <span className="text-sm font-semibold text-ink-1">Quantité</span>
                   <div className="flex items-center rounded-xl border border-hairline bg-canvas">
@@ -1169,7 +1181,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 quantity — there was no button under their thumb. That is 81% of this site's
                 traffic. The sticky bar stays, and now yields while this box is on screen.
               */}
-              <div className="mt-4 flex flex-col gap-2">
+              {/* Only the purchase branch pairs its alternate paths: WhatsApp stays prominent
+                  for backorders, where it is the direct ordering conversation. */}
+              <div className={cn('mt-4 flex flex-col gap-2', !stockStatus.isBackOrder && 'lg:grid lg:grid-cols-2')}>
                 {stockStatus.isBackOrder ? (
                   /*
                     SUR COMMANDE — a request, not a purchase.
@@ -1237,7 +1251,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                         entirely: a scale is movement, and DESIGN_SYSTEM §9 is explicit that
                         anything moving more than a colour respects the preference. */}
                     <Button
-                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide transition-[background-color,transform] duration-150 active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100"
+                      className="min-h-[52px] w-full font-display text-sm font-bold uppercase tracking-wide transition-[background-color,transform] duration-150 active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100 lg:col-span-2"
                       onClick={handleAddToCart}
                       disabled={stockStatus.isOutOfStock}
                     >
@@ -1246,11 +1260,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     </Button>
                     <Button
                       variant="outline"
-                      className="min-h-[52px] w-full border-brand bg-transparent font-display text-sm font-bold uppercase tracking-wide text-brand transition-[background-color,color,transform] duration-150 hover:bg-brand hover:text-on-brand active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100"
+                      className="min-h-[52px] w-full border-brand bg-transparent font-display text-sm font-bold uppercase tracking-wide text-brand transition-[background-color,color,transform] duration-150 hover:bg-brand hover:text-on-brand active:scale-[0.99] disabled:active:scale-100 motion-reduce:transition-none motion-reduce:active:scale-100 lg:h-auto lg:min-h-11 lg:gap-1.5 lg:whitespace-normal lg:border-hairline lg:px-2 lg:font-sans lg:text-xs lg:font-semibold lg:normal-case lg:tracking-normal lg:text-ink-1 lg:hover:bg-sunken lg:hover:text-brand"
                       onClick={handleQuickOrderClick}
                       disabled={stockStatus.isOutOfStock}
                     >
-                      <Zap className="me-2 h-4 w-4 shrink-0" />
+                      <Zap className="me-2 h-4 w-4 shrink-0 lg:me-0" />
                       Commander maintenant
                     </Button>
                 {/*
@@ -1277,7 +1291,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   href={whatsappHref}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-elevated font-display text-sm font-bold uppercase tracking-wide text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  className="inline-flex min-h-[52px] w-full items-center justify-center gap-2 rounded-xl border border-hairline bg-elevated font-display text-sm font-bold uppercase tracking-wide text-ink-1 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:min-h-11 lg:gap-1.5 lg:px-2 lg:font-sans lg:text-xs lg:font-semibold lg:normal-case lg:tracking-normal"
                 >
                   <svg viewBox="0 0 24 24" className="h-5 w-5 shrink-0" fill={WHATSAPP_GREEN} aria-hidden="true">
                     <path d={WHATSAPP_ICON_PATH} />
@@ -1300,11 +1314,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 that is where a shopper who has decided NOT to buy today actually looks. They are
                 written once, here; the copies on the frame are deleted rather than kept in sync.
               */}
-              <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2 lg:flex lg:justify-center lg:gap-4">
                 <button
                   type="button"
                   onClick={() => toggleFavorite(favoriteProduct)}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:border-transparent lg:px-2 lg:text-xs"
                   aria-pressed={isInFavorites(product.id)}
                 >
                   <Heart
@@ -1318,7 +1332,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <button
                   type="button"
                   onClick={handleShare}
-                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:border-transparent lg:px-2 lg:text-xs"
                 >
                   <Share2 className="h-4 w-4 shrink-0" aria-hidden="true" />
                   Partager
@@ -1340,7 +1354,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 the shop's stated terms, authenticity is its own guarantee (stated as its own, not
                 as a third-party verification), and the number is the number.
               */}
-              <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-hairline pt-4 sm:grid-cols-4">
+              <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-hairline pt-4 sm:grid-cols-4 lg:border-rule-strong">
                 {[
                   { Icon: Truck, label: 'Livraison', sub: '24–72h' },
                   { Icon: CreditCard, label: 'Paiement', sub: 'À la livraison' },
