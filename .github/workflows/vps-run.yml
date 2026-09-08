@@ -102,6 +102,7 @@ on:
           # delivered actually reaches the review engine rather than stopping at the order
           # table — two facts that were previously only ever assumed together.
           - reviews-due-dry-run
+          - reviews-backfill-dry-run
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
@@ -121,6 +122,7 @@ on:
           # and backfills `text_hash` — without which duplicate detection has nothing to compare a
           # new review against and silently finds nothing. It never changes `publier`.
           - reviews-rescore-apply
+          - reviews-backfill-apply
           # `aramex-sync-apply` is the one that actually marks orders delivered. Gated with the
           # other writes because it is the most consequential button here: each promotion stamps a
           # delivery date, credits loyalty points, and makes the order eligible for a review
@@ -211,6 +213,19 @@ jobs:
             reviews-due-dry-run)
               ARGS="reviews:send-due-requests --dry-run"
               WRITES=no
+              ;;
+            reviews-backfill-dry-run)
+              # The routine sender only looks 3-21 days back. This reaches the historical
+              # backlog of delivered orders that were never asked, up to 180 days.
+              ARGS="reviews:backfill-requests --days=180 --limit=25 --dry-run"
+              WRITES=no
+              ;;
+            reviews-backfill-apply)
+              # --limit=25 --sleep=2 is the command's own throttle: 25 emails per run, two
+              # seconds apart, so a backlog is drained in small batches instead of one burst
+              # that trips the SMTP rate limit or the queue.
+              ARGS="reviews:backfill-requests --days=180 --limit=25 --sleep=2"
+              WRITES=yes
               ;;
 
             reviews-rescore)
