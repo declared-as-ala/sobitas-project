@@ -22,6 +22,20 @@ export interface BrandSeoEntry {
  * a flavour: the same product declares different values per flavour, so an unqualified "30 g de
  * protéines" would be wrong for four of the five Nitro-Tech SKUs we list.
  *
+ * Four brands added on 08/09/2026 — gsn-great-sport-nutrition, real-pharm, ultimate-nutrition,
+ * c4-cellucor — have a thinner data floor, and the copy says so instead of papering over it. Only
+ * Real Pharm publishes a transcribed label on our own fiches: /product_details/real-isolate-1-8-kg
+ * and /product_details/real-mass-6-8-kg-real-pharm carry a populated `nutrition_facts`, and those
+ * are the ONLY two per-portion figures quoted in those four entries. GSN, Ultimate Nutrition and
+ * C4 / Cellucor return `nutrition_values: null` and empty `nutrition_facts.rows` on all 36 of
+ * their SKUs, so their entries quote no gram figure at all and say plainly that the pot's own
+ * label is the reference. Everything else in them — family, format, net weight, arôme — is read
+ * off /api/productsByBrandId/{53,21,24,342}, which is what the product grid on the same screen
+ * renders. Two traps worth writing down: "Animal Pak" belongs to brand 25 (Universal Nutrition),
+ * NOT to brand 168 (Animal), so it is absent from /animal; and "C4 / Cellucor" (342, 17 SKUs) and
+ * "CELLUCOR" (11, 1 SKU) are two separate brand rows serving two separate 200 pages, so the C4
+ * Original label figures that exist on /cellucor may not be reused on /c4-cellucor.
+ *
  * No entry states a price, a discount, a stock level or an availability promise. Those change
  * daily and the product grid above the copy already renders the live values — a number frozen
  * into this file would be a contradiction on the same screen within a week.
@@ -323,6 +337,212 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
       { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
       { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
+    ],
+  },
+
+  'gsn-great-sport-nutrition': {
+    metaTitle: 'GSN Tunisie | Whey, Isolate, Créatine & Gainer — Protein.tn',
+    metaDescription:
+      'GSN Great Sport Nutrition en Tunisie : Pure Whey et Nitro Whey 2 kg, Isolate Pro 2 kg, Creatine Monohydrate 200 g et 500 g, Big Mass Gainer 3 kg et 6 kg.',
+    h1: 'GSN Great Sport Nutrition Tunisie : whey, créatine et gainer',
+    introHtml:
+      '<p>La gamme <strong>GSN Great Sport Nutrition en Tunisie</strong> tient en sept références réparties sur trois usages. Côté protéines : <strong>Pure Whey</strong> 2 kg et <strong>Nitro Whey</strong> 2 kg, rangées en whey protéine sur le site, et <strong>Isolate Pro</strong> 2 kg, rangée en whey isolate. Côté performance : <strong>Creatine Monohydrate</strong> en 200 g et en 500 g. Côté calories : <strong>Big Mass Gainer</strong> en 3 kg et en 6 kg, le format 6 kg étant référencé en arôme Banane. Les trois poudres protéinées de la marque sont toutes vendues en 2 kg : GSN ne décline pas ses whey en petit pot, si bien que le choix porte sur le type de protéine et non sur la contenance.</p>',
+    howToChooseTitle: 'Quel produit GSN choisir ?',
+    howToChooseBody:
+      '<p>Les trois poudres protéinées de GSN ne sont pas classées dans le même rayon, et c’est le point de départ du choix. <strong>Pure Whey</strong> et <strong>Nitro Whey</strong> figurent en whey protéine : ce sont les références polyvalentes, faites pour compléter l’apport quotidien en protéines quand l’alimentation seule n’y suffit pas. <strong>Isolate Pro</strong> figure en whey isolate, une famille où la poudre subit une filtration supplémentaire et vise donc davantage de protéines par portion pour moins de glucides et de lipides. Nos fiches produit GSN ne publient pas de tableau de valeurs nutritionnelles : aucune valeur par portion n’est donc annoncée ici, et l’étiquette du pot reçu reste la seule référence pour calculer votre apport.</p>' +
+      '<p><strong>Creatine Monohydrate</strong> répond à une autre question. Les pots de 200 g et de 500 g contiennent le même ingrédient ; à dose journalière égale, seule la durée couverte change, ce qui en fait un arbitrage de budget et non de qualité. La créatine n’apporte pas de protéines : elle se prend en complément d’une whey, pas à sa place. <strong>Big Mass Gainer</strong>, enfin, ne s’adresse pas au même profil que les whey. Un gainer ajoute des glucides et des calories, et sert quand le point bloquant est d’atteindre l’apport calorique quotidien plutôt que l’apport protéique. Ses deux contenances sont classées dans deux rayons distincts du site — mass gainers pour le 3 kg, gainers protéinés pour le 6 kg — mais elles portent le même nom de produit. Vérifiez l’arôme affiché sur la fiche avant de commander : seul le 6 kg est référencé avec un arôme, Banane.</p>',
+    faqs: [
+      {
+        question: 'Quels produits GSN sont vendus en Tunisie sur Protein.tn ?',
+        answer:
+          'Sept références : Pure Whey 2 kg, Nitro Whey 2 kg, Isolate Pro 2 kg, Creatine Monohydrate 200 g, Creatine Monohydrate 500 g, Big Mass Gainer 3 kg et Big Mass Gainer 6 kg. Le Big Mass Gainer 6 kg est le seul référencé avec un arôme, Banane. La grille de produits de cette page affiche l’état réel de chaque référence.',
+      },
+      {
+        question: 'Quelle différence entre GSN Pure Whey, Nitro Whey et Isolate Pro ?',
+        answer:
+          'Pure Whey et Nitro Whey sont classées en whey protéine sur Protein.tn, Isolate Pro en whey isolate. Une whey isolate est plus filtrée qu’une whey classique et vise plus de protéines par portion pour moins de glucides et de lipides, généralement à un prix au kilo plus élevé. Les trois existent uniquement en 2 kg. Nos fiches GSN ne publient pas de valeurs nutritionnelles par portion : reportez-vous à l’étiquette du pot.',
+      },
+      {
+        question: 'Faut-il prendre la créatine GSN en 200 g ou en 500 g ?',
+        answer:
+          'Les deux pots contiennent la même Creatine Monohydrate. À dose journalière identique, le 500 g couvre simplement une période plus longue. Comparez le prix affiché des deux formats sur cette page : rien ne les distingue sur le plan de la composition.',
+      },
+      {
+        question: 'GSN Big Mass Gainer ou une whey GSN pour prendre du poids ?',
+        answer:
+          'Cela dépend de ce qui bloque. Si vous mangez assez de calories mais pas assez de protéines, une whey suffit. Si vous n’arrivez pas à atteindre votre apport calorique quotidien en mangeant, le Big Mass Gainer apporte en plus des glucides et des calories. Il existe en 3 kg et en 6 kg, deux contenances du même produit rangées dans deux rayons différents du site.',
+      },
+      {
+        question: 'Quel est le prix des produits GSN en Tunisie ?',
+        answer:
+          'Le prix dépend du format et des promotions en cours. La grille de produits de cette page affiche le prix et la disponibilité actuels de chaque référence GSN vendue sur Protein.tn.',
+      },
+      {
+        question: 'Comment commander GSN en Tunisie ?',
+        answer:
+          'Choisissez le produit et le format disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
+    ],
+  },
+
+  'real-pharm': {
+    metaTitle: 'Real Pharm Tunisie | Whey, Isolate, Créatine — Protein.tn',
+    metaDescription:
+      'Real Pharm en Tunisie : Real Whey 100, Real Isolate 1,8 kg, Real Casein, Real Mass 6,8 kg, créatine 150 à 500 g, BCAA, EAA et pre-workout King Real 500 g.',
+    h1: 'Real Pharm Tunisie : Real Whey, Real Isolate et créatine',
+    introHtml:
+      '<p>La gamme <strong>Real Pharm en Tunisie</strong> est l’une des plus larges du catalogue et couvre quatre usages. Les protéines d’abord : <strong>Real Whey 100</strong> 2,250 kg (Chocolat), <strong>Real Isolate</strong> 1,8 kg (Vanille), <strong>Real Casein 100</strong> 700 g (Fraise) et <strong>Muscle On</strong> en 1 kg (Cookies) et 2,27 kg (Chocolat), une protéine multi-sources. Les calories ensuite : <strong>Real Mass</strong> 6,8 kg (Cookies) et <strong>Carbo One</strong> 1 kg (Watermelon), une poudre de glucides seule. Les poudres de performance : <strong>Creatine Monohydrate</strong> en 150 g, 300 g et 500 g, <strong>BCAA 8:1:1</strong> 400 g (Fraise), <strong>EAA</strong> 420 g (Ananas), <strong>Beta Alanine</strong> 300 g (Fruit Punch), <strong>Citrulline</strong> 200 g et <strong>CitruArgin</strong> 300 g (Fruit de la passion), plus deux pre-workouts, <strong>King Real</strong> 500 g (Watermelon) et <strong>Behemoth</strong> 500 g. Enfin les gélules et comprimés du quotidien : Collagen Marine 300 g, Vitamin D3 + K2, Vitamax Men, Zinc, ZMA, Biotyna, Tribulus, Ashwagandha et Omega 3-6-9.</p>',
+    howToChooseTitle: 'Quel produit Real Pharm choisir ?',
+    howToChooseBody:
+      '<p>Sur la partie protéines, les trois références principales ne visent pas le même usage. <strong>Real Isolate</strong> est la plus concentrée : sur le format 1,8 kg en arôme Vanille, l’étiquette du fabricant transcrite sur notre fiche déclare une portion de 30 g apportant 25,8 g de protéines, 106 kcal, 0,3 g de glucides dont 0,3 g de sucres et 0,09 g de lipides, pour 60 portions par pot. Ces valeurs sont annoncées pour les arômes hors chocolat, et le produit contient du lait. <strong>Real Whey 100</strong> est la whey polyvalente, <strong>Real Casein 100</strong> une caséine à digestion plus lente que l’on place plutôt en dehors de l’entraînement, et <strong>Muscle On</strong> une protéine multi-sources, dont le format 1 kg est d’ailleurs classé en gainers protéinés sur le site.</p>' +
+      '<p>Si le problème est calorique et non protéique, la logique change. <strong>Real Mass</strong> 6,8 kg en arôme Cookies déclare une portion de 75 g apportant 283 kcal, 51 g de glucides dont 7,5 g de sucres et 15 g de protéines, pour 90 portions par pot ; les ingrédients aromatiques varient selon la saveur du pot, donc vérifiez l’étiquette reçue. <strong>Carbo One</strong> 1 kg, à l’inverse, n’apporte que des glucides et sert à compléter un shake ou une séance, pas à remplacer une protéine. Côté performance, la <strong>créatine</strong> en 150 g, 300 g et 500 g est le même ingrédient dans trois contenances : c’est un arbitrage de durée et de budget. <strong>BCAA 8:1:1</strong> et <strong>EAA</strong> se prennent autour de l’entraînement en complément d’un apport protéique déjà couvert, et <strong>King Real</strong> comme <strong>Behemoth</strong> sont des pre-workouts en 500 g, à réserver aux séances où vous en avez réellement besoin. Reportez-vous à l’étiquette de chaque référence pour les doses, la caféine éventuelle et les allergènes.</p>',
+    faqs: [
+      {
+        question: 'Combien de protéines dans une portion de Real Isolate 1,8 kg ?',
+        answer:
+          'Sur le format 1,8 kg en arôme Vanille, l’étiquette du fabricant transcrite sur notre fiche indique une portion de 30 g apportant 25,8 g de protéines, 106 kcal, 0,3 g de glucides dont 0,3 g de sucres et 0,09 g de lipides, soit 60 portions par pot. Ces valeurs sont données pour les arômes hors chocolat. Le produit contient du lait.',
+      },
+      {
+        question: 'Quelle différence entre Real Whey 100, Real Isolate et Real Casein ?',
+        answer:
+          'Real Whey 100 est la whey polyvalente de la marque, proposée en 2,250 kg arôme Chocolat. Real Isolate est une whey isolate 1,8 kg, plus filtrée, qui vise plus de protéines par portion pour très peu de glucides et de lipides. Real Casein 100 est une caséine 700 g arôme Fraise, à digestion plus lente, que l’on place plutôt en dehors de la fenêtre d’entraînement.',
+      },
+      {
+        question: 'Que contient une portion de Real Mass 6,8 kg ?',
+        answer:
+          'Sur le format 6,8 kg en arôme Cookies, l’étiquette indique une portion de 75 g apportant 283 kcal, 51 g de glucides dont 7,5 g de sucres et 15 g de protéines, soit 90 portions par pot. Les ingrédients aromatiques varient selon la saveur du pot, et le produit contient du lait.',
+      },
+      {
+        question: 'Quels formats de créatine Real Pharm existent en Tunisie ?',
+        answer:
+          'Trois contenances de Creatine Monohydrate sont référencées : 150 g, 300 g et 500 g. Il s’agit du même ingrédient ; à dose journalière égale, seule la durée couverte par le pot change. Le choix se fait donc sur le prix affiché et sur la durée que vous voulez couvrir.',
+      },
+      {
+        question: 'Real Pharm propose-t-il un pre-workout ?',
+        answer:
+          'Oui, deux références en 500 g : King Real Preworkout, référencé en arôme Watermelon, et Behemoth Preworkout. Ce sont des poudres à prendre avant la séance. Vérifiez la teneur en caféine sur l’étiquette et évitez de les cumuler avec d’autres sources de caféine dans la journée.',
+      },
+      {
+        question: 'Comment commander Real Pharm en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
+    ],
+  },
+
+  'ultimate-nutrition': {
+    metaTitle: 'Ultimate Nutrition Tunisie | Prostar & ISO Sensation 93',
+    metaDescription:
+      'Ultimate Nutrition en Tunisie : Prostar 100% Whey 907 g et 2,4 kg, ISO Sensation 93 en 910 g, Prostar Casein, créatine 300 g, glutamine 400 g et Oméga 3.',
+    h1: 'Ultimate Nutrition Tunisie : Prostar et ISO Sensation 93',
+    introHtml:
+      '<p>La gamme <strong>Ultimate Nutrition en Tunisie</strong> se lit en trois blocs. Les protéines en poudre : <strong>Prostar 100% Whey</strong> en 907 g (Vanille) et en 2,4 kg (Cookies, Double chocolat), <strong>ISO Sensation 93</strong> en 910 g (Cookies, Chocolat) et en 2,27 kg (Chocolate Fudge), et <strong>Prostar 100% Casein</strong> 907 g (Chocolat). Les poudres et gélules de performance : <strong>Creatine Monohydrate</strong> 300 g, <strong>L-Glutamine Gluta Pure</strong> 400 g et <strong>Arginine &amp; Pyroglutamate &amp; Lysine</strong> 100 gélules. Enfin les compléments du quotidien : <strong>Omega 3</strong> 90 softgels, <strong>Pure CLA 1000</strong> 90 softgels, <strong>Tribulus Bulgarian</strong> 90 gélules et <strong>L-Carnitine 2000</strong> en flacon de 355 ml, la seule forme liquide de la sélection.</p>',
+    howToChooseTitle: 'Quelle protéine Ultimate Nutrition choisir ?',
+    howToChooseBody:
+      '<p>Le choix se joue d’abord entre <strong>Prostar 100% Whey</strong> et <strong>ISO Sensation 93</strong>. Prostar est rangée en whey protéine sur le site : c’est la référence polyvalente, celle qui complète l’apport quotidien en protéines quand l’alimentation seule n’y suffit pas, et elle existe en deux contenances, 907 g et 2,4 kg. ISO Sensation 93 est rangée en whey isolate, une famille davantage filtrée qui vise plus de protéines par portion pour moins de glucides et de lipides, en général à un prix au kilo supérieur ; elle existe en 910 g et 2,27 kg. <strong>Prostar 100% Casein</strong> ne remplace ni l’une ni l’autre : une caséine se digère plus lentement et se place plutôt en dehors de la fenêtre d’entraînement. Nos fiches Ultimate Nutrition ne publient pas de tableau de valeurs nutritionnelles, donc aucune valeur par portion n’est avancée ici — l’étiquette du pot reçu fait foi, d’autant que le même produit déclare des valeurs différentes d’un arôme à l’autre.</p>' +
+      '<p>Les arômes disponibles diffèrent d’un format à l’autre, ce qui est souvent le vrai critère : Prostar est référencée en Vanille sur le 907 g, en Cookies et Double chocolat sur le 2,4 kg ; ISO Sensation 93 en Cookies et Chocolat sur le 910 g, en Chocolate Fudge sur le 2,27 kg. Vérifiez donc l’arôme sur la fiche avant de choisir la contenance. Sur le reste de la gamme, <strong>Creatine Monohydrate</strong> 300 g et <strong>L-Glutamine Gluta Pure</strong> 400 g sont des poudres à dose simple qui se prennent en complément d’une protéine, pas à sa place. <strong>Pure CLA 1000</strong>, <strong>Omega 3</strong>, <strong>Tribulus Bulgarian</strong> et <strong>L-Carnitine 2000</strong> relèvent d’un usage quotidien en gélules ou en liquide et non de la performance à l’entraînement ; reportez-vous à l’étiquette de chaque flacon pour les doses et les allergènes.</p>',
+    faqs: [
+      {
+        question: 'Quelle différence entre Prostar 100% Whey et ISO Sensation 93 ?',
+        answer:
+          'Prostar 100% Whey est classée en whey protéine sur Protein.tn et ISO Sensation 93 en whey isolate. Une whey isolate est plus filtrée et vise davantage de protéines par portion pour moins de glucides et de lipides, généralement à un prix au kilo plus élevé. Prostar existe en 907 g et 2,4 kg, ISO Sensation 93 en 910 g et 2,27 kg.',
+      },
+      {
+        question: 'Quels arômes Ultimate Nutrition sont référencés en Tunisie ?',
+        answer:
+          'Prostar 100% Whey est référencée en Vanille sur le format 907 g, et en Cookies et Double chocolat sur le 2,4 kg. ISO Sensation 93 est référencée en Cookies et Chocolat sur le 910 g, et en Chocolate Fudge sur le 2,27 kg. Prostar 100% Casein 907 g est référencée en Chocolat. Les arômes réellement disponibles s’affichent sur chaque fiche produit.',
+      },
+      {
+        question: 'À quoi sert Prostar 100% Casein par rapport à une whey ?',
+        answer:
+          'La caséine se digère plus lentement que la whey. Elle sert donc plutôt à couvrir un intervalle long sans apport protéique, par exemple en fin de journée, alors qu’une whey est habituellement placée autour de l’entraînement. Elle ne remplace pas une whey : les deux couvrent des moments différents de la journée.',
+      },
+      {
+        question: 'Quels autres produits Ultimate Nutrition trouve-t-on sur Protein.tn ?',
+        answer:
+          'En dehors des protéines : Creatine Monohydrate 300 g, L-Glutamine Gluta Pure 400 g, Arginine & Pyroglutamate & Lysine 100 gélules, Omega 3 90 softgels, Pure CLA 1000 90 softgels, Tribulus Bulgarian 90 gélules et L-Carnitine 2000 en flacon liquide de 355 ml.',
+      },
+      {
+        question: 'Quel est le prix des produits Ultimate Nutrition en Tunisie ?',
+        answer:
+          'Le prix dépend du format, de l’arôme et des promotions en cours. La grille de produits de cette page affiche le prix et la disponibilité actuels de chaque référence Ultimate Nutrition vendue sur Protein.tn.',
+      },
+      {
+        question: 'Comment commander Ultimate Nutrition en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'caseine', name: 'Caséine en Tunisie', url: '/caseine' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
+    ],
+  },
+
+  'c4-cellucor': {
+    metaTitle: 'C4 / Cellucor Tunisie | Pre-Workout, C4 Whey & Créatine',
+    metaDescription:
+      'C4 / Cellucor en Tunisie : C4 Original et C4 Ripped Sport, C4 Whey Protein en six versions, COR-Performance Creatine en cinq arômes, Max Test et brûleurs.',
+    h1: 'C4 / Cellucor Tunisie : pre-workout, whey et créatine',
+    introHtml:
+      '<p>La gamme <strong>C4 / Cellucor en Tunisie</strong> compte dix-sept références organisées en quatre familles. Les pre-workouts : <strong>C4 Original</strong> 246 g (Grape Popsicle) et <strong>C4 Ripped Sport</strong> en 213 g (Fruit Punch) et 210 g (Arctic Snow Cone). Les protéines : <strong>C4 Whey Protein</strong> en six versions — Vanilla Bean en 966 g et 2,28 kg, Hershey’s Milk Chocolate en 1,01 kg et 2,38 kg, Reese’s Peanut Butter &amp; Chocolate en 1,13 kg et 2,65 kg. La créatine : <strong>COR-Performance Creatine</strong> en cinq arômes, Jolly Rancher Green Apple 316 g, Jolly Rancher Cherry 321 g, Watermelon 315 g, Blue Raspberry 315 g et Fruit Punch 325 g. Enfin trois produits en gélules : <strong>Max Test</strong> 120 gélules, <strong>Super Shred</strong> et <strong>Super Thermo Stim-Free</strong> en 60 gélules chacun.</p>',
+    howToChooseTitle: 'Quel produit C4 / Cellucor choisir ?',
+    howToChooseBody:
+      '<p>C’est le pre-workout qui fait connaître la marque, et le catalogue en propose deux. <strong>C4 Original</strong> 246 g est la version historique, référencée ici en arôme Grape Popsicle. <strong>C4 Ripped Sport</strong>, en 213 g et 210 g, est une formule distincte présentée sous un autre nom par le fabricant ; elle est proposée en Fruit Punch et Arctic Snow Cone. Ces poudres contiennent de la caféine : lisez l’étiquette du pot reçu pour la dose exacte, évitez de les cumuler avec d’autres sources de caféine dans la même journée, et ne les prenez pas trop tard si vous êtes sensible au sommeil. Aucune valeur par portion n’est publiée sur nos fiches C4 / Cellucor, donc aucun chiffre n’est avancé ici.</p>' +
+      '<p>Le reste de la gamme couvre des besoins différents. <strong>C4 Whey Protein</strong> est une whey protéine classique : chacun de ses trois arômes existe en un petit et un grand format, ce qui permet de tester une saveur sur environ 1 kg avant de passer au pot de 2,28 à 2,65 kg. Le choix se fait donc sur l’arôme puis sur la contenance, et non sur la formule. <strong>COR-Performance Creatine</strong> est la créatine aromatisée de la marque, déclinée en cinq saveurs pour des pots de 315 à 325 g ; c’est le même produit d’un arôme à l’autre, le poids net variant simplement avec le système d’arôme. Les trois références en gélules — <strong>Max Test</strong>, classée en boosters hormonaux sur le site, <strong>Super Shred</strong> et <strong>Super Thermo Stim-Free</strong>, classées en brûleurs de graisse — relèvent d’un usage ponctuel et encadré : lisez la posologie du fabricant et demandez un avis médical en cas de traitement en cours.</p>',
+    faqs: [
+      {
+        question: 'Quels pre-workouts C4 sont disponibles en Tunisie ?',
+        answer:
+          'Deux formules. C4 Original en 246 g, référencé en arôme Grape Popsicle, et C4 Ripped Sport en 213 g arôme Fruit Punch et en 210 g arôme Arctic Snow Cone. Les deux sont des poudres à prendre avant la séance et contiennent de la caféine : la dose exacte figure sur l’étiquette du pot.',
+      },
+      {
+        question: 'En quels formats et arômes existe C4 Whey Protein ?',
+        answer:
+          'En six versions : Vanilla Bean en 966 g et 2,28 kg, Hershey’s Milk Chocolate en 1,01 kg et 2,38 kg, Reese’s Peanut Butter & Chocolate en 1,13 kg et 2,65 kg. Chaque arôme existe donc en un petit et un grand format, ce qui permet d’essayer une saveur avant de prendre le grand pot.',
+      },
+      {
+        question: 'Combien d’arômes pour la COR-Performance Creatine ?',
+        answer:
+          'Cinq : Jolly Rancher Green Apple 316 g, Jolly Rancher Cherry 321 g, Watermelon 315 g, Blue Raspberry 315 g et Fruit Punch 325 g. Il s’agit de la même créatine aromatisée ; le poids net varie légèrement d’un arôme à l’autre parce que le système d’arôme change, pas la dose de créatine par mesure.',
+      },
+      {
+        question: 'Faut-il un pre-workout C4 ou une créatine COR-Performance ?',
+        answer:
+          'Les deux ne servent pas au même moment. Un pre-workout se prend avant la séance et contient notamment de la caféine ; la créatine se prend tous les jours, séance ou non, et ne dépend pas de l’horaire. Les deux peuvent se cumuler, mais la créatine est le complément le plus étudié des deux et ne pose pas de question de tolérance à la caféine.',
+      },
+      {
+        question: 'Quel est le prix des produits C4 / Cellucor en Tunisie ?',
+        answer:
+          'Le prix dépend du produit, du format, de l’arôme et des promotions en cours. La grille de produits de cette page affiche le prix et la disponibilité actuels de chaque référence C4 / Cellucor vendue sur Protein.tn.',
+      },
+      {
+        question: 'Comment commander C4 / Cellucor en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'bruleurs-de-graisse', name: 'Brûleurs de graisse en Tunisie', url: '/bruleurs-de-graisse' },
     ],
   },
 });
