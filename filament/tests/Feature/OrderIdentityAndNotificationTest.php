@@ -251,7 +251,7 @@ class OrderIdentityAndNotificationTest extends TestCase
         $sms = TransactionalSmsText::status($order);
 
         $this->assertStringStartsWith('Protein.tn: mise a jour commande #2026/STATUS:', $sms);
-        $this->assertStringContainsString("Besoin d'aide? +216 27 612 500.", $sms);
+        $this->assertStringContainsString("Besoin d'aide? +216 22 464 315.", $sms);
         $this->assertLessThanOrEqual(160, mb_strlen($sms));
     }
 

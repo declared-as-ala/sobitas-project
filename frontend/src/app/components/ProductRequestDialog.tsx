@@ -13,6 +13,7 @@ import { buildComparison, type ComparisonRow } from '@/util/productComparison';
 import { visibleNutrients } from '@/util/productComparisonFacts';
 import { getProductPrimarySubCategory } from '@/util/productUrl';
 import { formatTnd } from '@/util/productPrice';
+import { CONTACT_PHONE } from '@/util/company';
 import type { Product } from '@/types';
 
 export interface ProductRequestDialogProps {
@@ -60,7 +61,7 @@ export function ProductRequestDialog({ open, onOpenChange, product, productName,
       setStep('sent');
     } catch (e) {
       const data = (e as { response?: { data?: { errors?: Record<string, string[]>; message?: string } } }).response?.data;
-      setError(Object.values(data?.errors ?? {}).flat()[0] || 'Envoi impossible. Vos informations sont conservées : réessayez ou appelez le 27 612 500.');
+      setError(Object.values(data?.errors ?? {}).flat()[0] || `Envoi impossible. Vos informations sont conservées : réessayez ou appelez le ${CONTACT_PHONE.national}.`);
     } finally { setSending(false); }
   };
   return <Sheet open={open} onOpenChange={next => { if (!sending) onOpenChange(next); }}>

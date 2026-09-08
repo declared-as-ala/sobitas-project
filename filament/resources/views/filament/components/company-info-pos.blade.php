@@ -11,7 +11,7 @@
         <strong style="font-size: 16px; color: #0f172a; display: block; margin-bottom: 6px;">
             {{ $coordinate->name ?? 'STE PROTEIN.TN' }}
         </strong>
-        <div>{{ $coordinate->phone_1 ?? '+216 27 612 500' }} / {{ $coordinate->phone_2 ?? '+216 73 200 169' }}</div>
+        <div>{{ $coordinate->phone_1 ?? '+216 22 464 315' }} / {{ $coordinate->phone_2 ?? '+216 73 200 169' }}</div>
         <div>{{ $coordinate->address ?? 'Rue Ribat, 4000 Sousse Tunisie' }}</div>
         @if($coordinate && $coordinate->mf)
             <div class="mt-1 text-sm text-gray-500">M.F: {{ $coordinate->mf }}</div>

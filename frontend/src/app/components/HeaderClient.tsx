@@ -6,6 +6,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE } from '@/util/company';
 import {
   ShoppingCart,
   User,
@@ -48,8 +49,8 @@ import { MULTILOCALE_ENABLED } from '@/i18n';
 // open state, so every add-to-cart re-rendered the whole header inside the tap handler. See the
 // note in CartDrawerHost for the measurements.
 
-const PHONE = '+216 27 612 500';
-const PHONE_FIXE = '+216 73 200 169';
+const PHONE = CONTACT_PHONE.display;
+const PHONE_FIXE = CONTACT_PHONE_FIXE.display;
 const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
 const DELIVERY_MSG = 'Livraison gratuite à partir de 300 DT';
 

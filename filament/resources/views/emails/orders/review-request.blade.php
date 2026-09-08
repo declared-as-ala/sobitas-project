@@ -31,7 +31,7 @@
     $prenom     = trim($commande->livraison_prenom ?? $commande->prenom ?? '');
     $coordonnee   = \App\Models\Coordinate::getCached();
     $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@protein.tn';
-    $contactPhone = ($coordonnee && !empty($coordonnee->phone_1)) ? $coordonnee->phone_1 : '+216 27 612 500';
+    $contactPhone = ($coordonnee && !empty($coordonnee->phone_1)) ? $coordonnee->phone_1 : '+216 22 464 315';
     $greeting     = $prenom !== '' ? 'Bonjour ' . $prenom . ',' : 'Bonjour,';
 @endphp
 <!DOCTYPE html>

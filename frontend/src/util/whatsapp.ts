@@ -6,8 +6,15 @@
  * phones. Those had drifted to two copies of the number and the message; one place to change the
  * shop's phone number is the point.
  */
+import { CONTACT_PHONE } from '@/util/company';
 
-export const WHATSAPP_NUMBER = '21627612500';
+/**
+ * wa.me takes the msisdn — international digits, no `+`, no spaces. Read from CONTACT_PHONE
+ * rather than retyped, so a number change lands here too; and read from the `msisdn` field
+ * specifically, because stripping the `+` off `e164` in a template literal is exactly the kind
+ * of derivation that survives review and then breaks silently.
+ */
+export const WHATSAPP_NUMBER: string = CONTACT_PHONE.msisdn;
 
 export const WHATSAPP_PREFILL = "Bonjour, j'aimerais des informations / passer commande sur protein.tn.";
 

@@ -24,9 +24,11 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Image from 'next/image';
 import { m } from 'motion/react';
 import { Check, Minus, Package, Plus, Search } from 'lucide-react';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { getStorageUrl, isStorageImageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { getStockDisponible } from '@/util/cartStock';
+import { buildProductUrlPath } from '@/util/productUrl';
 import type { Product } from '@/types';
 import { childVariants, tap } from './variants';
 
@@ -128,6 +130,9 @@ const Tile = memo(function Tile({
   const image = product.cover ? getStorageUrl(product.cover) : '';
   const atLimit = stock > 0 && qty >= stock;
   const selected = qty > 0;
+  /* Canonical `/{sous-categorie}/{slug}`, from the same helper ProductCard uses (ProductCard.tsx:512).
+     Hand-assembling it is how a link ends up on the legacy `/shop/…` shape and eats a 301. */
+  const href = buildProductUrlPath(product as never);
 
   const handleAdd = useCallback(() => {
     onAdd(product, frameRef.current?.querySelector('img') ?? null);
@@ -143,14 +148,37 @@ const Tile = memo(function Tile({
         selected ? 'border-brand bg-brand/5' : 'border-hairline bg-elevated'
       }`}
     >
+      {/*
+        ── THE PICTURE IS A LINK TO THE PRODUCT PAGE, THE BUTTON BELOW IS NOT ──────────────────
+        Owner, 08/09/2026: clicking a tile should open the product. The tile previously had no
+        click of its own at all — only "Ajouter" and the ± stepper — so a shopper who wanted the
+        ingredient list, the dosage or the flavour had to leave the wizard, find the product on
+        /shop and come back. Adding a link takes nothing away: composing still happens entirely
+        through the control at the bottom of the tile, which stays a `<button>`.
+
+        The picture and the NAME both link, because both are what a person aims at. They are the
+        same destination, so only the name is in the tab order and the accessibility tree — a
+        keyboard user hitting the same URL twice per tile, twelve tiles to a grid, is 24 stops to
+        cross a category. `tabIndex={-1}` + `aria-hidden` is the standard treatment for the
+        redundant half of a card link, and it is why this is NOT a `<button>` inside an `<a>`:
+        that is invalid HTML and it is what an overlay-and-stopPropagation version would need.
+      */}
       <div ref={frameRef} className="relative aspect-[4/3] w-full bg-sunken sm:aspect-square">
-        {image ? (
-          <ProductImage src={image} alt={product.designation_fr} unoptimized={isStorageImageUrl(image)} />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-ink-3">
-            <Package className="h-7 w-7" aria-hidden="true" />
-          </div>
-        )}
+        <LinkWithLoading
+          href={href}
+          tabIndex={-1}
+          aria-hidden="true"
+          loadingMessage="Chargement de la fiche produit"
+          className="absolute inset-0 block"
+        >
+          {image ? (
+            <ProductImage src={image} alt={product.designation_fr} unoptimized={isStorageImageUrl(image)} />
+          ) : (
+            <span className="flex h-full w-full items-center justify-center text-ink-3">
+              <Package className="h-7 w-7" aria-hidden="true" />
+            </span>
+          )}
+        </LinkWithLoading>
 
         {/* One mark, not a badge cluster: a filled tick when this is in the pack. The quantity is
             already the large number in the stepper directly below it. */}
@@ -174,12 +202,23 @@ const Tile = memo(function Tile({
       </div>
 
       <div className="flex flex-1 flex-col p-2.5 sm:p-3">
-        <h3
-          title={product.designation_fr}
-          className="line-clamp-2 min-h-[2.2rem] text-xs font-semibold leading-snug text-ink-1"
+        {/* The heading's `min-h-[2.2rem]` MOVES ONTO THE LINK and becomes 44px. It was there to
+            keep a one-line name and a two-line name at the same tile height; on the link it does
+            that job and gives the control its minimum target, which two clamped lines of text-xs
+            (35px) do not reach on their own. Cost: 9px of tile height, uniformly, so nothing in
+            the grid misaligns. `items-start` keeps the name top-aligned exactly as before. */}
+        <LinkWithLoading
+          href={href}
+          loadingMessage="Chargement de la fiche produit"
+          className="flex min-h-[44px] items-start rounded-lg text-ink-1 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus [@media(hover:hover)]:hover:text-brand"
         >
-          {product.designation_fr}
-        </h3>
+          <h3
+            title={product.designation_fr}
+            className="line-clamp-2 text-xs font-semibold leading-snug"
+          >
+            {product.designation_fr}
+          </h3>
+        </LinkWithLoading>
         {/* THE PRICE IS BRAND ORANGE — BUT ONLY WHEN THE TILE IS NOT SELECTED.
             Every price on the site is `text-brand` (ProductCard.tsx:355); this grid was the one
             place a price rendered in plain ink, so the pack builder's products read as a different

@@ -35,6 +35,44 @@ export const LEGAL_IDENTITY = {
 } as const;
 
 /**
+ * The shop's phone numbers, in every shape the codebase needs them.
+ *
+ * ── WHY THIS EXISTS EVEN THOUGH /coordonnees IS THE SYSTEM OF RECORD ───────────────────────
+ * `phone_1` / `phone_2` are read from the API at every render, and that has not changed. But
+ * every surface that reads them also carries a FALLBACK literal for the render where the fetch
+ * returns nothing — and those fallbacks had multiplied into a dozen hand-typed copies across
+ * the header, the footer, /contact, /qui-sommes-nous, /mentions-legales, the PDP, the request
+ * dialog and the JSON-LD, in five different formats (spaced, unspaced, national, E.164, and the
+ * bare msisdn wa.me wants). When the owner changed the mobile number on 08/09/2026 all of them
+ * had to be found by hand, which is the definition of a value that needs one home.
+ *
+ * The API still wins wherever it answers. This is what the site says when it does not, and the
+ * one place in the frontend a future number change has to be made.
+ *
+ * ── THE FORMATS ARE NOT INTERCHANGEABLE ────────────────────────────────────────────────────
+ * `tel:` hrefs and schema.org's `telephone` want E.164 (`+216…`, no spaces). wa.me wants those
+ * same digits with NO leading `+` — a `+` in the wa.me path yields a page that cannot resolve
+ * the number at all. Visible copy wants the spaced form. Never derive one by string-replacing
+ * another; pick the field.
+ */
+export const CONTACT_PHONE = {
+  /** Visible copy, with the country code. */
+  display: '+216 22 464 315',
+  /** Visible copy inside a sentence that already says "appelez le …". */
+  national: '22 464 315',
+  /** E.164 — `tel:` hrefs and schema.org `telephone`. */
+  e164: '+21622464315',
+  /** Digits only, no `+` — wa.me and the SMS gateway. */
+  msisdn: '21622464315',
+} as const;
+
+/** The shop's landline. Unchanged by the 08/09/2026 switch; here so the pair lives together. */
+export const CONTACT_PHONE_FIXE = {
+  display: '+216 73 200 169',
+  e164: '+21673200169',
+} as const;
+
+/**
  * The shop's Google Business Profile.
  *
  * ── WHAT IS AND IS NOT SAFE TO DO WITH THIS ────────────────────────────────────────────────

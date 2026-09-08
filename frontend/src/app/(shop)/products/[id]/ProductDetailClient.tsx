@@ -14,6 +14,7 @@ import { ProtinaMark } from '@/app/components/loyalty/Protina';
 import { REVIEW_POINTS_AWARD, pointsToDt } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { buildProductUrl, buildProductUrlPath } from '@/util/productUrl';
+import { CONTACT_PHONE } from '@/util/company';
 import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
@@ -1359,7 +1360,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   { Icon: Truck, label: 'Livraison', sub: '24–72h' },
                   { Icon: CreditCard, label: 'Paiement', sub: 'À la livraison' },
                   { Icon: Shield, label: 'Authenticité', sub: '100% garantie' },
-                  { Icon: Phone, label: 'Conseil', sub: '27 612 500', href: 'tel:+21627612500' },
+                  { Icon: Phone, label: 'Conseil', sub: CONTACT_PHONE.national, href: `tel:${CONTACT_PHONE.e164}` },
                 ].map(({ Icon, label, sub, href }) => {
                   const body = (
                     <>

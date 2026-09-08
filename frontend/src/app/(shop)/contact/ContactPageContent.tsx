@@ -18,7 +18,7 @@ import { SectionHeader } from '@/app/components/SectionHeader';
 import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
-import { LEGAL_IDENTITY, OPENING_HOURS } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, LEGAL_IDENTITY, OPENING_HOURS } from '@/util/company';
 import { ContactForm } from './ContactForm';
 import type { Coordinate } from '@/types';
 
@@ -61,8 +61,8 @@ const CHANNELS = [
   {
     icon: Phone,
     label: 'Par téléphone',
-    value: '+216 27 612 500',
-    href: 'tel:+21627612500',
+    value: CONTACT_PHONE.display,
+    href: `tel:${CONTACT_PHONE.e164}`,
     /* OPENING_HOURS.short, not a fourth literal. This card used to read "Lun. – sam., 10 h –
        19 h 30" while the store panel 160 lines below it added "Dimanche : 14 h – 19 h" — the card
        was already a SUBSET of the panel beside it, on the same page. */
@@ -133,7 +133,7 @@ export default function ContactPageContent({ coordinates }: { coordinates: Coord
   const email = coordinates?.email || 'contact@protein.tn';
   const phones = ([coordinates?.phone_1, coordinates?.phone_2].filter(Boolean) as string[]).length
     ? ([coordinates?.phone_1, coordinates?.phone_2].filter(Boolean) as string[])
-    : ['+216 27 612 500', '+216 73 200 169'];
+    : [CONTACT_PHONE.display, CONTACT_PHONE_FIXE.display];
 
   return (
     <div className="min-h-screen bg-canvas">

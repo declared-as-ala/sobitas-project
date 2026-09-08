@@ -3,11 +3,11 @@ import { getCoordinates } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
-import { OPENING_HOURS } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, OPENING_HOURS } from '@/util/company';
 import ContactPageContent from './ContactPageContent';
 
 /**
- * schema.org wants E.164; the coordonnees record stores "+216 27 612 500" with spaces. Returns
+ * schema.org wants E.164; the coordonnees record stores "+216 22 464 315" with spaces. Returns
  * null rather than a mangled string when the field is absent, so the caller's `||` fallback fires.
  */
 function normalisePhone(raw: string | null | undefined): string | null {
@@ -78,7 +78,7 @@ export default async function ContactPage() {
       contactPoint: [
         {
           '@type': 'ContactPoint',
-          telephone: normalisePhone(coordinates?.phone_1) || '+21627612500',
+          telephone: normalisePhone(coordinates?.phone_1) || CONTACT_PHONE.e164,
           email: coordinates?.email || 'contact@protein.tn',
           contactType: 'customer service',
           areaServed: 'TN',
@@ -92,7 +92,7 @@ export default async function ContactPage() {
         },
         {
           '@type': 'ContactPoint',
-          telephone: normalisePhone(coordinates?.phone_2) || '+21673200169',
+          telephone: normalisePhone(coordinates?.phone_2) || CONTACT_PHONE_FIXE.e164,
           contactType: 'sales',
           areaServed: 'TN',
           availableLanguage: 'French',

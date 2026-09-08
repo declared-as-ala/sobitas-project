@@ -21,7 +21,7 @@ import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { splitCmsBody } from '@/util/cmsSections';
 import { ABOUT_BODY_FR, ABOUT_BODY_SOURCE, ABOUT_TITLE } from '@/content/aboutBody';
-import { GOOGLE_PROFILE, LEGAL_IDENTITY } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, GOOGLE_PROFILE, LEGAL_IDENTITY } from '@/util/company';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import type { Coordinate, Page } from '@/types';
 
@@ -150,7 +150,7 @@ export default function AboutPageContent({
   const address = coordinates?.adresse_fr?.trim() || coordinates?.adresse?.trim() || 'Rue Ribat, Sousse 4000';
   const email = coordinates?.email || 'contact@protein.tn';
   const phones = [coordinates?.phone_1, coordinates?.phone_2].filter(Boolean) as string[];
-  const phoneList = phones.length > 0 ? phones : ['+216 27 612 500', '+216 73 200 169'];
+  const phoneList = phones.length > 0 ? phones : [CONTACT_PHONE.display, CONTACT_PHONE_FIXE.display];
 
   return (
     <div className="min-h-screen bg-canvas">

@@ -7,6 +7,8 @@ import { Input } from '@/app/components/ui/input';
 import { Textarea } from '@/app/components/ui/textarea';
 import { sendContact } from '@/services/api';
 import { notify as toast } from '@/lib/notify';
+import { CONTACT_PHONE } from '@/util/company';
+import { WHATSAPP_NUMBER } from '@/util/whatsapp';
 
 /**
  * The only client island on /contact.
@@ -110,7 +112,7 @@ export function ContactForm() {
       } else {
         toast.error(
           error?.response?.data?.message ||
-            'Envoi impossible pour le moment. Appelez-nous au 27 612 500.'
+            `Envoi impossible pour le moment. Appelez-nous au ${CONTACT_PHONE.national}.`
         );
       }
     } finally {
@@ -141,7 +143,7 @@ export function ContactForm() {
         </p>
         <div className="mt-5 flex flex-col gap-2 sm:flex-row sm:justify-center">
           <a
-            href="https://wa.me/21627612500"
+            href={`https://wa.me/${WHATSAPP_NUMBER}`}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-brand px-5 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover"
@@ -209,7 +211,7 @@ export function ContactForm() {
           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
           className="h-11 rounded-xl"
           autoComplete="tel"
-          placeholder="Ex. 27 612 500"
+          placeholder={`Ex. ${CONTACT_PHONE.national}`}
         />
         <p className="mt-1.5 text-xs text-ink-3">Laissez-le si vous préférez qu’on vous rappelle.</p>
       </div>
@@ -294,8 +296,8 @@ export function ContactForm() {
       <p className="mt-3 text-center text-xs leading-relaxed text-ink-3">
         Réponse sous 24 h ouvrées, et une copie part vers votre boîte mail. Pour une commande
         urgente,{' '}
-        <a href="tel:+21627612500" className="font-semibold text-brand hover:underline">
-          appelez le 27 612 500
+        <a href={`tel:${CONTACT_PHONE.e164}`} className="font-semibold text-brand hover:underline">
+          appelez le {CONTACT_PHONE.national}
         </a>
         .
       </p>

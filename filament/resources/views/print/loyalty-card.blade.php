@@ -694,7 +694,7 @@
                         </div>
                         <div class="back-pill-item back-pill-item-3">
                             <div class="back-pill-icon-wrap"><img src="{{ $icoPhone }}" alt=""></div>
-                            <span class="back-pill-text" style="font-weight:900;">{{ $company?->phone_1 ?: '27 612 500' }}</span>
+                            <span class="back-pill-text" style="font-weight:900;">{{ $company?->phone_1 ?: '22 464 315' }}</span>
                         </div>
                         <div style="clear:both;"></div>
                     </div>

@@ -16,7 +16,7 @@ class TransactionalSmsText
 {
     public const DEFAULT_CONFIRMATION = 'Protein.tn: commande #[num_commande] bien recue. Total: [total] TND, paiement a la livraison. Notre equipe vous appellera pour confirmation. Merci.';
 
-    public const DEFAULT_STATUS = "Protein.tn: mise a jour commande #[num_commande]: [etat]. Gardez votre telephone joignable. Besoin d'aide? +216 27 612 500.";
+    public const DEFAULT_STATUS = "Protein.tn: mise a jour commande #[num_commande]: [etat]. Gardez votre telephone joignable. Besoin d'aide? +216 22 464 315.";
 
     public static function confirmation(Commande $commande): string
     {

@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { Building2, FileText, Mail, MapPin, Phone } from 'lucide-react';
 import { Section } from '@/app/components/layout/Section';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
-import { LEGAL_IDENTITY } from '@/util/company';
+import { CONTACT_PHONE, LEGAL_IDENTITY } from '@/util/company';
 import { buildBreadcrumbListSchema } from '@/util/structuredData';
 
 const TITLE = 'Mentions légales | Protein.tn — SOBITAS Tunisie';
@@ -106,9 +106,9 @@ export default function MentionsLegalesPage() {
                   <Mail className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
                   contact@protein.tn
                 </a>
-                <a className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-ink-2 hover:text-brand" href="tel:+21627612500">
+                <a className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-ink-2 hover:text-brand" href={`tel:${CONTACT_PHONE.e164}`}>
                   <Phone className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-                  +216 27 612 500
+                  {CONTACT_PHONE.display}
                 </a>
                 <p className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-ink-2">
                   <MapPin className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />

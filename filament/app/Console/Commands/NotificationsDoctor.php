@@ -26,7 +26,7 @@ use Illuminate\Support\Facades\Mail;
  *     php artisan notifications:doctor                      # configuration only, sends nothing
  *     php artisan notifications:doctor --order=1234         # + what that order WOULD send
  *     php artisan notifications:doctor --order=1234 --send-email=moi@exemple.tn
- *     php artisan notifications:doctor --order=1234 --send-sms=+21627612500
+ *     php artisan notifications:doctor --order=1234 --send-sms=+21622464315
  *
  * Nothing is sent unless an address or a number is passed explicitly, and it goes to the address
  * given on the command line — never to the customer on the order. Re-notifying a real customer

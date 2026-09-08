@@ -5,7 +5,7 @@
  */
 
 import { getStorageUrl } from '@/services/api';
-import { OPENING_HOURS } from '@/util/company';
+import { CONTACT_PHONE, OPENING_HOURS } from '@/util/company';
 import { AR_BRAND_SUFFIX, resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
@@ -892,7 +892,7 @@ export function buildOrganizationSchema(
     },
     contactPoint: {
       '@type': 'ContactPoint',
-      telephone: '+21627612500',
+      telephone: CONTACT_PHONE.e164,
       email: 'contact@protein.tn',
       contactType: 'customer service',
       areaServed: 'TN',
@@ -941,7 +941,7 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     image: `${base}/icon.png`,
     logo: `${base}/logo.png`,
     url: base,
-    telephone: '+21627612500',
+    telephone: CONTACT_PHONE.e164,
     email: 'contact@protein.tn',
     address: {
       '@type': 'PostalAddress',

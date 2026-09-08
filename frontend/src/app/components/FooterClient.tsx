@@ -7,7 +7,7 @@ import { ArrowUp, ArrowUpRight, ChevronDown, Facebook, Instagram, Linkedin, Load
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter } from '@/services/api';
-import { LEGAL_IDENTITY } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, LEGAL_IDENTITY } from '@/util/company';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { cn } from '@/app/components/ui/utils';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
@@ -154,8 +154,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
   const contactAddress = coord?.adresse_fr?.trim() || coord?.adresse?.trim() || 'Rue Ribat, Sousse 4000';
   const contactEmail = coord?.email || 'contact@protein.tn';
   const contactPhones =
-    [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') || '+216 27 612 500 / +216 73 200 169';
-  const contactPhoneHref = `tel:${String(coord?.phone_1 || '+21627612500').replace(/\s/g, '')}`;
+    [coord?.phone_1, coord?.phone_2].filter(Boolean).join(' / ') ||
+    `${CONTACT_PHONE.display} / ${CONTACT_PHONE_FIXE.display}`;
+  const contactPhoneHref = `tel:${String(coord?.phone_1 || CONTACT_PHONE.e164).replace(/\s/g, '')}`;
 
   /* Default Google Maps embed for PROTEIN.TN (Sousse), used when /coordonnees has none. */
   const DEFAULT_MAP_EMBED =
