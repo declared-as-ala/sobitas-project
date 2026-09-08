@@ -10,6 +10,7 @@ import { addGuestReview, addReview, getReviewAccess } from '@/services/api';
 import type { ReviewAccess, ReviewSubmitResult } from '@/types';
 import { notify as toast } from '@/lib/notify';
 import { ProtinaAmount } from '@/app/components/loyalty/Protina';
+import { RATING_WORDS, ratingLabel } from './rating';
 
 /**
  * ── WRITING A REVIEW, ON A PHONE ────────────────────────────────────────────────────────────
@@ -57,20 +58,46 @@ import { ProtinaAmount } from '@/app/components/loyalty/Protina';
  *                                                        one line beside the button that earns it
  *
  * Nothing true was removed. Rules that only matter when broken are stated when they break.
+ *
+ * ── THE FIRST TAP NOW ARRIVES ALREADY RATED (08/09/2026) ────────────────────────────────────
+ * Measured before this change, at 390: opening the form took a tap on the prompt row, rating took
+ * a second tap, submitting a third. The prompt row and this form both drew five stars' worth of
+ * intent and only the second set was tappable.
+ *
+ * The row that opens the composer now IS the star row (see `ProductDetailClient`), and the star
+ * the customer pressed arrives here as `initialStars`. One interaction removed from a three-step
+ * flow, and — the part that matters for somebody arriving from a review-request email — the
+ * rating is the first thing on the page that can be touched, not the first thing after a tap.
+ *
+ * The composer still does not MOUNT until that tap, which is the reason the row was inert in the
+ * first place: `getReviewAccess` is a round trip, and firing it on every product page view across
+ * 11,263 pages to decorate a form almost nobody opens is not free. A star row is plain markup and
+ * costs nothing until it is pressed.
  */
 
 const MAX_IMAGES = 3;
 const MAX_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+/**
+ * 15, and it is not an arbitrary round number: `add_review` validates `min:15` server-side, so
+ * anything lower here would show the customer a friendly form that 422s on submit. The guest
+ * route is looser (`min:10`) but `ReviewAuthenticity` deducts 25 points for a body under 15
+ * characters — a shorter guest review publishes and then earns nothing, which is a worse outcome
+ * than being asked for four more words. One threshold, matching the stricter of the two.
+ */
 const MIN_COMMENT = 15;
 const MAX_COMMENT = 1000;
-
-/** The word under the stars. A number needs decoding; "Excellent" does not. */
-const RATING_WORDS = ['', 'Décevant', 'Moyen', 'Bien', 'Très bien', 'Excellent'];
 
 interface ReviewComposerProps {
   productId: number;
   productName: string;
+  /**
+   * The rating already chosen on the control that opened this form, 1–5.
+   *
+   * 0 (the default) is "opened without rating" — the camera button and the reviews-page button
+   * both do that — and the form then opens on the star row exactly as before.
+   */
+  initialStars?: number;
   onClose: () => void;
   onSubmitted?: (result: ReviewSubmitResult) => void;
 }
@@ -79,11 +106,11 @@ function apiMessage(error: unknown): string | undefined {
   return (error as { response?: { data?: { message?: string } } })?.response?.data?.message;
 }
 
-export function ReviewComposer({ productId, productName, onClose, onSubmitted }: ReviewComposerProps) {
+export function ReviewComposer({ productId, productName, initialStars = 0, onClose, onSubmitted }: ReviewComposerProps) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [access, setAccess] = useState<ReviewAccess | null>(null);
   const [loading, setLoading] = useState(isAuthenticated);
-  const [stars, setStars] = useState(0);
+  const [stars, setStars] = useState(Math.min(5, Math.max(0, Math.round(initialStars))));
   const [hoverStars, setHoverStars] = useState(0);
   const [comment, setComment] = useState('');
   const [guestName, setGuestName] = useState('');
@@ -94,6 +121,7 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
   const openedAt = useRef(Date.now());
   const fileInput = useRef<HTMLInputElement>(null);
   const commentRef = useRef<HTMLTextAreaElement>(null);
+  const focusedOnce = useRef(false);
   const previews = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);
 
   useEffect(() => () => previews.forEach((url) => URL.revokeObjectURL(url)), [previews]);
@@ -109,14 +137,24 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
     return () => { active = false; };
   }, [isAuthenticated, productId]);
 
+  /**
+   * True once the form itself is on screen rather than the spinner or one of the closed states.
+   * The focus effect below has to wait for it: a signed-in visitor sees the loading branch first,
+   * and a `requestAnimationFrame` fired against that render would look for a textarea that does
+   * not exist yet and silently give up — a rating arriving via `initialStars` would then land the
+   * customer on a form with no cursor in it.
+   */
+  const formReady = !authLoading && !(isAuthenticated && (loading || !access));
+
   /* The comment box is what the rating reveals, so it takes focus the moment it exists — one
-     tap to rate, then type. Skipped when a rating is being CHANGED rather than first set, which
-     would otherwise yank the page back up mid-edit. */
-  const rate = (value: number) => {
-    const first = stars === 0;
-    setStars(value);
-    if (first) requestAnimationFrame(() => commentRef.current?.focus({ preventScroll: true }));
-  };
+     tap to rate, then type. `focusedOnce` keeps it to the FIRST rating: changing a rating mid-edit
+     must not yank the caret back to the top of the box. This also covers the rating that arrives
+     already made from the row outside, which is why it is an effect and not a click handler. */
+  useEffect(() => {
+    if (!formReady || stars === 0 || focusedOnce.current) return;
+    focusedOnce.current = true;
+    requestAnimationFrame(() => commentRef.current?.focus({ preventScroll: true }));
+  }, [formReady, stars]);
 
   const addFiles = (incoming: FileList | null) => {
     if (!incoming) return;
@@ -236,12 +274,12 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
               type="button"
               role="radio"
               aria-checked={stars === value}
-              onClick={() => rate(value)}
+              onClick={() => setStars(value)}
               onMouseEnter={() => setHoverStars(value)}
               onFocus={() => setHoverStars(value)}
               onBlur={() => setHoverStars(0)}
               className="flex h-12 w-12 items-center justify-center rounded-xl transition-colors hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-              aria-label={`${value} étoile${value > 1 ? 's' : ''} — ${RATING_WORDS[value]}`}
+              aria-label={ratingLabel(value)}
             >
               {/*
                 36px, not 28px. The old glyph was 28px and unselected stars were `text-hairline`
@@ -255,13 +293,26 @@ export function ReviewComposer({ productId, productName, onClose, onSubmitted }:
               />
             </button>
           ))}
-          <span className="ms-2 min-w-0 text-sm font-semibold text-ink-2" aria-live="polite">
+          {/* Inline only from `sm`. Five 48px targets plus "Décevant" measure 320px against 292px
+              of card at 390, so this word used to hang 15px outside the panel — invisible to a
+              document-level overflow check, because the page's own gutter absorbed it. Below `sm`
+              the same word is the line underneath instead. */}
+          <span className="ms-2 hidden min-w-0 text-sm font-semibold text-ink-2 sm:inline">
             {shown ? RATING_WORDS[shown] : ''}
           </span>
         </div>
-        {stars === 0 && (
-          <p className="mt-1.5 text-xs text-ink-3">Touchez une étoile pour commencer.</p>
-        )}
+        {/* ONE line, always in the DOM, and it is the live region. Two conditional elements would
+            mean the announcement never fires: an `aria-live` region has to exist BEFORE its text
+            changes, and a region that mounts already holding its new text announces nothing.
+            It carries the hint until there is a rating and the rating's word afterwards, so the
+            block costs the same height in both states — and from `sm` up, where the word is
+            already inline beside the stars, it disappears once rated rather than repeating it. */}
+        <p
+          aria-live="polite"
+          className={shown ? 'mt-1.5 text-sm font-semibold text-ink-2 sm:hidden' : 'mt-1.5 text-xs text-ink-3'}
+        >
+          {shown ? RATING_WORDS[shown] : 'Touchez une étoile pour commencer.'}
+        </p>
       </fieldset>
 
       {/* A field no human can see. Named `hp_field` — `website` and `company` are names browsers

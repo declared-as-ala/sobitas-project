@@ -17,6 +17,7 @@ import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
 import { ReviewComposer } from '@/app/components/reviews/ReviewComposer';
+import { RATING_WORDS, ratingLabel } from '@/app/components/reviews/rating';
 import { ProductIdentifiers } from '@/app/components/product/ProductIdentifiers';
 import { ProductGallery } from '@/app/components/product/ProductGallery';
 import { ProductLabelGrid } from '@/app/components/product/ProductLabelGrid';
@@ -29,7 +30,7 @@ import { AromaSelect } from '@/app/components/product/AromaSelect';
 import { buildWhatsAppHref, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
-import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins, Camera, UserRound } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins, Camera } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
 import { useFavorites } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
@@ -98,6 +99,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
   const reviewOpenedAt = useRef<number | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
+  /**
+   * The star pressed on the row that opens the composer, handed to it as `initialStars`.
+   *
+   * 0 means the composer was opened by the camera button instead, which sets an intent (add a
+   * photo) but no rating. See the row itself for why the rating lives out here.
+   */
+  const [pendingStars, setPendingStars] = useState(0);
+  const [hoverStars, setHoverStars] = useState(0);
   const [descExpanded, setDescExpanded] = useState(false);
   const [visibleReviewCount, setVisibleReviewCount] = useState(12);
   const [reviewSort, setReviewSort] = useState<ReviewSort>('recent');
@@ -2127,9 +2136,24 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 is four lines down an otherwise empty section, and the control that GROWS the
                 section was placed behind the emptiness it is meant to fix.
 
-                So it is the first thing in the section now, shaped like the box it opens rather
-                than like a button: a round mark, a line of placeholder text, and a camera. That
-                shape is read as "type here" before any label is.
+                So it is the first thing in the section now.
+
+                ── AND SINCE 08/09/2026 IT IS THE STAR ROW ITSELF ────────────────────────────
+                33 post-delivery review-request emails went out on 08/09/2026, and every customer
+                who follows one has already decided how they feel about the product. What they
+                need is somewhere to put that, immediately.
+
+                This row was a Facebook-style placeholder pill: tap it, THEN the five stars
+                appeared, THEN you could rate. Measured at 390, the composer's own stars were
+                48px and perfectly good — but they were one tap away, and the row above them
+                drew nothing tappable that expressed a rating at all. Three interactions from
+                "I want to leave a review" to a submitted one; two of them before any opinion
+                could be recorded.
+
+                The stars are now the row. Pressing one opens the composer with that rating
+                already made (`initialStars`), so the flow is: star, type, publish. The
+                placeholder sentence is gone — five stars do not need a caption explaining that
+                they are for rating.
 
                 IT IS STILL INERT UNTIL TOUCHED, and that part is not cosmetic. `ReviewComposer`
                 calls `getReviewAccess` on mount for a signed-in visitor — a round trip answering
@@ -2145,31 +2169,61 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 otherwise would swallow the tap. It sets the intent and the composer takes over.
               */}
               {!showReviewForm && (
-                <div className="flex items-center gap-2.5 rounded-2xl border border-hairline bg-elevated p-2.5">
-                  <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-sunken text-ink-3" aria-hidden="true">
-                    <UserRound className="h-5 w-5" />
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setShowReviewForm(true)}
-                    /* A stable hook for `measure-reviews`, which has to open this composer to
-                       check the honeypot inside it. It used to find the entry point by matching
-                       the words "Écrire un avis"; renaming the control to a placeholder broke
-                       that and the guard reported an unguarded submission path. Copy is not a
-                       selector. */
-                    data-review-compose
-                    className="min-h-11 min-w-0 flex-1 rounded-full border border-hairline bg-sunken px-4 text-start text-sm text-ink-3 transition-colors hover:border-brand/40 hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  >
-                    Partagez votre avis sur ce produit…
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowReviewForm(true)}
-                    aria-label="Ajouter une photo à votre avis"
-                    className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                  >
-                    <Camera className="h-5 w-5" aria-hidden="true" />
-                  </button>
+                <div className="rounded-2xl border border-hairline bg-elevated p-3">
+                  <p className="font-display text-sm font-bold uppercase tracking-tight text-ink-1">
+                    Notez ce produit
+                  </p>
+                  {/* gap-0.5, not gap-1: five 48px targets plus the 44px camera come to exactly
+                      300px of the 300px this card offers at 390. Exactly-fits is one font metric
+                      away from overflowing. */}
+                  <div className="mt-1 flex items-center gap-0.5" onMouseLeave={() => setHoverStars(0)}>
+                    {[1, 2, 3, 4, 5].map((value) => (
+                      <button
+                        key={value}
+                        type="button"
+                        onClick={() => {
+                          setPendingStars(value);
+                          setShowReviewForm(true);
+                        }}
+                        onMouseEnter={() => setHoverStars(value)}
+                        onFocus={() => setHoverStars(value)}
+                        onBlur={() => setHoverStars(0)}
+                        aria-label={ratingLabel(value)}
+                        /* A stable hook for `measure-reviews`, which has to open this composer to
+                           check the honeypot inside it. It used to find the entry point by matching
+                           the words "Écrire un avis"; renaming the control broke that and the guard
+                           reported an unguarded submission path. Copy is not a selector. It rides
+                           the first star because that is now the control that opens the form. */
+                        {...(value === 1 ? { 'data-review-compose': '' } : {})}
+                        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-brand/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      >
+                        {/* Same 36px glyph and the same two colours as the composer's own row, so
+                            pressing a star here and seeing it again inside the form reads as one
+                            control that stayed put rather than two that happen to agree. */}
+                        <Star
+                          className={`h-9 w-9 transition-colors ${value <= hoverStars ? 'fill-amber-400 text-amber-400' : 'text-rule-strong'}`}
+                          aria-hidden="true"
+                        />
+                      </button>
+                    ))}
+                    {/* The word only has a hover to report, so it is desktop-only by construction
+                        rather than by breakpoint taste — on a phone there is no state between
+                        "not rated" and "rated", and the composer says the word once you are in it. */}
+                    <span className="ms-2 hidden min-w-0 text-sm font-semibold text-ink-2 sm:inline">
+                      {hoverStars ? RATING_WORDS[hoverStars] : ''}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setPendingStars(0);
+                        setShowReviewForm(true);
+                      }}
+                      aria-label="Ajouter une photo à votre avis"
+                      className="ms-auto grid h-11 w-11 shrink-0 place-items-center rounded-full text-ink-3 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      <Camera className="h-5 w-5" aria-hidden="true" />
+                    </button>
+                  </div>
                 </div>
               )}
 
@@ -2563,7 +2617,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 <ReviewComposer
                   productId={product.id}
                   productName={product.designation_fr}
-                  onClose={() => setShowReviewForm(false)}
+                  initialStars={pendingStars}
+                  onClose={() => {
+                    setShowReviewForm(false);
+                    setPendingStars(0);
+                  }}
                   onSubmitted={() => {
                     setTimeout(async () => {
                       try {

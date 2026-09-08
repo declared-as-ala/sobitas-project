@@ -1,12 +1,4 @@
 {
-  "src/app/(shop)/avis/[token]/AvisClient.tsx": {
-    "DS001": 8,
-    "DS002": 23,
-    "DS003": 14,
-    "DS004": 8,
-    "DS008": 1,
-    "DS011": 7
-  },
   "src/app/(shop)/blog/BlogPager.tsx": {
     "DS002": 3,
     "DS003": 3,
@@ -293,13 +285,6 @@
   "src/app/components/ProductsSkeleton.tsx": {
     "DS002": 1,
     "DS003": 2
-  },
-  "src/app/components/QuickOrderDrawer.tsx": {
-    "DS001": 24,
-    "DS002": 82,
-    "DS003": 59,
-    "DS004": 28,
-    "DS011": 46
   },
   "src/app/components/SafeImage.tsx": {
     "DS001": 6,
