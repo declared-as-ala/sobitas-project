@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
+import { ArrowRight } from 'lucide-react';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { Section } from '@/app/components/layout/Section';
@@ -11,19 +12,15 @@ import type { Brand } from '@/types';
 import { buildBrandAlt } from '@/util/productAlt';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 
-/**
- * How many brands ride the loop.
- *
- * ── THE NUMBER IS ABOUT DOM WEIGHT, NOT ABOUT SUPPLY ────────────────────────────────────────
- * The track renders its list TWICE (that is what makes the loop seamless), so 24 brands is 48
- * tiles and 48 lazy images on a band that sits ~5,000px down the homepage. The catalogue has 57
- * brands with a logo — the rest are one tap away behind "Toutes les marques", which is what that
- * link is for.
- */
+/** Keep the same 24 selected brands; a native rail needs no duplicate animation tiles. */
 const MARQUEE_BRANDS = 24;
-
-/** Skeleton count. Matches roughly what one screen of the strip shows at desktop. */
 const SKELETON_TILES = 10;
+
+// Below 1024px globals.css reserves 600px for each deferred band. With tight's 20 + 8px
+// padding and 1px seam that reports exactly 629px, even though this list does not wrap.
+// Keep the optimisation, with a local estimate of this compact band's content.
+const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_156px]';
+const RAIL_LAYOUT = 'scrollbar-hide flex flex-nowrap gap-3 overflow-x-auto snap-x snap-proximity';
 
 /**
  * One brand plate.
@@ -44,12 +41,8 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
         alt={interactive ? buildBrandAlt(brand.designation_fr, brand.alt_cover) : ''}
         width={200}
         height={100}
-        /* The tile is a fixed 160x80 box at every width, so the logo's required width is a
-           CONSTANT — no `vw` maths and no re-derivation when the grid changes, because there is no
-           longer a grid. 80% of 160 = 128 → 130px, which resolves inside an existing imageSizes
-           bucket, so no new optimizer variants are generated. */
         sizes="130px"
-        className="max-h-[56%] max-w-[78%] object-contain transition-transform duration-300 group-hover:scale-105 motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+        className="max-h-10 max-w-full object-contain"
         loading="lazy"
         onError={() => setImageError(true)}
       />
@@ -57,7 +50,7 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
       /* Fallback for a logo that 404s at runtime. The wordmark is set in the display face and
          compressed, so a text tile reads as a deliberate mark rather than as a broken image —
          which is exactly what the old wall looked like, twelve cells deep. */
-      <span className="line-clamp-2 px-3 text-center font-display font-compressed text-[13px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 transition-colors group-hover:text-brand">
+      <span className="line-clamp-2 px-3 text-center font-display text-[13px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 transition-colors group-hover:text-brand">
         {brand.designation_fr}
       </span>
     );
@@ -73,7 +66,7 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
   */
   const className = `${
     hasLogo ? 'pt-logo-well' : 'pt-plate'
-  } group flex h-[4.5rem] w-36 shrink-0 items-center justify-center rounded-xl border border-hairline px-3 shadow-sm transition-[border-color,box-shadow] duration-200 hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus`;
+  } group flex h-16 w-36 shrink-0 items-center justify-center rounded-xl border border-hairline px-4 transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus`;
 
   if (!interactive) {
     return (
@@ -95,41 +88,8 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
   );
 }
 
-/**
- * Homepage brands wall. SERVER-RENDERED: `brands` comes as a prop from the homepage server fetch,
- * so the logos and their links are in the SSR HTML (crawlable, zero layout shift). The client
- * fetch remains only as a fallback for when the server didn't supply brands.
- *
- * ── WHY THIS STOPPED BEING A GRID (owner, 18/08/2026) ───────────────────────────────────────
- * *"redesign this section, make it polished, match the vibe of the website, and show the partner
- * marks in a good way — you can add a micro animation loop."*
- *
- * The wall was twelve 3:2 cells fused by `gap-px`, and the screenshot that came with that message
- * shows what it actually rendered: 21st Century, ABE, Absolute Nutrition, Action Labs, Advance
- * Physician Formulas, Advanced Orthomolecular Research AOR… ten cells of small black text and two
- * logos.
- *
- * That is not a styling problem. Measured against the live API on 18/08/2026:
- *
- *     589 brands in the catalogue
- *      57 of them have a logo
- *      12 were shown — `brands.slice(0, MAX_BRANDS)` off an ALPHABETICAL list
- *
- * So the band was showing the first twelve names in the alphabet, which are precisely the obscure
- * ones nobody stocks, while Optimum Nutrition, MuscleTech, BioTech USA, Dymatize, Scitec, Myprotein
- * and Cellucor sat further down the same array with artwork ready to render. A "partner brands"
- * wall whose selection rule is `sort by name` is not a selection rule.
- *
- * `hasLogo` IS the selection: a brand with a logo in the admin is a brand somebody deliberately
- * onboarded. It needs no new endpoint, no new column and no editorial list to maintain, and it
- * degrades safely — if the logos ever disappear from the API the band falls back to the full list
- * rather than rendering empty.
- *
- * The loop is the owner's "micro animation": one continuous strip beats a static grid here because
- * the point of this band is BREADTH ("we carry the brands you have heard of"), and breadth is
- * exactly what a fixed 12-cell grid cannot show. See `.pt-marquee` in globals.css for the motion,
- * the pause rules and the reduced-motion fallback.
- */
+/** Server-supplied brands and the fallback fetch stay intact. A static rail makes every logo
+ * directly reachable by swipe, trackpad or keyboard, including for reduced-motion users. */
 export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   const [brands, setBrands] = useState<Brand[]>(brandsProp ?? []);
   const [isLoading, setIsLoading] = useState((brandsProp ?? []).length === 0);
@@ -153,8 +113,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  /* Logos first, and only fall back to the raw list if the API stops sending them — see the
-     docblock. `slice` AFTER the filter, or the filter would run on twelve alphabetical names and
+  /* Logos first, and only fall back to the raw list if the API stops sending them — as before. `slice` AFTER the filter, or the filter would run on twelve alphabetical names and
      return two. */
   const marqueeBrands = useMemo(() => {
     const withLogo = brands.filter((b) => Boolean(b.logo));
@@ -164,13 +123,14 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
 
   if (isLoading) {
     return (
-      <Section surface="sunken" spacing="tight" width="wide" defer>
-        <SectionHeader title="Nos marques partenaires" scale="3" />
-        <div className="flex gap-3 overflow-hidden" aria-hidden="true">
+      <Section surface="sunken" spacing="tight" width="wide" defer className={BAND_LAYOUT}>
+        <SectionHeader title="Nos marques partenaires" scale="3" viewAllHref="/brands" viewAllLabel="Toutes les marques" />
+        <div className={RAIL_LAYOUT} aria-hidden="true">
           {Array.from({ length: SKELETON_TILES }).map((_, i) => (
-            <Skeleton key={i} className="h-20 w-40 shrink-0 rounded-xl" />
+            <Skeleton key={i} className="h-16 w-36 shrink-0 rounded-xl" />
           ))}
         </div>
+        <div className="mt-2 h-11 sm:hidden" aria-hidden="true" />
       </Section>
     );
   }
@@ -178,7 +138,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   if (marqueeBrands.length === 0) return null;
 
   return (
-    <Section surface="sunken" spacing="tight" width="wide" defer>
+    <Section surface="sunken" spacing="tight" width="wide" defer className={BAND_LAYOUT}>
       {/* No kicker, no subtitle. "Partenaires officiels" above "Nos marques partenaires" above
           "Distributeur officiel des plus grandes marques internationales" is the same sentence
           three times, and it pushed a logo wall — which explains itself instantly — down by
@@ -190,38 +150,21 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
         scale="3"
       />
 
-      {/*
-        ── THE EDGES FADE RATHER THAN CUT ────────────────────────────────────────────────────
-        A marquee that ends at a hard border reads as a clipped grid; a fade says "this continues".
-        The mask is 6% of the width at each end — enough to soften a 160px tile, small enough that
-        no logo is ever half-invisible where a reader might try to click it.
-
-        `-mx-4 px-4 … lg:-mx-8 lg:px-8` cancels the Container's gutter and re-adds it as padding
-        INSIDE the scroller, so the strip travels the full width of the band while the first tile
-        still lines up with the heading above it.
-      */}
-      <div
-        className="pt-marquee-viewport relative -mx-4 overflow-hidden px-4 [-ms-overflow-style:none] [mask-image:linear-gradient(to_right,transparent,#000_6%,#000_94%,transparent)] [scrollbar-width:none] sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 [&::-webkit-scrollbar]:hidden"
+      {/* A single bounded row at every breakpoint. No mask hides a clickable logo. */}
+      <ul className={RAIL_LAYOUT} aria-label="Marques partenaires">
+        {marqueeBrands.map((brand) => (
+          <li key={brand.id} className="shrink-0 snap-start">
+            <BrandTile brand={brand} />
+          </li>
+        ))}
+      </ul>
+      <LinkWithLoading
+        href="/brands"
+        className="mt-2 inline-flex min-h-11 items-center gap-2 rounded-lg text-sm font-semibold text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:hidden"
       >
-        {/* `w-max` so the track is as wide as its content rather than as wide as the viewport —
-            without it the flex children shrink and -50% lands in the wrong place. */}
-        <ul className="pt-marquee flex w-max gap-3" data-motion>
-          {marqueeBrands.map((brand) => (
-            <li key={brand.id}>
-              <BrandTile brand={brand} />
-            </li>
-          ))}
-          {/* THE SECOND HALF. `aria-hidden` + non-interactive tiles: it exists so the strip can
-              wrap without a visible seam, and a screen reader announcing all 24 brands twice —
-              or a keyboard tabbing through 48 links to reach the footer — is the cost of getting
-              that wrong. */}
-          {marqueeBrands.map((brand) => (
-            <li key={`dup-${brand.id}`} aria-hidden="true">
-              <BrandTile brand={brand} interactive={false} />
-            </li>
-          ))}
-        </ul>
-      </div>
+        Toutes les marques
+        <ArrowRight className="h-4 w-4" aria-hidden="true" />
+      </LinkWithLoading>
     </Section>
   );
 }

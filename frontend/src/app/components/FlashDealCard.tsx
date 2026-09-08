@@ -61,16 +61,16 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
   }, [addToCart, atLimit, image, outOfStock, price.finalPrice, product, stock]);
 
   return (
-    <article className="pt-plate group relative flex h-full min-w-0 items-center gap-3 rounded-xl border border-hairline bg-elevated p-2.5 transition-colors [@media(hover:hover)]:hover:border-brand/50">
+    <article className="pt-plate group relative flex h-full min-w-0 items-center gap-3 rounded-xl border border-hairline bg-elevated p-3 transition-colors [@media(hover:hover)]:hover:border-brand/50">
       {discount > 0 && (
-        <span className="absolute left-2 top-2 z-10 rounded-full bg-brand px-2 py-0.5 font-display text-[11px] font-bold tabular-nums text-on-brand">−{discount}%</span>
+        <span className="absolute left-3 top-2 z-10 rounded-lg bg-brand px-2 py-1 font-display text-xs font-bold tabular-nums leading-none text-on-brand">−{discount}%</span>
       )}
       <LinkWithLoading
         href={buildProductUrlPath(product)}
         loadingMessage="Chargement du produit"
         className="flex min-w-0 flex-1 items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
-        <div className="pt-logo-well relative h-[4.75rem] w-[4.75rem] shrink-0 overflow-hidden rounded-lg sm:h-20 sm:w-20">
+        <div className="pt-logo-well relative h-20 w-20 shrink-0 overflow-hidden rounded-lg">
           {image ? (
             <Image
               src={image}
@@ -86,16 +86,16 @@ export const FlashDealCard = memo(function FlashDealCard({ product }: { product:
           )}
         </div>
         <div className="min-w-0 flex-1 py-1">
-          <h3 className="line-clamp-2 text-[13px] font-semibold leading-snug text-ink-1 transition-colors sm:text-sm [@media(hover:hover)]:group-hover:text-brand">{name}</h3>
+          <h3 className="line-clamp-2 min-h-10 text-sm font-semibold leading-5 text-ink-1 transition-colors [@media(hover:hover)]:group-hover:text-brand">{name}</h3>
           {outOfStock ? (
             <p className="mt-2 text-xs font-semibold text-ink-3">Rupture de stock</p>
           ) : (
             <>
               <div className="mt-2 flex flex-wrap items-baseline gap-x-1.5">
-                <span className="font-display text-lg font-extrabold tabular-nums leading-none text-brand">{Math.round(price.finalPrice)} DT</span>
+                <span className="font-display text-xl font-extrabold tabular-nums leading-none text-brand">{Math.round(price.finalPrice)} DT</span>
                 {price.hasPromo && price.oldPrice != null && <span className="text-xs tabular-nums text-ink-3 line-through">{Math.round(price.oldPrice)} DT</span>}
               </div>
-              {saved > 0 && <p className="mt-1 text-[11px] font-semibold text-success">Vous économisez {Math.round(saved)} DT</p>}
+              {saved > 0 && <p className="mt-1 text-xs leading-4 text-ink-2">Vous économisez {Math.round(saved)} DT</p>}
             </>
           )}
         </div>

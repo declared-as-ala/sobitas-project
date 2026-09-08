@@ -1,11 +1,11 @@
 'use client';
 
-import Image from 'next/image';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowRight, Clock3 } from 'lucide-react';
 import { FlashDealCard } from './FlashDealCard';
 import { LinkWithLoading } from './LinkWithLoading';
 import { Section } from './layout/Section';
+import { SectionHeader } from './SectionHeader';
 import type { Product } from '@/types';
 
 interface FlashProduct extends Product {
@@ -74,19 +74,19 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
   ];
 
   return (
-    <div ref={rootRef} className="flex min-w-0 items-center gap-2" aria-hidden="true">
-      <span className="hidden items-center gap-1.5 text-[11px] font-bold uppercase tracking-[0.12em] text-ink-3 sm:inline-flex">
+    <div ref={rootRef} className="flex min-w-0 flex-wrap items-center gap-2" aria-hidden="true">
+      <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-ink-2">
         <Clock3 className="h-4 w-4 text-brand" aria-hidden="true" />
         Fin dans
       </span>
-      <div className="pt-slab flex items-center gap-1 rounded-xl px-2 py-1.5 sm:gap-1.5 sm:px-2.5">
+      <div className="pt-slab flex items-center gap-1 rounded-xl px-2 py-2 sm:gap-1.5 sm:px-2.5">
         {segments.map((segment, index) => (
           <div key={segment.label} className="flex items-center gap-1 sm:gap-1.5">
             <span className="flex min-w-8 flex-col items-center sm:min-w-9">
-              <span className="font-display text-base font-bold tabular-nums leading-none text-brand">
+              <span className="font-display text-xl font-bold tabular-nums leading-none text-ink-1">
                 {segment.value == null ? '--' : String(segment.value).padStart(2, '0')}
               </span>
-              <span className="mt-1 text-[9px] font-semibold uppercase leading-none tracking-wide text-ink-3">
+              <span className="mt-1 text-[10px] font-semibold uppercase leading-none tracking-wide text-ink-2">
                 {segment.label}
               </span>
             </span>
@@ -137,44 +137,37 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
   const hasDeadline = Boolean(earliestExpiration);
 
   return (
-    <Section id="ventes-flash" surface="sunken" spacing="tight" width="wide" defer aria-labelledby="ventes-flash-heading">
-      <div className="overflow-hidden rounded-2xl border border-brand/25 bg-elevated">
-        <div className="grid gap-4 border-b border-hairline px-4 py-4 sm:px-5 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
-          <div className="flex min-w-0 items-center gap-3.5">
-            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl bg-brand-soft sm:h-16 sm:w-16">
-              <Image src="/home/flash-sale-mark.svg" alt="" fill sizes="64px" loading="lazy" className="object-contain p-1" />
-            </div>
-            <div className="min-w-0">
-              <p className="font-display text-[11px] font-bold uppercase tracking-[0.18em] text-brand">
-                {hasDeadline ? 'Offres en direct' : 'Prix réduits'}{maxDiscount > 0 ? ` · jusqu’à −${maxDiscount}%` : ''}
+    <Section id="ventes-flash" surface="sunken" spacing="tight" width="wide" defer aria-labelledby="ventes-flash-heading" className="[&.pt-defer]:[contain-intrinsic-size:auto_320px]">
+      {/* The offer owns the emphasis; decorative artwork and instructions no longer compete
+          with the discount. One clock instance, above the products at every width. */}
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+        <div className="min-w-0">
+          <SectionHeader
+            id="ventes-flash-heading"
+            title={hasDeadline ? 'Ventes flash' : 'Meilleures promos'}
+            scale="2"
+          />
+          <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+            {maxDiscount > 0 && (
+              <p className="font-display text-2xl font-extrabold uppercase leading-none text-brand sm:text-3xl">
+                <span className="mr-2 text-xs font-semibold">Jusqu’à</span>−{maxDiscount}%
               </p>
-              <h2 id="ventes-flash-heading" className="mt-1 font-display text-2xl font-extrabold uppercase leading-none text-ink-1 sm:text-3xl">
-                {hasDeadline ? 'Ventes flash' : 'Meilleures promos'}
-              </h2>
-              <p className="mt-1.5 text-sm text-ink-3">
-                {hasDeadline ? 'Choisissez votre offre avant la fin du chrono.' : 'Nos remises les plus intéressantes du moment.'}
-              </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5 sm:gap-3 lg:justify-end">
+            )}
             {earliestExpiration && <CountdownDisplay expirationDate={earliestExpiration} />}
+          </div>
+        </div>
             <LinkWithLoading
               href="/offres"
               loadingMessage="Chargement des offres"
-              className="inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-brand px-4 py-2.5 text-sm font-bold text-on-brand transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 sm:flex-none [@media(hover:hover)]:hover:bg-brand-hover"
+              className="order-last inline-flex min-h-11 items-center justify-center gap-2 justify-self-start rounded-xl px-3 text-sm font-semibold text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:order-none lg:border lg:border-rule"
             >
               Voir toutes les offres
               <ArrowRight className="h-4 w-4" aria-hidden="true" />
             </LinkWithLoading>
-          </div>
-        </div>
-
         {earliestExpiration && <FlashDeadline expirationDate={earliestExpiration} />}
-
-        <ul role="list" className="scrollbar-hide flex snap-x snap-mandatory gap-3 overflow-x-auto p-3 sm:grid sm:grid-cols-2 sm:overflow-visible sm:p-4 xl:grid-cols-4">
+        <ul role="list" className="scrollbar-hide flex snap-x snap-proximity gap-3 overflow-x-auto py-1 sm:grid sm:grid-cols-2 sm:overflow-visible lg:col-span-2 xl:grid-cols-4">
           {products.slice(0, 4).map((product) => (
-            <li key={product.id} className="w-[86%] min-w-0 flex-none snap-start sm:w-auto">
+            <li key={product.id} className="w-[94%] min-w-0 flex-none snap-start sm:w-auto">
               <FlashDealCard product={product} />
             </li>
           ))}
