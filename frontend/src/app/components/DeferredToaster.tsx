@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, type CSSProperties } from 'react';
 import dynamic from 'next/dynamic';
 import { CircleCheck, CircleX, Info, LoaderCircle, TriangleAlert, X } from 'lucide-react';
 
@@ -68,6 +68,20 @@ export function DeferredToaster() {
       position={isDesktop ? 'bottom-right' : 'bottom-center'}
       dir="ltr"
       className="sonner-toaster"
+      /*
+        THE ONLY PLACE THE TOAST'S WIDTH CAN BE SET.
+
+        Sonner writes `--width` as an INLINE style on the toaster element, so the
+        `.sonner-toaster { --width: 21rem }` rule that used to live in globals.css never applied
+        once — every toast has been sonner's default 356px. Sonner spreads `...style` after its
+        own defaults, so this prop is the one thing that wins.
+
+        368px, because the phone plate is `100vw - 24px` = 366px at 390: the toast is then the
+        same object at both breakpoints rather than two sizes that happen to look similar. It is
+        also the width at which the three-line description clamp stops cutting a French sentence
+        after four words.
+      */
+      style={{ '--width': '368px' } as CSSProperties}
       duration={4400}
       gap={8}
       visibleToasts={2}
@@ -98,7 +112,17 @@ export function DeferredToaster() {
         error: <CircleX aria-hidden="true" />,
         warning: <TriangleAlert aria-hidden="true" />,
         info: <Info aria-hidden="true" />,
-        loading: <LoaderCircle className="animate-spin" aria-hidden="true" />,
+        /*
+          NOT `animate-spin`, AND THE ATTRIBUTE IS THE POINT.
+
+          globals.css clamps `animation-duration` to 0.2s on `*:not([data-motion])` below 768px,
+          so Tailwind's 1s rotation became FIVE rotations a second on every phone — screenshotted
+          at 390 as a vibrating smear rather than a spinner. `data-motion` is the sanctioned
+          opt-out from that clamp, and `.pt-toast__spinner` owns the timing (900ms, and 2.4s under
+          prefers-reduced-motion — a progress indicator is essential feedback, so it slows rather
+          than stops).
+        */
+        loading: <LoaderCircle className="pt-toast__spinner" data-motion aria-hidden="true" />,
         close: <X aria-hidden="true" />,
       }}
       containerAriaLabel="Notifications Protein.tn"

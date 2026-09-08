@@ -128,11 +128,25 @@ const SCENARIOS = {
 const memberDashboard = (data) => ({
   summary: { orders: data.orders.length, delivered_orders: data.orders.filter((order) => ['livree', 'livrée', 'livre'].includes(order.etat)).length, reviews: data.reviews.length, points_earned: 589 },
   review_access: { phone_verified: true, monthly_limit: 3, used_this_month: Math.min(3, data.reviews.length), remaining_this_month: Math.max(0, 3 - data.reviews.length) },
+  /*
+    ALL SEVEN, VERBATIM FROM `MemberDashboardController::__invoke()`.
+
+    This list used to carry four missions with abbreviated strings, and the difference is not
+    cosmetic: the missions card is the tallest thing on the dashboard and its height is a
+    function of how many rows it has and how long their copy is. Measured on 08/09/2026 with the
+    real payload it was 931px at 390 — the four-mission stub had been reporting a card a third
+    shorter than the one every signed-in customer sees, on the one surface no other guard can
+    reach. The reward figures (300 = 15 DT x 20, 10, 50, and four nulls) are the real ones, so
+    the "no reward" rows are exercised too.
+  */
   missions: [
-    { key: 'verify_phone', label: 'Vérifier mon téléphone', description: 'Sécurisez votre compte.', reward_points: 300, completed: true, href: '/verify-phone' },
-    { key: 'first_order', label: 'Recevoir ma première commande', description: 'Protinas après livraison.', reward_points: null, completed: data.orders.length > 0, href: '/shop' },
-    { key: 'monthly_review', label: 'Partager un avis ce mois-ci', description: '10 ou 50 Protinas.', reward_points: 10, completed: data.reviews.length > 0, href: '/account?section=reviews' },
-    { key: 'photo_review', label: 'Illustrer mon expérience', description: 'Ajoutez une vraie photo.', reward_points: null, completed: false, href: '/account?section=reviews' },
+    { key: 'verify_phone', label: 'Vérifier mon téléphone', description: 'Sécurisez votre compte et débloquez les avantages membre.', reward_points: 300, completed: true, href: '/verify-phone' },
+    { key: 'first_order', label: 'Recevoir ma première commande', description: 'Les Protinas sont calculées sur les produits et créditées après livraison.', reward_points: null, completed: data.orders.length > 0, href: '/shop' },
+    { key: 'monthly_review', label: 'Partager un avis ce mois-ci', description: '10 Protinas, ou 50 Protinas pour un achat livré et vérifié.', reward_points: 10, completed: data.reviews.length > 0, href: '/account?section=reviews' },
+    { key: 'photo_review', label: 'Illustrer mon expérience', description: 'Ajoutez une vraie photo lorsque vous rédigez votre prochain avis.', reward_points: null, completed: false, href: '/account?section=reviews' },
+    { key: 'verified_review', label: 'Évaluer un achat livré', description: 'Votre badge « Achat vérifié » aide les autres membres à choisir.', reward_points: 50, completed: false, href: '/account?section=commandes' },
+    { key: 'complete_profile', label: 'Compléter mon profil', description: 'Des coordonnées exactes rendent vos prochaines commandes plus rapides.', reward_points: null, completed: true, href: '/account?section=profil' },
+    { key: 'first_redemption', label: 'Utiliser mes Protinas', description: 'Choisissez votre réduction sécurisée lors du checkout.', reward_points: null, completed: false, href: '/shop' },
   ],
   community: {
     members_rewarded: 128,

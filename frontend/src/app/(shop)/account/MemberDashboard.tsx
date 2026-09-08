@@ -15,12 +15,55 @@ import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { getBestSellers, getMemberDashboard, getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
-import { pointsToDt } from '@/util/loyaltyPoints';
-import type { MemberDashboardData, Product } from '@/types';
+import { pointsToDt, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import type { MemberDashboardData, MemberMission, Product } from '@/types';
 import type { PubMedResearchFeed } from '@/services/pubmed';
 import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
 
 const formatter = new Intl.NumberFormat('fr-FR');
+
+/*
+ * ── MISSION COPY LIVES HERE, AND THAT IS A DELIBERATE OVERRIDE ─────────────────────────────
+ * Owner, 08/09/2026: *"the text polished like a pro mission component"*.
+ *
+ * The label and description a mission arrives with are written in PHP —
+ * `MemberDashboardController::__invoke()` hard-codes both strings. That copy is a paragraph per
+ * mission and it explains rather than instructs: "Sécurisez votre compte et débloquez les
+ * avantages membre", "Choisissez votre réduction sécurisée lors du checkout". Seven of those is
+ * 443 characters of prose inside a card whose whole job is a checklist.
+ *
+ * Rewriting it in the controller would put the storefront's voice behind a separate deploy and
+ * out of this repo, so it is overridden HERE, keyed on `mission.key` — the stable enum the API
+ * already contracts in `types/index.ts`. This is presentation only: it renames nothing, changes
+ * no completion rule and touches no request.
+ *
+ * THE RULES THE COPY FOLLOWS:
+ *   · the LABEL is the action, in the infinitive, and nothing else;
+ *   · the LINE under it is one verifiable fact — when it pays, what counts, what it needs —
+ *     never a benefit, never an adjective;
+ *   · NO reward figure is ever written into a string. The amount comes from the API's own
+ *     `reward_points` and is rendered only when it is a real number greater than zero, so a
+ *     mission the backend does not price simply shows no price. The one number that is spelled
+ *     out (20 Protinas = 1 DT) is read from `REDEEM_POINTS_PER_DT`, the mirror of PointsService.
+ *
+ * A key with no entry falls back to the API's own strings, so a mission added in PHP still
+ * renders — just in the backend's voice until it gets a line here.
+ */
+const MISSION_COPY: Record<MemberMission['key'], { label: string; hint: string }> = {
+  verify_phone: { label: 'Vérifier mon numéro', hint: 'Un code par SMS, une seule fois.' },
+  /* "à la livraison" is load-bearing and must not be shortened — points are credited on the
+     transition to `livree`, never at checkout. See util/loyaltyPoints.ts. */
+  first_order: { label: 'Recevoir ma première commande', hint: 'Les Protinas sont créditées à la livraison.' },
+  monthly_review: { label: 'Publier un avis ce mois-ci', hint: 'Crédité une fois l’avis publié.' },
+  photo_review: { label: 'Ajouter une photo à un avis', hint: 'Une photo que vous avez prise.' },
+  verified_review: { label: 'Noter une commande livrée', hint: 'L’avis porte le badge « Achat vérifié ».' },
+  complete_profile: { label: 'Compléter mon profil', hint: 'Nom, e-mail et téléphone.' },
+  first_redemption: { label: 'Utiliser mes Protinas', hint: `${REDEEM_POINTS_PER_DT} Protinas = 1 DT de remise au paiement.` },
+};
+
+function missionCopy(mission: MemberMission): { label: string; hint: string } {
+  return MISSION_COPY[mission.key] ?? { label: mission.label, hint: mission.description };
+}
 
 function shortName(name?: string): string {
   return (name || 'Membre').trim().split(/\s+/)[0] || 'Membre';
@@ -147,115 +190,113 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
         <div className="grid gap-4 sm:gap-6 xl:grid-cols-3">
           {/*
             ── MES MISSIONS ────────────────────────────────────────────────────────────────
-            Owner, 07/09/2026: *"redesign this component, better layout, more responsive on
-            mobile and desktop."* Measured first, with the real seven-mission payload:
+            Owner, 08/09/2026: *"rework the missions component, make it simpler and polished,
+            and the text polished like a pro mission component."*
 
-              1440   title 116px / 2 lines   "Vérifier mon téléphone"        (22 chars, has a chip)
-              1440   title 248px / 1 line    "Recevoir ma première commande" (29 chars, no chip)
+            MEASURED FIRST, with the real seven-mission payload from MemberDashboardController
+            (scripts/zz-measure-missions.mjs — `measure-account`'s fixture only carries four):
 
-            THE LONGEST LABEL ON THE PAGE FIT ON ONE LINE AND A SHORTER ONE WRAPPED. The card
-            was a four-child flex row — badge, text, reward chip, chevron — so the chip took
-            its ~120px out of the title's column. A title's width therefore depended on
-            whether that mission happened to pay Protinas, which is unrelated to how long it
-            is. Exactly the two missions with rewards were the two that wrapped.
+                        BEFORE                          AFTER
+              390       931px, 7 rows of cards          610px
+              1440      667px, 4 ragged grid rows       457px
+              text      671 chars (443 of them prose)   396 chars (170 of them hints)
+              card h    134px / 96px in the same card   uniform 58px rows
 
-            That also drove the height spread: 104–142px at 1440 and 104–159px at 390, because
-            `min-h-[104px]` is a floor and nothing made siblings agree. The screenshot's ragged
-            two-column grid is that number.
+            FOUR THINGS WERE DOING THE JOB OF ONE, and that is where the height went.
 
-            SO THE CHIP LEFT THE TITLE'S ROW. The card is now a column — title row, then
-            description, then the reward on its own line — and the title gets the full width
-            minus the badge and the chevron at every breakpoint, whether or not there is a
-            reward. `h-full` on the link makes cards in a row match, which a min-height never
-            can.
+            1. SEVEN PLATES INSIDE A PLATE. Each mission was its own bordered, filled card in a
+               two-column grid, nested in the section's own bordered card. Eight borders and
+               eight fills for a checklist. The rest of this dashboard already has the right
+               shape for a list — "Produits populaires" two cards over is `divide-y` rows — so
+               the missions are rows now, and the section keeps the only border on screen.
 
-            THE NUMBERS ARE GONE, and that is the other half of the fix. The badge printed the
-            mission's index, but only when it was NOT complete — so the screenshot reads 2, 4,
-            5, 7 with checks where 1, 3 and 6 should be, and the numbering looks broken. It was
-            never a sequence anyway: nothing stops you using Protinas before you add a photo to
-            a review. A checklist gets a state, not a rank — a check when done, an empty ring
-            when not. (It also drops a `findIndex` that ran inside the map, once per mission.)
+            2. PROGRESS, THREE TIMES. A `3/7` pill, a green progress bar, AND a green plate with
+               a check on every finished card. The bar is the one that carried no information the
+               list does not already show item by item, so it went; the count stayed, because a
+               summary is worth having above seven rows.
 
-            AND `line-through` IS GONE from completed labels. Struck-through text means void or
-            cancelled; these are the ones you achieved. Done now reads as the green plate, the
-            check, and a quieter ink — three cues, none of which says "disregard this".
+            3. THE REWARD AS A BORDERED PILL ON ITS OWN LINE. That third line is what made cards
+               with a reward 38px taller than their neighbours in the same grid row — the ragged
+               edge in the screenshot. The figure is now inline at the end of the row, in
+               `compact` form, so it costs no height at all and cards cannot disagree.
 
-            The bare `3/7` pill became a real progress bar. Same number, plus the thing a
-            fraction cannot show at a glance: how far along the row actually is.
+            4. THE STATUS COLOUR TINTED ITS OWN BACKGROUND. Completed cards were `bg-ok/5` with a
+               `bg-ok/10 text-ok` check inside. DESIGN_SYSTEM has the measurement: a status hue
+               behind its own ink lands at 3.84–4.39:1 and looks fine. The done marker is now
+               `border-ok text-ok` on the plain plate — colour in the border and the glyph, never
+               in the fill.
+
+            The copy is rewritten too — see MISSION_COPY at the top of this file for why it lives
+            in the frontend and what rules it follows.
+
+            WHAT DID NOT CHANGE: which missions exist, `mission.completed`, `mission.href`, and
+            the reward figure, which is still the API's own `reward_points` and is still printed
+            only when it is a real number above zero.
           */}
           <section aria-labelledby="missions-title" className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm xl:col-span-2">
-            <div className="border-b border-hairline px-4 py-4 sm:px-6">
-              <div className="flex items-center justify-between gap-4">
-                <div className="min-w-0">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">À votre rythme</p>
-                  <h2 id="missions-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Mes missions</h2>
-                </div>
-                <span className="shrink-0 rounded-full bg-sunken px-3 py-1.5 text-xs font-bold tabular-nums text-ink-2">
-                  {completedMissions}/{dashboard.missions.length}
-                </span>
+            <div className="flex items-center justify-between gap-4 border-b border-hairline px-4 py-4 sm:px-6">
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Programme Protinas</p>
+                <h2 id="missions-title" className="mt-1 font-display text-xl font-bold uppercase tracking-tight text-ink-1">Mes missions</h2>
               </div>
-              {/* `bg-rule` track, not `bg-rule-strong` — the same reasoning as the review
-                  distribution bars: at rule-strong the empty portion outweighs the fill and the
-                  eye reads the grey as the value. An empty track is structure. */}
-              <div
-                className="mt-3 h-1.5 overflow-hidden rounded-full bg-rule"
-                role="progressbar"
-                aria-valuemin={0}
-                aria-valuemax={dashboard.missions.length}
-                aria-valuenow={completedMissions}
-                aria-label={`${completedMissions} missions terminées sur ${dashboard.missions.length}`}
-              >
-                <div
-                  className="h-full rounded-full bg-ok transition-[width] duration-500 ease-out motion-reduce:transition-none"
-                  style={{ width: `${dashboard.missions.length ? (completedMissions / dashboard.missions.length) * 100 : 0}%` }}
-                />
-              </div>
+              {/* The count, not a bar. Seven rows that each state their own status ARE the
+                  progress; a bar above them says the same thing a third time. */}
+              <p className="shrink-0 text-xs font-semibold tabular-nums text-ink-2">
+                {completedMissions} sur {dashboard.missions.length} terminées
+              </p>
             </div>
-            <ul className="grid gap-2 p-3 sm:grid-cols-2 sm:gap-3 sm:p-4">
-              {dashboard.missions.map((mission) => (
-                <li key={mission.key} className="min-w-0">
-                  <Link
-                    href={mission.href}
-                    aria-label={mission.completed ? `${mission.label} — terminée` : mission.label}
-                    className={`group flex h-full flex-col gap-2 rounded-xl border p-3.5 transition-colors sm:p-4 ${
-                      mission.completed
-                        ? 'border-ok/20 bg-ok/5'
-                        : 'border-hairline bg-sunken hover:border-brand/35 hover:bg-brand/5'
-                    }`}
-                  >
-                    <span className="flex items-start gap-2.5">
+            <ul className="divide-y divide-hairline">
+              {dashboard.missions.map((mission) => {
+                const copy = missionCopy(mission);
+                return (
+                  <li key={mission.key}>
+                    <Link
+                      href={mission.href}
+                      aria-label={mission.completed ? `${copy.label} — terminée` : copy.label}
+                      className="group flex items-center gap-3 px-4 py-3 transition-colors hover:bg-sunken sm:gap-4 sm:px-6"
+                    >
                       <span
-                        className={`mt-px flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
-                          mission.completed ? 'border-ok/40 bg-ok/10 text-ok' : 'border-rule-strong/50 bg-elevated'
+                        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          mission.completed ? 'border-ok text-ok' : 'border-rule-strong'
                         }`}
                       >
                         {mission.completed && <Check className="h-3 w-3" aria-hidden="true" />}
                       </span>
-                      {/* The title owns the row now. `text-pretty` keeps a two-line label from
-                          leaving one orphaned word when it does wrap at 320. */}
-                      <span className={`min-w-0 flex-1 text-pretty text-sm font-semibold leading-snug ${mission.completed ? 'text-ink-2' : 'text-ink-1'}`}>
-                        {mission.label}
-                      </span>
-                      <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
-                    </span>
-
-                    {/* Clamped to two lines. These come from the API and vary from 38 to 74
-                        characters; unclamped, one long description sets the height of an entire
-                        row of cards. */}
-                    <span className="line-clamp-2 ps-[30px] text-xs leading-snug text-ink-3">{mission.description}</span>
-
-                    {mission.reward_points !== null && mission.reward_points > 0 && (
-                      /* `mt-auto` pins the reward to the foot of the card, so in a row where one
-                         card has a reward and its neighbour does not, the two still line up. */
-                      <span className="mt-auto flex ps-[30px] pt-0.5">
-                        <span className="inline-flex rounded-full border border-brand/25 bg-elevated px-2.5 py-1 text-[11px] font-bold text-brand">
-                          <ProtinaAmount value={mission.reward_points} signed />
+                      <span className="min-w-0 flex-1">
+                        {/*
+                          THE REWARD SITS ON THE TITLE'S LINE, NOT BESIDE THE WHOLE ROW.
+                          Screenshotted at 390 with it beside the row: the hint lost the chip's
+                          ~66px and "L'avis porte le badge « Achat vérifi…" truncated mid-word.
+                          On the title's line instead, the hint owns the full row width, so it
+                          fits at 390 without any string being tuned to a pixel measurement.
+                        */}
+                        <span className="flex items-baseline gap-3">
+                          <span className={`min-w-0 flex-1 text-pretty text-sm font-semibold leading-snug ${mission.completed ? 'text-ink-2' : 'text-ink-1'}`}>
+                            {copy.label}
+                          </span>
+                          {mission.reward_points !== null && mission.reward_points > 0 && (
+                            /* `compact` shows the coin and the figure and keeps "+300 Protinas"
+                               for a screen reader — the word costs ~50px it does not earn beside
+                               the coin. The figure is the API's own `reward_points`; a mission
+                               the backend does not price shows nothing here. */
+                            <ProtinaAmount
+                              value={mission.reward_points}
+                              signed
+                              compact
+                              className="shrink-0 self-center text-xs font-bold text-brand"
+                            />
+                          )}
                         </span>
+                        {/* One line, and it stays one line: `truncate` rather than a two-line
+                            clamp, because every hint is written to fit and a row that grows is
+                            the thing this pass removed. */}
+                        <span className="mt-0.5 block truncate text-xs leading-snug text-ink-3">{copy.hint}</span>
                       </span>
-                    )}
-                  </Link>
-                </li>
-              ))}
+                      <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-colors group-hover:text-brand" aria-hidden="true" />
+                    </Link>
+                  </li>
+                );
+              })}
             </ul>
           </section>
 
