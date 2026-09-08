@@ -24,6 +24,60 @@ export interface BlogSeoEntry {
 
 /** Slug (from URL) → SEO config. Use normalized slug (lowercase, no accents). */
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
+  'impact-whey-protein-de-myprotein-avis-avantages-et-mode-d-emploi': {
+    metaDescription:
+      'Impact Whey MyProtein : ce que vaut sa teneur en protéines, comment la doser, et comment elle se situe face aux autres whey vendues en Tunisie.',
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'comparer les protéines disponibles', href: '/proteines' },
+    ],
+  },
+  'iso-100-de-dymatize-la-whey-isolate-ultime-pour-les-sportifs': {
+    metaDescription:
+      'ISO 100 de Dymatize : pourquoi l’hydrolyse change la digestion, quand la prendre, et ce qui la distingue d’une whey concentrée classique.',
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [
+      { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
+      { anchor: 'toutes les whey disponibles', href: '/whey-proteine' },
+    ],
+  },
+  'cosmetiques-bio-decouvrez-les-meilleurs-produits-naturels-pour-votre-peau': {
+    metaDescription:
+      'Cosmétiques bio : ce que le label garantit vraiment, comment lire une liste INCI et repérer un produit naturel de qualité avant de commander.',
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [
+      { anchor: 'compléments alimentaires disponibles', href: '/proteines' },
+    ],
+  },
+  'parapharmacie-moins-cher-en-tunisie-ou-trouver-les-meilleurs-prix': {
+    metaDescription:
+      'Parapharmacie moins chère en Tunisie : comment comparer les offres en ligne, ce qu’il faut vérifier avant de commander et les rayons les plus demandés.',
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [
+      { anchor: 'vitamines et minéraux', href: '/vitamines' },
+      { anchor: 'compléments alimentaires', href: '/proteines' },
+    ],
+  },
+  'equipements-cardio-tunisie': {
+    metaDescription:
+      'Équipements cardio en Tunisie : tapis, vélos et rameurs comparés selon l’espace, l’objectif et l’usage réel, avec les critères à vérifier avant d’acheter.',
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [
+      { anchor: 'équipements de sport en Tunisie', href: '/equipement' },
+    ],
+  },
+
   'ما هي الأطعمة التي تحتوي على الكرياتين؟': {
     headline: 'ما هي الأطعمة التي تحتوي على الكرياتين؟ المصادر والكميات',
     metaDescription:
