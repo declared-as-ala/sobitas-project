@@ -194,6 +194,8 @@ function translateTree(root: ParentNode, locale: Locale) {
 export function I18nProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [locale, setLocaleState] = useState<Locale>(DEFAULT_LOCALE);
+  // Do not overwrite the anti-FOUC locale with the initial French state before storage loads.
+  const [localeReady, setLocaleReady] = useState(false);
   // Bumped when a lazily-loaded locale chunk arrives, so text already on screen re-translates.
   // Stays at 0 forever while MULTILOCALE_ENABLED is false — loadLocaleAssets returns immediately.
   const [, setAssetsVersion] = useState(0);
@@ -204,10 +206,14 @@ export function I18nProvider({ children }: { children: ReactNode }) {
       // French-only: forget any persisted ar/en so the whole app (incl. the API locale param)
       // stays French. No translation pass runs while locale === 'fr'.
       try { localStorage.removeItem(LOCALE_STORAGE_KEY); } catch { /* ignore */ }
+      setLocaleReady(true);
       return;
     }
-    const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
-    if (isLocale(stored)) setLocaleState(stored);
+    try {
+      const stored = localStorage.getItem(LOCALE_STORAGE_KEY);
+      if (isLocale(stored)) setLocaleState(stored);
+    } catch { /* Storage can be unavailable; retain the default locale. */ }
+    setLocaleReady(true);
   }, []);
 
   const setLocale = useCallback((nextLocale: Locale) => {
@@ -222,6 +228,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    if (!localeReady) return;
     const dir = getLocaleDirection(locale);
     document.documentElement.lang = locale;
     document.documentElement.dir = dir;
@@ -248,7 +255,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
     }
 
     return () => observerRef.current?.disconnect();
-  }, [locale]);
+  }, [locale, localeReady]);
 
   // Pull the AR/EN chunks in as soon as a non-French locale is active. No-op while
   // MULTILOCALE_ENABLED is false, which is why none of that data reaches a French visitor.

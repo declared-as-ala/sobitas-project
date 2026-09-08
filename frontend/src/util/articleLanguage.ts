@@ -1,4 +1,5 @@
 import type { Article } from '@/types';
+import { truncateAtWord } from './sanitizeProductHtml';
 
 /**
  * Language of a blog article, from the CMS field when set and detected from the text when not.
@@ -141,20 +142,22 @@ export function buildArticleTitle(headline: string, lang: ArticleLanguage): stri
   return clean + suffix;
 }
 
-/**
- * The "and this is in Tunisia" reinforcement appended to a meta description that lacks it.
- *
- * The French version was appended UNCONDITIONALLY to Arabic articles, because the test asked
- * whether the description contained the Latin string "Tunisie" — which an Arabic description never
- * does. So every Arabic snippet was carrying a French sentence, in an RTL context, in the last
- * forty-five characters of the space Google gives it. `تونس` is the same claim in the same script.
- */
-export function localityHint(description: string, lang: ArticleLanguage): string {
+/** Keep locality inside the final snippet budget, even when it occurs late in CMS copy. */
+export function localityHint(description: string, lang: ArticleLanguage, maxLen = 160): string {
   const text = String(description ?? '').trim();
-  if (isArabicArticle(lang)) {
-    return /تونس/.test(text) ? text : `${text} نصائح التغذية الرياضية في تونس — ${AR_BRAND_SUFFIX}.`;
-  }
-  return text.includes('Tunisie')
-    ? text
-    : `${text} Conseils nutrition sportive Tunisie — Protéine Tunisie.`;
+  // truncateAtWord may append an ellipsis; reserve its character too.
+  const shorten = (value: string, budget: number) => value.length <= budget
+    ? value
+    : truncateAtWord(value, Math.max(0, budget - 1));
+  const snippet = shorten(text, maxLen);
+  const arabic = isArabicArticle(lang);
+  const hasLocality = arabic ? /تونس/.test(snippet) : /tunisi[eo]/i.test(snippet);
+  if (hasLocality) return snippet;
+
+  const hint = arabic
+    ? `نصائح التغذية الرياضية في تونس — ${AR_BRAND_SUFFIX}.`
+    : 'Conseils nutrition sportive Tunisie — Protéine Tunisie.';
+  if (hint.length >= maxLen) return shorten(hint, maxLen);
+  const opening = shorten(text, maxLen - hint.length - 1);
+  return opening ? `${opening} ${hint}` : hint;
 }

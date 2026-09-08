@@ -6,7 +6,7 @@
 
 import { getStorageUrl } from '@/services/api';
 import { OPENING_HOURS } from '@/util/company';
-import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { AR_BRAND_SUFFIX, resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
@@ -863,7 +863,7 @@ export function buildOrganizationSchema(
      * already sitting at position 2.4. It is here because a company's other name should be stated
      * somewhere, and right now it is stated nowhere.
      */
-    alternateName: ['SOBITAS', 'Sobitas'],
+    alternateName: ['SOBITAS', 'Sobitas', AR_BRAND_SUFFIX],
     url: base,
     logo: `${base}/logo.png`,
     // Search Console recommends a store-level return policy in addition to the policy carried
@@ -1035,7 +1035,7 @@ export function buildWebSiteSchema(baseUrl: string): object {
     name: 'Protéine Tunisie',
     // 'SOBITAS' appended for the reason given on the Organization node: it is the legal name, it
     // is the site's single biggest query, and it was machine-readable nowhere after the rebrand.
-    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS'],
+    alternateName: ['Protein Tunisie', 'Proteine Tunisie', 'protein.tn', 'SOBITAS', AR_BRAND_SUFFIX],
     url: base,
     inLanguage: 'fr-TN',
     publisher: { '@id': `${base}/#organization` },

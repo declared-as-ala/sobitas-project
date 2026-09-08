@@ -9,8 +9,8 @@ import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
 import { getStorageUrl } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
-import { buildMetaDescription, htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
-import { resolveArticleLanguage, buildArticleTitle, localityHint } from '@/util/articleLanguage';
+import { buildMetaDescription, htmlToText } from '@/util/sanitizeProductHtml';
+import { resolveArticleLanguage, buildArticleTitle, localityHint, isArabicArticle } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
@@ -39,6 +39,14 @@ export const revalidate = 3600;
  */
 function stripHtml(html: string): string {
   return htmlToText(html, 160);
+}
+
+/** Decode multiply escaped CMS whitespace before the shared, single-pass text sanitizer. */
+function buildArticleDescription(raw: string, title: string): string {
+  return buildMetaDescription(raw.replace(/&(?:amp;)+(?:nbsp|#160|#x0*a0);/gi, ' '), {
+    title,
+    maxLen: 500,
+  });
 }
 
 const ARTICLE_TOPIC_PATTERNS = [
@@ -131,10 +139,10 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       description,
       article.designation_fr || articleHeadline
     );
-    const metaDescription = buildMetaDescription(
+    const metaDescription = buildArticleDescription(
       alignedDescription ||
         `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
-      { title: articleHeadline, maxLen: 500 }
+      articleHeadline
     );
 
     // forceProteinDomain only normalised the HOST — an off-domain host, a dead path or an
@@ -150,14 +158,18 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
        they typed second. See buildArticleTitle for the five articles this is measured on. */
     const title = buildArticleTitle(articleHeadline, articleLanguage);
     const descriptionWithTunisia = localityHint(metaDescription, articleLanguage);
+    // CMS social overrides need the same entity decoding, title removal and locality budget.
+    const socialDescription = (raw?: string | null) => localityHint(
+      buildArticleDescription(raw || metaDescription, articleHeadline),
+      articleLanguage
+    );
     const twitterImage = article.seo?.twitter?.image || imageUrl || '';
     return {
       // absolute: `title` already carries the brand. Without this the template appends it AGAIN,
       // which is the defect on the French side and doubles the French one on the Arabic side.
       title: { absolute: title },
-      // truncateAtWord, not .slice(): the top Arabic article (5,834 impressions, 0.29% CTR)
-      // was ending its snippet on a dangling single letter because 160 landed mid-word.
-      description: truncateAtWord(descriptionWithTunisia, 160),
+      // localityHint reserves space before word-safe truncation, including the ellipsis.
+      description: descriptionWithTunisia,
       robots: {
         index: article.seo?.robots?.index ?? article.seo_robots_index ?? true,
         follow: article.seo?.robots?.follow ?? article.seo_robots_follow ?? true,
@@ -172,7 +184,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
       openGraph: {
         title: article.seo?.open_graph?.title || title,
-        description: article.seo?.open_graph?.description || truncateAtWord(descriptionWithTunisia, 160),
+        description: socialDescription(article.seo?.open_graph?.description),
         images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
@@ -181,7 +193,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       twitter: {
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',
         title: article.seo?.twitter?.title || title,
-        description: article.seo?.twitter?.description || truncateAtWord(descriptionWithTunisia, 160),
+        description: socialDescription(article.seo?.twitter?.description),
         images: twitterImage ? [twitterImage] : ['/og-banner.jpg'],
       },
     };
@@ -266,11 +278,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
      * Filament updates the linking with no code change.
      */
     const linkTargets: LinkTarget[] = targetsFromTaxonomy(categories, {
-      'whey-proteine': ['whey', 'whey isolate', 'protéine de lactosérum'],
-      creatine: ['créatine monohydrate', 'monohydrate de créatine'],
-      proteines: ['protéine en poudre', 'poudre de protéine'],
-      'prise-de-masse': ['gainer', 'mass gainer'],
-      'acides-amines': ['bcaa', 'acides aminés'],
+      'whey-proteine': ['whey', 'whey isolate', 'protéine de lactosérum', 'واي بروتين', 'الواي بروتين', 'مصل اللبن', 'بروتين مصل اللبن'],
+      creatine: ['créatine monohydrate', 'monohydrate de créatine', 'كرياتين', 'الكرياتين', 'كرياتين مونوهيدرات', 'الكرياتين مونوهيدرات'],
+      proteines: ['protéine en poudre', 'poudre de protéine', 'مسحوق البروتين', 'بروتين بودرة'],
+      'prise-de-masse': ['gainer', 'mass gainer', 'ماس جينر', 'زيادة الوزن', 'زيادة الكتلة العضلية'],
+      'acides-amines': ['bcaa', 'acides aminés', 'الأحماض الأمينية', 'احماض امينية'],
     });
 
     /*
@@ -287,10 +299,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
     const articleImageUrl = displayArticle.cover ? getStorageUrl(displayArticle.cover) : undefined;
     const articleSchema = buildArticleSchema(displayArticle, baseUrl, articleImageUrl);
+    const arabic = isArabicArticle(resolveArticleLanguage(article));
     const breadcrumbSchema = buildBreadcrumbListSchema(
       [
-        { name: 'Accueil', url: '/' },
-        { name: 'Blog', url: '/blog' },
+        { name: arabic ? 'الرئيسية' : 'Accueil', url: '/' },
+        { name: arabic ? 'المدونة' : 'Blog', url: '/blog' },
         { name: displayArticle.designation_fr || displayArticle.slug || 'Article', url: blogHref(displayArticle.slug || slug) },
       ],
       baseUrl

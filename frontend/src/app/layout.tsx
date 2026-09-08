@@ -13,7 +13,7 @@ import type { Metadata, Viewport } from "next";
  *                      in Inter — the face the rest of the body already uses.
  *   Noto Sans Arabic   `font-arabic` IS NOT IN tailwind.config.ts at all, so that class was always
  *                      a no-op. The real consumer is globals.css, which declares
- *                      `var(--font-arabic), "Noto Sans Arabic", "Segoe UI", Tahoma, Arial` — a
+ *                      `"Noto Sans Arabic", "Segoe UI", Tahoma, Arial` — a
  *                      complete Arabic fallback chain that resolves on every modern device without
  *                      the download.
  *

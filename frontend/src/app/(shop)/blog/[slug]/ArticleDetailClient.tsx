@@ -11,7 +11,7 @@ import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { stripEmptyHeadings } from '@/util/htmlEntities';
 import { injectInternalLinks, type LinkTarget } from '@/util/internalLinks';
-import { resolveArticleLanguage } from '@/util/articleLanguage';
+import { isArabicArticle, resolveArticleLanguage } from '@/util/articleLanguage';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useMemo, useState, useEffect, useRef } from 'react';
@@ -158,6 +158,10 @@ function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
 }
 
 export function ArticleDetailClient({ article, relatedArticles, linkTargets = [], children }: ArticleDetailClientProps) {
+  const articleLanguage = resolveArticleLanguage(article);
+  const arabic = isArabicArticle(articleLanguage);
+  const displayType = arabic ? 'article-arabic-type' : 'font-display uppercase tracking-tight';
+  const kickerType = arabic ? 'article-arabic-type' : 'font-display uppercase tracking-[0.2em]';
   const contentRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
@@ -277,11 +281,11 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
           <article className="bg-elevated rounded-xl border border-hairline shadow-sm overflow-hidden">
             {/* Article Header */}
             <header className="px-4 sm:px-6 lg:px-8 pt-6 sm:pt-8 pb-4 sm:pb-6">
-              <span className="inline-flex items-center gap-2 mb-3 font-display uppercase tracking-[0.2em] text-[11px] sm:text-xs font-semibold text-brand">
+              <span className={`inline-flex items-center gap-2 mb-3 ${kickerType} text-[11px] sm:text-xs font-semibold text-brand`}>
                 <span className="h-px w-5 bg-red-600 dark:bg-red-400" aria-hidden="true" />
                 Blog
               </span>
-              <h1 className="font-display uppercase tracking-tight leading-[1.1] sm:leading-[1.05] font-bold text-ink-1 text-2xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6 text-balance break-words">
+              <h1 lang={articleLanguage.code} dir={articleLanguage.dir} className={`${displayType} leading-[1.1] sm:leading-[1.05] font-bold text-ink-1 text-2xl sm:text-4xl lg:text-5xl mb-4 sm:mb-6 text-balance break-words`}>
                 {decodeHtmlEntities(article.designation_fr || '')}
               </h1>
 
@@ -365,7 +369,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                   className="mt-8 rounded-xl border border-hairline bg-sunken p-4 sm:p-6"
                   aria-label="Catégories boutique liées"
                 >
-                  <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold text-ink-1 mb-3">
+                  <h2 className={`${displayType} text-lg sm:text-xl font-bold text-ink-1 mb-3`}>
                     Voir aussi sur la boutique
                   </h2>
                   <ul className="flex flex-wrap gap-2 sm:gap-3">
@@ -389,7 +393,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                 >
                   {articleCategories.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                      <span className={`inline-flex items-center gap-1.5 ${kickerType} text-[11px] sm:text-xs font-semibold text-brand`}>
                         <FolderOpen className="h-3.5 w-3.5" aria-hidden="true" />
                         Catégorie
                       </span>
@@ -406,7 +410,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                   )}
                   {articleTags.length > 0 && (
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center gap-1.5 font-display text-[11px] sm:text-xs font-semibold uppercase tracking-[0.2em] text-brand">
+                      <span className={`inline-flex items-center gap-1.5 ${kickerType} text-[11px] sm:text-xs font-semibold text-brand`}>
                         <Tag className="h-3.5 w-3.5" aria-hidden="true" />
                         Tags
                       </span>

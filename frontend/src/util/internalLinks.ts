@@ -117,7 +117,7 @@ function compileTerm(term: string): string {
    * that includes the accented forms and `&` for the entity spellings — is what actually stops
    * "créatine" from being found inside "créatinine".
    */
-  const letter = '[A-Za-zÀ-ÿ0-9&;#]';
+  const letter = '[\\p{L}\\p{M}\\p{N}&;#_]';
 
   // Trailing (?:s|es)? so a plural mention still matches its singular term, which is how these
   // words are actually written: "les protéines", "des créatines".
@@ -205,7 +205,7 @@ export function injectInternalLinks(
     }
 
     if (skipDepth > 0 || placed >= max) continue;
-    if (!/[A-Za-zÀ-ÿ]/.test(token)) continue;
+    if (!/\p{L}/u.test(token)) continue;
 
     let text = token;
 
