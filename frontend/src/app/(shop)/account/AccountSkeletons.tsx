@@ -84,15 +84,23 @@ export function OrderDetailSkeleton() {
       <Section as="div" spacing="default" first last>
         <Skeleton className="h-9 w-24 mb-6" />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-          <PageHeaderSkeleton />
+          {/* PageHeader now carries a subtitle ("Passée le …"), so the placeholder grows a line
+              with it — otherwise the header block is 24px short of what replaces it. */}
+          <div className="space-y-3">
+            <PageHeaderSkeleton />
+            <Skeleton className="h-4 w-48" />
+          </div>
           <Skeleton className="h-6 w-24 rounded-full" />
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
+          {/* The articles card now carries the receipt underneath the lines (see OrderReceipt),
+              so the left column is roughly 200px taller than the block it replaced. */}
           <div className="lg:col-span-2">
-            <Skeleton className="h-72 w-full rounded-xl" />
+            <Skeleton className="h-[30rem] w-full rounded-xl" />
           </div>
           <div className="space-y-6">
             <Skeleton className="h-48 w-full rounded-xl" />
+            <Skeleton className="h-52 w-full rounded-xl" />
             <Skeleton className="h-56 w-full rounded-xl" />
           </div>
         </div>

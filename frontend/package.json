@@ -25,6 +25,7 @@
     "measure:auth": "node scripts/measure-auth.mjs",
     "measure:cart": "node scripts/measure-cart.mjs",
     "measure:account": "node scripts/measure-account.mjs",
+  "measure:order-detail": "node scripts/measure-order-detail.mjs",
     "measure:reviews": "node scripts/measure-reviews.mjs",
     "measure:avis": "node scripts/measure-avis.mjs",
     "stub:api": "node scripts/stub-api.mjs",

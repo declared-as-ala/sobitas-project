@@ -483,11 +483,41 @@ export interface Order {
   livraison_adresse1?: string;
   livraison_adresse2?: string;
   tracking?: OrderTracking | null;
+  /**
+   * Loyalty movement for THIS order, from the `user_point_transactions` ledger.
+   * Server-computed in `ClientController::withCustomerTracking()` — never re-derive it here.
+   *
+   * `spent` / `earned` are NET of the compensating `adjustment` rows a cancellation writes, so
+   * they are what the balance is holding right now. `redeemed` / `refunded` / `revoked` are the
+   * gross movements, which is what lets a cancelled order say "60 utilisées, 60 remboursées"
+   * instead of showing nothing once the two cancel out.
+   */
   protina?: {
     spent: number;
     earned: number;
     pending: number;
-    state: 'credited' | 'pending_delivery' | 'none';
+    redeemed?: number;
+    refunded?: number;
+    revoked?: number;
+    state: 'credited' | 'pending_delivery' | 'cancelled' | 'none';
+  };
+  /**
+   * The receipt, computed server-side from the columns checkout wrote. Present only on the order
+   * detail endpoint (`/detail_commande/{id}`), which is the only one that selects the money
+   * columns. Every field is a real figure — see the docblock in `ClientController`.
+   *
+   * `reconciled: false` means the itemised rows do NOT reproduce `total` (a legacy order, or one
+   * whose totals were edited in the back office). The UI must then stop itemising.
+   */
+  totals?: {
+    goods: number;
+    shipping: number;
+    coupon_discount: number;
+    coupon_code: string | null;
+    points_discount: number;
+    other_discount: number;
+    total: number;
+    reconciled: boolean;
   };
 }
 

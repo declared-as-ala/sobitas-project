@@ -7,7 +7,7 @@ import { Button } from '@/app/components/ui/button';
 import { Section } from '@/app/components/layout/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { ArrowLeft, Calendar, MapPin, Phone, Mail, Truck, ExternalLink, CheckCircle2, Clock3, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, Truck, ExternalLink, CheckCircle2, Clock3, Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Image from 'next/image';
@@ -15,8 +15,35 @@ import { getStorageUrl } from '@/services/api';
 import type { Order, OrderDetail } from '@/types';
 import { PageHeader } from '@/app/components/PageHeader';
 import { OrderDetailSkeleton } from '../../AccountSkeletons';
-import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
+import { OrderReceipt, moneyDecimals, receiptFigures } from '@/app/components/account/OrderReceipt';
+import { OrderProtinaOutcome } from '@/app/components/loyalty/OrderProtinaOutcome';
+import { orderLifecycle } from '@/util/orderStatus';
 
+/**
+ * ── THE ORDER PAGE HAD TO SHOW WHAT THE ORDER COST, AND IT DID NOT ──────────────────────────
+ *
+ * Owner, pointing at a live order: *"make it show real numbers of how much the commande, how much
+ * remise from site, how much used protinas reduces the command price etc, and total, and how much
+ * will gain protinas on livraison"*.
+ *
+ * What was here printed `prix_ht`, `frais_livraison` and `prix_ttc` under the headings Sous-total,
+ * Livraison and Total. Those three figures do not add up on any order carrying a coupon, a pack
+ * discount or a points redemption, because the backend computes
+ *
+ *     prix_ttc = max(0, prix_ht − (coupon + pack + points)) + frais_livraison
+ *
+ * and none of the three subtractions was on the page, nor in the API response — `detail_commande`
+ * did not select `remise`, `discount_ht` or `coupon_code_snapshot` at all. The fix is therefore
+ * half server-side (ClientController now selects those columns and publishes a reconciled
+ * `totals` object) and half here. Nothing on this page subtracts one API figure from another to
+ * produce a discount: `OrderReceipt` renders what the server computed, and refuses to itemise at
+ * all when the server says the components do not reproduce the total.
+ *
+ * The loyalty outcome is a SEPARATE block, deliberately. Protinas are not money — the dinars a
+ * redemption removed are on the receipt because they are on the invoice, and the points movement
+ * is stated on its own, in the tense the order's current status makes true. See
+ * `OrderProtinaOutcome`, which is what stops a cancelled order promising a reward.
+ */
 export default function OrderDetailPage() {
   const params = useParams();
   const router = useRouter();
@@ -49,6 +76,9 @@ export default function OrderDetailPage() {
     const red = 'border border-destructive/40 bg-elevated text-destructive';
     const gray = 'border border-rule bg-elevated text-ink-2';
 
+    /* Every spelling in `commandes.etat`. The fallback is `{ label: status }`, so a missing entry
+       renders the raw database value inside a display-face uppercase pill — which is exactly how
+       "livree" once shipped as a badge on the one status that matters most. */
     const statusMap: Record<string, { label: string; className: string }> = {
       'nouvelle_commande': { label: 'Nouvelle', className: gray },
       'en_cours_de_preparation': { label: 'En préparation', className: amber },
@@ -81,17 +111,34 @@ export default function OrderDetailPage() {
 
   if (!order) {
     return (
-      <div className="min-h-screen bg-canvas">
+      <main className="min-h-dvh bg-sunken">
         <Section as="div" spacing="feature" first last className="text-center">
           <h1 className="font-display uppercase tracking-tight text-2xl text-ink-1 mb-4">Commande non trouvée</h1>
           <Button className="h-12 rounded-xl bg-brand font-display uppercase tracking-wide text-on-brand hover:bg-brand-hover" onClick={() => router.push('/account')}>Retour au compte</Button>
         </Section>
-      </div>
+      </main>
     );
   }
 
+  const lifecycle = orderLifecycle(order.etat);
+  const itemCount = details.reduce((sum, detail) => sum + (Number(detail.qte) || 0), 0);
+  const lineTotal = (detail: OrderDetail) => Number(detail.prix_ttc || detail.prix_ht) || 0;
+  // One precision for the whole card: the line totals and the receipt beneath them are the same
+  // column of money, and printing "96.9 DT" above "96.90 DT" reads as two different roundings.
+  const decimals = moneyDecimals([
+    ...details.map(lineTotal),
+    ...(order.totals ? receiptFigures(order.totals) : [Number(order.prix_ttc) || 0]),
+  ]);
+  const money = (n: number) => `${n.toFixed(decimals)} DT`;
+  const orderedAt = order.created_at
+    ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr })
+    : null;
+
   return (
-    <div className="min-h-dvh bg-sunken">
+    /* `data-order-*` is how scripts/measure-order-detail.mjs asserts it is looking at the order it
+       navigated to. A guard that does not check which page it landed on is how the first version
+       of measure-account measured the default tab three times and reported three passes. */
+    <main className="min-h-dvh bg-sunken" data-order-numero={order.numero} data-order-lifecycle={lifecycle}>
 
       <Section as="div" spacing="default" first last>
         <Button
@@ -104,58 +151,87 @@ export default function OrderDetailPage() {
         </Button>
 
         <div className="flex flex-wrap items-start justify-between gap-4 mb-8">
-          <PageHeader kicker="Détail commande" title={`Commande #${order.numero}`} />
+          <PageHeader
+            kicker="Détail commande"
+            title={`Commande #${order.numero}`}
+            subtitle={orderedAt ? `Passée le ${orderedAt}` : undefined}
+          />
           {getStatusBadge(order.etat)}
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8">
-          {/* Order Details */}
+          {/* ── THE RECEIPT: the articles and what they came to, in one card ──────────────
+              Items and totals belong to the same object. Splitting them across two cards in
+              two columns is what let the totals block drift out of agreement with the lines
+              above it without anybody noticing. */}
           <div className="lg:col-span-2 space-y-6">
             <Card className="rounded-xl border border-hairline bg-elevated shadow-sm">
               <CardHeader className="border-b border-hairline">
-                <CardTitle className="font-display uppercase tracking-tight text-lg text-ink-1">Articles commandés</CardTitle>
+                <CardTitle className="flex flex-wrap items-center justify-between gap-2 font-display uppercase tracking-tight text-lg text-ink-1">
+                  <span>Articles commandés</span>
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold normal-case tracking-normal text-ink-3">
+                    <Package className="h-4 w-4" aria-hidden="true" />
+                    {itemCount} article{itemCount > 1 ? 's' : ''}
+                  </span>
+                </CardTitle>
               </CardHeader>
-              <CardContent className="pt-6">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2 text-sm text-ink-2">
-                    <Calendar className="h-4 w-4" aria-hidden="true" />
-                    <span>
-                      {order.created_at ? format(new Date(order.created_at), 'dd MMMM yyyy à HH:mm', { locale: fr }) : 'Date inconnue'}
-                    </span>
-                  </div>
-
-                  {/* Order Items */}
-                  <div className="space-y-4 mt-6">
-                    {details.map((detail) => (
-                      <div key={detail.id} className="flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-3 sm:gap-4 sm:p-4">
-                        {detail.produit?.cover && (
-                          <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-canvas">
-                            <Image
-                              src={getStorageUrl(detail.produit.cover)}
-                              alt={detail.produit.designation_fr || 'Produit'}
-                              fill
-                              className="object-contain p-2"
-                              sizes="64px"
-                              unoptimized
-                            />
-                          </div>
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-semibold text-ink-1 break-words">
-                            {detail.produit?.designation_fr || 'Produit'}
-                          </h4>
-                          <p className="text-sm text-ink-2">
-                            Quantité: {detail.qte} × {detail.prix_unitaire} DT
-                          </p>
+              <CardContent className="pt-5 sm:pt-6">
+                <ul className="space-y-3">
+                  {details.map((detail) => (
+                    <li key={detail.id} className="flex items-center gap-3 rounded-xl border border-hairline bg-sunken p-3 sm:gap-4 sm:p-4">
+                      {detail.produit?.cover && (
+                        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-lg bg-canvas">
+                          <Image
+                            src={getStorageUrl(detail.produit.cover)}
+                            alt={detail.produit.designation_fr || 'Produit'}
+                            fill
+                            className="object-contain p-2"
+                            sizes="64px"
+                            unoptimized
+                          />
                         </div>
-                        <div className="text-right shrink-0">
-                          <p className="font-display font-bold tracking-tight tabular-nums text-ink-1">
-                            {(detail.prix_ttc || detail.prix_ht || 0).toFixed(2)} DT
-                          </p>
-                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <h4 className="break-words font-semibold text-ink-1">
+                          {detail.produit?.designation_fr || 'Produit'}
+                        </h4>
+                        <p className="mt-0.5 text-sm tabular-nums text-ink-3">
+                          {detail.qte} × {money(Number(detail.prix_unitaire) || 0)}
+                        </p>
                       </div>
-                    ))}
-                  </div>
+                      <p className="shrink-0 font-display font-bold tracking-tight tabular-nums text-ink-1">
+                        {money(lineTotal(detail))}
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+
+                {/* `totals` comes only from /detail_commande, which is the only endpoint that
+                    selects the money columns. No fallback arithmetic: if the server did not send
+                    a receipt, the page says so rather than printing a total it reconstructed. */}
+                <div className="mt-6">
+                  {order.totals ? (
+                    <OrderReceipt
+                      totals={order.totals}
+                      lifecycle={lifecycle}
+                      pointsRedeemed={order.protina?.redeemed ?? order.protina?.spent ?? 0}
+                      decimals={decimals}
+                    />
+                  ) : (
+                    <div className="border-t border-rule pt-5">
+                      <div className="flex items-baseline justify-between gap-4">
+                        <span className="font-display text-base font-bold uppercase tracking-tight text-ink-1 sm:text-lg">
+                          Total
+                        </span>
+                        <span className="font-display text-xl font-bold tracking-tight tabular-nums text-brand sm:text-2xl">
+                          {money(Number(order.prix_ttc) || 0)}
+                        </span>
+                      </div>
+                      <p className="mt-2 text-xs leading-relaxed text-ink-3">
+                        Le détail des remises n’est pas disponible pour cette commande.
+                      </p>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -201,31 +277,13 @@ export default function OrderDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-xl border border-hairline bg-elevated shadow-sm">
-              <CardHeader className="border-b border-hairline">
-                <CardTitle className="font-display uppercase tracking-tight text-lg text-ink-1">Résumé</CardTitle>
-              </CardHeader>
-              <CardContent className="pt-6 space-y-4">
-                <div className="flex justify-between text-sm text-ink-2">
-                  <span>Sous-total</span>
-                  <span className="font-display font-semibold tabular-nums text-ink-1">{order.prix_ht?.toFixed(2) || 0} DT</span>
-                </div>
-                {order.frais_livraison && (
-                  <div className="flex justify-between text-sm text-ink-2">
-                    <span>Livraison</span>
-                    <span className="font-display font-semibold tabular-nums text-ink-1">{order.frais_livraison} DT</span>
-                  </div>
-                )}
-                <div className="border-t border-hairline pt-4 flex justify-between items-baseline">
-                  <span className="font-display uppercase tracking-tight text-lg text-ink-1">Total</span>
-                  <span className="font-display font-bold tracking-tight tabular-nums text-lg text-brand">
-                    {order.prix_ttc?.toFixed(2) || 0} DT
-                  </span>
-                </div>
-              </CardContent>
-            </Card>
-
-            {order.protina && <Card className="overflow-hidden rounded-xl border border-brand/20 bg-elevated shadow-sm"><CardContent className="relative p-5 pr-24 sm:p-6 sm:pr-28"><ProtinaMark size="lg" className="absolute right-5 top-5" decorative={false} /><p className="text-[10px] font-bold uppercase tracking-[0.16em] text-brand">Mouvement sécurisé</p><h2 className="mt-1 font-display text-lg font-bold uppercase tracking-tight text-ink-1">Protinas de cette commande</h2><div className="mt-4 space-y-2 text-sm"><div className="flex justify-between gap-3 text-ink-2"><span>Utilisées au paiement</span><ProtinaAmount value={-order.protina.spent} className="font-bold text-brand" /></div><div className="flex justify-between gap-3 text-ink-2"><span>{order.protina.state === 'pending_delivery' ? 'À créditer à la livraison' : 'Créditées'}</span><ProtinaAmount value={order.protina.pending || order.protina.earned} signed className="font-bold text-ok" /></div></div><p className="mt-4 flex items-start gap-2 border-t border-hairline pt-3 text-xs leading-relaxed text-ink-3"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ok" />Le débit est enregistré une seule fois. En cas d’annulation, les Protinas utilisées sont automatiquement remboursées.</p></CardContent></Card>}
+            {order.protina && (
+              <OrderProtinaOutcome
+                movement={order.protina}
+                lifecycle={lifecycle}
+                redemptionValueDt={order.totals ? order.totals.points_discount : null}
+              />
+            )}
 
             <Card className="rounded-xl border border-hairline bg-elevated shadow-sm">
               <CardHeader className="border-b border-hairline">
@@ -273,6 +331,6 @@ export default function OrderDetailPage() {
         </div>
       </Section>
 
-    </div>
+    </main>
   );
 }

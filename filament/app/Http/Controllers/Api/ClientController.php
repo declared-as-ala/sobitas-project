@@ -642,7 +642,16 @@ class ClientController extends Controller
                 'code_postale', 'adresse1', 'adresse2', 'livraison_nom', 'livraison_prenom',
                 'livraison_email', 'livraison_phone', 'livraison_region', 'livraison_ville',
                 'livraison_code_postale', 'livraison_adresse1', 'livraison_adresse2', 'note',
-                'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at'
+                'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at',
+                // ── THE MONEY COLUMNS, WITHOUT WHICH THE ORDER PAGE CANNOT ADD UP ───────────
+                // `prix_ttc` is the ONLY figure the customer actually pays, and it is
+                // `prix_ht - (coupon + pack + points) + frais_livraison` (CommandeController).
+                // Selecting only prix_ht/prix_ttc left the account page with a "Sous-total /
+                // Livraison / Total" block whose three numbers silently disagreed on every
+                // discounted order. These four are already returned to the same customer by
+                // CommandeController::details() on /commande/{id} (the confirmation page), so
+                // this exposes nothing new — it stops one of the two order views from lying.
+                'remise', 'discount_ht', 'discount_ttc', 'coupon_code_snapshot'
             )
             ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
             ->first();
@@ -666,18 +675,41 @@ class ClientController extends Controller
     {
         $shipment = $commande->latestShipment;
 
+        $points = app(\App\Services\PointsService::class);
         $movements = $commande->relationLoaded('pointTransactions') ? $commande->pointTransactions : collect();
-        $spent = abs((int) $movements->where('type', 'redeem')->sum('points'));
-        $earned = max(0, (int) $movements->where('type', 'earn')->sum('points'));
+
+        /*
+         * ── GROSS vs NET, WHICH IS THE WHOLE DIFFICULTY ON A CANCELLED ORDER ────────────────
+         * PointsService::reverseForCommande() does NOT delete the earn/redeem rows when an order
+         * is cancelled or returned — it writes compensating `adjustment` rows (a negative clawback
+         * of what was earned, a positive refund of what was spent). Summing only `type = earn`
+         * therefore reported a cancelled order as "+249 Protinas créditées" forever, on both the
+         * orders list and the order page, for points the ledger had already taken back.
+         *
+         * So there are two honest numbers and they are not the same one:
+         *   GROSS  what happened at checkout / at delivery. `$redeemedGross` is what actually
+         *          reduced `prix_ttc`, so it is the figure the MONEY block must use — a refund
+         *          in points does not retroactively change what the invoice said.
+         *   NET    what the balance is holding now. That is the figure the LOYALTY block must
+         *          use, because it is the only one a customer can check against their balance.
+         */
+        $redeemedGross = abs((int) $movements->where('type', 'redeem')->sum('points'));
+        $earnedGross = max(0, (int) $movements->where('type', 'earn')->sum('points'));
+        $adjustments = $movements->where('type', 'adjustment');
+        $refunded = max(0, (int) $adjustments->where('points', '>', 0)->sum('points'));
+        $revoked = abs(min(0, (int) $adjustments->where('points', '<', 0)->sum('points')));
+        $spent = max(0, $redeemedGross - $refunded);
+        $earned = max(0, $earnedGross - $revoked);
+
         $isDelivered = in_array((string) $commande->etat, \App\Services\PointsService::DELIVERED_STATUSES, true);
-        $isClosed = $isDelivered || in_array((string) $commande->etat, \App\Services\PointsService::CANCELLED_STATUSES, true);
+        $isCancelled = in_array((string) $commande->etat, \App\Services\PointsService::CANCELLED_STATUSES, true);
+        $isClosed = $isDelivered || $isCancelled;
         $pending = 0;
         if (! $isClosed) {
-            $points = app(\App\Services\PointsService::class);
             $pending = $points->earnForSpend($points->earnableSpend(
                 (float) $commande->prix_ttc,
                 (float) ($commande->frais_livraison ?? 0),
-                -$spent,
+                -$redeemedGross,
                 (float) $commande->prix_ht
             ));
         }
@@ -686,8 +718,58 @@ class ClientController extends Controller
             'spent' => $spent,
             'earned' => $earned,
             'pending' => $pending,
-            'state' => $earned > 0 ? 'credited' : ($pending > 0 ? 'pending_delivery' : 'none'),
+            // Gross figures, so the UI can say "60 utilisées, 60 remboursées" instead of silently
+            // showing nothing at all once the two cancel out.
+            'redeemed' => $redeemedGross,
+            'refunded' => $refunded,
+            'revoked' => $revoked,
+            'state' => $isCancelled
+                ? 'cancelled'
+                : ($earned > 0 ? 'credited' : ($pending > 0 ? 'pending_delivery' : 'none')),
         ]);
+
+        /*
+         * ── THE RECEIPT ────────────────────────────────────────────────────────────────────
+         * Computed HERE and not in the browser, because the storefront must never re-derive a
+         * discount by subtraction: `remise` conflates the pack discount and the points discount
+         * (CommandeController writes `remise = packDiscountHt + pointsDiscountHt`), and an order
+         * edited by hand in Filament can make that subtraction produce a negative "saving".
+         *
+         * `reconciled` is the guard. It is true only when the itemised rows actually reproduce
+         * `prix_ttc`; a legacy order, or one whose totals an admin has overwritten, comes back
+         * false and the storefront falls back to a single, exact "remise" residual rather than
+         * printing a column of labelled numbers that do not add up to what was paid.
+         *
+         * Only emitted when the money columns were actually selected — client_commandes() shares
+         * this method and does not select them, and an unselected Eloquent attribute reads as
+         * null, which would publish a receipt of zeros.
+         */
+        $attributes = $commande->getAttributes();
+        if (array_key_exists('remise', $attributes) && array_key_exists('discount_ht', $attributes)) {
+            $goods = round((float) $commande->prix_ht, 3);
+            $shipping = round((float) ($commande->frais_livraison ?? 0), 3);
+            $total = round((float) $commande->prix_ttc, 3);
+            $couponDiscount = round((float) ($commande->discount_ht ?? 0), 3);
+            // What the redemption took off the price, at the rate PointsService owns.
+            $pointsDiscount = $points->pointsToDt($redeemedGross);
+            // `remise` minus the points half of it. Clamped: a hand-edited remise smaller than the
+            // recorded redemption must not surface as a negative discount row.
+            $otherDiscount = round(max(0, (float) ($commande->remise ?? 0) - $pointsDiscount), 3);
+            $residual = round($goods - $couponDiscount - $otherDiscount - $pointsDiscount + $shipping - $total, 3);
+
+            $commande->setAttribute('totals', [
+                'goods' => $goods,
+                'shipping' => $shipping,
+                'coupon_discount' => $couponDiscount,
+                'coupon_code' => $commande->coupon_code_snapshot ?: null,
+                'points_discount' => $pointsDiscount,
+                'other_discount' => $otherDiscount,
+                'total' => $total,
+                // Five millimes of slack — one per rounded component. Anything larger is a real
+                // disagreement between the columns and what was charged, not float noise.
+                'reconciled' => abs($residual) <= 0.005,
+            ]);
+        }
 
         $commande->setAttribute('tracking', $shipment ? [
             'carrier' => 'Aramex',
