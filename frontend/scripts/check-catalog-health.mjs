@@ -126,22 +126,71 @@ if (runs.available) {
   }
 }
 
+/*
+ * ── A FAILED PASS USED TO BE PRINTED AND IGNORED ────────────────────────────────────────────
+ * Everything above prints. The only thing this script ever ASSERTED on was
+ * `chain.first_starved_stage`, a ratio between adjacent stages. A scheduled pass whose last run
+ * ended `failed` therefore appeared in the listing and changed the exit code not at all.
+ *
+ * On 08/09/2026 this script printed `discover  failed  processed 0 ... 2026-09-06 02:00:00` and
+ * then, four lines later, `No stage is starved.` — and exited 0. `discover` is the stage that
+ * ACQUIRES the prose every later stage composes from, and it had been dead for two days.
+ *
+ * That failure is the reason the catalogue does not grow: catalog_health reports 11,048 promoted
+ * staging rows but only 4,792 `with_prose`, 4,598 products over the 250-word gate, and 6,566
+ * products held at noindex. The ratio between stages looked fine precisely BECAUSE nothing new
+ * was arriving — a chain that has stopped moving is perfectly balanced.
+ *
+ * So the ratio check cannot see this class of failure, by construction, and needs this beside it.
+ */
+const failedRuns = runs.available
+  ? Object.keys(runs)
+      .filter((k) => k !== 'available')
+      .filter((k) => String(runs[k]?.status ?? '').toLowerCase() === 'failed')
+  : [];
+
 const starved = h.chain?.first_starved_stage;
 console.log('');
-if (starved) {
-  console.log(`FIRST STARVED STAGE: ${starved}`);
-  console.log('');
-  console.log('Everything after this stage is a symptom, not a bug. Fix this one and the rest');
-  console.log('recover on their own schedule — the passes downstream are already running.');
-  if (starved === 'page_prose') {
-    console.log('');
-    console.log('page_prose starved means the pages ARE being fetched and the extractor is not');
-    console.log('understanding them. Check `unmapped_sections` above: a non-zero count names the');
-    console.log('headings it met and could not place. A ZERO count with zero prose is worse — it');
-    console.log('means the section blocks are not being found at all, so nothing was even offered');
-    console.log('to the heading map. IHerbPageExtractor::sections() is the code to read.');
+
+if (failedRuns.length) {
+  for (const k of failedRuns) {
+    const r = runs[k];
+    console.log(`FAILED PASS: ${k} — last run ended "failed" at ${r.completed_at ?? 'unknown'}`);
+    if (Number(r.processed ?? 0) === 0) {
+      console.log(`  It processed 0 rows, so it failed at STARTUP, before touching any data.`);
+      console.log(`  Look for a credential, a network egress rule or a schema change — not a`);
+      console.log(`  data bug, because it never reached the data.`);
+    }
   }
-  process.exit(1);
+  console.log('');
+  console.log('A pass that is not running starves every stage after it, and the ratio check below');
+  console.log('CANNOT see that: when nothing new arrives, the stages stay in proportion.');
+  /*
+   * `process.exitCode` rather than `process.exit()`: this script's fetch handle is still open at
+   * this point, and on Windows exiting hard through it trips a libuv assertion
+   * (`!(handle->flags & UV_HANDLE_CLOSING)`) that reports 127 instead of 1 — a guard that fails
+   * with the wrong code is a guard whose result nobody can branch on. Setting the code and
+   * letting the module end returns 1 on every platform.
+   */
+  process.exitCode = 1;
 }
 
-console.log('No stage is starved.');
+if (!failedRuns.length) {
+  if (starved) {
+    console.log(`FIRST STARVED STAGE: ${starved}`);
+    console.log('');
+    console.log('Everything after this stage is a symptom, not a bug. Fix this one and the rest');
+    console.log('recover on their own schedule — the passes downstream are already running.');
+    if (starved === 'page_prose') {
+      console.log('');
+      console.log('page_prose starved means the pages ARE being fetched and the extractor is not');
+      console.log('understanding them. Check `unmapped_sections` above: a non-zero count names the');
+      console.log('headings it met and could not place. A ZERO count with zero prose is worse — it');
+      console.log('means the section blocks are not being found at all, so nothing was even offered');
+      console.log('to the heading map. IHerbPageExtractor::sections() is the code to read.');
+    }
+    process.exitCode = 1;
+  } else {
+    console.log('No stage is starved.');
+  }
+}
