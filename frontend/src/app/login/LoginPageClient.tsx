@@ -130,7 +130,7 @@ function LoginContent() {
       {/* Renders nothing at all when NEXT_PUBLIC_GOOGLE_CLIENT_ID is unset — including the
           divider, which would otherwise separate the form from an empty space. */}
       {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
+        <div data-auth-google="" className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
           <AuthDivider />
           <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
         </div>

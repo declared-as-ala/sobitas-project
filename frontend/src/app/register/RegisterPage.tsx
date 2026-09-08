@@ -15,7 +15,6 @@ import {
   AuthAlt,
 } from '@/app/components/AuthShell';
 import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
-import { RegistrationPanel } from '@/app/components/VerificationArtwork';
 
 /** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
  *  password before the request rather than surfacing a 422 the customer cannot read. */
@@ -122,10 +121,11 @@ export default function RegisterPage() {
   const busy = isLoading || googleLoading;
 
   return (
-    <AuthShell artwork={<RegistrationPanel />}>
+    <AuthShell>
       <AuthCardHeader
         kicker="Étape 1 sur 2"
         title="Créer mon compte"
+        subtitleDesktopOnly
         subtitle="Créez votre accès, puis confirmez votre numéro par SMS."
       />
 
@@ -199,7 +199,7 @@ export default function RegisterPage() {
       </form>
 
       {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID && (
-        <div className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
+        <div data-auth-google="" className="mt-4 space-y-3 sm:mt-5 sm:space-y-4">
           <AuthDivider />
           <GoogleSignInButton onCredential={handleGoogle} disabled={busy} />
         </div>

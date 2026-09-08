@@ -67,9 +67,9 @@ const PHONES = [
    * NOT ENFORCED, and printed as a warning on every run so the exemption stays visible.
    *
    * 320x568 is a 2013 screen. /register is 4 fields, a Google option and an account link, and its
-   * floor is ~677px — there is no arrangement of those elements that fits 568 without removing one
-   * of them, and removing the Google button or the phone field to satisfy a decade-old device
-   * would be the wrong trade for the 81% of this site's traffic on modern phones. Everything else
+   * expected height is ~661px including Google's reserve. Removing the Google button or phone
+   * field to satisfy a decade-old device would be the wrong trade for the 81% of this site's
+   * traffic on modern phones. Everything else
    * fits here; it is /register alone that does not.
    */
   { width: 320, height: 568, name: 'iPhone 5', enforce: false },
@@ -87,8 +87,12 @@ const FIT_TOLERANCE = 2;
  * A guard that measures a different page than the one customers get is worse than no guard, so the
  * height is reserved rather than hoped about: divider (~17px) + its two gaps (~28px) + the 48px
  * button, rounded up. When the client id is finally configured, this becomes a real measurement
- * and the reserve should be dropped — `hasGoogle` below reports which mode each run was in, so
- * nobody has to guess.
+ * and the reserve is dropped. A loading/failed Google block already occupies some space: only
+ * top it up to 96px, never add a second full block. Each fit result prints the mode.
+ *
+ * The old sum of header + card + body padding also OMITTED the 224px mobile artwork and the
+ * column's outer padding. Measure the column's bottom from the shell's top, including ancestor
+ * bottom padding/borders/margins, so preceding artwork and outer chrome cannot disappear again.
  */
 const GOOGLE_BLOCK_RESERVE = 96;
 const GOOGLE_ROUTES = new Set(['/login', '/register']);
@@ -96,7 +100,8 @@ const GOOGLE_ROUTES = new Set(['/login', '/register']);
 /** `reset-password` needs its query string, or it renders the "lien invalide" branch instead. */
 const ROUTES = [
   { path: '/login', submit: 'Se connecter' },
-  { path: '/register', submit: 'Créer mon compte' },
+  // Registration now continues to phone verification; the heading is not the submit label.
+  { path: '/register', submit: 'Continuer vers le SMS' },
   { path: '/forgot-password', submit: 'Envoyer le lien' },
   { path: '/reset-password?token=demo-token-for-measurement&email=test%40example.com', submit: 'Enregistrer le mot de passe' },
 ];
@@ -144,12 +149,12 @@ for (const theme of THEMES) {
             };
           });
 
-        const buttons = [...document.querySelectorAll('button, a')];
-        const submit = buttons.find((b) => (b.textContent || '').trim().toLowerCase().includes(submitLabel.toLowerCase()));
+        const buttons = [...document.querySelectorAll('form button[type="submit"]')];
+        const submit = buttons.find((b) => (b.textContent || '').trim().toLowerCase() === submitLabel.toLowerCase());
         const submitRect = submit ? submit.getBoundingClientRect() : null;
 
         /*
-         * 44px targets — with the two exemptions WCAG 2.5.8 itself grants, because without them
+         * 44px targets — with exemptions for inline links and unreachable controls, because without them
          * this check fails on correct markup and gets ignored, which is worse than not having it.
          *
          *   INLINE. A link inside a sentence ("Vous n'avez pas de compte ? Créer un compte") is
@@ -160,16 +165,29 @@ for (const theme of THEMES) {
          *   OFF-SCREEN. The install banner is in the DOM on these routes and parked below the fold
          *   by a transform; its close button is 40px. Measuring a control nobody can reach reports
          *   a failure nobody can fix.
+         *
+         *   HONEYPOT. Reviews use hp_field; registration still uses website (do not rename an
+         *   auth field for this guard). A name alone is insufficient: require the accessibility,
+         *   focus, autofill and visual-hiding attributes, plus the actual 1px geometry. The
+         *   website exception is restricted to /register. Other tiny inputs must still fail.
          */
         const small = [...document.querySelectorAll('main button, form button, form input, form a, button, a[href]')]
           .filter((el) => {
             const r = el.getBoundingClientRect();
+            const cs = getComputedStyle(el);
+            const knownHoneypot = el.matches('input[name="hp_field"], input[name="website"]') &&
+              (el.getAttribute('name') === 'hp_field' || window.location.pathname === '/register') &&
+              el.getAttribute('tabindex') === '-1' && el.getAttribute('aria-hidden') === 'true' &&
+              el.getAttribute('autocomplete') === 'off' && cs.position === 'absolute' &&
+              parseFloat(cs.opacity) === 0 && (cs.pointerEvents === 'none' || cs.clipPath === 'inset(50%)') &&
+              r.width <= 1 && r.height <= 1;
+            if (knownHoneypot) return false;
             if (r.width <= 0 || r.height <= 0 || r.height >= 44) return false;
             if (r.bottom <= 0 || r.top >= window.innerHeight) return false;
 
             const own = (el.textContent || '').trim();
             const parentText = (el.parentElement?.textContent || '').trim();
-            const inlineInSentence = own.length > 0 && parentText.length > own.length + 2;
+            const inlineInSentence = el.tagName === 'A' && own.length > 0 && parentText.length > own.length + 2;
             return !inlineInSentence;
           })
           .map((el) => `${el.tagName.toLowerCase()}:${(el.textContent || el.getAttribute('aria-label') || '').trim().slice(0, 24)}(${Math.round(el.getBoundingClientRect().height)}px)`);
@@ -226,7 +244,7 @@ for (const theme of THEMES) {
 }
 
 /* ── THE FIT PASS ──────────────────────────────────────────────────────────────────────────
-   Separate loop, and deliberately narrow: only the two widths a phone actually is, only the light
+   Separate loop, and deliberately narrow: the listed real phone dimensions, only the light
    theme (height does not vary with palette), and no interaction. Folding it into the matrix above
    would multiply a 40-page run by three for a question that has nothing to do with theme. */
 {
@@ -247,41 +265,57 @@ for (const theme of THEMES) {
           const header = document.querySelector('[data-auth-header]');
           const body = document.querySelector('[data-auth-body]');
           const card = document.querySelector('[data-auth-card]');
-          if (!header || !body || !card) return { missing: true, innerHeight: window.innerHeight };
-          const bodyStyle = getComputedStyle(body);
+          const column = document.querySelector('[data-auth-column]');
+          const shell = document.querySelector('.pt-no-chrome');
+          if (!header || !body || !card || !column || !shell) return { missing: true, innerHeight: window.innerHeight };
+          // The column has intrinsic height on mobile. Its position includes any preceding
+          // artwork; the walk includes outer chrome without counting min-h-dvh's empty space.
+          let contentHeight = column.getBoundingClientRect().bottom - shell.getBoundingClientRect().top;
+          let ancestor = column;
+          while (ancestor) {
+            const cs = getComputedStyle(ancestor);
+            if (ancestor !== column) contentHeight += parseFloat(cs.paddingBottom) + parseFloat(cs.borderBottomWidth);
+            if (ancestor === shell) break;
+            contentHeight += parseFloat(cs.marginBottom);
+            ancestor = ancestor.parentElement;
+          }
+          const googleBlock = document.querySelector('[data-auth-google]');
+          const googleBlockHeight = googleBlock
+            ? googleBlock.getBoundingClientRect().height + parseFloat(getComputedStyle(googleBlock).marginTop)
+            : 0;
           return {
             missing: false,
-            // The real height of what the screen contains, independent of where flexbox centred it
-            // and independent of `min-h-dvh`.
-            contentHeight: Math.ceil(
-              header.getBoundingClientRect().height +
-                card.getBoundingClientRect().height +
-                parseFloat(bodyStyle.paddingTop) +
-                parseFloat(bodyStyle.paddingBottom)
-            ),
+            contentHeight: Math.ceil(contentHeight),
             innerHeight: window.innerHeight,
-            hasGoogle: !!document.querySelector('[data-google-signin], iframe[src*="accounts.google"]'),
+            googleBlockHeight,
+            hasGoogle: !!googleBlock?.querySelector('iframe[src*="accounts.google"]'),
           };
         });
 
         if (m.missing) {
-          fail(`fit ${name} ${width}x${height} ${path}`, 'data-auth-header / -body / -card not found — the shell has moved');
+          fail(`fit ${name} ${width}x${height} ${path}`, 'data-auth-header / -body / -card / -column or shell not found — the shell has moved');
           continue;
         }
 
-        const reserve = GOOGLE_ROUTES.has(path) && !m.hasGoogle ? GOOGLE_BLOCK_RESERVE : 0;
+        const reserve = GOOGLE_ROUTES.has(path) && !m.hasGoogle
+          ? Math.max(0, Math.ceil(GOOGLE_BLOCK_RESERVE - m.googleBlockHeight)) : 0;
+        const googleMode = !GOOGLE_ROUTES.has(path) ? 'Google: n/a'
+          : m.hasGoogle ? 'Google: rendered'
+            : m.googleBlockHeight > 0 ? 'Google: pending/unavailable, reserve topped up' : 'Google: absent, 96px reserved';
         const needed = m.contentHeight + reserve;
         const over = needed - m.innerHeight;
         if (REPORT_ONLY) {
           console.log(
             `  ${name.padEnd(10)} ${String(width).padStart(3)}x${height}  ${path.padEnd(18)} ` +
               `${String(m.contentHeight).padStart(4)}px${reserve ? `+${reserve}` : '    '} of ${height} ` +
-              (over > FIT_TOLERANCE ? `— ${over}px OVER` : `— fits, ${-over}px spare`)
+              (over > FIT_TOLERANCE ? `— ${over}px OVER` : `— fits, ${-over}px spare`) + ` (${googleMode})`
           );
         } else if (over > FIT_TOLERANCE) {
-          const msg = `${over}px taller than the viewport (content ${m.contentHeight}${reserve ? ` + ${reserve} reserved for the Google block` : ''} vs ${m.innerHeight})`;
+          const msg = `${over}px taller than the viewport (content ${m.contentHeight}${reserve ? ` + ${reserve} reserved for the Google block` : ''} vs ${m.innerHeight}; ${googleMode})`;
           if (enforce) fail(`fit ${name} ${width}x${height} ${path}`, msg);
           else console.warn(`  note  fit ${name} ${width}x${height} ${path}  ${msg} (not enforced)`);
+        } else {
+          console.log(`  fit ${name} ${width}x${height} ${path}  ${m.contentHeight}px + ${reserve}px reserve = ${needed}px (${googleMode})`);
         }
       }
     }
