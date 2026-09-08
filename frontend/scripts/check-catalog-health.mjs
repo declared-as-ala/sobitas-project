@@ -143,6 +143,32 @@ if (runs.available) {
  *
  * So the ratio check cannot see this class of failure, by construction, and needs this beside it.
  */
+/*
+ * ── THE FAILURE THAT REPORTS SUCCESS, QUICKLY, FOREVER ──────────────────────────────────────
+ * The status check below catches a pass that ends `failed`. It cannot catch the worse shape,
+ * which ran for 28 days under a green board:
+ *
+ *   catalog:iherb:content dispatches 900 jobs every 5 minutes against fr.iherb.com. Every job
+ *   returns in ~1ms at the `isPaused()` guard, before anything reaches the wire, because the
+ *   circuit breaker opened on 11/08/2026 and the dispatch cadence re-opens it at every cooldown
+ *   expiry (900 jobs per 5 minutes against a 10-minute drain: a backlog is always waiting to
+ *   stampede the host the moment the breaker lifts).
+ *
+ * The scheduler printed DONE. The command printed "Dispatched 900". Every job printed DONE. This
+ * script printed "No stage is starved." and exited 0. Nothing was `failed`, nothing was starved,
+ * and nothing had been fetched for four weeks. See docs/catalog-content-breaker.md.
+ *
+ * `last_content_fetch` is the one honest signal: it is written only when a page actually comes
+ * back. A pass scheduled every five minutes that has not moved it in 24 hours is dead, whatever
+ * every status column says. 24h is deliberately loose — this must fire on a dead pipeline, not
+ * on a slow afternoon.
+ */
+const lastFetch = h.staging?.last_content_fetch ? new Date(String(h.staging.last_content_fetch).replace(' ', 'T') + 'Z') : null;
+const fetchAgeHours = lastFetch && !Number.isNaN(lastFetch.getTime())
+  ? (Date.now() - lastFetch.getTime()) / 3_600_000
+  : null;
+const STALE_AFTER_HOURS = 24;
+
 const failedRuns = runs.available
   ? Object.keys(runs)
       .filter((k) => k !== 'available')
@@ -151,6 +177,24 @@ const failedRuns = runs.available
 
 const starved = h.chain?.first_starved_stage;
 console.log('');
+
+if (fetchAgeHours !== null && fetchAgeHours > STALE_AFTER_HOURS) {
+  const days = Math.floor(fetchAgeHours / 24);
+  console.log(
+    `CONTENT PIPELINE STALE: last page fetch was ${h.staging.last_content_fetch} — ` +
+      `${fetchAgeHours.toFixed(0)}h ago${days >= 1 ? ` (${days} day${days === 1 ? '' : 's'})` : ''}.`
+  );
+  console.log('');
+  console.log('catalog:iherb:content is scheduled every five minutes, so this value should never');
+  console.log('be more than minutes old. If it is hours or days old the jobs are returning without');
+  console.log('fetching — almost always the PoliteFetcher circuit breaker being re-opened by the');
+  console.log('next stampede as fast as its 1800s cooldown clears it.');
+  console.log('');
+  console.log('Do NOT just clear the breaker: the dispatch cadence re-opens it. Read');
+  console.log('docs/catalog-content-breaker.md before changing anything.');
+  console.log('');
+  process.exitCode = 1;
+}
 
 if (failedRuns.length) {
   for (const k of failedRuns) {
