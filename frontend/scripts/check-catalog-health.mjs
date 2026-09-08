@@ -148,18 +148,19 @@ if (runs.available) {
  * The status check below catches a pass that ends `failed`. It cannot catch the worse shape,
  * which ran for 28 days under a green board:
  *
- *   catalog:iherb:content dispatches 900 jobs every 5 minutes against fr.iherb.com. Every job
+ *   catalog:iherb:content dispatches a batch every ten minutes against fr.iherb.com. Every job
  *   returns in ~1ms at the `isPaused()` guard, before anything reaches the wire, because the
- *   circuit breaker opened on 11/08/2026 and the dispatch cadence re-opens it at every cooldown
- *   expiry (900 jobs per 5 minutes against a 10-minute drain: a backlog is always waiting to
- *   stampede the host the moment the breaker lifts).
+ *   circuit breaker opened on 11/08/2026 and has never closed: fr.iherb.com answers every PRODUCT
+ *   page with `403 cf-mitigated: challenge` (its homepage still returns 200, and the 403 also
+ *   reproduces from a residential connection, so it is not an IP block on our server). Five 403s
+ *   re-open the breaker, the rest of the batch returns instantly, and the next tick repeats it.
  *
  * The scheduler printed DONE. The command printed "Dispatched 900". Every job printed DONE. This
  * script printed "No stage is starved." and exited 0. Nothing was `failed`, nothing was starved,
  * and nothing had been fetched for four weeks. See docs/catalog-content-breaker.md.
  *
  * `last_content_fetch` is the one honest signal: it is written only when a page actually comes
- * back. A pass scheduled every five minutes that has not moved it in 24 hours is dead, whatever
+ * back. A pass scheduled every ten minutes that has not moved it in 24 hours is dead, whatever
  * every status column says. 24h is deliberately loose — this must fire on a dead pipeline, not
  * on a slow afternoon.
  */
@@ -185,13 +186,14 @@ if (fetchAgeHours !== null && fetchAgeHours > STALE_AFTER_HOURS) {
       `${fetchAgeHours.toFixed(0)}h ago${days >= 1 ? ` (${days} day${days === 1 ? '' : 's'})` : ''}.`
   );
   console.log('');
-  console.log('catalog:iherb:content is scheduled every five minutes, so this value should never');
+  console.log('catalog:iherb:content is scheduled every ten minutes, so this value should never');
   console.log('be more than minutes old. If it is hours or days old the jobs are returning without');
-  console.log('fetching — almost always the PoliteFetcher circuit breaker being re-opened by the');
-  console.log('next stampede as fast as its 1800s cooldown clears it.');
+  console.log('fetching, at the PoliteFetcher circuit breaker — which usually means the UPSTREAM');
+  console.log('is refusing us, not that anything here is misconfigured.');
   console.log('');
-  console.log('Do NOT just clear the breaker: the dispatch cadence re-opens it. Read');
-  console.log('docs/catalog-content-breaker.md before changing anything.');
+  console.log('Check the host directly before changing any setting. As of 08/09/2026 fr.iherb.com');
+  console.log('answers every product page with 403 cf-mitigated: challenge, and no batch size or');
+  console.log('interval fixes that. Read docs/catalog-content-breaker.md first.');
   console.log('');
   process.exitCode = 1;
 }

@@ -57,19 +57,37 @@ The circuit breaker is open. The job's own comment dates the opening to **11/08/
 
 ## Why a 30-minute cooldown produced a 28-day outage
 
-`enrichment.fetch.circuit_breaker_cooldown_seconds` is **1800**. The breaker is supposed to clear
-itself twice an hour. It does clear — and is immediately re-opened:
+**The upstream is refusing us.** Measured 08/09/2026 from a residential connection — NOT the VPS,
+so this is not an IP block on our server:
 
-1. The cooldown expires.
-2. A backlog is always waiting, because 900 jobs are dispatched every **5** minutes while draining
-   them takes **10** — the queue is filled about twice as fast as it can empty.
-3. That backlog stampedes the host the instant the breaker clears.
-4. Five failures re-open the breaker (`circuit_breaker_failures: 5`) for another 1800 seconds.
-5. Back to 1.
+```
+fr.iherb.com/pr/<any product>   403   cf-mitigated: challenge
+fr.iherb.com/                   200
+```
 
-The dispatch cadence guarantees a stampede at every cooldown expiry, so the breaker can never stay
-closed long enough to fetch anything. **Clearing the breaker by hand does not fix this** — it
-restarts the cycle at step 2.
+Cloudflare challenges the product-page path specifically. Every fetch the pass makes lands on that
+403, five of them re-open the breaker (`circuit_breaker_failures: 5`), and the remaining ~895 jobs
+of the batch return in ~1 ms at the `isPaused()` guard. The next tick dispatches a fresh batch into
+the same wall. The loop persists because the host says no, every time, and it will persist for as
+long as that stays true.
+
+### The cadence is NOT the problem — an earlier version of this document said it was
+
+That claim was wrong and is corrected rather than deleted, because it is the kind of wrong that
+looks convincing:
+
+> "900 jobs are dispatched every 5 minutes while draining them takes 10, so a backlog is always
+> waiting to stampede the host."
+
+The pass is scheduled `cron('5-59/10 * * * *')` — every **ten** minutes, not five. (The error came
+from reading `:05` and `:15` in the scheduler log as a five-minute interval.) And
+`catalog.content.batch` is *derived*, not chosen: `ceil(CATALOG_IHERB_RPS × CATALOG_CONTENT_WINDOW)`
+= `1.5 × 600` = 900 = exactly one drain window, with a long comment in `config/catalog.php`
+explaining that it is computed precisely so the two numbers cannot drift apart.
+
+So the cadence is correct, the breaker is behaving correctly, and **there is no rate change that
+fixes this.** Anyone arriving here planning to lower the batch size or lengthen the interval is
+about to spend a day on the wrong thing.
 
 ## Why nothing reported it
 
@@ -89,19 +107,25 @@ this pass does not report `failed`. It reports success, quickly, forever.
 if it has not moved in 24 hours while the content pass is scheduled, the pipeline is dead no
 matter what any status column says.
 
-## What has to be decided before anything is changed
+## What the remedy actually is
 
-Two possibilities, and they need different fixes:
+The source is gone, not throttled. That narrows it to three honest options:
 
-1. **fr.iherb.com is now refusing us outright.** Then no rate change helps and the prose has to
-   come from somewhere else. Worth testing with a handful of manual fetches from the VPS before
-   assuming otherwise.
-2. **We are stampeding a host that would otherwise serve us.** Then the fix is the dispatch
-   cadence, not the breaker: dispatch no more than one drain-window's worth of work, and back off
-   on re-open rather than retrying at full rate.
+1. **Get the prose from somewhere else.** Manufacturer sites are the obvious candidate. A prior
+   measurement on this project put the hit rate at roughly 2 of 6 for manufacturer pages against
+   0 of 9 for barcode databases, so this is real but partial: it will not cover 6,566 products.
+2. **Write it.** The category guides in `frontend/content/categories/*.json` show the shape and
+   the standard. This is the only option that covers everything, and it is a large content job.
+3. **Accept a smaller indexable catalogue** and put the effort into the products that actually
+   sell, which is what tonight's category and brand work did.
 
-Either way, the sequencing is: establish which of the two it is, fix the cadence, and only then
-clear the breaker — clearing it first destroys the evidence and changes nothing.
+**What must NOT be done: defeating the Cloudflare challenge.** Solving or evading bot detection to
+take content from a site that is refusing automated access is out of scope here and should stay
+that way, regardless of how it is framed.
+
+Whichever option is chosen, `catalog:iherb:content` should stop being scheduled while the upstream
+returns 403. It currently burns ~130,000 job dispatches a day producing nothing, and — more
+importantly — its permanent green status is what hid this for four weeks.
 
 ## Corrections to earlier claims in this repository
 
@@ -113,4 +137,8 @@ standing:
   exists for 21,273 staging rows, so acquisition is not the binding constraint. `discover
   --refresh` did fail on 06/09 and is weekly, so it will not retry until Sunday, and the guard fix
   in that commit is still correct and worth having. But it is not the reason the catalogue is
-  stuck. This is.
+  stuck.
+- **"the dispatch cadence re-opens the breaker"** (stated in the first version of this document
+  and in `b5952fd7`'s message) — no. The pass runs every ten minutes and its batch is derived to
+  be exactly one drain window. The upstream returns 403 behind a Cloudflare challenge, and that
+  is the whole cause.
