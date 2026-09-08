@@ -17,11 +17,11 @@
 # Env:
 #   BASE / BASE_URL   site origin to verify           (default http://localhost:3000)
 #   API_BASE          backend /api origin; when set, the product URL count is cross-checked
-#                     against pagination.total from /all_products
+#                     against a verified crawl of INDEXABLE products (requires Node >=22.6)
 #   MIN_URLS          fail if the whole sitemap has fewer URLs than this   (default 1)
-#   TOLERANCE_PCT     allowed shortfall vs the API's published-product total, in percent
-#                     (default 10 — products may legitimately be absent: noindex, or no
-#                      resolvable subcategory, which is deliberately not submitted)
+#   TOLERANCE_PCT     allowed shortfall vs the API's indexable-product count, in percent
+#                     (default 10 — indexable products without a resolvable subcategory
+#                      are deliberately not submitted; noindex rows are excluded from the count)
 
 set -u
 
@@ -132,18 +132,16 @@ ok "unknown child name 404s"
 # catalogue". Without it, every check above passes on a sitemap missing 15,000 URLs.
 if [ -n "$API_BASE" ]; then
   API_BASE=$(printf '%s' "$API_BASE" | sed 's#/$##')
-  PAYLOAD=$(curl -sS "${API_BASE}/all_products?per_page=1&page=1") || fail "curl failed for ${API_BASE}/all_products"
-  PAGINATION=$(printf '%s' "$PAYLOAD" | sed -n 's/.*"pagination"[[:space:]]*:[[:space:]]*{\([^}]*\)}.*/\1/p')
-  API_TOTAL=$(printf '%s' "$PAGINATION" | sed -n 's/.*"total"[[:space:]]*:[[:space:]]*\([0-9][0-9]*\).*/\1/p')
-  if [ -z "$API_TOTAL" ]; then
-    echo "WARN: could not read pagination.total from ${API_BASE}/all_products — product count NOT cross-checked"
-  else
-    FLOOR=$(( API_TOTAL * (100 - TOLERANCE_PCT) / 100 ))
-    echo "Backend reports $API_TOTAL published products; sitemap carries $PRODUCT_URLS product URLs (floor $FLOOR)"
-    [ "$PRODUCT_URLS" -ge "$FLOOR" ] || fail "only $PRODUCT_URLS of $API_TOTAL published products are in the sitemap — more than ${TOLERANCE_PCT}% missing"
-    [ "$PRODUCT_URLS" -le "$API_TOTAL" ] || fail "$PRODUCT_URLS product URLs for only $API_TOTAL published products — duplicates or stale URLs are being submitted"
-    ok "product coverage within ${TOLERANCE_PCT}% of the backend total"
-  fi
+  # pagination.total includes the deliberately noindexed thin-content catalogue. Walk the
+  # lightweight projection and count robots-eligible rows; never guess a noindex percentage.
+  SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd) || fail "cannot resolve script directory"
+  API_TOTAL=$(node --experimental-strip-types --no-warnings "$SCRIPT_DIR/count-indexable-products.mjs" "$API_BASE") \
+    || fail "could not verify the backend INDEXABLE product count"
+  FLOOR=$(( API_TOTAL * (100 - TOLERANCE_PCT) / 100 ))
+  echo "Backend reports $API_TOTAL indexable products; sitemap carries $PRODUCT_URLS product URLs (floor $FLOOR)"
+  [ "$PRODUCT_URLS" -ge "$FLOOR" ] || fail "only $PRODUCT_URLS of $API_TOTAL indexable products are in the sitemap; more than ${TOLERANCE_PCT}% missing"
+  [ "$PRODUCT_URLS" -le "$API_TOTAL" ] || fail "$PRODUCT_URLS product URLs for only $API_TOTAL indexable products; duplicates or stale URLs are being submitted"
+  ok "product coverage within ${TOLERANCE_PCT}% of the backend indexable count"
 else
   echo "NOTE: set API_BASE=<backend>/api to cross-check the product count against the database."
 fi
