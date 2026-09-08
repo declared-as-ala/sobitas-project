@@ -553,11 +553,11 @@ export interface QuickOrderPayload {
   productId: number;
   variantId?: number;
   qty: number;
-  /** Required: first name / family name */
+  /** Family name required; given name may be empty for a single-word full name. */
   nom: string;
   prenom: string;
-  /** Required: customer email */
-  email: string;
+  /** Optional customer email; an empty string is also accepted. */
+  email?: string;
   phone: string;
   /** New flow: gouvernorat + délégation + localité (like checkout). If set, address is not required. */
   gouvernorat?: string;

@@ -91,13 +91,8 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       );
     }
     const emailTrim = (bodyEmail ?? '').trim();
-    if (!emailTrim) {
-      return NextResponse.json(
-        { error: 'Email requis.' },
-        { status: 400 }
-      );
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
+    // The upstream order API accepts nullable email; only a supplied address needs validation.
+    if (emailTrim && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailTrim)) {
       return NextResponse.json(
         { error: 'Email invalide.' },
         { status: 400 }
