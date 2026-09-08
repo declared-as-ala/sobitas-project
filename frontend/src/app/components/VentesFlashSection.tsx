@@ -146,7 +146,9 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     // Four stateful cards render directly: deadline/empty states have different heights, so a
     // single deferred placeholder would move the page whenever the offer changes.
     <Section id="ventes-flash" surface="sunken" spacing="tight" width="wide" aria-labelledby="ventes-flash-heading">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 sm:block">
+      {/* Phase 12: identity + navigation are one intrinsic-width row, not opposite page edges.
+          Keep SectionHeader's shared title/CTA; this band's next row owns a 16px separation. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 sm:block sm:w-fit [&>div]:mb-4 sm:[&>div]:gap-8">
         <SectionHeader
           id="ventes-flash-heading"
           title={earliestExpiration || !offers.length ? 'Ventes flash' : 'Meilleures promos'}
@@ -165,21 +167,24 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       </div>
       {offers.length > 0 ? (
         <>
-          {/* Two aligned groups, 16px apart on phones and sharing the desktop row. The maxima
-              remain independent: the deepest percentage need not be the largest dinar saving. */}
-          <div className="mb-4 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8">
-            <div className="flex min-w-0 items-center gap-4">
+          {/* Phase 12: offer + deadline read together with a fixed 32px gap from tablet up.
+              The tablet date sits above its clock so neither group is squeezed. On phones,
+              keep the compact two-row summary and the single CTA beside the section title.
+              The maxima remain independent: the deepest percentage need not be the largest
+              dinar saving. Give the leading number its own space before the supporting copy. */}
+          <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
+            <div className="flex min-w-0 items-center gap-6 sm:gap-8">
               <p className="shrink-0 font-display font-extrabold uppercase leading-none text-brand">
                 <span className="mb-1 block text-xs font-semibold tracking-wide">Jusqu’à</span>
                 <span className="text-4xl sm:text-5xl">−{maxDiscount}%</span>
               </p>
               <p className="min-w-0 text-sm text-ink-2">
-                <span className="block font-semibold text-ink-1">Jusqu’à {formatTnd(maxSaving)} d’économie</span>
+                <span className="mb-1 block font-semibold text-ink-1">Jusqu’à {formatTnd(maxSaving)} d’économie</span>
                 Sur {offers.length} produit{offers.length > 1 ? 's' : ''} sélectionné{offers.length > 1 ? 's' : ''}
               </p>
             </div>
             {earliestExpiration && (
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4">
+              <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:flex-col md:items-start lg:flex-row lg:items-center">
                 <FlashDeadline expirationDate={earliestExpiration} />
                 <CountdownDisplay expirationDate={earliestExpiration} />
               </div>
