@@ -298,10 +298,11 @@ export default async function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Protéine Tunisie" />
         {/* Favicons — ?v=8 publishes the transparent Protein.tn P mark. */}
-        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=8" />
-        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=8" />
-        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=8" />
-        <link rel="icon" href="/favicon.ico?v=8" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg?v=9" />
+        <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=9" />
+        <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=9" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png?v=9" />
+        <link rel="icon" href="/favicon.ico?v=9" />
         {/* Manifest for PWA and Android support */}
         <link rel="manifest" href="/site.webmanifest" />
         {/* Preconnect to image/storage origin and Google Fonts CDN */}
