@@ -14,9 +14,24 @@ const CONTENT_DIR = 'content/categories';
  * Ensures one JSON can serve multiple URL slugs (e.g. proteines + whey).
  */
 export const CONTENT_SLUG_ALIASES: Record<string, string> = {
-  // Mass / gainer
-  'prise-de-masse': 'mass-gainer',
-  'mass-gainer': 'mass-gainer',
+  /**
+   * Mass / gainer — the deep guide belongs to the URL Google actually ranks.
+   *
+   * `/mass-gainers` holds 9 of the 11 keywords the pair ranks for (SemRush TN, 08/09/2026),
+   * including `mass gainer` (1600/mo) at 14, and `/mass-gainer` 308s INTO it, so every external
+   * link to the singular already pools there. It was nevertheless reading the SHALLOWER of the two
+   * guides while `/prise-de-masse` — 0 traffic, 2 keywords — served the 1,551-word one. The alias
+   * hands the deep file to the page that can win with it.
+   *
+   * `/prise-de-masse` keeps its own file (`prise-de-masse.json`, resolved by identity below) and
+   * becomes the objective "how to gain weight" hub that routes into this page and its neighbours.
+   *
+   * There is deliberately NO `'mass-gainer'` entry: that URL 308-redirects to `/mass-gainers`
+   * (redirects.js) so the loader is never called with it, and an identity alias would be a no-op
+   * anyway. Listing it next to the live `'mass-gainers'` line only suggests two URLs read this
+   * file when exactly one does.
+   */
+  'mass-gainers': 'mass-gainer',
   // Pre-workout
   'pre-workout': 'pre-workout',
   'pre-workout-tunisie': 'pre-workout',

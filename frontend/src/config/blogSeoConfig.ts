@@ -60,11 +60,23 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
   'creatine-monohydrate-tunisie-guide-d-achat-bienfaits-et-meilleures-marques': {
     headline: "Créatine monohydrate : critères de choix et lecture des étiquettes",
-    openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, retrouvez notre sélection de <a href=\"/creatine\">créatine monohydrate en Tunisie</a>.</p>",
+    /**
+     * P1, 08/09/2026 — THE POST OUTRANKS ITS OWN PILLAR AND HAS TO HAND THE QUERY BACK.
+     *
+     * `creatine monohydrate tunisie` (480 vol, KD 4): this article sits at 16 and `/creatine`,
+     * the only page on the site that can sell the product, sits at 54. That is the cleanest
+     * commercial-intent inversion in the SemRush TN export of 08/09/2026.
+     *
+     * So the pillar link opens the body — openingLinkHtml is PREPENDED to the article body in
+     * blog/[slug]/page.tsx, it is NOT the "Lire aussi" footer block — and its anchor is now the
+     * EXACT query rather than the paraphrase "créatine monohydrate en Tunisie" it carried before.
+     * Google weighs the first anchor to a URL on a page; on this page that is this one.
+     */
+    openingLinkHtml: "<p><strong>Acheter en ligne :</strong> tous les formats, les marques et les prix du jour sont sur notre page <a href=\"/creatine\">créatine monohydrate Tunisie</a> — livraison partout en Tunisie.</p>",
     dateModified: '2026-09-08',
     lang: 'fr',
     faqs: [],
-    internalLinks: [{ anchor: 'créatine monohydrate en Tunisie', href: '/creatine' }],
+    internalLinks: [{ anchor: 'créatine monohydrate Tunisie', href: '/creatine' }],
   },
   'impact-whey-protein-de-myprotein-avis-avantages-et-mode-d-emploi': {
     metaDescription:

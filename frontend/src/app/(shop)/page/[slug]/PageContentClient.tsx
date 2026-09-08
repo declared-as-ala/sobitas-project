@@ -4,7 +4,8 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { getStorageUrl } from '@/services/api';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
-import { Calendar, ArrowLeft, Clock, ChevronRight, Home } from 'lucide-react';
+import { Calendar, ArrowLeft, Clock, ChevronRight, Home, ArrowRight } from 'lucide-react';
+import { getCmsPageSeoEntry } from '@/config/cmsPageSeoConfig';
 import type { Page } from '@/types';
 
 interface PageContentClientProps {
@@ -21,11 +22,39 @@ interface PageContentClientProps {
 }
 
 export function PageContentClient({ page }: PageContentClientProps) {
-  const hasContent = page.body || page.excerpt;
+  /**
+   * ── THE SEO OVERLAY (P1, 08/09/2026) ────────────────────────────────────────────────────
+   * Only pages named in cmsPageSeoConfig get one; every other CMS page renders exactly as
+   * before. Today that is /proteine-tunisie alone — the page the site-wide footer anchor
+   * "Proteine Tunisie" points at, which ranks 68 for `proteine tunisie` while the homepage
+   * ranks 10 and /proteines ranks 45. Read the file header there for the full measurement.
+   *
+   * `page.slug` and not the route param: this component is rendered by THREE routes
+   * (/{slug}, /page/{slug} and /x-crawler/category/{slug}) and the CMS slug is the one value
+   * all three agree on.
+   */
+  const seo = getCmsPageSeoEntry(page.slug ?? '');
+
+  /**
+   * The override H1 REPLACES the body's leading <h1>, it does not join it.
+   *
+   * /proteine-tunisie's CMS body opens with "Protéine Tunisie : Guide complet pour bien
+   * choisir…", i.e. the bare commercial phrase, in the element Google weighs most on the page.
+   * The prose styles below already hide that element (`[&>h1:first-child]:hidden`), so it was
+   * invisible-but-indexed — the worst of both. Dropping it costs nothing on screen and stops
+   * this editorial guide competing head-on with /proteines and /whey-proteine.
+   *
+   * Anchored regex: only a LEADING h1 is removed, which is exactly the one the CSS hides.
+   */
+  const rawBody = String(page.body ?? '');
+  const body = seo?.headingOverride ? rawBody.replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>/i, '') : rawBody;
+  const hasContent = body || page.excerpt;
   const imageUrl = page.image ? getStorageUrl(page.image) : null;
   // Does the admin-authored body open with its own <h1>? If so this template must not add a
-  // second one — see the note on the title element below.
-  const bodyHasOwnH1 = /<h1[\s>]/i.test(String(page.body ?? ''));
+  // second one — see the note on the title element below. Read off the POST-strip body, so a
+  // page with an override heading correctly falls back to emitting the h1 here.
+  const bodyHasOwnH1 = /<h1[\s>]/i.test(body);
+  const heading = seo?.headingOverride || page.title;
 
   return (
     <div className="min-h-screen bg-canvas text-ink-1">
@@ -83,11 +112,11 @@ export function PageContentClient({ page }: PageContentClientProps) {
               className="font-display uppercase tracking-tight leading-[0.95] font-bold text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-5 text-ink-1"
               aria-hidden="true"
             >
-              {page.title}
+              {heading}
             </p>
           ) : (
             <h1 className="font-display uppercase tracking-tight leading-[0.95] font-bold text-3xl sm:text-4xl lg:text-5xl mb-4 sm:mb-5 text-ink-1">
-              {page.title}
+              {heading}
             </h1>
           )}
 
@@ -117,6 +146,53 @@ export function PageContentClient({ page }: PageContentClientProps) {
       {/* ── Content Section ── */}
       <main className="relative bg-canvas">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14 lg:py-20">
+          {/*
+            ── THE COMMERCIAL ROUTE OUT, AND IT HAS TO BE ABOVE THE PROSE ──────────────────────
+            This block is the entire reason /proteine-tunisie is kept rather than 301'd. The page
+            is an informational guide that answers "how do I choose"; the money query behind it is
+            answered by /proteines and /whey-proteine, which currently rank 45 and 58 for it. A
+            "voir aussi" list at the foot of a 1,169-word guide is not a route out — almost nobody,
+            crawler or shopper, gets there. So it sits directly under the hero, first thing in
+            <main>, before a single line of body copy.
+
+            Anchors carry the query verbatim ("protéine en Tunisie", "whey protein en Tunisie").
+            The hint line is what stops it reading as a keyword strip: each link says what is on
+            the other side of it.
+
+            Config-driven, so no other CMS page grows a block it was never written for.
+          */}
+          {seo?.commercialLinks?.length ? (
+            <nav
+              aria-label="Acheter des protéines en Tunisie"
+              className="mb-10 rounded-xl border border-hairline bg-elevated p-5 shadow-sm sm:mb-12 sm:p-6"
+            >
+              {seo.commercialIntro && (
+                <p className="mb-4 font-display text-base font-bold uppercase tracking-tight text-ink-1">
+                  {seo.commercialIntro}
+                </p>
+              )}
+              <ul className="grid gap-3 sm:grid-cols-2">
+                {seo.commercialLinks.map(({ anchor, href, hint }) => (
+                  <li key={href}>
+                    <Link
+                      href={href}
+                      className="group flex h-full min-h-11 flex-col justify-center gap-1 rounded-xl border border-hairline bg-canvas px-4 py-3 transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand">
+                        {anchor}
+                        <ArrowRight
+                          className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none"
+                          aria-hidden="true"
+                        />
+                      </span>
+                      <span className="text-xs leading-relaxed text-ink-3 sm:text-sm">{hint}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </nav>
+          ) : null}
+
           {hasContent ? (
             <article>
               {/* Prose content — flat, one-accent red */}
@@ -147,7 +223,7 @@ export function PageContentClient({ page }: PageContentClientProps) {
                   [&>h2]:flex [&>h2]:items-center [&>h2]:gap-3 [&>h2]:before:content-[''] [&>h2]:before:block [&>h2]:before:w-1 [&>h2]:before:h-5 [&>h2]:before:bg-red-600 [&>h2]:before:rounded-full [&>h2]:before:flex-shrink-0
                   [&_table]:block [&_table]:w-max [&_table]:max-w-full [&_table]:overflow-x-auto [&_pre]:overflow-x-auto
                 "
-                dangerouslySetInnerHTML={{ __html: page.body || page.excerpt || '' }}
+                dangerouslySetInnerHTML={{ __html: body || page.excerpt || '' }}
               />
             </article>
           ) : (

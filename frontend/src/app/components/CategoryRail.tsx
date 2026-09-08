@@ -389,10 +389,44 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           );
         })}
       </ul>
-      <nav aria-label="Whey et créatine en Tunisie" className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-4 sm:px-0">
-        {['whey-proteine', 'creatine'].map((slug) => (
-          <LinkWithLoading key={slug} href={`/${slug}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
-            {categoryAnchor(slug, slug)}
+      {/*
+        ── THE HOMEPAGE'S COMMERCIAL ANCHORS, AND WHY THEY LIVE HERE (P1, 08/09/2026) ───────────
+        41 of our 58 top-20 keyword entries come from the homepage or a blog post, and our own
+        category pages rank 25–44 positions BELOW them for the same commercial queries. From the
+        SemRush TN export of 08/09/2026:
+
+            `proteine tunisie`  880 vol, KD 7   /  ranks 10   /proteines 45, /whey-proteine 58
+            `protein tunisie`   720 vol, KD 10  /  ranks  9   /proteines 37, /whey-proteine 60
+            `whey tunisie`      260 vol, KD 9   /  ranks 16   /whey-proteine 55
+
+        The homepage does not need help. The category pages do, and the homepage is the strongest
+        page we can link them from — so it links them with the query as the anchor text.
+
+        WHY THIS ROW AND NOT A NEW BAND. The homepage already carries these URLs in the SEO block
+        at the very bottom (PRIORITY_SHOP_CATEGORY_LINKS), where a crawler reaches them after ~10
+        bands. Google weighs the FIRST anchor to a URL on a page, so the anchors that matter have
+        to appear before those — and this nav is the first text link on the page, one band under
+        the hero. Adding a band of its own would instead flip the canvas/sunken alternation of
+        every band below it (see the band sequence in HomePageClient), for no gain.
+
+        `/mass-gainers`, not `/mass-gainer` or `/prise-de-masse`: the homepage linked the other two
+        and never this one, which is the page Google actually chose — 9 keywords and 4 traffic
+        against 2 and 0, and the singular slug 308s INTO it (asserted by
+        scripts/check-commercial-intent-map.mjs).
+
+        Anchors are written out here rather than taken from `categoryAnchor()`: that helper is the
+        shared label vocabulary for navigation, and these four strings are keyword targets that
+        must not drift when a label is reworded.
+      */}
+      <nav aria-label="Protéine, whey, mass gainer et créatine en Tunisie" className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-4 sm:px-0">
+        {[
+          { href: '/proteines', anchor: 'Protéine Tunisie' },
+          { href: '/whey-proteine', anchor: 'Whey Protein Tunisie' },
+          { href: '/mass-gainers', anchor: 'Mass Gainer en Tunisie' },
+          { href: '/creatine', anchor: 'Créatine monohydrate en Tunisie' },
+        ].map(({ href, anchor }) => (
+          <LinkWithLoading key={href} href={href} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            {anchor}
           </LinkWithLoading>
         ))}
       </nav>

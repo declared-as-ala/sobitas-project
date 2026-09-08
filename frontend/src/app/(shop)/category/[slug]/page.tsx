@@ -19,7 +19,7 @@ import {
   validateStructuredData,
 } from '@/util/structuredData';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
-import { mergeCategorySeoForSlug, type CategorySeoFromApi, type MergedCategorySeo } from '@/util/resolveCategorySeo';
+import { mergeCategorySeoForSlug, type CategorySeoFromApi, type MergedCategorySeo, canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription, generateTunisiaH1 } from '@/util/tunisiaCategoryKeywords';
 import { getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
@@ -169,13 +169,13 @@ function resolveRelatedCategories(
   for (const s of slugs.slice(0, 6)) {
     const cat = categories.find((c) => c.slug === s);
     if (cat) {
-      out.push({ slug: cat.slug, name: categoryAnchor(cat.slug, cat.designation_fr), url: `/${cat.slug}` });
+      out.push({ slug: cat.slug, name: categoryAnchor(cat.slug, cat.designation_fr), url: canonicalCategoryPath(cat.slug) });
       continue;
     }
     for (const c of categories) {
       const sub = (c.sous_categories || []).find((sc: SubCategory) => sc.slug === s);
       if (sub) {
-        out.push({ slug: sub.slug, name: categoryAnchor(sub.slug, sub.designation_fr), url: `/${sub.slug}` });
+        out.push({ slug: sub.slug, name: categoryAnchor(sub.slug, sub.designation_fr), url: canonicalCategoryPath(sub.slug) });
         break;
       }
     }

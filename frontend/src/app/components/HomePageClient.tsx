@@ -308,6 +308,15 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             the fold, no copy strip in between. The page's single <h1> used to live in that strip;
             it now lives in the crawlable SEO block near the bottom (still exactly one h1, still
             carrying the "Protéine Tunisie" query), so removing the strip costs no ranking signal. */}
+        {/* IT ALSO CARRIES THE PAGE'S FIRST COMMERCIAL ANCHORS (P1, 08/09/2026). The row of text
+            links at the foot of that band — "Protéine Tunisie" → /proteines, "Whey Protein
+            Tunisie" → /whey-proteine, "Mass Gainer en Tunisie" → /mass-gainers, "Créatine
+            monohydrate en Tunisie" → /creatine — is the first anchor to each of those URLs in the
+            document, which is the one Google weighs. PRIORITY_SHOP_CATEGORY_LINKS at the bottom of
+            this file repeats two of them ~10 bands later; do not reorder the two blocks without
+            reading the note in CategoryRail.tsx. The homepage's OWN targeting (`protein tn`,
+            `sobitas` — position 1, 60.9% CTR) is untouched: nothing here changes the sr-only h1,
+            the title, or any brand copy. */}
         <CategoryRail categories={safeAccueil.categories || []} />
 
 

@@ -214,12 +214,83 @@ function mergeFaqs(
   return out;
 }
 
+/**
+ * Related-category slugs that name a URL which REDIRECTS, mapped to what it redirects to.
+ *
+ * ── WHY A MAP AND NOT JUST A CONTENT EDIT ───────────────────────────────────────────────────
+ * `related_category_slugs` arrives from the Filament category record as well as from the JSON
+ * guide, and the backend copy is not editable from this repository. Sweeping the JSON files on
+ * 08/09/2026 fixed eleven of these and left one standing on the single most important page,
+ * because that one came from the API. So the normalisation has to happen where BOTH sources meet.
+ *
+ * These six were measured, not guessed — every one-segment internal href on sixteen category
+ * pages of a real build was fetched with `redirect: 'manual'` and these are the ones that answered
+ * 3xx. `scripts/check-related-slug-hops.mjs` is that measurement, kept as a guard.
+ *
+ * The worst was `/whey-proteine` linking to `/proteine-whey`, which 308s straight back to
+ * `/whey-proteine`: the canonical page linked to a redirect to ITSELF. That is why
+ * mergeCategorySeoForSlug also drops the page's own slug — a self-link survives any amount of
+ * destination-mapping, and no amount of it is correct.
+ */
+const RELATED_SLUG_CANONICAL: Readonly<Record<string, string>> = Object.freeze({
+  'proteine-whey': 'whey-proteine',
+  'complements-alimentaires': 'proteines',
+  proteine: 'proteines',
+  'proteines-completes': 'proteines',
+  'gainers-haute-energie': 'gainers-proteines',
+  'Intra-Workout': 'intra-workout',
+});
+
+function canonicalRelatedSlug(slug: string): string {
+  return RELATED_SLUG_CANONICAL[slug] ?? slug;
+}
+
+/**
+ * A taxonomy slug as a PATH, with any known redirecting slug resolved.
+ *
+ * Category links are built as `/${cat.slug}` in four places across the human and crawler routes,
+ * straight from the API taxonomy — and one taxonomy slug is `Intra-Workout` while the URL that
+ * serves it is `/intra-workout`, so every one of those links spent a hop. Both routes did it, so
+ * a shopper and Googlebot were both sent through the redirect.
+ *
+ * Use this wherever a taxonomy slug becomes an href. It is NOT applied to breadcrumb or canonical
+ * URLs, which are built from the already-resolved `canonicalSlug` rather than a raw record.
+ */
+export function canonicalCategoryPath(slug: string | null | undefined): string {
+  return `/${canonicalRelatedSlug(String(slug ?? '').trim())}`;
+}
+
+/**
+ * The same normalisation, applied to hrefs inside ADMIN-AUTHORED HTML.
+ *
+ * `longBottomHtml`, `intro` and `howToChooseBody` can all arrive from the Filament record as raw
+ * HTML containing internal links, and `longBottomHtml` is rendered with dangerouslySetInnerHTML
+ * and no sanitiser at all. /performance carried `<a href="/Intra-Workout">` in exactly that field
+ * — a hop the related-slug map above could not reach, because the link is prose, not a slug list.
+ *
+ * Deliberately narrow: it rewrites an exact one-segment href that is a KNOWN redirecting slug and
+ * nothing else. It does not parse the HTML, does not touch product or blog URLs, and cannot change
+ * a link it has not been told about. Anything broader belongs in a real sanitiser, not here.
+ */
+function canonicaliseCmsHrefs(html: string): string {
+  if (!html || !html.includes('href="/')) return html;
+  let out = html;
+  for (const [stale, canonical] of Object.entries(RELATED_SLUG_CANONICAL)) {
+    out = out.split(`href="/${stale}"`).join(`href="/${canonical}"`);
+  }
+  return out;
+}
+
 function mergeRelatedSlugs(api: CategorySeoFromApi | undefined, jsonSlugs: string[] | undefined): string[] {
   const fromApi = Array.isArray(api?.related_category_slugs)
     ? api!.related_category_slugs!.filter((s): s is string => typeof s === 'string' && s.trim() !== '')
     : [];
   const fromJson = Array.isArray(jsonSlugs) ? jsonSlugs.filter((s) => typeof s === 'string' && s.trim() !== '') : [];
-  return [...new Set([...fromApi.map((s) => s.trim()), ...fromJson.map((s) => s.trim())])];
+  return [
+    ...new Set(
+      [...fromApi, ...fromJson].map((s) => canonicalRelatedSlug(s.trim()))
+    ),
+  ];
 }
 
 function buildMetaKeywordsLine(api: CategorySeoFromApi | undefined, useApi: boolean): string | undefined {
@@ -296,9 +367,9 @@ export function mergeCategorySeo(
 
   return {
     h1: h1 || '',
-    intro: intro || '',
+    intro: canonicaliseCmsHrefs(intro || ''),
     howToChooseTitle: howToChooseTitle || '',
-    howToChooseBody: howToChooseBody || '',
+    howToChooseBody: canonicaliseCmsHrefs(howToChooseBody || ''),
     faqs,
     relatedCategorySlugs,
     bestProductSlugs: Array.isArray(j.bestProductSlugs) ? j.bestProductSlugs : [],
@@ -315,12 +386,32 @@ export function mergeCategorySeo(
     robotsIndex,
     robotsFollow,
     breadcrumbLabel: breadcrumbLabel || undefined,
-    longBottomHtml: longBottomHtml || undefined,
+    longBottomHtml: longBottomHtml ? canonicaliseCmsHrefs(longBottomHtml) : undefined,
     banners: banners?.desktop || banners?.mobile ? banners : undefined,
     extraJsonLd,
   };
 }
 
+/**
+ * Slugs whose h1 / metaTitle / metaDescription are written HERE, in content/categories/*.json,
+ * and must beat whatever the Filament category record says.
+ *
+ * Everywhere else the CMS wins, and that is the right default: a shop owner editing a category
+ * expects the edit to show. For these slugs it is wrong, because their titles are not decoration
+ * — they are written against Search Console and SemRush data to win one named query, and a
+ * well-meaning CMS edit silently undoes the targeting with no error and no diff to review.
+ *
+ * ── mass-gainers AND prise-de-masse JOINED ON 08/09/2026, AND WHY THEY HAD TO ────────────────
+ * The two pages were fighting over `mass gainer` (1600/mo). The fix gave the deep guide to
+ * /mass-gainers and rewrote /prise-de-masse as an objective hub — but the hub's whole job is to
+ * stop claiming the term, and its CMS title is `Prise de Masse Tunisie | Gainers & Mass Gainers`.
+ * The rewrite was measured on a real build and the rendered title did not move one character:
+ * mergeCategorySeo had discarded the JSON title because the slug was not in this set.
+ *
+ * So the consolidation was, until this line, a content change with its most important signal —
+ * the <title> — left saying the opposite. The alternative fix is blanking meta_title in Filament,
+ * which works until the next person fills it in again.
+ */
 const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
   'proteines',
   'whey-proteine',
@@ -328,6 +419,14 @@ const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
   'whey-isolate',
   'omega-3',
   'pre-workout',
+  'mass-gainers',
+  'prise-de-masse',
+  // /performance was a SECOND door on `pre workout tunisie`: it ranked 47 for that query while
+  // /pre-workout ranked 24, on a page holding 3 keywords and 0 traffic. Its title and H1 come
+  // from Filament — `Compléments Performance Tunisie | Créatine, BCAA & Pre-Workout` — so the
+  // reviewed copy in content/categories/performance.json could not reach the page without this
+  // entry. It narrows the hub to objectives and links DOWN to /pre-workout instead of competing.
+  'performance',
 ]);
 
 export function mergeCategorySeoForSlug(
@@ -335,7 +434,22 @@ export function mergeCategorySeoForSlug(
   json: Partial<CategorySeoContent> | null,
   api: CategorySeoFromApi | undefined
 ): MergedCategorySeo {
-  const merged = mergeCategorySeo(json, api);
+  const base = mergeCategorySeo(json, api);
+
+  /*
+   * A page must never list itself as a related category. It renders as a link to the URL you are
+   * already on — or, when the related slug is an alias, as a link to a redirect BACK to the page
+   * doing the linking, which is what /whey-proteine -> /proteine-whey -> /whey-proteine was.
+   * Both API and JSON can produce it, and both were producing it, so the filter goes here rather
+   * than in either source. Applied before the curated-slug branch below so it holds for EVERY
+   * category, not just the eight curated ones.
+   */
+  const self = new Set([slug, canonicalRelatedSlug(slug)]);
+  const merged: MergedCategorySeo = {
+    ...base,
+    relatedCategorySlugs: base.relatedCategorySlugs.filter((s) => !self.has(s)),
+  };
+
   if (!SEARCH_CONSOLE_CURATED_SLUGS.has(slug) || !json) return merged;
 
   const h1 = json.h1?.trim() || merged.h1;

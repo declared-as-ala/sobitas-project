@@ -42,7 +42,7 @@ import {
 } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
-import { mergeCategorySeoForSlug } from '@/util/resolveCategorySeo';
+import { mergeCategorySeoForSlug, canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildProductSchema, buildWebPageSchema } from '@/util/structuredData';
@@ -232,7 +232,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const subCats: CrawlerListLink[] = !isSub
       ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
           .filter((sc) => sc?.slug && sc?.designation_fr)
-          .map((sc) => ({ name: sc.designation_fr as string, url: `/${sc.slug}` }))
+          .map((sc) => ({ name: sc.designation_fr as string, url: canonicalCategoryPath(sc.slug) }))
       : [];
 
     // Parent category in the trail for a SUBcategory. Without it the crawler breadcrumb jumped
