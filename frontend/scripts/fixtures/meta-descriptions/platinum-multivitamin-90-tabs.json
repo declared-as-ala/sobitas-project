@@ -1,0 +1,57 @@
+{
+ "id": 17,
+ "slug": "platinum-multivitamin-90-tabs",
+ "designation_fr": "PLATINUM MULTIVITAMIN – 90 TABS",
+ "description_fr": "<p><strong>Platinum Multivitamin : la multivitamine complète et performante pour les athlètes et les personnes actives</strong></p><p>Platinum Multivitamin est une multivitamine complète et performante de la marque Myprotein. Elle est conçue pour fournir à l&#039;organisme les nutriments essentiels à sa bonne santé, en particulier pour les athlètes et les personnes actives.</p><p><strong>La composition de Platinum Multivitamin est exceptionnellement riche et diversifiée. Elle contient une large gamme de vitamines et de minéraux, notamment :</strong></p><ul><li>Vitamines A, D, E, K, C, B1, B2, B3, B5, B6, B9, B12</li><li>Minéraux : calcium, magnésium, fer, zinc, sélénium, iode, cuivre, manganèse, chrome, molybdène, bore, coenzyme Q10, L-arginine</li></ul><p><strong>Les avantages potentiels de la prise de Platinum Multivitamin comprennent :</strong></p><ul><li>Amélioration de la santé générale</li><li>Réduction du risque de maladies chroniques</li><li>Amélioration de la performance sportive</li><li>Réduction de la fatigue</li><li>Amélioration de la récupération musculaire</li></ul><p><strong>Platinum Multivitamin est généralement considéré comme sûr pour les adultes en bonne santé. Cependant, il est important de consulter un médecin avant de prendre ce supplément si vous avez des problèmes de santé.</strong></p><p><strong>Voici quelques-uns des avantages spécifiques de Platinum Multivitamin pour les athlètes et les personnes actives :</strong></p><ul><li><strong>Amélioration de la performance sportive</strong> : Platinum Multivitamin peut aider à améliorer la performance sportive en fournissant à l&#039;organisme les nutriments essentiels à la production d&#039;énergie, à la construction musculaire et à la récupération.</li><li><strong>Réduction de la fatigue</strong> : Platinum Multivitamin peut aider à réduire la fatigue en fournissant à l&#039;organisme les nutriments essentiels à la production d&#039;énergie.</li><li><strong>Amélioration de la récupération musculaire</strong> : Platinum Multivitamin peut aider à améliorer la récupération musculaire en fournissant à l&#039;organisme les nutriments essentiels à la réparation des tissus musculaires.</li></ul><p></p>",
+ "seo": {
+  "title": "PLATINUM MULTIVITAMIN – 90 TABS – Prix Tunisie | Protein.tn",
+  "description": "PLATINUM MULTIVITAMIN – 90 TABS — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "excerpt": null,
+  "canonical_url": null,
+  "robots": {
+   "index": true,
+   "follow": true
+  },
+  "image": "https://admin.protein.tn/storage/produits/September2023/turnn33VCUMjGUTRTvYI.webp",
+  "image_alt": "PLATINUM MULTIVITAMIN – 90 TABS — OLIMP SPORT NUTRITION — Tunisie"
+ },
+ "seo_description": null,
+ "meta_description": "PLATINUM MULTIVITAMIN – 90 TABS — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "meta_description_fr": "PLATINUM MULTIVITAMIN – 90 TABS — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "prix": 95,
+ "promo": null,
+ "promo_expiration_date": null,
+ "price_valid_until": null,
+ "brand": {
+  "id": 1,
+  "designation_fr": "OLIMP SPORT NUTRITION",
+  "logo": "brands/September2023/HGnPbXKfsY0t2gYFARg4.webp"
+ },
+ "sous_categorie": {
+  "id": 28,
+  "designation_fr": "Vitamines",
+  "slug": "vitamines",
+  "categorie_id": 1,
+  "categorie": {
+   "id": 1,
+   "designation_fr": "SANTÉ & VITALITÉ ",
+   "slug": "sante-vitalite"
+  }
+ },
+ "json_ld_product": {
+  "description": "PLATINUM MULTIVITAMIN – 90 TABS — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "offers": {
+   "@type": "Offer",
+   "url": "https://protein.tn/shop/platinum-multivitamin-90-tabs",
+   "priceCurrency": "TND",
+   "price": "95",
+   "availability": "https://schema.org/BackOrder",
+   "itemCondition": "https://schema.org/NewCondition",
+   "seller": {
+    "@type": "Organization",
+    "name": "Protein.tn"
+   }
+  },
+  "name": "PLATINUM MULTIVITAMIN – 90 TABS"
+ }
+}

@@ -1,0 +1,57 @@
+{
+ "id": 187,
+ "slug": "whey-protein-hd-1-9-kg",
+ "designation_fr": "WHEY PROTEIN HD 1,9 KG",
+ "description_fr": "<h2><strong>WHEY HD 1,9 KG de BPI Sports</strong></h2><p><br>Découvrez la puissance de la whey protéine ultime, spécialement conçue pour les passionnés de musculation et de fitness en Tunisie. Ce supplément haut de gamme de <strong>BPI Sports</strong> offre une formule ultra-pure et concentrée pour optimiser votre récupération, soutenir votre prise de muscle et améliorer vos performances sportives.</p><p><strong>Points Forts du Produit :</strong></p><ul><li><strong>Qualité Premium :</strong> Formulé avec des protéines de haute qualité pour un apport nutritionnel optimal.</li><li><strong>Performance Maximale :</strong> Favorise la récupération musculaire et accélère la croissance de vos muscles.</li><li><strong>Adapté aux Athlètes :</strong> Parfait pour la musculation, le fitness et toutes les activités sportives intensives.</li><li><strong>Facile à Utiliser :</strong> Se mélange aisément avec de l’eau ou votre boisson favorite pour un shake rapide et savoureux.</li></ul><p><strong>Pourquoi Choisir WHEY HD de BPI Sports ?</strong></p><ul><li><strong>Efficacité prouvée :</strong> Conçu pour booster vos performances et vous aider à atteindre vos objectifs de fitness.</li><li><strong>Idéal pour tous :</strong> Que vous soyez bodybuilder, athlète professionnel ou amateur de fitness, ce produit est votre allié incontournable.</li><li><strong>Optimisé pour la Tunisie :</strong> Disponible sur protein.tn, il répond aux exigences du marché tunisien avec des standards internationaux.</li></ul><p><br>Ne laissez pas passer l’opportunité de transformer vos entraînements et de repousser vos limites. <strong>Commandez dès maintenant WHEY HD 1,9 KG de BPI Sports sur protein.tn</strong> et donnez à votre corps la nutrition qu’il mérite pour des performances exceptionnelles !</p><p>Optimisez vos résultats et faites de chaque séance une victoire avec ce supplément de choix. 🚀</p>",
+ "seo": {
+  "title": "WHEY PROTEIN HD 1,9 KG – Prix Tunisie | Protein.tn",
+  "description": "WHEY PROTEIN HD 1,9 KG — Whey Protéine en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "excerpt": null,
+  "canonical_url": null,
+  "robots": {
+   "index": true,
+   "follow": true
+  },
+  "image": "https://admin.protein.tn/storage/produits/May2024/PYAjIsii79BvrVPTcS9g.webp",
+  "image_alt": "WHEY PROTEIN HD 1,9 KG — BPI SPORTS — Tunisie"
+ },
+ "seo_description": null,
+ "meta_description": "WHEY PROTEIN HD 1,9 KG — Whey Protéine en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "meta_description_fr": "WHEY PROTEIN HD 1,9 KG — Whey Protéine en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "prix": 260,
+ "promo": 239,
+ "promo_expiration_date": null,
+ "price_valid_until": null,
+ "brand": {
+  "id": 9,
+  "designation_fr": "BPI SPORTS",
+  "logo": "brands/September2023/lxSQgMmRXt1qG8DHVjKb.webp"
+ },
+ "sous_categorie": {
+  "id": 7,
+  "designation_fr": "Whey Protéine",
+  "slug": "whey-proteine",
+  "categorie_id": 4,
+  "categorie": {
+   "id": 4,
+   "designation_fr": "PROTÉINES ",
+   "slug": "proteines"
+  }
+ },
+ "json_ld_product": {
+  "description": "WHEY PROTEIN HD 1,9 KG — Whey Protéine en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "offers": {
+   "@type": "Offer",
+   "url": "https://protein.tn/shop/whey-protein-hd-1-9-kg",
+   "priceCurrency": "TND",
+   "price": "239",
+   "availability": "https://schema.org/BackOrder",
+   "itemCondition": "https://schema.org/NewCondition",
+   "seller": {
+    "@type": "Organization",
+    "name": "Protein.tn"
+   }
+  },
+  "name": "WHEY PROTEIN HD 1,9 KG"
+ }
+}

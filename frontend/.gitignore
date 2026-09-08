@@ -54,3 +54,4 @@ next-env.d.ts
 .next-verify/
 # scripts/stub-api.mjs + a dev server pointed at it — see measure-reviews.
 .next-stub/
+.seo-fixtures/

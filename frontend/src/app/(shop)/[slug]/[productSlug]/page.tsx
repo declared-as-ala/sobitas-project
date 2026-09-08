@@ -18,9 +18,8 @@ import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
-import { buildMetaDescription } from '@/util/sanitizeProductHtml';
+import { productDescription } from '@/util/productMetaDescription';
 import { getComplementProducts } from '@/services/productComplements';
-import { getPriceDisplay } from '@/util/productPrice';
 
 const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -70,56 +69,6 @@ function productTitle(product: Product): string {
   if (explicit?.trim()) return explicit.trim();
   const name = product.designation_fr ?? product.slug ?? 'Produit';
   return `${name} – Prix Tunisie & Livraison Rapide | Protéine Tunisie`;
-}
-
-/**
- * Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars.
- *
- * Two defects fixed here, both visible in live search results:
- *
- * 1. `.replace(/&[a-z]+;/gi, ' ')` DELETED entities instead of decoding them, so
- *    "MUSCULAIRE &amp; PERFORMANCE" reached Google as "MUSCULAIRE   PERFORMANCE" — the word
- *    silently gone. This is the same bug fixed for categories in #192 and blog posts in #195;
- *    this path was the last one still carrying it. `buildMetaDescription` decodes properly.
- * 2. `.slice(0, 160)` cut mid-word. Google appends its own ellipsis to long descriptions, so a
- *    snippet ending on half a word is damage we inflicted, not Google.
- *
- * It also drops a leading repetition of the product name, which the CMS copy almost always opens
- * with — that name is already the title on the line above, so restating it burned ~40 characters
- * of a 160-character budget.
- */
-function productDescription(product: Product, productName: string): string {
-  const explicit = product.seo?.description || product.seo_description || product.meta_description || product.meta_description_fr;
-  if (explicit?.trim()) {
-    const plain = buildMetaDescription(explicit, { title: productName, maxLen: 160 });
-    if (plain) {
-      /*
-       * Imported catalogue rows often carry one identical template with only the category changed:
-       * "… en Tunisie. Livraison 24-72h… paiement… authentique." It is valid text but weak SERP
-       * copy—the highest-impression example, Omega 3 Fish Oil, earned 3,475 impressions at position
-       * 7.4 and only 0.75% CTR. Google explicitly recommends bringing scattered product facts such
-       * as price together in a product description, so enrich ONLY that known template. Hand-written
-       * benefit copy remains authoritative.
-       */
-      const isGenericImportTemplate =
-        /livraison\s+24\s*[-–]\s*72h/i.test(plain) &&
-        /paiement\s+[àa]\s+la\s+livraison/i.test(plain) &&
-        /authentique/i.test(plain);
-
-      if (!isGenericImportTemplate) return plain;
-
-      const price = getPriceDisplay(product).finalPrice;
-      const priceText = Number.isFinite(price) && price > 0 ? ` : ${Math.round(price)} DT` : '';
-      return buildMetaDescription(
-        `${productName}${priceText}. Livraison 24–72h partout en Tunisie, paiement à la livraison. Produit authentique.`,
-        { maxLen: 160 }
-      );
-    }
-  }
-  // Leave room for the trust line rather than truncating it away.
-  const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });
-  if (plain) return `${plain} Prix Tunisie. Livraison 24-72h. Protéine Tunisie.`;
-  return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protéine Tunisie.`;
 }
 
 function productKeywords(product: Product): string[] {

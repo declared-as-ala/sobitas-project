@@ -1,0 +1,57 @@
+{
+ "id": 297,
+ "slug": "layers-dumbbell-rack-mnd-fitness",
+ "designation_fr": "Layers Dumbbell Rack - MND FITNESS",
+ "description_fr": "<h2 data-sourcepos=\"19:1-19:13\"><strong>Layers Dumbbell Rack MND FITNESS</strong></h2>\r\n<p class=\"my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2\">Le&nbsp;<strong>Layers Dumbbell Rack MND FITNESS</strong>&nbsp;(mod&egrave;le F72, 1420x700x1010mm, 71kg) est la solution id&eacute;ale pour organiser votre espace musculation sans compromis sur la solidit&eacute;. Ce rack &agrave; 3 niveaux supporte jusqu&rsquo;&agrave; 15 paires d&rsquo;halt&egrave;res (jusqu&rsquo;&agrave; 20kg/paire selon mod&egrave;les), lib&eacute;rant votre sol et facilitant l&rsquo;acc&egrave;s rapide &agrave; vos poids pr&eacute;f&eacute;r&eacute;s. Contrairement aux racks bas de gamme qui vacillent, sa structure acier &eacute;paisse avec pieds antid&eacute;rapants reste immobile m&ecirc;me charg&eacute; &agrave; bloc, parfait pour home gym ou salle pro.<span class=\"inline-flex\" data-state=\"closed\">​</span></p>\r\n<p class=\"my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2\"><strong>Organisation optimis&eacute;e</strong>&nbsp;: chaque niveau est con&ccedil;u pour des halt&egrave;res de tailles vari&eacute;es (hex, caoutchout&eacute;es, olympiques), avec plateaux espac&eacute;s pour &eacute;viter les rayures et chutes accidentelles. Les concurrents MND soulignent cette capacit&eacute; &agrave; &ldquo;ranger proprement 30+ halt&egrave;res&rdquo;, transformant un coin encombr&eacute; en setup pro. Les plateaux color&eacute;s (optionnels) ajoutent une touche esth&eacute;tique qui motive &agrave; entretenir son espace.<span class=\"inline-flex\" data-state=\"closed\">​</span></p>\r\n<p class=\"my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2\"><strong>Utilisation pratique</strong>&nbsp;: placez-le pr&egrave;s de votre banc multi-r&eacute;glable pour encha&icirc;ner d&eacute;velopp&eacute;/rowing sans perdre de temps &agrave; chercher vos poids. Sa compacit&eacute; (1.4m large) s&rsquo;adapte aux garages, chambres ou petites salles, et le poids 71kg garantit z&eacute;ro basculement lors des s&eacute;ances intenses. Id&eacute;al pour progresser en force sans d&eacute;sordre permanent.<span class=\"inline-flex\" data-state=\"closed\">​</span></p>\r\n<p class=\"my-2 [&amp;+p]:mt-4 [&amp;_strong:has(+br)]:inline-block [&amp;_strong:has(+br)]:pb-2\">Investir dans un rack MND, c&rsquo;est miser sur la durabilit&eacute; : acier trait&eacute; anti-rouille, capacit&eacute; 200kg+ totale, design &eacute;l&eacute",
+ "seo": {
+  "title": "Layers Dumbbell Rack - MND FITNESS – Prix Tunisie | Protein.tn",
+  "description": "Layers Dumbbell Rack - MND FITNESS — Matériel de Musculation en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison.",
+  "excerpt": null,
+  "canonical_url": null,
+  "robots": {
+   "index": true,
+   "follow": true
+  },
+  "image": "https://admin.protein.tn/storage/produits/January2024/5LT8RBJqitmBxoJiTWPb.webp",
+  "image_alt": "Layers Dumbbell Rack - MND FITNESS — MND FITNESS — Tunisie"
+ },
+ "seo_description": null,
+ "meta_description": "Layers Dumbbell Rack - MND FITNESS — Matériel de Musculation en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison.",
+ "meta_description_fr": "Layers Dumbbell Rack - MND FITNESS — Matériel de Musculation en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison.",
+ "prix": 4000,
+ "promo": 3500,
+ "promo_expiration_date": null,
+ "price_valid_until": null,
+ "brand": {
+  "id": 51,
+  "designation_fr": "MND FITNESS",
+  "logo": "brands/January2024/jVc5GiKIiD9GStepIscH.webp"
+ },
+ "sous_categorie": {
+  "id": 55,
+  "designation_fr": "Matériel de Musculation",
+  "slug": "materiel-de-musculation",
+  "categorie_id": 6,
+  "categorie": {
+   "id": 6,
+   "designation_fr": "ÉQUIPEMENT",
+   "slug": "equipement"
+  }
+ },
+ "json_ld_product": {
+  "description": "Layers Dumbbell Rack - MND FITNESS — Matériel de Musculation en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison.",
+  "offers": {
+   "@type": "Offer",
+   "url": "https://protein.tn/shop/layers-dumbbell-rack-mnd-fitness",
+   "priceCurrency": "TND",
+   "price": "3500",
+   "availability": "https://schema.org/InStock",
+   "itemCondition": "https://schema.org/NewCondition",
+   "seller": {
+    "@type": "Organization",
+    "name": "Protein.tn"
+   }
+  },
+  "name": "Layers Dumbbell Rack - MND FITNESS"
+ }
+}

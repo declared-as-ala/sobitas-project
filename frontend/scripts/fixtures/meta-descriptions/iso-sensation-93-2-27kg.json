@@ -1,0 +1,57 @@
+{
+ "id": 362,
+ "slug": "iso-sensation-93-2-27kg",
+ "designation_fr": "ISO SENSATION 93 – 2.27KG",
+ "description_fr": "<p><strong>ISO SENSATION 93 – 2.27KG ULTIMATE NUTRITION : whey isolate premium pour une prise de muscle “propre”</strong></p><p>ISO SENSATION 93 2.27KG d’Ultimate Nutrition est une whey isolate premium pensée pour les sportifs qui veulent une protéine de qualité, facile à digérer et adaptée à la prise de muscle sèche.<br>L’objectif de cette protéine est simple : apporter un maximum de protéines avec le moins possible de sucres et de graisses, tout en gardant un shaker agréable à boire au quotidien.</p><p>Grâce à un procédé de filtration avancé (type micro‑filtration / filtration à froid), la whey est isolée à partir du lactosérum pour obtenir une poudre plus “pure”, mieux assimilée et généralement plus légère sur le plan digestif que certaines whey classiques.<br>ISO SENSATION 93 est donc intéressante pour les pratiquants qui veulent progresser à la salle tout en gardant un physique sec et une digestion confortable.</p><h2>Pourquoi choisir ISO SENSATION 93 – 2.27KG sur Protein.tn ?</h2><ul><li><p>Whey isolate premium pour soutenir la construction et le maintien de la masse musculaire, dans le cadre d’un entraînement régulier.</p></li><li><p>Profil nutritionnel pensé pour la prise de muscle “propre”, avec très peu de sucres et de graisses.</p></li><li><p>Texture généralement fluide et goûts travaillés, idéal pour un shaker quotidien après l’entraînement ou en collation.</p></li><li><p>Format 2.27 kg pratique pour une utilisation régulière sur plusieurs semaines, sans devoir racheter un pot trop souvent.</p></li><li><p>Disponible sur Protein.tn avec service client local et livraison en Tunisie.</p></li></ul><h2>Pour qui ISO SENSATION 93 est-elle adaptée ?</h2><p>ISO SENSATION 93 s’adresse aux pratiquants de musculation, fitness, cross-training ou sports de performance qui veulent optimiser leur apport en protéines sans surcharger leur alimentation en calories inutiles.<br>Elle convient particulièrement bien aux personnes qui recherchent une protéine plus “propre”, par exemple en phase de sèche, de recomposition corporelle ou lorsqu’elles surveillent leur apport en glucides et en graisses.</p><p>Que vous soyez débutant ou avancé, homme ou femme, cette whey isolate peut vous aider à atteindre plus facilement votre quota de protéines journalier, à condition d’être associée à un entraînement régulier, un sommeil suffisant et une alimentation équilibrée.</p><h2>Comment utiliser ISO SENSATION 93 au quotidien ?</h2><ul><li><p>Mélanger une dose d’ISO SENSATION 93 av",
+ "seo": {
+  "title": "ISO SENSATION 93 – 2.27KG – Prix Tunisie | Protein.tn",
+  "description": "ISO SENSATION 93 – 2.27KG — Whey Isolate en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "excerpt": null,
+  "canonical_url": null,
+  "robots": {
+   "index": true,
+   "follow": true
+  },
+  "image": "https://admin.protein.tn/storage/produits/May2024/AHPkm2FoxVlog4xqEiNp.webp",
+  "image_alt": "ISO SENSATION 93 – 2.27KG — Ultimate Nutrition — Tunisie"
+ },
+ "seo_description": null,
+ "meta_description": "ISO SENSATION 93 – 2.27KG — Whey Isolate en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "meta_description_fr": "ISO SENSATION 93 – 2.27KG — Whey Isolate en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "prix": 400,
+ "promo": 359,
+ "promo_expiration_date": null,
+ "price_valid_until": null,
+ "brand": {
+  "id": 24,
+  "designation_fr": "Ultimate Nutrition",
+  "logo": "brands/September2023/dbWyAQkKmvQIhHEKtAOK.webp"
+ },
+ "sous_categorie": {
+  "id": 8,
+  "designation_fr": "Whey Isolate",
+  "slug": "whey-isolate",
+  "categorie_id": 4,
+  "categorie": {
+   "id": 4,
+   "designation_fr": "PROTÉINES ",
+   "slug": "proteines"
+  }
+ },
+ "json_ld_product": {
+  "description": "ISO SENSATION 93 – 2.27KG — Whey Isolate en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "offers": {
+   "@type": "Offer",
+   "url": "https://protein.tn/shop/iso-sensation-93-2-27kg",
+   "priceCurrency": "TND",
+   "price": "359",
+   "availability": "https://schema.org/BackOrder",
+   "itemCondition": "https://schema.org/NewCondition",
+   "seller": {
+    "@type": "Organization",
+    "name": "Protein.tn"
+   }
+  },
+  "name": "ISO SENSATION 93 – 2.27KG"
+ }
+}

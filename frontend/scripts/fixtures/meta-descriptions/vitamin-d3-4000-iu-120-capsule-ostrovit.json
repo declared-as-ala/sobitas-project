@@ -1,0 +1,57 @@
+{
+ "id": 493,
+ "slug": "vitamin-d3-4000-iu-120-capsule-ostrovit",
+ "designation_fr": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT",
+ "description_fr": "<p><strong>VITAMIN D3 4000 IU -120 Capsule - OSTROVIT<br></strong><br>La <strong>vitamine D3</strong> est l’un des compléments les plus utiles au quotidien, parce qu’elle dépend beaucoup de l’<strong>exposition au soleil</strong>… et dans la réalité, même dans un pays ensoleillé, beaucoup de personnes restent en intérieur, travaillent toute la journée, ou s’exposent peu (ou aux mauvais horaires). Résultat : on peut se retrouver facilement avec une <strong>carence</strong> ou un niveau insuffisant, ce qui peut impacter la forme générale.</p><p><strong>OstroVit Vitamin D3 4000 IU – 120 capsules</strong> est une formule <strong>hautement dosée</strong> (4000 IU par capsule) conçue pour soutenir plusieurs fonctions importantes :</p><ul><li><p><strong>Immunité</strong> : utile surtout en périodes de fatigue, stress, froid ou quand l’entraînement est intense.</p></li><li><p><strong>Os et dents</strong> : la vitamine D est très recherchée pour le maintien d’une bonne santé osseuse, surtout si l’alimentation est pauvre en certains micronutriments.</p></li><li><p><strong>Fonction musculaire</strong> : intéressante pour les sportifs, car une bonne fonction musculaire = meilleure qualité d’entraînement et récupération plus stable.</p></li><li><p><strong>Humeur &amp; énergie</strong> : beaucoup de personnes choisissent la vitamine D3 aussi pour le bien‑être général, notamment quand l’exposition au soleil est faible.</p></li></ul><p><strong>Pourquoi choisir le format 120 capsules ?</strong><br>Parce que c’est pratique et économique : vous avez une cure longue durée, facile à suivre, sans devoir racheter tous les mois.</p><p><strong>Comment le prendre </strong><br>La vitamine D3 se prend généralement <strong>avec un repas</strong> (idéalement contenant un peu de matières grasses) pour une meilleure assimilation. Respectez la dose indiquée sur l’étiquette, surtout que <strong>4000 IU</strong> est un dosage élevé.</p><p><strong>Pour qui ?</strong></p><ul><li><p>Personnes peu exposées au soleil (travail en intérieur, rythme urbain).</p></li><li><p>Sportifs voulant soutenir <strong>immunité + muscles + récupération</strong>.</p></li><li><p>Toute personne cherchant une vitamine D3 “forte dose” en format durable.</p></li></ul>",
+ "seo": {
+  "title": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT – Prix Tunisie",
+  "description": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "excerpt": null,
+  "canonical_url": null,
+  "robots": {
+   "index": true,
+   "follow": true
+  },
+  "image": "https://admin.protein.tn/storage/produits/c51c991e-ee58-42c4-a16e-b698ba420784.webp",
+  "image_alt": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT — OstroVit — Tunisie"
+ },
+ "seo_description": null,
+ "meta_description": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "meta_description_fr": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+ "prix": 120,
+ "promo": 89,
+ "promo_expiration_date": null,
+ "price_valid_until": null,
+ "brand": {
+  "id": 19,
+  "designation_fr": "OstroVit",
+  "logo": "brands/August2023/FukiSD5RdviqLsymBw5v.webp"
+ },
+ "sous_categorie": {
+  "id": 28,
+  "designation_fr": "Vitamines",
+  "slug": "vitamines",
+  "categorie_id": 1,
+  "categorie": {
+   "id": 1,
+   "designation_fr": "SANTÉ & VITALITÉ ",
+   "slug": "sante-vitalite"
+  }
+ },
+ "json_ld_product": {
+  "description": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT — Vitamines en Tunisie. Livraison 24-72h partout en Tunisie. Paiement à la livraison. Produit 100% authentique.",
+  "offers": {
+   "@type": "Offer",
+   "url": "https://protein.tn/shop/vitamin-d3-4000-iu-120-capsule-ostrovit",
+   "priceCurrency": "TND",
+   "price": "89",
+   "availability": "https://schema.org/BackOrder",
+   "itemCondition": "https://schema.org/NewCondition",
+   "seller": {
+    "@type": "Organization",
+    "name": "Protein.tn"
+   }
+  },
+  "name": "VITAMIN D3 4000 IU -120 Capsule - OSTROVIT"
+ }
+}
