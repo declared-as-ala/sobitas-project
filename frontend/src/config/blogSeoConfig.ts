@@ -10,6 +10,8 @@ export interface BlogSeoEntry {
   metaDescription?: string;
   /** Contextual link paragraph appended inside the article body; trusted editorial HTML only. */
   bodyLinkHtml?: string;
+  /** Commercial pillar paragraph at the opening of the body, before product recommendations. */
+  openingLinkHtml?: string;
   /** ISO date for a substantive editorial refresh reflected in Article schema. */
   dateModified?: string;
   /** Localized labels for non-French articles. */
@@ -24,6 +26,46 @@ export interface BlogSeoEntry {
 
 /** Slug (from URL) → SEO config. Use normalized slug (lowercase, no accents). */
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
+  'creatine-a-quoi-ca-sert-et-pourquoi-en-prendre': {
+    headline: "Créatine : à quoi ça sert et pourquoi en prendre ?",
+    openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, retrouvez notre sélection de <a href=\"/creatine\">créatine monohydrate en Tunisie</a>.</p>",
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [{ anchor: 'créatine monohydrate en Tunisie', href: '/creatine' }],
+  },
+  'proteines-tunisiennes-tout-ce-que-vous-devez-savoir': {
+    headline: "Protéines : sources alimentaires et compléments, les différences",
+    openingLinkHtml: "<p>Pour choisir un produit et comparer les formats et les prix actuels, retrouvez notre sélection de <a href=\"/whey-proteine\">whey protein en Tunisie</a>.</p>",
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+  },
+  'protein-the-essential-guide-to-its-benefits-sources-and-role-in-nutrition': {
+    headline: "Protéines : leur rôle dans la nutrition et les sources alimentaires",
+    openingLinkHtml: "<p>Pour choisir un produit et comparer les formats et les prix actuels, retrouvez notre sélection de <a href=\"/whey-proteine\">whey protein en Tunisie</a>.</p>",
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+  },
+  'whey-protein-et-entrainement-strategies-pour-des-gains-musculaires': {
+    headline: "Whey et entraînement : comment organiser ses apports en protéines",
+    openingLinkHtml: "<p>Pour choisir un produit et comparer les formats et les prix actuels, retrouvez notre sélection de <a href=\"/whey-proteine\">whey protein en Tunisie</a>.</p>",
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+  },
+  'creatine-monohydrate-tunisie-guide-d-achat-bienfaits-et-meilleures-marques': {
+    headline: "Créatine monohydrate : critères de choix et lecture des étiquettes",
+    openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, retrouvez notre sélection de <a href=\"/creatine\">créatine monohydrate en Tunisie</a>.</p>",
+    dateModified: '2026-09-08',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [{ anchor: 'créatine monohydrate en Tunisie', href: '/creatine' }],
+  },
   'impact-whey-protein-de-myprotein-avis-avantages-et-mode-d-emploi': {
     metaDescription:
       'Impact Whey MyProtein : ce que vaut sa teneur en protéines, comment la doser, et comment elle se situe face aux autres whey vendues en Tunisie.',
@@ -32,7 +74,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
-      { anchor: 'comparer les protéines disponibles', href: '/proteines' },
+      { anchor: 'catalogue de protéines', href: '/proteines' },
     ],
   },
   'iso-100-de-dymatize-la-whey-isolate-ultime-pour-les-sportifs': {
@@ -43,7 +85,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
-      { anchor: 'toutes les whey disponibles', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
   'cosmetiques-bio-decouvrez-les-meilleurs-produits-naturels-pour-votre-peau': {
@@ -53,7 +95,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'compléments alimentaires disponibles', href: '/proteines' },
+      { anchor: 'catalogue de protéines', href: '/proteines' },
     ],
   },
   'parapharmacie-moins-cher-en-tunisie-ou-trouver-les-meilleurs-prix': {
@@ -64,7 +106,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'vitamines et minéraux', href: '/vitamines' },
-      { anchor: 'compléments alimentaires', href: '/proteines' },
+      { anchor: 'catalogue de protéines', href: '/proteines' },
     ],
   },
   'equipements-cardio-tunisie': {
@@ -192,8 +234,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'comparer les mass gainers en Tunisie', href: '/gainers-proteines' },
-      { anchor: 'protéines et whey en Tunisie', href: '/proteines' },
-      { anchor: 'créatine pour la prise de masse', href: '/creatine' },
+      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
       { anchor: 'produits Dymatize en Tunisie', href: '/dymatize' },
     ],
   },
@@ -240,11 +282,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où acheter de la whey en Tunisie ?", answer: "Proteine Tunisie propose une large gamme de whey protein en Tunisie avec livraison à Sousse, Tunis et Sfax. Consultez notre catégorie whey protein tunisie pour les prix et la livraison." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
-      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
-      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
-      { anchor: 'creatine tunisie', href: '/creatine' },
-      { anchor: 'prix whey Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
   'whey-ou-isolate': {
@@ -253,11 +295,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Quel est le meilleur prix isolate whey Tunisie ?", answer: "Proteine Tunisie propose des isolats de whey à des prix compétitifs. Consultez notre catégorie whey protein tunisie pour comparer les prix et la livraison en Tunisie." },
     ],
     internalLinks: [
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
-      { anchor: 'acheter whey en tunisie', href: '/whey-proteine' },
-      { anchor: 'meilleure whey protein', href: '/whey-proteine' },
-      { anchor: 'isolat whey tunisie', href: '/whey-proteine' },
-      { anchor: 'creatine tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
     ],
   },
   'comment-prendre-creatine': {
@@ -267,9 +309,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où acheter de la créatine en Tunisie ?", answer: "Proteine Tunisie propose de la créatine monohydrate aux meilleurs prix avec livraison à Tunis, Sousse et Sfax. Consultez notre catégorie creatine tunisie." },
     ],
     internalLinks: [
-      { anchor: 'creatine tunisie', href: '/creatine' },
-      { anchor: 'creatine monohydrate prix tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
   'bcaa-utile-ou-pas': {
@@ -280,8 +322,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'bcaa tunisie', href: '/bcaa' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
-      { anchor: 'creatine tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
     ],
   },
   'creatine-musculation-avis': {
@@ -290,9 +332,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Créatine monohydrate prix Tunisie ?", answer: "Proteine Tunisie propose de la créatine monohydrate aux meilleurs prix en Tunisie. Livraison à Sousse, Tunis et Sfax. Consultez notre catégorie creatine tunisie." },
     ],
     internalLinks: [
-      { anchor: 'créatine Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
       { anchor: 'comment prendre creatine', href: '/blog/comment-prendre-creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -305,9 +347,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Comment comparer les prix de la créatine selon le format ?", answer: "Calculez toujours le prix au gramme (prix total ÷ poids net en grammes). Un format 1 kg est généralement 30 à 40 % moins cher au gramme qu'un 300 g. Les formats Creapure® sont un peu plus chers mais garantissent une pureté maximale." },
     ],
     internalLinks: [
-      { anchor: 'voir les prix de nos créatines', href: '/creatine' },
-      { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -318,9 +360,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Comment éviter les contrefaçons de créatine en Tunisie ?", answer: "Achetez uniquement auprès de sites ou magasins agréés. Vérifiez la présence d'un sceau de sécurité, d'un numéro de lot et d'une date de péremption. Méfiez-vous des prix anormalement bas et des emballages sans mention d'importateur officiel." },
     ],
     internalLinks: [
-      { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
-      { anchor: 'acheter créatine originale en Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -331,9 +373,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Quelle est la dose de créatine recommandée ?", answer: "3 à 5 g par jour en prise continue est la dose standard recommandée. La régularité prime sur le timing : peu importe si vous la prenez avant ou après l'entraînement, l'essentiel est de ne pas oublier les jours de repos." },
     ],
     internalLinks: [
-      { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
-      { anchor: 'créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -349,9 +391,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "La créatine est-elle sûre ?", answer: "Oui, la créatine monohydrate est l'un des compléments les mieux étudiés et les plus sûrs quand elle est prise aux doses recommandées (3–5 g/j). Consultez votre médecin si vous avez des problèmes rénaux préexistants." },
     ],
     internalLinks: [
-      { anchor: 'voir les créatines disponibles', href: '/creatine' },
-      { anchor: 'acheter créatine en Tunisie', href: '/creatine' },
-      { anchor: 'compléments alimentaires Tunisie', href: '/proteines' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'catalogue de protéines', href: '/proteines' },
     ],
   },
 
@@ -361,9 +403,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "La créatine Creapure® est-elle disponible en Tunisie ?", answer: "Oui, plusieurs produits certifiés Creapure® sont disponibles sur Protein.tn avec livraison rapide partout en Tunisie et paiement à la livraison." },
     ],
     internalLinks: [
-      { anchor: 'choisir votre créatine sur Protein.tn', href: '/creatine' },
-      { anchor: 'créatine Creapure® Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -373,9 +415,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Où comparer les marques de créatine en Tunisie ?", answer: "Protein.tn regroupe les meilleures marques disponibles avec des descriptions détaillées, les prix en dinars et la disponibilité en temps réel." },
     ],
     internalLinks: [
-      { anchor: 'voir les prix de nos créatines', href: '/creatine' },
-      { anchor: 'sélection créatine Protein.tn', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -384,9 +426,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Comment choisir la meilleure créatine selon son prix en Tunisie ?", answer: "Comparez le prix au gramme plutôt que le prix total. Une créatine monohydrate à 60 DT pour 1 kg est plus économique qu'un 300 g à 30 DT. Pour un maximum de qualité, choisissez un produit certifié Creapure® même à prix légèrement supérieur." },
     ],
     internalLinks: [
-      { anchor: 'voir les créatines disponibles', href: '/creatine' },
-      { anchor: 'acheter créatine monohydrate Tunisie', href: '/creatine' },
-      { anchor: 'protéines whey', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -396,8 +438,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Créatine et whey protein : peut-on les combiner ?", answer: "Oui, c'est même recommandé. La créatine améliore la force pendant l'entraînement, la whey optimise la récupération et la synthèse protéique après. Prenez 3–5 g de créatine n'importe quand dans la journée et votre shaker de whey dans l'heure post-entraînement." },
     ],
     internalLinks: [
-      { anchor: 'acheter créatine en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
       { anchor: 'gainers prise de masse Tunisie', href: '/gainers-proteines' },
     ],
   },
@@ -408,9 +450,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "Protein.tn vend-il de la créatine originale ?", answer: "Oui. Protein.tn importe directement ses créatines auprès des fabricants ou distributeurs officiels. Chaque produit a un numéro de lot traçable. Livraison partout en Tunisie avec paiement à la livraison." },
     ],
     internalLinks: [
-      { anchor: 'consulter la sélection de créatine Protein.tn', href: '/creatine' },
-      { anchor: 'acheter créatine originale Tunisie', href: '/creatine' },
-      { anchor: 'whey protein originale tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -420,9 +462,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "La créatine monohydrate micronisée est-elle meilleure ?", answer: "La créatine micronisée est chimiquement identique à la monohydrate classique, mais ses particules ultra-fines améliorent la solubilité dans l'eau et la tolérance digestive. Elle est préférable si vous avez un estomac sensible ou si votre créatine ne se dissout pas bien." },
     ],
     internalLinks: [
-      { anchor: 'acheter créatine monohydrate en Tunisie', href: '/creatine' },
-      { anchor: 'voir les créatines disponibles', href: '/creatine' },
-      { anchor: 'protéines whey Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 
@@ -432,9 +474,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "La créatine est-elle risquée pour les reins ?", answer: "Chez des personnes en bonne santé, la créatine monohydrate aux doses recommandées (3–5 g/j) est considérée comme sûre. Si vous avez des problèmes rénaux préexistants, consultez votre médecin avant de commencer une supplémentation." },
     ],
     internalLinks: [
-      { anchor: 'découvrir toutes nos créatines', href: '/creatine' },
-      { anchor: 'créatine Tunisie prix', href: '/creatine' },
-      { anchor: 'whey protein Tunisie', href: '/whey-proteine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
 

@@ -31,8 +31,8 @@ interface HomePageClientProps {
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
-  { href: '/whey-proteine', label: 'Whey protein Tunisie' },
-  { href: '/creatine', label: 'Créatine Tunisie' },
+  { href: '/whey-proteine', label: 'Whey protein en Tunisie' },
+  { href: '/creatine', label: 'Créatine monohydrate en Tunisie' },
   { href: '/proteines', label: 'Catalogue de protéines' },
   { href: '/dymatize', label: 'Dymatize Tunisie' },
   { href: '/bcaa', label: 'BCAA Tunisie' },
@@ -480,7 +480,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
                     whey protein en Tunisie
                   </LinkWithLoading>, de{' '}
                   <LinkWithLoading href="/creatine" className="-my-3 inline-block py-3 font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
-                    créatine en Tunisie
+                    créatine monohydrate en Tunisie
                   </LinkWithLoading>, de gainers et de{' '}
                   <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
                   prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son

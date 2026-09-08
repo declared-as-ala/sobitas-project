@@ -41,8 +41,8 @@ export const metadata: Metadata = {
 
 // Internal links — every slug is a real 200 hub (same set used by the SiteNavigation schema + footer).
 const CATEGORY_LINKS: Array<{ name: string; href: string; blurb: string }> = [
-  { name: 'Whey protéine', href: '/whey-proteine', blurb: 'Isolate, concentrée et hydrolysée des grandes marques.' },
-  { name: 'Créatine', href: '/creatine', blurb: 'Monohydrate & Creapure pour la force et la récupération.' },
+  { name: 'Whey protein en Tunisie', href: '/whey-proteine', blurb: 'Isolate, concentrée et hydrolysée des grandes marques.' },
+  { name: 'Créatine monohydrate en Tunisie', href: '/creatine', blurb: 'Monohydrate & Creapure pour la force et la récupération.' },
   { name: 'Gainers & prise de masse', href: '/gainers-proteines', blurb: 'Prise de masse rapide, riches en calories.' },
   { name: 'Prise de masse', href: '/prise-de-masse', blurb: 'Le pack complet pour prendre du volume.' },
   { name: 'Perte de poids', href: '/perte-de-poids', blurb: 'Brûleurs, L-carnitine et protéines minceur.' },

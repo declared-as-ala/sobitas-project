@@ -42,7 +42,7 @@ import {
 } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
-import { mergeCategorySeo } from '@/util/resolveCategorySeo';
+import { mergeCategorySeoForSlug } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
@@ -211,7 +211,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const entity = isSub ? (data as { sous_category?: { designation_fr?: string } }).sous_category
                          : (data as { category?: { designation_fr?: string } }).category;
     const seoJson = await getCategorySeoContent(cleanSlug);
-    const merged = mergeCategorySeo(seoJson, (data as { seo?: unknown }).seo as never);
+    const merged = mergeCategorySeoForSlug(cleanSlug, seoJson, (data as { seo?: unknown }).seo as never);
     const title = merged.h1?.trim() || entity?.designation_fr || cleanSlug;
     const introHtml = merged.intro?.trim() ? sanitizeProductHtml(merged.intro) : null;
     // The taxonomy endpoint always embeds page 1. Use the same cached listing loader as the human

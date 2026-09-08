@@ -1,3 +1,4 @@
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { HeroSliderControls } from '@/app/components/HeroSliderIndicator';
 import { HeroBestSellers, type HeroBestSeller } from '@/app/components/HeroBestSellers';
@@ -136,7 +137,7 @@ function HeroSlideFrame({
   // one can come from. In a multi-slide track the position is appended so two banners can never
   // present as the same link (WCAG 2.4.4). The <img> keeps the same alt; a screen reader announces
   // the link by its aria-label, so the two do not double up.
-  const baseLabel = slide?.alt?.trim() || fallbackAlt;
+  const baseLabel = categoryAnchor(href.replace(/^\//, ''), slide?.alt?.trim() || fallbackAlt);
   const ariaLabel =
     position && position.total > 1
       ? `${baseLabel} — diapositive ${position.index} sur ${position.total}`

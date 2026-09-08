@@ -255,6 +255,14 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
         }
       : article;
 
+    if (seoOverlay?.openingLinkHtml) {
+      if (displayArticle.description_fr) {
+        displayArticle.description_fr = seoOverlay.openingLinkHtml + displayArticle.description_fr;
+      } else {
+        displayArticle.description = seoOverlay.openingLinkHtml + (displayArticle.description || '');
+      }
+    }
+
     // Keep the explicit pillar link inside the prose delivered in the initial HTML, even when
     // taxonomy fetching fails. Preserve the CMS body and its French/fallback field selection.
     if (seoOverlay?.bodyLinkHtml) {

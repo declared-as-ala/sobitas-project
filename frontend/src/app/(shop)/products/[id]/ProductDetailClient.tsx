@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
@@ -912,7 +913,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 className="-my-3 inline-flex min-h-[44px] items-center gap-2 self-start font-display text-[11px] font-semibold uppercase tracking-[0.18em] text-brand underline-offset-4 hover:underline"
               >
                 <span className="h-px w-4 bg-brand" aria-hidden="true" />
-                {product.sous_categorie.designation_fr}
+                {categoryAnchor(product.sous_categorie.slug, product.sous_categorie.designation_fr)}
               </Link>
             )}
 
@@ -2657,7 +2658,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
               kicker="Vous aimerez aussi"
               title="Produits similaires"
               viewAllHref={product.sous_categorie?.slug ? `/${product.sous_categorie.slug}` : '/shop'}
-              viewAllLabel="Voir tout"
+              viewAllLabel={categoryAnchor(product.sous_categorie?.slug || '', 'Voir tout')}
             />
             <RelatedProductsRail products={similarProducts} />
           </div>

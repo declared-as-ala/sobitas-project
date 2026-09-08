@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -1431,7 +1432,7 @@ function ShopContent({
                     href={`/${sub.slug}`}
                     className="group flex min-h-[50px] w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-elevated px-3.5 py-2.5 text-[13px] font-semibold leading-tight text-ink-2 shadow-sm transition-[border-color,color,transform] hover:-translate-y-0.5 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   >
-                    <span className="line-clamp-2">{sub.designation_fr}</span>
+                    <span className="line-clamp-2">{categoryAnchor(sub.slug, sub.designation_fr)}</span>
                     <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
                   </Link>
                 </li>
@@ -1987,7 +1988,7 @@ function ShopContent({
                   prefetch={false}
                   className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-hairline bg-elevated px-4 text-sm font-medium text-ink-1 transition-colors hover:border-brand hover:text-brand"
                 >
-                  {c.designation_fr}
+                  {categoryAnchor(c.slug, c.designation_fr)}
                   {c.count > 0 && (
                     <span className="tabular-nums text-[12px] text-ink-3">{c.count.toLocaleString('fr-FR')}</span>
                   )}

@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -113,7 +114,7 @@ function normalizeNavigationItems(items: SiteNavigationItem[]): HeaderNavLink[] 
     .sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0) || a.id - b.id)
     .map((item) => ({
       href: item.url,
-      label: frenchifyNavLabel(item.label),
+      label: categoryAnchor(item.url.replace(/^\//, ''), frenchifyNavLabel(item.label)),
       icon: item.icon,
       opensNewTab: item.opens_new_tab,
     }));
@@ -1106,7 +1107,7 @@ export function HeaderClient() {
                                             )}
                                           >
                                             <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                                            <span className="min-w-0 flex-1 truncate">{cat.designation_fr}</span>
+                                            <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, cat.designation_fr)}</span>
                                             <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
                                           </Link>
                                         </li>
@@ -1133,7 +1134,7 @@ export function HeaderClient() {
                                           )}
                                         >
                                           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                                          <span className="min-w-0 flex-1 truncate">{cat.designation_fr}</span>
+                                          <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, cat.designation_fr)}</span>
                                           {catOpen ? (
                                             <ChevronUp className="h-4 w-4 shrink-0 text-brand" aria-hidden />
                                           ) : (
@@ -1155,7 +1156,7 @@ export function HeaderClient() {
                                                   onClick={closeMobileMenu}
                                                   className="flex items-center gap-2 min-h-[40px] rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-brand transition-colors hover:bg-sunken dark:hover:bg-gray-800"
                                                 >
-                                                  <span className="min-w-0 flex-1 truncate">Tout voir</span>
+                                                  <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, 'Tout voir')}</span>
                                                   <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
                                                 </Link>
                                               </li>
@@ -1179,8 +1180,8 @@ export function HeaderClient() {
                                                         className="h-px w-2.5 shrink-0 bg-gray-300 dark:bg-gray-600"
                                                         aria-hidden
                                                       />
-                                                      <span className="min-w-0 flex-1 truncate">
-                                                        {sub.designation_fr}
+                                                      <span className="min-w-0 flex-1 whitespace-normal">
+                                                        {categoryAnchor(sub.slug, sub.designation_fr)}
                                                       </span>
                                                     </Link>
                                                   </li>

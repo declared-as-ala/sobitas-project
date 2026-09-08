@@ -85,8 +85,8 @@ const NAVIGATION: Array<[string, string]> = [
 ];
 
 const CATEGORIES: Array<[string, string]> = [
-  ['/whey-proteine', 'Whey protéine'],
-  ['/creatine', 'Créatine'],
+  ['/whey-proteine', 'Whey protein en Tunisie'],
+  ['/creatine', 'Créatine monohydrate en Tunisie'],
   ['/gainers-proteines', 'Gainers'],
   ['/prise-de-masse', 'Prise de masse'],
   ['/perte-de-poids', 'Perte de poids'],

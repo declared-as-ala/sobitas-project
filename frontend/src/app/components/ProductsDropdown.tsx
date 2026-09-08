@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
@@ -362,8 +363,8 @@ export function ProductsDropdown({
                             )}
                           </span>
                           <span className="min-w-0 flex-1">
-                            <span className="block truncate font-display text-[12.5px] font-bold uppercase leading-tight tracking-[0.04em] text-ink-1 transition-colors group-hover:text-brand group-data-[active=true]:text-brand">
-                              {cat.designation_fr}
+                            <span className="block whitespace-normal font-display text-[12.5px] font-bold uppercase leading-tight tracking-[0.04em] text-ink-1 transition-colors group-hover:text-brand group-data-[active=true]:text-brand">
+                              {categoryAnchor(cat.slug, cat.designation_fr)}
                             </span>
                             <span className="mt-0.5 block text-[11.5px] leading-tight text-ink-3">
                               {subCount} {subCount > 1 ? 'catégories' : 'catégorie'}
@@ -417,7 +418,7 @@ export function ProductsDropdown({
                   loadingMessage="Chargement..."
                   onClick={close}
                 >
-                  Tout voir
+                  {categoryAnchor(activeRayon.slug, 'Tout voir')}
                   <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </LinkWithLoading>
               )}
@@ -450,8 +451,8 @@ export function ProductsDropdown({
                           onClick={close}
                         >
                           <span className="min-w-0">
-                            <span className="block truncate font-display text-[15px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
-                              {sub.designation_fr}
+                            <span className="block whitespace-normal font-display text-[15px] font-semibold leading-snug text-ink-1 transition-colors group-hover:text-brand">
+                              {categoryAnchor(sub.slug, sub.designation_fr)}
                             </span>
                             <span className="mt-1 block text-[11.5px] leading-none text-ink-3">
                               Découvrir
@@ -475,7 +476,7 @@ export function ProductsDropdown({
                   )}
                   loadingMessage="Chargement..."
                   onClick={close}
-                  aria-label={`Voir tous les produits ${activeRayon.designation_fr}`}
+                  aria-label={`Voir tous les produits ${categoryAnchor(activeRayon.slug, activeRayon.designation_fr)}`}
                 >
                   <span className="flex min-w-0 flex-1 items-center justify-between gap-5 p-5">
                     <span className="min-w-0">
@@ -483,7 +484,7 @@ export function ProductsDropdown({
                         Tout le rayon
                       </span>
                       <span className="mt-2 block font-display text-xl font-bold uppercase leading-tight text-ink-1">
-                        {activeRayon.designation_fr}
+                        {categoryAnchor(activeRayon.slug, activeRayon.designation_fr)}
                       </span>
                       <span className="mt-2 inline-flex items-center gap-2 text-[12.5px] font-semibold text-ink-2 transition-colors group-hover:text-brand">
                         Voir tous les produits
@@ -517,11 +518,11 @@ export function ProductsDropdown({
                       /* The row is the hover target, not the words. `bg-sunken` on a white pane is
                          a 1.08:1 tint — deliberately quiet, because 21 of these are on screen at
                          once and the brand ink is what actually marks the one under the pointer. */
-                      className="-mx-2 block truncate rounded-lg px-2 py-2 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                      className="-mx-2 block whitespace-normal rounded-lg px-2 py-2 text-[13px] leading-snug text-ink-2 transition-colors hover:bg-sunken hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                       loadingMessage="Chargement..."
                       onClick={close}
                     >
-                      {sub.designation_fr}
+                      {categoryAnchor(sub.slug, sub.designation_fr)}
                     </LinkWithLoading>
                   </li>
                 ))}

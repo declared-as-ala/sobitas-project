@@ -320,3 +320,40 @@ export function mergeCategorySeo(
     extraJsonLd,
   };
 }
+
+const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
+  'proteines',
+  'whey-proteine',
+  'creatine',
+  'whey-isolate',
+  'omega-3',
+  'pre-workout',
+]);
+
+export function mergeCategorySeoForSlug(
+  slug: string,
+  json: Partial<CategorySeoContent> | null,
+  api: CategorySeoFromApi | undefined
+): MergedCategorySeo {
+  const merged = mergeCategorySeo(json, api);
+  if (!SEARCH_CONSOLE_CURATED_SLUGS.has(slug) || !json) return merged;
+
+  const h1 = json.h1?.trim() || merged.h1;
+  const metaTitle = json.metaTitle?.trim() || merged.metaTitle;
+  const metaDescription = json.metaDescription?.trim() || merged.metaDescription;
+
+  return {
+    ...merged,
+    h1,
+    // Phase 15: these commercial pillars keep their reviewed opening, even if CMS copy is longer.
+    intro: ['proteines', 'whey-proteine', 'creatine'].includes(slug) ? json.intro?.trim() || merged.intro : merged.intro,
+    metaTitle,
+    metaDescription,
+    // Social previews must say the same thing as the SERP; keeping the stale API OG/Twitter text
+    // would produce two competing titles for one canonical page.
+    ogTitle: metaTitle,
+    ogDescription: metaDescription,
+    twitterTitle: metaTitle,
+    twitterDescription: metaDescription,
+  };
+}

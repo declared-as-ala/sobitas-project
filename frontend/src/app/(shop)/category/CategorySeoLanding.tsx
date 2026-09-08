@@ -1,3 +1,4 @@
+import { categoryAnchor } from '@/util/categoryAnchor';
 import type { ReactNode } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -246,7 +247,7 @@ function LinkList({ title, icon, links }: { title: string; icon: ReactNode; link
         {links.slice(0, 6).map((item) => (
           <li key={item.slug}>
             <Link href={item.url} className="group flex min-h-11 items-center justify-between gap-3 text-sm font-medium text-ink-2 transition-colors hover:text-brand">
-              <span className="line-clamp-1">{item.name}</span>
+              <span className="line-clamp-1">{categoryAnchor(item.url.replace(/^\//, ''), item.name)}</span>
               <ChevronRight className="h-4 w-4 shrink-0 text-ink-3 transition-transform group-hover:translate-x-0.5 group-hover:text-brand" aria-hidden="true" />
             </Link>
           </li>

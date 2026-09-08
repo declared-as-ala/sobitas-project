@@ -1,4 +1,6 @@
+import { categoryAnchor } from '@/util/categoryAnchor';
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
 import { ArrowRight } from 'lucide-react';
 import type { Category } from '@/types';
@@ -69,11 +71,9 @@ const CATEGORY_COVER_OVERRIDES: Readonly<Record<string, string>> = {
 };
 
 export function CategoryRail({ categories = [] }: CategoryRailProps) {
-  if (!Array.isArray(categories) || categories.length === 0) return null;
-
   // 6, matching `lg:grid-cols-6` below. At 8 a 7th/8th category wrapped onto a ragged second row
   // on desktop — the two numbers have to agree.
-  const items = categories.slice(0, 6);
+  const items = Array.isArray(categories) ? categories.slice(0, 6) : [];
 
   return (
     /* `width="full"` (owner, 11/08/2026: "make them full width of the screen"). This band no
@@ -185,7 +185,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
         {items.map((category) => {
           const href = `/${category.slug}`;
-          const label = (category.designation_fr || '').trim();
+          const label = categoryAnchor(category.slug, (category.designation_fr || '').trim());
           const localCover = CATEGORY_COVER_OVERRIDES[(category.slug || '').trim().toLowerCase()];
           const coverSrc = localCover || (category.cover ? getStorageUrl(category.cover) : null);
 
@@ -389,6 +389,13 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           );
         })}
       </ul>
+      <nav aria-label="Whey et créatine en Tunisie" className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-4 sm:px-0">
+        {['whey-proteine', 'creatine'].map((slug) => (
+          <LinkWithLoading key={slug} href={`/${slug}`} className="inline-flex min-h-11 items-center text-sm font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+            {categoryAnchor(slug, slug)}
+          </LinkWithLoading>
+        ))}
+      </nav>
     </Section>
   );
 }

@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
@@ -182,7 +183,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                         className="min-h-[52px] flex items-center justify-between gap-3 py-3 px-4 bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/40 rounded-xl text-red-600 dark:text-red-400 font-semibold text-sm active:bg-red-100 dark:active:bg-red-950/50 transition-colors"
                         loadingMessage="Chargement..."
                       >
-                        <span className="min-w-0 truncate">Tout voir — {selectedCategory.designation_fr}</span>
+                        <span className="min-w-0">{categoryAnchor(selectedCategory.slug, `Tout voir — ${selectedCategory.designation_fr}`)}</span>
                         <ArrowRight className="h-4 w-4 shrink-0" aria-hidden />
                       </LinkWithLoading>
                     </div>
@@ -199,7 +200,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                           >
                             <span className="w-1.5 h-1.5 rounded-full bg-red-400 flex-shrink-0" aria-hidden />
                             <span className="flex-1 min-w-0 text-sm font-medium text-gray-800 dark:text-gray-200 leading-snug">
-                              {sub.designation_fr}
+                              {categoryAnchor(sub.slug, sub.designation_fr)}
                             </span>
                             <ChevronRight className="h-4 w-4 text-gray-300 dark:text-gray-600 shrink-0" aria-hidden />
                           </LinkWithLoading>

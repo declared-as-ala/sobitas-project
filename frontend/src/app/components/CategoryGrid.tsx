@@ -1,5 +1,6 @@
 'use client';
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
@@ -32,8 +33,8 @@ function CategoryCard({ category }: { category: Category }) {
     <article className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-200 ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">
       <LinkWithLoading
         href={href}
-        aria-label={`Voir les produits de ${category.designation_fr}`}
-        loadingMessage={`Chargement de ${category.designation_fr}...`}
+        aria-label={`Voir les produits de ${categoryAnchor(category.slug, category.designation_fr)}`}
+        loadingMessage={`Chargement de ${categoryAnchor(category.slug, category.designation_fr)}...`}
         onMouseEnter={() => router.prefetch(href)}
         className="absolute inset-0"
       >
@@ -67,7 +68,7 @@ function CategoryCard({ category }: { category: Category }) {
         {/* Content */}
         <div className="relative flex h-full flex-col justify-end p-3 sm:p-5">
           <h3 className="font-display uppercase tracking-tight leading-none text-white text-base sm:text-xl md:text-2xl line-clamp-2">
-            {category.designation_fr}
+            {categoryAnchor(category.slug, category.designation_fr)}
           </h3>
           <div className="mt-1.5 flex items-center gap-1.5 text-white/80 transition-colors group-hover:text-red-400">
             <span className="font-display uppercase tracking-wide text-[11px] sm:text-xs font-semibold">Découvrir</span>

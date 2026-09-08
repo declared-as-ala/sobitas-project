@@ -15,6 +15,7 @@
  * back at the real /{slug} URL. This is dynamic rendering, not cloaking. See util/isCrawler.ts.
  */
 
+import { categoryAnchor } from '@/util/categoryAnchor';
 import { getProductLink } from '@/util/productUrl';
 import type { Product } from '@/types';
 
@@ -86,10 +87,10 @@ export function CrawlerCategoryView({
               {i > 0 && <span aria-hidden>›</span>}
               {i < breadcrumbs.length - 1 ? (
                 <a href={b.url} className="text-red-700 underline">
-                  {b.name}
+                  {categoryAnchor(b.url.replace(/^\//, ''), b.name)}
                 </a>
               ) : (
-                <span aria-current="page">{b.name}</span>
+                <span aria-current="page">{categoryAnchor(b.url.replace(/^\//, ''), b.name)}</span>
               )}
             </li>
           ))}
@@ -241,7 +242,7 @@ export function CrawlerCategoryView({
             {subCategories.map((c, i) => (
               <li key={`${c.url}-${i}`}>
                 <a className="text-red-700 underline" href={c.url}>
-                  {c.name}
+                  {categoryAnchor(c.url.replace(/^\//, ''), c.name)}
                 </a>
               </li>
             ))}
@@ -257,7 +258,7 @@ export function CrawlerCategoryView({
             {relatedCategories.map((c, i) => (
               <li key={`${c.url}-${i}`}>
                 <a className="text-red-700 underline" href={c.url}>
-                  {c.name}
+                  {categoryAnchor(c.url.replace(/^\//, ''), c.name)}
                 </a>
               </li>
             ))}

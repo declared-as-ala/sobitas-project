@@ -436,7 +436,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
             <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
               <p className="text-sm font-semibold text-ink-1 mb-1">Prêt à passer à l'action ?</p>
               <p className="text-sm text-gray-700 dark:text-gray-300">
-                <Link href="/creatine" className="text-brand font-medium hover:underline">Voir toutes nos créatines disponibles en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
+                <Link href="/creatine" className="text-brand font-medium hover:underline">créatine monohydrate en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
               </p>
             </div>
           )}
@@ -444,7 +444,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
           {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
             <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
               <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                <Link href="/whey-proteine" className="text-brand font-medium hover:underline">Whey protein Tunisie</Link> au meilleur prix : livraison rapide, produits originaux. <Link href="/whey-proteine" className="text-brand hover:underline">Acheter whey en Tunisie</Link> – découvrez notre sélection de <Link href="/whey-proteine" className="text-brand hover:underline">meilleure whey protein</Link> sur Proteine Tunisie.
+                Comparez notre sélection de <Link href="/whey-proteine" className="text-brand font-medium hover:underline">whey protein en Tunisie</Link> : formats, marques, prix actuels et livraison.
               </p>
             </div>
           )}
