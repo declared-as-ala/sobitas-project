@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, ImageOff } from 'lucide-react';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { Section } from '@/app/components/layout/Section';
@@ -16,11 +16,12 @@ import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 const MARQUEE_BRANDS = 24;
 const SKELETON_TILES = 10;
 
-// Below 1024px globals.css reserves 600px for each deferred band. With tight's 20 + 8px
-// padding and 1px seam that reports exactly 629px, even though this list does not wrap.
-// Keep the optimisation, with a local estimate of this compact band's content.
-const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_156px]';
-const RAIL_LAYOUT = 'scrollbar-hide flex flex-nowrap gap-3 overflow-x-auto snap-x snap-proximity';
+// Content-box estimates, excluding Section padding and its 1px seam. The framed rail is
+// 106px (64px logo + 40px caption + 2px border), 42px taller than the previous rail.
+// Expected band heights: ~228px at 320/390, ~227px at 1440, including the mobile link.
+const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_198px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_174px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_178px]';
+const RAIL_LAYOUT = 'scrollbar-hide flex flex-nowrap overflow-x-auto snap-x snap-proximity rounded-xl border border-hairline bg-elevated';
+const TILE_LAYOUT = 'flex w-40 shrink-0 flex-col';
 
 /**
  * One brand plate.
@@ -47,31 +48,31 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
         onError={() => setImageError(true)}
       />
     ) : (
-      /* Fallback for a logo that 404s at runtime. The wordmark is set in the display face and
-         compressed, so a text tile reads as a deliberate mark rather than as a broken image —
-         which is exactly what the old wall looked like, twelve cells deep. */
-      <span className="line-clamp-2 px-3 text-center font-display text-[13px] font-bold uppercase leading-tight tracking-[0.02em] text-ink-1 transition-colors group-hover:text-brand">
-        {brand.designation_fr}
+      <span className="flex flex-col items-center gap-1 text-xs text-ink-3">
+        <ImageOff className="h-4 w-4" aria-hidden="true" />
+        Logo indisponible
       </span>
     );
 
-  /*
-    `.pt-logo-well` WHEN THERE IS A LOGO, `.pt-plate` WHEN THERE IS NOT.
-
-    Same defect, found on /brands and fixed here because this strip has it too: a brand wordmark
-    is black artwork with no dark variant, so Optimum Nutrition, Nutrex, Universal and BioTech USA
-    render as near-empty tiles in dark theme on a plate that follows the theme. The well is a
-    frozen light background (globals.css). The TEXT fallback keeps `.pt-plate`, because its colour
-    is a theme token and near-white type on a frozen light well is the same bug one layer down.
-  */
-  const className = `${
-    hasLogo ? 'pt-logo-well' : 'pt-plate'
-  } group flex h-16 w-36 shrink-0 items-center justify-center rounded-xl border border-hairline px-4 transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus`;
+  // Keep the real artwork on its existing frozen white well, without filters or cropping.
+  // Captions and missing-logo notices use the theme surface; neither impersonates a wordmark.
+  const content = (
+    <>
+      <span className={`${hasLogo ? 'pt-logo-well' : 'bg-elevated'} flex h-16 shrink-0 items-center justify-center px-4`}>
+        {inner}
+      </span>
+      <span className="flex h-10 items-center justify-between gap-2 px-3 text-xs font-medium text-ink-2 transition-colors group-hover:text-brand group-focus-visible:text-brand">
+        <span className="line-clamp-2">{brand.designation_fr}</span>
+        <ArrowRight className="h-4 w-4 shrink-0" aria-hidden="true" />
+      </span>
+    </>
+  );
+  const className = `${TILE_LAYOUT} group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-focus`;
 
   if (!interactive) {
     return (
       <div className={className} aria-hidden="true">
-        {inner}
+        {content}
       </div>
     );
   }
@@ -83,7 +84,7 @@ function BrandTile({ brand, interactive = true }: { brand: Brand; interactive?: 
       aria-label={`Voir les produits ${brand.designation_fr}`}
       className={className}
     >
-      {inner}
+      {content}
     </LinkWithLoading>
   );
 }
@@ -127,7 +128,14 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
         <SectionHeader title="Nos marques partenaires" scale="3" viewAllHref="/brands" viewAllLabel="Toutes les marques" />
         <div className={RAIL_LAYOUT} aria-hidden="true">
           {Array.from({ length: SKELETON_TILES }).map((_, i) => (
-            <Skeleton key={i} className="h-16 w-36 shrink-0 rounded-xl" />
+            <div key={i} className="shrink-0 border-r border-rule-strong last:border-r-0">
+              <div className={TILE_LAYOUT}>
+                <Skeleton className="h-16 w-full rounded-none" />
+                <div className="flex h-10 items-center px-3">
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            </div>
           ))}
         </div>
         <div className="mt-2 h-11 sm:hidden" aria-hidden="true" />
@@ -150,10 +158,11 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
         scale="3"
       />
 
-      {/* A single bounded row at every breakpoint. No mask hides a clickable logo. */}
-      <ul className={RAIL_LAYOUT} aria-label="Marques partenaires">
+      {/* One framed roster, with captions for recognition and every original brand link.
+          Native overflow leaves a partial next tile visible; no mask hides clickable artwork. */}
+      <ul className={RAIL_LAYOUT} aria-label="Marques partenaires" role="list">
         {marqueeBrands.map((brand) => (
-          <li key={brand.id} className="shrink-0 snap-start">
+          <li key={brand.id} className="shrink-0 snap-start border-r border-rule-strong last:border-r-0">
             <BrandTile brand={brand} />
           </li>
         ))}

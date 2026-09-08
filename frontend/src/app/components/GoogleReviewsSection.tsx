@@ -77,7 +77,13 @@ export function GoogleReviewsSection({
                 </strong>
                 <span className="text-sm font-semibold text-ink-2">sur 5</span>
               </div>
-              <div className="mt-1 flex items-center gap-1 text-rating" aria-label={`${rating} étoiles sur 5`}>
+              {/* `text-amber-400`, not `text-rating`. `rating` is not a colour in tailwind.config.ts
+                  and not a token in tokens.css — Tailwind emitted NOTHING for it, confirmed by
+                  grepping the deployed CSS (0 occurrences), so these five stars have been
+                  rendering in inherited ink rather than gold. That is DESIGN_SYSTEM's named trap:
+                  an undefined colour fails silently and the element takes its band's text colour.
+                  `StarRating.tsx` is canonical and uses amber-400; matched here. */}
+              <div className="mt-1 flex items-center gap-1 text-amber-400" aria-label={`${rating} étoiles sur 5`}>
                 {Array.from({ length: 5 }).map((_, index) => (
                   <Star key={index} className="h-4 w-4 fill-current" strokeWidth={1.5} aria-hidden="true" />
                 ))}
@@ -161,7 +167,7 @@ function ReviewCard({ review }: { review: GoogleReview }) {
         className="group flex h-full flex-col rounded-xl border border-hairline bg-elevated p-4 shadow-sm transition-[border-color,box-shadow] hover:border-brand/40 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
       >
         <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-0.5 text-rating" aria-label="5 étoiles sur 5">
+          <div className="flex items-center gap-0.5 text-ok" aria-label="5 étoiles sur 5">
             {Array.from({ length: 5 }).map((_, index) => (
               <Star key={index} className="h-3.5 w-3.5 fill-current" strokeWidth={1.5} aria-hidden="true" />
             ))}
