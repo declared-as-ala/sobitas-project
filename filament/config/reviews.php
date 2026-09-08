@@ -58,8 +58,18 @@ return [
     |
     |     REVIEW_REQUEST_SMS_ENABLED=true
     |
-    | and it rides along with the same daily sweep, the same cap, the same
-    | once-per-order marker. Nothing else needs changing.
+    | ONE SWITCH, TWO SENDERS — both honour this key and both are off without it:
+    |
+    |   - `reviews:send-due-requests` texts the customers it is already emailing,
+    |     inside the same daily sweep, under the same cap;
+    |   - `reviews:send-due-sms-requests` texts the ones it CANNOT email. That is
+    |     the majority: on 08/09/2026 the due set was 3 orders, 1 with a usable
+    |     address. A cash-on-delivery shop confirms the phone number out loud and
+    |     takes whatever email it is given.
+    |
+    | They cannot double-send: each stamps `commandes.review_request_sms_sent_at`,
+    | which is separate from the email marker precisely so an order can be emailed,
+    | texted, or both, and asked at most once per channel.
     */
     'request_sms_enabled' => (bool) env('REVIEW_REQUEST_SMS_ENABLED', false),
 

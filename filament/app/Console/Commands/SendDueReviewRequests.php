@@ -154,9 +154,13 @@ class SendDueReviewRequests extends Command
              * timeout suppress the text message would mean one broken mail server costs this shop
              * every review it was going to get that day.
              *
-             * It does not have its own "sent" marker either — `review_request_sent_at` is stamped
-             * by the email branch and gates the whole order out of the next sweep, so the SMS is
-             * asked for at most once per order for exactly the same reason.
+             * It stamps its OWN marker, `review_request_sms_sent_at`, and not because this sweep
+             * needs one — `review_request_sent_at` already gates the order out of the next run.
+             * The marker exists because `reviews:send-due-sms-requests` also exists: that command
+             * reaches the orders with no email address, which this loop can never see (they are
+             * filtered out of `$sendable` before the SMS branch is reached). Without a per-channel
+             * marker the two paths would both consider an order untexted and buy the message
+             * twice.
              */
             if ($smsEnabled) {
                 try {
@@ -282,7 +286,20 @@ class SendDueReviewRequests extends Command
         $text = "Protein.tn: votre commande #{$commande->numero} est bien arrivee?"
             . " Partagez votre avis pour aider nos clients: {$url}. Merci.";
 
+        // Per-channel marker, checked and stamped only when the column is actually readable — on
+        // an install where the migration has not run, the SMS-only command bails out anyway, so
+        // there is nothing to collide with and this behaves exactly as it did before.
+        $tracked = $this->hasColumn('commandes', 'review_request_sms_sent_at');
+        if ($tracked && $commande->review_request_sms_sent_at) {
+            return false; // already texted by reviews:send-due-sms-requests
+        }
+
         SendSmsJob::dispatch($phone, $text);
+
+        if ($tracked) {
+            // saveQuietly so this write does not re-fire observer events.
+            $commande->forceFill(['review_request_sms_sent_at' => now()])->saveQuietly();
+        }
 
         return true;
     }
