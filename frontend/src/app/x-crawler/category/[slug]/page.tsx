@@ -53,6 +53,7 @@ import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
@@ -159,7 +160,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         .trim()
         .slice(0, 155);
       return {
-        title: { absolute: page.meta_title?.trim() || page.title || 'Page' },
+        title: { absolute: getCmsPageTitleOverride(cleanSlug) || page.meta_title?.trim() || page.title || 'Page' },
         description,
         alternates: { canonical },
         robots: { index: page.robots_index ?? true, follow: page.robots_follow ?? true },

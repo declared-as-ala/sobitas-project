@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import dynamic from 'next/dynamic';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import { Hero } from '@/app/components/Hero';
@@ -30,9 +31,9 @@ interface HomePageClientProps {
 
 /** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
-  { href: '/proteines', label: 'Protéines en Tunisie' },
-  { href: '/creatine', label: 'Créatine Tunisie' },
   { href: '/whey-proteine', label: 'Whey protein Tunisie' },
+  { href: '/creatine', label: 'Créatine Tunisie' },
+  { href: '/proteines', label: 'Catalogue de protéines' },
   { href: '/dymatize', label: 'Dymatize Tunisie' },
   { href: '/bcaa', label: 'BCAA Tunisie' },
   { href: '/glutamine', label: 'Glutamine Tunisie' },
@@ -235,8 +236,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
             a correct outline. sr-only keeps the "Protéine Tunisie" query in the h1 for SEO/screen
             readers without putting a heading back on screen. */}
         <h1 className="sr-only">
-          Protéine Tunisie — whey, créatine et compléments de nutrition sportive, livraison partout
-          en Tunisie
+          Protéine Tunisie — Protein.tn, boutique à Sousse et livraison partout en Tunisie
         </h1>
         {/* Above the fold - Critical content - Hero must render first */}
         {/* bestSellers powers the wide-screen column beside the slider. Same payload the
@@ -438,7 +438,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
                 </span>
                 {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top. */}
                 <h2 className="max-w-[24ch] font-display font-compressed text-[1.75rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 sm:text-[2rem] lg:text-[2.5rem]">
-                  Nutrition sportive Tunisie : protéine, whey et créatine de qualité
+                  Protein.tn : votre boutique de nutrition sportive à Sousse
                 </h2>
               </div>
 
@@ -475,7 +475,13 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
               <div className="grid gap-6 border-t border-hairline px-5 py-5 sm:px-6 sm:py-6 lg:grid-cols-2 lg:gap-10 lg:px-8 lg:py-8">
                 <p className="text-sm leading-relaxed text-ink-2 sm:text-base">
                   Chez <strong>Protein.tn</strong>, nous accompagnons les sportifs tunisiens avec une sélection rigoureuse de{' '}
-                  <strong>protéines</strong>, <strong>whey</strong>, <strong>créatine</strong>, gainers et{' '}
+                  <strong>protéines</strong>, de{' '}
+                  <LinkWithLoading href="/whey-proteine" className="-my-3 inline-block py-3 font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+                    whey protein en Tunisie
+                  </LinkWithLoading>, de{' '}
+                  <LinkWithLoading href="/creatine" className="-my-3 inline-block py-3 font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+                    créatine en Tunisie
+                  </LinkWithLoading>, de gainers et de{' '}
                   <strong>compléments alimentaires</strong> (BCAA, oméga 3, vitamines, brûleurs) — pour la performance, la
                   prise de masse ou la sèche. Chaque produit est choisi pour son authenticité, son profil nutritionnel et son
                   rapport qualité / prix, avec une fiche détaillée pour vous aider à faire le bon choix.

@@ -7,6 +7,7 @@ import { getCachedPageBySlug as getPageBySlug } from '@/services/getCachedProduc
 import { getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
 import { PageContentClient } from './PageContentClient';
+import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 
 export type PageProps = {
   params: Promise<{ slug: string }>;
@@ -33,9 +34,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(page.slug || apiSlug)}`);
     const description = page.meta_description ?? page.excerpt ?? `Decouvrez ${page.title} sur Proteine Tunisie`;
     const ogImage = page.og_image ? getStorageUrl(page.og_image) : undefined;
+    const titleOverride = getCmsPageTitleOverride(apiSlug);
 
     return {
-      title: { absolute: page.meta_title?.trim() || page.title || 'Page' },
+      title: { absolute: titleOverride || page.meta_title?.trim() || page.title || 'Page' },
       description,
       keywords: page.meta_keywords ?? undefined,
       alternates: { canonical },
@@ -44,7 +46,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         follow: page.robots_follow ?? true,
       },
       openGraph: {
-        title: page.og_title?.trim() || page.meta_title?.trim() || page.title || 'Page',
+        title: titleOverride || page.og_title?.trim() || page.meta_title?.trim() || page.title || 'Page',
         description: page.og_description?.trim() || description,
         url: canonical,
         type: 'website',

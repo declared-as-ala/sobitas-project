@@ -16,9 +16,11 @@ import type { AccueilData, Product } from '@/types';
 // for the home rails; the flash-sale countdown ticks client-side from each product's expiry date.
 export const revalidate = 300;
 
+const HOME_TITLE = 'Protéine Tunisie | Protein.tn, boutique à Sousse';
+
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
-  const title = 'Protéine Tunisie | Whey, Créatine & Compléments – Protein.tn Sousse';
+  const title = HOME_TITLE;
   const description =
     'Achetez whey, créatine, gainer, BCAA et compléments alimentaires en Tunisie chez Protein.tn (Sousse). Produits authentiques, livraison rapide à Sousse, Tunis et partout en Tunisie.';
 
@@ -185,7 +187,7 @@ export default async function Home() {
     return true;
   });
   const webPageSchema = buildWebPageSchema(
-    'Protéine Tunisie | Whey, Créatine & Compléments en Tunisie',
+    HOME_TITLE,
     '/',
     baseUrl,
     { description: 'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.' }

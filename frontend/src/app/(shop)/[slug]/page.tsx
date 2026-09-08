@@ -23,6 +23,7 @@ import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription } from '@/util/brandMeta';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
 
 export type RootSlugPageProps = {
@@ -69,7 +70,8 @@ async function findPageBySlug(slug: string): Promise<Page | null> {
 }
 
 async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
-  const title = page.meta_title?.trim() || page.title || 'Page | Proteine Tunisie';
+  const titleOverride = getCmsPageTitleOverride(slug);
+  const title = titleOverride || page.meta_title?.trim() || page.title || 'Page | Proteine Tunisie';
   const description =
     page.meta_description?.trim() ||
     page.excerpt?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
@@ -90,7 +92,7 @@ async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
       follow: page.robots_follow ?? true,
     },
     openGraph: {
-      title: page.og_title?.trim() || title,
+      title: titleOverride || page.og_title?.trim() || title,
       description: (page.og_description?.trim() || description).slice(0, 200),
       url: canonical,
       type: 'website',
