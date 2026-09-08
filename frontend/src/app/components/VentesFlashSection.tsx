@@ -89,7 +89,10 @@ const CountdownDisplay = memo(function CountdownDisplay({ expirationDate }: { ex
 
 function FlashDeadline({ expirationDate }: { expirationDate: Date }) {
   return (
-    <span className="min-w-32 flex-1 text-xs text-ink-2 sm:flex-initial">
+    // Phase 14: between `md` and `lg` the date sits ABOVE the clock, and that stack now hangs off
+    // the band's RIGHT edge — so the label rags right there and only there. At `lg` the pair is a
+    // row again and the label reads left-to-right into the clock, as it always did.
+    <span className="min-w-32 flex-1 text-xs text-ink-2 sm:flex-initial md:text-right lg:text-left">
       <span className="block font-semibold">Prochaine échéance</span>
       <time className="block" dateTime={expirationDate.toISOString()}>
         {expirationDate.toLocaleString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Africa/Tunis' })}
@@ -146,9 +149,16 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
     // Four stateful cards render directly: deadline/empty states have different heights, so a
     // single deferred placeholder would move the page whenever the offer changes.
     <Section id="ventes-flash" surface="sunken" spacing="tight" width="wide" aria-labelledby="ventes-flash-heading">
-      {/* Phase 12: identity + navigation are one intrinsic-width row, not opposite page edges.
-          Keep SectionHeader's shared title/CTA; this band's next row owns a 16px separation. */}
-      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 sm:block sm:w-fit [&>div]:mb-4 sm:[&>div]:gap-8">
+      {/* Phase 12 shrank this row to `sm:w-fit` so the title and the CTA would stand next to each
+          other. That closed the gap between them by making the HEADER narrower than the grid it
+          sits on — the void moved from the middle of the row to the right of it, and the band ended
+          up as the one place on the site where the header and its content disagree about how wide
+          the section is. Phase 14 removes `w-fit`: SectionHeader's own `sm:justify-between` puts
+          the title on the grid's left edge and "Voir toutes les offres" on its right edge, which is
+          the arrangement every other `viewAllHref` header on the site already uses.
+          `[&>div]:mb-4` still overrides SectionHeader's mb-5/lg:mb-6 — this band's rows are 16px
+          apart, not 20/24 — and `sm:[&>div]:gap-8` keeps a 32px floor between title and CTA. */}
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 sm:block [&>div]:mb-4 sm:[&>div]:gap-8">
         <SectionHeader
           id="ventes-flash-heading"
           title={earliestExpiration || !offers.length ? 'Ventes flash' : 'Meilleures promos'}
@@ -167,12 +177,13 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
       </div>
       {offers.length > 0 ? (
         <>
-          {/* Phase 12: offer + deadline read together with a fixed 32px gap from tablet up.
+          {/* Phase 12: offer + deadline read together from tablet up — now 24px either side of the
+              rule below, so the separation between them is unchanged at 48px.
               The tablet date sits above its clock so neither group is squeezed. On phones,
               keep the compact two-row summary and the single CTA beside the section title.
               The maxima remain independent: the deepest percentage need not be the largest
               dinar saving. Give the leading number its own space before the supporting copy. */}
-          <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:gap-8">
+          <div className="mb-4 flex flex-col gap-4 md:flex-row md:items-center md:gap-6">
             <div className="flex min-w-0 items-center gap-6 sm:gap-8">
               <p className="shrink-0 font-display font-extrabold uppercase leading-none text-brand">
                 <span className="mb-1 block text-xs font-semibold tracking-wide">Jusqu’à</span>
@@ -184,10 +195,23 @@ export const VentesFlashSection = memo(function VentesFlashSection({ products }:
               </p>
             </div>
             {earliestExpiration && (
-              <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:flex-col md:items-start lg:flex-row lg:items-center">
-                <FlashDeadline expirationDate={earliestExpiration} />
-                <CountdownDisplay expirationDate={earliestExpiration} />
-              </div>
+              <>
+                {/* Phase 14: the offer anchors the left edge, the deadline and its clock anchor the
+                    right one, and this rule is what occupies the measure between them. Pushing the
+                    two groups apart with `justify-between` alone would put the same ~850px of
+                    nothing back in the middle that Phase 12 was asked to remove — a hole either
+                    end of the row is still a hole. DESIGN_SYSTEM: separation is a colour change
+                    plus a 1px rule, never emptiness. It also says something true — this offer runs
+                    until that date — and, being a flex item in a row that already exists, it costs
+                    zero height, which is what keeps 390 and 768 at their Phase 12 numbers.
+                    `bg-rule`, the cell-divider weight, per AuthShell's identical leader. Hidden
+                    below `md`, where the two groups stack and there is no gap to fill. */}
+                <span aria-hidden="true" className="hidden h-px flex-1 bg-rule md:block" />
+                <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:flex-col md:items-end lg:flex-row lg:items-center">
+                  <FlashDeadline expirationDate={earliestExpiration} />
+                  <CountdownDisplay expirationDate={earliestExpiration} />
+                </div>
+              </>
             )}
           </div>
           <ul role="list" className="scrollbar-hide flex snap-x snap-proximity gap-4 overflow-x-auto py-1 sm:grid sm:grid-cols-2 sm:overflow-visible xl:grid-cols-4">
