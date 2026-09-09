@@ -1,7 +1,7 @@
 import { categoryAnchor } from '@/util/categoryAnchor';
 import { Metadata } from 'next';
 import { unstable_cache } from 'next/cache';
-import { htmlToText } from '@/util/sanitizeProductHtml';
+import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getCategories, getInStockCount, getShopFacets } from '@/services/api';
@@ -426,7 +426,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const canonicalUrl = metaQuery.page > 1
       ? await resolveCanonicalUrl(undefined, buildShopUrl({ ...EMPTY_SHOP_QUERY, page: metaQuery.page }, `/${encodeURIComponent(canonicalSlug)}`))
       : await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
-    const descTrimmed = description.slice(0, 155);
+    /* truncateAtWord, not slice: a blunt cut produced "…ongles et peau. Livra" on
+       /beaute-cheveux — mid-word, no ellipsis, live in the SERP. The helper backs off to a
+       sentence, then a clause, then a word boundary, and drops a dangling function word. */
+    const descTrimmed = truncateAtWord(description, 155);
     const ogImageRaw = merged.ogImage || undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';

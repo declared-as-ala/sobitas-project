@@ -14,6 +14,7 @@ import {
   getCachedPageBySlug as getPageBySlug,
   getCachedProductsByBrand,
 } from '@/services/getCachedProductDetails';
+import { truncateAtWord } from '@/util/sanitizeProductHtml';
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug } from '@/util/productUrl';
@@ -86,7 +87,7 @@ async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
 
   return {
     title: { absolute: title },
-    description: description.slice(0, 155),
+    description: truncateAtWord(description, 155),
     keywords: page.meta_keywords || undefined,
     alternates: { canonical },
     robots: {
