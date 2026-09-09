@@ -206,7 +206,7 @@ class DefaultEmailTemplates
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
               <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
-            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
+            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre affilié nutrition &amp; bien-être</p>
           </td>
         </tr>
 
@@ -395,7 +395,7 @@ HTML;
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
               <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
-            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
+            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre affilié nutrition &amp; bien-être</p>
           </td>
         </tr>
 
@@ -596,7 +596,7 @@ HTML;
             <a href="https://protein.tn" style="text-decoration:none;display:inline-block;">
               <img src="{{logo_url}}" alt="Protein.tn" width="240" style="max-width:240px;width:100%;height:auto;display:inline-block;border:0;" />
             </a>
-            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre partenaire nutrition &amp; bien-être</p>
+            <p style="margin:10px 0 0;font-size:13px;color:#9ca3af;letter-spacing:0.5px;text-transform:uppercase;font-weight:500;">Votre affilié nutrition &amp; bien-être</p>
           </td>
         </tr>
 

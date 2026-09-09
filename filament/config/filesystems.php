@@ -47,6 +47,34 @@ return [
 
         // Persistent but never web-addressable: nginx blocks /storage/.campaign-archives/.
         // This lives on the existing uploads volume so rollback assets survive container deploys.
+        /*
+         * ── AFFILIATE KYC — IDENTITY DOCUMENTS. READ BOTH CONSTRAINTS BEFORE MOVING THIS ──────
+         * Two requirements pull in opposite directions and only this location satisfies both.
+         *
+         * 1. It MUST persist across deploys. docker-compose bind-mounts exactly two paths:
+         *    /var/sobitas/uploads -> storage/app/public and /var/sobitas/logs -> storage/logs.
+         *    Anything under storage/app/private lives inside the container and is DESTROYED on
+         *    every deploy — national identity cards would silently disappear.
+         *
+         * 2. It MUST NOT be web-addressable. Every other upload in this app uses disk('public'),
+         *    which is readable by anyone who guesses the URL. That is acceptable for a product
+         *    photo and unacceptable for a CIN.
+         *
+         * The leading dot is what reconciles them: nginx/configuration.conf line 107 returns 404
+         * for any /storage/ path beginning with a dot, so this directory sits on the persisted
+         * volume yet cannot be fetched. Same trick as campaign-archive below.
+         *
+         * Documents are served ONLY through an authenticated, signed controller route — never a
+         * Storage::url(). If you ever move this out from under a dot-prefixed directory, you have
+         * published every affiliate's identity card.
+         */
+        'affilie-kyc' => [
+            'driver' => 'local',
+            'root' => storage_path('app/public/.affilie-kyc'),
+            'visibility' => 'private',
+            'throw' => false,
+        ],
+
         'campaign-archive' => [
             'driver' => 'local',
             'root' => storage_path('app/public/.campaign-archives'),

@@ -2,17 +2,17 @@
 
 namespace App\Filament\Pages;
 
-use App\Enums\PartnerStatus;
+use App\Enums\AffilieStatus;
 use App\Models\Client;
 use App\Models\Coordinate;
-use App\Models\PartnerCode;
+use App\Models\AffilieCode;
 use App\Models\DetailsTicket;
 use App\Models\LoyaltyCard;
 use App\Models\Product;
 use App\Models\Ticket;
 use App\Services\LoyaltyService;
 use App\Services\NumberSequenceService;
-use App\Services\PartnerTransactionService;
+use App\Services\AffilieTransactionService;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use App\Filament\Resources\TicketResource;
@@ -61,10 +61,10 @@ class TicketPosPage extends Page
     public string  $loyalty_points_earn_dt = '0.000';
     public bool    $loyalty_panel_visible  = false;
 
-    /** Partner promo (boutique) — partner_codes.id when applied */
-    public ?int $partner_code_id = null;
+    /** Affilie promo (boutique) — affilie_codes.id when applied */
+    public ?int $affilie_code_id = null;
 
-    public string $partner_code_input = '';
+    public string $affilie_code_input = '';
 
     // ── Computed ────────────────────────────────────────────────────────────
     public ?Coordinate $coordonnee = null;
@@ -100,8 +100,8 @@ class TicketPosPage extends Page
                 'prix_unitaire' => (float) ($d->prix_unitaire ?? 0),
             ])->toArray();
 
-            $this->partner_code_id = $this->ticket->partner_code_id;
-            $this->partner_code_input = (string) ($this->ticket->partner_code_snapshot ?? '');
+            $this->affilie_code_id = $this->ticket->affilie_code_id;
+            $this->affilie_code_input = (string) ($this->ticket->affilie_code_snapshot ?? '');
         }
 
         // Pre-load client when redirected from Scanner Fidélité page
@@ -122,8 +122,8 @@ class TicketPosPage extends Page
     // ── Client change ────────────────────────────────────────────────────────
     public function updatedClientId($value): void
     {
-        $this->partner_code_id = null;
-        $this->partner_code_input = '';
+        $this->affilie_code_id = null;
+        $this->affilie_code_input = '';
         $this->clearLoyalty();
 
         if ($value && $client = Client::find($value)) {
@@ -200,7 +200,7 @@ class TicketPosPage extends Page
             $this->loyalty_redeem_input = $points;
         }
 
-        $maxFromTicket = (int) floor($totals['base_after_partner'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = (int) floor($totals['base_after_affilie'] * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($points > $maxFromTicket) {
             $points = $maxFromTicket;
             $this->loyalty_redeem_input = $points;
@@ -221,7 +221,7 @@ class TicketPosPage extends Page
         $svc            = app(LoyaltyService::class);
         $totals         = $this->computeTicketTotals();
         $maxFromBalance = $this->loyalty_balance;
-        $maxFromTicket  = (int) floor($totals['base_after_partner'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket  = (int) floor($totals['base_after_affilie'] * LoyaltyService::POINTS_PER_DT_VALUE);
         $max            = min($maxFromBalance, $maxFromTicket);
         if ($max > 0 && $max < LoyaltyService::MIN_REDEEM_POINTS) {
             $max = 0;
@@ -253,7 +253,7 @@ class TicketPosPage extends Page
     protected function dispatchTotalsRecalc(): void
     {
         $this->dispatch('loyalty-totals-recalc');
-        $this->dispatchPartnerTotalsJs();
+        $this->dispatchAffilieTotalsJs();
     }
 
     /** Payload for JS inside wire:ignore (avoid relying on Livewire.on alone). */
@@ -274,7 +274,7 @@ class TicketPosPage extends Page
 
     /**
      * Sync lines + remise from the POS table (inside wire:ignore) so server totals match the DOM.
-     * Called from JS before applyPartnerCode / clearPartnerCode; save() already receives the same payload.
+     * Called from JS before applyAffilieCode / clearAffilieCode; save() already receives the same payload.
      */
     public function syncPosTotalsFromClient(array $payload): void
     {
@@ -303,8 +303,8 @@ class TicketPosPage extends Page
      */
     public function syncClientFromPos(?int $clientId): array
     {
-        $this->partner_code_id = null;
-        $this->partner_code_input = '';
+        $this->affilie_code_id = null;
+        $this->affilie_code_input = '';
         $this->clearLoyalty();
 
         $this->client_id = null;
@@ -328,9 +328,9 @@ class TicketPosPage extends Page
     /**
      * @return array{toast: bool, variant?: string, title?: string, body?: string}
      */
-    public function applyPartnerCode(): array
+    public function applyAffilieCode(): array
     {
-        if ($this->ticket && $this->ticket->partner_commission_processed_at) {
+        if ($this->ticket && $this->ticket->affilie_commission_processed_at) {
             return [
                 'toast' => true,
                 'variant' => 'warning',
@@ -339,18 +339,18 @@ class TicketPosPage extends Page
             ];
         }
 
-        $code = trim($this->partner_code_input);
+        $code = trim($this->affilie_code_input);
         if ($code === '') {
-            $this->partner_code_id = null;
+            $this->affilie_code_id = null;
             $this->dispatchTotalsRecalc();
 
             return ['toast' => false];
         }
 
-        $svc = app(PartnerTransactionService::class);
-        $draftTotals = $this->computeTicketTotals(withoutPartnerDiscount: true);
+        $svc = app(AffilieTransactionService::class);
+        $draftTotals = $this->computeTicketTotals(withoutAffilieDiscount: true);
 
-        $val = $svc->validatePartnerCodeForTicket(
+        $val = $svc->validateAffilieCodeForTicket(
             $code,
             $draftTotals['base_after_regular_discount'],
             $this->client_id,
@@ -359,63 +359,63 @@ class TicketPosPage extends Page
         );
 
         if (! $val['valid']) {
-            $this->partner_code_id = null;
+            $this->affilie_code_id = null;
             $this->dispatchTotalsRecalc();
 
             return [
                 'toast' => true,
                 'variant' => 'danger',
-                'title' => __('Code partenaire'),
+                'title' => __('Code affilié'),
                 'body' => $val['message'],
             ];
         }
 
-        $this->partner_code_id = $val['partnerCode']->id;
-        $this->partner_code_input = strtoupper(trim($code));
+        $this->affilie_code_id = $val['affilieCode']->id;
+        $this->affilie_code_input = strtoupper(trim($code));
 
-        $partner = $val['partner'];
-        $label = $partner ? trim((string) ($partner->business_name ?: $partner->name)) : '';
+        $affilie = $val['affilie'];
+        $label = $affilie ? trim((string) ($affilie->business_name ?: $affilie->name)) : '';
 
         $this->recalcLoyaltyEarn();
         $this->dispatchTotalsRecalc();
 
-        $displayCode = $this->partner_code_input;
+        $displayCode = $this->affilie_code_input;
         $body = $label !== ''
-            ? __('Le code « :code » est actif — :partner. Les totaux ont été mis à jour.', ['code' => $displayCode, 'partner' => $label])
+            ? __('Le code « :code » est actif — :affilie. Les totaux ont été mis à jour.', ['code' => $displayCode, 'affilie' => $label])
             : __('Le code « :code » est actif. Les totaux ont été mis à jour.', ['code' => $displayCode]);
 
         return [
             'toast' => true,
             'variant' => 'success',
-            'title' => __('Code partenaire appliqué'),
+            'title' => __('Code affilié appliqué'),
             'body' => $body,
         ];
     }
 
-    public function clearPartnerCode(): void
+    public function clearAffilieCode(): void
     {
-        $this->partner_code_id = null;
-        $this->partner_code_input = '';
+        $this->affilie_code_id = null;
+        $this->affilie_code_input = '';
         $this->recalcLoyaltyEarn();
         $this->dispatchTotalsRecalc();
     }
 
-    protected function dispatchPartnerTotalsJs(): void
+    protected function dispatchAffilieTotalsJs(): void
     {
         $t = $this->computeTicketTotals();
         $estimate = 0.0;
         $rate = 0.0;
-        if ($this->partner_code_id) {
-            $partnerCode = PartnerCode::query()->with('partner')->find($this->partner_code_id);
-            if ($partnerCode && $partnerCode->partner) {
-                $p = app(PartnerTransactionService::class)->previewFromTotals($partnerCode, $partnerCode->partner, $t);
+        if ($this->affilie_code_id) {
+            $affilieCode = AffilieCode::query()->with('affilie')->find($this->affilie_code_id);
+            if ($affilieCode && $affilieCode->affilie) {
+                $p = app(AffilieTransactionService::class)->previewFromTotals($affilieCode, $affilieCode->affilie, $t);
                 $estimate = $p['commission_amount'];
                 $rate = $p['rate'];
             }
         }
 
-        $this->dispatch('pos-partner-updated', [
-            'partner_discount' => $t['partner_discount'],
+        $this->dispatch('pos-affilie-updated', [
+            'affilie_discount' => $t['affilie_discount'],
             'commission_estimate' => $estimate,
             'commission_rate' => $rate,
         ]);
@@ -558,23 +558,23 @@ class TicketPosPage extends Page
         $this->prix_ttc = $net;
 
         $existingTicket = $this->ticketId ? Ticket::find($this->ticketId) : null;
-        $partnerCommissionFrozen = $existingTicket?->partner_commission_processed_at !== null;
+        $affilieCommissionFrozen = $existingTicket?->affilie_commission_processed_at !== null;
 
-        $partnerSvc = app(PartnerTransactionService::class);
+        $affilieSvc = app(AffilieTransactionService::class);
 
-        if ($this->partner_code_id && ! $partnerCommissionFrozen) {
-            $partnerCode = PartnerCode::query()->with('partner')->find($this->partner_code_id);
-            if (! $partnerCode || ! $partnerCode->partner) {
+        if ($this->affilie_code_id && ! $affilieCommissionFrozen) {
+            $affilieCode = AffilieCode::query()->with('affilie')->find($this->affilie_code_id);
+            if (! $affilieCode || ! $affilieCode->affilie) {
                 Notification::make()
-                    ->title('Code partenaire invalide.')
+                    ->title('Code affilié invalide.')
                     ->danger()
                     ->send();
 
                 return null;
             }
 
-            $val = $partnerSvc->validatePartnerCodeForTicket(
-                $partnerCode->code,
+            $val = $affilieSvc->validateAffilieCodeForTicket(
+                $affilieCode->code,
                 $totals['base_after_regular_discount'],
                 $this->client_id,
                 $this->client_phone,
@@ -600,32 +600,32 @@ class TicketPosPage extends Page
             'prix_ttc'           => $net,
         ];
 
-        if ($partnerCommissionFrozen && $existingTicket) {
-            $data['partner_id'] = $existingTicket->partner_id;
-            $data['partner_code_id'] = $existingTicket->partner_code_id;
-            $data['partner_code_snapshot'] = $existingTicket->partner_code_snapshot;
-            $data['partner_discount_amount'] = $existingTicket->partner_discount_amount;
-            $data['partner_commission_base'] = $existingTicket->partner_commission_base;
-            $data['partner_commission_rate'] = $existingTicket->partner_commission_rate;
-            $data['partner_commission_amount'] = $existingTicket->partner_commission_amount;
-        } elseif ($this->partner_code_id) {
-            $partnerCode = PartnerCode::query()->with('partner')->findOrFail($this->partner_code_id);
-            $preview = $partnerSvc->previewFromTotals($partnerCode, $partnerCode->partner, $totals);
-            $data['partner_id'] = $partnerCode->partner_id;
-            $data['partner_code_id'] = $partnerCode->id;
-            $data['partner_code_snapshot'] = strtoupper(trim((string) $partnerCode->code));
-            $data['partner_discount_amount'] = $preview['discount_ht'];
-            $data['partner_commission_base'] = $preview['commission_base'];
-            $data['partner_commission_rate'] = $preview['rate'];
-            $data['partner_commission_amount'] = $preview['commission_amount'];
+        if ($affilieCommissionFrozen && $existingTicket) {
+            $data['affilie_id'] = $existingTicket->affilie_id;
+            $data['affilie_code_id'] = $existingTicket->affilie_code_id;
+            $data['affilie_code_snapshot'] = $existingTicket->affilie_code_snapshot;
+            $data['affilie_discount_amount'] = $existingTicket->affilie_discount_amount;
+            $data['affilie_commission_base'] = $existingTicket->affilie_commission_base;
+            $data['affilie_commission_rate'] = $existingTicket->affilie_commission_rate;
+            $data['affilie_commission_amount'] = $existingTicket->affilie_commission_amount;
+        } elseif ($this->affilie_code_id) {
+            $affilieCode = AffilieCode::query()->with('affilie')->findOrFail($this->affilie_code_id);
+            $preview = $affilieSvc->previewFromTotals($affilieCode, $affilieCode->affilie, $totals);
+            $data['affilie_id'] = $affilieCode->affilie_id;
+            $data['affilie_code_id'] = $affilieCode->id;
+            $data['affilie_code_snapshot'] = strtoupper(trim((string) $affilieCode->code));
+            $data['affilie_discount_amount'] = $preview['discount_ht'];
+            $data['affilie_commission_base'] = $preview['commission_base'];
+            $data['affilie_commission_rate'] = $preview['rate'];
+            $data['affilie_commission_amount'] = $preview['commission_amount'];
         } else {
-            $data['partner_id'] = null;
-            $data['partner_code_id'] = null;
-            $data['partner_code_snapshot'] = null;
-            $data['partner_discount_amount'] = 0;
-            $data['partner_commission_base'] = 0;
-            $data['partner_commission_rate'] = 0;
-            $data['partner_commission_amount'] = 0;
+            $data['affilie_id'] = null;
+            $data['affilie_code_id'] = null;
+            $data['affilie_code_snapshot'] = null;
+            $data['affilie_discount_amount'] = 0;
+            $data['affilie_commission_base'] = 0;
+            $data['affilie_commission_rate'] = 0;
+            $data['affilie_commission_amount'] = 0;
         }
 
         try {
@@ -673,13 +673,13 @@ class TicketPosPage extends Page
                             $loyaltyClient,
                             $loyaltyCard,
                             (int) $this->loyalty_redeem_input,
-                            (float) $totals['base_after_partner']
+                            (float) $totals['base_after_affilie']
                         );
                     }
                 }
 
                 $ticket->refresh();
-                app(PartnerTransactionService::class)->processTicketCommission($ticket);
+                app(AffilieTransactionService::class)->processTicketCommission($ticket);
             });
         } catch (\Throwable $e) {
             Notification::make()
@@ -710,7 +710,7 @@ class TicketPosPage extends Page
         return route('filament.admin.resources.tickets.pos', $parameters, $isAbsolute);
     }
 
-    public function computeTicketTotals(bool $withoutPartnerDiscount = false): array
+    public function computeTicketTotals(bool $withoutAffilieDiscount = false): array
     {
         $total = 0.0;
         foreach ($this->lines as $line) {
@@ -726,21 +726,21 @@ class TicketPosPage extends Page
         $regularDiscount = min($regularDiscount, $total);
         $baseAfterRegularDiscount = max(0.0, $total - $regularDiscount);
 
-        $partnerDiscount = 0.0;
-        $effectivePartnerCodeId = $withoutPartnerDiscount ? null : $this->partner_code_id;
+        $affilieDiscount = 0.0;
+        $effectiveAffilieCodeId = $withoutAffilieDiscount ? null : $this->affilie_code_id;
 
-        if ($effectivePartnerCodeId) {
-            $partnerCode = PartnerCode::query()->with('partner')->find($effectivePartnerCodeId);
+        if ($effectiveAffilieCodeId) {
+            $affilieCode = AffilieCode::query()->with('affilie')->find($effectiveAffilieCodeId);
             if (
-                $partnerCode && $partnerCode->partner
-                && $partnerCode->partner->status === PartnerStatus::Active
+                $affilieCode && $affilieCode->affilie
+                && $affilieCode->affilie->status === AffilieStatus::Active
             ) {
-                $partnerDiscount = app(PartnerTransactionService::class)
-                    ->computePartnerDiscountHt($partnerCode, $baseAfterRegularDiscount);
+                $affilieDiscount = app(AffilieTransactionService::class)
+                    ->computeAffilieDiscountHt($affilieCode, $baseAfterRegularDiscount);
             }
         }
 
-        $baseAfterPartner = max(0.0, $baseAfterRegularDiscount - $partnerDiscount);
+        $baseAfterAffilie = max(0.0, $baseAfterRegularDiscount - $affilieDiscount);
 
         $pointsToRedeem = max(0, (int) $this->loyalty_redeem_input);
         if ($pointsToRedeem > $this->loyalty_balance) {
@@ -748,7 +748,7 @@ class TicketPosPage extends Page
             $this->loyalty_redeem_input = $pointsToRedeem;
         }
 
-        $maxFromTicket = (int) floor($baseAfterPartner * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = (int) floor($baseAfterAffilie * LoyaltyService::POINTS_PER_DT_VALUE);
         if ($pointsToRedeem > $maxFromTicket) {
             $pointsToRedeem = $maxFromTicket;
             $this->loyalty_redeem_input = $pointsToRedeem;
@@ -761,7 +761,7 @@ class TicketPosPage extends Page
         $loyaltyDiscount = $this->loyalty_card_id
             ? app(LoyaltyService::class)->pointsToDiscount($pointsToRedeem)
             : 0.0;
-        $loyaltyDiscount = min($loyaltyDiscount, $baseAfterPartner);
+        $loyaltyDiscount = min($loyaltyDiscount, $baseAfterAffilie);
 
         return [
             'total_ht' => $total,
@@ -769,10 +769,10 @@ class TicketPosPage extends Page
             'manual_discount' => $manualDiscount,
             'percent_discount' => $percentDiscount,
             'base_after_regular_discount' => $baseAfterRegularDiscount,
-            'partner_discount' => $partnerDiscount,
-            'base_after_partner' => $baseAfterPartner,
+            'affilie_discount' => $affilieDiscount,
+            'base_after_affilie' => $baseAfterAffilie,
             'loyalty_discount' => $loyaltyDiscount,
-            'final_paid_amount' => max(0.0, $baseAfterPartner - $loyaltyDiscount),
+            'final_paid_amount' => max(0.0, $baseAfterAffilie - $loyaltyDiscount),
         ];
     }
 }

@@ -738,7 +738,7 @@
         --color-catalogue:      #8b5cf6;
         --color-blog:           #06b6d4;
         --color-marketing:      #ec4899;
-        --color-partenaires:    #14b8a6;
+        --color-affiliés:    #14b8a6;
         --color-seo:            #84cc16;
         --color-parametres:     #6366f1;
         --color-systeme:        #ef4444;
@@ -1044,24 +1044,24 @@
         color: var(--color-marketing) !important;
     }
 
-    /* ── Partenaires (Teal) ── */
-    .fi-sidebar-group[data-sb-group="partenaires"] {
-        --sb-accent: var(--color-partenaires);
+    /* ── Affiliés (Teal) ── */
+    .fi-sidebar-group[data-sb-group="affiliés"] {
+        --sb-accent: var(--color-affiliés);
     }
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-header {
-        border-left-color: var(--color-partenaires) !important;
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-group-header {
+        border-left-color: var(--color-affiliés) !important;
     }
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-label,
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-group-header svg:first-of-type {
-        color: var(--color-partenaires) !important;
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-group-label,
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-group-header svg:first-of-type {
+        color: var(--color-affiliés) !important;
     }
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-button:hover::before {
-        background: var(--color-partenaires) !important;
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-item-active .fi-sidebar-item-button::before,
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-item-button:hover::before {
+        background: var(--color-affiliés) !important;
     }
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .sb-bi,
-    .fi-sidebar-group[data-sb-group="partenaires"] .fi-sidebar-item-active .fi-sidebar-item-icon {
-        color: var(--color-partenaires) !important;
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-item-active .sb-bi,
+    .fi-sidebar-group[data-sb-group="affiliés"] .fi-sidebar-item-active .fi-sidebar-item-icon {
+        color: var(--color-affiliés) !important;
     }
 
     /* ── SEO (Lime) ── */
@@ -1134,7 +1134,7 @@
         { match: 'catalogue',    key: 'catalogue'   },
         { match: 'blog',         key: 'blog'        },
         { match: 'marketing',    key: 'marketing'   },
-        { match: 'partenaire',   key: 'partenaires' },
+        { match: 'affilié',   key: 'affiliés' },
         { match: 'seo',          key: 'seo'         },
         { match: 'param',        key: 'parametres'  },
         { match: 'syst',         key: 'systeme'     },
@@ -1177,8 +1177,8 @@
         /* Blog */
         { match: 'article',                 icon: 'bi-newspaper'                    },
         { match: "type d'article",          icon: 'bi-journals'                     },
-        /* Partenaires */
-        { match: 'partenaire',              icon: 'bi-handshake'                    },
+        /* Affiliés */
+        { match: 'affilié',              icon: 'bi-handshake'                    },
         { match: 'code promo',              icon: 'bi-qr-code'                      },
         { match: 'commission',              icon: 'bi-cash-stack'                   },
         { match: 'coach',                   icon: 'bi-person-video3'                },

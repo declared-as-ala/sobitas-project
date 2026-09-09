@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\PartnerAppliesChannel;
+use App\Enums\AffilieAppliesChannel;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -18,8 +18,8 @@ class Coupon extends Model
     public const APPLIES_TO_ORDER = 'order';
 
     protected $fillable = [
-        'partner_id',
-        'is_partner_code',
+        'affilie_id',
+        'is_affilie_code',
         'commission_rate',
         'applies_channel',
         'code', 'type', 'value', 'starts_at', 'ends_at', 'is_active',
@@ -35,15 +35,15 @@ class Coupon extends Model
         'starts_at' => 'datetime',
         'ends_at' => 'datetime',
         'is_active' => 'boolean',
-        'is_partner_code' => 'boolean',
+        'is_affilie_code' => 'boolean',
         'usage_limit_total' => 'integer',
         'usage_limit_per_client' => 'integer',
-        'applies_channel' => PartnerAppliesChannel::class,
+        'applies_channel' => AffilieAppliesChannel::class,
     ];
 
-    public function partner(): BelongsTo
+    public function affilie(): BelongsTo
     {
-        return $this->belongsTo(Partner::class, 'partner_id');
+        return $this->belongsTo(Affilie::class, 'affilie_id');
     }
 
     public function redemptions(): HasMany

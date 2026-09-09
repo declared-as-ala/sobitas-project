@@ -25,11 +25,11 @@ class Ticket extends Model
         'loyalty_points_earned'  => 'integer',
         'loyalty_old_balance_points' => 'integer',
         'loyalty_new_balance_points' => 'integer',
-        'partner_discount_amount' => 'decimal:3',
-        'partner_commission_base' => 'decimal:3',
-        'partner_commission_rate' => 'decimal:2',
-        'partner_commission_amount' => 'decimal:3',
-        'partner_commission_processed_at' => 'datetime',
+        'affilie_discount_amount' => 'decimal:3',
+        'affilie_commission_base' => 'decimal:3',
+        'affilie_commission_rate' => 'decimal:2',
+        'affilie_commission_amount' => 'decimal:3',
+        'affilie_commission_processed_at' => 'datetime',
     ];
 
     public function client(): BelongsTo
@@ -62,14 +62,14 @@ class Ticket extends Model
         return $this->hasMany(LoyaltyPointTransaction::class, 'ticket_id');
     }
 
-    public function partner(): BelongsTo
+    public function affilie(): BelongsTo
     {
-        return $this->belongsTo(Partner::class, 'partner_id');
+        return $this->belongsTo(Affilie::class, 'affilie_id');
     }
 
-    public function partnerCode(): BelongsTo
+    public function affilieCode(): BelongsTo
     {
-        return $this->belongsTo(PartnerCode::class, 'partner_code_id');
+        return $this->belongsTo(AffilieCode::class, 'affilie_code_id');
     }
 
     public function isTicketCaisse(): bool

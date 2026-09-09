@@ -19,7 +19,7 @@ class UserObserver
             return;
         }
 
-        $adminRoleIds = config('partners.admin_role_ids', [1, 3]);
+        $adminRoleIds = config('affilies.admin_role_ids', [1, 3]);
         $recipients = User::whereIn('role_id', $adminRoleIds)->get();
 
         $title = 'Nouvel utilisateur';

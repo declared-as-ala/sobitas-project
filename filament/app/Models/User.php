@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Enums\PartnerStatus;
+use App\Enums\AffilieStatus;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -64,9 +64,9 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         });
     }
 
-    public function partner(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function affilie(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
-        return $this->hasOne(Partner::class, 'user_id');
+        return $this->hasOne(Affilie::class, 'user_id');
     }
 
     public function client(): \Illuminate\Database\Eloquent\Relations\HasOne
@@ -77,33 +77,33 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'admin') {
-            return in_array((int) ($this->role_id ?? 0), config('partners.admin_role_ids', [1, 3]), true);
+            return in_array((int) ($this->role_id ?? 0), config('affilies.admin_role_ids', [1, 3]), true);
         }
 
-        if ($panel->getId() === 'partner') {
-            $partner = $this->partner()->first();
+        if ($panel->getId() === 'affilie') {
+            $affilie = $this->affilie()->first();
 
-            return $partner !== null
-                && $partner->status === PartnerStatus::Active
-                && (int) ($this->role_id ?? 0) === Partner::availableCommissionRoleId();
+            return $affilie !== null
+                && $affilie->status === AffilieStatus::Active
+                && (int) ($this->role_id ?? 0) === Affilie::availableCommissionRoleId();
         }
 
         return false;
     }
 
     /**
-     * Invitation password setup mail targeting the `/partner` Filament panel.
+     * Invitation password setup mail targeting the `/affilie` Filament panel.
      */
-    public function sendPartnerInvitationResetNotification(string $token): void
+    public function sendAffilieInvitationResetNotification(string $token): void
     {
-        $resetUrl = \Filament\Facades\Filament::getPanel('partner')
+        $resetUrl = \Filament\Facades\Filament::getPanel('affilie')
             ->getResetPasswordUrl($token, $this);
 
         $user     = $this;
         $fromAddr = (string) config('mail.from.address');
         $fromName = config('mail.from.name', 'Protein.tn');
 
-        Log::info('PartnerInviteReset: attempting send', [
+        Log::info('AffilieInviteReset: attempting send', [
             'to' => $user->email,
             'reset_url' => $resetUrl,
         ]);
@@ -112,7 +112,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
             $message
                 ->to($user->email, $user->name)
                 ->from($fromAddr, $fromName)
-                ->subject('Invitation espace partenaire — Protein.tn')
+                ->subject('Invitation espace affilié — Protein.tn')
                 ->html(
                     view('mail.password-reset', [
                         'resetUrl' => $resetUrl,
@@ -141,7 +141,7 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
      */
     public function sendPasswordResetNotification($token): void
     {
-        $isStaff = in_array((int) ($this->role_id ?? 0), config('partners.admin_role_ids', [1, 3]), true);
+        $isStaff = in_array((int) ($this->role_id ?? 0), config('affilies.admin_role_ids', [1, 3]), true);
 
         if (! $isStaff) {
             $this->notify(new \App\Notifications\ResetPasswordLink($token));

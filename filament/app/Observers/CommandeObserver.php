@@ -23,7 +23,7 @@ class CommandeObserver
     /** Notify only panel administrators when a new order is created. */
     public function created(Commande $commande): void
     {
-        $recipients = User::whereIn('role_id', config('partners.admin_role_ids', [1, 3]))->get();
+        $recipients = User::whereIn('role_id', config('affilies.admin_role_ids', [1, 3]))->get();
         if ($recipients->isEmpty()) {
             return;
         }

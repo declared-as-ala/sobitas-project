@@ -35,9 +35,9 @@ use App\Filament\Resources\LoyaltyTransactionResource;
 use App\Filament\Resources\MarketingTemplateResource;
 use App\Filament\Resources\MessageResource;
 use App\Filament\Resources\NewsletterResource;
-use App\Filament\Resources\PartnerCommissionLedgerResource;
-use App\Filament\Resources\PartnerPromoCodeResource;
-use App\Filament\Resources\PartnerResource;
+use App\Filament\Resources\AffilieCommissionLedgerResource;
+use App\Filament\Resources\AffiliePromoCodeResource;
+use App\Filament\Resources\AffilieResource;
 use App\Filament\Resources\PageResource;
 use App\Filament\Resources\ProductPriceListResource;
 use App\Filament\Resources\ProductResource;
@@ -170,9 +170,9 @@ class AdminPanelProvider extends PanelProvider
                 ContactResource::class,
                 CoordinateResource::class,
                 CouponResource::class,
-                PartnerResource::class,
-                PartnerPromoCodeResource::class,
-                PartnerCommissionLedgerResource::class,
+                AffilieResource::class,
+                AffiliePromoCodeResource::class,
+                AffilieCommissionLedgerResource::class,
                 FactureResource::class,
                 FactureTvaResource::class,
                 FaqResource::class,
@@ -269,7 +269,7 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Marketing')
                     ->icon('heroicon-o-megaphone')
                     ->collapsed(),
-                NavigationGroup::make('Partenaires')
+                NavigationGroup::make('Affiliés')
                     ->icon('heroicon-o-user-group')
                     ->collapsed(),
                 NavigationGroup::make('SEO')

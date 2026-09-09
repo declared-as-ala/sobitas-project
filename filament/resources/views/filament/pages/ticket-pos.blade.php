@@ -434,7 +434,7 @@
     .pos-totals-wrap { justify-content: stretch; }
 }
 
-/* Avantages boutique — fidélité + code partenaire (pile verticale) */
+/* Avantages boutique — fidélité + code affilié (pile verticale) */
 #loyalty-panel.pos-rewards-stack.pos-loyalty-sticky-wrap {
     position: sticky;
     top: 4.75rem;
@@ -496,41 +496,41 @@
     border-top: 2px dashed rgba(217, 119, 6, 0.35);
     background: transparent;
 }
-.pos-rewards-section--partner {
+.pos-rewards-section--affilie {
     background: #fffef7;
     border-top: none;
 }
-.pos-rewards-section--partner .pos-rewards-section-head {
+.pos-rewards-section--affilie .pos-rewards-section-head {
     background: rgba(255, 247, 237, 0.95);
     border-bottom: 1px solid #fed7aa;
 }
-.pos-rewards-section--partner .pos-rewards-label {
+.pos-rewards-section--affilie .pos-rewards-label {
     color: #9a3412;
 }
-.pos-partner-form {
+.pos-affilie-form {
     padding: 14px 14px 16px;
 }
-.pos-partner-row {
+.pos-affilie-row {
     display: flex;
     flex-wrap: wrap;
     gap: 10px;
     align-items: flex-end;
 }
-.pos-partner-field {
+.pos-affilie-field {
     flex: 1 1 200px;
     min-width: 180px;
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
-.pos-partner-field label {
+.pos-affilie-field label {
     font-size: 11px;
     font-weight: 700;
     color: #78716c;
     text-transform: uppercase;
     letter-spacing: 0.04em;
 }
-.pos-partner-input {
+.pos-affilie-input {
     width: 100%;
     border: 1px solid #d6d3d1;
     border-radius: 8px;
@@ -539,17 +539,17 @@
     background: #fff;
     transition: border-color 0.15s, box-shadow 0.15s;
 }
-.pos-partner-input:focus {
+.pos-affilie-input:focus {
     outline: none;
     border-color: #f97316;
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
-.pos-partner-actions {
+.pos-affilie-actions {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
 }
-.pos-btn-partner-go {
+.pos-btn-affilie-go {
     appearance: none;
     border: none;
     border-radius: 8px;
@@ -562,13 +562,13 @@
     box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
     transition: background 0.15s, transform 0.1s;
 }
-.pos-btn-partner-go:hover {
+.pos-btn-affilie-go:hover {
     background: #c2410c;
 }
-.pos-btn-partner-go:active {
+.pos-btn-affilie-go:active {
     transform: translateY(1px);
 }
-.pos-btn-partner-muted {
+.pos-btn-affilie-muted {
     appearance: none;
     border: 1px solid #d6d3d1;
     border-radius: 8px;
@@ -579,44 +579,44 @@
     background: #fff;
     color: #57534e;
 }
-.pos-btn-partner-muted:hover {
+.pos-btn-affilie-muted:hover {
     background: #f5f5f4;
     border-color: #a8a29e;
 }
-/* ── Partner code Bootstrap toast (POS) ── */
-.pos-partner-toast-host {
+/* ── Affilie code Bootstrap toast (POS) ── */
+.pos-affilie-toast-host {
     z-index: 10850;
     max-width: min(420px, calc(100vw - 1.5rem));
     pointer-events: none;
 }
-.pos-partner-toast-host .toast {
+.pos-affilie-toast-host .toast {
     pointer-events: auto;
     min-width: 280px;
     border-radius: 0.65rem;
     overflow: hidden;
 }
-.pos-partner-toast-host .toast-body {
+.pos-affilie-toast-host .toast-body {
     padding: 0.85rem 1rem;
 }
-.pos-partner-toast-host .toast-body .pos-partner-toast-title {
+.pos-affilie-toast-host .toast-body .pos-affilie-toast-title {
     font-size: 0.95rem;
     letter-spacing: 0.01em;
 }
-.pos-partner-toast-host .toast-body .pos-partner-toast-sub {
+.pos-affilie-toast-host .toast-body .pos-affilie-toast-sub {
     font-size: 0.8125rem;
     line-height: 1.45;
     margin-top: 0.25rem;
 }
-.pos-partner-toast-host .btn-close {
+.pos-affilie-toast-host .btn-close {
     flex-shrink: 0;
 }
 
-.pos-partner-note {
+.pos-affilie-note {
     margin: 12px 0 0;
     font-size: 12px;
     color: #78716c;
 }
-.pos-partner-locked {
+.pos-affilie-locked {
     margin: 0;
     padding: 12px 14px;
     background: #f5f5f4;
@@ -625,7 +625,7 @@
     font-size: 13px;
     color: #44403c;
 }
-.pos-partner-locked .muted {
+.pos-affilie-locked .muted {
     font-size: 12px;
     color: #78716c;
     margin-top: 6px;
@@ -642,9 +642,9 @@
 
 <div class="pos-wrap" id="pos-ticket-root">
 
-    {{-- Bootstrap toast: code partenaire (Appliquer) --}}
-    <div class="toast-container position-fixed top-0 end-0 p-3 pos-partner-toast-host" aria-live="polite" aria-atomic="true">
-        <div id="pos-partner-toast"
+    {{-- Bootstrap toast: code affilié (Appliquer) --}}
+    <div class="toast-container position-fixed top-0 end-0 p-3 pos-affilie-toast-host" aria-live="polite" aria-atomic="true">
+        <div id="pos-affilie-toast"
              class="toast align-items-center border-0 shadow-lg"
              role="alert"
              data-bs-autohide="true"
@@ -730,10 +730,10 @@
     </div>
     </div>{{-- /wire:ignore client + barcode --}}
 
-    {{-- Fidélité + code partenaire — un seul bloc visuel, empilés (fidélité puis partenaire) --}}
+    {{-- Fidélité + code affilié — un seul bloc visuel, empilés (fidélité puis affilié) --}}
     <div id="loyalty-panel" class="pos-loyalty-sticky-wrap pos-rewards-stack">
         <div class="pos-rewards-stack-shell">
-            <div class="pos-rewards-stack-ribbon">Fidélité &amp; partenaire boutique</div>
+            <div class="pos-rewards-stack-ribbon">Fidélité &amp; affilié boutique</div>
 
             {{-- 1. Programme fidélité --}}
             <div class="pos-rewards-section pos-rewards-section--loyalty">
@@ -800,42 +800,42 @@
 
             <hr class="pos-rewards-divider" aria-hidden="true">
 
-            {{-- 2. Code promo partenaire — sous le programme fidélité --}}
-            <div class="pos-rewards-section pos-rewards-section--partner">
+            {{-- 2. Code promo affilié — sous le programme fidélité --}}
+            <div class="pos-rewards-section pos-rewards-section--affilie">
                 <div class="pos-rewards-section-head">
-                    <span class="pos-rewards-label">🤝 Code promo partenaire (boutique)</span>
+                    <span class="pos-rewards-label">🤝 Code promo affilié (boutique)</span>
                 </div>
-                <div class="pos-partner-form">
-                    @if($ticket && $ticket->partner_commission_processed_at)
-                        <div class="pos-partner-locked" role="status">
-                            <strong>Verrouillé</strong> — code <span style="font-family:ui-monospace,'Courier New',monospace;font-weight:700;">{{ $ticket->partner_code_snapshot ?? '—' }}</span>
-                            @if((float)($ticket->partner_discount_amount ?? 0) > 0)
-                                <span> · remise {{ number_format((float)$ticket->partner_discount_amount, 3, '.', ' ') }} DT</span>
+                <div class="pos-affilie-form">
+                    @if($ticket && $ticket->affilie_commission_processed_at)
+                        <div class="pos-affilie-locked" role="status">
+                            <strong>Verrouillé</strong> — code <span style="font-family:ui-monospace,'Courier New',monospace;font-weight:700;">{{ $ticket->affilie_code_snapshot ?? '—' }}</span>
+                            @if((float)($ticket->affilie_discount_amount ?? 0) > 0)
+                                <span> · remise {{ number_format((float)$ticket->affilie_discount_amount, 3, '.', ' ') }} DT</span>
                             @endif
                             <div class="muted">La commission ne peut plus être modifiée depuis le POS.</div>
                         </div>
                     @else
-                        <div class="pos-partner-row">
-                            <div class="pos-partner-field">
-                                <label for="partner_code_input_pos">Saisir le code</label>
-                                <input type="text" id="partner_code_input_pos"
-                                       wire:model.live.debounce.400ms="partner_code_input"
-                                       class="pos-partner-input"
+                        <div class="pos-affilie-row">
+                            <div class="pos-affilie-field">
+                                <label for="affilie_code_input_pos">Saisir le code</label>
+                                <input type="text" id="affilie_code_input_pos"
+                                       wire:model.live.debounce.400ms="affilie_code_input"
+                                       class="pos-affilie-input"
                                        placeholder="Ex. COACH10" autocomplete="off">
                             </div>
-                            <div class="pos-partner-actions">
-                                <button type="button" id="btn-apply-partner-code"
-                                        class="pos-btn-partner-go"
-                                        onclick="ticketPosApplyPartnerCode(event)">Appliquer</button>
-                                <button type="button" id="btn-clear-partner-code"
-                                        class="pos-btn-partner-muted"
-                                        onclick="ticketPosClearPartnerCode(event)">Effacer</button>
+                            <div class="pos-affilie-actions">
+                                <button type="button" id="btn-apply-affilie-code"
+                                        class="pos-btn-affilie-go"
+                                        onclick="ticketPosApplyAffilieCode(event)">Appliquer</button>
+                                <button type="button" id="btn-clear-affilie-code"
+                                        class="pos-btn-affilie-muted"
+                                        onclick="ticketPosClearAffilieCode(event)">Effacer</button>
                             </div>
                         </div>
-                        <p class="pos-partner-note">
+                        <p class="pos-affilie-note">
                             Commission estimée (interne, non imprimée) :
-                            <strong><span id="pos-partner-commission-est">0.000</span> DT</strong>
-                            <span class="text-muted">(<span id="pos-partner-commission-rate">0</span>%)</span>
+                            <strong><span id="pos-affilie-commission-est">0.000</span> DT</strong>
+                            <span class="text-muted">(<span id="pos-affilie-commission-rate">0</span>%)</span>
                         </p>
                     @endif
                 </div>
@@ -939,10 +939,10 @@
                     <input type="number" id="pourcen_remise" step="0.1" min="0" max="100" value="{{ $pourcentage_remise }}" onkeyup="calculate('pourcen_remise')" onchange="calculate('pourcen_remise')">
                 </div>
             </div>
-            <div class="pos-tot-row" id="partner-discount-row" style="display:none;">
-                <div class="pos-tot-label" style="color:#0369a1;">Remise partenaire</div>
+            <div class="pos-tot-row" id="affilie-discount-row" style="display:none;">
+                <div class="pos-tot-label" style="color:#0369a1;">Remise affilié</div>
                 <div class="pos-tot-value" style="color:#0369a1;">
-                    − <span id="partner-discount-display">0.000</span> DT
+                    − <span id="affilie-discount-display">0.000</span> DT
                 </div>
             </div>
             {{-- Loyalty discount row — only shown when panel is visible --}}
@@ -980,7 +980,7 @@
     const minRedeemPoints = {{ \App\Services\LoyaltyService::MIN_REDEEM_POINTS }};
     const produits = @json(json_decode($productsJson)); // Array of products for barcode
     let visibleRows = {{ count($startLines) }};
-    window.partnerDiscountHt = window.partnerDiscountHt || 0;
+    window.affilieDiscountHt = window.affilieDiscountHt || 0;
     const loyaltyState = {
         panelVisible: {{ $loyalty_panel_visible ? 'true' : 'false' }},
         balance: {{ (int) $loyalty_balance }},
@@ -1401,13 +1401,13 @@
         var totale_remise = parseFloat(m_remise.value) || 0;
         totale_remise = Math.min(totale_remise, m_totale_ht);
         var base_after_regular_discount = Math.max(0, m_totale_ht - totale_remise);
-        var pdRaw = typeof window.partnerDiscountHt !== 'undefined' ? window.partnerDiscountHt : 0;
-        var partner_discount = Math.min(Math.max(0, parseFloat(pdRaw) || 0), base_after_regular_discount);
-        var base_after_partner = Math.max(0, base_after_regular_discount - partner_discount);
+        var pdRaw = typeof window.affilieDiscountHt !== 'undefined' ? window.affilieDiscountHt : 0;
+        var affilie_discount = Math.min(Math.max(0, parseFloat(pdRaw) || 0), base_after_regular_discount);
+        var base_after_affilie = Math.max(0, base_after_regular_discount - affilie_discount);
         var redeemInput = document.getElementById('loyalty_redeem_input');
         var rawPoints = parseInt(redeemInput?.value || 0, 10);
         if (Number.isNaN(rawPoints)) rawPoints = 0;
-        var maxFromTicket = Math.floor(base_after_partner * pointsPerDtValue);
+        var maxFromTicket = Math.floor(base_after_affilie * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         var redeemPoints = Math.max(0, Math.min(rawPoints, maxFromBalance, maxFromTicket));
         // Do not stomp the field while the user is typing (partial numbers / empty).
@@ -1417,18 +1417,18 @@
         }
 
         var loyalty_discount = redeemPoints / pointsPerDtValue;
-        loyalty_discount = Math.min(loyalty_discount, base_after_partner);
-        var m_totale_ttc = Math.max(0, base_after_partner - loyalty_discount);
+        loyalty_discount = Math.min(loyalty_discount, base_after_affilie);
+        var m_totale_ttc = Math.max(0, base_after_affilie - loyalty_discount);
 
         document.getElementById('p_ht').value = m_totale_ht.toFixed(3);
         document.getElementById('apres_remise').value = m_totale_ttc.toFixed(3);
 
-        var pRow = document.getElementById('partner-discount-row');
-        var pDisc = document.getElementById('partner-discount-display');
+        var pRow = document.getElementById('affilie-discount-row');
+        var pDisc = document.getElementById('affilie-discount-display');
         if (pRow && pDisc) {
-            if (partner_discount > 0.0005) {
+            if (affilie_discount > 0.0005) {
                 pRow.style.display = '';
-                pDisc.textContent = partner_discount.toFixed(3);
+                pDisc.textContent = affilie_discount.toFixed(3);
             } else {
                 pRow.style.display = 'none';
                 pDisc.textContent = '0.000';
@@ -1436,7 +1436,7 @@
         }
 
         // Update loyalty earn preview
-        var earnPts = Math.floor(Math.max(0, base_after_partner - loyalty_discount) * pointsPerDt);
+        var earnPts = Math.floor(Math.max(0, base_after_affilie - loyalty_discount) * pointsPerDt);
         var earnEl  = document.getElementById('lp-earn');
         var earnDtEl = document.getElementById('lp-earn-dt');
         if (earnEl)   earnEl.textContent   = earnPts;
@@ -1463,9 +1463,9 @@
         var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
         regularDiscount = Math.min(regularDiscount, total);
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
-        var pd = typeof window.partnerDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.partnerDiscountHt) || 0), baseAfterRegularDiscount) : 0;
-        var baseAfterPartner = Math.max(0, baseAfterRegularDiscount - pd);
-        var maxFromTicket = Math.floor(baseAfterPartner * pointsPerDtValue);
+        var pd = typeof window.affilieDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.affilieDiscountHt) || 0), baseAfterRegularDiscount) : 0;
+        var baseAfterAffilie = Math.max(0, baseAfterRegularDiscount - pd);
+        var maxFromTicket = Math.floor(baseAfterAffilie * pointsPerDtValue);
         var maxFromBalance = loyaltyState.balance || 0;
         pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
 
@@ -1497,9 +1497,9 @@
         var regularDiscount = parseFloat(document.getElementById('m_remise')?.value || 0) || 0;
         regularDiscount = Math.min(regularDiscount, total);
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
-        var pd = typeof window.partnerDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.partnerDiscountHt) || 0), baseAfterRegularDiscount) : 0;
-        var baseAfterPartner = Math.max(0, baseAfterRegularDiscount - pd);
-        var maxFromTicket = Math.floor(baseAfterPartner * pointsPerDtValue);
+        var pd = typeof window.affilieDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.affilieDiscountHt) || 0), baseAfterRegularDiscount) : 0;
+        var baseAfterAffilie = Math.max(0, baseAfterRegularDiscount - pd);
+        var maxFromTicket = Math.floor(baseAfterAffilie * pointsPerDtValue);
         var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
         if (maxPts > 0 && maxPts < minRedeemPoints) maxPts = 0;
         redeemInput.value = maxPts;
@@ -1539,9 +1539,9 @@
             .replace(/"/g, '&quot;');
     }
 
-    /** Bootstrap 5 toast for partner code apply (success / erreur / avertissement). */
-    function showPosPartnerToast(variant, title, body) {
-        var el = document.getElementById('pos-partner-toast');
+    /** Bootstrap 5 toast for affilie code apply (success / erreur / avertissement). */
+    function showPosAffilieToast(variant, title, body) {
+        var el = document.getElementById('pos-affilie-toast');
         if (!el) return;
         if (typeof bootstrap === 'undefined' || !bootstrap.Toast) return;
 
@@ -1560,25 +1560,25 @@
         var bodyEl = el.querySelector('.toast-body');
         if (bodyEl) {
             var sub = body
-                ? '<div class="pos-partner-toast-sub opacity-90">' + ticketPosEscapeHtml(body) + '</div>'
+                ? '<div class="pos-affilie-toast-sub opacity-90">' + ticketPosEscapeHtml(body) + '</div>'
                 : '';
-            bodyEl.innerHTML = '<div class="pos-partner-toast-title fw-semibold">' + ticketPosEscapeHtml(title) + '</div>' + sub;
+            bodyEl.innerHTML = '<div class="pos-affilie-toast-title fw-semibold">' + ticketPosEscapeHtml(title) + '</div>' + sub;
         }
 
         var inst = bootstrap.Toast.getOrCreateInstance(el, { autohide: true, delay: 5500 });
         inst.show();
     }
 
-    function ticketPosApplyPartnerCode(e) {
+    function ticketPosApplyAffilieCode(e) {
         if (e && e.preventDefault) e.preventDefault();
-        var btn = document.getElementById('btn-apply-partner-code');
+        var btn = document.getElementById('btn-apply-affilie-code');
         if (btn) { btn.disabled = true; }
         var snap = buildPosSnapshotForLivewire();
         @this.call('syncPosTotalsFromClient', snap)
-            .then(function () { return @this.call('applyPartnerCode'); })
+            .then(function () { return @this.call('applyAffilieCode'); })
             .then(function (res) {
                 if (res && res.toast) {
-                    showPosPartnerToast(res.variant || 'success', res.title || '', res.body || '');
+                    showPosAffilieToast(res.variant || 'success', res.title || '', res.body || '');
                 }
             })
             .finally(function () {
@@ -1587,13 +1587,13 @@
             });
     }
 
-    function ticketPosClearPartnerCode(e) {
+    function ticketPosClearAffilieCode(e) {
         if (e && e.preventDefault) e.preventDefault();
-        var btn = document.getElementById('btn-clear-partner-code');
+        var btn = document.getElementById('btn-clear-affilie-code');
         if (btn) { btn.disabled = true; }
         var snap = buildPosSnapshotForLivewire();
         @this.call('syncPosTotalsFromClient', snap)
-            .then(function () { return @this.call('clearPartnerCode'); })
+            .then(function () { return @this.call('clearAffilieCode'); })
             .finally(function () {
                 if (btn) { btn.disabled = false; }
                 calculate();
@@ -1726,12 +1726,12 @@
             calculate();
         });
 
-        Livewire.on('pos-partner-updated', function (payload) {
+        Livewire.on('pos-affilie-updated', function (payload) {
             var raw = Array.isArray(payload) ? payload[0] : payload;
             if (!raw || typeof raw !== 'object') return;
-            window.partnerDiscountHt = parseFloat(raw.partner_discount) || 0;
-            var ce = document.getElementById('pos-partner-commission-est');
-            var cr = document.getElementById('pos-partner-commission-rate');
+            window.affilieDiscountHt = parseFloat(raw.affilie_discount) || 0;
+            var ce = document.getElementById('pos-affilie-commission-est');
+            var cr = document.getElementById('pos-affilie-commission-rate');
             if (ce) ce.textContent = (parseFloat(raw.commission_estimate) || 0).toFixed(3);
             if (cr) cr.textContent = String(parseFloat(raw.commission_rate) || 0);
             calculate();
