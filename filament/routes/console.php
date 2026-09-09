@@ -108,6 +108,43 @@ Schedule::command('aramex:sync-tracking')
         );
     });
 
+/*
+ * ── AFFILIATE PAYOUTS ─ FRIDAY, AND DELIBERATELY WITHOUT AUTHORITY TO PAY ────────────────
+ * Placed directly after aramex:sync-tracking because it is downstream of it: that command is what
+ * moves orders to "livrée", which is what accrues commission, which is what this assembles.
+ *
+ * IT PREPARES `affilie_payouts` ROWS AND STOPS. Every other entry in this file changes data that
+ * can be edited back; this one would move real money out of a real bank account if it were allowed
+ * to, and a cron that pays affiliates while nobody is watching is precisely the hole an affiliate
+ * fraud scheme is built to fit through. An admin confirms each batch in Filament, and only that
+ * confirmation writes a payment to the ledger. A `pending` payout row moves no balance.
+ *
+ * Friday 09:00 — before the working day rather than at the end of it, so the person confirming has
+ * a whole Friday to query anything that looks wrong, and the bank still has time to act on it.
+ *
+ * `withoutOverlapping(30)` is BOUNDED. The bare form expires after 24 hours, and a deploy that
+ * kills this mid-run would otherwise leave a lock that suppresses next week's batch entirely —
+ * silently, since a suppressed run produces no output at all. The command is idempotent on its own
+ * terms anyway: it refuses to prepare a second batch for an affiliate who already has one pending.
+ *
+ * appendOutputTo, for the reason the Aramex entry above learned the hard way: this command's worst
+ * failure is not an exception. It is preparing NOTHING, week after week — which is what happens if
+ * `cod_remitted_at` is never populated, because then every commission is permanently held behind
+ * the second COD gate and every affiliate looks like they are owed zero. That state exits 0 and
+ * looks identical to "nobody earned anything this week". The log is the only place it is visible.
+ */
+Schedule::command('affilies:prepare-payout-batch')
+    ->weeklyOn(5, '09:00')
+    ->withoutOverlapping(30)
+    ->appendOutputTo(storage_path('logs/affilie-payouts.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'affilies:prepare-payout-batch FAILED — no affiliate payout batches were assembled this '
+            .'week. Nobody has been underpaid yet (the command never pays), but nobody can be paid '
+            .'until it runs. See storage/logs/affilie-payouts.log.',
+        );
+    });
+
 Schedule::command('seo:health-report')->weeklyOn(1, '06:00'); // Monday summary of missing SEO data (logged)
 Schedule::command('seo:enrich-nutrition --limit=25')->weeklyOn(2, '03:00'); // gradual factual nutrition enrichment (OFF, by GTIN)
 

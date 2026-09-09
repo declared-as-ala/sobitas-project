@@ -297,6 +297,84 @@ class CommandeResource extends Resource
                     })
                     ->deselectRecordsAfterCompletion(),
 
+                /*
+                 * ── THE SECOND COD GATE, AND THE ONLY THING THAT OPENS IT ────────────────────
+                 * Affiliate commission is EARNED when a parcel reaches `livree`, but it is not
+                 * PAYABLE until Aramex has actually remitted the cash for it. In a
+                 * cash-on-delivery business those are different days: `livree` means the courier
+                 * took the money, not that we have it.
+                 *
+                 * AffilieTransactionService reads `commandes.cod_remitted_at` for exactly that
+                 * gate. Before this action existed NOTHING in the codebase ever wrote that column
+                 * — so the Friday payout batch would have selected zero payable commissions, every
+                 * week, for ever, exiting 0 and looking indistinguishable from "nobody sold
+                 * anything". A silent permanent no-op is the failure mode this project has been
+                 * bitten by before (see AramexTrackingSync on promoting nothing and reporting
+                 * success), so the writer is deliberately explicit.
+                 *
+                 * Manual is also correct operationally: COD reconciliation means matching an
+                 * Aramex settlement report against orders. A human reads the report; this action
+                 * records the outcome. When an Aramex remittance API exists this becomes its
+                 * automated counterpart, not a replacement — keep the manual path for corrections.
+                 *
+                 * Only delivered orders qualify: money cannot be remitted for a parcel the courier
+                 * never handed over. Already-remitted orders are skipped rather than re-stamped,
+                 * because that timestamp is evidence and overwriting it destroys the audit trail
+                 * the payout run relies on.
+                 */
+                Actions\BulkAction::make('marquerEncaisseCod')
+                    ->label('Marquer encaissé (COD)')
+                    ->icon('heroicon-o-banknotes')
+                    ->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirmer l\'encaissement Aramex')
+                    ->modalDescription(
+                        'À faire uniquement après réception du versement Aramex pour ces commandes. '
+                        .'Cela rend la commission des affiliés payable lors du prochain virement. '
+                        .'Seules les commandes livrées sont concernées.'
+                    )
+                    ->modalSubmitActionLabel('Confirmer l\'encaissement')
+                    ->action(function (\Illuminate\Support\Collection $records) {
+                        $done = 0;
+                        $skipped = 0;
+
+                        foreach ($records as $record) {
+                            $delivered = in_array(
+                                (string) $record->etat,
+                                \App\Services\PointsService::DELIVERED_STATUSES,
+                                true
+                            );
+
+                            if (! $delivered || $record->cod_remitted_at !== null) {
+                                $skipped++;
+
+                                continue;
+                            }
+
+                            try {
+                                // saveQuietly: this stamps a reconciliation fact and must not
+                                // re-fire CommandeObserver, which reacts to `etat` changes and
+                                // would re-run delivery side effects on an untouched status.
+                                $record->cod_remitted_at = now();
+                                $record->saveQuietly();
+                                $done++;
+                            } catch (\Throwable $e) {
+                                $skipped++;
+                                \Illuminate\Support\Facades\Log::error('COD remittance marking failed', [
+                                    'commande_id' => $record->id,
+                                    'error'       => $e->getMessage(),
+                                ]);
+                            }
+                        }
+
+                        \Filament\Notifications\Notification::make()
+                            ->title("{$done} commande(s) marquée(s) encaissée(s)")
+                            ->body($skipped > 0 ? "{$skipped} ignorée(s) (non livrée ou déjà encaissée)." : null)
+                            ->success()
+                            ->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
+
                 Actions\DeleteBulkAction::make(),
             ]);
     }

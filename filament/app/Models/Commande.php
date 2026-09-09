@@ -25,6 +25,11 @@ class Commande extends Model
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'discount_ht', 'discount_ttc', 'stock_restored_at',
+        // ── Affiliate attribution + the two COD money gates (migration 2026_09_09_120100) ──
+        // `cod_remitted_at` is NOT a duplicate of `delivered_at`. Delivered means the COURIER has
+        // the customer's cash; remitted means the shop does. Commission is EARNED on the first and
+        // PAYABLE only after the second. Collapsing them pays affiliates from the shop's own float.
+        'affilie_id', 'affilie_code_id', 'affilie_commission_processed_at', 'cod_remitted_at',
     ];
 
     protected $casts = [
@@ -40,6 +45,8 @@ class Commande extends Model
         'is_returning_customer' => 'boolean',
         'delivered_at' => 'datetime',
         'stock_restored_at' => 'datetime',
+        'affilie_commission_processed_at' => 'datetime',
+        'cod_remitted_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -299,6 +306,71 @@ class Commande extends Model
     public function pointTransactions(): HasMany
     {
         return $this->hasMany(UserPointTransaction::class, 'commande_id');
+    }
+
+    // ── Affiliate attribution ───────────────────────────
+
+    /** The affiliate credited with this order, when one entered or referred it. */
+    public function affilie(): BelongsTo
+    {
+        return $this->belongsTo(Affilie::class, 'affilie_id');
+    }
+
+    /** The specific code used, which may carry its own commission rate. */
+    public function affilieCode(): BelongsTo
+    {
+        return $this->belongsTo(AffilieCode::class, 'affilie_code_id');
+    }
+
+    /** Every commission, reversal and return fee this order has produced. */
+    public function affilieTransactions(): HasMany
+    {
+        return $this->hasMany(AffilieTransaction::class, 'commande_id');
+    }
+
+    /**
+     * Did this order actually leave the building?
+     *
+     * The return fee turns on this and nothing else, because the STATUS cannot answer it.
+     * `getStatusOptions()` offers the admin exactly one negative outcome — `annuler` — so an
+     * order cancelled before it was ever picked and an order that travelled to the customer,
+     * was refused and travelled back both arrive here wearing the same word. Only the first
+     * costs the shop nothing; only the second may be charged to the affiliate.
+     *
+     * Three independent signals, any of which is proof of dispatch:
+     *   1. a `retour*` spelling — a return is by definition something that went out;
+     *   2. `delivered_at` — the parcel reached the customer, so a later cancel is a return;
+     *   3. an Aramex airway bill — a shipment was handed to the courier and is billable.
+     *
+     * Deliberately conservative: when none of the three is present the answer is NO and the
+     * affiliate is not charged. A missed fee costs 10 DT; a wrong one costs trust.
+     */
+    public function wasDispatched(): bool
+    {
+        $etat = strtolower(trim((string) $this->etat));
+        if (str_starts_with($etat, 'retour')) {
+            return true;
+        }
+
+        if (! empty($this->delivered_at)) {
+            return true;
+        }
+
+        try {
+            return $this->factures()
+                ->whereNotNull('aramex_hawb')
+                ->where('aramex_hawb', '!=', '')
+                ->exists();
+        } catch (\Throwable $e) {
+            // Missing column or table on a partially migrated install. Unknown means "not
+            // dispatched", so the affiliate keeps the benefit of the doubt.
+            \Illuminate\Support\Facades\Log::warning('wasDispatched() could not read shipments', [
+                'commande_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
     }
 
     public function factures(): HasMany

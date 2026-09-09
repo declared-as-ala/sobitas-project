@@ -58,6 +58,27 @@ Route::match(['get', 'post'], 'unsubscribe', function () {
 
 Route::redirect('login-redirect', 'login')->name('login');
 
+/*
+ * ── AFFILIATE KYC DOCUMENTS — THE ONLY READ PATH ──────────────────────────────────────────────
+ * National identity cards. NOT `back.office`: the affiliate must be able to see their own upload,
+ * and `AffilieKycService::canView()` makes the admin-or-owner decision using the same
+ * config('affilies.admin_role_ids') list EnsureBackOfficeRole and User::canAccessPanel read, so
+ * there is one definition of "staff" rather than a third.
+ *
+ * `signed` bounds the link (5 minutes); `auth` requires a real session or storefront token;
+ * canView() re-checks identity on every request. All three, because each alone fails: a signature
+ * leaks through history and Referer, a session says nothing about WHICH affiliate is asking, and a
+ * permission check on an unauthenticated request has nobody to check.
+ *
+ * `whereNumber` so a letter in the id is a 404 rather than a TypeError-driven 500 — the same fix
+ * applied across routes/api.php.
+ */
+Route::middleware(['auth:web,sanctum', 'signed', 'throttle:60,1'])
+    ->get('affilie-kyc/{affilie}/{side}', \App\Http\Controllers\AffilieKycDocumentController::class)
+    ->whereNumber('affilie')
+    ->whereIn('side', ['front', 'back'])
+    ->name('affilie.kyc.document');
+
 Route::middleware(['auth', 'back.office', 'no.cache.print'])->group(function () {
     Route::get('factures/{facture}/print', function (Facture $facture) {
         $facture->load('client');

@@ -175,6 +175,56 @@ Route::middleware('throttle:10,1')->post('/auth/google', [ClientController::clas
 Route::middleware('throttle:4,1')->post('/forgot-password', [ClientController::class, 'forgotPassword']);
 Route::middleware('throttle:6,1')->post('/reset-password', [ClientController::class, 'resetPassword']);
 
+/*
+ * ── AFFILIÉS — THE ROUTES THE STOREFRONT HAS BEEN CALLING INTO A 404 ───────────────────────
+ * `frontend/src/services/partners.ts` POSTs an application and GETs a code preview. Neither route
+ * has ever existed in this file: the /partenaires form shipped, and every candidature submitted
+ * through it was answered with a 404 and lost. Confirmed by reading this file — it contained no
+ * affiliate route of any kind.
+ *
+ * ── WHY THE APPLICATION IS 5/1, THE SAME AS /register ─────────────────────────────────────
+ * It creates a row from an anonymous request, which is exactly what /register does, so it gets
+ * /register's ceiling rather than the looser write bucket. A person filling in a form once is
+ * unaffected; a script filling a review queue is not worth running. The frontend already renders a
+ * specific French message on 429, so the refusal is legible rather than mysterious.
+ *
+ * The code preview is a READ and is deliberately looser (60/1): it is called on page load whenever
+ * an attribution cookie is present, so a tight limit would make a legitimate browse look like an
+ * attack. It returns no commission figure — see AffilieCodeController.
+ */
+Route::middleware('throttle:5,1')
+    ->post('/affilie-applications', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'store']);
+
+Route::middleware('throttle:60,1')
+    ->get('/affilie-codes/{code}', [\App\Http\Controllers\Api\AffilieCodeController::class, 'show'])
+    ->where('code', '[A-Za-z0-9_-]{1,64}');
+
+/*
+ * The rest of the signup funnel is authenticated, and the OTP throttles below are COPIES of the
+ * ones already applied to /phone-verification/* and /email-verification/* further down this file —
+ * same numbers, same reasons. They are the outer wall only: the real ceilings (per account, per
+ * phone, per IP, shop-wide, plus a Cache::lock around the paid WinSMS send) live inside
+ * PhoneVerificationService and EmailVerificationOtpService, which these endpoints call rather than
+ * reimplement. If you change a number here, change it there too or the two walls disagree.
+ *
+ * The KYC upload is 6/1: it is a multipart request carrying up to two 8 MB files, so the cost of
+ * an abusive call is measured in disk and bandwidth, not in rows.
+ */
+Route::middleware('auth:sanctum')->prefix('affilie-applications/me')->group(function () {
+    Route::get('/', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'me'])
+        ->middleware('throttle:30,1');
+    Route::post('/kyc', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'uploadKyc'])
+        ->middleware('throttle:6,1');
+    Route::post('/phone-otp', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'sendPhoneOtp'])
+        ->middleware('throttle:3,60');
+    Route::post('/phone-otp/verify', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'verifyPhoneOtp'])
+        ->middleware('throttle:10,1');
+    Route::post('/email-otp', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'sendEmailOtp'])
+        ->middleware('throttle:5,60');
+    Route::post('/email-otp/verify', [\App\Http\Controllers\Api\AffilieApplicationController::class, 'verifyEmailOtp'])
+        ->middleware('throttle:10,1');
+});
+
 // ── Authenticated Routes ──────────────────────────────
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

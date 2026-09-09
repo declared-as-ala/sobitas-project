@@ -8,6 +8,7 @@ use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Models\Product;
 use App\Models\User;
+use App\Services\AffilieTransactionService;
 use App\Services\PointsService;
 use App\Services\CustomerOrderStatusMailer;
 use App\Services\TransactionalSmsText;
@@ -73,6 +74,35 @@ class CommandeObserver
         } catch (\Throwable $e) {
             Log::error('Review request email failed', [
                 'commande_id' => $commande->id,
+                'error'       => $e->getMessage(),
+            ]);
+        }
+
+        /*
+         * ── AFFILIATE COMMISSION LIFECYCLE ──────────────────────────────────────────────────
+         * Accrue on delivery, reverse + charge the return fee on cancellation/return. Driven from
+         * the same `wasChanged('etat')` gate as loyalty points and reading the SAME two constants
+         * (PointsService::DELIVERED_STATUSES / CANCELLED_STATUSES), because a shop with two
+         * definitions of "delivered" will eventually pay on one and not the other.
+         *
+         * ORDERED DELIBERATELY, between two neighbours that both constrain it:
+         *   AFTER  the review-request block, because THAT is what stamps `commandes.delivered_at`
+         *          (unconditionally, first thing, even when the email itself is switched off).
+         *          Accruing before it would write a commission row whose ledger metadata claims
+         *          the order has no delivery date.
+         *   BEFORE the `annuler` early-return further down, which exits this method entirely for
+         *          cancelled orders. A return fee placed after it would never fire at all.
+         *
+         * Best-effort, and this one matters most. The service already swallows its own errors;
+         * this is the second net. An admin marking a parcel delivered must never see a 500 because
+         * an affiliate's balance could not be written.
+         */
+        try {
+            app(AffilieTransactionService::class)->syncOrderCommissionOnStatusChange($commande);
+        } catch (\Throwable $e) {
+            Log::error('Affilie commission status sync failed', [
+                'commande_id' => $commande->id,
+                'etat'        => $commande->etat,
                 'error'       => $e->getMessage(),
             ]);
         }
