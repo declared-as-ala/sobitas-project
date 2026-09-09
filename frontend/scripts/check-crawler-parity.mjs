@@ -136,12 +136,21 @@ async function fetchAs(url, ua) {
        this. Four documented divergences were found by measuring fields somebody thought to check;
        this one was found by accident while writing brand copy. */
     robots: pick(html, /<meta\s+name="robots"\s+content="([^"]*)"/i),
+    /* ── h1, ADDED 09/09/2026 IN THE SAME PASS AND FOR THE SAME REASON AS robots ──────────
+       Measured on production, ~40 brand pages without a brandSeoConfig entry:
+           /activlab   googlebot "Produits ACTIVLAB"   browser "Boutique — Protéines & Compl…"
+       ShopPageClient held `currentBrand` in useState(null), so the server HTML always took the
+       generic branch while the crawler route resolved the brand server-side. The h1 in that file
+       carries a comment saying it must stay in sync with the crawler view — it did not, and
+       nothing measured it. Tags inside the heading are stripped so markup differences (a <span>
+       wrapper, say) do not read as a text divergence. */
+    h1: pick(html, /<h1[^>]*>([\s\S]*?)<\/h1>/i)?.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim() ?? null,
     schemaTypes: schema.types,
     schemaPageNodes: schema.pageNodes,
   };
 }
 
-const FIELDS = ['title', 'description', 'canonical', 'ogImage', 'robots', 'schemaTypes', 'schemaPageNodes'];
+const FIELDS = ['title', 'description', 'canonical', 'ogImage', 'robots', 'h1', 'schemaTypes', 'schemaPageNodes'];
 
 let failures = 0;
 for (const route of ROUTES) {

@@ -12,6 +12,7 @@ import {
   getCachedCategoryOrSubCategory as fetchCategoryOrSubCategory,
   getCachedAllBrands as getAllBrands,
   getCachedPageBySlug as getPageBySlug,
+  getCachedProductsByBrand,
 } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { getBaseUrl, forceProteinDomain, resolveCanonicalUrl } from '@/util/canonical';
@@ -102,7 +103,7 @@ async function metadataForPage(page: Page, slug: string): Promise<Metadata> {
   };
 }
 
-function metadataForBrand(brand: Brand, slug: string): Metadata {
+async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
   // Force the apex protein.tn domain so the canonical can never point at a host that 301s
   // (www / legacy sobitas), which Search Console flags as "Google chose a different canonical".
@@ -114,12 +115,41 @@ function metadataForBrand(brand: Brand, slug: string): Metadata {
   const title = buildBrandMetaTitle(brand.designation_fr);
   const description = buildBrandMetaDescription(brand.designation_fr);
 
+  let brandProductCount = 0;
+  try {
+    const listing = await getCachedProductsByBrand(brand.id);
+    brandProductCount = (listing?.products ?? []).length;
+  } catch {
+    brandProductCount = 1;
+  }
+
   return {
     // absolute: the brand title already ends with "| Protéine Tunisie"; without this the root
     // layout template would append the brand a second time on these ranking-surface pages.
     title: { absolute: title },
     description,
     alternates: { canonical },
+    /*
+     * ── ROBOTS, MIRRORED FROM THE CRAWLER ROUTE. THE TWO DISAGREED ─────────────────────────
+     * This function emitted no `robots` key at all, so a brand page inherited `index, follow`
+     * from the layout, while x-crawler/category/[slug] — the route middleware sends Googlebot to
+     * for this same URL — emits `index: brandProductCount > 0`. Measured on production
+     * 09/09/2026:
+     *
+     *     /myprotein   googlebot "noindex, follow"   browser "index, follow"
+     *
+     * The crawler side is the correct behaviour and its reasoning is sound: an empty brand
+     * listing is held out of the index, it is deliberately not a redirect or a 404 so the page
+     * still resolves for anyone following a link, and it becomes indexable again on its own the
+     * day the brand gets a product. What was wrong is that only one of the two routes did it.
+     * Two routes disagreeing about indexability under different user agents is the shape that
+     * separates dynamic rendering from cloaking.
+     *
+     * Same cached fetch as the crawler route, so this costs no extra API call, and the same
+     * failure posture: a transient listing error assumes the brand HAS products and stays
+     * indexable, because a wrong noindex is far more expensive than a wrong index.
+     */
+    robots: { index: brandProductCount > 0, follow: true },
     // Shared with the crawler route, which emitted no openGraph at all and therefore fell back to
     // the site-wide banner — see buildBrandSocialMetadata.
     ...buildBrandSocialMetadata(brand.designation_fr, canonical),
@@ -141,7 +171,7 @@ export async function generateMetadata({ params, searchParams }: RootSlugPagePro
 
   const brand = await findBrandBySlug(cleanSlug);
   if (brand) {
-    return metadataForBrand(brand, cleanSlug);
+    return await metadataForBrand(brand, cleanSlug);
   }
 
   const page = await findPageBySlug(cleanSlug);
@@ -207,7 +237,23 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
         <ShopPageClient
           productsData={productsData}
           categories={categories}
-          brands={result.brands}
+          /*
+           * The brand being VIEWED is guaranteed present in this list, which `result.brands` does
+           * not do on its own: that list is built from the catalogue, so a brand with an empty
+           * grid or one whose SKUs are all `rupture` is absent from it. ShopPageClient seeds its
+           * `currentBrand` state from these props at first render, and without the brand there it
+           * fell to the generic h1 — measured on production 09/09/2026, /myprotein and
+           * /olimp-sport-nutrition served "Produits MYPROTEIN" to Googlebot and
+           * "Boutique — Protéines & Compléments Alimentaires en Tunisie" to a shopper.
+           *
+           * We already resolved `brand` above to get here, so this costs nothing and removes the
+           * whole class: the client can never be asked to render a brand page without the brand.
+           */
+          brands={
+            result.brands.some((b) => b.id === brand.id)
+              ? result.brands
+              : [...result.brands, brand]
+          }
           initialBrand={brand.id}
           categorySeoLanding={brandSeo ? <BrandSeoHeader entry={brandSeo} /> : undefined}
           categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : undefined}

@@ -246,7 +246,39 @@ function ShopContent({
   // items are sorted last (see the sorting engine) so they never push a buyable product down.
   const [inStockOnly, setInStockOnly] = useState(serverQuery?.inStock ?? false);
   const [currentPage, setCurrentPage] = useState(serverQuery?.page ?? 1);
-  const [currentBrand, setCurrentBrand] = useState<Brand | null>(null);
+  /*
+   * ── SEEDED FROM PROPS, NOT null. THE h1 BELOW DEPENDS ON IT AT SERVER-RENDER TIME ──────────
+   * This was `useState<Brand | null>(null)`, so the FIRST render — the one that becomes the HTML
+   * — never had a brand, and the h1 at the foot of this file fell to its generic branch. Measured
+   * on production 09/09/2026:
+   *
+   *     /activlab   Googlebot "Produits ACTIVLAB"   browser "Boutique — Protéines & Compléments…"
+   *     /myprotein  Googlebot "Produits MYPROTEIN"  browser  same generic string
+   *
+   * Two defects in one. A shopper on a brand page was shown "Boutique" as the page heading until
+   * hydration replaced it — on ~40 brand pages without a brandSeoConfig entry, which render this
+   * client rather than BrandSeoHeader. And the h1 the crawler route emits and the h1 in this HTML
+   * disagreed, which is precisely what the comment beside that h1 warns turns dynamic rendering
+   * into cloaking.
+   *
+   * `brands` and `initialBrand` are both already props and are both already used together at the
+   * bottom of this file, so the lookup needs nothing new — it just has to happen before the first
+   * paint instead of after it. The effect that used to set this still runs and still wins on a
+   * client-side brand change; this only fixes what the server sends.
+   */
+  const [currentBrand, setCurrentBrand] = useState<Brand | null>(() => {
+    if (!initialBrand) return null;
+    /* Both lists, in this order — the same lookup the effect further down already does. `brands`
+       is built from the catalogue and does NOT contain a brand whose products are all out of
+       stock or whose grid is empty: seeding from it alone fixed /activlab (1 SKU) and left
+       /myprotein (0 SKUs) and /olimp-sport-nutrition (5, all rupture) still showing "Boutique".
+       Measured, then widened. */
+    return (
+      brands.find((b) => b.id === initialBrand) ??
+      safeProductsData.brands?.find((b) => b.id === initialBrand) ??
+      null
+    );
+  });
   const [isDescriptionExpanded, setIsDescriptionExpanded] = useState(false);
   /*
    * Set while a URL navigation is in flight so the grid can show its skeleton instead of the
