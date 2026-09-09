@@ -155,12 +155,100 @@ export function truncateAtWord(text: string, maxLen: number): string {
   if (clean.length <= maxLen) return clean;
 
   const window = clean.slice(0, maxLen);
+
+  /*
+   * ── A WORD BOUNDARY IS NOT ENOUGH. MEASURED ON LIVE BLOG SNIPPETS, 09/09/2026 ─────────────
+   * Backing off to the last space is word-safe and still hands Google a broken sentence:
+   *
+   *   /blog/creatine-monohydrate-tunisie-guide-d-achat
+   *     "…le supplément le plus étudié et…"        ends on a conjunction
+   *   /blog/meilleure-proteine-whey-2026
+   *     "…la protéine en poudre la plus…"          a superlative with no adjective
+   *   /blog/quelle-est-la-meilleure-creatine-monohydrate-en-tunisie
+   *     "…booster vos muscles et…"                 ends on a conjunction
+   *
+   * Every word is whole and every one of those is nonsense — on creatine and whey queries, the
+   * two the shop most wants to win. That is worse than a hard cut: it reads as a fault in the
+   * writing rather than in the truncation.
+   *
+   * So prefer, in order:
+   *   1. the last SENTENCE end in range — a finished sentence needs no ellipsis and gets none;
+   *   2. the last COMMA or semicolon — not a sentence, so the ellipsis stays, but a whole idea;
+   *   3. the last space, exactly as before.
+   *
+   * Arabic punctuation is included because the defect this helper was originally written for was
+   * an Arabic article (5,834 impressions, 0.29% CTR) that ended on a single orphaned letter.
+   * A boundary that follows a digit is refused so a dose ("1,5 g.") or a decimal cannot end the
+   * snippet halfway through a fact.
+   */
+  const MIN_RATIO = 0.6;
+  const deepEnough = (i: number) => i > maxLen * MIN_RATIO && !/\d\s*$/.test(window.slice(0, i));
+
+  const hard = Math.max(
+    window.lastIndexOf('. '),
+    window.lastIndexOf('! '),
+    window.lastIndexOf('? '),
+    window.lastIndexOf('؟ ')
+  );
+  if (deepEnough(hard)) return window.slice(0, hard + 1).trim();
+
+  const soft = Math.max(
+    window.lastIndexOf(', '),
+    window.lastIndexOf('; '),
+    window.lastIndexOf('، ')
+  );
+  if (deepEnough(soft)) return `${window.slice(0, soft).replace(/[\s,;:.،؛-]+$/u, '')}…`;
+
   const lastSpace = window.lastIndexOf(' ');
   // Only honour the boundary if it keeps a reasonable amount of the text; a space at index 3 of a
   // 160-char budget would throw away the whole snippet.
-  const cut = lastSpace > maxLen * 0.6 ? window.slice(0, lastSpace) : window;
+  const cut = lastSpace > maxLen * MIN_RATIO ? window.slice(0, lastSpace) : window;
 
-  return `${cut.replace(/[\s,;:.،؛-]+$/u, '')}…`;
+  return `${dropDanglingWords(cut).replace(/[\s,;:.،؛-]+$/u, '')}…`;
+}
+
+/*
+ * ── THE ACTUAL DEFECT IS THE LAST WORD, NOT THE LAST BOUNDARY ────────────────────────────────
+ * The tiers above fix a snippet when a sentence or clause ends deep enough to be worth using.
+ * When neither does, the word cut still lands wherever the character budget ran out — and on live
+ * blog snippets that was repeatedly a function word carrying no meaning on its own:
+ *
+ *   "…le supplément le plus étudié et…"     a conjunction with nothing conjoined
+ *   "…la protéine en poudre la plus…"       a superlative with no adjective
+ *   "…deux acides gras reconnus pour leurs…" a possessive with nothing possessed
+ *
+ * Those first two survived the tiered fix because their only sentence end sits at ~40% of the
+ * budget, below MIN_RATIO — correctly rejected, since cutting there would throw away more than
+ * half the snippet. Lowering the ratio to catch them would shorten every other snippet on the
+ * site to fix two, so the narrower fix is right: drop trailing words that cannot end a phrase.
+ *
+ * Deliberately a SMALL closed list of French and Arabic function words. A stemmer or a
+ * parts-of-speech guess would mangle real content; this only removes tokens that are never the
+ * last word of a meaningful fragment. It stops as soon as it meets a real word, and it refuses to
+ * eat more than three tokens or to leave fewer than half the characters — a snippet that has been
+ * whittled away is a worse outcome than one ending awkwardly.
+ */
+const DANGLING_WORDS = new Set([
+  'et', 'ou', 'de', 'du', 'des', 'le', 'la', 'les', 'un', 'une', 'au', 'aux', 'en', 'dans',
+  'sur', 'sous', 'pour', 'par', 'avec', 'sans', 'plus', 'moins', 'tres', 'très', 'ce', 'cet',
+  'cette', 'ces', 'son', 'sa', 'ses', 'leur', 'leurs', 'notre', 'nos', 'votre', 'vos', 'qui',
+  'que', 'dont', 'est', 'sont', 'a', 'à', 'd', 'l', 'the', 'and', 'of', 'و', 'في', 'من', 'على',
+]);
+
+function dropDanglingWords(text: string): string {
+  let out = text.trimEnd();
+  const floor = Math.floor(text.length / 2);
+  for (let i = 0; i < 3; i += 1) {
+    const at = out.lastIndexOf(' ');
+    if (at <= 0 || at < floor) break;
+    const last = out
+      .slice(at + 1)
+      .replace(/[.,;:!?()«»"'’،؛…-]+$/u, '')
+      .toLowerCase();
+    if (!DANGLING_WORDS.has(last)) break;
+    out = out.slice(0, at).trimEnd();
+  }
+  return out;
 }
 
 /**
