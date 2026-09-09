@@ -52,6 +52,24 @@ export interface BackendOrderPayload {
   pack_discount?: boolean;
   /** Whole loyalty points the user chooses to spend; backend validates <= balance and <= cap. */
   points_to_redeem?: number;
+  /**
+   * Affiliate attribution — the `pt_aff` subdomain label, e.g. `ali` for a visit that started on
+   * `ali.protein.tn`.
+   *
+   * ── SERVER-INJECTED. `buildBackendOrderPayload` NEVER SETS IT. ────────────────────────────
+   * It is written by the Next route handlers that proxy order creation (`app/api/orders` and
+   * `app/api/quick-order`), which read it from the HttpOnly request cookie and OVERWRITE whatever
+   * the browser sent. It is declared on the payload type rather than passed as a header so that
+   * the backend can fold it into the idempotency hash: `CommandeController` hashes an explicit
+   * list of body keys, and an attribution that travelled outside that list would let one
+   * idempotency key stand for two different commission outcomes.
+   *
+   * It is a LABEL, never an id. The backend resolves it to an affiliate itself and refuses
+   * anything it does not recognise — the same posture as `resolveTokenUser()`, which that
+   * controller calls "the ONLY trusted identity". A browser that forges this field can at best
+   * name an affiliate that already exists; it can never name a row by number.
+   */
+  affiliate_subdomain?: string;
 }
 
 /**

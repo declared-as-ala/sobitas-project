@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\Affilie;
 use App\Models\Commande;
 use App\Models\CommandeDetail;
 use App\Models\CouponRedemption;
@@ -89,7 +90,7 @@ class CommandeController extends Controller
              * again below. There is deliberately NO `affilie_id` key: the moment a browser can
              * name a row by number, the resolution below is decoration.
              */
-            'affiliate_subdomain' => ['nullable', 'string', 'max:32', 'regex:/^[a-z0-9][a-z0-9-]{0,31}$/'],
+            'affiliate_subdomain' => ['nullable', 'string', 'max:32', 'regex:'.Affilie::SUBDOMAIN_PATTERN],
         ]);
 
         $commandeData = $request->commande;
@@ -200,19 +201,19 @@ class CommandeController extends Controller
              */
             $affiliateSubdomain = $request->input('affiliate_subdomain');
             if (filled($affiliateSubdomain) && Schema::hasColumn($new_facture->getTable(), 'affilie_id')) {
-                $affilie = \App\Models\Affilie::resolveActiveBySubdomain((string) $affiliateSubdomain);
+                $affilie = Affilie::resolveActiveBySubdomain((string) $affiliateSubdomain);
                 if ($affilie !== null) {
                     $new_facture->affilie_id = $affilie->id;
                     Log::info('filament.api.add_commande.affilie_attributed', [
                         'affilie_id' => $affilie->id,
-                        'subdomain' => \App\Models\Affilie::normalizeSubdomain((string) $affiliateSubdomain),
+                        'subdomain' => Affilie::normalizeSubdomain((string) $affiliateSubdomain),
                     ]);
                 } else {
                     // An unknown or deactivated subdomain is a NORMAL outcome, not an error: the
                     // cookie outlives the affiliate by up to 30 days. The order is created
                     // unattributed and the customer notices nothing.
                     Log::info('filament.api.add_commande.affilie_unresolved', [
-                        'subdomain' => \App\Models\Affilie::normalizeSubdomain((string) $affiliateSubdomain),
+                        'subdomain' => Affilie::normalizeSubdomain((string) $affiliateSubdomain),
                     ]);
                 }
             }

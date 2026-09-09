@@ -111,6 +111,55 @@ const nextConfig = {
     return [
       ...facetedShopNoindex,
       /*
+       * ── AFFILIATE SUBDOMAINS ARE SERVED, AND MUST NEVER BE INDEXED ──────────────────────────
+       *
+       * `ali.protein.tn` now serves the storefront instead of redirecting to the apex, so that an
+       * affiliate's hostname survives past the first click (see src/util/affiliateHost.ts for the
+       * full argument). The thing that made the redirect safe — no second crawlable copy of the
+       * catalogue — has to be bought back explicitly, and this is where.
+       *
+       * Without this header, wildcard DNS means every string under the apex is a complete,
+       * crawlable duplicate of ~11,000 product pages. `canonical.ts` builds every canonical from
+       * NEXT_PUBLIC_BASE_URL rather than the request host, so those copies would all point at
+       * protein.tn — but a canonical is a hint, and Google crawls and evaluates the duplicate
+       * either way. On a site whose central problem is indexation, N duplicate storefronts is the
+       * last thing to introduce. `noindex` is a directive, not a hint.
+       *
+       * ── NOINDEX, NOT robots.txt Disallow ───────────────────────────────────────────────────
+       * A Disallow removes Google's PERMISSION TO LOOK, which means it can never see the noindex
+       * that would drop the URL — the trap app/robots.ts documents at length for /cart and
+       * friends. Crawlable + noindex is the combination that actually empties the bucket.
+       *
+       * ── DECLARED HERE RATHER THAN IN MIDDLEWARE ────────────────────────────────────────────
+       * Mutating headers on middleware's passthrough `NextResponse.next()` pinned every response
+       * to HTTP 200 on this codebase and turned notFound() into a soft 404 (the note is in
+       * middleware.ts). A header rule is applied to the real response whatever its status, so a
+       * 404 on an affiliate host stays a 404 AND carries the noindex.
+       *
+       * ── `www` IS EXCLUDED BY A NEGATIVE LOOKAHEAD ──────────────────────────────────────────
+       * `headers` are evaluated BEFORE `redirects`, so without the lookahead this rule would stamp
+       * `noindex` onto the 301 that sends www → apex. Google's handling of a noindex on a redirect
+       * response is not something to be confident about when being wrong means deindexing the
+       * canonical host.
+       *
+       * The apex itself cannot match: the pattern requires something AND a dot before `protein.tn`,
+       * and the expression is anchored at both ends, so `protein.tn.evil.com` does not match either.
+       *
+       * ── `.+` RATHER THAN THE LABEL GRAMMAR ─────────────────────────────────────────────────
+       * The middleware's parser is strict — one label, hostname characters only — because it
+       * decides whether MONEY is attributed. This rule is strict about nothing, because it decides
+       * only whether a page may be indexed, and every wrong answer in the permissive direction is
+       * a duplicate storefront. `a.b.protein.tn` is unreachable through a one-level wildcard CNAME
+       * today; if a second host is ever added by hand it inherits the noindex instead of quietly
+       * becoming a crawlable clone. Verified against a real build: matches every subdomain shape,
+       * never the apex, never `www`.
+       */
+      {
+        source: '/:path*',
+        has: [{ type: 'host', value: '(?!www\\.protein\\.tn$).+\\.protein\\.tn' }],
+        headers: [{ key: 'X-Robots-Tag', value: 'noindex, nofollow' }],
+      },
+      /*
        * MACHINE ENDPOINTS: noindex AS WELL AS robots.txt-disallowed, because the two fail in
        * opposite directions. robots.txt stops a crawl but cannot remove a URL Google already
        * indexed from a link — that is the "Indexed, though blocked by robots.txt" bucket, which is

@@ -216,7 +216,7 @@ Route::middleware('throttle:60,1')
  */
 Route::middleware('throttle:60,1')
     ->get('/affilie-subdomains/{subdomain}', [\App\Http\Controllers\Api\AffilieSubdomainController::class, 'show'])
-    ->where('subdomain', '[a-z0-9][a-z0-9-]{0,31}');
+    ->where('subdomain', '[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?');
 
 /*
  * The rest of the signup funnel is authenticated, and the OTP throttles below are COPIES of the

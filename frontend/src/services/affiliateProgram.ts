@@ -7,7 +7,7 @@
  * one line at the bottom of this file chooses between them, so switching to the real endpoints
  * the day they exist is a one-line change and nothing in the UI moves.
  *
- * Modelled on `services/partners.ts` — same `getApiBaseUrl()`, same axios instance shape, same
+ * Modelled on the retired `services/partners.ts` — same `getApiBaseUrl()`, same axios shape, same
  * "turn a Laravel error into one French sentence" discipline — and deliberately kept out of
  * `api.ts` for the same reason that file gives: this is a handful of endpoints used by one
  * route, and folding them in would put them in every page's bundle for nothing.

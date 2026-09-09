@@ -190,6 +190,16 @@ class AffilieResource extends Resource
                         ->dehydrateStateUsing(fn (?string $state) => \App\Models\Affilie::normalizeSubdomain($state))
                         ->unique(ignoreRecord: true)
                         ->rules([
+                            /*
+                             * `nullable` FIRST, and it is not decoration. Laravel skips every
+                             * non-implicit rule for a null value only when it is present; without
+                             * it, `regex` runs against the empty state of an affiliate who has no
+                             * subdomain, fails, and the field becomes de-facto REQUIRED — which
+                             * would block saving every affiliate in the shop, not just new ones.
+                             * The blur handler above normalises an emptied field back to null, so
+                             * "cleared by hand" reaches validation as null too.
+                             */
+                            'nullable',
                             'regex:'.\App\Models\Affilie::SUBDOMAIN_PATTERN,
                             \Illuminate\Validation\Rule::notIn(\App\Models\Affilie::RESERVED_SUBDOMAINS),
                         ])

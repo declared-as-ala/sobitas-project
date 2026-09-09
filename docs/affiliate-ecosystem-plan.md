@@ -52,7 +52,12 @@ logic, drifting apart, each needing every bug fixed twice.** One ledger, one aud
    to `pending`, but the admin Select offers only Active/Suspended. **Every application submitted
    through /partenaires is stuck in `pending` with no path out.** This is a live bug.
 7. **`individual` and `marketer`** partner types.
-8. **Per-affiliate subdomain attribution** (`x.protein.tn`).
+8. ~~**Per-affiliate subdomain attribution** (`x.protein.tn`).~~ **BUILT.** `ali.protein.tn` serves
+   the storefront, middleware resolves the label against `/api/affilie-subdomains/{sub}` and writes
+   the `pt_aff` cookie, and `CommandeController` re-resolves it to set `commandes.affilie_id`.
+   Every non-apex host is `noindex, nofollow` so no duplicate storefront can be indexed. Inert until
+   the wildcard DNS + origin certificate in `docs/PARTNER-SUBDOMAINS.md` exist. The commission
+   ACCRUAL (item 2 above) is still missing — the link is written, the ledger row is not.
 9. **Return fee** charged back to the affiliate.
 10. **Weekly (Friday) payout batch.**
 

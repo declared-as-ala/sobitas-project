@@ -66,40 +66,31 @@ function buildRedirects() {
       permanent: true,
     },
 
-    /**
-     * ── Partner vanity subdomains → apex + ?ref= ─────────────────────────
+    /*
+     * ── THE AFFILIATE SUBDOMAIN RULE THAT USED TO SIT HERE IS GONE, ON PURPOSE ────────────────
      *
-     * `coach-ali.protein.tn/whey` → `protein.tn/whey?ref=coach-ali`
+     * It answered `coach-ali.protein.tn/whey` with a 307 to `protein.tn/whey?ref=coach-ali`, and
+     * it was never wrong about the danger it was avoiding — a full crawlable copy of ~11,000
+     * product pages on every affiliate hostname. What it got wrong was the price:
      *
-     * Owner: "we can make it subdomain but point to same website, and the only thing change is
-     * the sub is unique so from the sub I know the ref — it looks more pro." This delivers exactly
-     * that: a partner hands out a subdomain, and the referral is carried without them ever seeing
-     * a query string.
+     *   1. The affiliate's hostname survived one click. Everything after it read protein.tn, which
+     *      is the opposite of the reason a subdomain was asked for.
+     *   2. It moved the cache fragmentation onto the APEX. Cloudflare's cache key includes the
+     *      query string (measured on this site — see src/util/referral.ts), so every affiliate
+     *      visit minted a separate `protein.tn/<path>?ref=<code>` entry for byte-identical HTML,
+     *      each one a cold origin fetch, on the hostname that serves all of the search traffic.
+     *   3. It attributed to ANY string somebody put in front of the domain, because a redirect
+     *      cannot ask the backend whether the affiliate exists.
      *
-     * IT REDIRECTS RATHER THAN SERVING THE SITE ON THE SUBDOMAIN, and that is not a shortcut —
-     * serving would put a full, indexable copy of the entire catalogue on every partner hostname.
-     * `robots.ts`, `sitemap` and `canonical.ts` all bake `https://protein.tn` at build time, so N
-     * partners would mean N duplicate storefronts all pointing their canonicals at the apex while
-     * Google crawled them anyway. For a site whose central problem is indexation, that is the last
-     * thing to introduce. It would also fragment the Cloudflare cache once per partner, since the
-     * cache key includes the hostname.
+     * The storefront is now SERVED on the subdomain and the visit is stamped by middleware, which
+     * resolves the label against the backend first. The duplicate-content risk is bought back
+     * explicitly by an `X-Robots-Tag: noindex, nofollow` on every non-apex host, declared in
+     * next.config.js `headers()` — a directive rather than the canonical's hint, and applied to
+     * the real response whatever its status. Reasoning in full: src/util/affiliateHost.ts.
      *
-     * 307, NOT 308. A permanent redirect is cached by the browser forever against that hostname,
-     * so if a partner is ever renamed or removed, every device that visited keeps redirecting to
-     * a dead code. Attribution links must stay revocable.
-     *
-     * The `:sub` pattern excludes `www` and `admin` by construction — `www` is matched by the rule
-     * above and never reaches here, and `admin.protein.tn` resolves to the Laravel origin, not to
-     * this app. The character class also refuses dots, so it cannot match a deeper label.
-     *
-     * NOTE: this rule is inert until wildcard DNS exists. See docs/PARTNER-SUBDOMAINS.md.
+     * The www rule ABOVE is untouched and still runs first. Nothing in this file matches a
+     * subdomain any more, so www → apex stays the only host-level redirect on the site.
      */
-    {
-      source: '/:path*',
-      has: [{ type: 'host', value: '(?<sub>[a-z0-9](?:[a-z0-9-]{1,30}[a-z0-9])?)\\.protein\\.tn' }],
-      destination: 'https://protein.tn/:path*?ref=:sub',
-      permanent: false,
-    },
 
     // ── Locale prefix ─────────────────────────────────────────────────────
     p('/en', '/'),

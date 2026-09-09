@@ -6,6 +6,13 @@ import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
 import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug } from '@/util/taxonomySlugs';
 import { isArticleSlug } from '@/util/blogSlugs';
+import {
+  AFFILIATE_COOKIE,
+  AFFILIATE_COOKIE_MAX_AGE,
+  affiliateCookieDomain,
+  affiliateSubdomainFromHost,
+} from '@/util/affiliateHost';
+import { isKnownAffiliateSubdomain } from '@/util/affiliateSubdomains';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -1032,6 +1039,64 @@ export async function middleware(request: NextRequest) {
   // (POST /api/revalidate-blog); the blog HTML documents cache normally.
   const response = NextResponse.next();
 
+  /* ── AFFILIATE SUBDOMAIN ATTRIBUTION — `ali.protein.tn` IS THE REFERRAL ──────────────────────
+   *
+   * Owner: "for each affiliate something like x.protein.tn … we detect that this website is opened
+   * from an affiliate subdomain." The storefront is SERVED on that hostname (it is not redirected
+   * to the apex any more — the rule that did that is retired in redirects.js, with the reasoning
+   * in util/affiliateHost.ts), and this is where the visit is stamped.
+   *
+   * ── WHAT IT COSTS THE APEX: ONE STRING COMPARE, AND NOTHING ELSE ────────────────────────────
+   * `affiliateSubdomainFromHost` lowercases the Host header and compares it to the apex. For
+   * protein.tn — ~100% of indexed traffic — it returns null on that first comparison and the whole
+   * block is skipped. No fetch, no await, no allocation. The backend lookup below runs ONLY on a
+   * hostname that already looks like an affiliate's, and even then hits an in-process Map after
+   * the first request per subdomain per 5 minutes.
+   *
+   * ── WHY IT IS DOWN HERE AND NOT AT THE TOP ─────────────────────────────────────────────────
+   * Everything above this line returns a redirect, a 410 or a rewrite. Those are not the responses
+   * a visitor lands on, and threading a Set-Cookie through thirty exit points would be thirty
+   * chances to attach it to a response whose status matters more than its cookies. A normal
+   * affiliate visit — `ali.protein.tn/` or `ali.protein.tn/whey-proteine` — reaches exactly this
+   * `NextResponse.next()`, and a visitor who first arrives on a redirecting URL is stamped one hop
+   * later on the page they actually see.
+   *
+   * ── NOTHING ELSE ON THIS RESPONSE IS TOUCHED ───────────────────────────────────────────────
+   * The note directly above explains why this passthrough response must not have its headers
+   * rewritten: doing that to force `no-store` on /blog pinned every response to HTTP 200 and turned
+   * notFound() into a soft 404. `cookies.set()` appends a Set-Cookie and does not override the
+   * status or the cache headers — verified against a real build, requesting a known-404 path on an
+   * affiliate host and confirming it still answers 404. The `noindex` half of this feature is
+   * deliberately NOT set here for the same reason; it is a next.config.js `headers()` rule.
+   *
+   * ── AND WHY THE COOKIE IS RE-SENT ON EVERY REQUEST ─────────────────────────────────────────
+   * It would be cheaper to skip the Set-Cookie when the visitor already carries the right value.
+   * That is wrong at the edge: Cloudflare's cache key includes the hostname, so a copy of
+   * `ali.protein.tn/whey` stored WITHOUT the Set-Cookie would then be served to a brand-new
+   * visitor who never gets stamped at all. Sending it unconditionally makes the header a pure
+   * function of the hostname — the same property that makes it safe to cache in the first place.
+   * The `Set-Cookie` leak util/referral.ts warns about cannot happen here for the same reason:
+   * the only visitors who can receive `pt_aff=ali` are the ones who asked for ali's hostname.
+   */
+  const affiliateSub = affiliateSubdomainFromHost(
+    request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+  );
+  if (affiliateSub && (await isKnownAffiliateSubdomain(affiliateSub))) {
+    response.cookies.set({
+      name: AFFILIATE_COOKIE,
+      value: affiliateSub,
+      maxAge: AFFILIATE_COOKIE_MAX_AGE,
+      path: '/',
+      sameSite: 'lax',
+      httpOnly: true,
+      secure:
+        (request.headers.get('x-forwarded-proto') ?? request.nextUrl.protocol.replace(':', '')) ===
+        'https',
+      domain: affiliateCookieDomain(
+        request.headers.get('x-forwarded-host') ?? request.headers.get('host')
+      ),
+    });
+  }
 
   // /product/* and /products/* are now handled by their own server components
   // which resolve the product and 301 directly to /{sousCategorySlug}/{productSlug}

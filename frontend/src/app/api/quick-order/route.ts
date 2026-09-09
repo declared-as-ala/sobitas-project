@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
+import { withAffiliateAttribution } from '@/lib/orderAttribution';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 
 // Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
@@ -137,7 +138,8 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
     const livraisonVille = useAddressFlow ? cityTrim : [delTrim, locTrim].filter(Boolean).join(', ');
     const livraisonAdresse1 = useAddressFlow ? addressTrim : 'Livraison';
 
-    // Same backend structure as normal checkout (see lib/orderPayload.ts)
+    // Same backend structure as normal checkout (see lib/orderPayload.ts). The affiliate stamp is
+    // applied below, from the request cookie — never from `body`, which the browser composed.
     const orderPayload = buildBackendOrderPayload({
       livraison: {
         livraison_nom: nom,
@@ -167,7 +169,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
         ...(authHeader && { Authorization: authHeader }),
         ...(idempotencyKey && { 'Idempotency-Key': idempotencyKey }),
       },
-      body: JSON.stringify(orderPayload),
+      body: JSON.stringify(withAffiliateAttribution(orderPayload, request)),
       signal: AbortSignal.timeout(30000),
     });
 
