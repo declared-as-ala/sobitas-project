@@ -148,6 +148,39 @@ Whichever option is chosen, `catalog:iherb:content` should stop being scheduled 
 returns 403. It currently burns ~130,000 job dispatches a day producing nothing, and — more
 importantly — its permanent green status is what hid this for four weeks.
 
+## There IS a delivery path for content, and its own escape hatch has now closed too
+
+An earlier version of this document said the remedy needed a decision about *how* written or
+sourced content would ever reach the products. That was wrong — the mechanism exists and is
+purpose-built:
+
+```
+php artisan catalog:iherb:import-content --dry-run
+php artisan catalog:iherb:import-content --file=database/catalog-content/iherb-content.jsonl.gz
+```
+
+`CatalogIHerbImportContent` loads harvested content into the staging table **from a JSONL file
+instead of over the network**. It is idempotent (a row that already has content is skipped unless
+`--overwrite`), staging-only (no product row, price, stock or publication state), French-gated
+twice, and it refuses to create staging rows that do not already exist — importing content is not
+allowed to become a second, unaudited discovery path. `--dry-run` reports without writing.
+
+So anything sourced or written elsewhere can reach customers through this file. That is the answer
+to "how would we ever apply new copy at scale", and it was already in the repository.
+
+**But note why that command was written, and what has changed since.** Its docblock, dated
+11/08/2026:
+
+> the identity pass reaches iHerb from the server and the CONTENT pass does not. The same pages
+> fetch perfectly from a developer machine, which is what this file carries: the extraction was
+> performed elsewhere and only the result is imported here.
+
+That escape hatch is now closed as well. Measured 08/09/2026 from a residential connection,
+`fr.iherb.com/pr/<product>` returns **403 `cf-mitigated: challenge`** — the block is no longer
+specific to the server, so "harvest it from a developer machine and import the file" no longer
+works either. The importer remains the right delivery mechanism; what it needs is a source that
+is not iHerb.
+
 ## Corrections to earlier claims in this repository
 
 Two diagnoses recorded earlier tonight were wrong, and are corrected here rather than left
