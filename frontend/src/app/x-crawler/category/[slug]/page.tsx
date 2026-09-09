@@ -47,7 +47,7 @@ import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canon
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildProductSchema, buildWebPageSchema } from '@/util/structuredData';
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
-import { sanitizeProductHtml } from '@/util/sanitizeProductHtml';
+import { sanitizeProductHtml, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import type { Brand, Page, Product } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
@@ -159,11 +159,15 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       // Googlebot's canonical actually comes from. Emitting page.canonical_url raw is why 4 CMS pages
       // told Google that sobitas.tn owns their content while a browser saw the correct self canonical.
       const canonical = await resolveCanonicalUrl(page.canonical_url, `/${encodeURIComponent(cleanSlug)}`);
-      const description = (page.meta_description ?? page.excerpt ?? '')
-        .replace(/<[^>]*>/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim()
-        .slice(0, 155);
+      // Same helper and same budget as the human route's CMS branch. These two must agree:
+      // divergent descriptions on one URL is the class check-crawler-parity exists to catch.
+      const description = truncateAtWord(
+        (page.meta_description ?? page.excerpt ?? '')
+          .replace(/<[^>]*>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim(),
+        155
+      );
       return {
         title: { absolute: getCmsPageTitleOverride(cleanSlug) || page.meta_title?.trim() || page.title || 'Page' },
         description,
