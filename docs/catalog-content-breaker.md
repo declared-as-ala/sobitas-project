@@ -107,6 +107,27 @@ this pass does not report `failed`. It reports success, quickly, forever.
 if it has not moved in 24 hours while the content pass is scheduled, the pipeline is dead no
 matter what any status column says.
 
+## Measured 09/09/2026: not one held-back product qualifies
+
+`catalog:iherb:promote --reindex` was run on production (backup
+`db-pre-command-20260909-000910.sql.gz`). It re-measures every held-back product's body against
+the 250-word gate and flips only what now clears it. The result:
+
+```
+0 already-published product(s) were RE-INDEXED
+6,471 more were measured and are still short; nothing was written for them
+```
+
+**Zero.** Not one of the 6,471 has earned indexing since it was held back. This is the empirical
+confirmation that the gate is not the problem and no flag flip fixes this — the pages have no
+content, and content cannot arrive while the upstream returns 403. Anyone tempted to lower
+`min_body_words` instead should note that the honest reading of this number is "6,471 pages have
+nothing to say", not "the bar is too high".
+
+It also rules out a second theory worth naming: that the recompose pass's `hand_edited` skip was
+holding back rows that would otherwise qualify. If that were true, some of those 4,197 would clear
+the gate on re-measurement. None do.
+
 ## What the remedy actually is
 
 The source is gone, not throttled. That narrows it to three honest options:
