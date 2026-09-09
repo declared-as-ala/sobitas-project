@@ -1272,7 +1272,16 @@ export function HeaderClient() {
 
                 {/* The mobile half of the same move. Owner: "even in the sidebar of the mobile,
                     don't forget that." Without this the B2B programme would be desktop-only the
-                    moment it left the pack-builder page — and coaches run their gym from a phone. */}
+                    moment it left the pack-builder page — and coaches run their gym from a phone.
+
+                    ── THE SUB-LABEL, 09/09/2026 ─────────────────────────────────────────────
+                    It read "Coachs & salles de sport", which described who the programme was FOR
+                    and said nothing about what the row DOES. /partenaires now leads with two
+                    doors — Se connecter and Devenir affilié — and an affiliate who already has an
+                    account had no way to tell from this row that their login was behind it. The
+                    href and the label are unchanged: /partenaires carries the SEO signals and
+                    "Accès Pro" is the phrase the owner chose for the header. Only the second line
+                    moves, to say which two things are on the other side of the tap. */}
                 <Link
                   href="/partenaires"
                   onClick={closeMobileMenu}
@@ -1281,7 +1290,9 @@ export function HeaderClient() {
                   <BadgeCheck className="h-5 w-5 shrink-0 text-brand" aria-hidden />
                   <span className="flex-1 text-left">
                     Accès Pro
-                    <span className="block text-[12px] font-normal text-ink-3">Coachs &amp; salles de sport</span>
+                    <span className="block text-[12px] font-normal text-ink-3">
+                      Espace affilié : connexion ou inscription
+                    </span>
                   </span>
                 </Link>
 

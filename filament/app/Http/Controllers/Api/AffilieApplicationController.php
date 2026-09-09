@@ -12,7 +12,10 @@ use App\Services\EmailVerificationOtpService;
 use App\Services\PhoneVerificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * The public affiliate application, and the pipeline that turns it into a reviewable file.
@@ -133,6 +136,72 @@ class AffilieApplicationController extends Controller
             'user_id' => $request->user('sanctum')?->getAuthIdentifier(),
         ])->save();
 
+        /*
+         * ── THE SEAM: HOW AN ANONYMOUS APPLICANT REACHES THE KYC AND OTP STEPS ───────────────
+         * Both OTP services take a User. Re-implementing them anonymously would mean a second copy
+         * of their five rate ceilings and the Cache::lock that stops a burst burning paid SMS —
+         * the duplication this module exists to avoid. So the funnel needs a User.
+         *
+         * Rather than making a visitor stop and invent a password mid-application, a brand-new
+         * email gets a shadow customer account and a SCOPED token, and the storefront carries on.
+         *
+         * THE TRAP, AND WHY THE EMAIL CHECK IS NOT OPTIONAL: if this issued a token for whatever
+         * address was typed, anyone could type a stranger's email and be handed a session for
+         * their account. That is account takeover through a public form. An email that already
+         * belongs to a user therefore gets NO token — the storefront asks that person to sign in,
+         * and findApplication()'s claim path attaches this row once they prove who they are.
+         *
+         * ON THE TOKEN'S SCOPE — READ THIS BEFORE RELYING ON IT.
+         * The ability `affilie-application` is RECORDED BUT NOT ENFORCED. Nothing in this
+         * application checks Sanctum abilities: a search for `ability:`, `abilities:` and
+         * `tokenCan(` across routes/ and app/Http/ returns zero hits, so the `storefront` ability
+         * on ordinary login tokens is decorative too. Do not read the ability as a boundary.
+         *
+         * What actually contains this token is that the account is BRAND NEW — it exists only
+         * because the address had never been seen, so there are no orders, no loyalty balance and
+         * no profile worth reaching. It also expires in 7 days, with the storefront's own draft.
+         *
+         * FOLLOW-UP WORTH DOING: add `ability:storefront` to the authenticated storefront routes
+         * and `ability:affilie-application,storefront` here. Then this comment becomes true as
+         * written, and every token in the system gains a real boundary. It is a wider change to
+         * shared routes than this feature should make on its own.
+         *
+         * SIDE EFFECT, deliberate: applying with a new address creates the account, so that person
+         * cannot later "register" with it — they set a password through "mot de passe oublié",
+         * which proves control of the mailbox. That is the safer half of the trade.
+         */
+        $resumeToken = null;
+        $requiresLogin = false;
+
+        if ($affilie->user_id === null) {
+            $existing = User::where('email', $affilie->email)->first();
+
+            if ($existing !== null) {
+                // Known address. Never mint a session for it on the strength of a typed email.
+                $requiresLogin = true;
+            } else {
+                $shadow = new User();
+                $shadow->forceFill([
+                    'name' => $affilie->name,
+                    'email' => $affilie->email,
+                    // Unguessable and never transmitted: this account is reachable only through
+                    // "mot de passe oublié", which proves control of the mailbox.
+                    'password' => Hash::make(Str::random(64)),
+                    // role_id is in User::$guarded, so a plain create() drops it against a NOT NULL
+                    // column and 500s — the same trap ClientController::register documents.
+                    'role_id' => 2,
+                ])->save();
+
+                $affilie->forceFill(['user_id' => $shadow->getAuthIdentifier()])->save();
+
+                $resumeToken = $shadow->createToken(
+                    'affilie-application',
+                    ['affilie-application'],
+                    now()->addDays(7)
+                )->plainTextToken;
+            }
+        }
+
         return response()->json([
             'status' => 'pending',
             'reference' => (string) $affilie->reference,
@@ -140,6 +209,11 @@ class AffilieApplicationController extends Controller
             // Tells the storefront whether it can go straight to the ID-card and OTP steps or must
             // first ask the visitor to sign in / create a customer account.
             'linked_account' => $affilie->user_id !== null,
+            // Present only for a brand-new email. Sent as a Bearer token on the /me routes.
+            'resume_token' => $resumeToken,
+            // True when the address already has an account: ask them to sign in, after which the
+            // application is claimed automatically.
+            'requires_login' => $requiresLogin,
         ], 201);
     }
 
@@ -184,14 +258,31 @@ class AffilieApplicationController extends Controller
         }
 
         $request->validate([
-            'id_front' => AffilieKycService::rulesFor(! $kyc->exists($affilie, 'front')),
-            'id_back' => AffilieKycService::rulesFor(! $kyc->exists($affilie, 'back')),
+            /*
+             * Each side is independently optional, with "at least one" enforced below.
+             *
+             * The rule used to require a side whenever it was not already on file, which meant the
+             * FIRST call had to carry both. The storefront uploads them one at a time — a person
+             * photographs the recto, sees it accepted, then photographs the verso — so that rule
+             * 422'd the very first upload every time. Requiring both at once would also mean a
+             * dropped connection on the second photo loses the first.
+             */
+            'id_front' => AffilieKycService::rulesFor(false),
+            'id_back' => AffilieKycService::rulesFor(false),
             // The CIN number itself, so a reviewer can cross-check the card against what was typed.
             'kyc_cin' => ['nullable', 'string', 'max:32'],
         ], [], [
             'id_front' => 'recto de la CIN',
             'id_back' => 'verso de la CIN',
         ]);
+
+        // With both sides now optional, a call carrying neither would be accepted and change
+        // nothing while returning 200 — the storefront would show a success it never earned.
+        if (! $request->hasFile('id_front') && ! $request->hasFile('id_back')) {
+            throw ValidationException::withMessages([
+                'id_front' => ['Envoyez au moins une face de la CIN.'],
+            ]);
+        }
 
         foreach (AffilieKycService::sides() as $side) {
             $field = 'id_'.$side;

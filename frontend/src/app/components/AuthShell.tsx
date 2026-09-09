@@ -150,9 +150,20 @@ interface AuthFieldProps extends Omit<React.ComponentProps<'input'>, 'id'> {
   action?: ReactNode;
   hint?: string;
   reveal?: boolean;
+  /**
+   * A validation message in French. When set it REPLACES the hint, marks the input
+   * `aria-invalid`, and turns the border destructive.
+   *
+   * Added for the affiliate signup, which is a five-step form filled in by people who are not
+   * all comfortable with the web — every field has to be able to say what is wrong with it in
+   * place, rather than pushing one summary error to the top of the card. It is a PROP rather
+   * than a second field component because forking this string is how two inputs on the same
+   * site end up with different focus rings; see DESIGN_SYSTEM §"Primitives".
+   */
+  error?: string;
 }
 
-export function AuthField({ label, Icon, action, hint, reveal = false, className, ...props }: AuthFieldProps) {
+export function AuthField({ label, Icon, action, hint, error, reveal = false, className, ...props }: AuthFieldProps) {
   const id = useId();
   const hintId = `${id}-hint`;
   const [shown, setShown] = useState(false);
@@ -173,7 +184,8 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
         />
         <Input
           id={id}
-          aria-describedby={hint ? hintId : undefined}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error || hint ? hintId : undefined}
           {...props}
           type={reveal ? (shown ? 'text' : 'password') : props.type}
           className={cn(
@@ -181,6 +193,7 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
             'transition-[border-color,box-shadow,background-color] hover:border-rule-strong',
             'focus-visible:border-brand focus-visible:bg-elevated focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-0',
             reveal && 'pe-11',
+            error && 'border-destructive hover:border-destructive',
             className
           )}
         />
@@ -199,11 +212,15 @@ export function AuthField({ label, Icon, action, hint, reveal = false, className
           </button>
         )}
       </div>
-      {hint && (
+      {error ? (
+        <p id={hintId} className="text-xs leading-snug text-destructive">
+          {error}
+        </p>
+      ) : hint ? (
         <p id={hintId} className="text-xs leading-snug text-ink-3">
           {hint}
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

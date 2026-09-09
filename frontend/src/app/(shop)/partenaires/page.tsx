@@ -1,23 +1,34 @@
 import type { Metadata } from 'next';
 import { buildCanonicalUrl } from '@/util/canonical';
-import { PartnersPageClient } from './PartnersPageClient';
+import { AffiliateLanding } from './AffiliateLanding';
 
 /**
- * The public door to a programme that, until now, had none.
+ * The public door to the affiliate programme.
  *
- * The partner module (Partner / PartnerCode / PartnerCommissionTransaction / PartnerPayout, plus
- * its own Filament panel) has existed and worked for some time — but entirely inside the admin.
- * Every partner had to be typed in by hand, which is why the programme has the partners it has and
- * no more. This route is the missing half: a coach or a gym can read what the deal is and apply
- * without anyone at SOBITAS touching a keyboard.
+ * The module behind it (Partner / PartnerCode / PartnerTransaction / PartnerPayout, plus its own
+ * Filament panel at `/affilie`) has existed and worked for some time — but entirely inside the
+ * admin. Every affiliate had to be typed in by hand, which is why the programme has the
+ * affiliates it has and no more. This route is the missing half.
  *
- * It is a SERVER component with static metadata and JSON-LD because it is also an acquisition
- * page — "devenir partenaire salle de sport tunisie" is a query with real intent and no incumbent.
+ * It is a SERVER page with static metadata because it is also an acquisition page — "devenir
+ * partenaire salle de sport tunisie" is a query with real intent and no incumbent.
+ *
+ * ── ON THE TITLE ──────────────────────────────────────────────────────────────────────────
+ * "Partenaire" is kept alongside "Affilié". The owner's rename ("I don't want to see partner",
+ * docs/affiliate-ecosystem-plan.md §6) governs tables, models, the panel and the admin nav — not
+ * a public URL that has been indexed since August and not the query people actually type. The
+ * page's own language is "affilié" throughout; the title carries both so the change costs
+ * nothing in Search Console.
+ *
+ * The PATH is untouched for the same reason, and for two mechanical ones: /partenaires is
+ * submitted in util/sitemapSources.ts, and it is listed in `isReservedRouteSlug`, without which
+ * middleware rewrites it to /x-crawler/category/partenaires and serves Googlebot a 404 for a page
+ * that answers 200 to every human.
  */
 
-const TITLE = 'Programme Partenaire — Coachs & Salles de Sport | Protein.tn';
+const TITLE = 'Programme Affilié & Partenaire — Coachs, Salles de Sport | Protein.tn';
 const DESC =
-  'Coach sportif ou salle de sport en Tunisie ? Rejoignez le programme partenaire Protein.tn : code de réduction pour vos clients, commission sur chaque vente, suivi en temps réel. Inscription gratuite.';
+  'Coach, salle de sport, créateur ou passionné en Tunisie ? Devenez affilié Protein.tn : code de réduction à votre nom, commission sur chaque commande livrée, suivi en temps réel. Inscription gratuite, ou connexion à votre espace affilié.';
 
 export const metadata: Metadata = {
   title: { absolute: TITLE },
@@ -34,5 +45,5 @@ export const metadata: Metadata = {
 };
 
 export default function PartenairesPage() {
-  return <PartnersPageClient />;
+  return <AffiliateLanding />;
 }
