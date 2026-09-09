@@ -626,6 +626,326 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'bruleurs-de-graisse', name: 'Brûleurs de graisse en Tunisie', url: '/bruleurs-de-graisse' },
     ],
   },
+
+  /**
+   * ── BATCH OF 09/09/2026: THE FIVE BARE BRAND PAGES THAT HAVE MEASURED DEMAND ────────────────
+   *
+   * Search Console (repo exports, Web, last 3 months) for the brand pages that still had no
+   * entry, i.e. still served buildBrandMetaTitle's generic "<brand> — Protéines & Compléments en
+   * Tunisie | Protéine Tunisie":
+   *
+   *     /proactive              121 impr,  4 clicks,  3.31%,  pos 13.4
+   *     /big-ramy-labs          118 impr,  2 clicks,  1.69%,  pos 11.7
+   *     /william-bonac           62 impr,  1 click,   1.61%,  pos  6.6
+   *     /victor-martinez         54 impr,  0 clicks,     —,   pos 11.0
+   *     /challenger-nutrition    49 impr,  0 clicks,  0.00%,  pos 10.0
+   *
+   * /challenger-nutrition (already at position 10 and converting nothing) and /william-bonac
+   * (position 6.6) are the two where only the SERP line is failing — the rank is already there.
+   *
+   * ── DATA FLOOR, BRAND BY BRAND ───────────────────────────────────────────────────────────────
+   * Family, format, net weight, arôme and unit count below are read off
+   * /api/productsByBrandId/{29,54,59,55,12} on 09/09/2026 — the same rows the product grid on
+   * each page renders. Per-portion figures are quoted ONLY where /api/product_details/{slug}
+   * returns a populated `nutrition_facts.rows`, and each one is tied to the exact format AND
+   * arôme it was transcribed for, because the same product declares different values per arôme:
+   *
+   *     /product_details/anabolic-whey-80-2-25kg-proactive     35 g → 25 g prot + 5 g créatine
+   *     /product_details/big-whey-2kg-big-ramy-labs            34 g → 24 g prot (Cookies)
+   *     /product_details/whey-iso-regime-2kg-william-bonac     30 g → 26 g prot (Vanilla)
+   *     /product_details/whey-regime-2kg-william-bonac         30 g → 25 g prot (Vanilla)
+   *     /product_details/whey-ultimate-2kg-william-bonac       30 g → 23 g prot (Chocolat)
+   *     /product_details/100-whey-protein-2-27kg-challenger…   34 g → 24 g prot (Chocolat)
+   *
+   * Everything else returns `nutrition_facts: null` or `rows: []`, so no gram figure is stated
+   * for it anywhere below and the copy says the pot's own label is the reference. That is true of
+   * ALL FIVE Victor Martinez SKUs, so that entry quotes no per-portion number at all — as with
+   * GSN, Ultimate Nutrition and C4 above, that is the honest outcome, not a gap to fill.
+   *
+   * The Challenger whey figures carry one extra caveat worth recording: its `serving_note` says
+   * the row came from the packaging column of the product's Open Food Facts page, not from a
+   * team transcription of a pot in the warehouse, and the same block's `claims` field holds three
+   * paragraphs of reseller marketing. The numeric packaging column is quoted; not one word of
+   * `claims` is, because it is exactly the kind of health claim this file forbids.
+   *
+   * ── SKIPPED, WITH REASONS ────────────────────────────────────────────────────────────────────
+   * Five of the ten bare pages got no entry. All five have no measured demand in the exports, and
+   * each also fails on the catalogue:
+   *
+   *   /monster              NO BRAND ROW. All 582 rows of /all_brands were searched for the
+   *                         substring "monster" on 09/09/2026: zero hits. The slug resolves to no
+   *                         brand, so an entry here would be dead config — the same reason
+   *                         american-wolf and impact-sport-nutrition are absent (see header).
+   *   /myprotein            brand 28 exists, `products_meta.total` = 0. The page renders an empty
+   *                         grid; copy describing a catalogue would describe nothing.
+   *   /activlab             brand 32 returns exactly 1 SKU, and that SKU is
+   *                         "VITAMIN C 1000 MG 90 TABS - GYMBEAM" — a GymBeam product filed under
+   *                         ACTIVLAB, out of stock. The single product on the page is not even the
+   *                         brand's. This is a catalogue defect to fix in the admin, not a page to
+   *                         write copy for.
+   *   /olimp-sport-nutrition  5 SKUs, all 5 `rupture: true`.
+   *   /mr-x-v-shape-supps     8 SKUs, 6 of them `rupture: true`, and the brand row itself is
+   *                         "MR.X  V-Shape Supps" (double space) while the SKUs split across two
+   *                         names, "MR.X" and "V-Shape Supps" — the brand identity a title would
+   *                         have to lead with is not settled in the data.
+   *
+   * /proactive is the borderline case that WAS written: only 2 SKUs, which is thinner than the
+   * 3-SKU /applied-nutrition skipped on 08/09/2026. The difference is that honest copy here needs
+   * no health claim — the catalogue is one whey and one pack — and that whey is the only SKU in
+   * this whole batch with BOTH a transcribed label and a specific fact worth a title (25 g of
+   * protéines and 5 g de créatine in the same 35 g portion). The entry says in its first sentence
+   * that the range is two references, rather than implying a gamme that does not exist.
+   */
+  proactive: {
+    metaTitle: 'ProActive Tunisie | Anabolic Whey 80 2,25 kg — Protein.tn',
+    metaDescription:
+      'ProActive en Tunisie : Anabolic Whey 80 2,25 kg, une whey qui déclare 25 g de protéines et 5 g de créatine par portion, arôme Double chocolat. Livraison 24–72h.',
+    h1: 'ProActive Tunisie : Anabolic Whey 80, whey et créatine dans le même pot',
+    introHtml:
+      '<p><strong>ProActive en Tunisie</strong> tient en deux références sur Protein.tn, et autant le dire d’emblée plutôt que de laisser croire à une gamme complète : la whey <strong>Anabolic Whey 80</strong> en 2,25 kg, référencée en arôme Double chocolat et rangée en whey protéine, et le <strong>Pack Sèche Extrême</strong>, un pack rangé en protéines multi-sources. Il n’y a pas de créatine vendue seule, pas de gainer et pas d’acides aminés ProActive au catalogue. La grille ci-dessus affiche le prix et la disponibilité de ces deux références.</p>',
+    howToChooseTitle: 'Anabolic Whey 80 : ce que déclare l’étiquette',
+    howToChooseBody:
+      '<p><strong>Anabolic Whey 80</strong> n’est pas une whey ordinaire, et c’est le seul point qui compte vraiment pour choisir. Sur le format 2,25 kg en arôme Double chocolat, l’étiquette transcrite sur notre fiche produit déclare une portion de 35 g apportant <strong>25 g de protéines et 5 g de créatine monohydrate</strong>, avec 64 portions annoncées pour le pot. C’est donc une poudre à la fois protéinée et créatinée : elle occupe la place d’une whey dans la journée tout en apportant une créatine que vous n’avez pas à acheter à côté. Si vous prenez déjà une créatine par ailleurs, ces 5 g entrent dans votre total quotidien et doivent y être comptés.</p>' +
+      '<p>Le <strong>Pack Sèche Extrême</strong> est l’autre entrée de cette page. C’est un pack, c’est-à-dire un regroupement de plusieurs produits en une seule commande, classé en protéines multi-sources ; sa composition exacte est détaillée sur sa propre fiche et aucune valeur nutritionnelle par portion n’y est publiée. Avec deux références seulement, la marque ne se compare pas sur l’étendue de sa gamme : regardez la catégorie whey protéine dans son ensemble et laissez l’étiquette du pot que vous recevez trancher, car les valeurs déclarées changent d’un arôme et d’un format à l’autre.</p>',
+    faqs: [
+      {
+        question: 'Quels produits ProActive sont vendus en Tunisie ?',
+        answer:
+          'Deux références sur Protein.tn : Anabolic Whey 80 en 2,25 kg, arôme Double chocolat, classée en whey protéine, et le Pack Sèche Extrême, classé en protéines multi-sources. La grille de produits de cette page indique celles qui sont effectivement proposées.',
+      },
+      {
+        question: 'Combien de protéines dans une portion d’Anabolic Whey 80 ?',
+        answer:
+          'Sur le format 2,25 kg en arôme Double chocolat, l’étiquette transcrite sur notre fiche produit indique une portion de 35 g apportant 25 g de protéines et 5 g de créatine monohydrate, pour 64 portions annoncées par pot. Ces valeurs valent pour cet arôme et ce format : l’étiquette de la référence que vous recevez fait foi.',
+      },
+      {
+        question: 'Pourquoi Anabolic Whey 80 contient-elle de la créatine ?',
+        answer:
+          'Parce que la formule associe les deux dans la même poudre : la portion de 35 g déclare 25 g de protéines et 5 g de créatine monohydrate. L’intérêt pratique est de ne pas avoir à doser deux produits. La conséquence à retenir est arithmétique : si vous ajoutez une créatine séparée, comptez ces 5 g dans votre apport quotidien total.',
+      },
+      {
+        question: 'En quel format et quel arôme Anabolic Whey 80 est-elle référencée ?',
+        answer:
+          'En un seul format, 2,25 kg, et un seul arôme référencé, Double chocolat. ProActive ne décline pas cette whey en petit pot sur Protein.tn, donc il n’y a pas d’arbitrage de contenance à faire ici.',
+      },
+      {
+        question: 'Comment commander ProActive en Tunisie ?',
+        answer:
+          'Choisissez la référence disponible, ajoutez-la au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'proteines-multi-sources', name: 'Protéines multi-sources', url: '/proteines-multi-sources' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+    ],
+  },
+
+  'big-ramy-labs': {
+    metaTitle: 'Big Ramy Labs Tunisie | Big Whey, Iso Big & Beef Mass',
+    metaDescription:
+      'Big Ramy Labs en Tunisie : Big Whey 2 kg, Iso Big 2,1 kg, All In Isolate 2,04 kg, Beef Mass Plus 2,7 kg, Carbo Big 1,5 kg, Red Rex Glutamine et créatine 300 g.',
+    h1: 'Big Ramy Labs Tunisie : Big Whey, Iso Big et protéine de bœuf',
+    introHtml:
+      '<p>La gamme <strong>Big Ramy Labs en Tunisie</strong> compte neuf références réparties sur cinq rayons. Les poudres de lactosérum d’abord : <strong>Big Whey</strong> 2 kg (arôme Cookies), classée en whey protéine, puis <strong>Iso Big</strong> 2,1 kg (arôme Chocolat) et <strong>All In Isolate</strong> 2,04 kg, toutes deux classées en whey isolate. La marque est ensuite l’une des rares du catalogue à proposer de la <strong>protéine de bœuf</strong>, avec <strong>Beef Mass Plus</strong> 2,7 kg et <strong>Beef Mass Gainer</strong> 4,9 kg, le plus grand format de la gamme. Viennent enfin trois poudres à dose simple — <strong>Red Rex Glutamine</strong> 300 g, <strong>BCAA</strong> 300 g et <strong>Creatine</strong> 300 g — et <strong>Carbo Big</strong> 1,5 kg, une poudre de glucides seule. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
+    howToChooseTitle: 'Quel produit Big Ramy Labs choisir ?',
+    howToChooseBody:
+      '<p>Le premier tri se fait entre les trois poudres de lactosérum, et il porte sur le rayon dans lequel elles sont classées. <strong>Big Whey</strong> 2 kg est la référence polyvalente, celle qui complète l’apport quotidien en protéines quand l’alimentation seule n’y suffit pas : sur l’arôme Cookies, l’étiquette transcrite sur notre fiche déclare une portion de 34 g apportant 24 g de protéines, 5 g de glucides, 1,5 g de matières grasses et 130 kcal. <strong>Iso Big</strong> 2,1 kg et <strong>All In Isolate</strong> 2,04 kg sont classées en whey isolate, une famille davantage filtrée qui vise plus de protéines par portion pour moins de glucides et de lipides, en général à un prix au kilo supérieur. Nos fiches ne publient pas de tableau de valeurs pour ces deux isolats : aucun chiffre n’est donc avancé ici pour eux, et l’étiquette du pot reçu reste la seule référence — d’autant que le même produit déclare des valeurs différentes d’un arôme à l’autre.</p>' +
+      '<p>La <strong>protéine de bœuf</strong> est ce qui distingue réellement Big Ramy Labs sur ce catalogue. <strong>Beef Mass Plus</strong> 2,7 kg et <strong>Beef Mass Gainer</strong> 4,9 kg sont rangés dans ce rayon et non parmi les whey : la source de protéines y est bovine et non laitière, ce qui est le vrai critère quand vous voulez changer de source plutôt que de marque. <strong>Carbo Big</strong> 1,5 kg répond à l’inverse à une question calorique et non protéique : c’est une poudre de glucides seule, qui complète un shake ou une séance et ne remplace aucune protéine. Restent les trois pots de 300 g — <strong>Red Rex Glutamine</strong>, <strong>BCAA</strong> et <strong>Creatine</strong> — qui se prennent en complément d’un apport protéique déjà couvert, jamais à sa place. Aucune fiche Big Ramy Labs autre que celle de Big Whey ne publie de valeurs par portion ; reportez-vous à l’étiquette pour les doses et les allergènes.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Big Ramy Labs sont vendus en Tunisie ?',
+        answer:
+          'Neuf références sur Protein.tn : Big Whey 2 kg, Iso Big 2,1 kg, All In Isolate 2,04 kg, Beef Mass Plus 2,7 kg, Beef Mass Gainer 4,9 kg, Carbo Big 1,5 kg, Red Rex Glutamine 300 g, BCAA 300 g et Creatine 300 g. La grille de produits de cette page affiche l’état réel de chacune.',
+      },
+      {
+        question: 'Combien de protéines dans une portion de Big Whey 2 kg ?',
+        answer:
+          'Sur l’arôme Cookies, l’étiquette transcrite sur notre fiche produit indique une portion de 34 g apportant 24 g de protéines, 5 g de glucides, 1,5 g de matières grasses et 130 kcal. Ces valeurs valent pour cet arôme : celles de la référence que vous recevez sont imprimées sur son pot.',
+      },
+      {
+        question: 'Quelle différence entre Big Whey, Iso Big et All In Isolate ?',
+        answer:
+          'Big Whey 2 kg est classée en whey protéine sur Protein.tn ; Iso Big 2,1 kg et All In Isolate 2,04 kg sont classées en whey isolate. Une whey isolate est plus filtrée qu’une whey classique et vise davantage de protéines par portion pour moins de glucides et de lipides, généralement à un prix au kilo plus élevé. Nos fiches Iso Big et All In Isolate ne publient pas de valeurs par portion : l’étiquette du pot fait foi.',
+      },
+      {
+        question: 'Qu’apporte la protéine de bœuf Big Ramy Labs par rapport à une whey ?',
+        answer:
+          'Beef Mass Plus 2,7 kg et Beef Mass Gainer 4,9 kg sont classés en protéine de bœuf, un rayon distinct des whey : la source de protéines y est bovine et non laitière. C’est le critère sur lequel se joue ce choix. Nos fiches de ces deux références ne publient pas de valeurs par portion, donc comparez les étiquettes des pots.',
+      },
+      {
+        question: 'À quoi sert Carbo Big 1,5 kg ?',
+        answer:
+          'Carbo Big est une poudre de glucides de 1,5 kg, sans protéines. Elle sert à augmenter l’apport calorique autour de l’entraînement ou à compléter un shake protéiné. Si vous cherchez protéines et glucides dans un seul produit, un gainer complet répond mieux qu’une poudre de glucides seule.',
+      },
+      {
+        question: 'Comment commander Big Ramy Labs en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'proteine-de-boeuf', name: 'Protéine de bœuf en Tunisie', url: '/proteine-de-boeuf' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
+    ],
+  },
+
+  'william-bonac': {
+    metaTitle: 'William Bonac Tunisie | Whey Regime & Iso Hydro Zero',
+    metaDescription:
+      'William Bonac en Tunisie : Whey Regime 2 kg, Whey Iso Regime 2 kg, Whey Ultimate 2 kg, Iso Hydro Zero 1,8 kg et Clear Beef 1,8 kg. Formats et arômes affichés.',
+    h1: 'William Bonac Tunisie : Whey Regime, Whey Ultimate et Iso Hydro Zero',
+    introHtml:
+      '<p>La gamme <strong>William Bonac en Tunisie</strong> est entièrement construite autour des protéines, sans créatine, sans acides aminés et sans vitamines. Six références sont proposées : <strong>Whey Regime</strong> 2 kg (arôme Vanilla) et <strong>Whey Ultimate</strong> 2 kg (arôme Chocolat), classées en whey protéine ; <strong>Whey Iso Regime</strong> 2 kg (arôme Vanilla), classée en whey isolate ; <strong>Iso Hydro Zero</strong> 1,8 kg (arôme Chocolat), la seule whey hydrolysée de la marque ; <strong>Clear Beef</strong> 1,8 kg (arôme PinaColada), classée en protéine de bœuf ; et le <strong>Pack Ultimate Muscle</strong>, un pack. Toutes les poudres sont vendues en 2 kg ou 1,8 kg : le choix ne porte donc pas sur la contenance mais sur le type de protéine.</p>',
+    howToChooseTitle: 'Quelle protéine William Bonac choisir ?',
+    howToChooseBody:
+      '<p>Trois références de la gamme publient un tableau de valeurs sur nos fiches, et elles se départagent très proprement sur une portion identique de 30 g. <strong>Whey Iso Regime</strong> 2 kg, en arôme Vanilla, déclare 26 g de protéines, 1,5 g de glucides dont 0 g de sucres, 0,84 g de matières grasses et 140 kcal. <strong>Whey Regime</strong> 2 kg, également en Vanilla, déclare 25 g de protéines, 1,5 g de glucides dont 0,87 g de sucres, 0,86 g de matières grasses et 133,74 kcal. <strong>Whey Ultimate</strong> 2 kg, cette fois en arôme Chocolat, déclare 23 g de protéines, 1,44 g de glucides dont 1,44 g de sucres, 1,5 g de matières grasses et 111 kcal. Ces trois lignes ne sont comparables que sous cette réserve : l’arôme n’est pas le même pour la troisième, et les valeurs déclarées changent d’un arôme à l’autre.</p>' +
+      '<p>Les deux autres poudres relèvent de rayons différents. <strong>Iso Hydro Zero</strong> 1,8 kg est la seule référence de la marque classée en whey hydrolysée, c’est-à-dire une protéine prédécoupée ; <strong>Clear Beef</strong> 1,8 kg est classée en protéine de bœuf, où la source est bovine et non laitière, et elle est référencée en arôme PinaColada plutôt qu’en saveur lactée. Nos fiches ne publient aucune valeur par portion pour ces deux-là ni pour le <strong>Pack Ultimate Muscle</strong> : aucun chiffre n’est donc avancé ici les concernant, et l’étiquette du pot reçu est la seule référence. Vérifiez-y aussi les allergènes avant de commander.</p>',
+    faqs: [
+      {
+        question: 'Quels produits William Bonac sont vendus en Tunisie ?',
+        answer:
+          'Six références sur Protein.tn : Whey Regime 2 kg, Whey Iso Regime 2 kg, Whey Ultimate 2 kg, Iso Hydro Zero 1,8 kg, Clear Beef 1,8 kg et le Pack Ultimate Muscle. La gamme ne comporte ni créatine, ni acides aminés, ni vitamines. La grille de produits de cette page affiche l’état réel de chaque référence.',
+      },
+      {
+        question: 'Combien de protéines dans une portion de Whey Iso Regime 2 kg ?',
+        answer:
+          'Sur l’arôme Vanilla, l’étiquette transcrite sur notre fiche produit indique une portion de 30 g apportant 26 g de protéines, 1,5 g de glucides dont 0 g de sucres, 0,84 g de matières grasses et 140 kcal. Ces valeurs valent pour cet arôme et ce format.',
+      },
+      {
+        question: 'Quelle différence entre Whey Regime, Whey Iso Regime et Whey Ultimate ?',
+        answer:
+          'Whey Regime et Whey Ultimate sont classées en whey protéine, Whey Iso Regime en whey isolate, plus filtrée. Pour une même portion de 30 g, nos fiches déclarent 26 g de protéines pour Whey Iso Regime (Vanilla), 25 g pour Whey Regime (Vanilla) et 23 g pour Whey Ultimate (Chocolat). L’arôme diffère sur la troisième, et les valeurs déclarées varient d’un arôme à l’autre.',
+      },
+      {
+        question: 'Qu’est-ce que Iso Hydro Zero 1800 g ?',
+        answer:
+          'C’est la seule référence William Bonac classée en whey hydrolysée sur Protein.tn, proposée en 1,8 kg et référencée en arôme Chocolat. Une whey hydrolysée est une protéine prédécoupée, distincte d’une whey concentrée ou d’un isolat. Notre fiche ne publie pas de valeurs par portion pour cette référence : l’étiquette du pot fait foi.',
+      },
+      {
+        question: 'Clear Beef est-elle une whey ?',
+        answer:
+          'Non. Clear Beef 1,8 kg est classée en protéine de bœuf : la source de protéines y est bovine et non laitière. Elle est référencée en arôme PinaColada. C’est la référence à regarder si vous voulez changer de source de protéines plutôt que de marque. Aucune valeur par portion n’est publiée sur notre fiche pour ce produit.',
+      },
+      {
+        question: 'Comment commander William Bonac en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-hydrolysee', name: 'Whey hydrolysée en Tunisie', url: '/whey-hydrolysee' },
+      { slug: 'proteine-de-boeuf', name: 'Protéine de bœuf en Tunisie', url: '/proteine-de-boeuf' },
+    ],
+  },
+
+  'victor-martinez': {
+    metaTitle: 'Victor Martinez Tunisie | V-Bulk, Whey Gold & Break-Out',
+    metaDescription:
+      'Victor Martinez en Tunisie : Premium V-Bulk 2,7 kg et 5,5 kg, Premium Whey Gold 2 kg, Premium Isolate Protein Matrix 2 kg et le pre-workout Break-Out.',
+    h1: 'Victor Martinez Tunisie : Premium V-Bulk, Whey Gold et Break-Out',
+    introHtml:
+      '<p>La gamme <strong>Victor Martinez en Tunisie</strong> tient en cinq références réparties sur quatre rayons, toutes préfixées « Premium » sauf le pre-workout. Les calories d’abord, avec <strong>Premium V-Bulk</strong> en 2,7 kg et en 5,5 kg (arôme Chocolat sur le grand format), classé en gainers protéinés. Les protéines ensuite : <strong>Premium Whey Gold</strong> 2 kg (arôme Cookies) en whey protéine et <strong>Premium Isolate Protein Matrix</strong> 2 kg (arôme Cookies) en whey isolate. Enfin le pre-workout <strong>Break-Out</strong>, seule référence de la marque à ne pas être une poudre protéinée ou calorique. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
+    howToChooseTitle: 'Quel produit Victor Martinez choisir ?',
+    howToChooseBody:
+      '<p>La question à trancher en premier n’est pas la marque mais le blocage. Si vous mangez assez de calories et manquez seulement de protéines, ce sont <strong>Premium Whey Gold</strong> 2 kg ou <strong>Premium Isolate Protein Matrix</strong> 2 kg qu’il faut regarder : la première est classée en whey protéine, la polyvalente ; la seconde en whey isolate, une famille davantage filtrée qui vise plus de protéines par portion pour moins de glucides et de lipides, en général à un prix au kilo supérieur. Les deux sont référencées en arôme Cookies et en 2 kg, donc ni la contenance ni la saveur ne départagent ici — seul le type de protéine le fait.</p>' +
+      '<p>Si le point bloquant est au contraire d’atteindre l’apport calorique quotidien en mangeant, <strong>Premium V-Bulk</strong> est le produit correspondant : c’est un gainer, il ajoute des glucides et des calories, et il existe en 2,7 kg et en 5,5 kg. Ces deux contenances portent le même nom de produit ; à dose journalière égale, seule la durée couverte change, ce qui en fait un arbitrage de prix et non de formule. <strong>Break-Out</strong>, enfin, est un pre-workout : il se prend avant la séance et ne remplace ni une protéine ni un gainer. Aucune fiche Victor Martinez de notre catalogue ne publie de tableau de valeurs nutritionnelles — les cinq références renvoient un bloc vide — donc aucune valeur par portion n’est avancée ici, ni en protéines, ni en calories, ni en caféine. L’étiquette du pot que vous recevez est la seule référence, et c’est là qu’il faut lire la dose de caféine du Break-Out avant de le cumuler avec du café.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Victor Martinez sont vendus en Tunisie ?',
+        answer:
+          'Cinq références sur Protein.tn : Premium V-Bulk 2,7 kg et Premium V-Bulk 5,5 kg en gainers protéinés, Premium Whey Gold 2 kg en whey protéine, Premium Isolate Protein Matrix 2 kg en whey isolate, et le pre-workout Break-Out. La grille de produits de cette page affiche l’état réel de chacune.',
+      },
+      {
+        question: 'Quelle différence entre Premium Whey Gold et Premium Isolate Protein Matrix ?',
+        answer:
+          'Premium Whey Gold 2 kg est classée en whey protéine sur Protein.tn, Premium Isolate Protein Matrix 2 kg en whey isolate. Une whey isolate est plus filtrée et vise davantage de protéines par portion pour moins de glucides et de lipides, généralement à un prix au kilo plus élevé. Les deux sont référencées en arôme Cookies et en 2 kg.',
+      },
+      {
+        question: 'Faut-il prendre Premium V-Bulk en 2,7 kg ou en 5,5 kg ?',
+        answer:
+          'Les deux sacs portent le même nom de produit et le même rayon, gainers protéinés. À dose journalière égale, le 5,5 kg couvre simplement une période plus longue. Comparez le prix affiché des deux formats sur cette page : la décision est budgétaire, pas nutritionnelle.',
+      },
+      {
+        question: 'Combien de protéines dans une portion de whey Victor Martinez ?',
+        answer:
+          'Aucune fiche produit Victor Martinez de notre catalogue ne publie de tableau de valeurs nutritionnelles : les cinq références renvoient un bloc vide. Nous ne citons donc aucun chiffre par portion sur cette page. Les valeurs déclarées figurent sur l’étiquette du pot que vous recevez, et elles varient selon l’arôme et le format.',
+      },
+      {
+        question: 'À quoi sert le pre-workout Break-Out ?',
+        answer:
+          'C’est une poudre à prendre avant la séance, la seule référence Victor Martinez qui ne soit ni une protéine ni un gainer. Elle ne remplace aucun des deux. Lisez la composition et la teneur en stimulants sur l’étiquette du pot, et évitez de la cumuler avec d’autres sources de caféine dans la même journée.',
+      },
+      {
+        question: 'Comment commander Victor Martinez en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'gainers-proteines', name: 'Gainers protéinés en Tunisie', url: '/gainers-proteines' },
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+    ],
+  },
+
+  'challenger-nutrition': {
+    metaTitle: 'Challenger Nutrition Tunisie | 100% Whey & Thunder Gainer',
+    metaDescription:
+      'Challenger Nutrition en Tunisie : 100% Whey Protein 2,27 kg, Thunder Gainer 5,4 kg, EAA + BCAA 390 g, Creatine 300 g et Pump Extreme Pre-Workout 30 portions.',
+    h1: 'Challenger Nutrition Tunisie : 100% Whey, Thunder Gainer et Pump Extreme',
+    introHtml:
+      '<p>La gamme <strong>Challenger Nutrition en Tunisie</strong> tient en cinq références, une par rayon, ce qui rend le choix inhabituellement simple : <strong>100% Whey Protein</strong> 2,27 kg (arôme Chocolat) en whey protéine, <strong>Thunder Gainer</strong> 5,4 kg (arôme Chocolat) en gainers protéinés, <strong>EAA + BCAA</strong> 390 g en EAA, <strong>Creatine</strong> 300 g en créatine, et <strong>Pump Extreme Pre-Workout</strong>, annoncé pour 30 portions, en pré-workout. Il n’y a ni doublon de format ni deuxième arôme à départager : chaque besoin correspond à un seul produit. La grille ci-dessus affiche le prix et la disponibilité de chacun.</p>',
+    howToChooseTitle: 'Quel produit Challenger Nutrition choisir ?',
+    howToChooseBody:
+      '<p>Commencez par la seule référence dont l’étiquette est transcrite sur nos fiches. Sur <strong>100% Whey Protein</strong> 2,27 kg en arôme Chocolat, les valeurs relevées sur l’emballage déclarent une portion de 34 g apportant 24 g de protéines, 5 g de glucides dont 1,5 g de sucres, 2 g de matières grasses dont 1 g de saturés, 0,5 g de fibres et 135 kcal, pour 66 portions annoncées sur un pot de 2,267 kg net. C’est la référence à prendre si votre alimentation couvre déjà les calories et qu’il vous manque seulement des protéines. Ces valeurs valent pour cet arôme : celles de la référence que vous recevez sont imprimées sur son pot.</p>' +
+      '<p>Si à l’inverse c’est l’apport calorique quotidien qui ne suit pas, <strong>Thunder Gainer</strong> 5,4 kg est le produit correspondant : un gainer ajoute des glucides et des calories en plus des protéines, dans un sac nettement plus grand. Les trois autres références se placent autour de l’entraînement et ne remplacent aucune des deux premières. <strong>Creatine</strong> 300 g se prend tous les jours, séance ou non, et n’apporte pas de protéines. <strong>EAA + BCAA</strong> 390 g complète un apport protéique déjà couvert, il ne le constitue pas. <strong>Pump Extreme Pre-Workout</strong>, annoncé pour 30 portions, se prend avant la séance uniquement. Nos fiches ne publient pas de tableau de valeurs pour ces quatre-là : aucun chiffre n’est avancé ici les concernant, et l’étiquette du pot reçu — teneur en stimulants du pre-workout comprise — est la seule référence.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Challenger Nutrition sont vendus en Tunisie ?',
+        answer:
+          'Cinq références sur Protein.tn : 100% Whey Protein 2,27 kg, Thunder Gainer 5,4 kg, EAA + BCAA 390 g, Creatine 300 g et Pump Extreme Pre-Workout annoncé pour 30 portions. Chaque rayon n’est couvert que par un seul produit. La grille de produits de cette page affiche l’état réel de chacun.',
+      },
+      {
+        question: 'Combien de protéines dans une portion de 100% Whey Protein 2,27 kg ?',
+        answer:
+          'Sur l’arôme Chocolat, les valeurs de l’emballage transcrites sur notre fiche produit indiquent une portion de 34 g apportant 24 g de protéines, 5 g de glucides dont 1,5 g de sucres, 2 g de matières grasses dont 1 g de saturés, 0,5 g de fibres et 135 kcal, pour 66 portions annoncées sur un pot de 2,267 kg net. Ces valeurs valent pour cet arôme.',
+      },
+      {
+        question: '100% Whey Protein ou Thunder Gainer pour prendre du poids ?',
+        answer:
+          'Cela dépend de ce qui bloque. Si vous mangez assez de calories mais pas assez de protéines, la 100% Whey Protein 2,27 kg suffit. Si vous n’arrivez pas à atteindre votre apport calorique quotidien en mangeant, Thunder Gainer 5,4 kg ajoute des glucides et des calories en plus des protéines. Le point de départ reste votre alimentation, pas la poudre.',
+      },
+      {
+        question: 'Faut-il prendre la créatine ou les EAA + BCAA Challenger Nutrition ?',
+        answer:
+          'Ils ne répondent pas à la même question. La Creatine 300 g se prend tous les jours, séance ou non, et n’apporte pas de protéines. Les EAA + BCAA 390 g se placent autour de l’entraînement et viennent en complément d’un apport protéique déjà couvert par l’alimentation ou par une whey. Ni l’un ni l’autre ne remplace une protéine.',
+      },
+      {
+        question: 'Le Pump Extreme Pre-Workout contient-il de la caféine ?',
+        answer:
+          'Notre fiche produit ne publie pas de tableau de composition pour cette référence, donc nous n’avançons aucune valeur ici. Le produit est annoncé pour 30 portions et se prend avant la séance. Lisez la liste des ingrédients et la teneur en stimulants sur l’étiquette du pot, et évitez de le cumuler avec d’autres sources de caféine dans la même journée.',
+      },
+      {
+        question: 'Comment commander Challenger Nutrition en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'gainers-proteines', name: 'Gainers protéinés en Tunisie', url: '/gainers-proteines' },
+      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'eaa', name: 'EAA en Tunisie', url: '/eaa' },
+      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+    ],
+  },
 });
 
 export function getBrandSeoEntry(slug: string | undefined): BrandSeoEntry | null {

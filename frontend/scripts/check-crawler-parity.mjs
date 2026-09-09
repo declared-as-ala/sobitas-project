@@ -125,12 +125,23 @@ async function fetchAs(url, ua) {
     description: pick(html, /<meta\s+name="description"\s+content="([\s\S]*?)"/i),
     canonical: pick(html, /<link\s+rel="canonical"\s+href="([^"]*)"/i),
     ogImage: pick(html, /<meta\s+property="og:image"\s+content="([^"]*)"/i),
+    /* ── ROBOTS, ADDED 09/09/2026 AFTER A DIVERGENCE THIS SCRIPT COULD NOT SEE ────────────
+       /myprotein serves `noindex, follow` to Googlebot and `index, follow` to a browser, live.
+       (Brand 28 has zero products; the crawler route holds an empty listing out of the index and
+       the human route does not.) Whatever the intent, two routes disagreeing about INDEXABILITY
+       under different user agents is the shape that separates dynamic rendering from cloaking,
+       and it is the single most consequential field on the page — it decides whether any of the
+       other five fields are ever read at all.
+       This script compared title, description, canonical, og:image and the JSON-LD graph, and not
+       this. Four documented divergences were found by measuring fields somebody thought to check;
+       this one was found by accident while writing brand copy. */
+    robots: pick(html, /<meta\s+name="robots"\s+content="([^"]*)"/i),
     schemaTypes: schema.types,
     schemaPageNodes: schema.pageNodes,
   };
 }
 
-const FIELDS = ['title', 'description', 'canonical', 'ogImage', 'schemaTypes', 'schemaPageNodes'];
+const FIELDS = ['title', 'description', 'canonical', 'ogImage', 'robots', 'schemaTypes', 'schemaPageNodes'];
 
 let failures = 0;
 for (const route of ROUTES) {
