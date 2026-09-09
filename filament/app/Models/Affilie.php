@@ -66,6 +66,14 @@ class Affilie extends Model
         'referred_by_code',
         'reference',
         'applied_at',
+        /*
+         * Admin-assigned vanity hostname (`ali` → ali.protein.tn). Fillable because the admin form
+         * is the only thing that writes it — the public application path uses forceFill() with
+         * explicit key lists and never touches it, and nothing in the storefront can reach a
+         * mass-assign on this model at all. It is a routing label, not a verdict or a file path, so
+         * it does not belong in the excluded set above.
+         */
+        'subdomain',
     ];
 
     protected $casts = [
@@ -141,6 +149,102 @@ class Affilie extends Model
     public function scopeForEmail(Builder $query, string $email): Builder
     {
         return $query->whereRaw('LOWER(email) = ?', [mb_strtolower(trim($email))]);
+    }
+
+    /*
+     * ── VANITY SUBDOMAINS: `ali.protein.tn` IS THE REFERRAL ──────────────────────────────────
+     *
+     * Owner: "for each affiliate something like x.protein.tn … he sends it, and we detect that this
+     * website is opened from an affiliate subdomain."
+     *
+     * The storefront is SERVED on that hostname (frontend middleware stamps an attribution cookie
+     * and next.config.js puts `X-Robots-Tag: noindex, nofollow` on every non-apex host so no
+     * duplicate copy of the catalogue is ever indexed). Everything below is the authority half:
+     * what a valid label is, which ones are refused, and how a label becomes an affiliate row.
+     */
+
+    /**
+     * A hostname label: 1–32 characters, lowercase alphanumerics and hyphens, never leading or
+     * trailing a hyphen. Deliberately narrower than the DNS spec — no uppercase, no underscore, no
+     * punycode — because this string is printed on a poster and read aloud down a phone line.
+     */
+    public const SUBDOMAIN_PATTERN = '/^[a-z0-9](?:[a-z0-9-]{0,30}[a-z0-9])?$/';
+
+    /**
+     * Labels that are infrastructure, not affiliates.
+     *
+     * MIRRORED IN TYPESCRIPT: `frontend/src/util/affiliateHost.ts` → `RESERVED_SUBDOMAINS`. That
+     * copy decides whether a live request attributes; this one decides what an admin is allowed to
+     * save. If the two disagree, an admin can assign a subdomain that silently never attributes —
+     * which looks exactly like a broken feature and is very hard to diagnose from the outside. Add
+     * a name to both, or to neither.
+     *
+     * @var list<string>
+     */
+    public const RESERVED_SUBDOMAINS = [
+        'www', 'admin', 'dev', 'files', 'next', 'api', 'affilie', 'affilies', 'app', 'assets',
+        'blog', 'cdn', 'ftp', 'imap', 'img', 'images', 'localhost', 'mail', 'media', 'ns1', 'ns2',
+        'pop', 'preview', 'shop', 'smtp', 'staging', 'static', 'store', 'test', 'webmail',
+    ];
+
+    /**
+     * Fold a hand-typed value into the one canonical form, or null.
+     *
+     * Admins paste `Coach-Ali.protein.tn`, `https://ali.protein.tn/` and ` ALI ` — all three mean
+     * the same affiliate, and storing three spellings in a UNIQUE column means the second one is
+     * rejected as a duplicate of nothing. An empty result is null rather than '', because the
+     * unique index treats NULLs as distinct and '' as a value: two affiliates with no subdomain
+     * would otherwise collide with each other.
+     */
+    public static function normalizeSubdomain(?string $value): ?string
+    {
+        $raw = mb_strtolower(trim((string) $value));
+        if ($raw === '') {
+            return null;
+        }
+        // Tolerate a pasted URL or a full hostname; keep only the first label.
+        $raw = (string) preg_replace('#^[a-z]+://#', '', $raw);
+        $raw = explode('/', $raw)[0];
+        $raw = explode('.', $raw)[0];
+
+        return $raw === '' ? null : $raw;
+    }
+
+    /** Is this a label this shop will attribute on? */
+    public static function isValidSubdomain(?string $value): bool
+    {
+        if (! is_string($value) || $value === '') {
+            return false;
+        }
+        if (str_starts_with($value, 'xn--')) {
+            return false;
+        }
+
+        return preg_match(self::SUBDOMAIN_PATTERN, $value) === 1
+            && ! in_array($value, self::RESERVED_SUBDOMAINS, true);
+    }
+
+    /**
+     * The ACTIVE affiliate owning a subdomain, or null.
+     *
+     * Status is part of the question, not a detail: a suspended or still-pending affiliate's
+     * hostname must resolve to nothing, exactly as AffilieCodeController refuses to preview their
+     * code. Otherwise a suspension would stop the money and leave the traffic attributed.
+     */
+    public static function resolveActiveBySubdomain(?string $value): ?self
+    {
+        $sub = static::normalizeSubdomain($value);
+        if (! static::isValidSubdomain($sub)) {
+            return null;
+        }
+        if (! \Illuminate\Support\Facades\Schema::hasColumn((new static)->getTable(), 'subdomain')) {
+            return null;
+        }
+
+        return static::query()
+            ->where('subdomain', $sub)
+            ->where('status', AffilieStatus::Active->value)
+            ->first();
     }
 
     /**

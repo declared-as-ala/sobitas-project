@@ -82,6 +82,14 @@ class CommandeController extends Controller
             'coupon_code'       => ['nullable', 'string', 'max:64'],
             'pack_discount'     => ['nullable', 'boolean'],   // opt-in; amount computed server-side
             'points_to_redeem'  => ['nullable', 'integer', 'min:0'], // validated <= balance & cap
+            /*
+             * Affiliate attribution — a hostname LABEL (`ali` for a visit that began on
+             * ali.protein.tn), never an id. The storefront proxy injects it from an HttpOnly
+             * cookie and discards whatever the browser sent; this controller then resolves it
+             * again below. There is deliberately NO `affilie_id` key: the moment a browser can
+             * name a row by number, the resolution below is decoration.
+             */
+            'affiliate_subdomain' => ['nullable', 'string', 'max:32', 'regex:/^[a-z0-9][a-z0-9-]{0,31}$/'],
         ]);
 
         $commandeData = $request->commande;
@@ -90,8 +98,15 @@ class CommandeController extends Controller
         if ($idempotencyKey !== '' && ! preg_match('/^[A-Za-z0-9._:-]{16,100}$/', $idempotencyKey)) {
             return response()->json(['message' => 'Clé de commande invalide.'], 422);
         }
+        /*
+         * `affiliate_subdomain` is IN THE HASH. It changes who gets paid for this order, so two
+         * requests that differ only by attribution are not the same order — and the replay branch
+         * below returns the FIRST order for a repeated key, which would otherwise silently keep
+         * the first attribution while reporting success for the second.
+         */
         $payloadHash = hash('sha256', (string) json_encode($request->only([
             'commande', 'panier', 'coupon_code', 'pack_discount', 'points_to_redeem',
+            'affiliate_subdomain',
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         if ($idempotencyKey !== '') {
@@ -160,6 +175,46 @@ class CommandeController extends Controller
                     'has_phone' => ! empty($commandeData['livraison_phone'] ?? $commandeData['phone'] ?? null),
                     'has_email' => ! empty($commandeData['livraison_email'] ?? $commandeData['email'] ?? null),
                 ]);
+            }
+
+            /*
+             * ── AFFILIATE ATTRIBUTION — RESOLVED HERE, NEVER ACCEPTED ───────────────────────
+             *
+             * The request carries a hostname LABEL: `ali`, because the visit started on
+             * ali.protein.tn and the storefront proxy copied it out of an HttpOnly cookie. This is
+             * the same posture resolveTokenUser() sets for identity a few lines above — the client
+             * names a thing, the server decides what that name means, and the server's answer is
+             * the only one written.
+             *
+             * `Affilie::resolveActiveBySubdomain()` re-normalises, re-validates against the
+             * reserved list, and requires status=active, so a forged cookie can at best name an
+             * affiliate who already exists and is already being paid. It can never name a row by
+             * id: no `affilie_id` key is validated, and this controller assigns every column
+             * explicitly rather than mass-assigning, so an extra key in the body reaches nothing.
+             *
+             * NO COMMISSION IS ACCRUED HERE, deliberately. These are cash-on-delivery orders and
+             * the ledger is gated on delivery for the same reason loyalty points are: crediting at
+             * order time would let a place-then-cancel loop farm commission, which is worth more
+             * money than farming points. This writes the LINK only; the accrual belongs to the
+             * observer that watches `etat` reach a PointsService::DELIVERED_STATUSES value.
+             */
+            $affiliateSubdomain = $request->input('affiliate_subdomain');
+            if (filled($affiliateSubdomain) && Schema::hasColumn($new_facture->getTable(), 'affilie_id')) {
+                $affilie = \App\Models\Affilie::resolveActiveBySubdomain((string) $affiliateSubdomain);
+                if ($affilie !== null) {
+                    $new_facture->affilie_id = $affilie->id;
+                    Log::info('filament.api.add_commande.affilie_attributed', [
+                        'affilie_id' => $affilie->id,
+                        'subdomain' => \App\Models\Affilie::normalizeSubdomain((string) $affiliateSubdomain),
+                    ]);
+                } else {
+                    // An unknown or deactivated subdomain is a NORMAL outcome, not an error: the
+                    // cookie outlives the affiliate by up to 30 days. The order is created
+                    // unattributed and the customer notices nothing.
+                    Log::info('filament.api.add_commande.affilie_unresolved', [
+                        'subdomain' => \App\Models\Affilie::normalizeSubdomain((string) $affiliateSubdomain),
+                    ]);
+                }
             }
 
             $new_facture->livraison_nom = $commandeData['livraison_nom'] ?? null;

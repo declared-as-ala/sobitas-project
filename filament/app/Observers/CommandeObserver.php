@@ -5,6 +5,7 @@ namespace App\Observers;
 use App\Filament\Resources\CommandeResource;
 use App\Jobs\SendSmsJob;
 use App\Mail\ReviewRequestMail;
+use App\Models\Affilie;
 use App\Models\Commande;
 use App\Models\Product;
 use App\Models\User;
@@ -21,29 +22,82 @@ use Illuminate\Support\Facades\Schema;
 
 class CommandeObserver
 {
-    /** Notify only panel administrators when a new order is created. */
+    /**
+     * Notify only panel administrators when a new order is created.
+     *
+     * ── BEST-EFFORT, AND IT HAS TO BE ────────────────────────────────────────────────────────
+     * This runs inside the caller's transaction — `CommandeController::storeCommandeApi()` wraps
+     * checkout in one, and so does the affiliate order desk. An uncaught throw here does not just
+     * lose a notification, it ABORTS THE ORDER: stock already decremented is rolled back, the
+     * customer sees a 500, and nothing records why. Every other side-effect in this file is
+     * wrapped for exactly that reason; this one was not, and the route-name bug fixed below is
+     * precisely the kind of failure that made it matter.
+     */
     public function created(Commande $commande): void
     {
-        $recipients = User::whereIn('role_id', config('affilies.admin_role_ids', [1, 3]))->get();
-        if ($recipients->isEmpty()) {
-            return;
-        }
+        try {
+            $recipients = User::whereIn('role_id', config('affilies.admin_role_ids', [1, 3]))->get();
+            if ($recipients->isEmpty()) {
+                return;
+            }
 
-        $url = CommandeResource::getUrl('edit', ['record' => $commande]);
-        $title = 'Nouvelle commande';
-        $body = 'Commande #' . ($commande->numero ?? $commande->id) . ' – ' . trim(($commande->nom ?? '') . ' ' . ($commande->prenom ?? ''));
+            /*
+             * ── `panel: 'admin'` IS LOAD-BEARING, NOT TIDINESS ──────────────────────────────
+             * `Resource::getUrl()` falls through to `Filament::getCurrentOrDefaultPanel()`. From
+             * the storefront API there is no current panel, so it picked the DEFAULT one (admin)
+             * and the link happened to be right. From inside the `affilie` panel the current panel
+             * IS `affilie`, so this resolved the route name `filament.affilie.resources.commandes.edit`
+             * — a route that does not exist, because the admin CommandeResource is registered only
+             * in AffiliePanelProvider's sibling. `route()` throws RouteNotFoundException, inside
+             * the order transaction, and no affiliate could ever have created an order.
+             *
+             * Naming the panel explicitly is also simply correct: the recipients are
+             * administrators and the link must open in the admin panel regardless of where the
+             * order was typed.
+             */
+            $url = CommandeResource::getUrl('edit', ['record' => $commande], panel: 'admin');
 
-        foreach ($recipients as $user) {
-            Notification::make()
-                ->title($title)
-                ->body($body)
-                ->success()
-                ->actions([
-                    Action::make('open')
-                        ->label('Ouvrir')
-                        ->url($url),
-                ])
-                ->sendToDatabase($user);
+            /*
+             * An affiliate order needs a different sentence, because it needs a different action:
+             * it arrives already sold and paid-for-on-delivery, so nobody has to call the customer
+             * to confirm it — it goes straight to preparation. Saying "affilié" and naming them is
+             * what tells the person reading the notification that.
+             */
+            $affilieName = null;
+            if (! empty($commande->affilie_id)) {
+                $affilieName = Affilie::query()->whereKey($commande->affilie_id)->value('name');
+            }
+
+            $customer = trim(($commande->nom ?? '') . ' ' . ($commande->prenom ?? ''));
+
+            if (! empty($commande->affilie_id)) {
+                $title = 'Nouvelle commande affilié';
+                $body = 'Commande #' . ($commande->numero ?? $commande->id)
+                    . ' – ' . ($customer !== '' ? $customer : 'client')
+                    . ' – vendue par ' . ($affilieName ?: ('affilié #' . $commande->affilie_id))
+                    . ' – à préparer et expédier.';
+            } else {
+                $title = 'Nouvelle commande';
+                $body = 'Commande #' . ($commande->numero ?? $commande->id) . ' – ' . $customer;
+            }
+
+            foreach ($recipients as $user) {
+                Notification::make()
+                    ->title($title)
+                    ->body($body)
+                    ->success()
+                    ->actions([
+                        Action::make('open')
+                            ->label('Ouvrir')
+                            ->url($url),
+                    ])
+                    ->sendToDatabase($user);
+            }
+        } catch (\Throwable $e) {
+            Log::error('New order admin notification failed', [
+                'commande_id' => $commande->id,
+                'error' => $e->getMessage(),
+            ]);
         }
     }
 

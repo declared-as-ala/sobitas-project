@@ -155,6 +155,50 @@ class AffilieResource extends Resource
                         ->default(10)
                         ->required()
                         ->helperText('Appliquée au-dessus du prix affilié du produit pour proposer un prix de vente. L’affilié garde la différence entre son prix de vente et le prix affilié.'),
+                    /*
+                     * ── LE SOUS-DOMAINE DÉDIÉ : ali.protein.tn ────────────────────────────────
+                     *
+                     * Owner: "for each affiliate something like x.protein.tn … he sends it, and we
+                     * detect that this website is opened from an affiliate subdomain." Everything
+                     * on that hostname is the normal storefront; the frontend middleware resolves
+                     * this label against /api/affilie-subdomains and stamps an attribution cookie
+                     * that reaches `commandes.affilie_id` when an order is placed.
+                     *
+                     * ── WHY THIS FIELD IS FUSSIER THAN IT LOOKS ──────────────────────────────
+                     * The value becomes a HOSTNAME. A space, an accent, an underscore or a capital
+                     * does not produce a warning — it produces a link that does not resolve, on a
+                     * poster somebody has already printed. So the input normalises on blur (a
+                     * pasted `https://Coach-Ali.protein.tn/` collapses to `coach-ali`), refuses
+                     * anything outside the label grammar, refuses the infrastructure names in
+                     * Affilie::RESERVED_SUBDOMAINS — mirrored in frontend/src/util/affiliateHost.ts,
+                     * and an admin who could save `admin` or `www` here would be aiming a coach's
+                     * traffic at the Laravel origin — and stores NULL rather than '' when cleared,
+                     * because the unique index treats NULLs as distinct and empty strings as a
+                     * value that two affiliates would collide on.
+                     *
+                     * Normalisation is also applied at dehydration, not only on blur, so a save
+                     * that never fires a blur event still stores the canonical form.
+                     */
+                    Forms\Components\TextInput::make('subdomain')
+                        ->label('Sous-domaine dédié')
+                        ->placeholder('ali')
+                        ->prefix('https://')
+                        ->suffix('.protein.tn')
+                        ->maxLength(32)
+                        ->live(onBlur: true)
+                        ->afterStateUpdated(fn ($set, ?string $state) => $set('subdomain', \App\Models\Affilie::normalizeSubdomain($state)))
+                        ->dehydrateStateUsing(fn (?string $state) => \App\Models\Affilie::normalizeSubdomain($state))
+                        ->unique(ignoreRecord: true)
+                        ->rules([
+                            'regex:'.\App\Models\Affilie::SUBDOMAIN_PATTERN,
+                            \Illuminate\Validation\Rule::notIn(\App\Models\Affilie::RESERVED_SUBDOMAINS),
+                        ])
+                        ->validationMessages([
+                            'regex' => 'Uniquement des minuscules, chiffres et tirets (1 à 32 caractères), sans tiret au début ni à la fin.',
+                            'not_in' => 'Ce sous-domaine est réservé à l’infrastructure du site.',
+                            'unique' => 'Ce sous-domaine est déjà attribué à un autre affilié.',
+                        ])
+                        ->helperText('Laisser vide si l’affilié n’en a pas. Toute visite ouverte sur ce sous-domaine lui est attribuée pendant 30 jours.'),
                     Forms\Components\Textarea::make('notes')
                         ->label('Notes')
                         ->columnSpanFull()
@@ -304,6 +348,15 @@ class AffilieResource extends Resource
                         return AffilieType::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('phone')->label('Téléphone')->searchable(),
+                // Rendered as the full hostname because that is the string somebody will be asked
+                // to read out or check against a poster; the column stores only the label.
+                Tables\Columns\TextColumn::make('subdomain')
+                    ->label('Sous-domaine')
+                    ->formatStateUsing(fn (?string $state): string => filled($state) ? $state.'.protein.tn' : '—')
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->copyable()
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Statut')
                     ->badge()

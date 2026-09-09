@@ -41,8 +41,11 @@ class AffilieLedgerReadResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $pid = auth()->user()?->affilie?->id;
+        // `commande` joins the order half of the ledger. Without it an order commission — now the
+        // common case, since affiliates create their own orders — shows a date, a status and an
+        // amount with nothing to say WHICH sale it came from.
         $q = parent::getEloquentQuery()
-            ->with(['ticket', 'affilieCode'])
+            ->with(['ticket', 'affilieCode', 'commande'])
             ->where('type', AffilieTransactionType::Commission->value);
 
         return $pid ? $q->where('affilie_id', $pid) : $q->whereRaw('1 = 0');
@@ -73,6 +76,7 @@ class AffilieLedgerReadResource extends Resource
                         return AffilieTransactionStatus::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
                 Tables\Columns\TextColumn::make('ticket.numero')->label('Ticket')->placeholder('—'),
+                Tables\Columns\TextColumn::make('commande.numero')->label('Commande')->placeholder('—'),
                 Tables\Columns\TextColumn::make('amount')->label('Montant')->numeric(decimalPlaces: 3)->alignEnd(),
             ])
             ->defaultSort('created_at', 'desc');

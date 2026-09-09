@@ -468,7 +468,13 @@ class AffilieTransactionService
      * already used by `Commande::scopeVisibleToStorefrontUser()`, so the fraud guard and the
      * order-visibility rule cannot come to disagree about what "same phone" means.
      */
-    private function normalisePhone(?string $raw): string
+    /**
+     * Public and static ON PURPOSE: the affiliate order form needs the SAME normalisation to
+     * refuse self-dealing at entry, and a private copy there had already been written. Two
+     * implementations of a fraud check drift — one gets a fix, the other does not, and the guard
+     * quietly stops matching the numbers it is supposed to catch. One function, both callers.
+     */
+    public static function normalisePhone(?string $raw): string
     {
         $digits = preg_replace('/\D+/', '', (string) $raw) ?? '';
 
@@ -502,7 +508,7 @@ class AffilieTransactionService
      */
     private function isSelfDealing(Commande $commande, Affilie $affilie): bool
     {
-        $affiliePhone = $this->normalisePhone($affilie->phone ?? null);
+        $affiliePhone = self::normalisePhone($affilie->phone ?? null);
 
         // Too short to identify anybody. Two empty strings must never compare equal, or every
         // affiliate with no phone on file would be blocked from every order with none either.
@@ -511,7 +517,7 @@ class AffilieTransactionService
         }
 
         foreach ([$commande->livraison_phone ?? null, $commande->phone ?? null] as $candidate) {
-            $normalised = $this->normalisePhone($candidate);
+            $normalised = self::normalisePhone($candidate);
             if (strlen($normalised) >= 8 && $normalised === $affiliePhone) {
                 return true;
             }
@@ -864,9 +870,32 @@ class AffilieTransactionService
                 ->first();
 
             if (! $original) {
-                // Nothing was ever earned on this order — cancelled before delivery, most likely.
-                // Not an error, and NOT a reason to skip the return fee: the parcel may still have
-                // travelled. The caller charges that separately.
+                /*
+                 * Nothing was ever EARNED on this order — cancelled before delivery, most likely.
+                 * Not an error, and NOT a reason to skip the return fee: the parcel may still have
+                 * travelled. The caller charges that separately.
+                 *
+                 * But a PENDING row may exist, written when the affiliate entered the order as the
+                 * record of the price agreed that day. Left alone it sits at "En attente" in the
+                 * affiliate's ledger for ever, on an order everyone knows is dead — the balance is
+                 * untouched and correct, but the affiliate is looking at a promise that will never
+                 * be kept and has no way to tell that from one still in flight.
+                 *
+                 * Cancel it. `balance_after` stays null exactly as it was: this row never moved the
+                 * balance and closing it must not either. Guarded on Pending so a Confirmed or Paid
+                 * row can never be rewritten by this path — money rows are immutable, and this is
+                 * the one status that carries no money.
+                 */
+                AffilieTransaction::query()
+                    ->where('commande_id', $locked->id)
+                    ->where('type', AffilieTransactionType::Commission)
+                    ->where('status', AffilieTransactionStatus::Pending)
+                    ->whereNull('balance_after')
+                    ->update([
+                        'status' => AffilieTransactionStatus::Cancelled,
+                        'description' => trim('Commande annulée. '.(string) $reason),
+                    ]);
+
                 return;
             }
 

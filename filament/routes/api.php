@@ -200,6 +200,25 @@ Route::middleware('throttle:60,1')
     ->where('code', '[A-Za-z0-9_-]{1,64}');
 
 /*
+ * ── SUBDOMAIN → AFFILIÉ, THE LOOKUP THAT DECIDES WHETHER A VISIT IS ATTRIBUTED ──────────────
+ * `ali.protein.tn` serves the storefront, and the frontend middleware asks this route whether
+ * `ali` is a real, active affiliate before it writes an attribution cookie. With wildcard DNS
+ * every string under the apex resolves, so without this the answer would always be "yes".
+ *
+ * Same 60/1 ceiling as the code preview, and for the same reason: it is a READ that fires once per
+ * new hostname a visitor arrives on, and the caller caches both hits and misses in-process, so a
+ * legitimate browse costs one call per subdomain per five minutes per worker. The throttle is here
+ * for the other case — somebody walking random hostnames to enumerate affiliates. They learn
+ * nothing but "this label exists", which the affiliate prints on a poster.
+ *
+ * The `where` constraint is the hostname-label grammar, so a request that could not be a subdomain
+ * never reaches the controller or the database at all.
+ */
+Route::middleware('throttle:60,1')
+    ->get('/affilie-subdomains/{subdomain}', [\App\Http\Controllers\Api\AffilieSubdomainController::class, 'show'])
+    ->where('subdomain', '[a-z0-9][a-z0-9-]{0,31}');
+
+/*
  * The rest of the signup funnel is authenticated, and the OTP throttles below are COPIES of the
  * ones already applied to /phone-verification/* and /email-verification/* further down this file —
  * same numbers, same reasons. They are the outer wall only: the real ceilings (per account, per

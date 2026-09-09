@@ -7,6 +7,7 @@ use App\Filament\Pages\Auth\Login;
 use App\Filament\Affilie\Pages\AffilieDashboard;
 use App\Filament\Affilie\Pages\AffilieProfilePage;
 use App\Filament\Affilie\Widgets\AffilieBalanceWidget;
+use App\Filament\Affilie\Resources\AffilieCommandeResource;
 use App\Filament\Affilie\Resources\AffilieLedgerReadResource;
 use App\Filament\Affilie\Resources\AffiliePaymentReadResource;
 use App\Filament\Affilie\Resources\AffilieSaleTicketResource;
@@ -37,7 +38,14 @@ class AffiliePanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Orange,
             ])
+            /*
+             * THERE IS NO AUTO-DISCOVERY IN THIS PANEL. A resource that is not in this array does
+             * not exist: no navigation entry, no routes, and `Resource::getUrl()` throws
+             * RouteNotFoundException for it. AffilieCommandeResource is the affiliate's own order
+             * desk — the create page the whole module is built around — so it leads.
+             */
             ->resources([
+                AffilieCommandeResource::class,
                 AffilieSaleTicketResource::class,
                 AffilieLedgerReadResource::class,
                 AffiliePaymentReadResource::class,
