@@ -133,11 +133,28 @@ class AffilieResource extends Resource
                         ->default(AffilieStatus::Active->value)
                         ->required()
                         ->helperText('Utilisez les actions « Approuver » / « Refuser » sur la liste : elles gèrent aussi le rôle, l’accès à l’espace affilié et la traçabilité.'),
+                    /*
+                     * ── THIS NUMBER IS A MARKUP, NOT A CUT OF THE ORDER ──────────────────────────
+                     * The affilié is a reseller: the shop is owed `products.prix_affilie` and the
+                     * affilié keeps everything they charge above it, so there is no order total left
+                     * to take a percentage of. What this number now does is supply the DEFAULT MARKUP
+                     * used to suggest a selling price for every product at once
+                     * (Affilie::suggestedSellingPrice) — one setting, instead of pricing ~11 000
+                     * products by hand. Any single line can still be overridden when selling.
+                     *
+                     * There is deliberately ONE input for it. The column is `commission_rate`:
+                     * migration 2026_05_08_160000 renamed `default_commission_rate` into it, and the
+                     * old name survives only as a fallback inside Affilie::effectiveCommissionRate()
+                     * for a database restored from before that rename. A field labelled « marge »
+                     * sitting next to a field labelled « commission » is how the wrong one gets used.
+                     */
                     Forms\Components\TextInput::make('commission_rate')
-                        ->label('Commission par défaut (%)')
+                        ->label('Marge par défaut (%)')
                         ->numeric()
+                        ->minValue(0)
                         ->default(10)
-                        ->required(),
+                        ->required()
+                        ->helperText('Appliquée au-dessus du prix affilié du produit pour proposer un prix de vente. L’affilié garde la différence entre son prix de vente et le prix affilié.'),
                     Forms\Components\Textarea::make('notes')
                         ->label('Notes')
                         ->columnSpanFull()
@@ -320,7 +337,7 @@ class AffilieResource extends Resource
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true)
                     ->placeholder('—'),
-                Tables\Columns\TextColumn::make('commission_rate')->label('Com. %')->alignEnd(),
+                Tables\Columns\TextColumn::make('commission_rate')->label('Marge %')->alignEnd(),
                 Tables\Columns\TextColumn::make('current_balance')->label('Solde')->numeric(decimalPlaces: 3)->alignEnd(),
                 Tables\Columns\TextColumn::make('total_earned')->label('Total gagné')->numeric(decimalPlaces: 3)->alignEnd(),
                 Tables\Columns\TextColumn::make('total_paid')->label('Total payé')->numeric(decimalPlaces: 3)->alignEnd(),
@@ -357,18 +374,25 @@ class AffilieResource extends Resource
                     ->visible(fn (Affilie $record): bool => in_array($record->status, [AffilieStatus::Pending, AffilieStatus::Rejected], true))
                     ->requiresConfirmation()
                     ->modalHeading('Approuver cette candidature')
-                    ->modalDescription('L’affilié devient actif, reçoit le taux de commission choisi et obtient l’accès à son espace.')
+                    ->modalDescription('L’affilié devient actif, reçoit la marge par défaut choisie et obtient l’accès à son espace.')
                     ->form([
                         Forms\Components\TextInput::make('commission_rate')
-                            ->label('Commission accordée (%)')
+                            ->label('Marge par défaut accordée (%)')
                             ->numeric()
                             ->minValue(0)
-                            ->maxValue(100)
+                            // No upper bound any more. A cap of 100 was right while this
+                            // meant "percent of the order" — nobody may take more than the
+                            // order is worth. As a MARKUP over `prix_affilie` it is simply a
+                            // multiplier, and a coach reselling at three times the affiliate
+                            // price (200 %) is an ordinary, legal arrangement. Leaving the
+                            // cap would have refused it as an input error.
                             ->required()
                             ->default(fn (Affilie $record): float => ((float) ($record->getAttributes()['commission_rate'] ?? 0)) ?: 10.0)
                             // A public application is stored at 0 % precisely so this field cannot
                             // be skipped into a rate nobody agreed. See AffilieApplicationController.
-                            ->helperText('Une candidature publique arrive à 0 %. Le taux doit être décidé ici.'),
+                            // At 0 % the suggested selling price equals `prix_affilie` exactly, so the
+                            // affilié would earn nothing on every line until someone corrects it.
+                            ->helperText('Marge appliquée au-dessus du prix affilié pour proposer un prix de vente. Une candidature publique arrive à 0 % : la marge doit être décidée ici.'),
                         Forms\Components\Toggle::make('send_invitation')
                             ->label('Envoyer l’invitation par e-mail')
                             ->default(true)

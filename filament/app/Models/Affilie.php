@@ -160,11 +160,105 @@ class Affilie extends Model
         return $token;
     }
 
+    /**
+     * ── THIS PERCENTAGE IS A MARKUP NOW, NOT A SHARE OF AN ORDER ─────────────────────────────
+     * It used to mean "percent of order value". Under the reseller model it does not: the shop is
+     * owed `products.prix_affilie` and the affiliate keeps whatever they charge above it, so a cut
+     * of the order total has nothing to divide. What survives is the DEFAULT MARKUP — the one
+     * number an affiliate sets once so that a selling price can be suggested for every product at
+     * once, instead of pricing ~11,000 of them by hand. Any single line may still be overridden.
+     *
+     * ── WHY TWO COLUMN NAMES AND ONE NUMBER ──────────────────────────────────────────────────
+     * Migration 2026_05_08_160000 renamed `default_commission_rate` to `commission_rate`. A
+     * database restored from before that rename still carries the old name, so both are read here
+     * and the live one wins. This is also what keeps a SECOND admin field from appearing: exactly
+     * one input in AffilieResource writes this value, because two percentages meaning almost the
+     * same thing is how the wrong one gets used.
+     *
+     * Kept under its old name because AffilieTransactionService calls it.
+     * New code should prefer defaultMarkupPercent(), which says what the number now means.
+     */
     public function effectiveCommissionRate(): float
     {
         $attrs = $this->getAttributes();
 
         return (float) ($attrs['commission_rate'] ?? $attrs['default_commission_rate'] ?? 10);
+    }
+
+    /**
+     * The default markup, in percent, applied on top of `products.prix_affilie`.
+     *
+     * The same stored number as effectiveCommissionRate() — not a second setting — named for what
+     * it means under the reseller model.
+     */
+    public function defaultMarkupPercent(): float
+    {
+        // Clamped rather than honoured if negative: a negative markup would suggest a price BELOW
+        // `prix_affilie`, which validateSellingPrice() then refuses. The form would be proposing a
+        // number its own guard rail rejects, and the affiliate would read that as a broken page
+        // rather than as a misconfigured rate.
+        return max(0.0, $this->effectiveCommissionRate());
+    }
+
+    /**
+     * The selling price to pre-fill for this product: `prix_affilie` plus the default markup.
+     *
+     * Null when the product is not sellable by affiliates. That answer comes from
+     * Product::affiliateBasePrice() and from nowhere else, so "is this product priced" has one
+     * home; re-testing `prix_affilie` here would be a second rule to keep in sync.
+     *
+     * Rounded to 3 decimals because TND carries three and the ledger it feeds
+     * (`affilie_transactions.amount`, decimal(14,3)) rounds the same way. A suggestion carrying a
+     * fourth decimal would settle into a spread the affiliate was never shown.
+     */
+    public function suggestedSellingPrice(Product $product): ?float
+    {
+        $base = $product->affiliateBasePrice();
+
+        if ($base === null) {
+            return null;
+        }
+
+        return round($base * (1 + ($this->defaultMarkupPercent() / 100)), 3);
+    }
+
+    /**
+     * ── GUARD RAIL: A SELLING PRICE MAY NEVER SIT BELOW THE AFFILIATE PRICE ──────────────────
+     * The spread IS the earning:
+     *
+     *     earning = (unit selling price − prix_affilie) × quantity
+     *
+     * so a selling price under `prix_affilie` does two things at once. It hands the shop less than
+     * it is owed for stock already shipped, and it books a NEGATIVE commission that quietly eats
+     * the affiliate's balance. Neither is visible on the order; both surface only when the ledger
+     * is reconciled, by which time the parcel is gone. Refuse it at the edge instead.
+     *
+     * Equality is allowed on purpose: selling at exactly `prix_affilie` earns nothing, which an
+     * affiliate is entitled to choose. The comparison carries the same 0.0001 epsilon
+     * AffilieTransactionService uses throughout, so a value that rounds onto the base price is not
+     * rejected by a float artefact.
+     *
+     * Throws rather than returning a bool, and reports through __() like the service does, so a
+     * caller cannot ignore the answer by forgetting to check it.
+     *
+     * @throws \InvalidArgumentException
+     */
+    public function validateSellingPrice(Product $product, float $sellingPrice): void
+    {
+        $base = $product->affiliateBasePrice();
+
+        if ($base === null) {
+            throw new \InvalidArgumentException(__('Le produit « :produit » n’a pas de prix affilié : il ne peut pas être vendu par un affilié.', [
+                'produit' => (string) ($product->getAttribute('designation_fr') ?: $product->getKey()),
+            ]));
+        }
+
+        if (round($sellingPrice, 3) + 0.0001 < $base) {
+            throw new \InvalidArgumentException(__('Le prix de vente (:vente DT) ne peut pas être inférieur au prix affilié (:base DT).', [
+                'vente' => number_format(round($sellingPrice, 3), 3, ',', ' '),
+                'base' => number_format($base, 3, ',', ' '),
+            ]));
+        }
     }
 
     public static function availableCommissionRoleId(): int

@@ -301,7 +301,7 @@ class ProductResource extends Resource
                         ->schema([
                             Section::make("Prix de vente")
                                 ->icon('heroicon-o-tag')
-                                ->description('Définissez le prix de vente et le prix promotionnel du produit.')
+                                ->description('Définissez le prix de vente, le prix promotionnel et le prix affilié du produit.')
                                 ->schema([
                                     Grid::make(2)->schema([
                                         Forms\Components\TextInput::make("prix")
@@ -322,6 +322,35 @@ class ProductResource extends Resource
                                             ->minValue(0)
                                             ->extraInputAttributes(['class' => 'text-lg font-semibold text-red-600'])
                                             ->helperText('Laissez vide si aucune promotion.'),
+                                        /*
+                                         * ── PRIX AFFILIÉ — WHAT THE SHOP MUST RECEIVE ────────
+                                         * Not a discount and not a commission rate. The affiliate
+                                         * is a reseller: they sell above this number and keep the
+                                         * difference, so this is the floor under every affiliate
+                                         * sale of this product.
+                                         *
+                                         * Deliberately has NO default and is never derived from
+                                         * `prix`. Leaving it empty is a real decision — the
+                                         * product then does not exist for affiliates at all
+                                         * (Product::affiliateBasePrice fails closed rather than
+                                         * guessing a base price nobody reviewed).
+                                         *
+                                         * minValue is 0.001, not 0, so the form refuses exactly
+                                         * what the accessor refuses. A 0 here would mean the shop
+                                         * ships stock for nothing, and 0 is what an empty
+                                         * imported cell looks like.
+                                         */
+                                        Forms\Components\TextInput::make('prix_affilie')
+                                            ->label('Prix affilié')
+                                            ->visible(fn (): bool => self::hasProductColumn('prix_affilie'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('prix_affilie'))
+                                            ->numeric()
+                                            ->prefix('DT')
+                                            ->placeholder('0.000')
+                                            ->step(0.001)
+                                            ->minValue(0.001)
+                                            ->extraInputAttributes(['class' => 'text-lg font-semibold text-amber-600'])
+                                            ->helperText('Prix que la boutique doit encaisser sur une vente affiliée ; l’affilié revend au-dessus et garde la différence. Laissez vide pour que ce produit n’apparaisse pas dans le catalogue des affiliés.'),
                                     ]),
                                     Forms\Components\DateTimePicker::make("promo_expiration_date")
                                         ->label("Date d'expiration de la promotion")
@@ -879,6 +908,17 @@ class ProductResource extends Resource
                     ->placeholder('—')
                     ->numeric()
                     ->width('10%'),
+                Tables\Columns\TextColumn::make('prix_affilie')
+                    ->label('Prix affilié')
+                    ->money('TND', 0)
+                    ->sortable()
+                    ->visible(fn (): bool => self::hasProductColumn('prix_affilie'))
+                    ->toggleable(isToggledHiddenByDefault: false)
+                    // The dash is the point of this column: with ~11,000 products the owner needs
+                    // to SEE which rows an affiliate cannot sell, not deduce it from a blank cell.
+                    ->placeholder('— non vendable')
+                    ->numeric()
+                    ->width('10%'),
                 Tables\Columns\TextColumn::make('qte')
                     ->label('Stock')
                     ->sortable()
@@ -926,6 +966,28 @@ class ProductResource extends Resource
                     ->relationship('sousCategorie', 'designation_fr')
                     ->searchable()
                     ->preload(),
+                /*
+                 * Coverage across ~11,000 products: which of them an affiliate can actually sell.
+                 * Backed by the index added in migration 2026_09_09_140000 — both branches stay a
+                 * range scan on `prix_affilie` alone, so this is usable on the full catalogue.
+                 *
+                 * `whereNotNull` alone would count a 0 as priced. Product::affiliateBasePrice()
+                 * refuses 0, so the filter refuses it too; otherwise "vendable" would list rows the
+                 * affiliate catalogue silently drops, which is the worst of both answers.
+                 */
+                Tables\Filters\TernaryFilter::make('prix_affilie')
+                    ->label('Vendable par un affilié')
+                    ->placeholder('Tous les produits')
+                    ->trueLabel('Prix affilié défini')
+                    ->falseLabel('Sans prix affilié')
+                    ->visible(fn (): bool => self::hasProductColumn('prix_affilie'))
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereNotNull('prix_affilie')->where('prix_affilie', '>', 0),
+                        false: fn (Builder $query): Builder => $query->where(
+                            fn (Builder $sub): Builder => $sub->whereNull('prix_affilie')->orWhere('prix_affilie', '<=', 0)
+                        ),
+                        blank: fn (Builder $query): Builder => $query,
+                    ),
                 // Find what `products:generate-content` drafted. Without this the pending drafts are
                 // invisible and would simply never be reviewed.
                 Tables\Filters\SelectFilter::make('ai_review_status')

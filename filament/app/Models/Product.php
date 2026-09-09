@@ -390,6 +390,74 @@ class Product extends Model
         return $name . ' — ' . number_format($price, 3, ',', ' ') . ' DT' . $suffix . ' — ' . $stock . ' en stock';
     }
 
+    /**
+     * ── AFFILIATE BASE PRICE — THE NUMBER THE SHOP MUST RECEIVE ──────────────────────────────
+     * The affiliate is a RESELLER, not a commission earner. They sell at a price of their own
+     * choosing and keep everything above this one:
+     *
+     *     earning = (unit selling price − prix_affilie) × quantity
+     *
+     * ── IT FAILS CLOSED, AND THAT IS THE ENTIRE POINT ────────────────────────────────────────
+     * It must NEVER fall back to `prix`, `prix_ht`, `promo`, or a percentage of any of them.
+     * `prix_affilie` was added nullable (migration 2026_09_09_140000) to a live catalogue of
+     * ~11,000 rows nobody has priced yet; a fallback would silently invent the number that decides
+     * how much money an affiliate keeps, on a product no administrator ever reviewed. The
+     * migration's docblock states the rule in full — this method exists to obey it, not to soften
+     * it.
+     *
+     * An affiliate seeing fewer products is a support call. An affiliate earning a spread off a
+     * guessed base price is a loss nobody notices until the ledger is reconciled.
+     *
+     * @return float|null Base price in TND rounded to 3 decimals, or null when this product is not
+     *                    sellable by affiliates.
+     */
+    public function affiliateBasePrice(): ?float
+    {
+        $attributes = $this->getAttributes();
+
+        // "Absent" is not the same as "null", but both fail closed. The attribute is genuinely
+        // missing when the model was hydrated by a narrow select() — Product::getSelectSearchColumns()
+        // does not list `prix_affilie` — and returning a price read from a column that was never
+        // loaded is exactly the invented number this method exists to prevent. A caller that needs
+        // this answer must load the column.
+        if (! array_key_exists('prix_affilie', $attributes)) {
+            return null;
+        }
+
+        $raw = $attributes['prix_affilie'];
+
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+
+        $base = round((float) $raw, 3);
+
+        // Zero and negative are refused for the same reason null is. Zero hands the shop nothing
+        // for stock it has already shipped and lets the affiliate keep the whole selling price —
+        // and zero is precisely what an empty cell in a bulk import, or a stray keystroke in a
+        // numeric field, produces. It cannot be read as a deliberate decision. A product that is
+        // genuinely meant to be given away is a decision to record explicitly, not to infer from
+        // a 0 that arrived by accident.
+        if ($base <= 0.0) {
+            return null;
+        }
+
+        return $base;
+    }
+
+    /**
+     * Whether an affiliate may sell this product at all.
+     *
+     * Deliberately expressed as "the base price resolves" rather than as its own set of
+     * conditions: one rule for what counts as priced, in one place. A second predicate with its
+     * own tests is how this method and Affilie::validateSellingPrice() end up disagreeing about
+     * the same product.
+     */
+    public function isAffiliateSellable(): bool
+    {
+        return $this->affiliateBasePrice() !== null;
+    }
+
     public function effectiveSeoTitle(): ?string
     {
         $seoTitle = trim((string) ($this->attributes['seo_title'] ?? ''));
