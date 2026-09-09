@@ -74,7 +74,12 @@ function enrichDescription(product: Product, productName: string): string {
     .replace(/<h[1-6]\b[^>]*>[\s\S]*?<\/h[1-6]\s*>/gi, ' ')
     .replace(/<\/(?:li|p)>/gi, '. ');
   const plain = buildMetaDescription(body, { maxLen: Infinity })
-    .replace(/\s+([.!?])/g, '$1').replace(/(?:\.\s*){2,}/g, '. ')
+    /* `,` added 09/09/2026: the CMS copy contains "créatine monohydrate pure micronisée ," and
+       "Gainer hautement calorique ,", and that space survived into the live snippet. French takes
+       no space before a comma (unlike ; : ! ?), so this is a typo in the source, not a
+       typographic convention to preserve. Only the comma is added here — the existing set is left
+       exactly as it was. */
+    .replace(/\s+([.!?,])/g, '$1').replace(/(?:\.\s*){2,}/g, '. ')
     .replace(/([!?])\./g, '$1')
     .split(/(?<=[.!?])\s+/)
     .map((sentence) => {
@@ -87,8 +92,63 @@ function enrichDescription(product: Product, productName: string): string {
   let excerpt = plain;
   if (excerpt.length > budget) {
     const window = excerpt.slice(0, budget - 1);
-    const boundary = /\s/.test(excerpt[budget - 1]) ? window.length : window.lastIndexOf(' ');
-    excerpt = boundary > 0 ? `${window.slice(0, boundary).replace(/[\s,;:.–—-]+$/u, '')}…` : '';
+    /*
+     * ── PREFER A CLAUSE BOUNDARY. A WORD BOUNDARY IS NOT ENOUGH ─────────────────────────────
+     * Cutting on the last space is word-safe and still produces a broken sentence. Measured live
+     * on /omega-3/omega-3-fish-oil-240-softgel-weightworld — the biggest zero-CTR line in the
+     * whole Search Console export, 2,827 impressions on `omega 3 fish oil` at position 7.5 and
+     * 3,475 on the page at 0.75%:
+     *
+     *   "…riche en EPA et DHA, deux acides gras essentiels reconnus pour leurs… Prix : 179 DT."
+     *
+     * It ends on a possessive with nothing to possess. Every word is whole and the sentence is
+     * still nonsense, which is worse than a hard cut because it reads as a fault in the product
+     * rather than a fault in the truncation.
+     *
+     * So: take the last sentence end inside the budget when it leaves at least 55% of the
+     * available characters used — a complete sentence needs no ellipsis and reads as deliberate.
+     * Below that threshold the sentence is too short to be worth the lost characters, and the
+     * word-boundary cut with an ellipsis stays as the fallback. The `.` in the lookbehind is
+     * excluded when it follows a digit so a dose ("1,5 g.") or a decimal cannot end the snippet
+     * on half a fact.
+     */
+    const MIN_CLAUSE_RATIO = 0.55;
+    const clause = Math.max(
+      window.lastIndexOf('. '),
+      window.lastIndexOf('! '),
+      window.lastIndexOf('? ')
+    );
+    const clauseUsable =
+      clause > 0 &&
+      clause + 1 >= Math.floor(budget * MIN_CLAUSE_RATIO) &&
+      !/\d\s*$/.test(window.slice(0, clause));
+
+    /*
+     * Tier 2, added in the same pass after measuring tier 1: a comma or semicolon.
+     *
+     * The sentence tier fixed /whey-proteine/100-whey-gold-standard-2-27kg, whose first sentence
+     * ends inside the budget. It did nothing for the omega-3 page this was written for, because
+     * that copy's FIRST sentence is longer than 160 characters — there is no sentence end to
+     * find, so it fell straight through to the word cut and still read "reconnus pour leurs…".
+     *
+     * A comma is not a sentence, so the ellipsis stays. But "…riche en EPA et DHA…" is a whole
+     * idea and "…reconnus pour leurs…" is not, and that is the difference the reader sees.
+     */
+    const softClause = Math.max(window.lastIndexOf(', '), window.lastIndexOf('; '));
+    const softUsable =
+      !clauseUsable &&
+      softClause > 0 &&
+      softClause >= Math.floor(budget * MIN_CLAUSE_RATIO) &&
+      !/\d\s*$/.test(window.slice(0, softClause));
+
+    if (clauseUsable) {
+      excerpt = window.slice(0, clause + 1);
+    } else if (softUsable) {
+      excerpt = `${window.slice(0, softClause)}…`;
+    } else {
+      const boundary = /\s/.test(excerpt[budget - 1]) ? window.length : window.lastIndexOf(' ');
+      excerpt = boundary > 0 ? `${window.slice(0, boundary).replace(/[\s,;:.–—-]+$/u, '')}…` : '';
+    }
   }
   return `${excerpt || 'Consultez la composition et les conseils d’utilisation sur la fiche produit.'}${suffix}`;
 }
