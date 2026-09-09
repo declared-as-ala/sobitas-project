@@ -232,15 +232,31 @@ class AffilieResource extends Resource
                         ->label('Adresse')
                         ->rows(2)
                         ->columnSpanFull(),
-                    Forms\Components\TextInput::make('payment_method')
+                    /*
+                     * Was a free TextInput. On a money field that means "cash", "Espèces" and
+                     * "espece au magasin" all end up in the column and the Friday run cannot group
+                     * by method — whoever prepares the payments has to read every row and guess.
+                     */
+                    Forms\Components\Select::make('payment_method')
                         ->label('Méthode de paiement')
-                        ->maxLength(64),
+                        ->options(\App\Enums\AffiliePayoutMethod::options())
+                        ->native(false)
+                        ->live()
+                        ->helperText('Espèces : l’affilié passe au magasin. Virement : chaque vendredi sur son RIB.'),
                     Forms\Components\TextInput::make('bank_name')
                         ->label('Banque')
-                        ->maxLength(128),
+                        ->maxLength(128)
+                        ->visible(fn ($get): bool => $get('payment_method') === \App\Enums\AffiliePayoutMethod::Bank->value),
+                    /*
+                     * Required for a transfer and deliberately NOT for cash: the affiliates most
+                     * likely to collect at the counter are exactly the ones without a bank account,
+                     * and demanding a RIB from them would block their payout entirely.
+                     */
                     Forms\Components\TextInput::make('rib_or_iban')
                         ->label('RIB / IBAN')
-                        ->maxLength(128),
+                        ->maxLength(128)
+                        ->visible(fn ($get): bool => $get('payment_method') === \App\Enums\AffiliePayoutMethod::Bank->value)
+                        ->required(fn ($get): bool => $get('payment_method') === \App\Enums\AffiliePayoutMethod::Bank->value),
                     Forms\Components\Textarea::make('payout_notes')
                         ->label('Notes paiement')
                         ->columnSpanFull(),

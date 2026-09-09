@@ -99,6 +99,24 @@ return [
          * courier scan. It exists as a switch only so the owner can make that call knowingly —
          * it is not a tuning parameter.
          */
-        'require_cod_remittance' => (bool) env('AFFILIE_PAYOUT_REQUIRE_COD_REMITTANCE', true),
+        /*
+         * OWNER'S DECISION: pay every Friday, full stop. Default therefore FALSE.
+         *
+         * Left at true, the batch waits for someone to mark each order "encaissé (COD)" against an
+         * Aramex settlement report. Nobody had agreed to do that, so the run would have selected
+         * zero payable commissions every week, exited 0, and looked exactly like a quiet week —
+         * the silent-no-op failure this project has been bitten by before.
+         *
+         * The trade the owner accepted, stated plainly: commission is paid on DELIVERY, and in a
+         * cash-on-delivery business delivery means the courier holds the money, not you. Between
+         * Friday and Aramex's remittance the shop is fronting the affiliates' margin out of its own
+         * cash. That is a working-capital cost, not a loss — the money does arrive — and it is
+         * bounded by one week of affiliate sales.
+         *
+         * Flip this to true (AFFILIE_PAYOUT_REQUIRE_COD_REMITTANCE=1) if that float ever becomes
+         * uncomfortable. The gate and its admin action are built and tested; only the default
+         * changed. Nothing else needs touching.
+         */
+        'require_cod_remittance' => (bool) env('AFFILIE_PAYOUT_REQUIRE_COD_REMITTANCE', false),
     ],
 ];

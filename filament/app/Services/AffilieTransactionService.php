@@ -533,6 +533,68 @@ class AffilieTransactionService
      *      racing outside the lock's reach gets a duplicate-key error and rolls back having moved
      *      nothing. Layers 1 and 2 are correctness; layer 3 is the guarantee.
      */
+    /**
+     * The affiliate's earning on an order: what they charged, minus what the shop must receive.
+     *
+     *     Σ over lines of  (prix_unitaire − products.prix_affilie) × qte
+     *
+     * Returns null when NO line carries a `prix_affilie` — the caller then falls back to the
+     * percentage model, so a legacy order still settles instead of paying zero in silence.
+     *
+     * ── WHY AN UNPRICED LINE CONTRIBUTES ZERO RATHER THAN VOIDING THE ORDER ─────────────────
+     * A null `prix_affilie` means an administrator never set a base price for that product, so its
+     * spread is genuinely unknown. Guessing it — from `prix`, `promo`, or a percentage — would
+     * invent the number that decides how much money leaves the business.
+     *
+     * Refusing the whole order's commission would punish the affiliate for the shop's missing
+     * data. Contributing zero for that line pays them for everything that IS priced, and the
+     * warning names the product so it can be fixed and adjusted with adjustBalance(). The order
+     * form refuses unpriced products at creation, so this is a defensive path, not the normal one.
+     *
+     * A negative spread — sold below the shop's base price — is clamped to zero here. It should be
+     * impossible (validated at order entry) and if it ever happens the shop absorbs it rather than
+     * the ledger recording a commission that reaches into the affiliate's other earnings.
+     */
+    public function orderSpreadCommission(Commande $commande): ?float
+    {
+        $lines = DB::table('commande_details')
+            ->join('products', 'products.id', '=', 'commande_details.produit_id')
+            ->where('commande_details.commande_id', $commande->id)
+            ->get(['commande_details.produit_id', 'commande_details.qte', 'commande_details.prix_unitaire', 'products.prix_affilie', 'products.designation_fr']);
+
+        if ($lines->isEmpty()) {
+            return null;
+        }
+
+        $total = 0.0;
+        $priced = 0;
+
+        foreach ($lines as $line) {
+            if ($line->prix_affilie === null) {
+                Log::warning('Affilie spread: line skipped, product has no prix_affilie', [
+                    'commande_id' => $commande->id,
+                    'produit_id' => $line->produit_id,
+                    'produit' => $line->designation_fr ?? null,
+                ]);
+
+                continue;
+            }
+
+            $priced++;
+            $qte = max(0.0, (float) $line->qte);
+            $spread = (float) $line->prix_unitaire - (float) $line->prix_affilie;
+
+            $total += max(0.0, $spread) * $qte;
+        }
+
+        // No line was priced: the spread model has nothing to say about this order.
+        if ($priced === 0) {
+            return null;
+        }
+
+        return round($total, 3);
+    }
+
     public function processOrderCommission(Commande $commande): void
     {
         DB::transaction(function () use ($commande) {
@@ -626,7 +688,28 @@ class AffilieTransactionService
                 ? $this->effectiveCommissionRatePercent($code, $affilie)
                 : $affilie->effectiveCommissionRate();
 
-            $amount = $this->calculateCommissionAmount($base, $rate);
+            /*
+             * ── AFFILIATE ORDERS EARN A SPREAD, NOT A PERCENTAGE ────────────────────────────
+             * Two commission models coexist deliberately and must not be merged:
+             *
+             *   POS tickets      percentage of the ticket total. The boutique flow, unchanged.
+             *   Affiliate orders (selling price − prix_affilie) × qty, summed over the lines.
+             *
+             * The owner's model: the shop publishes a `prix_affilie` per product — what it must
+             * receive — and the affiliate sells at whatever price they like, keeping everything
+             * above it. A percentage of the order total would pay them for the shop's own base
+             * price as well as their markup.
+             *
+             * The percentage still has a job: it is the affiliate's DEFAULT MARKUP, used to
+             * suggest a selling price so they need not price 11,000 products by hand. It decides
+             * what they charge; it does not decide what they earn.
+             *
+             * Falls back to the percentage when the spread cannot be computed at all (an order
+             * with no priced lines), so a legacy or hand-made order still settles rather than
+             * silently paying zero.
+             */
+            $spread = $this->orderSpreadCommission($locked);
+            $amount = $spread ?? $this->calculateCommissionAmount($base, $rate);
 
             /*
              * A pending row, if the order-entry path wrote one, is the CONTRACT: the rate agreed
