@@ -1,4 +1,5 @@
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import Link from 'next/link';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import Image from 'next/image';
@@ -184,7 +185,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
           to be near each other. */}
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3 xl:grid-cols-6">
         {items.map((category) => {
-          const href = `/${category.slug}`;
+          const href = canonicalCategoryPath(category.slug);
           const label = categoryAnchor(category.slug, (category.designation_fr || '').trim());
           const localCover = CATEGORY_COVER_OVERRIDES[(category.slug || '').trim().toLowerCase()];
           const coverSrc = localCover || (category.cover ? getStorageUrl(category.cover) : null);

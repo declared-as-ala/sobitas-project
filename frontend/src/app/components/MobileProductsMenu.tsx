@@ -1,6 +1,7 @@
 'use client';
 
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
@@ -195,7 +196,7 @@ export function MobileProductsMenu({ open, onOpenChange }: MobileProductsMenuPro
                         {subCategories.map((sub) => (
                           <LinkWithLoading
                             key={sub.id}
-                            href={`/${sub.slug}`}
+                            href={canonicalCategoryPath(sub.slug)}
                             className="min-h-[52px] flex items-center gap-3 py-3 px-4 bg-white dark:bg-gray-900 active:bg-gray-50 dark:active:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-800 shadow-sm transition-colors"
                             loadingMessage="Chargement..."
                           >

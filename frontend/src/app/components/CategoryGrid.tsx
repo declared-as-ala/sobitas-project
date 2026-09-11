@@ -1,6 +1,7 @@
 'use client';
 
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight } from 'lucide-react';
@@ -27,7 +28,7 @@ function CategoryCard({ category }: { category: Category }) {
   const [imageError, setImageError] = useState(false);
   const showImage = category.cover && !imageError;
   const imageUrl = category.cover ? getStorageUrl(category.cover) : '';
-  const href = `/${category.slug}`;
+  const href = canonicalCategoryPath(category.slug);
 
   return (
     <article className="group relative aspect-[4/3] overflow-hidden rounded-xl bg-gray-200 ring-1 ring-black/5 dark:bg-gray-800 dark:ring-white/10">

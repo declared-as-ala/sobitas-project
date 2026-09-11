@@ -1,6 +1,7 @@
 'use client';
 
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import Image from 'next/image';
@@ -334,7 +335,7 @@ export function ProductsDropdown({
                     return (
                       <li key={cat.id}>
                         <LinkWithLoading
-                          href={`/${cat.slug}`}
+                          href={canonicalCategoryPath(cat.slug)}
                           data-active={isActive}
                           /*
                             HOVER SELECTS, CLICK NAVIGATES — a rayon is a real page and this menu's
@@ -413,7 +414,7 @@ export function ProductsDropdown({
               </h2>
               {activeRayon && (
                 <LinkWithLoading
-                  href={`/${activeRayon.slug}`}
+                  href={canonicalCategoryPath(activeRayon.slug)}
                   className="-my-2 inline-flex shrink-0 items-center gap-1.5 rounded py-2 text-[13px] font-semibold text-brand transition-colors hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   loadingMessage="Chargement..."
                   onClick={close}
@@ -445,7 +446,7 @@ export function ProductsDropdown({
                     {activeSubs.map((sub) => (
                       <li key={sub.id}>
                         <LinkWithLoading
-                          href={`/${sub.slug}`}
+                          href={canonicalCategoryPath(sub.slug)}
                           className="group flex min-h-[72px] items-center justify-between gap-3 rounded-xl border border-hairline bg-sunken px-4 py-3 transition-colors hover:border-brand hover:bg-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                           loadingMessage="Chargement..."
                           onClick={close}
@@ -469,7 +470,7 @@ export function ProductsDropdown({
                 )}
 
                 <LinkWithLoading
-                  href={`/${activeRayon.slug}`}
+                  href={canonicalCategoryPath(activeRayon.slug)}
                   className={cn(
                     'group flex min-h-[104px] flex-1 overflow-hidden rounded-xl border border-hairline bg-elevated transition-colors hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus',
                     activeSubs.length > 0 && 'mt-4'
@@ -514,7 +515,7 @@ export function ProductsDropdown({
                 {activeSubs.map((sub) => (
                   <li key={sub.id}>
                     <LinkWithLoading
-                      href={`/${sub.slug}`}
+                      href={canonicalCategoryPath(sub.slug)}
                       /* The row is the hover target, not the words. `bg-sunken` on a white pane is
                          a 1.08:1 tint — deliberately quiet, because 21 of these are on screen at
                          once and the brand ink is what actually marks the one under the pointer. */

@@ -1,6 +1,7 @@
 'use client';
 
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Image from 'next/image';
@@ -1461,7 +1462,7 @@ function ShopContent({
               {topCategorySubcategories.map((sub) => (
                 <li key={sub.slug} className={topCategorySubcategories.length > 6 ? 'w-[11.25rem] shrink-0 snap-start sm:w-[12.5rem]' : undefined}>
                   <Link
-                    href={`/${sub.slug}`}
+                    href={canonicalCategoryPath(sub.slug)}
                     className="group flex min-h-[50px] w-full items-center justify-between gap-3 rounded-xl border border-hairline bg-elevated px-3.5 py-2.5 text-[13px] font-semibold leading-tight text-ink-2 shadow-sm transition-[border-color,color,transform] hover:-translate-y-0.5 hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                   >
                     <span className="line-clamp-2">{categoryAnchor(sub.slug, sub.designation_fr)}</span>

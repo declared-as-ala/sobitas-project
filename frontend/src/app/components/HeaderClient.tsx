@@ -1,6 +1,7 @@
 'use client';
 
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -1090,7 +1091,7 @@ export function HeaderClient() {
                               <div className="overflow-hidden">
                                 <ul className="mt-1 space-y-0.5 pb-1">
                                   {sidebarCategories.map((cat) => {
-                                    const catHref = `/${cat.slug}`;
+                                    const catHref = canonicalCategoryPath(cat.slug);
                                     const catActive = pathname === catHref;
                                     const subs = cat.sous_categories ?? [];
                                     const catOpen = openCategoryId === cat.id;
@@ -1165,7 +1166,7 @@ export function HeaderClient() {
                                                 </Link>
                                               </li>
                                               {subs.map((sub) => {
-                                                const subHref = `/${sub.slug}`;
+                                                const subHref = canonicalCategoryPath(sub.slug);
                                                 const subActive = pathname === subHref;
                                                 return (
                                                   <li key={sub.id}>
