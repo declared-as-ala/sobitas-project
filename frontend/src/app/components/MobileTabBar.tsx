@@ -51,7 +51,11 @@ import { cn } from '@/app/components/ui/utils';
  * "CRÉER MON COMPTE" button on the register page — measured at 390px, the banner sat exactly over
  * the submit. Two copies of a route list drift; one does not.
  */
-export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-account', '/verify-email', '/verify-phone', '/forgot-password', '/reset-password', '/pack-builder', '/account'];
+// `/partenaires/inscription` is the affiliate signup — a focused five-step form whose phone/email
+// steps are the same OTP interaction as the standalone `/verify-phone` already listed here. It was
+// missing, so the tab bar and the install banner sat on top of the form (and the KYC photo guide)
+// on mobile. The landing `/partenaires` is deliberately NOT chrome-free: it is a marketing page.
+export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-account', '/verify-email', '/verify-phone', '/forgot-password', '/reset-password', '/pack-builder', '/account', '/partenaires/inscription'];
 
 /** True when `pathname` is one of those routes, or a child of one. */
 export function isChromeFreeRoute(pathname: string): boolean {
