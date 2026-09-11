@@ -2,6 +2,7 @@ import {
   ArrowRight,
   BadgeCheck,
   Check,
+  ChevronDown,
   LineChart,
   Link2,
   LogIn,
@@ -17,7 +18,9 @@ import { SectionHeader } from '@/app/components/SectionHeader';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { AFFILIATE_PANEL_URL } from '@/services/affiliateProgram';
-import { AFFILIATE_PROFILES } from './affiliateCopy';
+import { getBaseUrl } from '@/util/canonical';
+import { buildBreadcrumbListSchema, buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
+import { AFFILIATE_FAQ, AFFILIATE_PROFILES } from './affiliateCopy';
 import { AffiliateMarginVisual } from './AffiliateMarginVisual';
 
 /**
@@ -173,8 +176,20 @@ const BENEFITS = [
 ];
 
 export function AffiliateLanding() {
+  const breadcrumbSchema = buildBreadcrumbListSchema([
+    { name: 'Accueil', url: '/' },
+    { name: 'Programme Affilié', url: '/partenaires' },
+  ], getBaseUrl());
+  validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
+  const faqSchema = buildFAQPageSchemaFromQA(AFFILIATE_FAQ);
+  if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
+
   return (
     <div className="min-h-screen bg-canvas">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
+      {faqSchema && (
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
+      )}
       <main>
         {/* ── The decision ─────────────────────────────────────────────────────────────── */}
         <Section as="div" spacing="tight" width="wide" first>
@@ -310,6 +325,26 @@ export function AffiliateLanding() {
 
         {/* ── The same decision, at the end ────────────────────────────────────────────── */}
         <Section as="section" spacing="feature" width="wide" last aria-labelledby="aff-cta">
+          {/* Keep the FAQ inside this canvas band so both door plates retain their contrast. */}
+          <div className="mb-10 sm:mb-12" role="group" aria-labelledby="aff-faq">
+            <SectionHeader
+              kicker="Questions fréquentes"
+              title="Vous vous demandez peut-être…"
+              scale="2"
+              id="aff-faq"
+            />
+            <div className="space-y-3">
+              {AFFILIATE_FAQ.map(({ question, answer }) => (
+                <details key={question} className="group rounded-xl border border-hairline bg-elevated">
+                  <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 rounded-xl px-5 py-3 font-semibold text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus [&::-webkit-details-marker]:hidden">
+                    {question}
+                    <ChevronDown className="h-5 w-5 shrink-0 transition-transform group-open:rotate-180 motion-reduce:transition-none" aria-hidden />
+                  </summary>
+                  <p className="px-5 pb-5 text-sm leading-relaxed text-ink-2">{answer}</p>
+                </details>
+              ))}
+            </div>
+          </div>
           <SectionHeader
             kicker="Prêt ?"
             title="Ouvrez votre espace affilié"

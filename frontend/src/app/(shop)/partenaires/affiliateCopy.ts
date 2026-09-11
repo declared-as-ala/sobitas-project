@@ -99,6 +99,37 @@ export const AFFILIATE_PROFILES: readonly AffiliateProfile[] = [
   },
 ];
 
+export const AFFILIATE_FAQ: { question: string; answer: string }[] = [
+  {
+    question: 'Qui peut devenir affilié Protein.tn ?',
+    answer: "Tout le monde en Tunisie : un coach, une salle de sport, un créateur de contenu ou un simple passionné. Vous choisissez le profil qui vous ressemble à l'inscription ; cela adapte seulement les questions posées, pas vos droits ni votre commission.",
+  },
+  {
+    question: 'Comment et quand suis-je payé ?',
+    answer: "Chaque vendredi. Vous êtes réglé en espèces à la boutique ou par virement bancaire, au choix. La commission est acquise dès qu'une commande passée avec votre code est livrée.",
+  },
+  {
+    question: 'Combien puis-je gagner ?',
+    answer: "Vous ne touchez pas un pourcentage fixe : pour chaque produit, la boutique fixe un « prix affilié » et vous revendez au prix que vous voulez au-dessus. Vous gardez toute la différence. Exemple : sur une vente à 330.000 DT d'un produit dont le prix affilié est 285.000 DT, votre gain est de 45.000 DT.",
+  },
+  {
+    question: "Dois-je gérer un stock ou avancer de l'argent ?",
+    answer: "Non. Vous ne stockez rien et vous n'avancez rien. Nous gérons la commande, le paiement à la livraison, l'expédition et le service client. Vous partagez votre code ou votre lien, c'est tout.",
+  },
+  {
+    question: 'Comment mes clients utilisent-ils mon code ?',
+    answer: "Ils saisissent votre code de réduction au moment du paiement, ou passent par votre lien de suivi — les deux vous sont attribués. Ils bénéficient d'une remise réelle à votre nom et la commande vous est créditée.",
+  },
+  {
+    question: 'Combien de temps pour être accepté ?',
+    answer: "En général sous 48 heures. Après votre inscription — profil, coordonnées, pièce d'identité, puis deux codes de confirmation — une personne de notre équipe vérifie votre dossier et vous appelle pour convenir de votre marge.",
+  },
+  {
+    question: "Pourquoi vérifiez-vous ma pièce d'identité ?",
+    answer: "Parce que nous versons de l'argent sur un compte à votre nom. Elle sert uniquement à confirmer votre identité ; elle n'est jamais publiée et n'est visible que par l'équipe qui valide votre dossier.",
+  },
+];
+
 export function profileOf(kind: AffiliateKind): AffiliateProfile {
   return AFFILIATE_PROFILES.find((p) => p.kind === kind) ?? AFFILIATE_PROFILES[0];
 }
