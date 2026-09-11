@@ -4,9 +4,13 @@ const SELLING_PRICE = 330;
 const AFFILIATE_PRICE = 285;
 const GAIN = SELLING_PRICE - AFFILIATE_PRICE;
 
-export function AffiliateMarginVisual() {
+export function AffiliateMarginVisual({ embedded = false }: { embedded?: boolean }) {
   return (
-    <figure className="rounded-2xl border border-hairline bg-elevated p-5 sm:p-6">
+    <figure
+      className={embedded
+        ? 'border-t border-hairline pt-5 mt-6'
+        : 'rounded-2xl border border-hairline bg-elevated p-5 sm:p-6'}
+    >
       <p className="pt-kicker text-brand">Comment vous gagnez</p>
       <p className="mt-2 font-sans text-sm text-ink-2">Sur une vente à 330.000 DT</p>
 

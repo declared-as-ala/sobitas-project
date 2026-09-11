@@ -25,6 +25,7 @@ import {
   type IdentityValues,
   type SignupStepId,
 } from '../affiliateCopy';
+import { AffiliateMarginVisual } from '../AffiliateMarginVisual';
 import { StepIdentity } from './StepIdentity';
 import { StepKyc } from './StepKyc';
 import { StepOtp } from './StepOtp';
@@ -549,6 +550,10 @@ function StepType({
           );
         })}
       </div>
+      <p className="mt-6 text-sm text-ink-2">
+        Quel que soit votre profil, le principe est le même :
+      </p>
+      <AffiliateMarginVisual embedded />
     </div>
   );
 }
