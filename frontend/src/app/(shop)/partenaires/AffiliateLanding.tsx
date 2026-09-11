@@ -18,6 +18,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { AFFILIATE_PANEL_URL } from '@/services/affiliateProgram';
 import { AFFILIATE_PROFILES } from './affiliateCopy';
+import { AffiliateMarginVisual } from './AffiliateMarginVisual';
 
 /**
  * /partenaires — the affiliate programme's front door.
@@ -177,24 +178,31 @@ export function AffiliateLanding() {
       <main>
         {/* ── The decision ─────────────────────────────────────────────────────────────── */}
         <Section as="div" spacing="tight" width="wide" first>
-          <PageHeader
-            kicker="Espace affilié"
-            title="Devenez affilié Protein.tn"
-            subtitle="Coach, salle de sport, créateur ou simple passionné : partagez votre code, vos proches économisent, et chaque commande livrée vous rapporte."
-          />
+          <div className="lg:grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-10 lg:items-start">
+            <div className="min-w-0">
+              <PageHeader
+                kicker="Espace affilié"
+                title="Devenez affilié Protein.tn"
+                subtitle="Coach, salle de sport, créateur ou simple passionné : partagez votre code, vos proches économisent, et chaque commande livrée vous rapporte."
+              />
 
-          <div className="mt-6">
-            <AffiliateDoors />
+              <div className="mt-6">
+                <AffiliateDoors />
+              </div>
+
+              <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-2">
+                {REASSURANCE.map((item) => (
+                  <li key={item} className="flex items-center gap-2">
+                    <Check className="h-4 w-4 shrink-0 text-ok" aria-hidden />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="mt-6 min-w-0 lg:mt-0">
+              <AffiliateMarginVisual />
+            </div>
           </div>
-
-          <ul className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-ink-2">
-            {REASSURANCE.map((item) => (
-              <li key={item} className="flex items-center gap-2">
-                <Check className="h-4 w-4 shrink-0 text-ok" aria-hidden />
-                {item}
-              </li>
-            ))}
-          </ul>
         </Section>
 
         {/* ── How it works ─────────────────────────────────────────────────────────────── */}
