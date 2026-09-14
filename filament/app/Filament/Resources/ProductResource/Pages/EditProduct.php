@@ -58,6 +58,22 @@ class EditProduct extends EditRecord
         $qte = (int) ($data['qte'] ?? 0);
         $data['rupture'] = $qte <= 0 ? 1 : 0;
 
+        // ── WHY THE ROBOTS TOGGLES ARE COERCED HERE ──────────────────────────────────────────
+        // `seo_robots_index` / `seo_robots_follow` are NULLABLE and NULL on every product that
+        // predates the 2026-04-21 SEO contract migration. The API reads NULL as "index, follow"
+        // (Product::getEffectiveSeoRobotsIndexAttribute) — but a Filament Toggle hydrates NULL as
+        // OFF and dehydrates OFF as `false`, so saving ANY edit (a price, a stock figure) on such a
+        // product silently wrote `noindex, nofollow`. Measured on the 14/09/2026 dump: 95 legacy
+        // products at seo_robots_index = 0, all with updated_at in the last four weeks, all
+        // sitting at exactly (0, 1) — the toggle-bug signature after seo:products-robots-audit
+        // repaired follow — and 0 of the 205 never-edited legacy products at 0. The form must show
+        // the value the site actually serves, so an untouched toggle round-trips to the same page.
+        foreach (['seo_robots_index', 'seo_robots_follow'] as $flag) {
+            if (array_key_exists($flag, $data) && $data[$flag] === null) {
+                $data[$flag] = true;
+            }
+        }
+
         return $data;
     }
 
