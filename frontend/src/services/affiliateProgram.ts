@@ -271,9 +271,56 @@ function client(): AxiosInstance {
   return cachedClient;
 }
 
+/**
+ * The `resume_token` IS a Sanctum bearer token — `POST /affilie-applications` mints a scoped token
+ * for the applicant's (shadow) account, and every `/me` route is `auth:sanctum`. So it travels as a
+ * standard Authorization header, not a custom one. (An earlier draft of this client invented an
+ * `X-Affilie-Resume-Token` header and `/{id}` routes; the backend that shipped uses neither.)
+ */
 const auth = (session: AffiliateApplicationSession) => ({
-  headers: { 'X-Affilie-Resume-Token': session.resume_token },
+  headers: { Authorization: `Bearer ${session.resume_token}` },
 });
+
+/** Display-only masking. The backend's applicant state returns the real contact (it is the
+ *  applicant's own record), so the resume screen masks it here; the OTP screens get their masked
+ *  destination from `sendOtp` instead. */
+function maskPhone(phone: string): string {
+  const digits = String(phone).replace(/\D/g, '');
+  return digits.length >= 2 ? `•• •• •• ${digits.slice(-2)}` : String(phone);
+}
+function maskEmail(email: string): string {
+  const [user, domain] = String(email).split('@');
+  if (!domain || !user) return String(email);
+  return `${user.slice(0, 1)}•••@${domain}`;
+}
+
+/** The backend's applicant view (`AffilieApplicationController::publicState`) — the shape every
+ *  `/me` route returns. Mapped into the UI's `AffiliateApplication` by `toApplication`. */
+interface BackendApplicantState {
+  reference: string;
+  status: string;
+  type: string;
+  name: string;
+  email: string;
+  phone: string;
+  phone_verified: boolean;
+  email_verified: boolean;
+  kyc?: { status?: string; id_front?: boolean; id_back?: boolean };
+}
+
+function toApplication(id: string, s: BackendApplicantState): AffiliateApplication {
+  return {
+    id,
+    reference: s.reference,
+    status: (s.status as AffiliateApplicationStatus) ?? 'pending',
+    type: (s.type as AffiliateKind) ?? 'individual',
+    masked_phone: maskPhone(s.phone ?? ''),
+    masked_email: maskEmail(s.email ?? ''),
+    documents: { front: Boolean(s.kyc?.id_front), back: Boolean(s.kyc?.id_back) },
+    phone_verified: Boolean(s.phone_verified),
+    email_verified: Boolean(s.email_verified),
+  };
+}
 
 /**
  * The endpoints this UI expects. Every path is under `/affilie-*` to match the rename map in
@@ -294,49 +341,68 @@ export const liveAffiliateProgramApi: AffiliateProgramApi = {
 
   async createApplication(details) {
     try {
-      const { data } = await client().post<AffiliateApplicationCreated>('/affilie-applications', details);
-      return data;
+      const { data } = await client().post<{
+        reference: string;
+        status?: string;
+        resume_token: string | null;
+        requires_login?: boolean;
+        linked_account?: boolean;
+      }>('/affilie-applications', details);
+
+      // The address already has a storefront account. The backend refuses to mint a session for a
+      // merely-typed e-mail (that would be account takeover through a public form), so the applicant
+      // has to sign in — after which the server attaches this application to them automatically.
+      if (data.requires_login || !data.resume_token) {
+        throw new AffiliateLoginRequiredError();
+      }
+
+      return {
+        id: data.reference,
+        reference: data.reference,
+        status: (data.status as AffiliateApplicationStatus) ?? 'pending',
+        type: details.type,
+        masked_phone: maskPhone(details.phone),
+        masked_email: maskEmail(details.email),
+        documents: { front: false, back: false },
+        phone_verified: false,
+        email_verified: false,
+        resume_token: data.resume_token,
+      };
     } catch (err) {
+      // Re-throw our own signalling error unchanged; only server/transport errors get translated.
+      if (err instanceof AffiliateLoginRequiredError) throw err;
       throw readableAffiliateError(err);
     }
   },
 
-  async updateApplication(session, details) {
-    try {
-      const { data } = await client().patch<AffiliateApplication>(
-        `/affilie-applications/${encodeURIComponent(session.id)}`,
-        details,
-        auth(session),
-      );
-      return data;
-    } catch (err) {
-      throw readableAffiliateError(err);
-    }
+  // The backend has no update endpoint — details are persisted at creation. Re-read server state so
+  // a resumed session still reflects the truth. (Editing details after creation is not yet
+  // supported server-side; the fields shown are the ones the applicant submitted.)
+  async updateApplication(session) {
+    return liveAffiliateProgramApi.getApplication(session);
   },
 
   async getApplication(session) {
     try {
-      const { data } = await client().get<AffiliateApplication>(
-        `/affilie-applications/${encodeURIComponent(session.id)}`,
+      const { data } = await client().get<BackendApplicantState>(
+        '/affilie-applications/me',
         auth(session),
       );
-      return data;
+      return toApplication(session.id, data);
     } catch (err) {
       throw readableAffiliateError(err);
     }
   },
 
   async uploadDocument(session, side, file) {
+    // The backend keys each side as its own multipart field (`id_front` / `id_back`), one side per
+    // call, rather than a `side` + `document` pair.
     const body = new FormData();
-    body.append('side', side);
-    body.append('document', file);
+    body.append(side === 'front' ? 'id_front' : 'id_back', file);
     try {
-      const { data } = await client().post<UploadedDocument>(
-        `/affilie-applications/${encodeURIComponent(session.id)}/documents`,
-        body,
-        auth(session),
-      );
-      return data;
+      await client().post<BackendApplicantState>('/affilie-applications/me/kyc', body, auth(session));
+      // The endpoint returns the whole applicant state; the UI only needs the accepted size back.
+      return { side, size: file.size };
     } catch (err) {
       throw readableAffiliateError(err);
     }
@@ -344,12 +410,39 @@ export const liveAffiliateProgramApi: AffiliateProgramApi = {
 
   async sendOtp(session, channel) {
     try {
-      const { data } = await client().post<OtpChallenge>(
-        `/affilie-applications/${encodeURIComponent(session.id)}/otp/${channel}`,
+      if (channel === 'phone') {
+        // The send endpoint needs the number in the body; read it from the applicant's own record
+        // (the one they created in step 2) rather than trusting anything the client kept.
+        const state = await client().get<BackendApplicantState>(
+          '/affilie-applications/me',
+          auth(session),
+        );
+        const phone = state.data.phone ?? '';
+        const { data } = await client().post<Record<string, unknown>>(
+          '/affilie-applications/me/phone-otp',
+          { phone },
+          auth(session),
+        );
+        return {
+          masked_destination:
+            (data.masked_destination as string) ?? (data.masked_phone as string) ?? maskPhone(phone),
+          expires_in: Number(data.expires_in ?? 120),
+          resend_after: Number(data.resend_after ?? 30),
+          attempts_remaining: Number(data.attempts_remaining ?? 3),
+        };
+      }
+      const { data } = await client().post<Record<string, unknown>>(
+        '/affilie-applications/me/email-otp',
         {},
         auth(session),
       );
-      return data;
+      return {
+        masked_destination:
+          (data.masked_destination as string) ?? maskEmail(String((data.email as string) ?? '')),
+        expires_in: Number(data.expires_in ?? 600),
+        resend_after: Number(data.resend_after ?? 60),
+        attempts_remaining: Number(data.attempts_remaining ?? 5),
+      };
     } catch (err) {
       throw readableAffiliateError(err);
     }
@@ -357,52 +450,53 @@ export const liveAffiliateProgramApi: AffiliateProgramApi = {
 
   async verifyOtp(session, channel, code) {
     try {
-      const { data } = await client().post<AffiliateApplication>(
-        `/affilie-applications/${encodeURIComponent(session.id)}/otp/${channel}/verify`,
+      const { data } = await client().post<BackendApplicantState>(
+        `/affilie-applications/me/${channel}-otp/verify`,
         { code },
         auth(session),
       );
-      return data;
+      return toApplication(session.id, data);
     } catch (err) {
       throw readableAffiliateError(err);
     }
   },
 
+  // No `/submit` on the backend: `store` creates the record as `pending`, and KYC + OTP enrich it in
+  // place. The final screen just needs the confirmed server state.
   async submitApplication(session) {
-    try {
-      const { data } = await client().post<AffiliateApplication>(
-        `/affilie-applications/${encodeURIComponent(session.id)}/submit`,
-        {},
-        auth(session),
-      );
-      return data;
-    } catch (err) {
-      throw readableAffiliateError(err);
-    }
+    return liveAffiliateProgramApi.getApplication(session);
   },
 };
+
+/**
+ * Signals that the application e-mail already belongs to a storefront account. Thrown by
+ * `createApplication` so the screen can show the "please sign in" message with a French sentence
+ * rather than a raw 4xx — it carries no server string.
+ */
+class AffiliateLoginRequiredError extends Error {
+  constructor() {
+    super(
+      'Un compte existe déjà avec cette adresse e-mail. Connectez-vous, puis revenez : votre candidature sera rattachée à votre compte automatiquement.',
+    );
+    this.name = 'AffiliateLoginRequiredError';
+  }
+}
 
 /* ────────────────────────────────────────────────────────────────────────────────────────────
  * THE SWAP
  * ──────────────────────────────────────────────────────────────────────────────────────────*/
 
 /**
- * ══ ONE LINE TO GO LIVE ══════════════════════════════════════════════════════════════════
+ * ══ LIVE BY DEFAULT — the backend endpoints now exist ══════════════════════════════════════
  *
- * The backend endpoints above DO NOT EXIST YET — `POST /affilie-applications`, the private-disk
- * KYC upload and the OTP wiring are being built separately. Until they land, the screen runs
- * against `stubAffiliateProgramApi`, which keeps the whole flow verifiable end to end in a
- * browser today.
+ * `AffilieApplicationController` (filament/app/Http/Controllers/Api/AffilieApplicationController.php)
+ * ships the public `POST /affilie-applications` and the authenticated `/me/kyc`, `/me/phone-otp`,
+ * `/me/email-otp` routes this client targets, so the storefront now talks to the real backend and
+ * "mode démonstration" no longer appears in production.
  *
- * To go live: set NEXT_PUBLIC_AFFILIATE_API=live, or delete the ternary and export
- * `liveAffiliateProgramApi` directly. Nothing in `src/app/(shop)/partenaires/**` changes — the
- * UI only ever imports `affiliateProgramApi` and the `AffiliateProgramApi` interface guarantees
- * the two implementations have the same shape.
- *
- * The env flag exists so the live client can be exercised against a staging API without editing
- * a tracked file, and so this stub can never silently reach production behind a forgotten
- * boolean: shipping with the flag unset is a deliberate, visible state ("mode démonstration" is
- * printed on the screen itself, see `isStub`).
+ * The stub stays for local UI work when the backend is not to hand, reachable with
+ * NEXT_PUBLIC_AFFILIATE_API=stub. Nothing in `src/app/(shop)/partenaires/**` changes: the UI only
+ * imports `affiliateProgramApi`, and the `AffiliateProgramApi` interface keeps both in shape.
  */
 export const affiliateProgramApi: AffiliateProgramApi =
-  process.env.NEXT_PUBLIC_AFFILIATE_API === 'live' ? liveAffiliateProgramApi : stubAffiliateProgramApi;
+  process.env.NEXT_PUBLIC_AFFILIATE_API === 'stub' ? stubAffiliateProgramApi : liveAffiliateProgramApi;
