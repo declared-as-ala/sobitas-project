@@ -90,11 +90,13 @@
         text-align: right;
         font-variant-numeric: tabular-nums;
     }
-    /* Primary actions: orange brand */
-    .fi-btn-primary,
-    .fi-btn-primary:hover {
+    /* Primary actions: SOBITAS brand orange (#D53B04), with a darker hover for real feedback */
+    .fi-btn-primary {
         --tw-bg-opacity: 1;
-        background-color: rgb(249 115 22 / var(--tw-bg-opacity));
+        background-color: rgb(213 59 4 / var(--tw-bg-opacity));
+    }
+    .fi-btn-primary:hover {
+        background-color: rgb(178 51 3 / var(--tw-bg-opacity));
     }
     /* Status badges */
     .badge-statut-brouillon { background-color: #6b7280; color: #fff; border-radius: 9999px; padding: 0.25rem 0.625rem; font-size: 0.75rem; font-weight: 500; }
@@ -133,12 +135,12 @@
         border-radius: 10px;
     }
     .fi-page-edit-facture-tva .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child {
-        background-color: rgb(249 115 22);
+        background-color: rgb(213 59 4);
         color: #fff;
-        border-color: rgb(249 115 22);
+        border-color: rgb(213 59 4);
     }
     .fi-page-edit-facture-tva .fi-page-header-main-ctn .fi-header-actions .fi-btn:first-child:hover {
-        background-color: rgb(234 88 12);
+        background-color: rgb(178 51 3);
         color: #fff;
     }
 
@@ -157,13 +159,13 @@
         font-size: 1.125rem;
         font-weight: 700;
         background-color: rgb(255 237 213);
-        border: 2px solid rgb(249 115 22);
+        border: 2px solid rgb(213 59 4);
         color: rgb(194 65 12);
     }
     .dark .doc-net-a-payer-input.fi-input,
     .dark .doc-net-a-payer-input.input {
         background-color: rgb(67 20 7);
-        border-color: rgb(249 115 22);
+        border-color: rgb(213 59 4);
         color: rgb(254 215 170);
     }
     /* Tighter spacing on document edit sections */
@@ -245,15 +247,15 @@
     }
     .doc-timeline-node-inner--link:hover {
         background: rgb(243 244 246);
-        border-color: rgb(249 115 22);
+        border-color: rgb(213 59 4);
     }
     .dark .doc-timeline-node-inner--link:hover { background: rgb(75 85 99); }
     .doc-timeline-node--current .doc-timeline-node-inner {
         background: rgb(255 237 213);
-        border-color: rgb(249 115 22);
+        border-color: rgb(213 59 4);
         font-weight: 600;
     }
-    .dark .doc-timeline-node--current .doc-timeline-node-inner { background: rgb(67 20 7); border-color: rgb(249 115 22); }
+    .dark .doc-timeline-node--current .doc-timeline-node-inner { background: rgb(67 20 7); border-color: rgb(213 59 4); }
     .doc-timeline-node-label { font-weight: 500; }
     .doc-timeline-node-number { color: rgb(30 64 175); font-variant-numeric: tabular-nums; }
     .doc-timeline-node-empty { color: rgb(107 114 128); font-style: italic; }
@@ -262,8 +264,8 @@
     .doc-timeline-arrow { color: rgb(156 163 175); padding: 0 4px; font-size: 0.875rem; }
     .doc-badge { display: inline-block; }
     .doc-btn { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 500; text-decoration: none; }
-    .doc-btn--primary { background: rgb(249 115 22); color: #fff; border: none; }
-    .doc-btn--primary:hover { background: rgb(234 88 12); color: #fff; }
+    .doc-btn--primary { background: rgb(213 59 4); color: #fff; border: none; }
+    .doc-btn--primary:hover { background: rgb(178 51 3); color: #fff; }
     .doc-btn--sm { padding: 2px 8px; font-size: 0.6875rem; }
 
     /* ── Conversion wizard modal ────────────────────────────────────────── */

@@ -1,21 +1,12 @@
-@php
-    $colors = [
-        'blue'    => ['bg' => '#eff6ff', 'icon' => '#3b82f6', 'border' => '#bfdbfe', 'hover' => '#dbeafe', 'shadow' => '59,130,246'],
-        'green'   => ['bg' => '#f0fdf4', 'icon' => '#16a34a', 'border' => '#bbf7d0', 'hover' => '#dcfce7', 'shadow' => '34,197,94'],
-        'emerald' => ['bg' => '#ecfdf5', 'icon' => '#059669', 'border' => '#a7f3d0', 'hover' => '#d1fae5', 'shadow' => '5,150,105'],
-        'red'     => ['bg' => '#fef2f2', 'icon' => '#dc2626', 'border' => '#fecaca', 'hover' => '#fee2e2', 'shadow' => '220,38,38'],
-        'purple'  => ['bg' => '#faf5ff', 'icon' => '#9333ea', 'border' => '#e9d5ff', 'hover' => '#f3e8ff', 'shadow' => '147,51,234'],
-        'indigo'  => ['bg' => '#eef2ff', 'icon' => '#4f46e5', 'border' => '#c7d2fe', 'hover' => '#e0e7ff', 'shadow' => '79,70,229'],
-        'teal'    => ['bg' => '#f0fdfa', 'icon' => '#0d9488', 'border' => '#99f6e4', 'hover' => '#ccfbf1', 'shadow' => '13,148,136'],
-        'amber'   => ['bg' => '#fffbeb', 'icon' => '#d97706', 'border' => '#fde68a', 'hover' => '#fef3c7', 'shadow' => '217,119,6'],
-    ];
-@endphp
-
 <x-filament-widgets::widget>
+{{--
+    Uniform, branded quick-actions toolbar. Every action is an "Ajouter X" create
+    shortcut — semantically identical — so they share ONE treatment (a soft brand-orange
+    icon chip that fills solid on hover), not the old per-action rainbow that read as
+    unprofessional. Colours come from the SOBITAS brand ramp (#D53B04), not 8 hues.
+--}}
 <style>
-    .qa-wrap {
-        padding: 0;
-    }
+    .qa-wrap { padding: 0; }
 
     .qa-grid {
         display: grid;
@@ -30,41 +21,42 @@
         display: flex;
         align-items: center;
         gap: 0.625rem;
-        padding: 0.625rem 0.75rem;
-        border-radius: 10px;
+        padding: 0.6875rem 0.8125rem;
+        border-radius: 12px;
         text-decoration: none;
-        border: 1px solid var(--qa-border);
-        background: var(--qa-bg);
-        transition: all 0.18s ease;
-        overflow: hidden;
+        border: 1px solid #e9ebef;
+        background: #fff;
+        transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
     }
     .qa-tile:hover {
-        background: var(--qa-hover);
-        border-color: var(--qa-icon);
-        box-shadow: 0 2px 8px rgba(var(--qa-shadow), 0.12);
+        border-color: #D53B04;
+        box-shadow: 0 4px 14px rgba(213,59,4,0.12);
         transform: translateY(-1px);
         text-decoration: none;
     }
-    .qa-tile:active {
-        transform: translateY(0);
-        box-shadow: none;
+    .qa-tile:active { transform: translateY(0); box-shadow: none; }
+    .dark .qa-tile {
+        background: rgba(255,255,255,0.03);
+        border-color: rgba(255,255,255,0.08);
     }
+    .dark .qa-tile:hover { border-color: #D53B04; }
 
     .qa-tile-icon {
-        width: 34px;
-        height: 34px;
-        border-radius: 8px;
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        background: var(--qa-icon);
+        background: rgba(213,59,4,0.10);
+        color: #D53B04;
+        transition: background .18s ease, color .18s ease;
     }
-    .qa-tile-icon svg {
-        width: 17px;
-        height: 17px;
-        color: #fff;
-    }
+    .qa-tile-icon svg { width: 18px; height: 18px; }
+    .qa-tile:hover .qa-tile-icon { background: #D53B04; color: #fff; }
+    .dark .qa-tile-icon { background: rgba(213,59,4,0.18); color: #ff8a4c; }
+    .dark .qa-tile:hover .qa-tile-icon { background: #D53B04; color: #fff; }
 
     .qa-tile-label {
         font-size: 0.8125rem;
@@ -74,34 +66,12 @@
         letter-spacing: -0.01em;
     }
     .dark .qa-tile-label { color: #e2e8f0; }
-
-    .dark .qa-tile {
-        background: rgba(255,255,255,0.03);
-        border-color: rgba(255,255,255,0.08);
-    }
-    .dark .qa-tile:hover {
-        background: rgba(255,255,255,0.06);
-        border-color: var(--qa-icon);
-    }
 </style>
 
     <div class="qa-wrap">
         <div class="qa-grid">
             @foreach($this->getActions() as $action)
-                @php
-                    $c = $colors[$action['color']] ?? $colors['blue'];
-                @endphp
-                <a
-                    href="{{ $action['url'] }}"
-                    class="qa-tile"
-                    style="
-                        --qa-bg: {{ $c['bg'] }};
-                        --qa-icon: {{ $c['icon'] }};
-                        --qa-border: {{ $c['border'] }};
-                        --qa-hover: {{ $c['hover'] }};
-                        --qa-shadow: {{ $c['shadow'] }};
-                    "
-                >
+                <a href="{{ $action['url'] }}" class="qa-tile">
                     <div class="qa-tile-icon">
                         <x-filament::icon :icon="$action['icon']" />
                     </div>

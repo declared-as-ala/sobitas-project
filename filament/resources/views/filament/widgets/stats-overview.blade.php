@@ -38,7 +38,7 @@
     }
     .kpi-card.color-success::before { background: linear-gradient(90deg,#10b981,#34d399); }
     .kpi-card.color-danger::before  { background: linear-gradient(90deg,#ef4444,#f87171); }
-    .kpi-card.color-primary::before { background: linear-gradient(90deg,#6366f1,#818cf8); }
+    .kpi-card.color-primary::before { background: linear-gradient(90deg,#D53B04,#f2691f); }
     .kpi-card.color-warning::before { background: linear-gradient(90deg,#f59e0b,#fbbf24); }
 
     /* Icon bubble */
@@ -53,7 +53,7 @@
     }
     .kpi-card.color-success .kpi-icon { background: rgba(16,185,129,.12); color: #059669; }
     .kpi-card.color-danger  .kpi-icon { background: rgba(239,68,68,.12);   color: #dc2626; }
-    .kpi-card.color-primary .kpi-icon { background: rgba(99,102,241,.12);  color: #4f46e5; }
+    .kpi-card.color-primary .kpi-icon { background: rgba(213,59,4,.12);   color: #D53B04; }
     .kpi-card.color-warning .kpi-icon { background: rgba(245,158,11,.12);  color: #d97706; }
 
     .kpi-header {
@@ -109,7 +109,7 @@
     }
     .kpi-card.color-success .kpi-desc { color: #059669; }
     .kpi-card.color-danger  .kpi-desc { color: #dc2626; }
-    .kpi-card.color-primary .kpi-desc { color: #4f46e5; }
+    .kpi-card.color-primary .kpi-desc { color: #D53B04; }
     .kpi-card.color-warning .kpi-desc { color: #d97706; }
 
     /* Sparkline */
@@ -124,22 +124,6 @@
         height: 100%;
         display: block;
     }
-
-    /* Decorative background circle */
-    .kpi-bg-circle {
-        position: absolute;
-        bottom: -20px;
-        right: -20px;
-        width: 90px;
-        height: 90px;
-        border-radius: 50%;
-        opacity: .045;
-        pointer-events: none;
-    }
-    .kpi-card.color-success .kpi-bg-circle { background: #10b981; }
-    .kpi-card.color-danger  .kpi-bg-circle { background: #ef4444; }
-    .kpi-card.color-primary .kpi-bg-circle { background: #6366f1; }
-    .kpi-card.color-warning .kpi-bg-circle { background: #f59e0b; }
 </style>
 
 @php
@@ -179,13 +163,13 @@
         $colorFill = match($colorClass) {
             'color-success' => 'rgba(16,185,129,',
             'color-danger'  => 'rgba(239,68,68,',
-            'color-primary' => 'rgba(99,102,241,',
+            'color-primary' => 'rgba(213,59,4,',
             default         => 'rgba(245,158,11,',
         };
         $stroke = match($colorClass) {
             'color-success' => '#10b981',
             'color-danger'  => '#ef4444',
-            'color-primary' => '#6366f1',
+            'color-primary' => '#D53B04',
             default         => '#f59e0b',
         };
 
@@ -212,8 +196,6 @@
         @endphp
 
         <div class="kpi-card {{ $colorClass }}{{ $isWide ? ' wide-value' : '' }}">
-            <div class="kpi-bg-circle"></div>
-
             <div class="kpi-header">
                 <span class="kpi-label">{{ $stat->getLabel() }}</span>
 

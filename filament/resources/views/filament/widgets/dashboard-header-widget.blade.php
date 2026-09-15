@@ -20,12 +20,12 @@
         width: 42px;
         height: 42px;
         border-radius: 12px;
-        background: linear-gradient(135deg, #f97316 0%, #ef4444 100%);
+        background: linear-gradient(135deg, #D53B04 0%, #f2691f 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         flex-shrink: 0;
-        box-shadow: 0 4px 12px rgba(249,115,22,0.35);
+        box-shadow: 0 4px 12px rgba(213,59,4,0.30);
     }
     .dh-brand-badge svg { width: 20px; height: 20px; color: #fff; }
     .dh-brand-name {
@@ -120,7 +120,7 @@
     .dh-refresh:hover:not(:disabled) {
         border-color: #D53B04;
         color: #D53B04;
-        background: #eff6ff;
+        background: #fff7ed;
     }
     .dh-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
     .dark .dh-refresh {
@@ -130,8 +130,8 @@
     }
     .dark .dh-refresh:hover:not(:disabled) {
         border-color: #D53B04;
-        color: #60a5fa;
-        background: rgba(59,130,246,0.1);
+        color: #ff8a4c;
+        background: rgba(213,59,4,0.12);
     }
     .dh-refresh svg { width: 14px; height: 14px; }
 
@@ -141,18 +141,19 @@
         align-items: center;
         gap: 0.375rem;
         padding: 0.3rem 0.7rem;
-        background: rgba(249,115,22,0.08);
-        border: 1px solid rgba(249,115,22,0.2);
+        background: rgba(213,59,4,0.08);
+        border: 1px solid rgba(213,59,4,0.2);
         border-radius: 20px;
         font-size: 0.75rem;
         font-weight: 600;
-        color: #f97316;
+        color: #D53B04;
     }
+    .dark .dh-period-badge { color: #ff8a4c; }
     .dh-period-dot {
         width: 6px;
         height: 6px;
         border-radius: 50%;
-        background: #f97316;
+        background: #D53B04;
     }
 
     @media (max-width: 768px) {
