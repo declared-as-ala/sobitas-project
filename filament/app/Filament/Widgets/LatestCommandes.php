@@ -3,6 +3,7 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Commande;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
@@ -26,26 +27,37 @@ class LatestCommandes extends BaseWidget
                     ->latest()
             )
             ->columns([
+                // Order + when, stacked — the "N°" and "Date" columns merged into one primary cell.
                 Tables\Columns\TextColumn::make('numero')
-                    ->label('N°'),
+                    ->label('Commande')
+                    ->weight(FontWeight::Bold)
+                    ->description(fn ($record): ?string => $record->created_at
+                        ? $record->created_at->locale('fr')->diffForHumans()
+                        : null)
+                    ->searchable(),
+                // Client + phone, stacked — the "Client" and "Tél." columns merged.
                 Tables\Columns\TextColumn::make('nom')
                     ->label('Client')
-                    ->formatStateUsing(fn ($record) => trim(($record->nom ?? '') . ' ' . ($record->prenom ?? ''))),
-                Tables\Columns\TextColumn::make('phone')
-                    ->label('Tél.'),
+                    ->formatStateUsing(fn ($record): string => trim(($record->nom ?? '') . ' ' . ($record->prenom ?? '')) ?: '—')
+                    ->description(fn ($record): ?string => $record->phone)
+                    ->icon('heroicon-m-user-circle')
+                    ->iconColor('gray'),
+                Tables\Columns\TextColumn::make('region')
+                    ->label('Région')
+                    ->icon('heroicon-m-map-pin')
+                    ->iconColor('gray')
+                    ->color('gray')
+                    ->placeholder('—'),
                 Tables\Columns\TextColumn::make('prix_ttc')
                     ->label('Total')
-                    ->money('TND'),
+                    ->money('TND')
+                    ->weight(FontWeight::Bold)
+                    ->alignEnd(),
                 Tables\Columns\TextColumn::make('etat')
                     ->label('État')
                     ->badge()
                     ->color(fn (string $state): string => Commande::getStatusColor($state))
                     ->formatStateUsing(fn (string $state): string => Commande::getStatusLabel($state)),
-                Tables\Columns\TextColumn::make('region')
-                    ->label('Région'),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->label('Date')
-                    ->dateTime('d/m/Y H:i'),
             ])
             ->defaultPaginationPageOption(10)
             ->defaultSort('created_at', 'desc');
