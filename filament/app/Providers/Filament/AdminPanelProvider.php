@@ -80,7 +80,9 @@ use App\Filament\Widgets\StockMovementChartWidget;
 use App\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use App\Filament\Pages\TicketPosPage;
 use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -278,6 +280,17 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Système')
                     ->icon('heroicon-o-wrench-screwdriver')
                     ->collapsed(),
+            ])
+            // The Caisse (point-of-sale) page already exists and works, but was hidden off-nav
+            // (reachable only from the loyalty scanner). Surface it as a first-class entry under
+            // Vente so staff can open the till directly — it is the shop's live-selling screen.
+            ->navigationItems([
+                NavigationItem::make('Caisse')
+                    ->url(fn (): string => TicketPosPage::getUrl())
+                    ->icon('heroicon-o-calculator')
+                    ->group('Vente')
+                    ->sort(0)
+                    ->isActiveWhen(fn (): bool => str_contains((string) request()->path(), 'tickets/pos')),
             ])
             ->sidebarCollapsibleOnDesktop()
             // Database notifications — poll every 120s to reduce AJAX overhead
