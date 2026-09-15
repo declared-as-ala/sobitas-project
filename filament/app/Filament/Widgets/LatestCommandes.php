@@ -12,7 +12,7 @@ class LatestCommandes extends BaseWidget
 {
     protected static ?string $heading = 'Dernières commandes';
 
-    protected static ?int $sort = 4;
+    protected static ?int $sort = 8;
 
     protected static bool $isLazy = true;
 

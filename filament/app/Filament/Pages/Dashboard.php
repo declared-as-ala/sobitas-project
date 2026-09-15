@@ -5,6 +5,7 @@ namespace App\Filament\Pages;
 use App\Filament\Widgets\ClientHistoriqueSearchWidget;
 use App\Filament\Widgets\DashboardHeaderWidget;
 use App\Filament\Widgets\LatestCommandes;
+use App\Filament\Widgets\OperationsTodayWidget;
 use App\Filament\Widgets\QuickActionsWidget;
 use App\Filament\Widgets\RevenueBySourcePieChart;
 use App\Filament\Widgets\RevenueChart;
@@ -71,12 +72,13 @@ class Dashboard extends BaseDashboard
         // GROUP-BY analytics are parked below — re-enable them once their queries are profiled/indexed
         // (or moved to a dedicated Analytics page), not on the default landing view.
         return [
-            QuickActionsWidget::class,           // sort=-200 — Action buttons (very top), no query
+            DashboardHeaderWidget::class,        // sort=-300 — Greeting + period filter (very top), no query
+            QuickActionsWidget::class,           // sort=-200 — Action buttons, no query
             ClientHistoriqueSearchWidget::class,  // sort=-150 — Client search, no query
-            DashboardHeaderWidget::class,        // sort=-100 — Period filter, no query
             StatsOverview::class,               // sort=4    — 4 KPI cards
+            OperationsTodayWidget::class,        // sort=5    — "À traiter" actionable ops (cheap COUNTs)
             RevenueChart::class,                // sort=6    — Évolution des ventes (revenue trend)
-            LatestCommandes::class,             // sort=4    — Latest orders
+            LatestCommandes::class,             // sort=8    — Latest orders (moved below the chart)
             // Parked (heavy GROUP-BY, caused the 503 storm) — re-enable when optimized:
             // RevenueBySourcePieChart::class,  // sort=5 — Répartition HT
             // TopProductsWidget::class,        // sort=8 — Top Produits

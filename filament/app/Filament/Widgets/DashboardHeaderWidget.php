@@ -11,7 +11,7 @@ class DashboardHeaderWidget extends Widget
 
     protected string $view = 'filament.widgets.dashboard-header-widget';
 
-    protected static ?int $sort = -100;
+    protected static ?int $sort = -300;
 
     protected int | string | array $columnSpan = 'full';
 

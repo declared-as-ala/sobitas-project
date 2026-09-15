@@ -51,6 +51,7 @@ use App\Filament\Resources\SousCategoryResource;
 use App\Filament\Resources\TicketResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Widgets\LatestCommandes;
+use App\Filament\Widgets\OperationsTodayWidget;
 use App\Filament\Widgets\MonthlyRevenueComparison;
 use App\Filament\Widgets\OrderStatusChart;
 use App\Filament\Widgets\OrdersStatusPieChart;
@@ -219,6 +220,7 @@ class AdminPanelProvider extends PanelProvider
                 GeographicChart::class,
                 TopCustomersTable::class,
                 StatsOverview::class,
+                OperationsTodayWidget::class,
                 RevenueChart::class,
                 OrderStatusChart::class,
                 TopProductsWidget::class,
