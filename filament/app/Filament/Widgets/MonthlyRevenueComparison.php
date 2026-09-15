@@ -72,8 +72,8 @@ class MonthlyRevenueComparison extends ChartWidget
                 [
                     'label' => 'Cette année',
                     'data' => $thisYear,
-                    'borderColor' => '#3b82f6',
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.3)',
+                    'borderColor' => '#D53B04',
+                    'backgroundColor' => 'rgba(213, 59, 4, 0.3)',
                 ],
                 [
                     'label' => 'Année précédente',

@@ -65,12 +65,12 @@ class RevenueBySourcePieChart extends ChartWidget
                 'datasets' => [[
                     'data' => $data,
                     'backgroundColor' => [
-                        'rgba(99,  102, 241, 0.88)',  // indigo  – Tickets caisse
-                        'rgba(245, 158,  11, 0.88)',  // amber   – Bons de livraison
-                        'rgba( 16, 185, 129, 0.88)',  // emerald – Factures TVA
+                        'rgba(213,  59,   4, 0.88)',  // brand orange – Tickets caisse
+                        'rgba(245, 158,  11, 0.88)',  // amber        – Bons de livraison
+                        'rgba( 16, 185, 129, 0.88)',  // emerald      – Factures TVA
                     ],
                     'hoverBackgroundColor' => [
-                        'rgba(99,  102, 241, 1)',
+                        'rgba(213,  59,   4, 1)',
                         'rgba(245, 158,  11, 1)',
                         'rgba( 16, 185, 129, 1)',
                     ],

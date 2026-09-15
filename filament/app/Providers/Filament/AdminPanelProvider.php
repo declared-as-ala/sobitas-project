@@ -13,6 +13,7 @@ use App\Filament\Pages\SendEmail;
 use App\Filament\Pages\SendSms;
 use App\Filament\Pages\Stock\StockDashboard;
 use App\Filament\Pages\MediaPage;
+use App\Filament\Pages\RapportsPage;
 use App\Filament\Pages\MenuNavbarOrderPage;
 use App\Filament\Resources\AnnonceResource;
 use App\Filament\Resources\ArticleResource;
@@ -197,6 +198,7 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->pages([
                 Dashboard::class,
+                RapportsPage::class,
                 HistoriqueClient::class,
                 MediaPage::class,
                 MenuNavbarOrderPage::class,

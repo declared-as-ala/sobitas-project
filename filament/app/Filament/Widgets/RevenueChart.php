@@ -98,8 +98,8 @@ class RevenueChart extends ChartWidget
                 [
                     'label'           => 'Ventes HT (DT)',
                     'data'            => $totals,
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.65)',
-                    'borderColor'     => '#2563eb',
+                    'backgroundColor' => 'rgba(213, 59, 4, 0.65)',
+                    'borderColor'     => '#D53B04',
                     'borderWidth'     => 1,
                     'borderRadius'    => 4,
                 ],
