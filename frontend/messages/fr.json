@@ -1,0 +1,67 @@
+{
+  "language": {
+    "french": "Français",
+    "english": "English",
+    "arabic": "العربية",
+    "switchTo": "Changer de langue",
+    "current": "Langue actuelle"
+  },
+  "common": {
+    "close": "Fermer",
+    "loading": "Chargement...",
+    "error": "Une erreur est survenue",
+    "retry": "Réessayer",
+    "search": "Rechercher",
+    "back": "Retour",
+    "continue": "Continuer",
+    "cancel": "Annuler",
+    "confirm": "Confirmer",
+    "save": "Enregistrer",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "viewAll": "Voir tout",
+    "noResults": "Aucun résultat"
+  },
+  "nav": {
+    "home": "Accueil",
+    "products": "Nos produits",
+    "packs": "Packs",
+    "brands": "Marques",
+    "blog": "Blog",
+    "contact": "Contact",
+    "about": "Qui sommes-nous",
+    "account": "Mon compte",
+    "orders": "Mes commandes",
+    "cart": "Panier",
+    "favorites": "Favoris",
+    "login": "Connexion",
+    "logout": "Déconnexion",
+    "menu": "Menu",
+    "main": "Navigation principale"
+  },
+  "search": {
+    "placeholder": "Rechercher tous les produits...",
+    "inProgress": "Recherche en cours...",
+    "empty": "Aucun produit trouvé"
+  },
+  "cart": {
+    "empty": "Votre panier est vide",
+    "total": "Total",
+    "checkout": "Passer la commande"
+  },
+  "footer": {
+    "follow": "Suivez-nous",
+    "subscribe": "Abonnez-vous",
+    "services": "Services & Ventes",
+    "navigation": "Navigation",
+    "emailPlaceholder": "Entrez votre email...",
+    "subscribeAction": "S'abonner"
+  },
+  "delivery": {
+    "free": "Livraison gratuite dès 300 DT"
+  },
+  "theme": {
+    "light": "Mode clair",
+    "dark": "Mode sombre"
+  }
+}

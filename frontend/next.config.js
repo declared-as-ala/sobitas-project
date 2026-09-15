@@ -426,4 +426,8 @@ const nextConfig = {
   },
 }
 
-module.exports = nextConfig
+// next-intl: message-layer plugin only. Its routing middleware is deliberately NOT used — the
+// existing SEO middleware owns routing and resolves the locale (see src/i18n/request.ts).
+const withNextIntl = require('next-intl/plugin')('./src/i18n/request.ts');
+
+module.exports = withNextIntl(nextConfig)

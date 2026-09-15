@@ -1,0 +1,67 @@
+{
+  "language": {
+    "french": "French",
+    "english": "English",
+    "arabic": "Arabic",
+    "switchTo": "Change language",
+    "current": "Current language"
+  },
+  "common": {
+    "close": "Close",
+    "loading": "Loading...",
+    "error": "An error occurred",
+    "retry": "Try again",
+    "search": "Search",
+    "back": "Back",
+    "continue": "Continue",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "viewAll": "View all",
+    "noResults": "No results"
+  },
+  "nav": {
+    "home": "Home",
+    "products": "Our products",
+    "packs": "Packs",
+    "brands": "Brands",
+    "blog": "Blog",
+    "contact": "Contact",
+    "about": "About us",
+    "account": "My account",
+    "orders": "My orders",
+    "cart": "Cart",
+    "favorites": "Favorites",
+    "login": "Log in",
+    "logout": "Log out",
+    "menu": "Menu",
+    "main": "Main navigation"
+  },
+  "search": {
+    "placeholder": "Search all products...",
+    "inProgress": "Searching...",
+    "empty": "No products found"
+  },
+  "cart": {
+    "empty": "Your cart is empty",
+    "total": "Total",
+    "checkout": "Checkout"
+  },
+  "footer": {
+    "follow": "Follow us",
+    "subscribe": "Subscribe",
+    "services": "Services & Sales",
+    "navigation": "Navigation",
+    "emailPlaceholder": "Enter your email...",
+    "subscribeAction": "Subscribe"
+  },
+  "delivery": {
+    "free": "Free delivery from 300 TND"
+  },
+  "theme": {
+    "light": "Light mode",
+    "dark": "Dark mode"
+  }
+}
