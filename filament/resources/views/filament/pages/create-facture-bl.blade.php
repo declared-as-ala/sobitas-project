@@ -169,6 +169,15 @@ body:has(.bl-page) [wire\:key] > .fi-fo-field-wrp-label { display: none !importa
 .bl-footer{margin-top:24px;text-align:right;border-top:1px solid #e2e8f0;padding-top:16px}
 .btn-save{background:#D53B04;color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:15px;font-weight:700;cursor:pointer}
 .btn-save:hover{background:#b23303}
+/* Mobile: stack the header (logo/client) and the totals so the form is usable on a phone.
+   Additive, <=640px only — desktop is untouched. The product table keeps its overflow-x scroll. */
+@media (max-width:640px){
+  .bl-wrap{padding:10px}
+  .bl-form{padding:14px}
+  .bl-top{flex-direction:column;gap:14px}
+  .bl-bottom{flex-direction:column;gap:14px}
+  .bl-totals{flex:1 1 auto;width:100%}
+}
 </style>
 
 <div class="bl-page" wire:ignore>
