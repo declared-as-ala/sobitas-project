@@ -61,16 +61,26 @@ class Dashboard extends BaseDashboard
 
     public function getWidgets(): array
     {
+        // ── TRIMMED so the dashboard actually LOADS ─────────────────────────────────────────────
+        // Every widget below caches its result (Cache::remember), but with all 9 mounted the six
+        // data widgets fired their COLD-cache queries concurrently on each load, overloaded the
+        // origin, and returned 503 — so the cache never populated and every load repeated the
+        // failure (blank skeletons that never fill). Keeping the three UI widgets plus the three
+        // ESSENTIAL, lightest data widgets (KPIs, revenue trend, latest orders) drops the concurrent
+        // cold-query count from six to three so they complete and warm the cache. The three heavy
+        // GROUP-BY analytics are parked below — re-enable them once their queries are profiled/indexed
+        // (or moved to a dedicated Analytics page), not on the default landing view.
         return [
-            QuickActionsWidget::class,           // sort=-200 — Action buttons (very top)
-            ClientHistoriqueSearchWidget::class,  // sort=-150 — Client search
-            DashboardHeaderWidget::class,        // sort=-100 — Period filter
-            StatsOverview::class,               // sort=4    — 4 KPI cards (span=2 of 3 cols)
-            RevenueBySourcePieChart::class,     // sort=5    — Répartition HT (span=1, same row)
-            RevenueChart::class,                // sort=6    — Évolution des ventes (full-width)
-            LatestCommandes::class,             // sort=4    — Latest orders, visible without opening the resource
-            TopProductsWidget::class,           // sort=8    — Top Produits table (full-width)
-            TopRegionsWidget::class,            // sort=9    — Top Régions + Top Clients (full-width)
+            QuickActionsWidget::class,           // sort=-200 — Action buttons (very top), no query
+            ClientHistoriqueSearchWidget::class,  // sort=-150 — Client search, no query
+            DashboardHeaderWidget::class,        // sort=-100 — Period filter, no query
+            StatsOverview::class,               // sort=4    — 4 KPI cards
+            RevenueChart::class,                // sort=6    — Évolution des ventes (revenue trend)
+            LatestCommandes::class,             // sort=4    — Latest orders
+            // Parked (heavy GROUP-BY, caused the 503 storm) — re-enable when optimized:
+            // RevenueBySourcePieChart::class,  // sort=5 — Répartition HT
+            // TopProductsWidget::class,        // sort=8 — Top Produits
+            // TopRegionsWidget::class,         // sort=9 — Top Régions + Top Clients
         ];
     }
 
