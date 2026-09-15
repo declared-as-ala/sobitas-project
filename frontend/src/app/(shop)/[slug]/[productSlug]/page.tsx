@@ -30,7 +30,15 @@ export type PageProps = {
   searchParams?: Promise<Record<string, string | string[] | undefined>>;
 };
 
-export const revalidate = 300;
+// ── RENDER DYNAMICALLY (was ISR: `export const revalidate = 300` + empty generateStaticParams) ──
+// The shared root layout now resolves the locale through next-intl (`getLocale`/`getMessages`),
+// which are REQUEST-time APIs. Under ISR / static generation there is no request scope, so they
+// throw and the page 500s — which is exactly what took every /{slug}/{productSlug} page down after
+// the multilang deploy (the /en and Googlebot paths survived because the middleware REWRITES them,
+// forcing a dynamic render with a request scope). Forcing this route dynamic gives every render that
+// scope, matching the ƒ routes (home, /[slug]) that never broke. The DATA is still cached
+// (unstable_cache), so origin load is unaffected; only the HTML render moves from ISR to on-demand.
+export const dynamic = 'force-dynamic';
 
 /** Extract HTTP status from error. */
 function getErrorStatus(e: unknown): number | null {
@@ -346,6 +354,6 @@ export default async function NewProductPage({ params }: PageProps) {
  * Deliberately NOT enumerating the catalogue — `next build` runs in CI where Cloudflare 403s the
  * runner, so a fetched list would come back empty or partial and bake bad pages.
  */
-export function generateStaticParams(): { slug: string; productSlug: string }[] {
-  return [];
-}
+// generateStaticParams removed: it opted this route into ISR/static generation, which is
+// incompatible with the request-time locale resolution in the root layout (see the force-dynamic
+// note at the top of this file) and cannot coexist with `dynamic = 'force-dynamic'`.

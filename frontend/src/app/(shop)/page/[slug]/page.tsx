@@ -15,7 +15,10 @@ export type PageProps = {
 
 // Legal/CMS pages (cookies, mentions légales, CGV…) are effectively static — cache with ISR
 // (revalidate hourly) instead of re-fetching on every request. Rendered output is identical.
-export const revalidate = 3600;
+// Rendered dynamically (was ISR): the root layout resolves locale via next-intl request-time APIs,
+// which throw under ISR/static generation → 500. Force dynamic so every render has a request scope.
+// See the fuller note in app/(shop)/[slug]/[productSlug]/page.tsx.
+export const dynamic = 'force-dynamic';
 
 const slugMapping: Record<string, string> = {
   cookies: 'politique-des-cookies',
@@ -109,6 +112,5 @@ export default async function DynamicPage({ params }: PageProps) {
  * Deliberately NOT enumerating the catalogue — `next build` runs in CI where Cloudflare 403s the
  * runner, so a fetched list would come back empty or partial and bake bad pages.
  */
-export function generateStaticParams(): { slug: string }[] {
-  return [];
-}
+// generateStaticParams removed: ISR/static generation is incompatible with the request-time locale
+// resolution in the root layout, and cannot coexist with `dynamic = 'force-dynamic'`.

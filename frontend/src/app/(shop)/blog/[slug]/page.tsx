@@ -23,7 +23,10 @@ interface ArticlePageProps {
 
 // ISR (was force-dynamic → rendered every request, slow TTFB/LCP). Articles rarely change;
 // cache the render and revalidate hourly (fetch tags:['blog'] still allow on-demand purge).
-export const revalidate = 3600;
+// Rendered dynamically (was ISR): the root layout resolves locale via next-intl request-time APIs,
+// which throw under ISR/static generation → 500. Force dynamic so every render has a request scope.
+// See the fuller note in app/(shop)/[slug]/[productSlug]/page.tsx.
+export const dynamic = 'force-dynamic';
 
 /**
  * Plain text for a meta description.
@@ -349,6 +352,5 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
  * Deliberately NOT enumerating the catalogue — `next build` runs in CI where Cloudflare 403s the
  * runner, so a fetched list would come back empty or partial and bake bad pages.
  */
-export function generateStaticParams(): { slug: string }[] {
-  return [];
-}
+// generateStaticParams removed: ISR/static generation is incompatible with the request-time locale
+// resolution in the root layout, and cannot coexist with `dynamic = 'force-dynamic'`.
