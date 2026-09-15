@@ -1106,6 +1106,7 @@ export function buildSiteNavigationSchema(baseUrl: string): object {
   const links: Array<{ name: string; path: string }> = [
     { name: 'Accueil', path: '/' },
     { name: 'Nos produits', path: '/shop' },
+    { name: 'Protéines en poudre', path: '/proteines' },
     { name: 'Whey protéine', path: '/whey-proteine' },
     { name: 'Créatine', path: '/creatine' },
     { name: 'Gainers & prise de masse', path: '/gainers-proteines' },
