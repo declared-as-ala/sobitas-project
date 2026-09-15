@@ -43,7 +43,6 @@ import { useSiteLogos } from '@/hooks/useSiteLogos';
 import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
-import { MULTILOCALE_ENABLED } from '@/i18n';
 
 // CartDrawer no longer lives here — it moved to components/CartDrawerHost.tsx, mounted at the
 // layout level. Keeping it here meant this ~1,050-line component had to subscribe to the drawer's
@@ -680,7 +679,7 @@ export function HeaderClient() {
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-0.5">
-                {MULTILOCALE_ENABLED && <LanguageSwitcher />}
+                <LanguageSwitcher />
 
                 {/* Account is a destination, not a menu: one click always opens the member app. */}
                 {isAuthenticated ? (
@@ -967,6 +966,12 @@ export function HeaderClient() {
                   </Link>
                 </div>
               )}
+
+              {/* Language — mobile users switch here (desktop has it in the utility bar). Real URL
+                  navigation between /fr · /en · /ar, resolved server-side; closes the drawer after. */}
+              <div className="mt-3 border-t border-hairline pt-3">
+                <LanguageSwitcher mobile onNavigate={closeMobileMenu} />
+              </div>
 
               {/* The reference's "Installer l'application" slot. This shop has no app; what it has
                   is the pack builder, which is the highest-intent path on the site and was

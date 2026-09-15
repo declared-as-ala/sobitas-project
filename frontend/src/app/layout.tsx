@@ -79,7 +79,9 @@ import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { ReferralCapture } from "@/app/components/ReferralCapture";
 import { WebVitalsReporter } from "@/app/components/WebVitalsReporter";
-import { LOCALE_STORAGE_KEY } from "@/i18n";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale, getMessages } from "next-intl/server";
+import { getLocaleDirection, LOCALE_HREFLANG, isLocale, DEFAULT_LOCALE, type Locale } from "@/i18n";
 
 const inter = localFont({
   /* The `latin` subset file, which is what `subsets: ["latin"]` selected before. Every French
@@ -277,19 +279,21 @@ export default async function RootLayout({
   const websiteSchema = buildWebSiteSchema(baseUrl);
   const siteNavigationSchema = buildSiteNavigationSchema(baseUrl);
 
+  // ── SSR LOCALE ─────────────────────────────────────────────────────────────────────────────
+  // The locale is resolved by the middleware from the URL prefix (fr unprefixed · /en · /ar) and
+  // passed down via the `x-locale` request header; next-intl's request config turns it into `locale`
+  // + `messages`. We render `<html lang dir>` from it SERVER-SIDE — no more hardcoded `lang="fr"` and
+  // no more anti-FOUC localStorage script (en/ar users got a French-LTR flash + a half-flipped mixed
+  // render before hydration; now the very first byte of HTML carries the correct lang + direction).
+  const resolvedLocale = await getLocale();
+  const locale: Locale = isLocale(resolvedLocale) ? resolvedLocale : DEFAULT_LOCALE;
+  const messages = await getMessages();
+  const dir = getLocaleDirection(locale);
+  const langAttr = LOCALE_HREFLANG[locale];
+
   return (
-    <html lang="fr" suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${archivo.variable}`}>
+    <html lang={langAttr} dir={dir} suppressHydrationWarning data-scroll-behavior="smooth" className={`${inter.variable} ${archivo.variable}`}>
       <head>
-        {/* Anti-FOUC: set lang/dir from the persisted locale BEFORE first paint. Must read the
-            same key I18nProvider writes (LOCALE_STORAGE_KEY = 'sobitas-locale'); it previously
-            hardcoded the wrong 'protein-locale', so this was dead code and ar/en users got a
-            French-LTR flash + a half-flipped mixed render before hydration. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html:
-              `try{var l=localStorage.getItem('${LOCALE_STORAGE_KEY}');if(l==='fr'||l==='en'||l==='ar'){document.documentElement.lang=l;document.documentElement.dir=l==='ar'?'rtl':'ltr';document.documentElement.dataset.locale=l}}catch(e){}`,
-          }}
-        />
         {/* Brand orange — must stay in sync with --c-brand in styles/tokens.css.
             This tints the mobile browser chrome, so a stale value here is very visible. */}
         <meta name="theme-color" content="#D53B04" />
@@ -334,6 +338,7 @@ export default async function RootLayout({
           {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });`}
         </Script>
         <WebVitalsReporter />
+        <NextIntlClientProvider locale={locale} messages={messages}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <Providers navigation={navigation} navCategories={navCategories} cmsPages={footer.cmsPages} coordinates={footer.coordinates}>
             <Suspense fallback={null}>
@@ -366,6 +371,7 @@ export default async function RootLayout({
             <ReferralCapture />
           </Providers>
         </ThemeProvider>
+        </NextIntlClientProvider>
       </body>
     </html>
   );

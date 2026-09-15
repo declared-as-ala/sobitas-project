@@ -93,10 +93,12 @@ function buildRedirects() {
      */
 
     // ── Locale prefix ─────────────────────────────────────────────────────
-    p('/en', '/'),
-    p('/en/', '/'),
-    // Exact legacy locale URLs from the current GSC examples. Point at the FINAL destination so
-    // locale removal and product retirement do not become separate hops.
+    // NOTE: `/en` and `/ar` are FIRST-CLASS SSR locales again (see src/middleware.ts locale
+    // negotiation). The old `p('/en','/')` / `p('/en/','/')` rules that stripped the English root
+    // are GONE — they were config-layer `redirects()` that fire before middleware, so they 308'd
+    // `/en` → `/` and defeated the locale before it could be served. The retired-product legacy
+    // examples below stay: those are retired products whose consolidation to a live category is
+    // correct in every locale (they 301 to the French canonical; hreflang consolidates the rest).
     p('/en/shop/gainer-xtreme-54-kg', '/mass-gainers'),
     p('/ar/shop/animal-pak-30-packs-universal-nutrition', '/vitamines/animal-pak-30-packs'),
 

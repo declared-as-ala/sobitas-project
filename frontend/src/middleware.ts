@@ -13,6 +13,7 @@ import {
   affiliateSubdomainFromHost,
 } from '@/util/affiliateHost';
 import { isKnownAffiliateSubdomain } from '@/util/affiliateSubdomains';
+import { DEFAULT_LOCALE, localizePath, stripLocalePrefix, type Locale } from '@/i18n';
 
 /**
  * Open-redirect guard. A path derived from user input — e.g. `/en//evil.com` or `/en/\evil.com`
@@ -299,8 +300,15 @@ async function retireLegacyPath(
   return goneOrCategory(request, slug);
 }
 
-export async function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
+/**
+ * The full SEO/redirect pipeline, run against the LOCALE-STRIPPED pathname. `pathname` here is
+ * `/whey-proteine`, never `/en/whey-proteine` — the outer `middleware()` peels the locale prefix
+ * off first (French is unprefixed, so for ~all traffic this is `request.nextUrl.pathname` verbatim)
+ * and threads the clean path in, so every matcher below is written exactly as it always was and
+ * needs no per-locale awareness. The outer wrapper re-applies the locale to the RESULT.
+ */
+async function handleRequest(request: NextRequest, pathname: string): Promise<NextResponse> {
+  const { searchParams } = request.nextUrl;
 
   // Exact, immutable build assets from an old Next deployment. They cannot reappear because their
   // filenames are content hashes. The two exact matcher entries at the foot of this file let only
@@ -739,12 +747,10 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  // Legacy locale-prefixed URLs (old i18n scheme): /en/... , /ar/... → strip the prefix.
-  // Locale is client-side now, so /ar/shop/x and /en/category/y should land on the real URL.
-  const legacyLocale = pathname.match(/^\/(en|ar)(\/.*)?$/);
-  if (legacyLocale) {
-    return redirectPreservingQuery(request, legacyLocale[2] || '/');
-  }
+  // NOTE: /en/… and /ar/… are NO LONGER stripped-and-301'd here. They are first-class SSR locales
+  // now: the outer middleware() peels the /en|/ar prefix BEFORE this pipeline runs (so `pathname`
+  // above is already locale-clean) and re-applies it to the response — an internal rewrite to the
+  // French route carrying `x-locale`, never a redirect. See the outer wrapper at the foot of file.
 
   // Legacy review sub-pages: /product/{slug}/reviews or /products/{slug}/reviews.
   // Resolve straight to the canonical /{subcat}/{slug} in ONE hop (falling back to /product/{slug},
@@ -1104,6 +1110,81 @@ export async function middleware(request: NextRequest) {
   // and app/products/[id]/page.tsx.
 
   return response;
+}
+
+/**
+ * ── LOCALE NEGOTIATION WRAPPER (fr unprefixed · en/ar prefixed) ──────────────────────────────
+ *
+ * French is the incumbent ranking locale and stays at the site root with NO prefix. For it, this
+ * wrapper is a pure pass-through: `stripLocalePrefix` returns the path unchanged, `locale` is `fr`,
+ * and we return `handleRequest`'s response verbatim. ~100% of indexed traffic pays one regex test
+ * and nothing else — no ranking French URL, status, redirect or header changes in any way.
+ *
+ * For /en/… and /ar/… we:
+ *   1. run the ENTIRE existing SEO pipeline on the locale-stripped path (so every 301/410/canonical
+ *      rule behaves identically), then
+ *   2. turn the pipeline's result back into a localized response:
+ *      • a passthrough render (`next()`, incl. the final human render and the backend-unhealthy
+ *        fall-throughs) → an internal REWRITE to the French route, carrying the locale to the
+ *        renderer via the `x-locale` request header (next-intl's request config reads it), URL
+ *        unchanged so the browser/Googlebot keep seeing `/en/…`;
+ *      • a same-origin redirect → its Location re-prefixed, so an en/ar request never escapes its
+ *        locale (`/en/produit/x` → 301 → `/en/isolat-de-whey/x`, not `/isolat-de-whey/x`);
+ *      • every en/ar response is stamped `X-Robots-Tag: noindex, follow` + `Content-Language`.
+ *
+ * The noindex is the Phase-6 rollout gate: en/ar ship LIVE (switchable, server-rendered) but serve
+ * French content behind translated chrome until the catalogue is translated AND reviewed per URL,
+ * at which point the gate is lifted per URL and the page joins the locale sitemap + hreflang set.
+ * Shipping en/ar indexable while they still mirror French content would be self-inflicted
+ * duplicate-content damage to the French rankings this whole design exists to protect.
+ */
+function stampLocaleHeaders(res: NextResponse, locale: Locale): NextResponse {
+  // follow (not nofollow): link equity still flows through en/ar while they are gated out of the
+  // index. Flip to index per-URL in Phase 6 once that URL's content is translated + reviewed.
+  res.headers.set('X-Robots-Tag', 'noindex, follow');
+  res.headers.set('Content-Language', locale === 'ar' ? 'ar-TN' : 'en-TN');
+  return res;
+}
+
+export async function middleware(request: NextRequest) {
+  const { locale, pathname } = stripLocalePrefix(request.nextUrl.pathname);
+  const res = await handleRequest(request, pathname);
+
+  // French: the incumbent path, returned exactly as the pipeline produced it. No new behavior.
+  if (locale === DEFAULT_LOCALE) return res;
+
+  // A passthrough render (next()) must become an internal rewrite to the French route so the
+  // localized URL resolves at all, with the locale threaded to the renderer.
+  if (res.headers.get('x-middleware-next') === '1') {
+    const dest = new URL(pathname, request.url);
+    dest.search = request.nextUrl.search;
+    const requestHeaders = new Headers(request.headers);
+    requestHeaders.set('x-locale', locale);
+    const rewritten = NextResponse.rewrite(dest, { request: { headers: requestHeaders } });
+    // Preserve any cookies the pipeline set (e.g. affiliate attribution on x.protein.tn).
+    res.cookies.getAll().forEach((cookie) => rewritten.cookies.set(cookie));
+    return stampLocaleHeaders(rewritten, locale);
+  }
+
+  // A same-origin redirect: keep the visitor inside their locale by re-prefixing the target.
+  const location = res.headers.get('location');
+  if (location) {
+    try {
+      const target = new URL(location, request.url);
+      if (
+        target.origin === request.nextUrl.origin &&
+        stripLocalePrefix(target.pathname).locale === DEFAULT_LOCALE
+      ) {
+        target.pathname = localizePath(locale, target.pathname);
+        res.headers.set('location', target.toString());
+      }
+    } catch {
+      /* off-origin or malformed Location — leave the pipeline's decision untouched */
+    }
+  }
+
+  // Crawler rewrite, 410, or a redirect: still gate en/ar out of the index.
+  return stampLocaleHeaders(res, locale);
 }
 
 export const config = {
