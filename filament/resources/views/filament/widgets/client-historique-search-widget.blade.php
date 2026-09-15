@@ -26,7 +26,7 @@
     .chs-header-icon svg {
         width: 18px;
         height: 18px;
-        color: #2563eb;
+        color: #D53B04;
     }
     .chs-header-text {}
     .chs-title {
@@ -121,7 +121,7 @@
         box-sizing: border-box;
     }
     .chs-input:focus {
-        border-color: #2563eb;
+        border-color: #D53B04;
         background: #fff;
         box-shadow: 0 0 0 3px rgba(37,99,235,0.08);
     }
@@ -131,7 +131,7 @@
         color: #f3f4f6;
     }
     .dark .chs-input:focus {
-        border-color: #3b82f6;
+        border-color: #D53B04;
         background: rgba(255,255,255,0.09);
         box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
     }
@@ -150,7 +150,7 @@
         gap: 0.4rem;
         padding: 0.625rem 1.25rem;
         border-radius: 10px;
-        background: #2563eb;
+        background: #D53B04;
         color: #fff;
         font-size: 0.875rem;
         font-weight: 600;
@@ -160,7 +160,7 @@
         white-space: nowrap;
     }
     .chs-btn-primary:hover:not(:disabled) {
-        background: #1d4ed8;
+        background: #b23303;
         box-shadow: 0 4px 12px rgba(37,99,235,0.3);
         transform: translateY(-1px);
     }

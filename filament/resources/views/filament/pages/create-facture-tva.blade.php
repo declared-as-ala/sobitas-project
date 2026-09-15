@@ -124,9 +124,9 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
 .ftva-client input.fc-input{width:100%;border:1px solid #e2e8f0;border-radius:6px;padding:7px 10px;font-size:13px;color:#374151;background:#f8fafc}
 .ftva-client input.fc-input:disabled{background:#f1f5f9;color:#64748b}
 
-.btn-ajouter-client{background:#2563eb;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
+.btn-ajouter-client{background:#D53B04;color:#fff;border:none;border-radius:6px;padding:7px 16px;font-size:13px;font-weight:600;cursor:pointer}
 .btn-annuler-client{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer}
-.btn-ajouter-client:hover{background:#1d4ed8}
+.btn-ajouter-client:hover{background:#b23303}
 .btn-annuler-client:hover{background:#dc2626}
 
 .ftva-barcode{margin-bottom:16px}
@@ -160,12 +160,12 @@ body:has(.ftva-page) .fi-form-actions { display: none !important; }
 .ftva-totals table td:last-child{text-align:right}
 .ftva-totals table input.tot-input{width:120px;border:1px solid #cbd5e1;border-radius:5px;padding:4px 8px;font-size:13px;text-align:right;background:#fff}
 .ftva-totals table input.tot-input:disabled{background:#f8fafc;border-color:transparent;color:#1e293b;font-weight:700}
-.ftva-net-row{background:#eff6ff}
-.ftva-net-row td{font-size:15px!important;font-weight:800!important;color:#1e40af!important}
+.ftva-net-row{background:#fff7ed}
+.ftva-net-row td{font-size:15px!important;font-weight:800!important;color:#9a2c06!important}
 
 .ftva-footer{margin-top:24px;text-align:right;border-top:1px solid #e2e8f0;padding-top:16px}
-.btn-save{background:#2563eb;color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:15px;font-weight:700;cursor:pointer}
-.btn-save:hover{background:#1d4ed8}
+.btn-save{background:#D53B04;color:#fff;border:none;border-radius:8px;padding:10px 32px;font-size:15px;font-weight:700;cursor:pointer}
+.btn-save:hover{background:#b23303}
 </style>
 
 <div class="ftva-page" wire:ignore>
