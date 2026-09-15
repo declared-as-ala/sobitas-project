@@ -299,8 +299,12 @@ class AdminPanelProvider extends PanelProvider
             ])
             // SPA mode — navigations are AJAX-based, no full page reloads
             ->spa()
+            // Brand primary = SOBITAS orange (#D53B04), matched to the storefront's --c-brand so
+            // the admin and the shop read as one product. Was Color::Blue (default Filament), which
+            // left the whole back office off-brand. `info` stays Sky so informational accents remain
+            // visually distinct from the brand/primary now that primary is warm.
             ->colors([
-                'primary' => Color::Blue,
+                'primary' => Color::hex('#D53B04'),
                 'danger'  => Color::Rose,
                 'gray'    => Color::Slate,
                 'info'    => Color::Sky,
