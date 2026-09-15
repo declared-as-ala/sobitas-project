@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Resources\CommandeResource;
 use App\Models\Commande;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
@@ -60,6 +61,8 @@ class LatestCommandes extends BaseWidget
                     ->formatStateUsing(fn (string $state): string => Commande::getStatusLabel($state)),
             ])
             ->defaultPaginationPageOption(10)
-            ->defaultSort('created_at', 'desc');
+            ->defaultSort('created_at', 'desc')
+            // Whole row clicks straight through to the order — a daily-ops convenience.
+            ->recordUrl(fn (Commande $record): string => CommandeResource::getUrl('edit', ['record' => $record]));
     }
 }
