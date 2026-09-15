@@ -33,13 +33,63 @@ class StatsOverview extends BaseWidget
 
     protected ?string $pollingInterval = '60s';
 
-    protected function getStats(): array
+    /**
+     * Raw metrics for the period, cached. Both getCards() (the redesigned blade) and getStats()
+     * (kept for Filament base-class compatibility) map from this, so the queries run once.
+     */
+    private function metrics(): array
     {
         $period = $this->getCurrentPeriod();
-        $cacheKey = "dashboard:stats_overview:{$period['start']->format('Ymd')}_{$period['end']->format('Ymd')}";
+        $cacheKey = "dashboard:stats_metrics:{$period['start']->format('Ymd')}_{$period['end']->format('Ymd')}";
 
         return Cache::remember($cacheKey, 120, function () use ($period) {
-            return $this->buildStats($period);
+            $start = $period['start'];
+            $end = $period['end'];
+            $prevStart = $period['prev_start'];
+            $prevEnd = $period['prev_end'];
+
+            $revenueService = app(RevenueService::class);
+
+            $periodRevenue = $revenueService->revenueHt($start, $end);
+            $lastPeriodRevenue = $revenueService->revenueHt($prevStart, $prevEnd);
+            $revenueGrowth = $lastPeriodRevenue > 0
+                ? round((($periodRevenue - $lastPeriodRevenue) / $lastPeriodRevenue) * 100, 1)
+                : 0.0;
+
+            $days = min(30, $start->diffInDays($end) + 1);
+            $dailyChart = array_values($revenueService->dailyRevenueHt($start, $days));
+
+            $orderStats = DB::selectOne("
+                SELECT
+                    COUNT(*) as total,
+                    SUM(CASE WHEN etat = 'expidee' THEN 1 ELSE 0 END) as shipped
+                FROM commandes
+                WHERE created_at BETWEEN ? AND ?
+            ", [$start, $end]);
+
+            $productStats = DB::selectOne("
+                SELECT COUNT(*) as total, SUM(CASE WHEN publier = 1 THEN 1 ELSE 0 END) as published
+                FROM products
+            ");
+
+            $clientStats = DB::selectOne("
+                SELECT COUNT(*) as total, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as period_new
+                FROM clients
+            ", [$start]);
+
+            return [
+                'label'            => $period['label'] ?? 'Période',
+                'revenue_ht'       => (float) $periodRevenue,
+                'revenue_ttc'      => (float) $revenueService->revenueTtc($start, $end),
+                'revenue_growth'   => (float) $revenueGrowth,
+                'daily_chart'      => $dailyChart,
+                'orders_total'     => (int) $orderStats->total,
+                'orders_shipped'   => (int) $orderStats->shipped,
+                'products_total'   => (int) $productStats->total,
+                'products_pub'     => (int) $productStats->published,
+                'clients_total'    => (int) $clientStats->total,
+                'clients_new'      => (int) $clientStats->period_new,
+            ];
         });
     }
 
@@ -56,72 +106,77 @@ class StatsOverview extends BaseWidget
         return DateRangeFilterService::getPeriod($preset, $customStart, $customEnd);
     }
 
-    private function buildStats(array $period): array
+    private static function nf(float | int $n, int $decimals = 0): string
     {
-        $start = $period['start'];
-        $end = $period['end'];
-        $prevStart = $period['prev_start'];
-        $prevEnd = $period['prev_end'];
-        $label = $period['label'] ?? 'Période';
+        return number_format($n, $decimals, '.', ' ');
+    }
 
-        $revenueService = app(RevenueService::class);
-
-        $periodRevenue = $revenueService->revenueHt($start, $end);
-        $lastPeriodRevenue = $revenueService->revenueHt($prevStart, $prevEnd);
-
-        $revenueGrowth = $lastPeriodRevenue > 0
-            ? round((($periodRevenue - $lastPeriodRevenue) / $lastPeriodRevenue) * 100, 1)
-            : 0;
-
-        $days = min(30, $start->diffInDays($end) + 1);
-        $dailyHt = $revenueService->dailyRevenueHt($start, $days);
-        $dailyChart = array_values($dailyHt);
-
-        $orderStats = DB::selectOne("
-            SELECT
-                COUNT(*) as total,
-                SUM(CASE WHEN etat IN ('nouvelle_commande', 'en_cours_de_preparation') THEN 1 ELSE 0 END) as pending,
-                SUM(CASE WHEN etat = 'expidee' THEN 1 ELSE 0 END) as shipped
-            FROM commandes
-            WHERE created_at BETWEEN ? AND ?
-        ", [$start, $end]);
-
-        $productStats = DB::selectOne("
-            SELECT COUNT(*) as total, SUM(CASE WHEN publier = 1 THEN 1 ELSE 0 END) as published
-            FROM products
-        ");
-
-        $clientStats = DB::selectOne("
-            SELECT COUNT(*) as total, SUM(CASE WHEN created_at >= ? THEN 1 ELSE 0 END) as period_new
-            FROM clients
-        ", [$start]);
-
-        $periodTtc = $revenueService->revenueTtc($start, $end);
-
-        $shipped = (int) $orderStats->shipped;
-        $totalCommandesDescription = $shipped > 0 ? $shipped . ' expédiées' : 'Total période';
+    /**
+     * Redesigned KPI card model consumed by stats-overview.blade.php.
+     * Each card: label · value · optional delta pill · context · icon · tone · sparkline.
+     */
+    public function getCards(): array
+    {
+        $m = $this->metrics();
+        $growth = $m['revenue_growth'];
 
         return [
-            Stat::make("Chiffre d'affaires HT ({$label})", number_format($periodRevenue, 3, '.', ' ') . ' DT')
-                ->description(($revenueGrowth >= 0 ? "+{$revenueGrowth}% " : "{$revenueGrowth}% ") . "vs période précédente · TTC : " . number_format($periodTtc, 0, '.', ' ') . ' DT')
-                ->descriptionIcon($revenueGrowth >= 0 ? 'heroicon-m-arrow-trending-up' : 'heroicon-m-arrow-trending-down')
-                ->chart($dailyChart)
-                ->color($revenueGrowth >= 0 ? 'success' : 'danger'),
+            [
+                'label'   => "Chiffre d'affaires HT",
+                'value'   => self::nf($m['revenue_ht'], 3) . ' DT',
+                'delta'   => $growth != 0.0
+                    ? ['dir' => $growth > 0 ? 'up' : 'down', 'text' => ($growth > 0 ? '+' : '') . self::nf($growth, 1) . '%']
+                    : null,
+                'context' => 'vs période préc. · TTC ' . self::nf($m['revenue_ttc']) . ' DT',
+                'icon'    => 'heroicon-m-banknotes',
+                'tone'    => 'brand',
+                'chart'   => $m['daily_chart'],
+            ],
+            [
+                'label'   => 'Commandes',
+                'value'   => self::nf($m['orders_total']),
+                'delta'   => null,
+                'context' => $m['orders_shipped'] > 0
+                    ? $m['orders_shipped'] . ' expédiées sur la période'
+                    : 'Sur la période sélectionnée',
+                'icon'    => 'heroicon-m-shopping-cart',
+                'tone'    => 'brand',
+                'chart'   => [],
+            ],
+            [
+                'label'   => 'Clients',
+                'value'   => self::nf($m['clients_total']),
+                'delta'   => $m['clients_new'] > 0 ? ['dir' => 'up', 'text' => '+' . self::nf($m['clients_new'])] : null,
+                'context' => 'nouveaux sur la période',
+                'icon'    => 'heroicon-m-users',
+                'tone'    => 'success',
+                'chart'   => [],
+            ],
+            [
+                'label'   => 'Produits',
+                'value'   => self::nf($m['products_total']),
+                'delta'   => null,
+                'context' => self::nf($m['products_pub']) . ' publiés en ligne',
+                'icon'    => 'heroicon-m-cube',
+                'tone'    => 'neutral',
+                'chart'   => [],
+            ],
+        ];
+    }
 
-            Stat::make('Total Produits', $productStats->total)
-                ->description($productStats->published . ' publiés')
-                ->descriptionIcon('heroicon-m-cube')
-                ->color('primary'),
+    /**
+     * Kept for Filament base-class compatibility (getColumns() counts these). The redesigned
+     * dashboard renders getCards() instead; this is never shown.
+     */
+    protected function getStats(): array
+    {
+        $m = $this->metrics();
 
-            Stat::make('Total Clients', $clientStats->total)
-                ->description($clientStats->period_new . ' nouveaux (période)')
-                ->descriptionIcon('heroicon-m-users')
-                ->color('success'),
-
-            Stat::make('Total Commandes (période)', $orderStats->total)
-                ->description($totalCommandesDescription)
-                ->descriptionIcon('heroicon-m-shopping-cart')
-                ->color('primary'),
+        return [
+            Stat::make("Chiffre d'affaires HT", self::nf($m['revenue_ht'], 3) . ' DT'),
+            Stat::make('Commandes', self::nf($m['orders_total'])),
+            Stat::make('Clients', self::nf($m['clients_total'])),
+            Stat::make('Produits', self::nf($m['products_total'])),
         ];
     }
 }
