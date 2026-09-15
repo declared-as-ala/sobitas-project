@@ -1,7 +1,7 @@
 import { Metadata } from 'next';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { retiredSlugDestination } from '@/util/retiredSlug';
-import dynamic from 'next/dynamic';
+import nextDynamic from 'next/dynamic';
 import { getSimilarProducts } from '@/services/api';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ProductDetailSkeleton } from '@/app/components/ProductDetailSkeleton';
@@ -21,7 +21,7 @@ import type { Product } from '@/types';
 import { productDescription, productTitle } from '@/util/productMetaDescription';
 import { getComplementProducts } from '@/services/productComplements';
 
-const ProductDetailClient = dynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
+const ProductDetailClient = nextDynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
 });
 
