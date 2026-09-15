@@ -54,8 +54,12 @@
     "subscribe": "اشترك معنا",
     "services": "الخدمات والمبيعات",
     "navigation": "التنقل",
-    "emailPlaceholder": "أدخل بريدك الإلكتروني...",
-    "subscribeAction": "اشتراك"
+    "emailPlaceholder": "بريدك الإلكتروني…",
+    "subscribeAction": "اشتراك",
+    "subscribeSubtitle": "عروض حصرية ومنتجات جديدة، مرة كل أسبوع.",
+    "subscribing": "جارٍ الاشتراك…",
+    "categories": "الفئات",
+    "contact": "اتصل بنا"
   },
   "delivery": {
     "free": "توصيل مجاني ابتداء من 300 د.ت"

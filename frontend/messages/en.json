@@ -54,8 +54,12 @@
     "subscribe": "Subscribe",
     "services": "Services & Sales",
     "navigation": "Navigation",
-    "emailPlaceholder": "Enter your email...",
-    "subscribeAction": "Subscribe"
+    "emailPlaceholder": "Your email…",
+    "subscribeAction": "Subscribe",
+    "subscribeSubtitle": "Exclusive offers and new arrivals, once a week.",
+    "subscribing": "Subscribing…",
+    "categories": "Categories",
+    "contact": "Contact us"
   },
   "delivery": {
     "free": "Free delivery from 300 TND"

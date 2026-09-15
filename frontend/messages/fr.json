@@ -54,8 +54,12 @@
     "subscribe": "Abonnez-vous",
     "services": "Services & Ventes",
     "navigation": "Navigation",
-    "emailPlaceholder": "Entrez votre email...",
-    "subscribeAction": "S'abonner"
+    "emailPlaceholder": "Votre email…",
+    "subscribeAction": "S'abonner",
+    "subscribeSubtitle": "Offres exclusives et nouveautés, une fois par semaine.",
+    "subscribing": "Inscription…",
+    "categories": "Catégories",
+    "contact": "Nous contacter"
   },
   "delivery": {
     "free": "Livraison gratuite dès 300 DT"

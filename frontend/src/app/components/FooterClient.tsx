@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { useTranslations } from 'next-intl';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUp, ArrowUpRight, ChevronDown, Facebook, Instagram, Linkedin, Loader2, Mail, Map as MapIcon, MapPin, Phone, Youtube } from 'lucide-react';
@@ -133,6 +134,7 @@ const QUIET_BUTTON =
   'inline-flex min-h-[44px] items-center gap-1.5 rounded-lg border border-hairline px-3 text-xs font-semibold text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-[36px] sm:px-2.5';
 
 export function FooterClient({ pages: pagesProp }: FooterClientProps) {
+  const t = useTranslations('footer');
   const { footerLogoUrl } = useSiteLogos();
   const [newsletterEmail, setNewsletterEmail] = useState('');
   const [isSubscribing, setIsSubscribing] = useState(false);
@@ -206,9 +208,9 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
         >
           <div className="min-w-0">
             <h2 className="font-display text-base font-bold uppercase tracking-wide text-ink-1">
-              Abonnez-vous
+              {t('subscribe')}
             </h2>
-            <p className="mt-1 text-sm text-ink-2">Offres exclusives et nouveautés, une fois par semaine.</p>
+            <p className="mt-1 text-sm text-ink-2">{t('subscribeSubtitle')}</p>
           </div>
           {/* ONE ROW AT EVERY WIDTH, including 320. The field and the button stacked cost 52px on
               a phone for no gain: at 390 the button is ~112px and the field keeps ~230, which is
@@ -217,7 +219,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           <div className="flex w-full min-w-0 gap-2 lg:w-auto lg:shrink-0">
             <Input
               type="email"
-              placeholder="Votre email…"
+              placeholder={t('emailPlaceholder')}
               value={newsletterEmail}
               onChange={(e) => setNewsletterEmail(e.target.value)}
               className="h-11 min-w-0 flex-1 rounded-xl border-hairline bg-sunken text-ink-1 placeholder:text-ink-3 sm:w-72"
@@ -231,10 +233,10 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             >
               {isSubscribing ? (
                 <>
-                  <Loader2 className="me-2 h-4 w-4 animate-spin" /> Inscription…
+                  <Loader2 className="me-2 h-4 w-4 animate-spin" /> {t('subscribing')}
                 </>
               ) : (
-                "S'abonner"
+                t('subscribeAction')
               )}
             </Button>
           </div>
@@ -304,11 +306,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           </div>
         </div>
 
-        <FooterLinkColumn title="Navigation" links={NAVIGATION} />
-        <FooterLinkColumn title="Catégories" links={CATEGORIES} />
+        <FooterLinkColumn title={t('navigation')} links={NAVIGATION} />
+        <FooterLinkColumn title={t('categories')} links={CATEGORIES} />
 
 
-        <FooterGroup title="Services &amp; ventes">
+        <FooterGroup title={t('services')}>
           <ul className="space-y-0.5 pb-2 sm:pb-0">
             {footerPages.map((p) => (
               <li key={p.id}>
@@ -328,7 +330,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
 
         {/* Never collapsed — see the note on the grid above. */}
         <div className="min-w-0 border-t border-hairline pt-4 sm:border-t-0 sm:pt-0">
-          <FooterHeading>Nous contacter</FooterHeading>
+          <FooterHeading>{t('contact')}</FooterHeading>
           <ul className="mt-3 space-y-0.5">
             <li>
               <a href={contactPhoneHref} className={FOOTER_LINK} aria-label="Appeler la boutique">
