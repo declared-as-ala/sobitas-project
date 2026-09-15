@@ -140,8 +140,8 @@ body:has(.lp-page) .fi-topbar-end {
     border: 1px solid transparent;
     cursor: pointer;
 }
-.lp-btn-primary { color: #fff; background-color: #007bff; border-color: #007bff; }
-.lp-btn-primary:hover { background-color: #0069d9; border-color: #0062cc; }
+.lp-btn-primary { color: #fff; background-color: #D53B04; border-color: #D53B04; }
+.lp-btn-primary:hover { background-color: #b23303; border-color: #b23303; }
 .lp-btn-primary:disabled { opacity: 0.65; cursor: not-allowed; }
 .lp-btn-danger { color: #fff; background-color: #dc3545; border-color: #dc3545; padding: 0.25rem 0.5rem; font-size: 0.875rem; }
 .lp-btn-danger:hover { background-color: #c82333; }

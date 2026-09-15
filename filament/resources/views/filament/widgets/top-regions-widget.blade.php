@@ -166,7 +166,7 @@
 .av-1 { background: rgba(16,185,129,.14); color: #059669; }
 .av-2 { background: rgba(245,158,11,.14); color: #d97706; }
 .av-3 { background: rgba(239,68,68,.14);  color: #dc2626; }
-.av-4 { background: rgba(59,130,246,.14); color: #2563eb; }
+.av-4 { background: rgba(59,130,246,.14); color: #D53B04; }
 .av-5 { background: rgba(168,85,247,.14); color: #7c3aed; }
 .av-6 { background: rgba(20,184,166,.14); color: #0d9488; }
 .av-7 { background: rgba(249,115,22,.14); color: #ea580c; }

@@ -118,8 +118,8 @@
         white-space: nowrap;
     }
     .dh-refresh:hover:not(:disabled) {
-        border-color: #2563eb;
-        color: #2563eb;
+        border-color: #D53B04;
+        color: #D53B04;
         background: #eff6ff;
     }
     .dh-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -129,7 +129,7 @@
         color: #d1d5db;
     }
     .dark .dh-refresh:hover:not(:disabled) {
-        border-color: #3b82f6;
+        border-color: #D53B04;
         color: #60a5fa;
         background: rgba(59,130,246,0.1);
     }

@@ -39,9 +39,9 @@
                         📦 Plus vendu (qté)
                     </span>
                     <p style="font-size:13px;font-weight:600;color:#1f2937;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px;" title="{{ $topByQty['name'] }}">{{ $topByQty['name'] }}</p>
-                    <p style="font-size:20px;font-weight:800;color:#2563eb;letter-spacing:-.5px;line-height:1.1;">
+                    <p style="font-size:20px;font-weight:800;color:#D53B04;letter-spacing:-.5px;line-height:1.1;">
                         {{ number_format((float)$topByQty['total_qty'], 0, ',', ' ') }}
-                        <span style="font-size:11px;font-weight:600;color:#1d4ed8;">unités</span>
+                        <span style="font-size:11px;font-weight:600;color:#b23303;">unités</span>
                     </p>
                     <p style="font-size:11px;color:#1e40af;opacity:.7;margin-top:3px;">
                         {{ number_format((float)$topByQty['total_revenue_ht'], 3, ',', ' ') }} DT &middot; {{ number_format((int)$topByQty['total_orders'], 0, ',', ' ') }} docs

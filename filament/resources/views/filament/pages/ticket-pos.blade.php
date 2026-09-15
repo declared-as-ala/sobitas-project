@@ -90,7 +90,7 @@
 .pos-company .pos-company-name {
     font-weight: 800;
     font-size: 18px;
-    color: #f97316;
+    color: #D53B04;
 }
 
 .pos-company .pos-company-info {
@@ -138,7 +138,7 @@
 
 .pos-field input:focus {
     outline: none;
-    border-color: #f97316;
+    border-color: #D53B04;
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.15);
 }
 
@@ -224,7 +224,7 @@
 
 .pos-barcode-input:focus {
     outline: none;
-    border-color: #ea580c;
+    border-color: #b23303;
     box-shadow: 0 0 0 3px rgba(234, 88, 12, 0.2);
 }
 
@@ -371,7 +371,7 @@
 }
 
 .pos-tot-value input:focus {
-    border-color: #f97316;
+    border-color: #D53B04;
     outline: none;
     box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.1);
 }
@@ -398,7 +398,7 @@
 .pos-tot-row.row-net .pos-tot-value input {
     font-weight: 800;
     font-size: 18px;
-    color: #ea580c;
+    color: #b23303;
     background: transparent;
     border-color: transparent;
 }
@@ -412,7 +412,7 @@
 }
 
 .pos-btn-save {
-    background: #f97316;
+    background: #D53B04;
     color: #fff;
     border: 0;
     border-radius: 8px;
@@ -424,7 +424,7 @@
     transition: all 0.2s;
 }
 
-.pos-btn-save:hover { background: #ea580c; box-shadow: 0 6px 8px -1px rgba(234, 88, 12, 0.4); transform: translateY(-1px); }
+.pos-btn-save:hover { background: #b23303; box-shadow: 0 6px 8px -1px rgba(234, 88, 12, 0.4); transform: translateY(-1px); }
 
 /* ── Responsive ── */
 @media (max-width: 768px) {
@@ -541,7 +541,7 @@
 }
 .pos-affilie-input:focus {
     outline: none;
-    border-color: #f97316;
+    border-color: #D53B04;
     box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2);
 }
 .pos-affilie-actions {
@@ -557,7 +557,7 @@
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    background: #ea580c;
+    background: #b23303;
     color: #fff;
     box-shadow: 0 2px 6px rgba(234, 88, 12, 0.35);
     transition: background 0.15s, transform 0.1s;
@@ -662,8 +662,8 @@
     @if($ticketId)
     <div style="display:flex; justify-content:flex-end; margin-bottom:16px;">
         <a href="{{ route('tickets.print', ['ticket' => $ticketId]) }}" target="_blank"
-           style="display:inline-flex; align-items:center; gap:8px; background:#f97316; color:#fff; border:none; border-radius:8px; padding:10px 22px; font-size:14px; font-weight:700; cursor:pointer; text-decoration:none; box-shadow:0 4px 6px -1px rgba(249,115,22,.3); transition:all .2s;"
-           onmouseover="this.style.background='#ea580c'" onmouseout="this.style.background='#f97316'">
+           style="display:inline-flex; align-items:center; gap:8px; background:#D53B04; color:#fff; border:none; border-radius:8px; padding:10px 22px; font-size:14px; font-weight:700; cursor:pointer; text-decoration:none; box-shadow:0 4px 6px -1px rgba(249,115,22,.3); transition:all .2s;"
+           onmouseover="this.style.background='#b23303'" onmouseout="this.style.background='#D53B04'">
             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 9V2h12v7M6 18H4a2 2 0 01-2-2v-5a2 2 0 012-2h16a2 2 0 012 2v5a2 2 0 01-2 2h-2M6 14h12v8H6v-8z"/></svg>
             Imprimer
         </a>

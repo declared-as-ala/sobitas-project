@@ -87,8 +87,8 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
 .form-control.select2 { display: none; }
 
 .btn { display: inline-block; padding: 6px 12px; font-size: 14px; font-weight: 400; line-height: 1.42857143; text-align: center; cursor: pointer; border: 1px solid transparent; border-radius: 4px; text-decoration: none; }
-.btn-primary { color: #fff; background-color: #337ab7; border-color: #2e6da4; }
-.btn-primary:hover { background-color: #286090; }
+.btn-primary { color: #fff; background-color: #D53B04; border-color: #b23303; }
+.btn-primary:hover { background-color: #b23303; }
 .btn-danger  { color: #fff; background-color: #d9534f; border-color: #d43f3a; }
 .btn-danger:hover  { background-color: #c9302c; }
 
