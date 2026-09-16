@@ -61,11 +61,27 @@ class AffiliePanelProvider extends PanelProvider
                 PanelsRenderHook::HEAD_END,
                 fn (): string => <<<'HTML'
                     <style>
+                        /* Full width (owner request) — only injected on the affilie panel. */
                         .fi-main { max-width: 100% !important; }
                         .fi-main-ctn { width: 100% !important; }
                         @media (min-width: 1024px) {
                             .fi-main { padding-left: 2rem !important; padding-right: 2rem !important; }
                         }
+                        /* Rich product option in the order desk (Select ->allowHtml). */
+                        .afp-opt { display: flex; align-items: center; gap: 10px; padding: 3px 0; min-width: 0; }
+                        .afp-img { width: 40px; height: 40px; border-radius: 9px; object-fit: cover;
+                                   background: #f1f5f9; border: 1px solid #eef2f7; flex: 0 0 40px; }
+                        .afp-body { min-width: 0; }
+                        .afp-name { font-weight: 600; font-size: 13.5px; color: #0f172a;
+                                    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+                        .afp-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-top: 2px; }
+                        .afp-base { color: #D53B04; font-weight: 700; }
+                        .afp-stock { font-weight: 600; padding: 0 7px; border-radius: 999px; }
+                        .afp-stock.afp-ok { color: #047857; background: #ecfdf5; }
+                        .afp-stock.afp-out { color: #b91c1c; background: #fef2f2; }
+                        .dark .afp-name { color: #f1f5f9; }
+                        .dark .afp-stock.afp-ok { background: rgba(16,185,129,.14); }
+                        .dark .afp-stock.afp-out { background: rgba(239,68,68,.14); }
                     </style>
                     HTML
             )

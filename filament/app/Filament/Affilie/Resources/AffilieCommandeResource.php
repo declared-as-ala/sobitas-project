@@ -148,7 +148,7 @@ class AffilieCommandeResource extends Resource
     public static function affiliateProductQuery(): Builder
     {
         return Product::query()
-            ->select(['id', 'designation_fr', 'code_product', 'qte', 'prix', 'promo', 'prix_affilie'])
+            ->select(['id', 'designation_fr', 'code_product', 'qte', 'prix', 'promo', 'prix_affilie', 'cover'])
             ->whereNotNull('prix_affilie')
             ->where('prix_affilie', '>', 0);
     }
@@ -174,10 +174,30 @@ class AffilieCommandeResource extends Resource
     public static function productLabel(Product $product): string
     {
         $base = $product->affiliateBasePrice();
+        $name = e(trim((string) ($product->designation_fr ?? ('Produit #'.$product->getKey()))));
+        $stock = (int) ($product->qte ?? 0);
+        $inStock = $stock > 0;
 
-        return trim((string) ($product->designation_fr ?? ('Produit #'.$product->getKey())))
-            .' — base '.number_format((float) $base, 3, ',', ' ').' DT'
-            .' — '.(int) ($product->qte ?? 0).' en stock';
+        // Cover thumbnail via the panel's canonical resolver (legacy path / external CDN / placeholder).
+        $rel = \App\Filament\Support\ImagePath::normalizeExisting($product->cover);
+        $img = \App\Filament\Support\ImagePath::isExternal($rel)
+            ? $rel
+            : \Illuminate\Support\Facades\Storage::disk('public')->url($rel);
+
+        $baseTxt  = 'Base '.number_format((float) $base, 3, ',', ' ').' DT';
+        $stockTxt = $inStock ? ($stock.' en stock') : 'Rupture';
+        $stockCls = $inStock ? 'afp-ok' : 'afp-out';
+
+        // Rendered as HTML by the Select's ->allowHtml(); styled by classes in AffiliePanelProvider's
+        // render hook so both light and dark themes are handled. Product data is escaped via e().
+        return '<div class="afp-opt">'
+            .'<img class="afp-img" src="'.e($img).'" alt="" loading="lazy" onerror="this.style.visibility=\'hidden\'">'
+            .'<div class="afp-body">'
+                .'<div class="afp-name">'.$name.'</div>'
+                .'<div class="afp-meta"><span class="afp-base">'.e($baseTxt).'</span>'
+                .'<span class="afp-stock '.$stockCls.'">'.e($stockTxt).'</span></div>'
+            .'</div>'
+            .'</div>';
     }
 
     public static function productOptionLabel(mixed $id): ?string
@@ -335,8 +355,9 @@ class AffilieCommandeResource extends Resource
                                         ->label('Produit')
                                         ->required()
                                         ->searchable()
+                                        ->allowHtml() // rich options: thumbnail + name + base price + stock
                                         ->live()
-                                        ->placeholder('Tapez pour rechercher…')
+                                        ->placeholder('Rechercher un produit (nom ou code)…')
                                         ->getSearchResultsUsing(fn (string $search): array => static::productSearchOptions($search, 30))
                                         ->getOptionLabelUsing(fn ($value): ?string => static::productOptionLabel($value))
                                         // Pre-fill the selling price so an affiliate can submit an
