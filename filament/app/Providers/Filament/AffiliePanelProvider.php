@@ -61,22 +61,44 @@ class AffiliePanelProvider extends PanelProvider
                 PanelsRenderHook::HEAD_END,
                 fn (): string => <<<'HTML'
                     <style>
-                        /* Full width (owner request) — only injected on the affilie panel. */
-                        .fi-main { max-width: 100% !important; }
+                        /* ── Affiliate panel: BIG, spacious, image-forward (owner request) ──────────
+                           Only injected on the affilie panel, so the admin layout is untouched. */
+
+                        /* Use the full width, with breathing room. */
+                        .fi-main { max-width: 100% !important; font-size: 15px; }
                         .fi-main-ctn { width: 100% !important; }
                         @media (min-width: 1024px) {
                             .fi-main { padding-left: 2rem !important; padding-right: 2rem !important; }
                         }
-                        /* Rich product option in the order desk (Select ->allowHtml). */
-                        .afp-opt { display: flex; align-items: center; gap: 10px; padding: 3px 0; min-width: 0; }
-                        .afp-img { width: 40px; height: 40px; border-radius: 9px; object-fit: cover;
-                                   background: #f1f5f9; border: 1px solid #eef2f7; flex: 0 0 40px; }
+
+                        /* Bigger, clearer section headings. */
+                        .fi-section-header-heading, .fi-fo-section-header-heading { font-size: 1.2rem !important; font-weight: 800 !important; }
+
+                        /* Tall, legible form fields — easy to hit, easy to read. */
+                        .fi-input, textarea.fi-input, .fi-select-input, .fi-fo-select .fi-input {
+                            font-size: 1.03rem !important;
+                            min-height: 3.2rem !important;
+                            padding-top: .72rem !important; padding-bottom: .72rem !important;
+                            border-radius: 12px !important;
+                        }
+                        .fi-fo-field-wrp label, .fi-fo-field-label, .fi-fo-field-wrp-label {
+                            font-size: .95rem !important; font-weight: 700 !important;
+                        }
+
+                        /* Roomier repeater rows (each product line) + card feel. */
+                        .fi-fo-repeater-item { border-radius: 16px !important; }
+                        .fi-fo-repeater-item .fi-section-content, .fi-fo-repeater-item > div { padding: 1rem 1.1rem !important; }
+
+                        /* ── Rich product option (Select ->allowHtml): BIG thumbnail + clear data ── */
+                        .afp-opt { display: flex; align-items: center; gap: 14px; padding: 6px 2px; min-width: 0; }
+                        .afp-img { width: 56px; height: 56px; border-radius: 13px; object-fit: cover;
+                                   background: #f1f5f9; border: 1px solid #eef2f7; flex: 0 0 56px; }
                         .afp-body { min-width: 0; }
-                        .afp-name { font-weight: 600; font-size: 13.5px; color: #0f172a;
+                        .afp-name { font-weight: 700; font-size: 15.5px; color: #0f172a; line-height: 1.25;
                                     white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-                        .afp-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; margin-top: 2px; }
-                        .afp-base { color: #D53B04; font-weight: 700; }
-                        .afp-stock { font-weight: 600; padding: 0 7px; border-radius: 999px; }
+                        .afp-meta { display: flex; align-items: center; gap: 10px; font-size: 13px; margin-top: 4px; }
+                        .afp-base { color: #D53B04; font-weight: 800; }
+                        .afp-stock { font-weight: 700; padding: 1px 10px; border-radius: 999px; }
                         .afp-stock.afp-ok { color: #047857; background: #ecfdf5; }
                         .afp-stock.afp-out { color: #b91c1c; background: #fef2f2; }
                         .dark .afp-name { color: #f1f5f9; }
