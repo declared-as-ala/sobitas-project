@@ -85,6 +85,20 @@ class EditCommande extends EditRecord
                         ->send();
                     return redirect(route('factures.print', ['facture' => $bl->id]));
                 }),
+            // Once the order already has a Bon de Livraison the conversion button above hides
+            // itself — which used to leave staff with no visible way back to the shipment paper.
+            // This keeps the BL one click away for the order's whole life.
+            Actions\Action::make('printBl')
+                ->label('Imprimer le bon de livraison')
+                ->icon('heroicon-o-printer')
+                ->color('warning')
+                ->visible(fn () => $this->record->factures()->exists())
+                ->url(function (): string {
+                    $bl = $this->record->factures()->latest('id')->first();
+
+                    return $bl ? route('factures.print', ['facture' => $bl->id]) : '#';
+                })
+                ->openUrlInNewTab(),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),
