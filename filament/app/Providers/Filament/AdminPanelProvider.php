@@ -105,6 +105,23 @@ class AdminPanelProvider extends PanelProvider
         return Coordinate::publicBrandLogoUrl();
     }
 
+    /**
+     * asset() URL with a content-version query so a redeploy busts Cloudflare's 30-day cache.
+     *
+     * admin.protein.tn is Cloudflare-proxied with `Cache-Control: public, max-age=2592000` on
+     * /css/*, so an un-versioned stylesheet URL keeps serving the OLD file for weeks after a deploy
+     * (a CSS change ships but nobody sees it). filemtime() changes on every deploy that rewrites the
+     * file, which is exactly the cache key we want; it falls back to the app version if the file is
+     * unreadable so the link never breaks.
+     */
+    private function versionedAsset(string $relativePath): string
+    {
+        $full = public_path($relativePath);
+        $version = @filemtime($full) ?: (config('app.version') ?? '1');
+
+        return asset($relativePath) . '?v=' . $version;
+    }
+
     private function resolveLoginBackgroundUrl(): string
     {
         return Coordinate::publicLoginBackgroundUrl();
@@ -154,9 +171,9 @@ class AdminPanelProvider extends PanelProvider
                     return implode("\n", [
                         '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/nprogress/0.2.0/nprogress.min.css" />',
                         view('filament.components.custom-admin-styles')->render(),
-                        '<link rel="stylesheet" href="' . asset('css/filament/topbar.css') . '" />',
-                        '<link rel="stylesheet" href="' . asset('css/filament/doc-edit.css') . '" />',
-                        '<link rel="stylesheet" href="' . asset('css/filament/auth.css') . '" />',
+                        '<link rel="stylesheet" href="' . $this->versionedAsset('css/filament/topbar.css') . '" />',
+                        '<link rel="stylesheet" href="' . $this->versionedAsset('css/filament/doc-edit.css') . '" />',
+                        '<link rel="stylesheet" href="' . $this->versionedAsset('css/filament/auth.css') . '" />',
                         '<style id="filament-login-background">' . $loginBgStyle . '</style>',
                     ]);
                 }
