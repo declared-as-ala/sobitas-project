@@ -78,3 +78,114 @@ export function fmtDT(n: number | null | undefined): string {
   const v = Number(n ?? 0);
   return `${v.toLocaleString('fr-FR', { minimumFractionDigits: 3, maximumFractionDigits: 3 }).replace(/ | /g, ' ')} DT`;
 }
+
+// ── Order desk (Phase 2) ───────────────────────────────────────────────────────────────────────
+
+/** A sellable product for the create-order picker (only products with a real prix_affilie appear). */
+export interface AffiliateProduct {
+  id: number;
+  name: string;
+  image: string | null;
+  /** The affiliate floor: selling below this is refused server-side. */
+  base: number;
+  /** Suggested selling price (retail), pre-filled and editable down to `base`. */
+  suggested: number;
+  stock: number;
+  code: string;
+}
+
+export type OrderTone = 'ok' | 'warn' | 'destructive' | 'info' | 'brand' | 'neutral';
+
+export interface AffiliateOrder {
+  id: number;
+  numero: string;
+  created_at: string | null;
+  status: string;
+  status_label: string;
+  status_tone: OrderTone;
+  customer: string | null;
+  phone: string | null;
+  ville: string | null;
+  items_count: number;
+  total: number;
+  commission: number;
+}
+
+export interface AffiliateOrdersPage {
+  data: AffiliateOrder[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+}
+
+export interface CreateOrderLine {
+  produit_id: number;
+  qte: number;
+  prix_unitaire: number;
+}
+
+export interface CreateOrderCustomer {
+  nom?: string;
+  phone: string;
+  email?: string;
+  region?: string;
+  ville?: string;
+  adresse1?: string;
+  code_postale?: string;
+  note?: string;
+}
+
+export interface CreateOrderPayload {
+  lines: CreateOrderLine[];
+  customer: CreateOrderCustomer;
+  shipping?: number;
+}
+
+export interface CreateOrderResult {
+  id: number;
+  numero: string;
+  status: string;
+  total: number;
+  commission: number;
+}
+
+/** Normalised create-order failure: `field` is the semantic field, `line` the offending line index. */
+export interface AffiliateOrderError {
+  message: string;
+  field?: string | null;
+  line?: number | string | null;
+}
+
+export async function getAffiliateProducts(q = ''): Promise<AffiliateProduct[]> {
+  const { data } = await client.get<{ data: AffiliateProduct[] }>('/affilie/products', { params: { q } });
+  return data.data ?? [];
+}
+
+export async function getAffiliateOrders(page = 1, perPage = 20): Promise<AffiliateOrdersPage> {
+  const { data } = await client.get<AffiliateOrdersPage>('/affilie/orders', { params: { page, per_page: perPage } });
+  return data;
+}
+
+export async function createAffiliateOrder(payload: CreateOrderPayload): Promise<CreateOrderResult> {
+  try {
+    const { data } = await client.post<CreateOrderResult>('/affilie/orders', payload);
+    return data;
+  } catch (err: unknown) {
+    throw normaliseOrderError(err);
+  }
+}
+
+/** Turn an axios failure (our {message,field,line} 422 OR Laravel's {errors} validation) into one shape. */
+function normaliseOrderError(err: unknown): AffiliateOrderError {
+  const resp = (err as { response?: { data?: Record<string, unknown> } })?.response;
+  const body = resp?.data;
+  if (body && typeof body === 'object') {
+    if (typeof body.message === 'string' && 'field' in body) {
+      return { message: body.message, field: (body.field as string) ?? null, line: (body.line as number) ?? null };
+    }
+    if (body.errors && typeof body.errors === 'object') {
+      const first = Object.values(body.errors as Record<string, string[]>)[0]?.[0];
+      return { message: first || (typeof body.message === 'string' ? body.message : 'Données invalides.') };
+    }
+    if (typeof body.message === 'string') return { message: body.message };
+  }
+  return { message: 'Création impossible. Vérifiez votre connexion et réessayez.' };
+}
