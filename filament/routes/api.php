@@ -255,6 +255,14 @@ Route::middleware(['auth:sanctum', 'affilie'])->prefix('affilie')->group(functio
         ->middleware('throttle:60,1');
     Route::get('/dashboard', [\App\Http\Controllers\Api\AffiliePortalController::class, 'dashboard'])
         ->middleware('throttle:60,1');
+
+    // Order desk. GET reads are cheap; POST is the money-critical create, over AffilieOrderService.
+    Route::get('/products', [\App\Http\Controllers\Api\AffilieOrderController::class, 'products'])
+        ->middleware('throttle:120,1');
+    Route::get('/orders', [\App\Http\Controllers\Api\AffilieOrderController::class, 'orders'])
+        ->middleware('throttle:120,1');
+    Route::post('/orders', [\App\Http\Controllers\Api\AffilieOrderController::class, 'store'])
+        ->middleware('throttle:30,1');
 });
 
 // ── Authenticated Routes ──────────────────────────────
