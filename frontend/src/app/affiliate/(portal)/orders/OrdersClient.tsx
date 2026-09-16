@@ -3,33 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Plus, Package, ShoppingBag, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
-import { cn } from '@/app/components/ui/utils';
 import {
-  getAffiliateOrders, fmtDT, type AffiliateOrder, type AffiliateOrdersPage, type OrderTone,
+  getAffiliateOrders, fmtDT, type AffiliateOrder, type AffiliateOrdersPage,
 } from '@/services/affiliatePortal';
-
-const TONE: Record<OrderTone, string> = {
-  ok: 'border-ok/40 text-ok',
-  warn: 'border-warn/40 text-warn',
-  destructive: 'border-destructive/40 text-destructive',
-  brand: 'border-brand/40 text-brand',
-  info: 'border-hairline text-ink-2',
-  neutral: 'border-hairline text-ink-2',
-};
-
-function StatusBadge({ label, tone }: { label: string; tone: OrderTone }) {
-  return (
-    <span className={cn('inline-flex items-center rounded-full border bg-elevated px-2.5 py-0.5 text-xs font-semibold', TONE[tone])}>
-      {label}
-    </span>
-  );
-}
-
-function fmtDate(iso: string | null): string {
-  if (!iso) return '—';
-  const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
+import { StatusBadge, fmtDate } from '../ui';
 
 export function OrdersClient() {
   const [page, setPage] = useState(1);

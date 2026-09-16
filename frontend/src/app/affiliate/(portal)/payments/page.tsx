@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AffiliateComingSoon } from '../../AffiliateComingSoon';
+import { PaymentsClient } from './PaymentsClient';
 
 export const metadata: Metadata = {
   title: 'Mes paiements — Affilié',
@@ -7,10 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AffiliatePaymentsPage() {
-  return (
-    <AffiliateComingSoon
-      title="Mes paiements"
-      description="L’historique de vos versements arrive très prochainement."
-    />
-  );
+  return <PaymentsClient />;
 }

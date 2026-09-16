@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { AffiliateComingSoon } from '../../AffiliateComingSoon';
+import { ProfileClient } from './ProfileClient';
 
 export const metadata: Metadata = {
   title: 'Mon profil — Affilié',
@@ -7,10 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function AffiliateProfilePage() {
-  return (
-    <AffiliateComingSoon
-      title="Mon profil"
-      description="La modification de vos coordonnées et de vos informations de paiement arrive très prochainement."
-    />
-  );
+  return <ProfileClient />;
 }

@@ -189,3 +189,86 @@ function normaliseOrderError(err: unknown): AffiliateOrderError {
   }
   return { message: 'Création impossible. Vérifiez votre connexion et réessayez.' };
 }
+
+// ── Commissions / payments / profile (Phase 3) ──────────────────────────────────────────────────
+
+export interface AffiliateCommission {
+  id: number;
+  type: string;
+  type_label: string;
+  amount: number;
+  status: string;
+  status_label: string;
+  status_tone: OrderTone;
+  description: string;
+  commande: string | null;
+  created_at: string | null;
+}
+
+export interface AffiliateCommissionsPage {
+  summary: { pending: number; confirmed: number; paid: number };
+  data: AffiliateCommission[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+}
+
+export interface AffiliatePayment {
+  id: number;
+  amount: number;
+  status: string;
+  status_label: string;
+  status_tone: OrderTone;
+  reference: string | null;
+  paid_at: string | null;
+  created_at: string | null;
+}
+
+export interface AffiliatePaymentsPage {
+  summary: { paid: number; pending: number };
+  data: AffiliatePayment[];
+  meta: { current_page: number; last_page: number; per_page: number; total: number };
+}
+
+export interface AffiliateProfile {
+  name: string | null;
+  business_name: string | null;
+  email: string | null;
+  phone: string | null;
+  address: string | null;
+  city: string | null;
+  reference: string | null;
+  type: string | null;
+  status: string | null;
+  payment_method: string | null;
+  bank_name: string | null;
+  rib_or_iban: string | null;
+}
+
+/** The contact fields an affiliate may edit (payout details stay admin-managed). */
+export interface AffiliateProfileContact {
+  name?: string;
+  business_name?: string;
+  email?: string;
+  phone?: string;
+  address?: string;
+  city?: string;
+}
+
+export async function getAffiliateCommissions(page = 1, perPage = 20): Promise<AffiliateCommissionsPage> {
+  const { data } = await client.get<AffiliateCommissionsPage>('/affilie/commissions', { params: { page, per_page: perPage } });
+  return data;
+}
+
+export async function getAffiliatePayments(page = 1, perPage = 20): Promise<AffiliatePaymentsPage> {
+  const { data } = await client.get<AffiliatePaymentsPage>('/affilie/payments', { params: { page, per_page: perPage } });
+  return data;
+}
+
+export async function getAffiliateProfile(): Promise<AffiliateProfile> {
+  const { data } = await client.get<AffiliateProfile>('/affilie/profile');
+  return data;
+}
+
+export async function updateAffiliateProfile(contact: AffiliateProfileContact): Promise<AffiliateProfile> {
+  const { data } = await client.put<AffiliateProfile>('/affilie/profile', contact);
+  return data;
+}
