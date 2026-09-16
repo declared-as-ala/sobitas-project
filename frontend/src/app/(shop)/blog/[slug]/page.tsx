@@ -234,7 +234,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       getArticleDetails(slug),
       getLatestArticles().catch(() => [] as Awaited<ReturnType<typeof getLatestArticles>>),
       getAllArticles().catch(() => [] as Awaited<ReturnType<typeof getAllArticles>>),
-      getCategories(undefined, { perPage: 50 }).catch(() => []),
+      // 200, not 50: every category must be a candidate link target, or the ones past the 50th
+      // (commercial categories the blog should feed) are silently excluded from in-content linking.
+      getCategories(undefined, { perPage: 200 }).catch(() => []),
     ]);
 
     if (!article) {

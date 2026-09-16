@@ -103,7 +103,11 @@ const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 function compileTerm(term: string): string {
   const chars = [...term.toLowerCase()];
   const parts = chars.map((ch) => {
-    if (/\s/.test(ch)) return '(?:\\s|&nbsp;)+';
+    // A space in a search term also matches a hyphen (and non-breaking hyphen): supplement terms
+    // are written both ways in the corpus — "oméga 3" / "oméga-3", "pre workout" / "pre-workout",
+    // "mass gainer" / "mass-gainer" — so a space-spelled term must catch the hyphenated mention too.
+    // Additive: it only widens what a multi-word term matches, never narrows it.
+    if (/\s/.test(ch)) return '(?:\\s|&nbsp;|-|‑)+';
     const base = BASE_OF[ch] ?? ch;
     const alts = CHAR_ALTERNATIVES[base];
     if (!alts) return escapeRegex(ch);
