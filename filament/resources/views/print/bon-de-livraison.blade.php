@@ -44,9 +44,22 @@
             $qte         = (float)($d->qte ?? $d->quantite ?? 0);
             $pu          = (float)($d->prix_unitaire ?? 0);
             $lineTotal   = isset($d->prix_ttc) ? (float)$d->prix_ttc : $qte * $pu;
+
+            // Product thumbnail — resolved the same way every admin ImageColumn does, so legacy
+            // paths, external CDN covers and the missing-media placeholder all behave. URL form
+            // (the print page is HTML rendered by the browser, not a server-side PDF).
+            $cover  = $d->product->cover ?? null;
+            $imgRel = \App\Filament\Support\ImagePath::normalizeExisting($cover);
+            $imgUrl = $imgRel
+                ? (\App\Filament\Support\ImagePath::isExternal($imgRel)
+                    ? $imgRel
+                    : \Illuminate\Support\Facades\Storage::disk('public')->url($imgRel))
+                : null;
+
             $rows[] = [
                 'index'       => $i + 1,
                 'produit'     => $d->product->designation_fr ?? '—',
+                'image'       => $imgUrl,
                 'qte'         => $qte,
                 'pu'          => $pu,
                 'total'       => $lineTotal,
@@ -86,7 +99,7 @@
     gap: 24px;
     margin-bottom: 20px;
     padding-bottom: 16px;
-    border-bottom: 2px solid #ff4000;
+    border-bottom: 2px solid #D53B04;
 }
 .ftva-header-company {
     flex: 1;
@@ -127,7 +140,7 @@
 .ftva-doc-meta {
     width: 100%;
     background: #fff7ed;
-    border: 1.5px solid #ff4000;
+    border: 1.5px solid #D53B04;
     border-radius: 8px;
     padding: 12px 16px;
     text-align: center;
@@ -137,7 +150,7 @@
 .ftva-doc-meta h1 {
     font-size: 17pt;
     font-weight: 900;
-    color: #ff4000;
+    color: #D53B04;
     margin: 0 0 6px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
@@ -210,8 +223,8 @@ table.ftva-lines thead {
     display: table-header-group;
 }
 table.ftva-lines thead th {
-    background: #ff4000 !important;
-    background-color: #ff4000 !important;
+    background: #D53B04 !important;
+    background-color: #D53B04 !important;
     color: #fff !important;
     font-weight: 700;
     font-size: 7.5pt;
@@ -274,6 +287,14 @@ table.ftva-lines td.td-prod {
     word-break: break-word;
     line-height: 1.4;
 }
+.bl-prod-cell { display: flex; align-items: center; gap: 9px; }
+.bl-prod-img {
+    width: 38px; height: 38px; flex: 0 0 38px; border-radius: 6px; object-fit: cover;
+    border: 1px solid #e2e8f0; background: #f8fafc;
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+}
+.bl-prod-img--ph { display: inline-block; }
+.bl-prod-name { font-weight: 500; }
 table.ftva-lines td.td-right {
     text-align: right;
     padding-right: 8px;
@@ -335,7 +356,7 @@ table.ftva-totals tr:last-child td {
 }
 table.ftva-totals tr.row-grand td {
     padding: 11px 14px;
-    border-top: 2px solid #ff4000;
+    border-top: 2px solid #D53B04;
     border-bottom: none;
     font-size: 11.5pt;
     font-weight: 900;
@@ -367,7 +388,7 @@ table.ftva-totals tr.row-grand td:last-child {
 }
 .ftva-note {
     padding: 10px 14px;
-    border-left: 4px solid #ff4000;
+    border-left: 4px solid #D53B04;
     background: #fffbeb !important;
     border-radius: 0 6px 6px 0;
     font-size: 9pt;
@@ -398,7 +419,7 @@ table.ftva-totals tr.row-grand td:last-child {
     letter-spacing: 0.04em;
 }
 .ftva-rib span {
-    color: #ff4000;
+    color: #D53B04;
     font-weight: 700;
     text-transform: uppercase;
     font-size: 8pt;
@@ -495,7 +516,7 @@ table.ftva-totals tr.row-grand td:last-child {
             <div class="ftva-doc-meta-line"><b>N° :</b> {{ $facture->numero ?? '' }}</div>
             <div class="ftva-doc-meta-line"><b>Date :</b> {{ $dateStr }}</div>
             @if(!empty($facture->aramex_hawb))
-            <div class="ftva-doc-meta-line" style="margin-top:4px;padding-top:4px;border-top:1px dashed #ff4000;">
+            <div class="ftva-doc-meta-line" style="margin-top:4px;padding-top:4px;border-top:1px dashed #D53B04;">
                 <b>N° Suivi Aramex :</b> {{ $facture->aramex_hawb }}
             </div>
             @endif
@@ -544,7 +565,16 @@ table.ftva-totals tr.row-grand td:last-child {
         @foreach($rows as $row)
         <tr>
             <td class="td-num">{{ $row['index'] }}</td>
-            <td class="td-prod">{{ $row['produit'] }}</td>
+            <td class="td-prod">
+                <div class="bl-prod-cell">
+                    @if(!empty($row['image']))
+                        <img src="{{ $row['image'] }}" alt="" class="bl-prod-img" onerror="this.style.display='none'">
+                    @else
+                        <span class="bl-prod-img bl-prod-img--ph"></span>
+                    @endif
+                    <span class="bl-prod-name">{{ $row['produit'] }}</span>
+                </div>
+            </td>
             <td class="td-right" style="text-align:center;">{{ $row['qte'] }}</td>
             <td class="td-right">{{ $fmt($row['pu']) }}</td>
             <td class="td-ttc">{{ $fmt($row['total']) }}</td>

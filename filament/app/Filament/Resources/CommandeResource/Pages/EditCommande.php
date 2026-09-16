@@ -93,12 +93,22 @@ class EditCommande extends EditRecord
                 ->icon('heroicon-o-printer')
                 ->color('warning')
                 ->visible(fn () => $this->record->factures()->exists())
-                ->url(function (): string {
+                // Server-side redirect (same pattern as the working "Convertir" action) rather than
+                // an openUrlInNewTab link: it runs in the live admin panel session, so it reaches
+                // the staff-only print route under the SAME authenticated request that rendered this
+                // page — avoiding the 403 a new-tab GET hits when the shared web session has since
+                // been taken over by an affiliate login on the same domain.
+                ->action(function () {
                     $bl = $this->record->factures()->latest('id')->first();
 
-                    return $bl ? route('factures.print', ['facture' => $bl->id]) : '#';
-                })
-                ->openUrlInNewTab(),
+                    if (! $bl) {
+                        Notification::make()->warning()->title('Aucun bon de livraison trouvé')->send();
+
+                        return;
+                    }
+
+                    return redirect(route('factures.print', ['facture' => $bl->id]));
+                }),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),
