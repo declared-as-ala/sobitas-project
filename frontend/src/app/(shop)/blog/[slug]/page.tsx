@@ -294,6 +294,18 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       proteines: ['protéine en poudre', 'poudre de protéine', 'مسحوق البروتين', 'بروتين بودرة'],
       'prise-de-masse': ['gainer', 'mass gainer', 'ماس جينر', 'زيادة الوزن', 'زيادة الكتلة العضلية'],
       'acides-amines': ['bcaa', 'acides aminés', 'الأحماض الأمينية', 'احماض امينية'],
+      // Widened 16/09/2026 to route the blog's authority into more category pages — the same
+      // de-cannibalization lever, extended. A synonym for a slug not in the live taxonomy is a
+      // no-op (targetsFromTaxonomy only emits targets for categories that exist), so this is safe.
+      'omega-3': ['oméga 3', 'omega 3', 'huile de poisson', 'أوميغا 3', 'اوميغا 3', 'زيت السمك'],
+      'pre-workout': ['pre workout', 'pré-workout', 'preworkout', 'booster d’entraînement', 'ما قبل التمرين', 'بري وركاوت'],
+      'perte-de-poids': ['brûleur de graisse', 'bruleur de graisse', 'brûle-graisse', 'perte de poids', 'حرق الدهون', 'حارق الدهون', 'التخسيس'],
+      glutamine: ['glutamine', 'l-glutamine', 'جلوتامين', 'الجلوتامين'],
+      caseine: ['caséine', 'caseine', 'protéine caséine', 'كازين', 'الكازين'],
+      collagene: ['collagène', 'collagene', 'كولاجين', 'الكولاجين'],
+      'proteines-vegetales': ['protéine végétale', 'proteine vegetale', 'protéine vegan', 'بروتين نباتي', 'البروتين النباتي'],
+      vitamines: ['vitamine', 'complément vitaminé', 'فيتامينات', 'الفيتامينات'],
+      magnesium: ['magnésium', 'magnesium', 'مغنيسيوم', 'المغنيسيوم'],
     });
 
     /*

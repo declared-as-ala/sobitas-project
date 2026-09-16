@@ -12,7 +12,7 @@ import { Label } from '@/app/components/ui/label';
 import { cn } from '@/app/components/ui/utils';
 import { Container } from '@/app/components/layout/Container';
 
-export function AuthShell({ children, compact = false, artwork }: { children: ReactNode; compact?: boolean; artwork?: ReactNode }) {
+export function AuthShell({ children, compact = false, artwork, artworkLabel }: { children: ReactNode; compact?: boolean; artwork?: ReactNode; artworkLabel?: string }) {
   const { headerLogoUrl } = useSiteLogos();
 
   return (
@@ -24,7 +24,7 @@ export function AuthShell({ children, compact = false, artwork }: { children: Re
         <main className="relative flex w-full flex-col bg-elevated sm:rounded-xl lg:grid lg:min-h-[40rem] lg:grid-cols-2 lg:border lg:border-hairline">
           <aside
             className="relative hidden overflow-hidden bg-sunken lg:order-2 lg:block lg:rounded-e-xl lg:border-s lg:border-hairline"
-            aria-label={artwork ? 'Vérification Protein.tn' : 'Programme fidélité Protein.tn'}
+            aria-label={artworkLabel ?? (artwork ? 'Vérification Protein.tn' : 'Programme fidélité Protein.tn')}
           >
             {artwork ?? <AuthLoyaltyPanel />}
           </aside>

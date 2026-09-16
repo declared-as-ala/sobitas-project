@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 import { AuthShell, AuthCardHeader, AuthField, AuthSubmit, AuthAlt } from '@/app/components/AuthShell';
 import { checkIsAffiliate } from '@/services/affiliatePortal';
+import { AffiliatePartnerPanel } from './AffiliatePartnerPanel';
 
 export function AffiliateLoginClient() {
   const router = useRouter();
@@ -45,11 +46,11 @@ export function AffiliateLoginClient() {
   };
 
   return (
-    <AuthShell>
+    <AuthShell artwork={<AffiliatePartnerPanel />} artworkLabel="Programme partenaire Protein.tn">
       <AuthCardHeader
-        kicker="Espace Affilié"
+        kicker="Espace Partenaire"
         title="Connexion"
-        subtitle="Suivez vos commissions, vos commandes et vos paiements."
+        subtitle="Vos ventes, vos commissions et vos paiements, réunis en un seul espace."
       />
 
       <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
