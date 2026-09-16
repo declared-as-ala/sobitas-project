@@ -3,6 +3,8 @@
 namespace App\Filament\Affilie\Pages;
 
 use App\Filament\Affilie\Widgets\AffilieBalanceWidget;
+use App\Filament\Affilie\Widgets\AffilieEarningsChart;
+use App\Filament\Affilie\Widgets\AffilieReferralWidget;
 use Filament\Actions\Action;
 use Filament\Pages\Dashboard as BaseDashboard;
 
@@ -51,15 +53,15 @@ class AffilieDashboard extends BaseDashboard
     {
         return [
             AffilieBalanceWidget::class,
+            AffilieReferralWidget::class,
+            AffilieEarningsChart::class,
         ];
     }
 
     public function getColumns(): int | array
     {
-        return [
-            'default' => 1,
-            'md' => 2,
-            'xl' => 2,
-        ];
+        // Single column: the balance widget lays out its own tile grid, and the referral card
+        // and earnings chart are full-width, so they stack cleanly on every breakpoint.
+        return 1;
     }
 }

@@ -7,6 +7,8 @@ use App\Filament\Pages\Auth\Login;
 use App\Filament\Affilie\Pages\AffilieDashboard;
 use App\Filament\Affilie\Pages\AffilieProfilePage;
 use App\Filament\Affilie\Widgets\AffilieBalanceWidget;
+use App\Filament\Affilie\Widgets\AffilieEarningsChart;
+use App\Filament\Affilie\Widgets\AffilieReferralWidget;
 use App\Filament\Affilie\Resources\AffilieCommandeResource;
 use App\Filament\Affilie\Resources\AffilieLedgerReadResource;
 use App\Filament\Affilie\Resources\AffiliePaymentReadResource;
@@ -69,6 +71,8 @@ class AffiliePanelProvider extends PanelProvider
             ])
             ->widgets([
                 AffilieBalanceWidget::class,
+                AffilieEarningsChart::class,
+                AffilieReferralWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
