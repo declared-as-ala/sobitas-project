@@ -68,6 +68,10 @@ on:
           - commerce-flow-tests
           - notifications-status
           - campaign-artwork-retire-dry-run
+          # Affiliate pricing: fills products.prix_affilie = retail − 10% so the affiliate order
+          # desk has a catalogue to sell. Dry-run previews the eligible count + a sample; writes
+          # nothing. The -apply variant (below, gated) does the one UPDATE.
+          - affilie-seed-base-prices-dry-run
           # The three logs the scheduler redirects away from the container's stdout. Without
           # these, a pass that runs and decides to do nothing is indistinguishable from a pass
           # that is working.
@@ -143,6 +147,7 @@ on:
           # known-good pre-deploy snapshot. The dry-run variant must be reviewed first.
           - commerce-order-recovery-apply
           - campaign-artwork-retire-apply
+          - affilie-seed-base-prices-apply
       confirm:
         description: "Writing tasks only (including commerce-order-recovery-apply): type APPLY"
         required: false
@@ -197,6 +202,17 @@ jobs:
               ;;
             campaign-artwork-retire-apply)
               ARGS="slides:retire-20260903 --apply"
+              WRITES=yes
+              ;;
+            affilie-seed-base-prices-dry-run)
+              # Preview only — prints the eligible count and a sample, writes nothing.
+              ARGS="affilie:seed-base-prices --markup=10"
+              WRITES=no
+              ;;
+            affilie-seed-base-prices-apply)
+              # Fills products.prix_affilie = ROUND(prix × 0.9, 3) for published products that have
+              # no affiliate price yet. One UPDATE; safe to re-run (skips already-priced rows).
+              ARGS="affilie:seed-base-prices --markup=10 --apply"
               WRITES=yes
               ;;
             catalog-status)
