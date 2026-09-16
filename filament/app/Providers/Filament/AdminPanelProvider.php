@@ -112,10 +112,21 @@ class AdminPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        $panel = $panel
             ->default()
             ->id('admin')
-            ->path('')
+            ->path('');
+
+        /*
+         * Once the affiliate panel moves to its own subdomain (AFFILIATE_PANEL_HOST set),
+         * pin the admin panel to its host so its root route ('') no longer answers on — and
+         * shadows — the affiliate subdomain. No-op by default (both panels stay path-based).
+         */
+        if (config('affilies.panel_host') && ($adminHost = config('affilies.admin_panel_host'))) {
+            $panel = $panel->domain($adminHost);
+        }
+
+        return $panel
             ->login(Login::class)
             ->passwordReset()
             ->profile(EditProfile::class)

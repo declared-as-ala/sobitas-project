@@ -29,9 +29,22 @@ class AffiliePanelProvider extends PanelProvider
 {
     public function panel(Panel $panel): Panel
     {
+        $panel = $panel->id('affilie');
+
+        /*
+         * Subdomain separation (opt-in via AFFILIATE_PANEL_HOST — see config/affilies.php).
+         * With a host set, the affiliate portal is its OWN site at the subdomain root; without
+         * one, it stays co-hosted at admin.protein.tn/affilie exactly as before. Binding a
+         * domain restricts the panel to that host, so this MUST NOT activate before the DNS +
+         * reverse-proxy + TLS for the subdomain exist, or the portal becomes unreachable.
+         */
+        if ($affilieHost = config('affilies.panel_host')) {
+            $panel = $panel->domain($affilieHost)->path('');
+        } else {
+            $panel = $panel->path('affilie');
+        }
+
         return $panel
-            ->id('affilie')
-            ->path('affilie')
             ->login(Login::class)
             ->passwordReset()
             ->profile(EditProfile::class)

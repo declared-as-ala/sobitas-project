@@ -48,10 +48,29 @@ class AppServiceProvider extends ServiceProvider
         // Force all URL/asset generation to use APP_URL regardless of the Host header
         // received by PHP-FPM (which may differ from the public domain when behind a
         // reverse proxy like Nginx Proxy Manager).
-        $appUrl = rtrim((string) config('app.url'), '/');
-        if ($appUrl) {
-            URL::forceRootUrl($appUrl);
-            if (str_starts_with($appUrl, 'https://')) {
+        $appUrl  = rtrim((string) config('app.url'), '/');
+        $rootUrl = $appUrl;
+
+        // Subdomain separation: when the affiliate panel has its own host, a request that
+        // arrives on a KNOWN panel host must generate its URLs/redirects/assets on that same
+        // host — otherwise an affiliate on partenaires.protein.tn is bounced to APP_URL
+        // (admin.protein.tn) mid-login. Only trusted, configured hosts are honoured, so the
+        // Host header can't be used to forge links. No-op unless AFFILIATE_PANEL_HOST is set.
+        if (config('affilies.panel_host') && ! $this->app->runningInConsole()) {
+            $requestHost = request()?->getHost();
+            $knownHosts  = array_filter([
+                config('affilies.panel_host'),
+                config('affilies.admin_panel_host'),
+                parse_url($appUrl, PHP_URL_HOST),
+            ]);
+            if ($requestHost && in_array($requestHost, $knownHosts, true)) {
+                $rootUrl = (str_starts_with($appUrl, 'http://') ? 'http://' : 'https://') . $requestHost;
+            }
+        }
+
+        if ($rootUrl) {
+            URL::forceRootUrl($rootUrl);
+            if (str_starts_with($rootUrl, 'https://')) {
                 URL::forceScheme('https');
             }
         }

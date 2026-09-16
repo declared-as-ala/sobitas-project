@@ -19,6 +19,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Panel hosts — affiliate subdomain separation
+    |--------------------------------------------------------------------------
+    | DEFAULT (both empty): nothing changes. The affilié panel stays co-hosted at
+    | admin.protein.tn/affilie exactly as today, and no panel is host-pinned.
+    |
+    | When AFFILIATE_PANEL_HOST is set (e.g. "partenaires.protein.tn"):
+    |   • the affilié panel is bound to that host and served at its ROOT ("/"),
+    |   • the admin panel is pinned to ADMIN_PANEL_HOST (defaults to the APP_URL
+    |     host, i.e. admin.protein.tn) so it no longer answers on the new subdomain,
+    |   • admin.protein.tn/affilie 301-redirects to the new host (legacy links keep
+    |     working), and URL/asset generation follows the incoming host.
+    |
+    | ONLY set AFFILIATE_PANEL_HOST once the DNS record, the reverse-proxy host
+    | (Nginx Proxy Manager → 127.0.0.1:8083) and the TLS cert for the subdomain all
+    | exist — otherwise the affiliate portal moves to a host that cannot yet resolve.
+    | Set it in the Laravel .env on the VPS (NOT in docker-compose, whose empty
+    | APP_URL-style env would override the .env value), then redeploy.
+    */
+    'panel_host'       => trim((string) env('AFFILIATE_PANEL_HOST', '')) ?: null,
+    'admin_panel_host' => trim((string) env('ADMIN_PANEL_HOST', ''))
+        ?: (parse_url((string) env('APP_URL', ''), PHP_URL_HOST) ?: null),
+
+    /*
+    |--------------------------------------------------------------------------
     | Order commission — the money model
     |--------------------------------------------------------------------------
     | These settings are read by AffilieTransactionService and by

@@ -49,6 +49,37 @@ var __cmdInitDone = false;
 </script>
 
 <style>
+/* ── Rich product autocomplete (Select2 options) ──────────────────────────── */
+.select2-dropdown{border:1px solid #e5e7eb;border-radius:12px;box-shadow:0 14px 38px rgba(15,23,42,.16);overflow:hidden}
+.select2-container--default .select2-results__option{padding:0}
+.select2-container--default .select2-results__option--highlighted[aria-selected]{background:#fff5f0;color:inherit}
+.select2-search--dropdown .select2-search__field{border-radius:8px;border:1px solid #e5e7eb;padding:8px 10px}
+.pos-opt{display:flex;align-items:center;gap:12px;padding:9px 12px;min-height:52px}
+.pos-opt-img{width:40px;height:40px;border-radius:9px;object-fit:cover;background:#f1f5f9;border:1px solid #eef2f7;flex:0 0 40px}
+.pos-opt-img--ph{display:inline-block}
+.pos-opt-body{flex:1 1 auto;min-width:0}
+.pos-opt-name{font-weight:600;font-size:13.5px;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:6px}
+.pos-opt-meta{font-size:11.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-top:1px}
+.pos-opt-side{flex:0 0 auto;display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.pos-opt-price{font-weight:700;font-size:13px;color:#D53B04;white-space:nowrap}
+.pos-stock{font-size:10.5px;font-weight:600;padding:1px 7px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.pos-stock--ok{color:#047857;background:#ecfdf5;border-color:#a7f3d0}
+.pos-stock--out{color:#b91c1c;background:#fef2f2;border-color:#fecaca}
+.pos-badge{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;padding:1px 6px;border-radius:6px}
+.pos-badge--promo{color:#fff;background:#D53B04}
+.pos-sel{display:inline-flex;align-items:center;gap:7px;min-width:0}
+.pos-sel-img{width:22px;height:22px;border-radius:6px;object-fit:cover;flex:0 0 22px}
+.select2-container .select2-selection--single{height:auto;min-height:38px;display:flex;align-items:center}
+.select2-container--default .select2-selection--single .select2-selection__rendered{line-height:1.3;padding-top:2px;padding-bottom:2px}
+html.dark .select2-dropdown{background:#1f2937;border-color:#374151}
+html.dark .pos-opt-name{color:#f1f5f9}
+html.dark .pos-opt-meta{color:#94a3b8}
+html.dark .select2-container--default .select2-results__option--highlighted[aria-selected]{background:#374151}
+html.dark .pos-stock--ok{background:rgba(16,185,129,.12)}
+html.dark .pos-stock--out{background:rgba(239,68,68,.12)}
+</style>
+
+<style>
 /* ── Force FULL WIDTH on Commande Pages ─────────── */
 body:has(.commande-edit-page) .fi-main-ctn,
 body:has(.commande-edit-page) .fi-page,
@@ -333,7 +364,7 @@ function cmdBootPage() {
                 cmdInitSelect2(j);
                 var pInfo = selProducts[line.produit_id];
                 if (pInfo) {
-                    var newOption = new Option(pInfo.designation_fr + ' (' + (pInfo.qte||0) + ') — ' + pInfo.code_product, line.produit_id, true, true);
+                    var newOption = new Option(pInfo.designation_fr, line.produit_id, true, true);
                     $('#select_produit' + j).append(newOption).trigger('change.select2');
                 } else {
                     $('#select_produit' + j).val(line.produit_id).trigger('change.select2');
@@ -370,18 +401,61 @@ if (!window._cmdNavListenerActive) {
     document.addEventListener('livewire:navigated', function() { __cmdInitDone = false; cmdWaitAndBoot(); });
 }
 
+function cmdEscapeHtml(s) {
+    var d = document.createElement('div');
+    d.textContent = (s === null || s === undefined) ? '' : String(s);
+    return d.innerHTML;
+}
+
+// Rich dropdown row: thumbnail · name (+ promo) · brand/ref · price · stock badge
+function cmdProductResult(d) {
+    if (d.loading) return d.text;
+    if (!d.id) return d.text;
+    var img = '<img class="pos-opt-img" src="' + cmdEscapeHtml(d.image) + '" loading="lazy" onerror="this.style.visibility=\'hidden\'">';
+    var inStock = Number(d.qte) > 0;
+    var stock = '<span class="pos-stock ' + (inStock ? 'pos-stock--ok' : 'pos-stock--out') + '">'
+        + (inStock ? (Number(d.qte) + ' en stock') : 'Rupture') + '</span>';
+    var price = (d.prix !== null && d.prix !== undefined && d.prix !== '')
+        ? (parseFloat(d.prix).toFixed(3) + ' DT') : '';
+    var promo = d.has_promo ? '<span class="pos-badge pos-badge--promo">Promo</span>' : '';
+    var meta = [];
+    if (d.brand) meta.push(cmdEscapeHtml(d.brand));
+    if (d.code_product) meta.push('#' + cmdEscapeHtml(d.code_product));
+    var name = cmdEscapeHtml(d.name || d.text);
+    return '<div class="pos-opt">' + img
+        + '<div class="pos-opt-body"><div class="pos-opt-name">' + name + promo + '</div>'
+        + '<div class="pos-opt-meta">' + meta.join(' · ') + '</div></div>'
+        + '<div class="pos-opt-side"><span class="pos-opt-price">' + price + '</span>' + stock + '</div></div>';
+}
+
+// Selected pill: small thumbnail + name (falls back to plain text for prefilled edit rows)
+function cmdProductSelection(d) {
+    if (!d.id) return d.text;
+    var name = d.name || d.text;
+    if (d.image) {
+        return $('<span class="pos-sel"><img class="pos-sel-img" src="' + cmdEscapeHtml(d.image)
+            + '" onerror="this.remove()"><span>' + cmdEscapeHtml(name) + '</span></span>');
+    }
+    return name;
+}
+
 function cmdInitSelect2(i) {
     var $el = $('#select_produit' + i);
     try { $el.select2('destroy'); } catch(e) {}
     $el.select2({
-        placeholder: 'Choisir..',
+        placeholder: 'Rechercher un produit (nom ou code)…',
         allowClear: true,
         width: '100%',
+        minimumInputLength: 0,
+        escapeMarkup: function (m) { return m; },
+        templateResult: cmdProductResult,
+        templateSelection: cmdProductSelection,
         ajax: {
             url: '/api/pos-products',
             dataType: 'json',
             delay: 250,
             data: function (params) { return { q: params.term || '' }; },
+            processResults: function (data) { return { results: (data && data.results) || [] }; },
             cache: true
         }
     });

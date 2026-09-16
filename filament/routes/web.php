@@ -330,20 +330,45 @@ Route::middleware(['auth', 'back.office'])->group(function () {
 
     // POS Native AJAX endpoints
     Route::get('/api/pos-products', function() {
-        $search = request('q', '');
+        $search = trim((string) request('q', ''));
         $products = \App\Models\Product::query()
-            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product')
-            ->where('designation_fr', 'like', "%{$search}%")
-            ->orWhere('code_product', 'like', "%{$search}%")
+            ->select('id', 'designation_fr', 'prix', 'promo', 'promo_expiration_date', 'qte', 'code_product', 'cover', 'brand_id')
+            ->when($search !== '', function ($query) use ($search) {
+                // Group the OR so an empty/absent search still returns the top list rather
+                // than an unbounded orWhere leaking every row. Matches name OR barcode/ref.
+                $query->where(function ($q) use ($search) {
+                    $q->where('designation_fr', 'like', "%{$search}%")
+                      ->orWhere('code_product', 'like', "%{$search}%");
+                });
+            })
+            ->with('brand:id,designation_fr')
+            ->orderByRaw('CASE WHEN qte > 0 THEN 0 ELSE 1 END') // in-stock first
+            ->orderBy('designation_fr')
             ->limit(30)
             ->get();
-        return response()->json(['results' => $products->map(fn($p) => [
-            'id' => $p->id,
-            'text' => $p->designation_fr . ' (' . ($p->qte ?? 0) . ') - ' . $p->code_product,
-            'prix' => $p->getEffectiveUnitPrice(),
-            'qte' => $p->qte,
-            'code_product' => $p->code_product
-        ])]);
+
+        return response()->json(['results' => $products->map(function ($p) {
+            // Reuse the panel's canonical cover resolver (handles legacy paths, external
+            // CDN covers and the missing-media placeholder identically to every ImageColumn).
+            $rel   = \App\Filament\Support\ImagePath::normalizeExisting($p->cover);
+            $image = \App\Filament\Support\ImagePath::isExternal($rel)
+                ? $rel
+                : \Illuminate\Support\Facades\Storage::disk('public')->url($rel);
+
+            return [
+                'id'           => $p->id,
+                // `text` stays the verbose label the plain builders (devis/factures) render as-is.
+                'text'         => $p->designation_fr . ' (' . ($p->qte ?? 0) . ') - ' . $p->code_product,
+                'name'         => $p->designation_fr,          // clean name for the rich commande option template
+                'image'        => $image,
+                'prix'         => $p->getEffectiveUnitPrice(),  // promo-aware selling price
+                'prix_base'    => $p->prix,
+                'has_promo'    => $p->hasActivePromo(),
+                'qte'          => (int) ($p->qte ?? 0),
+                'code_product' => $p->code_product,
+                'brand'        => optional($p->brand)->designation_fr,
+            ];
+        })]);
     })->name('api.pos-products');
 
     Route::get('/api/pos-barcode', function() {
@@ -400,3 +425,21 @@ Route::middleware(['auth', 'back.office'])->group(function () {
         ]);
     })->name('api.pos-clients.store');
 });
+
+/*
+ * Legacy affiliate path → subdomain redirect.
+ *
+ * Registered ONLY once the affiliate portal has moved to its own host
+ * (AFFILIATE_PANEL_HOST set — see config/affilies.php). Keeps old links and bookmarks to
+ * admin.protein.tn/affilie working by 301-ing them to the new host. Scoped to the admin
+ * host so it never touches the affiliate panel that now lives at the subdomain root. No-op
+ * by default (the affiliate panel still owns /affilie under the admin domain).
+ */
+if (($affilieHost = config('affilies.panel_host')) && ($adminHost = config('affilies.admin_panel_host'))) {
+    $scheme = str_starts_with((string) config('app.url'), 'http://') ? 'http' : 'https';
+    Route::domain($adminHost)->group(function () use ($affilieHost, $scheme) {
+        Route::get('affilie/{path?}', function (?string $path = null) use ($affilieHost, $scheme) {
+            return redirect()->away($scheme . '://' . $affilieHost . '/' . ltrim((string) $path, '/'), 301);
+        })->where('path', '.*')->name('affilie.legacy-redirect');
+    });
+}
