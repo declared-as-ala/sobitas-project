@@ -244,6 +244,19 @@ Route::middleware('auth:sanctum')->prefix('affilie-applications/me')->group(func
         ->middleware('throttle:10,1');
 });
 
+/*
+ * ── AFFILIATE PORTAL (protein.tn/affiliate/*) ───────────────────────────────────────────────
+ * The active affiliate's own surface, replacing the Filament panel with native storefront routes.
+ * `auth:sanctum` proves login; the `affilie` gate proves an APPROVED affiliate (Active + role) —
+ * the same test as User::canAccessPanel('affilie'). Figures come from the shared money services.
+ */
+Route::middleware(['auth:sanctum', 'affilie'])->prefix('affilie')->group(function () {
+    Route::get('/me', [\App\Http\Controllers\Api\AffiliePortalController::class, 'me'])
+        ->middleware('throttle:60,1');
+    Route::get('/dashboard', [\App\Http\Controllers\Api\AffiliePortalController::class, 'dashboard'])
+        ->middleware('throttle:60,1');
+});
+
 // ── Authenticated Routes ──────────────────────────────
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();

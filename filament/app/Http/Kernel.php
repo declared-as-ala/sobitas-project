@@ -98,5 +98,7 @@ class Kernel extends HttpKernel
         'no.cache.print' => \App\Http\Middleware\DisableBrowserCacheForPrintDocuments::class,
         // Staff-only. `auth` alone lets AFFILIES (same 'web' guard) reach back-office routes.
         'back.office' => \App\Http\Middleware\EnsureBackOfficeRole::class,
+        // Approved-affiliate only, for the /affilie portal API. Runs after auth:sanctum.
+        'affilie' => \App\Http\Middleware\EnsureAffilie::class,
     ];
 }
