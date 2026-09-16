@@ -38,6 +38,10 @@
 
     $dateStr = $documentDate ?? $facture->created_at?->format('d/m/Y');
 
+    // Single amount lead-in for the NOTE: the company note if set (it already reads "… à la
+    // somme de :"), otherwise a default — never both.
+    $noteLead = trim((string) ($footerNote ?? ($coordonnee->note ?? '')));
+
     /* ── Rows ─────────────────────────────────────────────────── */
     $rows = [];
     if (isset($details_facture)) {
@@ -295,10 +299,7 @@ table.bl-totals tr.grand td.v { color: var(--or); font-weight: 900; font-size: 1
     <div class="bl-note">
         <div class="bl-label"><span class="bl-bar"></span> Note</div>
         <div class="bl-note-body">
-            @if(!empty($footerNote) || (!empty($coordonnee) && !empty($coordonnee->note)))
-                {{ $footerNote ?? $coordonnee->note }}<br>
-            @endif
-            Arrêté le présent bon de livraison à la somme de :<br>
+            {{ $noteLead !== '' ? $noteLead : 'Arrêté le présent bon de livraison à la somme de :' }}<br>
             <b id="bl-words"><em style="color:#9aa5b1;">calcul…</em></b>
         </div>
     </div>
@@ -334,8 +335,16 @@ table.bl-totals tr.grand td.v { color: var(--or); font-weight: 900; font-size: 1
     function tens(n) {
         if (n < 20) return a[n];
         var hi = Math.floor(n / 10), lo = n % 10;
-        if (hi === 7 || hi === 9) { return b[hi] + (lo > 0 ? '-' + a[10 + lo] : (hi === 8 ? 's' : '')); }
-        return b[hi] + (lo > 0 ? '-' + a[lo] : (hi === 8 ? 's' : ''));
+        if (hi === 7 || hi === 9) {
+            // 70s built on 'soixante', 90s on 'quatre-vingt', each + a teen (dix..dix-neuf).
+            var base = b[hi - 1];
+            if (lo === 1 && hi === 7) return base + ' et ' + a[11]; // soixante et onze
+            return base + '-' + a[10 + lo];                          // e.g. 92 → quatre-vingt-douze
+        }
+        if (hi === 8) return lo === 0 ? 'quatre-vingts' : 'quatre-vingt-' + a[lo];
+        if (lo === 0) return b[hi];
+        if (lo === 1) return b[hi] + ' et ' + a[1];                  // vingt et un … soixante et un
+        return b[hi] + '-' + a[lo];
     }
     function hundreds(n) {
         var h = Math.floor(n / 100), t = n % 100, s = '';
