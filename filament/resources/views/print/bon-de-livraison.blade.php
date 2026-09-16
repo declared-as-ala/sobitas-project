@@ -12,21 +12,20 @@
     /* ── Context ──────────────────────────────────────────────── */
     $coordonnee = $coordonnee ?? $company ?? null;
     $isPdf      = !empty($forPdf);
-    $fmt        = fn ($n) => number_format((float) $n, 3, '.', ' ');
-    $qfmt       = fn ($q) => ((float) $q == (int) $q)
-        ? (string) (int) $q
-        : rtrim(rtrim(number_format((float) $q, 3, '.', ''), '0'), '.');
+    $fmt        = function ($n) { return number_format((float) $n, 3, '.', ' '); };
 
     $logoUrl = \App\Support\PrintLogo::resolve($coordonnee ?? null);
 
     /* ── Client (delivery recipient) ──────────────────────────── */
     $printClient   = $client ?? $facture->client ?? null;
+    // Null-safe throughout: a facture with no client must render (an empty CLIENT block), never
+    // 500 on "Attempt to read property on null".
     $clientAddress = trim((string) ($facture->formatted_delivery_address ?? '')) !== ''
         ? $facture->formatted_delivery_address
-        : ($printClient->adresse ?? '');
-    $cPhones = array_values(array_filter([$printClient->phone_1 ?? null, $printClient->phone_2 ?? null]));
-    $cRc     = $printClient->registre_commerce ?? null;
-    $cMf     = $printClient->matricule ?? null;
+        : ($printClient?->adresse ?? '');
+    $cPhones = array_values(array_filter([$printClient?->phone_1, $printClient?->phone_2]));
+    $cRc     = $printClient?->registre_commerce;
+    $cMf     = $printClient?->matricule;
 
     /* ── Totals ───────────────────────────────────────────────── */
     $frais         = (float) ($calc_frais ?? $facture->frais_livraison ?? 0);
@@ -46,10 +45,13 @@
             $qte       = (float) ($d->qte ?? $d->quantite ?? 0);
             $pu        = (float) ($d->prix_unitaire ?? 0);
             $lineTotal = isset($d->prix_ttc) ? (float) $d->prix_ttc : $qte * $pu;
+            $qteDisp   = ($qte == (int) $qte)
+                ? (string) (int) $qte
+                : rtrim(rtrim(number_format($qte, 3, '.', ''), '0'), '.');
             $rows[] = [
                 'index'   => $i + 1,
                 'produit' => $d->product->designation_fr ?? '—',
-                'qte'     => $qte,
+                'qte'     => $qteDisp,
                 'pu'      => $pu,
                 'total'   => $lineTotal,
             ];
@@ -257,17 +259,18 @@ table.bl-totals tr.grand td.v { color: var(--or); font-weight: 900; font-size: 1
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $row)
+            @foreach($rows as $row)
             <tr>
                 <td class="c-center c-num">{{ $row['index'] }}</td>
                 <td class="c-left c-prod">{{ $row['produit'] }}</td>
-                <td class="c-center">{{ $qfmt($row['qte']) }}</td>
+                <td class="c-center">{{ $row['qte'] }}</td>
                 <td class="c-right">{{ $fmt($row['pu']) }}</td>
                 <td class="c-right c-total">{{ $fmt($row['total']) }}</td>
             </tr>
-            @empty
+            @endforeach
+            @if(empty($rows))
             <tr><td colspan="5" class="c-center bl-empty">Aucune ligne de produit.</td></tr>
-            @endforelse
+            @endif
         </tbody>
     </table>
 
