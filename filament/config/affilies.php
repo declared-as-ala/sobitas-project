@@ -24,7 +24,7 @@ return [
     | DEFAULT (both empty): nothing changes. The affilié panel stays co-hosted at
     | admin.protein.tn/affilie exactly as today, and no panel is host-pinned.
     |
-    | When AFFILIATE_PANEL_HOST is set (e.g. "partenaires.protein.tn"):
+    | When AFFILIATE_PANEL_HOST is set (e.g. "affilie.protein.tn"):
     |   • the affilié panel is bound to that host and served at its ROOT ("/"),
     |   • the admin panel is pinned to ADMIN_PANEL_HOST (defaults to the APP_URL
     |     host, i.e. admin.protein.tn) so it no longer answers on the new subdomain,

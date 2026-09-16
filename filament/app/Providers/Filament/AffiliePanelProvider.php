@@ -3,7 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\EditProfile;
-use App\Filament\Pages\Auth\Login;
+use App\Filament\Affilie\Pages\Auth\AffilieLogin;
 use App\Filament\Affilie\Pages\AffilieDashboard;
 use App\Filament\Affilie\Pages\AffilieProfilePage;
 use App\Filament\Affilie\Widgets\AffilieBalanceWidget;
@@ -19,6 +19,7 @@ use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -47,12 +48,27 @@ class AffiliePanelProvider extends PanelProvider
         }
 
         return $panel
-            ->login(Login::class)
+            ->login(AffilieLogin::class)
             ->passwordReset()
             ->profile(EditProfile::class)
             ->colors([
                 'primary' => Color::Orange,
             ])
+            // Use the FULL screen width (owner request: "use all the space"). Only injected on the
+            // affilie panel, so it can't touch the admin layout. Kept to layout width — no fragile
+            // targeting of Filament's internal control markup.
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => <<<'HTML'
+                    <style>
+                        .fi-main { max-width: 100% !important; }
+                        .fi-main-ctn { width: 100% !important; }
+                        @media (min-width: 1024px) {
+                            .fi-main { padding-left: 2rem !important; padding-right: 2rem !important; }
+                        }
+                    </style>
+                    HTML
+            )
             /*
              * THERE IS NO AUTO-DISCOVERY IN THIS PANEL. A resource that is not in this array does
              * not exist: no navigation entry, no routes, and `Resource::getUrl()` throws
