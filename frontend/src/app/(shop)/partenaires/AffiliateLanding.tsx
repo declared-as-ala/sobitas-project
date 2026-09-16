@@ -17,7 +17,6 @@ import { PageHeader } from '@/app/components/PageHeader';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { AFFILIATE_PANEL_URL } from '@/services/affiliateProgram';
 import { getBaseUrl } from '@/util/canonical';
 import { buildBreadcrumbListSchema, buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { AFFILIATE_FAQ, AFFILIATE_PROFILES } from './affiliateCopy';
@@ -102,12 +101,13 @@ function AffiliateDoors() {
       </LinkWithLoading>
 
       {/*
-        A plain <a>, and it has to be: the affiliate dashboard is a Filament panel on the admin
-        host, not a Next.js route, so `LinkWithLoading` would show a navigation spinner for a
-        full page load it does not control.
+        The affiliate space is now an internal Next.js route (protein.tn/affiliate/login), not the
+        Filament panel on the admin host — so this is a `LinkWithLoading`, which draws its own
+        navigation boundary. Same brand domain, its own session, separate from admin.
       */}
-      <a
-        href={AFFILIATE_PANEL_URL}
+      <LinkWithLoading
+        href="/affiliate/login"
+        loadingMessage="Ouverture de votre espace…"
         className="group flex min-h-[124px] flex-col justify-between gap-4 rounded-2xl border border-rule-strong bg-sunken p-5 text-ink-1 transition-colors [@media(hover:hover)]:hover:border-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
       >
         <span className="flex items-center gap-3">
@@ -127,7 +127,7 @@ function AffiliateDoors() {
             aria-hidden
           />
         </span>
-      </a>
+      </LinkWithLoading>
     </div>
   );
 }
