@@ -55,7 +55,10 @@ import { cn } from '@/app/components/ui/utils';
 // steps are the same OTP interaction as the standalone `/verify-phone` already listed here. It was
 // missing, so the tab bar and the install banner sat on top of the form (and the KYC photo guide)
 // on mobile. The landing `/partenaires` is deliberately NOT chrome-free: it is a marketing page.
-export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-account', '/verify-email', '/verify-phone', '/forgot-password', '/reset-password', '/pack-builder', '/account', '/partenaires/inscription'];
+// `/affiliate` is the affiliate portal: its login is a full-screen two-panel AuthShell and its
+// signed-in pages carry their own header + bottom tab bar (AffiliateShell), so the storefront
+// bottom nav and install banner must not stack on top of them — the same reason `/account` is here.
+export const CHROME_FREE_ROUTES = ['/checkout', '/login', '/register', '/verify-account', '/verify-email', '/verify-phone', '/forgot-password', '/reset-password', '/pack-builder', '/account', '/partenaires/inscription', '/affiliate'];
 
 /** True when `pathname` is one of those routes, or a child of one. */
 export function isChromeFreeRoute(pathname: string): boolean {

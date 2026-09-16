@@ -132,6 +132,12 @@ export function isReservedRouteSlug(slug: string): boolean {
     'pack-builder',
     // Caught by that same check on its first build — which is the point of having it.
     'partenaires',
+    // The affiliate portal — app/affiliate/{login,orders,commissions,payments,profile}. Like
+    // /partenaires above, without this the middleware crawler-rewrite sends Googlebot to
+    // /x-crawler/category/affiliate (single segment) or /x-crawler/product/affiliate/login (two),
+    // which resolve to nothing → a 404 + noindex for pages that answer 200 to a browser. The
+    // section is noindex by design anyway (per-page robots meta), but it must not 404 for bots.
+    'affiliate',
     /*
      * /avis/{token} — the per-order review page. Same defect as /pack-builder, and it survived
      * check-reserved-routes.mjs because that check only looks at top-level segments that hold a
