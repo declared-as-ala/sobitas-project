@@ -263,6 +263,16 @@ Route::middleware(['auth:sanctum', 'affilie'])->prefix('affilie')->group(functio
         ->middleware('throttle:120,1');
     Route::post('/orders', [\App\Http\Controllers\Api\AffilieOrderController::class, 'store'])
         ->middleware('throttle:30,1');
+
+    // Commissions ledger, payout history, and self-service profile (contact fields only).
+    Route::get('/commissions', [\App\Http\Controllers\Api\AffiliePortalController::class, 'commissions'])
+        ->middleware('throttle:120,1');
+    Route::get('/payments', [\App\Http\Controllers\Api\AffiliePortalController::class, 'payments'])
+        ->middleware('throttle:120,1');
+    Route::get('/profile', [\App\Http\Controllers\Api\AffiliePortalController::class, 'profile'])
+        ->middleware('throttle:120,1');
+    Route::put('/profile', [\App\Http\Controllers\Api\AffiliePortalController::class, 'updateProfile'])
+        ->middleware('throttle:30,1');
 });
 
 // ── Authenticated Routes ──────────────────────────────
