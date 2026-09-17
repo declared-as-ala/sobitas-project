@@ -5,20 +5,27 @@ return [
     |--------------------------------------------------------------------------
     | Aramex API — Tunisia domestic shipping
     |--------------------------------------------------------------------------
-    | ARAMEX_SANDBOX=true  → ws.dev.aramex.net  (test account below)
-    | ARAMEX_SANDBOX=false → ws.aramex.net      (live account from sales team)
+    | ARAMEX_SANDBOX=true  → ws.dev.aramex.net  (Aramex dev/sandbox endpoint)
+    | ARAMEX_SANDBOX=false → ws.aramex.net      (live endpoint)
+    |
+    | Every value below is read from the environment (see .env.example) and set in
+    | the VPS .env — nothing here is committed. Before this, the credentials were
+    | hardcoded literals and `sandbox` ignored ARAMEX_SANDBOX entirely, so there was
+    | no way to point the integration at the sandbox without editing this file.
     */
 
-    'sandbox' => false,
+    'sandbox' => env('ARAMEX_SANDBOX', false),
 
-    // Credentials sent inside every API request body (ClientInfo)
-    'username'       => 'bitoutawalid@gmail.com',
-    'password'       => 'Walid@bitouta@0000',
-    'account_number' => '60506486',
-    'account_pin'    => '321321',
-    'account_entity' => 'TUN',
-    'account_country' => 'TN',
-    'version'          => '1.0',
+    // Credentials sent inside every API request body (ClientInfo). Real values live
+    // ONLY in the VPS .env. The literals that used to sit here were committed to git
+    // history and must be rotated with Aramex (the password and account PIN especially).
+    'username'        => env('ARAMEX_USERNAME'),
+    'password'        => env('ARAMEX_PASSWORD'),
+    'account_number'  => env('ARAMEX_ACCOUNT_NUMBER'),
+    'account_pin'     => env('ARAMEX_ACCOUNT_PIN'),
+    'account_entity'  => env('ARAMEX_ACCOUNT_ENTITY', 'TUN'),
+    'account_country' => env('ARAMEX_ACCOUNT_COUNTRY', 'TN'),
+    'version'         => env('ARAMEX_VERSION', '1.0'),
 
     // Shipment defaults for domestic Tunisia
     'product_group'    => 'DOM',   // domestic
