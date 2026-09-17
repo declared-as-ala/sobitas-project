@@ -271,17 +271,42 @@
     /* ── Conversion wizard modal ────────────────────────────────────────── */
     .cw-root {
         display: flex;
+        flex-direction: column;
         align-items: stretch;
-        gap: 12px;
-        padding: 4px 0;
+        gap: 8px;
+        padding: 2px 0;
+        /* Never let the summary stretch to a full-width modal — keep it a tidy centred column
+           whatever width the dialog is (the convert modals are shared across Commande + Quotation). */
+        max-width: 380px;
+        margin-inline: auto;
     }
     .cw-card {
-        flex: 1;
         background: #f9fafb;
         border: 1px solid #e5e7eb;
         border-radius: 10px;
         padding: 14px 16px;
     }
+    /* Why-there-is-a-remise note: sits just under the Remise line, quiet and explanatory. */
+    .cw-remise-reason {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 2px 0 2px auto;
+        padding: 3px 9px;
+        max-width: max-content;
+        border-radius: 999px;
+        background: #fffbeb;
+        border: 1px solid #fde68a;
+        color: #92400e;
+        font-size: 0.6875rem;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+    .cw-remise-reason svg { flex-shrink: 0; color: #f59e0b; }
+    .dark .cw-remise-reason { background: rgb(120 53 15 / 0.25); border-color: rgb(146 64 14 / 0.5); color: #fcd34d; }
+    .dark .cw-remise-reason svg { color: #fbbf24; }
+    .cw-totals-row--remise { color: #b45309; font-weight: 600; }
+    .dark .cw-totals-row--remise { color: #fcd34d; }
     .dark .cw-card { background: rgb(30 41 59); border-color: rgb(55 65 81); }
     .cw-card-header {
         display: flex;
@@ -374,7 +399,7 @@
         padding: 14px 16px;
         border-radius: 10px;
         border: 1.5px solid;
-        min-width: 170px;
+        width: 100%;
     }
     .cw-target-icon {
         width: 36px;
@@ -397,9 +422,8 @@
     }
     .dark .cw-target-hint { color: #9ca3af; }
     @media (max-width: 540px) {
-        .cw-root { flex-direction: column; align-items: center; }
-        .cw-arrow svg { transform: rotate(90deg); }
-        .cw-target { min-width: auto; width: 100%; }
+        /* Base layout is already a vertical column with a down-arrow, so nothing to flip here. */
+        .cw-card { padding: 12px 14px; }
     }
 
     /* ── Products table: compact, responsive, no horizontal scroll ────────────── */

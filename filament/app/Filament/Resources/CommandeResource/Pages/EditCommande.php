@@ -74,6 +74,7 @@ class EditCommande extends EditRecord
                 ->modalHeading('Transformer en Bon de Livraison')
                 ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
                 ->modalContent(fn (): View => CommandeResource::buildConversionModalContent($this->record, 'Bon de Livraison', 'amber'))
+                ->modalWidth(Width::Large)
                 ->modalSubmitActionLabel('Confirmer la conversion')
                 ->modalCancelActionLabel('Annuler')
                 ->visible(fn () => ! $this->record->factures()->exists())

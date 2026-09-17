@@ -14,6 +14,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Contracts\View\View;
@@ -194,6 +195,7 @@ class CommandeResource extends Resource
                         ->modalHeading('Transformer en Bon de Livraison')
                         ->modalDescription('Vérifiez les informations avant de confirmer la conversion.')
                         ->modalContent(fn (Commande $record): View => static::buildConversionModalContent($record, 'Bon de Livraison', 'amber'))
+                        ->modalWidth(Width::Large)
                         ->modalSubmitActionLabel('Confirmer la conversion')
                         ->modalCancelActionLabel('Annuler')
                         ->action(function (Commande $record) {
@@ -409,6 +411,24 @@ class CommandeResource extends Resource
             ?: trim(($record->nom ?? '') . ' ' . ($record->prenom ?? ''))
             ?: ($record->client?->name ?? '—');
 
+        // WHY is there a remise? The most common reason is the client spending Protinas (loyalty
+        // points): each redemption writes a `redeem` UserPointTransaction against this order, so the
+        // points spent are the plain-language explanation staff need. Guarded — a missing column or
+        // relation must never break the confirmation modal (it would block converting the order).
+        $protinasUsed = 0;
+        try {
+            $protinasUsed = (int) abs((int) $record->pointTransactions()->where('type', 'redeem')->sum('points'));
+        } catch (\Throwable) {
+            $protinasUsed = 0;
+        }
+
+        $remiseReason = null;
+        if ($remise > 0) {
+            $remiseReason = $protinasUsed > 0
+                ? number_format($protinasUsed, 0, ',', ' ') . ' Protinas utilisées par le client (fidélité)'
+                : 'Remise commerciale appliquée à la commande';
+        }
+
         return view('filament.components.convert-wizard-summary', [
             'sourceType'   => 'Commande',
             'sourceNumber' => $record->numero,
@@ -417,6 +437,8 @@ class CommandeResource extends Resource
             'itemsCount'   => $record->details->count(),
             'totalHt'      => $fmt($totalHt > 0 ? $totalHt : $totalTtc),
             'remise'       => $remise > 0 ? $fmt($remise) : 0,
+            'remiseReason' => $remiseReason,
+            'frais'        => $frais > 0 ? $fmt($frais) : null,
             'tva'          => null,
             'totalTtc'     => $fmt($totalTtc),
             'targetLabel'  => $targetLabel,
