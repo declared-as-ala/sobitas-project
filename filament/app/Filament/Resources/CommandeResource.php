@@ -430,19 +430,21 @@ class CommandeResource extends Resource
         }
 
         return view('filament.components.convert-wizard-summary', [
-            'sourceType'   => 'Commande',
-            'sourceNumber' => $record->numero,
-            'client'       => $clientName,
-            'date'         => $record->created_at?->format('d/m/Y') ?? '—',
-            'itemsCount'   => $record->details->count(),
-            'totalHt'      => $fmt($totalHt > 0 ? $totalHt : $totalTtc),
-            'remise'       => $remise > 0 ? $fmt($remise) : 0,
-            'remiseReason' => $remiseReason,
-            'frais'        => $frais > 0 ? $fmt($frais) : null,
-            'tva'          => null,
-            'totalTtc'     => $fmt($totalTtc),
-            'targetLabel'  => $targetLabel,
-            'targetColor'  => $targetColor,
+            'sourceType'      => 'Commande',
+            'sourceNumber'    => $record->numero,
+            'client'          => $clientName,
+            'date'            => $record->created_at?->format('d/m/Y') ?? '—',
+            'itemsCount'      => $record->details->count(),
+            'totalHt'         => $fmt($totalHt > 0 ? $totalHt : $totalTtc),
+            'remise'          => $remise > 0 ? $fmt($remise) : 0,
+            'remiseReason'    => $remiseReason,
+            'remiseIsLoyalty' => $protinasUsed > 0,
+            'protinasUsed'    => $protinasUsed,
+            'frais'           => $frais > 0 ? $fmt($frais) : null,
+            'tva'             => null,
+            'totalTtc'        => $fmt($totalTtc),
+            'targetLabel'     => $targetLabel,
+            'targetColor'     => $targetColor,
         ]);
     }
 

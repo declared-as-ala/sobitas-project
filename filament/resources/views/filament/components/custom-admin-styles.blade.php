@@ -269,15 +269,23 @@
     .doc-btn--sm { padding: 2px 8px; font-size: 0.6875rem; }
 
     /* ── Conversion wizard modal ────────────────────────────────────────── */
+    /* Filament v4 confirmation modals ignore ->modalWidth(), so the "Convertir en BL" dialog
+       renders full-bleed. Constrain the modal WINDOW itself by matching the one that holds our
+       summary — scoped via :has() so no other modal is touched, and it automatically covers both
+       the Commande and the shared Quotation conversion dialogs. */
+    .fi-modal-window:has(.cw-root) {
+        max-width: 29rem !important;   /* ~464px — a tidy confirmation dialog, never the whole screen */
+        width: 100% !important;
+        margin-inline: auto !important;
+    }
     .cw-root {
         display: flex;
         flex-direction: column;
         align-items: stretch;
         gap: 8px;
         padding: 2px 0;
-        /* Never let the summary stretch to a full-width modal — keep it a tidy centred column
-           whatever width the dialog is (the convert modals are shared across Commande + Quotation). */
-        max-width: 380px;
+        /* Fallback cap should the window selector ever miss — the summary still stays a tidy column. */
+        max-width: 400px;
         margin-inline: auto;
     }
     .cw-card {
@@ -307,6 +315,43 @@
     .dark .cw-remise-reason svg { color: #fbbf24; }
     .cw-totals-row--remise { color: #b45309; font-weight: 600; }
     .dark .cw-totals-row--remise { color: #fcd34d; }
+    /* Loyalty callout — the branded reason a remise exists: the client spent Protinas.
+       Carries the real Protina coin so staff recognise it instantly. */
+    .cw-loyalty {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-top: 10px;
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+        border: 1px solid #fed7aa;
+    }
+    .dark .cw-loyalty {
+        background: linear-gradient(135deg, rgb(67 20 7 / 0.6), rgb(120 53 15 / 0.35));
+        border-color: rgb(154 52 18 / 0.55);
+    }
+    .cw-loyalty__coin {
+        width: 38px;
+        height: 38px;
+        flex-shrink: 0;
+        object-fit: contain;
+        filter: drop-shadow(0 1px 3px rgb(154 52 18 / 0.35));
+    }
+    .cw-loyalty__amount {
+        font-size: 0.8125rem;
+        font-weight: 700;
+        color: #9a3412;
+        line-height: 1.2;
+    }
+    .dark .cw-loyalty__amount { color: #fdba74; }
+    .cw-loyalty__hint {
+        font-size: 0.6875rem;
+        color: #b45309;
+        line-height: 1.3;
+        margin-top: 2px;
+    }
+    .dark .cw-loyalty__hint { color: #fcd34d; }
     .dark .cw-card { background: rgb(30 41 59); border-color: rgb(55 65 81); }
     .cw-card-header {
         display: flex;

@@ -6,6 +6,12 @@
         'gray'    => ['bg' => '#f9fafb', 'text' => '#374151', 'border' => '#e5e7eb', 'icon' => '#6b7280'],
     ];
     $tc = $colorMap[$targetColor ?? 'gray'] ?? $colorMap['gray'];
+
+    // A loyalty remise carries the branded Protina callout; a plain commercial discount gets the
+    // quiet note. Both flags are optional so the shared Quotation modal (which passes neither)
+    // simply renders no explanation.
+    $isLoyaltyRemise = ! empty($remiseIsLoyalty);
+    $protinas        = (int) ($protinasUsed ?? 0);
 @endphp
 
 <div class="cw-root">
@@ -49,15 +55,6 @@
                     <span>Remise</span>
                     <span>- {{ $remise }}</span>
                 </div>
-                @if(!empty($remiseReason))
-                    {{-- WHY the remise exists — so staff aren't guessing where the discount came from. --}}
-                    <div class="cw-remise-reason">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
-                            <path fill-rule="evenodd" d="M9 4.5a.75.75 0 01.721.544l.813 2.846a3.75 3.75 0 002.576 2.576l2.846.813a.75.75 0 010 1.442l-2.846.813a3.75 3.75 0 00-2.576 2.576l-.813 2.846a.75.75 0 01-1.442 0l-.813-2.846a3.75 3.75 0 00-2.576-2.576l-2.846-.813a.75.75 0 010-1.442l2.846-.813A3.75 3.75 0 007.466 7.89l.813-2.846A.75.75 0 019 4.5z" clip-rule="evenodd" />
-                        </svg>
-                        <span>{{ $remiseReason }}</span>
-                    </div>
-                @endif
             @endif
 
             @if(isset($tva) && $tva !== null && $tva !== '—')
@@ -72,6 +69,31 @@
                 <span>{{ $totalTtc ?? '—' }}</span>
             </div>
         </div>
+
+        {{-- WHY there is a remise — so staff never have to guess where a discount came from. --}}
+        @if(!empty($remise) && $isLoyaltyRemise)
+            <div class="cw-loyalty">
+                <img
+                    class="cw-loyalty__coin"
+                    src="{{ asset('images/protina-coin.webp') }}"
+                    alt="Protina"
+                    width="38"
+                    height="38"
+                    loading="lazy"
+                />
+                <div>
+                    <div class="cw-loyalty__amount">{{ number_format($protinas, 0, ',', ' ') }} Protinas utilisées</div>
+                    <div class="cw-loyalty__hint">Le client a échangé ses points de fidélité — c’est l’origine de la remise.</div>
+                </div>
+            </div>
+        @elseif(!empty($remise) && !empty($remiseReason))
+            <div class="cw-remise-reason">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
+                    <path fill-rule="evenodd" d="M5.25 2.25h3.879a1.5 1.5 0 011.06.44l11.122 11.12a1.5 1.5 0 010 2.122l-3.879 3.879a1.5 1.5 0 01-2.121 0L3.31 10.81a1.5 1.5 0 01-.44-1.061V5.872A3.622 3.622 0 015.25 2.25zM6 6a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />
+                </svg>
+                <span>{{ $remiseReason }}</span>
+            </div>
+        @endif
     </div>
 
     {{-- Flow arrow (points down: this order becomes the document below) --}}
