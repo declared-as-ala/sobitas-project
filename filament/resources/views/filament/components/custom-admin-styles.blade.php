@@ -1,5 +1,86 @@
 {{-- Design system: Facturation ERP-lite — cards, tables, badges, spacing (see docs/DESIGN_SYSTEM.md) --}}
 <style>
+    /* Affiliate order document — scoped to the read-only admin infolist. */
+    .aff-facture-document {
+        --aff-paper: #fff;
+        --aff-soft: #f9fafb;
+        --aff-line: #e5e7eb;
+        --aff-ink: #111827;
+        --aff-muted: #4b5563;
+        --aff-accent: #D53B04;
+        --aff-gain-bg: #fff7ed;
+        --aff-gain-ink: #9a3412;
+        --aff-gain-line: #fed7aa;
+        width: 100%;
+        min-width: 0;
+        background: var(--aff-paper);
+        color: var(--aff-ink);
+        border: 1px solid var(--aff-line);
+        border-radius: 12px;
+        box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+        font-size: 0.875rem;
+        line-height: 1.5;
+        overflow-wrap: anywhere;
+    }
+    .dark .aff-facture-document {
+        --aff-paper: #111827;
+        --aff-soft: #1e293b;
+        --aff-line: #374151;
+        --aff-ink: #f1f5f9;
+        --aff-muted: #cbd5e1;
+        --aff-accent: #fdba74;
+        --aff-gain-bg: #431407;
+        --aff-gain-ink: #fdba74;
+        --aff-gain-line: #9a3412;
+    }
+    .aff-facture-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; padding: 24px; border-bottom: 3px solid #D53B04; }
+    .aff-facture-header > div { min-width: 0; }
+    .aff-facture-kicker { margin: 0 0 6px; color: var(--aff-accent); font-size: 0.6875rem; font-weight: 700; letter-spacing: 0.1em; }
+    .aff-facture-number { margin: 0; font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 750; line-height: 1.2; font-variant-numeric: tabular-nums; }
+    .aff-facture-date { margin: 8px 0 0; color: var(--aff-muted); font-size: 0.8125rem; }
+    .aff-facture-badges { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+    .aff-facture-mode { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
+    .aff-facture-mode > span { color: var(--aff-muted); font-size: 0.75rem; }
+    .aff-facture-body { display: grid; gap: 24px; min-width: 0; padding: 24px; }
+    .aff-facture-parties { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+    .aff-facture-party { min-width: 0; padding: 20px; border: 1px solid var(--aff-line); border-radius: 10px; }
+    .aff-facture-party h3 { margin: 0 0 12px; color: var(--aff-muted); font-size: 0.75rem; font-weight: 600; }
+    .aff-facture-party-name { margin: 0 0 12px; font-size: 1rem; font-weight: 700; }
+    .aff-facture-details { margin: 0; display: grid; gap: 6px; }
+    .aff-facture-details > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; }
+    .aff-facture-details dt { color: var(--aff-muted); font-size: 0.8125rem; }
+    .aff-facture-details dd { margin: 0; }
+    .aff-facture-note { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--aff-line); font-size: 0.8125rem; }
+    .aff-facture-note strong { color: var(--aff-muted); font-weight: 600; }
+    .aff-facture-note p { margin: 4px 0 0; white-space: pre-line; }
+    .aff-facture-table-wrap { min-width: 0; overflow-x: auto; border: 1px solid var(--aff-line); border-radius: 10px; }
+    .aff-facture-table-wrap:focus-visible { outline: 2px solid var(--aff-accent); outline-offset: 3px; }
+    .aff-facture-table { width: 100%; min-width: 620px; border-collapse: collapse; text-align: left; }
+    .aff-facture-table caption { text-align: left; padding: 16px; font-weight: 700; }
+    .aff-facture-table th { background: var(--aff-soft); color: var(--aff-muted); font-size: 0.75rem; font-weight: 600; }
+    .aff-facture-table th, .aff-facture-table td { padding: 12px 16px; border-top: 1px solid var(--aff-line); vertical-align: top; }
+    .aff-facture-table tbody tr:nth-child(even), .aff-facture-table tbody tr:hover { background: var(--aff-soft); }
+    .aff-facture-product { min-width: 180px; font-weight: 600; }
+    .aff-facture-table .aff-facture-numeric { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .aff-facture-empty { text-align: center; color: var(--aff-muted); }
+    .aff-facture-totals { width: min(100%, 400px); margin: 0 0 0 auto; border: 1px solid var(--aff-line); border-radius: 10px; overflow: hidden; }
+    .aff-facture-totals > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; padding: 10px 16px; }
+    .aff-facture-totals dt { color: var(--aff-muted); }
+    .aff-facture-totals dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+    .aff-facture-totals .aff-facture-total-client { padding-block: 16px; border-top: 1px solid var(--aff-line); background: var(--aff-soft); font-size: 1.125rem; font-weight: 700; }
+    .aff-facture-total-client dt { color: var(--aff-ink); }
+    .aff-facture-totals .aff-facture-gain { padding-block: 14px; background: var(--aff-gain-bg); border-top: 1px solid var(--aff-gain-line); color: var(--aff-gain-ink); font-weight: 700; }
+    .aff-facture-gain dt { color: inherit; }
+    @media (max-width: 700px) {
+        .aff-facture-header { flex-direction: column; gap: 16px; padding: 16px; }
+        .aff-facture-badges, .aff-facture-mode { align-items: flex-start; }
+        .aff-facture-badges { flex-direction: row; flex-wrap: wrap; align-items: center; }
+        .aff-facture-body { padding: 16px; gap: 16px; }
+        .aff-facture-parties { grid-template-columns: minmax(0, 1fr); }
+        .aff-facture-party { padding: 16px; }
+        .aff-facture-details > div { grid-template-columns: 88px minmax(0, 1fr); gap: 8px; }
+    }
+
     /* ── Sticky topbar: header stays fixed on scroll, content has top padding ───────────────────── */
     .fi-topbar {
         position: sticky;

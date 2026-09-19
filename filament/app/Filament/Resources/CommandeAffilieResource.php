@@ -7,10 +7,8 @@ use App\Enums\AffilieTransactionType;
 use App\Filament\Resources\CommandeAffilieResource\Pages;
 use App\Models\Commande;
 use Filament\Actions\ViewAction;
-use Filament\Infolists\Components\RepeatableEntry;
-use Filament\Infolists\Components\TextEntry;
+use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -74,7 +72,7 @@ class CommandeAffilieResource extends Resource
     {
         return parent::getEloquentQuery()
             ->whereNotNull('affilie_id')
-            ->with(['affilie', 'affilieTransactions']);
+            ->with(['affilie', 'affilieTransactions', 'details.product']);
     }
 
     private static function ledgerGain(Commande $record): string
@@ -131,53 +129,14 @@ class CommandeAffilieResource extends Resource
     public static function infolist(Schema $schema): Schema
     {
         return $schema->components([
-            Section::make('Commande')->schema([
-                TextEntry::make('numero')->label('N°'),
-                TextEntry::make('created_at')->label('Date')->dateTime('d/m/Y H:i'),
-                TextEntry::make('etat')->label('État')->badge()
-                    ->formatStateUsing(fn ($state): string => Commande::getStatusLabel((string) $state))
-                    ->color(fn ($state): string => Commande::getStatusColor((string) $state)),
-                TextEntry::make('fulfillment_mode')->label('Mode de réception')->badge()
-                    ->default(Commande::FULFILLMENT_DELIVERY)
-                    ->formatStateUsing(fn ($state): string => static::fulfillmentLabel($state))
-                    ->color('gray'),
-            ])->columns(2)->columnSpanFull(),
-            Section::make('Affilié')->schema([
-                TextEntry::make('affilie.name')->label('Nom')->placeholder('—'),
-                TextEntry::make('affilie.business_name')->label('Entreprise')->placeholder('—'),
-                TextEntry::make('affilie.phone')->label('Téléphone')->placeholder('—'),
-                TextEntry::make('affilie.email')->label('E-mail')->placeholder('—'),
-                TextEntry::make('affilie.address')->label('Adresse')->placeholder('—'),
-                TextEntry::make('affilie.city')->label('Ville')->placeholder('—'),
-            ])->columns(2)->columnSpanFull(),
-            Section::make('Client et livraison')->schema([
-                ...array_map(
-                    fn (string $field, string $label): TextEntry => TextEntry::make($field)
-                        ->label($label)
-                        ->state(fn (Commande $record) => $record->{'livraison_'.$field} ?: $record->{$field})
-                        ->placeholder('—'),
-                    ['nom', 'prenom', 'phone', 'email', 'region', 'ville', 'code_postale', 'adresse1', 'adresse2'],
-                    ['Nom', 'Prénom', 'Téléphone', 'E-mail', 'Gouvernorat', 'Ville', 'Code postal', 'Adresse', 'Complément d’adresse'],
-                ),
-                TextEntry::make('note')->label('Note')->placeholder('—')->columnSpanFull(),
-            ])->columns(2)->columnSpanFull(),
-            Section::make('Articles')->schema([
-                RepeatableEntry::make('details')->hiddenLabel()->schema([
-                    TextEntry::make('product.designation_fr')->label('Produit')->placeholder('Produit indisponible'),
-                    TextEntry::make('arome')->label('Arôme')->placeholder('—'),
-                    TextEntry::make('qte')->label('Quantité'),
-                    TextEntry::make('prix_unitaire')->label('Prix unitaire (DT)')->numeric(decimalPlaces: 3),
-                    TextEntry::make('total')->label('Total (DT)')->numeric(decimalPlaces: 3),
-                ])->columns(['sm' => 2, 'lg' => 5])->columnSpanFull(),
-            ])->columnSpanFull(),
-            Section::make('Totaux')->schema([
-                TextEntry::make('prix_ht')->label('Total HT (DT)')->numeric(decimalPlaces: 3),
-                TextEntry::make('remise')->label('Remise (DT)')->numeric(decimalPlaces: 3),
-                TextEntry::make('frais_livraison')->label('Frais de livraison (DT)')->numeric(decimalPlaces: 3),
-                TextEntry::make('prix_ttc')->label('Total client (DT)')->numeric(decimalPlaces: 3),
-                TextEntry::make('gain')->label('Gain affilié')
-                    ->state(fn (Commande $record): string => static::ledgerGain($record)),
-            ])->columns(2)->columnSpanFull(),
+            ViewEntry::make('facture')
+                ->hiddenLabel()
+                ->view('filament.affilie.order-facture')
+                ->viewData(fn (Commande $record): array => [
+                    'record' => $record,
+                    'gain' => static::ledgerGain($record),
+                ])
+                ->columnSpanFull(),
         ]);
     }
 
