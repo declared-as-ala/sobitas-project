@@ -119,13 +119,17 @@ export function ProfileClient() {
           </span>
         </div>
         <p className="mb-4 text-xs text-ink-3">
-          Pour modifier votre méthode ou vos coordonnées bancaires, contactez l’équipe protein.tn — c’est une sécurité pour vos versements.
+          Pour modifier votre méthode de paiement, contactez l’équipe Protein.tn.
         </p>
         <dl className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <ReadOnly label="Méthode de paiement" value={profile.payment_method} />
-          <ReadOnly label="Banque" value={profile.bank_name} />
-          <ReadOnly label="RIB / IBAN" value={profile.rib_or_iban} mono full />
+          <ReadOnly label="Méthode de paiement" value={
+            profile.payment_method === 'cash' ? 'Retrait au magasin (espèces)'
+              : profile.payment_method === 'bank' ? 'Livraison Aramex (colis)' : null
+          } />
         </dl>
+        {profile.payment_method === 'bank' && (
+          <p className="mt-3 text-xs text-ink-3">Versé via Aramex à votre adresse.</p>
+        )}
       </section>
     </div>
   );

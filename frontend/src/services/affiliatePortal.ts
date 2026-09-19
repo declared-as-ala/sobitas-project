@@ -240,8 +240,6 @@ export interface AffiliateProfile {
   type: string | null;
   status: string | null;
   payment_method: string | null;
-  bank_name: string | null;
-  rib_or_iban: string | null;
 }
 
 /** The contact fields an affiliate may edit (payout details stay admin-managed). */

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Affilie\Pages;
 
+use App\Enums\AffiliePayoutMethod;
 use Filament\Forms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -42,9 +43,7 @@ class AffilieProfilePage extends Page implements HasForms
             'business_name' => $affilie->business_name,
             'phone' => $affilie->phone,
             'address' => $affilie->address,
-            'payment_method' => $affilie->payment_method,
-            'bank_name' => $affilie->bank_name,
-            'rib_or_iban' => $affilie->rib_or_iban,
+            'payment_method' => AffiliePayoutMethod::tryFrom($affilie->payment_method ?? '')?->label() ?? 'Non renseigné',
             'payout_notes' => $affilie->payout_notes,
         ];
     }
@@ -57,9 +56,11 @@ class AffilieProfilePage extends Page implements HasForms
             Forms\Components\TextInput::make('business_name')->label('Raison sociale')->maxLength(255),
             Forms\Components\TextInput::make('phone')->label('Téléphone')->tel()->maxLength(64),
             Forms\Components\Textarea::make('address')->label('Adresse')->rows(3)->columnSpanFull(),
-            Forms\Components\TextInput::make('payment_method')->label('Méthode de paiement')->maxLength(64),
-            Forms\Components\TextInput::make('bank_name')->label('Banque')->maxLength(128),
-            Forms\Components\TextInput::make('rib_or_iban')->label('RIB / IBAN')->maxLength(128),
+            Forms\Components\TextInput::make('payment_method')
+                ->label('Méthode de paiement')
+                ->disabled()
+                ->dehydrated(false)
+                ->helperText('Pour modifier votre méthode de paiement, contactez l’équipe Protein.tn.'),
             Forms\Components\Textarea::make('payout_notes')->label('Notes paiement')->columnSpanFull(),
         ])->columns(2);
     }
@@ -77,9 +78,6 @@ class AffilieProfilePage extends Page implements HasForms
             'business_name' => $state['business_name'] ?? null,
             'phone' => $state['phone'] ?? null,
             'address' => $state['address'] ?? null,
-            'payment_method' => $state['payment_method'] ?? null,
-            'bank_name' => $state['bank_name'] ?? null,
-            'rib_or_iban' => $state['rib_or_iban'] ?? null,
             'payout_notes' => $state['payout_notes'] ?? null,
         ])->save();
 

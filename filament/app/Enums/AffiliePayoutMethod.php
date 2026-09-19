@@ -3,19 +3,17 @@
 namespace App\Enums;
 
 /**
- * How an affiliate is paid on Friday.
+ * How an affiliate is paid in the monthly batch on the 1st.
  *
  * ── WHY THIS IS AN ENUM AND NOT THE FREE-TEXT FIELD IT REPLACES ─────────────────────────────
  * `affilies.payment_method` was a plain TextInput. On a money field that means one person types
- * "cash", the next "Espèces", the next "espece au magasin" — and the Friday run cannot group by
+ * "cash", the next "Espèces", the next "espece au magasin" — and the payout run cannot group by
  * method, so whoever prepares the payments has to read every row and decide what each one meant.
  * Two values, spelled once.
  *
- * The owner's rule: "either they want to come to the boutique and get cash, or we send the money
- * to their bank account each Friday."
- *
- * `Bank` requires a RIB; `Cash` must not demand one, because the affiliates most likely to collect
- * at the counter are exactly the ones without a bank account. Enforced in AffilieResource.
+ * The legacy value 'bank' now means the Aramex cash-box, delivered to the affiliate's address.
+ * Only the labels changed: existing 'cash'/'bank' choices remain valid without a data migration.
+ * Neither method requires bank details.
  *
  * Deliberately NOT offering D17 / Flouci / mandat minute yet. They exist and are common in Tunisia,
  * but each carries its own identity requirements and fee schedule, and adding a rail nobody has
@@ -30,15 +28,15 @@ enum AffiliePayoutMethod: string
     public function label(): string
     {
         return match ($this) {
-            self::Cash => 'Espèces au magasin',
-            self::Bank => 'Virement bancaire',
+            self::Cash => 'Retrait au magasin (espèces)',
+            self::Bank => 'Livraison Aramex (colis)',
         };
     }
 
     /** Whether a RIB/IBAN is mandatory for this method. */
     public function requiresBankDetails(): bool
     {
-        return $this === self::Bank;
+        return false;
     }
 
     /** @return array<string, string> value => label, for a Filament Select. */
