@@ -617,7 +617,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       image: productImage,
       ...(selectedAroma && { selectedAroma: { id: selectedAroma.id, designation_fr: selectedAroma.designation_fr } }),
     };
-    addToCart(cartProduct as any, quantity);
+    addToCart(cartProduct as any, quantity, selectedAroma?.designation_fr);
     toast.success('Produit ajouté au panier');
   };
 
@@ -652,6 +652,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   };
 
   const handleQuickOrderClick = () => {
+    // quickOrderProduct.aromes carries the labels; the drawer resolves the selected label at submit.
     openQuickOrder(quickOrderProduct, { initialQty: quantity, initialVariantId: effectiveAromaId ?? undefined });
   };
 

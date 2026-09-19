@@ -78,6 +78,7 @@ class CommandeController extends Controller
             'commande.frais_livraison' => ['nullable', 'numeric', 'min:0'], // never trust a negative shipping fee
             'panier'            => ['required', 'array', 'min:1'],
             'panier.*.produit_id'    => ['required', 'integer', 'exists:products,id'],
+            'panier.*.arome'         => ['nullable', 'string', 'max:191'],
             'panier.*.quantite'      => ['required', 'integer', 'min:1'],
             'panier.*.prix_unitaire' => ['nullable', 'numeric', 'min:0'], // CRIT-03: ignored; server uses DB price
             'coupon_code'       => ['nullable', 'string', 'max:64'],
@@ -279,6 +280,7 @@ class CommandeController extends Controller
                 $new_details = new CommandeDetail();
                 $new_details->produit_id = $panier['produit_id'];
                 $new_details->qte = $panier['quantite'];
+                $new_details->arome = $panier['arome'] ?? null;
                 $new_details->prix_unitaire = $prix_unitaire;
 
                 $the_price_ht = $panier['quantite'] * $prix_unitaire;

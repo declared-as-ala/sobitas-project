@@ -581,6 +581,7 @@ export interface OrderRequest {
 /** Quick order (commande rapide) – minimal one-item order from product page. Does not modify cart. */
 export interface QuickOrderPayload {
   productId: number;
+  arome?: string;
   variantId?: number;
   qty: number;
   /** Family name required; given name may be empty for a single-word full name. */

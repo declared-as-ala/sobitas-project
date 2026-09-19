@@ -33,6 +33,7 @@ export interface BackendCommandeFields {
 }
 
 export interface BackendPanierItem {
+  arome?: string;
   produit_id: number;
   quantite: number;
   prix_unitaire: number;
@@ -91,7 +92,7 @@ export function buildBackendOrderPayload(params: {
     livraison?: number;
     frais_livraison: number;
   };
-  panier: Array<{ produit_id: number; quantite: number; prix_unitaire: number }>;
+  panier: BackendPanierItem[];
   user_id?: number;
   m_remise?: number;
   coupon_code?: string;
@@ -131,6 +132,7 @@ export function buildBackendOrderPayload(params: {
       produit_id: item.produit_id,
       quantite: item.quantite,
       prix_unitaire: item.prix_unitaire,
+      arome: item.arome,
     })),
   };
   if (m_remise != null && m_remise > 0) {

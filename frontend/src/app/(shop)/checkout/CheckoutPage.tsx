@@ -381,6 +381,7 @@ export default function CheckoutPage() {
         panier: items.map(item => ({
           produit_id: item.product.id,
           quantite: item.quantity,
+          arome: item.arome,
           prix_unitaire: getEffectivePrice(item.product),
         })),
         user_id: user?.id,

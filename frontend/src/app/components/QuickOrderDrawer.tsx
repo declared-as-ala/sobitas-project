@@ -242,6 +242,7 @@ export function QuickOrderDrawer({
     const payload: QuickOrderPayload = {
       productId: product.id,
       variantId: selectedVariantId,
+      arome: productWithAromes.aromes?.find((aroma) => aroma.id === selectedVariantId)?.designation_fr,
       qty: quantity,
       nom: nom.trim(),
       prenom: prenom.trim(),

@@ -154,7 +154,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
         frais_livraison: Number(deliveryFeeSnapshot) || 0,
       },
       panier: [
-        { produit_id: productId, quantite: qtyNum, prix_unitaire: priceSnapshot },
+        { produit_id: productId, quantite: qtyNum, prix_unitaire: priceSnapshot, arome: body.arome },
       ],
       ...(couponCode && String(couponCode).trim() !== '' && { coupon_code: String(couponCode).trim() }),
     });

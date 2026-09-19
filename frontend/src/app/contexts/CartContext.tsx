@@ -23,6 +23,7 @@ type Product = ApiProduct | DataProduct;
 export interface CartItem {
   product: Product;
   quantity: number;
+  arome?: string;
 }
 
 /** Effective unit price: promo if valid (promo + no expiry or future expiration), else prix/price. Uses shared util. */
@@ -34,7 +35,7 @@ interface CartContextType {
   items: CartItem[];
   /** True once the cart has been rehydrated from localStorage (avoid flashing the empty state). */
   isLoaded: boolean;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, arome?: string) => void;
   removeFromCart: (productId: number) => void;
   updateQuantity: (productId: number, quantity: number) => void;
   clearCart: () => void;
@@ -212,7 +213,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     setTimeout(open, 0);
   }, []);
 
-  const addToCart = useCallback((product: Product, quantity: number = 1) => {
+  const addToCart = useCallback((product: Product, quantity: number = 1, arome?: string) => {
     const stockDisponible = getStockDisponible(product as any);
     if (stockDisponible <= 0) {
       toast.error('Rupture de stock - Ce produit n\'est pas disponible');
@@ -236,10 +237,10 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           const newQty = inCartQty + restant;
           if (existing) {
             return prevItems.map(item =>
-              item.product.id === product.id ? { ...item, quantity: newQty } : item
+              item.product.id === product.id ? { ...item, quantity: newQty, arome: arome ?? item.arome } : item
             );
           }
-          return [...prevItems, { product, quantity: restant }];
+          return [...prevItems, { product, quantity: restant, arome }];
         });
         openDrawerDeferred();
       }
@@ -251,11 +252,11 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       if (existingItem) {
         return prevItems.map(item =>
           item.product.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
+            ? { ...item, quantity: item.quantity + quantity, arome: arome ?? item.arome }
             : item
         );
       }
-      return [...prevItems, { product, quantity }];
+      return [...prevItems, { product, quantity, arome }];
     });
     openDrawerDeferred();
     // `openDrawerDeferred` is itself lifetime-stable, so this callback remains lifetime-stable.

@@ -252,6 +252,7 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                     <thead>
                         <tr>
                             <th scope="col">Produits</th>
+                            <th scope="col">Arôme</th>
                             <th scope="col">Qté</th>
                             <th scope="col">P.U</th>
                             <th scope="col">P.T</th>
@@ -266,6 +267,7 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                                     <option value="" selected disabled>Choisir..</option>
                                 </select>
                             </td>
+                            <td><input type="text" id="arome{{ $i }}" class="form-control" aria-label="Arôme" readonly></td>
                             <td><input type="number" id="qte{{ $i }}" class="form-control" step="1" value="1" min="1" onkeyup="calculate()" onchange="calculate()"></td>
                             <td><input type="number" step="0.001" min="0" value="0" id="p_unitaire{{ $i }}" class="form-control" onkeyup="calculate()" onchange="calculate()"></td>
                             <td><input type="number" step="0.001" min="0" value="0" id="p_t_ht{{ $i }}" class="form-control" disabled></td>
@@ -369,6 +371,7 @@ function cmdBootPage() {
                 } else {
                     $('#select_produit' + j).val(line.produit_id).trigger('change.select2');
                 }
+                document.getElementById('arome' + j).value = line.arome ?? '';
                 document.getElementById('qte' + j).value = line.qte || 1;
                 document.getElementById('p_unitaire' + j).value = parseFloat(line.prix_unitaire || 0).toFixed(3);
             }
@@ -513,6 +516,7 @@ function cmdCopyFactToLiv() {
 }
 
 function selectProduit(i) {
+    document.getElementById('arome' + i).value = '';
     var sel = $('#select_produit' + i).select2('data')[0];
     if (!sel || !sel.id) return;
     var prix   = parseFloat(sel.prix || 0);
@@ -528,6 +532,7 @@ function addRow() {
         document.getElementById('achat' + j).style.display = '';
         cmdInitSelect2(j);
         $('#select_produit' + j).val('').trigger('change.select2');
+        document.getElementById('arome' + j).value = '';
         document.getElementById('qte' + j).value = 1;
         document.getElementById('p_unitaire' + j).value = '0.000';
         document.getElementById('p_t_ht' + j).value = '0.000';
@@ -538,6 +543,7 @@ function removeRow(i) {
     var el = document.getElementById('achat' + i);
     el.style.display = 'none';
     $('#select_produit' + i).val('').trigger('change.select2');
+    document.getElementById('arome' + i).value = '';
     document.getElementById('qte' + i).value = 1;
     document.getElementById('p_unitaire' + i).value = '0.000';
     document.getElementById('p_t_ht' + i).value = '0.000';
@@ -571,6 +577,7 @@ function cmdSave() {
         if (!pid) continue;
         lines.push({
             produit_id:    pid,
+            arome:         document.getElementById('arome' + i).value || null,
             qte:           parseFloat(document.getElementById('qte' + i).value) || 1,
             prix_unitaire: parseFloat(document.getElementById('p_unitaire' + i).value) || 0
         });

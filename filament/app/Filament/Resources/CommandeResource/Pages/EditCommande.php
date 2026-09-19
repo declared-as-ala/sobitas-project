@@ -122,6 +122,7 @@ class EditCommande extends EditRecord
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte ?? $d->quantite ?? 1,
             'prix_unitaire' => $d->prix_unitaire,
+            'arome'         => $d->arome,
         ])->toArray();
         if (empty($data['details'])) {
             $data['details'] = [['produit_id' => null, 'qte' => 1, 'prix_unitaire' => 0]];
@@ -181,6 +182,7 @@ class EditCommande extends EditRecord
                     'produit_id'    => $row['produit_id'],
                     'qte'           => $qte,
                     'prix_unitaire' => $prixUnitaire,
+                    'arome'         => $row['arome'] ?? null,
                 ]);
                 Product::where('id', $row['produit_id'])->decrement('qte', $qte);
                 $touchedProductIds[] = $row['produit_id'];
