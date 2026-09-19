@@ -106,7 +106,11 @@ export const AFFILIATE_FAQ: { question: string; answer: string }[] = [
   },
   {
     question: 'Comment et quand suis-je payé ?',
-    answer: "Chaque vendredi. Vous êtes réglé en espèces à la boutique ou par virement bancaire, au choix. La commission est acquise dès qu'une commande passée avec votre code est livrée.",
+    answer: "Vous êtes payé le 1er de chaque mois, par retrait en espèces au magasin ou par livraison Aramex (colis) à votre adresse, au choix. La commission est acquise dès qu'une commande passée avec votre code est livrée.",
+  },
+  {
+    question: 'Que se passe-t-il si une commande est retournée ?',
+    answer: "Si une commande expédiée par Aramex est retournée, vous supportez les frais de retour de 10 DT, déduits de votre solde. Votre solde peut devenir négatif ; ce montant sera récupéré sur vos prochaines commissions.",
   },
   {
     question: 'Combien puis-je gagner ?',

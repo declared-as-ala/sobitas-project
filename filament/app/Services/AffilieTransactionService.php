@@ -38,6 +38,26 @@ use Illuminate\Support\Facades\Schema;
  */
 class AffilieTransactionService
 {
+    private function logAudit(string $action, Affilie $affilie, array $before, array $after): void
+    {
+        try {
+            if (! class_exists(\App\Models\AuditLog::class) || ! Schema::hasTable('audit_logs')) {
+                return;
+            }
+
+            \App\Models\AuditLog::create([
+                'user_id' => Auth::id(),
+                'action' => $action,
+                'entity_type' => 'affilie_transaction',
+                'entity_id' => $affilie->getKey(),
+                'before' => $before ?: null,
+                'after' => $after ?: null,
+            ]);
+        } catch (\Throwable $e) {
+            // Auditing is best-effort and must never interrupt a money operation.
+        }
+    }
+
     public function normalizeCode(string $code): string
     {
         return strtoupper(trim($code));
@@ -302,6 +322,11 @@ class AffilieTransactionService
                 'current_balance' => $newBal,
                 'total_paid' => round((float) ($lockedAffilie->total_paid ?? 0) + $amount, 3),
             ])->save();
+
+            $this->logAudit('affilie_payment_recorded', $lockedAffilie,
+                ['current_balance' => $bal],
+                ['current_balance' => $newBal, 'amount' => $signed, 'kind' => 'payment'],
+            );
         });
     }
 
@@ -330,6 +355,11 @@ class AffilieTransactionService
                 'current_balance' => $newBal,
                 'total_earned' => round((float) ($lockedAffilie->total_earned ?? 0) + $earnedDelta, 3),
             ])->save();
+
+            $this->logAudit('affilie_balance_adjusted', $lockedAffilie,
+                ['current_balance' => $bal],
+                ['current_balance' => $newBal, 'amount' => $signedAmount, 'kind' => 'adjustment'],
+            );
 
             return $tx;
         });
@@ -915,6 +945,7 @@ class AffilieTransactionService
 
             $credit = max(0.0, (float) $original->amount);
             $signed = -round($credit, 3);
+            $auditBalanceBefore = (float) ($affilie->current_balance ?? 0);
             $newBalance = round((float) ($affilie->current_balance ?? 0) + $signed, 3);
 
             AffilieTransaction::query()->create([
@@ -940,6 +971,11 @@ class AffilieTransactionService
                 'current_balance' => $newBalance,
                 'total_earned' => round(max(0.0, (float) ($affilie->total_earned ?? 0) + $signed), 3),
             ])->save();
+
+            $this->logAudit('affilie_commission_reversed', $affilie,
+                ['current_balance' => $auditBalanceBefore],
+                ['current_balance' => $newBalance, 'amount' => $signed, 'kind' => 'commission_reversal', 'commande_id' => $locked->id],
+            );
 
             Log::info('Affilie commission reversed', [
                 'commande_id' => $locked->id,
@@ -1039,6 +1075,7 @@ class AffilieTransactionService
             }
 
             $signed = -round($fee, 3);
+            $auditBalanceBefore = (float) ($affilie->current_balance ?? 0);
             $newBalance = round((float) ($affilie->current_balance ?? 0) + $signed, 3);
 
             AffilieTransaction::query()->create([
@@ -1064,6 +1101,11 @@ class AffilieTransactionService
 
             // No total_earned change: a fee is a debt, not negative earnings.
             $affilie->forceFill(['current_balance' => $newBalance])->save();
+
+            $this->logAudit('affilie_return_fee_charged', $affilie,
+                ['current_balance' => $auditBalanceBefore],
+                ['current_balance' => $newBalance, 'amount' => $signed, 'kind' => 'return_fee', 'commande_id' => $locked->id],
+            );
 
             Log::info('Affilie return fee charged', [
                 'commande_id' => $locked->id,
@@ -1116,6 +1158,7 @@ class AffilieTransactionService
             $affilie = Affilie::query()->whereKey($fee->affilie_id)->lockForUpdate()->firstOrFail();
 
             $credit = round(abs((float) $fee->amount), 3);
+            $auditBalanceBefore = (float) ($affilie->current_balance ?? 0);
             $newBalance = round((float) ($affilie->current_balance ?? 0) + $credit, 3);
 
             $tx = AffilieTransaction::query()->create([
@@ -1143,6 +1186,11 @@ class AffilieTransactionService
             // A waiver restores the balance but does not create earnings, so total_earned is
             // untouched — symmetric with the charge, which did not reduce it.
             $affilie->forceFill(['current_balance' => $newBalance])->save();
+
+            $this->logAudit('affilie_return_fee_waived', $affilie,
+                ['current_balance' => $auditBalanceBefore],
+                ['current_balance' => $newBalance, 'amount' => $credit, 'kind' => 'return_fee_waiver', 'commande_id' => $commande->id],
+            );
 
             Log::info('Affilie return fee waived', [
                 'commande_id' => $commande->id,
@@ -1286,6 +1334,7 @@ class AffilieTransactionService
             }
 
             $signed = -$amount;
+            $auditBalanceBefore = (float) ($affilie->current_balance ?? 0);
             $newBalance = round((float) ($affilie->current_balance ?? 0) + $signed, 3);
 
             AffilieTransaction::query()->create([
@@ -1320,6 +1369,11 @@ class AffilieTransactionService
                 'payment_reference' => $paymentReference ?? $lockedPayout->payment_reference,
                 'admin_note' => $adminNote ?? $lockedPayout->admin_note,
             ])->save();
+
+            $this->logAudit('affilie_payout_settled', $affilie,
+                ['current_balance' => $auditBalanceBefore],
+                ['current_balance' => $newBalance, 'amount' => $signed, 'kind' => 'payment', 'affilie_payout_id' => $lockedPayout->id],
+            );
 
             Log::info('Affilie payout settled', [
                 'affilie_payout_id' => $lockedPayout->id,
