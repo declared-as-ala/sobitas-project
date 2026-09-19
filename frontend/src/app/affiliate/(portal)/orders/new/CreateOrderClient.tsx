@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { SafeImage } from '@/app/components/SafeImage';
+import { AddressSelector } from '@/app/components/AddressSelector';
 import { cn } from '@/app/components/ui/utils';
 import {
   getAffiliateProducts, createAffiliateOrder, fmtDT,
@@ -17,7 +18,7 @@ import {
 interface Line {
   product: AffiliateProduct;
   qte: number;
-  price: number;
+  marge: number;
 }
 
 const CUSTOMER_FIELDS = ['nom', 'phone', 'email', 'region', 'ville', 'adresse1', 'code_postale', 'note'] as const;
@@ -34,7 +35,12 @@ export function CreateOrderClient() {
   const [customer, setCustomer] = useState<Record<CustomerField, string>>({
     nom: '', phone: '', email: '', region: '', ville: '', adresse1: '', code_postale: '', note: '',
   });
-  const [shipping, setShipping] = useState('0');
+  const [fulfillmentMode, setFulfillmentMode] = useState<'delivery' | 'pickup'>('delivery');
+  const [gouvernorat, setGouvernorat] = useState('');
+  const [delegation, setDelegation] = useState('');
+  const [localite, setLocalite] = useState('');
+  const [codePostal, setCodePostal] = useState('');
+  const [addressError, setAddressError] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [fieldError, setFieldError] = useState<CustomerField | null>(null);
   const [lineError, setLineError] = useState<number | null>(null);
@@ -60,7 +66,10 @@ export function CreateOrderClient() {
         next[i] = { ...next[i], qte: Math.min(next[i].qte + 1, Math.max(1, p.stock)) };
         return next;
       }
-      return [...prev, { product: p, qte: 1, price: p.suggested || p.base }];
+      const marge = p.markup_percent === 0
+        ? Math.max(0, p.suggested - p.base)
+        : Number((p.base * p.markup_percent / 100).toFixed(3));
+      return [...prev, { product: p, qte: 1, marge }];
     });
   }, []);
 
@@ -70,15 +79,14 @@ export function CreateOrderClient() {
     setLines((prev) => prev.map((l) => (l.product.id === id ? { ...l, ...patch } : l)));
   const removeLine = (id: number) => setLines((prev) => prev.filter((l) => l.product.id !== id));
 
-  const subtotal = useMemo(() => lines.reduce((s, l) => s + l.price * l.qte, 0), [lines]);
+  const subtotal = useMemo(() => lines.reduce((s, l) => s + (l.product.base + l.marge) * l.qte, 0), [lines]);
   const commission = useMemo(
-    () => lines.reduce((s, l) => s + Math.max(0, l.price - l.product.base) * l.qte, 0),
+    () => lines.reduce((s, l) => s + l.marge * l.qte, 0),
     [lines],
   );
-  const shippingNum = Math.max(0, Number(shipping) || 0);
-  const total = subtotal + shippingNum;
+  const total = subtotal + (fulfillmentMode === 'delivery' ? 10 : 0);
 
-  const belowFloor = lines.some((l) => l.price < l.product.base - 1e-6);
+  const belowFloor = lines.some((l) => !Number.isFinite(l.marge) || l.marge < 0);
 
   const setCustomerField = (f: CustomerField, v: string) => {
     setCustomer((c) => ({ ...c, [f]: v }));
@@ -94,23 +102,28 @@ export function CreateOrderClient() {
       toast.error('Le numéro de téléphone du client est requis.');
       return;
     }
-    if (belowFloor) { toast.error('Un prix est en dessous du prix affilié minimum.'); return; }
+    if (fulfillmentMode === 'delivery' && (!gouvernorat || !delegation || !localite)) {
+      setAddressError(true);
+      toast.error('Sélectionnez le gouvernorat, la délégation et la localité.');
+      return;
+    }
+    if (belowFloor) { toast.error('La marge doit être un montant positif ou nul.'); return; }
 
     setSubmitting(true);
     try {
       const res = await createAffiliateOrder({
-        lines: lines.map((l) => ({ produit_id: l.product.id, qte: l.qte, prix_unitaire: Number(l.price.toFixed(3)) })),
+        lines: lines.map((l) => ({ produit_id: l.product.id, qte: l.qte, prix_unitaire: (l.product.base + l.marge).toFixed(3) })),
         customer: {
           phone: customer.phone.trim(),
           nom: customer.nom.trim() || undefined,
           email: customer.email.trim() || undefined,
-          region: customer.region.trim() || undefined,
-          ville: customer.ville.trim() || undefined,
-          adresse1: customer.adresse1.trim() || undefined,
-          code_postale: customer.code_postale.trim() || undefined,
+          region: fulfillmentMode === 'delivery' ? gouvernorat : undefined,
+          ville: fulfillmentMode === 'delivery' ? localite || delegation : undefined,
+          adresse1: fulfillmentMode === 'delivery' ? customer.adresse1.trim() || undefined : undefined,
+          code_postale: fulfillmentMode === 'delivery' ? codePostal : undefined,
           note: customer.note.trim() || undefined,
         },
-        shipping: shippingNum,
+        fulfillment_mode: fulfillmentMode,
       });
       toast.success(`Commande ${res.numero} créée`, { description: `Commission estimée : ${fmtDT(res.commission)}` });
       router.replace('/affiliate/orders');
@@ -130,7 +143,7 @@ export function CreateOrderClient() {
           <ArrowLeft className="h-4 w-4" aria-hidden /> Mes commandes
         </LinkWithLoading>
         <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-ink-1 sm:text-3xl">Nouvelle commande</h1>
-        <p className="mt-1 text-sm text-ink-2">Choisissez les produits, fixez votre prix de vente, saisissez le client.</p>
+        <p className="mt-1 text-sm text-ink-2">Choisissez les produits, fixez votre marge, saisissez le client.</p>
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_380px]">
@@ -176,7 +189,7 @@ export function CreateOrderClient() {
               <ShoppingCart className="h-5 w-5 text-brand" aria-hidden />
               <h2 className="text-sm font-bold text-ink-1">2. Produits de la commande</h2>
               {lines.length > 0 && (
-                <span className="ml-auto rounded-full bg-brand/10 px-2 py-0.5 text-xs font-bold text-brand">{lines.length}</span>
+                <span className="ml-auto rounded-full border border-brand/40 bg-canvas px-2 py-0.5 text-xs font-bold text-brand">{lines.length}</span>
               )}
             </div>
             {lines.length === 0 ? (
@@ -191,7 +204,7 @@ export function CreateOrderClient() {
                     line={l}
                     hasError={lineError === l.product.id}
                     onQte={(qte) => setLine(l.product.id, { qte })}
-                    onPrice={(price) => setLine(l.product.id, { price })}
+                    onMarge={(marge) => setLine(l.product.id, { marge })}
                     onRemove={() => removeLine(l.product.id)}
                   />
                 ))}
@@ -205,18 +218,56 @@ export function CreateOrderClient() {
           <section className="rounded-xl border border-hairline bg-elevated p-4 sm:p-5">
             <h2 className="mb-3 text-sm font-bold text-ink-1">3. Client &amp; livraison</h2>
             <div className="space-y-3">
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-xs font-semibold text-ink-2">Mode de réception</legend>
+                {([
+                  ['delivery', 'Livraison (Aramex) — 10 DT'],
+                  ['pickup', 'Retrait en magasin (gratuit)'],
+                ] as const).map(([mode, label]) => (
+                  <label key={mode} className={cn(
+                    'flex min-h-11 cursor-pointer items-center gap-3 rounded-lg border bg-canvas px-3 py-3 text-sm text-ink-1',
+                    fulfillmentMode === mode ? 'border-brand' : 'border-hairline',
+                  )}>
+                    <input type="radio" name="fulfillment-mode" value={mode} checked={fulfillmentMode === mode}
+                      onChange={() => setFulfillmentMode(mode)}
+                      className="h-4 w-4 shrink-0 accent-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus" />
+                    {label}
+                  </label>
+                ))}
+              </fieldset>
               <Field label="Nom du client" value={customer.nom} onChange={(v) => setCustomerField('nom', v)} placeholder="Nom et prénom" />
               <Field label="Téléphone" required value={customer.phone} onChange={(v) => setCustomerField('phone', v)} placeholder="20 000 000" inputMode="tel" error={fieldError === 'phone'} />
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Ville" value={customer.ville} onChange={(v) => setCustomerField('ville', v)} placeholder="Sousse" error={fieldError === 'ville'} />
-                <Field label="Région" value={customer.region} onChange={(v) => setCustomerField('region', v)} placeholder="Sousse" error={fieldError === 'region'} />
-              </div>
-              <Field label="Adresse" value={customer.adresse1} onChange={(v) => setCustomerField('adresse1', v)} placeholder="Rue, immeuble…" error={fieldError === 'adresse1'} />
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Code postal" value={customer.code_postale} onChange={(v) => setCustomerField('code_postale', v)} placeholder="4000" inputMode="numeric" />
-                <Field label="Frais de livraison (DT)" value={shipping} onChange={setShipping} placeholder="0" inputMode="decimal" />
-              </div>
-              <Field label="Note (facultatif)" value={customer.note} onChange={(v) => setCustomerField('note', v)} placeholder="Instructions de livraison…" />
+              {fulfillmentMode === 'delivery' ? (
+                <>
+                  <AddressSelector checkout required
+                    gouvernorat={gouvernorat} delegation={delegation} localite={localite} codePostal={codePostal}
+                    onGouvernoratChange={(v) => {
+                      setGouvernorat(v);
+                      setDelegation('');
+                      setLocalite('');
+                      setCodePostal('');
+                    }}
+                    onDelegationChange={(v) => {
+                      setDelegation(v);
+                      setLocalite('');
+                      setCodePostal('');
+                    }}
+                    onLocaliteChange={(v, postal) => {
+                      setLocalite(v);
+                      setCodePostal(postal);
+                    }}
+                    errors={addressError ? {
+                      gouvernorat: !gouvernorat ? 'Choisissez le gouvernorat.' : undefined,
+                      delegation: !delegation ? 'Choisissez la délégation.' : undefined,
+                      localite: !localite ? 'Choisissez la localité.' : undefined,
+                    } : undefined}
+                  />
+                  <Field label="Adresse" value={customer.adresse1} onChange={(v) => setCustomerField('adresse1', v)} placeholder="Rue, immeuble…" error={fieldError === 'adresse1'} />
+                </>
+              ) : (
+                <p className="text-sm text-ink-2">Le client récupère la commande au magasin.</p>
+              )}
+              <Field label="Note (facultatif)" value={customer.note} onChange={(v) => setCustomerField('note', v)} placeholder="Instructions pour la commande…" />
             </div>
           </section>
 
@@ -224,18 +275,18 @@ export function CreateOrderClient() {
             <h2 className="mb-3 text-sm font-bold text-ink-1">Récapitulatif</h2>
             <dl className="space-y-2 text-sm">
               <Row label="Sous-total" value={fmtDT(subtotal)} />
-              <Row label="Livraison" value={fmtDT(shippingNum)} muted />
+              <Row label={fulfillmentMode === 'delivery' ? 'Livraison :' : 'Retrait en magasin :'} value={fulfillmentMode === 'delivery' ? fmtDT(10) : 'gratuit'} muted />
               <div className="my-2 border-t border-hairline" />
               <Row label="Total client" value={fmtDT(total)} strong />
-              <div className="mt-3 flex items-center justify-between rounded-lg bg-brand/10 px-3 py-2">
-                <dt className="text-sm font-semibold text-brand">Votre commission</dt>
+              <div className="mt-3 flex items-center justify-between rounded-lg border border-brand/40 bg-canvas px-3 py-2">
+                <dt className="text-sm font-semibold text-brand">Gain total</dt>
                 <dd className="font-display text-base font-bold tabular-nums text-brand">{fmtDT(commission)}</dd>
               </div>
             </dl>
 
             {belowFloor && (
               <p className="mt-3 text-xs font-medium text-destructive">
-                Un prix de vente est inférieur au prix affilié minimum. Ajustez-le pour continuer.
+                La marge doit être un montant positif ou nul. Ajustez-la pour continuer.
               </p>
             )}
 
@@ -295,11 +346,11 @@ function PickerCard({ product, added, onAdd }: { product: AffiliateProduct; adde
 }
 
 function LineRow({
-  line, hasError, onQte, onPrice, onRemove,
-}: { line: Line; hasError: boolean; onQte: (q: number) => void; onPrice: (p: number) => void; onRemove: () => void }) {
-  const { product, qte, price } = line;
-  const gain = Math.max(0, price - product.base) * qte;
-  const below = price < product.base - 1e-6;
+  line, hasError, onQte, onMarge, onRemove,
+}: { line: Line; hasError: boolean; onQte: (q: number) => void; onMarge: (p: number) => void; onRemove: () => void }) {
+  const { product, qte, marge } = line;
+  const gain = marge * qte;
+  const below = !Number.isFinite(marge) || marge < 0;
 
   return (
     <div className={cn('flex gap-3 rounded-xl border bg-canvas p-3', hasError || below ? 'border-destructive' : 'border-hairline')}>
@@ -314,7 +365,7 @@ function LineRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-start justify-between gap-2">
           <p className="line-clamp-2 text-sm font-semibold leading-snug text-ink-1">{product.name}</p>
-          <button type="button" onClick={onRemove} aria-label="Retirer" className="-m-1 shrink-0 p-1 text-ink-3 transition-colors hover:text-destructive">
+          <button type="button" onClick={onRemove} aria-label="Retirer" className="-m-1 grid h-11 w-11 shrink-0 place-items-center text-ink-3 transition-colors hover:text-destructive focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
             <Trash2 className="h-4 w-4" aria-hidden />
           </button>
         </div>
@@ -324,25 +375,30 @@ function LineRow({
           <div>
             <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">Qté</span>
             <div className="inline-flex items-center rounded-lg border border-hairline bg-elevated">
-              <button type="button" onClick={() => onQte(Math.max(1, qte - 1))} aria-label="Diminuer" className="grid h-9 w-9 place-items-center text-ink-2 hover:text-ink-1"><Minus className="h-4 w-4" aria-hidden /></button>
+              <button type="button" onClick={() => onQte(Math.max(1, qte - 1))} aria-label="Diminuer" className="grid h-11 w-11 place-items-center text-ink-2 hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"><Minus className="h-4 w-4" aria-hidden /></button>
               <input
                 type="number" min={1} max={product.stock} value={qte}
+                aria-label={`Quantité pour ${product.name}`}
                 onChange={(e) => onQte(Math.min(product.stock, Math.max(1, Math.floor(Number(e.target.value) || 1))))}
-                className="w-10 border-x border-hairline bg-transparent py-1.5 text-center text-sm font-semibold tabular-nums text-ink-1 [appearance:textfield] focus:outline-none [&::-webkit-inner-spin-button]:appearance-none"
+                className="h-11 w-11 border-x border-hairline bg-transparent py-1.5 text-center text-sm font-semibold tabular-nums text-ink-1 [appearance:textfield] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus [&::-webkit-inner-spin-button]:appearance-none"
               />
-              <button type="button" onClick={() => onQte(Math.min(product.stock, qte + 1))} aria-label="Augmenter" className="grid h-9 w-9 place-items-center text-ink-2 hover:text-ink-1"><Plus className="h-4 w-4" aria-hidden /></button>
+              <button type="button" onClick={() => onQte(Math.min(product.stock, qte + 1))} aria-label="Augmenter" className="grid h-11 w-11 place-items-center text-ink-2 hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"><Plus className="h-4 w-4" aria-hidden /></button>
             </div>
           </div>
 
-          {/* Selling price */}
           <div>
-            <span className="mb-1 block text-[10px] font-semibold uppercase tracking-wide text-ink-3">Prix de vente (DT)</span>
-            <input
-              type="number" min={product.base} step="0.5" value={price}
-              onChange={(e) => onPrice(Math.max(0, Number(e.target.value) || 0))}
-              className={cn('h-9 w-28 rounded-lg border bg-elevated px-2.5 text-sm font-semibold tabular-nums text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus', below ? 'border-destructive' : 'border-hairline focus-visible:border-brand')}
-            />
+            <span className="mb-1 block text-xs font-semibold text-ink-2">Prix de base</span>
+            <span className="text-sm font-semibold tabular-nums text-ink-1">{fmtDT(product.base)}</span>
           </div>
+          <label>
+            <span className="mb-1 block text-xs font-semibold text-ink-2">Marge (DT)</span>
+            <input
+              type="number" min={0} step="0.5" value={marge}
+              onChange={(e) => onMarge(Number(e.target.value) || 0)}
+              aria-invalid={below || undefined}
+              className={cn('h-11 w-28 rounded-lg border bg-elevated px-2.5 text-sm font-semibold tabular-nums text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus', below ? 'border-destructive' : 'border-hairline focus-visible:border-brand')}
+            />
+          </label>
 
           {/* Gain */}
           <div className="ml-auto text-right">
@@ -350,7 +406,8 @@ function LineRow({
             <span className="font-display text-sm font-bold tabular-nums text-brand">{fmtDT(gain)}</span>
           </div>
         </div>
-        {below && <p className="mt-1.5 text-xs font-medium text-destructive">Minimum : {fmtDT(product.base)}</p>}
+        <p className="mt-2 text-xs tabular-nums text-ink-2">Prix de vente : {fmtDT(product.base + marge)} / unité</p>
+        {below && <p className="mt-1.5 text-xs font-medium text-destructive">La marge doit être un montant positif ou nul.</p>}
       </div>
     </div>
   );
@@ -370,6 +427,8 @@ function Field({
       <input
         type="text"
         inputMode={inputMode}
+        required={required}
+        aria-invalid={error || undefined}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}

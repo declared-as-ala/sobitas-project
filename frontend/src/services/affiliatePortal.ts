@@ -88,8 +88,9 @@ export interface AffiliateProduct {
   image: string | null;
   /** The affiliate floor: selling below this is refused server-side. */
   base: number;
-  /** Suggested selling price (retail), pre-filled and editable down to `base`. */
+  /** Suggested retail price, used when no default markup is configured. */
   suggested: number;
+  markup_percent: number;
   stock: number;
   code: string;
 }
@@ -119,7 +120,7 @@ export interface AffiliateOrdersPage {
 export interface CreateOrderLine {
   produit_id: number;
   qte: number;
-  prix_unitaire: number;
+  prix_unitaire: string;
 }
 
 export interface CreateOrderCustomer {
@@ -136,7 +137,7 @@ export interface CreateOrderCustomer {
 export interface CreateOrderPayload {
   lines: CreateOrderLine[];
   customer: CreateOrderCustomer;
-  shipping?: number;
+  fulfillment_mode: 'delivery' | 'pickup';
 }
 
 export interface CreateOrderResult {
