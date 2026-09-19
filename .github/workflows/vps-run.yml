@@ -106,6 +106,10 @@ on:
           # Robots/indexability. The dry run reports how many products are noindexed and how many
           # are nofollowed; it changes nothing.
           - seo-robots-audit
+          # The legacy half of catalog-reindex: which HAND-BUILT products (no import staging row)
+          # are held at noindex, and which of them would be indexed because their page clears the
+          # 250-word gate. Prints the list either way; writes nothing.
+          - seo-legacy-reindex-dry-run
           # staging table only: no customer-visible effect
           - catalog-discover
           - catalog-hydrate-now
@@ -137,6 +141,8 @@ on:
           # Re-measures products held at seo_robots_index=0 and indexes the ones whose body now
           # clears catalog.promotion.min_body_words. Creates and publishes nothing.
           - catalog-reindex
+          # Same gate, same flip, for the products catalog-reindex cannot reach (see the arm).
+          - seo-legacy-reindex-apply
           # Staging-only, but it REWRITES stored HTML, so it is gated like the rest.
           - content-rederive
           # Selectively restores one missing storefront order and its line items from the newest
@@ -608,6 +614,12 @@ jobs:
               ARGS="seo:products-robots-audit"
               WRITES=no
               ;;
+            seo-legacy-reindex-dry-run)
+              # The report half of seo-legacy-reindex-apply below: the same selection and the same
+              # measurement, printed, with nothing written. Read it first — it is the exact list.
+              ARGS="seo:products-legacy-reindex"
+              WRITES=no
+              ;;
             seo-robots-fix)
               # Sets seo_robots_follow = 1 on published products explicitly marked nofollow.
               #
@@ -627,6 +639,20 @@ jobs:
               # now clear it — as opposed to forcing ~10,000 thin pages into the index, which costs
               # more than it gains. Creates nothing and publishes nothing.
               ARGS="catalog:iherb:promote --reindex"
+              WRITES=yes
+              ;;
+            seo-legacy-reindex-apply)
+              # catalog-reindex iterates the import STAGING table, so a product with no staging row
+              # — the ~300 hand-built ones that predate the import — can never be reached by it.
+              # On 14/09/2026, 95 of those were at seo_robots_index=0 (69 in stock: Serious Mass,
+              # Gold Standard Whey, every in-stock creatine), put there by a Filament Toggle that
+              # wrote NULL as 0 on any save, not by anyone's decision. The form is fixed; this
+              # repairs the rows. Same gate as catalog-reindex (page body >= min_body_words), so
+              # nothing thin is submitted; each flip is a model save, so the page is revalidated,
+              # the sitemap refreshed and the URL sent to IndexNow. Products below the gate are
+              # listed and left alone — write their copy, click again, they graduate.
+              # Idempotent: a second click reports nothing to do.
+              ARGS="seo:products-legacy-reindex --apply"
               WRITES=yes
               ;;
             *)

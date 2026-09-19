@@ -127,6 +127,11 @@ class SeoProductsRobotsAudit extends Command
             $this->line('');
             $this->line('  That flips only what clears the gate. Forcing the rest indexable would publish');
             $this->line('  thin pages at scale, which costs more than it gains.');
+            $this->line('');
+            $this->line('  Hand-built products (no import staging row) are outside that pass. Same gate,');
+            $this->line('  same flip, for them:');
+            $this->line('');
+            $this->line('      php artisan seo:products-legacy-reindex');
         }
 
         return self::SUCCESS;
