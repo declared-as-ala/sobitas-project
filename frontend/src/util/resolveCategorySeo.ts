@@ -461,6 +461,26 @@ const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
   'l-arginine',
   'zinc',
   'mineraux',
+  /*
+   * ── /barres-proteinees ADDED 16/09/2026, FROM SEARCH CONSOLE ────────────────────────────────
+   * The page's entire 3-month query history is one English-phrased cluster with zero clicks:
+   *
+   *     protein bar chocolate   122 impr   0 clicks   pos 10.2   (all of it 9–11 Sep, Tunisia)
+   *     protein bar tunisie      21 impr   0 clicks
+   *     protein bar              19 impr   0 clicks
+   *     barre protéinée tunisie   3 impr   0 clicks
+   *
+   * Google tested the page for three days and dropped it. What it tested: the Filament record
+   * (sous_categories id 69) has every SEO field NULL, so the page shipped the designation as its
+   * title — `Barres & Snacks Protéinés | Protéine Tunisie`, naming neither "protein bar" nor
+   * "chocolat" — with the GENERIC WHEY description from tunisiaCategoryKeywords ("Large choix de
+   * whey, caséine, protéines végétales") and not one word of intro on the crawler render.
+   *
+   * content/categories/barres-proteinees.json now carries a reviewed title, description and
+   * guide written against that cluster. Without this entry the JSON title loses to the NULL
+   * record's designation, exactly as /prise-de-masse did above.
+   */
+  'barres-proteinees',
 ]);
 
 export function mergeCategorySeoForSlug(

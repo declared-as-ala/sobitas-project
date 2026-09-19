@@ -222,6 +222,26 @@ export function productTitle(product: Product): string {
       'Serious Mass 2,7 kg – Prix Tunisie | Optimum Nutrition',
     'serious-mass-5-45-kg-optimum-nutrition':
       'Serious Mass 5,45 kg – Prix Tunisie | Optimum Nutrition',
+    /*
+     * Pre-workout cluster (GSC 28 days to 13/09/2026). The head term "pre workout" is 100 %
+     * Tunisian searchers and ranks on a PRODUCT, not the category: Born Rage sat at position 5.3
+     * with 405 impressions and 0 clicks, while /pre-workout was at 23.8. The snippet Google showed
+     * was the shouting catalogue name "PRE WORKOUT BORN RAGE ORIGINAL - ERIC FAVRE – Prix Tunisie".
+     * All six in-stock pre-workouts carry that all-caps house style, so they get the same pass.
+     * Sizes/servings below come from the product's own copy; nothing else is asserted.
+     */
+    'pre-workout-born-rage-original-eric-favre':
+      'Pre Workout Born Rage Original Eric Favre – Prix Tunisie',
+    'c4-original-pre-workout-cellucor':
+      'C4 Original Pre Workout Cellucor – Prix Tunisie | Protein.tn',
+    'psychotic-pre-workout':
+      'Psychotic Pre Workout Invictus – Prix Tunisie | Protein.tn',
+    'pump-extreme-pre-workout-challenger-nutrition-30-servings':
+      'Pump Extreme Pre Workout Challenger 30 doses – Prix Tunisie',
+    'king-real-preworkout-500gr-real-pharm-tunisie':
+      'King Real Pre Workout 500 g Real Pharm – Prix Tunisie',
+    'victor-martinez-break-out-pre-workout':
+      'Break-Out Pre Workout Victor Martinez – Prix Tunisie',
   };
   const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
   if (opportunityTitle) return opportunityTitle;

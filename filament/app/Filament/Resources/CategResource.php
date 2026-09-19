@@ -77,6 +77,11 @@ class CategResource extends Resource
                                             Forms\Components\TextInput::make('slug')
                                                 ->label('Slug')
                                                 ->required()
+                                                // The slug is the first URL segment, and middleware 301s any capital letter to its
+                                                // lowercase form. A hand-typed `Intra-Workout` (id 43, 19/09/2026) therefore made every
+                                                // product URL under it an infinite 301↔308 loop — unreachable for shoppers and Google
+                                                // alike. Fold on save so the stored slug is always the one the site can serve.
+                                                ->dehydrateStateUsing(fn (?string $state): string => mb_strtolower(trim((string) $state)))
                                                 ->maxLength(255)
                                                 ->unique(ignoreRecord: true)
                                                 ->rule(function (?Categ $record): \Closure {
