@@ -24,7 +24,9 @@ class CommandeAffilieResource extends Resource
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shopping-bag';
 
-    protected static string | \UnitEnum | null $navigationGroup = 'Affiliés';
+    protected static string | \UnitEnum | null $navigationGroup = 'Commandes';
+
+    protected static ?int $navigationSort = 2;
 
     protected static ?string $navigationLabel = 'Commandes affiliés';
 
@@ -33,6 +35,20 @@ class CommandeAffilieResource extends Resource
     protected static ?string $pluralModelLabel = 'Commandes affiliés';
 
     protected static ?string $recordTitleAttribute = 'numero';
+
+    public static function getNavigationBadge(): ?string
+    {
+        $count = \Illuminate\Support\Facades\Cache::remember('nav:commandes_affilies', 60, function () {
+            return static::getModel()::whereNotNull('affilie_id')->count();
+        });
+
+        return $count ?: null;
+    }
+
+    public static function getNavigationBadgeColor(): ?string
+    {
+        return 'success';
+    }
 
     public static function canCreate(): bool
     {
