@@ -46,7 +46,7 @@ class CommandeResource extends Resource
     {
         // Cache the badge count for 60 seconds to avoid query on every page load
         $count = \Illuminate\Support\Facades\Cache::remember('nav:commandes_pending', 60, function () {
-            return static::getModel()::where('etat', 'nouvelle_commande')->count();
+            return static::getModel()::where('etat', 'nouvelle_commande')->whereNull('affilie_id')->count();
         });
 
         return $count ?: null;
@@ -117,7 +117,7 @@ class CommandeResource extends Resource
                 if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', 'client_id')) {
                     $columns[] = 'client_id';
                 }
-                return $query->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1'])->select($columns);
+                return $query->whereNull('affilie_id')->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1'])->select($columns);
             })
             ->columns([
                 Tables\Columns\TextColumn::make('numero')

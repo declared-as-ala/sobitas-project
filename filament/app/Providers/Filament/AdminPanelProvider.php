@@ -23,6 +23,7 @@ use App\Filament\Resources\BrandResource;
 use App\Filament\Resources\CategResource;
 use App\Filament\Resources\ClientResource;
 use App\Filament\Resources\CommandeResource;
+use App\Filament\Resources\CommandeAffilieResource;
 use App\Filament\Resources\ContactResource;
 use App\Filament\Resources\CoordinateResource;
 use App\Filament\Resources\CouponResource;
@@ -199,6 +200,7 @@ class AdminPanelProvider extends PanelProvider
                 CategResource::class,
                 ClientResource::class,
                 CommandeResource::class,
+                CommandeAffilieResource::class,
                 ContactResource::class,
                 CoordinateResource::class,
                 CouponResource::class,
