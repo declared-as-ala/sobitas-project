@@ -254,7 +254,12 @@ return [
         ['sub' => 'eaa', 'any' => ['eaa', 'essential-amino']],
         ['sub' => 'pre-workout', 'any' => ['pre-workout', 'preworkout', 'pump-formula', 'nitric-oxide']],
         ['sub' => 'post-workout', 'any' => ['post-workout', 'recovery-formula']],
-        ['sub' => 'Intra-Workout', 'any' => ['intra-workout']],
+        // Lower-case since 19/09/2026, paired with the SQL that folds sous_categories.slug id 43.
+        // The gate looks this value up VERBATIM in a slug => id map built from the DB, and the
+        // capitalised slug was the one that looped every product URL under it (see the
+        // SousCategoryResource slug field). Until the SQL runs, this rayon resolves to id null -
+        // the row is held back, never mis-filed.
+        ['sub' => 'intra-workout', 'any' => ['intra-workout']],
 
         /*
         | ── Added 10/08/2026, from the FIRST PROMOTION DRY RUN and nothing else ─────────────

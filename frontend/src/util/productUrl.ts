@@ -3,21 +3,55 @@ import type { Product, SubCategory } from '@/types';
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
 /**
+ * A TAXONOMY SLUG, AS IT MAY APPEAR IN A URL: LOWERCASE.
+ *
+ * Middleware folds any path that carries a capital letter to lowercase with a 301 (see the
+ * `/[A-Z]/.test(pathname)` block there — it exists because /whey-proteine, /Whey-Proteine and
+ * /WHEY-PROTEINE each used to return 200). That makes lowercase the site's URL contract, and every
+ * builder in this file has to honour it — because the DB does not.
+ *
+ * Measured on production 19/09/2026. `sous_categories` id 43 has slug `Intra-Workout`, typed by
+ * hand in Filament (the slug field auto-generates `Str::slug` but accepts anything). Every builder
+ * here emitted it verbatim, and the product route compared it verbatim, so:
+ *
+ *     /Intra-Workout/nutrabio-intra-blast-…-716-g   301 → /intra-workout/nutrabio-…   (middleware)
+ *     /intra-workout/nutrabio-intra-blast-…-716-g   308 → /Intra-Workout/nutrabio-…   (this file)
+ *
+ * An infinite loop, for all 12 products in the category: the listing linked them, the sitemap
+ * submitted 4 of them, and neither a shopper nor Googlebot could open one. Search Console files
+ * it under "Redirect error" (33 pages, climbing since late August).
+ *
+ * Folding the segment where the URL is BUILT fixes every href, canonical, breadcrumb, JSON-LD and
+ * sitemap entry at once; comparing through `sameUrlSlug` fixes the redirect that closed the loop.
+ * Product slugs are not folded: none carries a capital today (0 of 11,368 in the 14/09 dump) and
+ * the product lookup is by slug, so folding one that did would trade a loop for a 404.
+ */
+export function urlSlug(slug: string): string {
+  return slug.trim().toLowerCase();
+}
+
+/** Do two slugs name the same URL segment? Case-insensitive, because middleware is. */
+export function sameUrlSlug(a: string | null | undefined, b: string | null | undefined): boolean {
+  if (!a || !b) return false;
+  return urlSlug(a) === urlSlug(b);
+}
+
+/**
  * Build product link href (without base URL).
  * Uses new SEO-friendly format /{sousCategorySlug}/{productSlug}
  * Falls back to legacy /shop/{slug} if no subcategory.
- * 
+ *
  * @param product - The product object
  * @returns The relative URL path (e.g., "/proteine-whey/gold-standard-whey")
  */
 export function getProductLink(product: Product): string {
   const subCategory = getProductPrimarySubCategory(product);
-  
+
   if (!subCategory?.slug) {
     return `/shop/${product.slug}`;
   }
-  
-  return `/${subCategory.slug}/${product.slug}`;
+
+  return `/${urlSlug(subCategory.slug)}/${product.slug}`;
 }
 
 /**
@@ -51,8 +85,8 @@ export function buildProductUrl(product: Product, baseUrl: string = BASE_URL): s
     // Fallback to legacy /shop URL if no subcategory
     return `${baseUrl}/shop/${product.slug}`;
   }
-  
-  return `${baseUrl}/${subCategory.slug}/${product.slug}`;
+
+  return `${baseUrl}/${urlSlug(subCategory.slug)}/${product.slug}`;
 }
 
 /**
@@ -61,12 +95,12 @@ export function buildProductUrl(product: Product, baseUrl: string = BASE_URL): s
  */
 export function buildProductUrlPath(product: Product): string {
   const subCategory = getProductPrimarySubCategory(product);
-  
+
   if (!subCategory?.slug) {
     return `/shop/${product.slug}`;
   }
-  
-  return `/${subCategory.slug}/${product.slug}`;
+
+  return `/${urlSlug(subCategory.slug)}/${product.slug}`;
 }
 
 /**
@@ -186,8 +220,8 @@ export function isProductInSubCategory(product: Product, claimedSubCategorySlug:
   if (!subCategory) {
     return false;
   }
-  
-  return subCategory.slug === claimedSubCategorySlug;
+
+  return sameUrlSlug(subCategory.slug, claimedSubCategorySlug);
 }
 
 /**
@@ -205,14 +239,14 @@ export function getProductBreadcrumbs(product: Product): Array<{ name: string; u
   if (subCategory?.categorie) {
     breadcrumbs.push({
       name: subCategory.categorie.designation_fr || subCategory.categorie.slug,
-      url: `/${subCategory.categorie.slug}`,
+      url: `/${urlSlug(subCategory.categorie.slug)}`,
     });
   }
-  
+
   if (subCategory?.slug) {
     breadcrumbs.push({
       name: subCategory.designation_fr || subCategory.slug,
-      url: `/${subCategory.slug}`,
+      url: `/${urlSlug(subCategory.slug)}`,
     });
   }
   

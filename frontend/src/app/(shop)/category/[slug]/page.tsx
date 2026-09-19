@@ -21,7 +21,7 @@ import {
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeoForSlug, type CategorySeoFromApi, type MergedCategorySeo, canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription, generateTunisiaH1 } from '@/util/tunisiaCategoryKeywords';
-import { getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
+import { getProductLink, getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
 import { CategorySeoLanding } from '@/app/(shop)/category/CategorySeoLanding';
@@ -194,7 +194,7 @@ function resolveBestProducts(
     if (p) {
       // Use new SEO-friendly URL format if subcategory exists
       const subCategory = p.sous_categories?.[0] || p.sous_categorie;
-      const url = subCategory?.slug ? `/${subCategory.slug}/${s}` : null;
+      const url = subCategory?.slug ? `/${urlSlug(subCategory.slug)}/${s}` : null;
       acc.push({ slug: s, name: p.designation_fr ?? s, url: url || `/${s}` });
     }
     return acc;
