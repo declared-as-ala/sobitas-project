@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Filament\Resources\CommandeResource;
 use App\Jobs\SendSmsJob;
+use App\Mail\AffilieOrderStatusMail;
 use App\Mail\ReviewRequestMail;
 use App\Models\Affilie;
 use App\Models\Commande;
@@ -158,6 +159,53 @@ class CommandeObserver
                 'commande_id' => $commande->id,
                 'etat'        => $commande->etat,
                 'error'       => $e->getMessage(),
+            ]);
+        }
+
+        // Affiliate status notifications follow commission sync, including cancellations.
+        // Keep both channels best-effort so a notification cannot abort the order update.
+        try {
+            $statusKind = match (true) {
+                in_array($commande->etat, PointsService::CANCELLED_STATUSES, true) => 'cancelled',
+                in_array($commande->etat, PointsService::DELIVERED_STATUSES, true) => 'delivered',
+                default => null,
+            };
+
+            if ($commande->affilie_id && $statusKind !== null && ($affilie = $commande->affilie)) {
+                // A mail failure must still allow the panel notification to be attempted.
+                try {
+                    if ($affilie->email) {
+                        Mail::to($affilie->email)->send(new AffilieOrderStatusMail($commande, $statusKind));
+                    }
+                } catch (\Throwable $e) {
+                    Log::error('Affilie order status email failed', [
+                        'commande_id' => $commande->id,
+                        'etat' => $commande->etat,
+                        'error' => $e->getMessage(),
+                    ]);
+                }
+
+                if ($user = $affilie->user) {
+                    $cancelled = $statusKind === 'cancelled';
+                    $notification = Notification::make()
+                        ->title($cancelled ? 'Commande annulée' : 'Commande livrée')
+                        ->body('Commande #' . ($commande->numero ?? $commande->id) . ' — '
+                            . ($cancelled ? 'commande annulée, commission retirée.' : 'commande livrée, commission confirmée.'));
+
+                    if ($cancelled) {
+                        $notification->danger();
+                    } else {
+                        $notification->success();
+                    }
+
+                    $notification->sendToDatabase($user);
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::error('Affilie order status notification failed', [
+                'commande_id' => $commande->id,
+                'etat' => $commande->etat,
+                'error' => $e->getMessage(),
             ]);
         }
 

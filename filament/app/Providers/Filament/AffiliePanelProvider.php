@@ -128,6 +128,7 @@ class AffiliePanelProvider extends PanelProvider
                 AffilieEarningsChart::class,
                 AffilieReferralWidget::class,
             ])
+            ->databaseNotifications()
             ->middleware([
                 EncryptCookies::class,
                 AddQueuedCookiesToResponse::class,
