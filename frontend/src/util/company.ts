@@ -146,3 +146,32 @@ export const GOOGLE_PROFILE = {
    */
   writeReviewUrl: 'https://search.google.com/local/writereview?placeid=ChIJsZHosBsTAhMRDLJJWPLg2lE',
 } as const;
+
+/**
+ * The shop's real social profiles — the ONE list every schema `sameAs` reads from.
+ *
+ * ── WHY THIS REPLACES THE OLD GUESSES ──────────────────────────────────────────────────────
+ * The Organization and LocalBusiness nodes used to carry `facebook.com/protein.tn`,
+ * `instagram.com/protein.tn`, `tiktok.com/@protein.tn` — handles that were never confirmed and
+ * do NOT match the profiles the owner actually maintains. A `sameAs` pointing at a dead or wrong
+ * URL does not merely fail to help: it weakens the entity match Google is building. These URLs
+ * are taken from the shop's own Google Business Profile — the authoritative source — so the two
+ * finally agree.
+ *
+ * ── VERIFICATION (19/09/2026) ──────────────────────────────────────────────────────────────
+ * Six of the seven return HTTP 200 to a browser-UA request, YouTube included (which matters:
+ * two EARLIER YouTube handles — @proteinetunisie and @proteine-tunisie — were 404s and were
+ * removed, so this one was checked deliberately). Facebook returns 400 to any non-browser
+ * request whether or not the page exists, so it cannot be settled from a server; it is kept
+ * because it is the profile listed on the GBP and the real ~949K-follower page. If any profile
+ * is ever retired, drop it here — it flows to every `sameAs` at once.
+ */
+export const SOCIAL_PROFILES: readonly string[] = [
+  'https://www.facebook.com/proteinetunisie',
+  'https://www.instagram.com/sobitas_/',
+  'https://www.tiktok.com/@protein.tn1',
+  'https://www.youtube.com/@protein_tn',
+  'https://www.linkedin.com/company/sobitas',
+  'https://www.pinterest.com/protein_tn/',
+  'https://x.com/TunisieProteine',
+] as const;

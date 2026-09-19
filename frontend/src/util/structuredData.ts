@@ -5,7 +5,7 @@
  */
 
 import { getStorageUrl } from '@/services/api';
-import { CONTACT_PHONE, OPENING_HOURS } from '@/util/company';
+import { CONTACT_PHONE, GOOGLE_PROFILE, LEGAL_IDENTITY, OPENING_HOURS, SOCIAL_PROFILES } from '@/util/company';
 import { AR_BRAND_SUFFIX, resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { getEffectivePrice, hasValidPromo } from '@/util/productPrice';
@@ -952,31 +952,13 @@ export function buildOrganizationSchema(
       availableLanguage: 'French',
     },
     /**
-     * ── THE YOUTUBE URL WAS REMOVED BECAUSE IT IS A 404 ────────────────────────────────────
-     * Verified with a control: `youtube.com/@Google` returns 200 from here, so the request path
-     * works; `youtube.com/@proteinetunisie` returns 404. The footer links a DIFFERENT handle
-     * (`@proteine-tunisie`, FooterClient.tsx) and that one is also a 404 — so the site currently
-     * asserts two different YouTube channels and neither of them exists.
-     *
-     * `sameAs` is a corroboration signal: it only does anything when the profile links back. A
-     * URL that resolves to nothing corroborates nothing and is a claim about an entity that does
-     * not exist, so it comes out.
-     *
-     * ── THE OTHER THREE ARE LEFT ALONE, DELIBERATELY ───────────────────────────────────────
-     * Facebook and Instagram DISAGREE with the footer too (`protein.tn` here vs `proteinetunisie`
-     * and `sobitas.proteine.tunisie` there), and one side of each pair is wrong. But neither can
-     * be settled from a server: Facebook returns 400 to any non-browser request regardless of
-     * whether the page exists, and Instagram returns 200 for profiles that do not. Guessing which
-     * handle is real would just move the wrong URL from one file to another.
-     *
-     * This needs the owner to name the real accounts, and it is written up in the PR. Until then
-     * these stay as-is rather than being replaced with a different guess.
+     * The shop's real social profiles, taken from its Google Business Profile — the authoritative
+     * source — and centralised in SOCIAL_PROFILES (util/company.ts), where each URL's verification
+     * is recorded. This resolves the ambiguity noted here before: the old `protein.tn/*` handles
+     * were never confirmed and disagreed with the footer's `proteinetunisie`. The LocalBusiness
+     * node reads the SAME list, so the entity never asserts two different sets of accounts.
      */
-    sameAs: [
-      'https://www.facebook.com/protein.tn',
-      'https://www.instagram.com/protein.tn',
-      'https://www.tiktok.com/@protein.tn',
-    ],
+    sameAs: [...SOCIAL_PROFILES],
   };
 }
 
@@ -990,7 +972,16 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
     '@type': 'LocalBusiness',
     '@id': `${base}/#localbusiness`,
     parentOrganization: { '@id': `${base}/#organization` },
-    name: `${SITE_BRAND_NAME} – Protéines & Compléments Alimentaires Tunisie`,
+    // The business name EXACTLY as it appears on the Google Business Profile, so the markup and the
+    // profile describe one entity. The keyword phrase that used to pad this field ("Protéines &
+    // Compléments Alimentaires Tunisie") now lives in alternateName + description, where Google
+    // expects it — a keyword-stuffed `name` is discounted for the local knowledge panel.
+    name: GOOGLE_PROFILE.name,
+    alternateName: [SITE_BRAND_NAME, LEGAL_IDENTITY.shortLegalName, AR_BRAND_SUFFIX],
+    description:
+      'Magasin de vitamines et compléments alimentaires à Sousse depuis 2010 : whey protéine, ' +
+      'créatine, BCAA, EAA, gainers, pré-workout et nutrition sportive. Boutique Rue Ribat à ' +
+      'Sousse, livraison partout en Tunisie.',
     image: `${base}/icon.png`,
     logo: `${base}/logo.png`,
     url: base,
@@ -1061,10 +1052,8 @@ export function buildLocalBusinessSchema(baseUrl: string): object {
       opens: slot.opens,
       closes: slot.closes,
     })),
-    sameAs: [
-      'https://www.facebook.com/protein.tn',
-      'https://www.instagram.com/protein.tn',
-    ],
+    // The same real profiles as the Organization node — see SOCIAL_PROFILES (util/company.ts).
+    sameAs: [...SOCIAL_PROFILES],
   };
 }
 
