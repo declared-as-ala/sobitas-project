@@ -138,6 +138,7 @@ class AffilieOrderController extends Controller
             'lines.*.produit_id'    => ['required', 'integer', 'min:1'],
             'lines.*.qte'           => ['required', 'integer', 'min:1'],
             'lines.*.prix_unitaire' => ['required', 'numeric', 'min:0'],
+            'lines.*.arome'         => ['nullable', 'string', 'max:191'],
             'customer'              => ['required', 'array'],
             'customer.nom'          => ['nullable', 'string', 'max:191'],
             'customer.phone'        => ['required', 'string', 'max:32'],
@@ -148,6 +149,7 @@ class AffilieOrderController extends Controller
             'customer.code_postale' => ['nullable', 'string', 'max:20'],
             'customer.note'         => ['nullable', 'string', 'max:1000'],
             'shipping'              => ['nullable', 'numeric', 'min:0'],
+            'fulfillment_mode'      => ['nullable', 'in:delivery,pickup'],
         ]);
 
         try {
@@ -157,6 +159,7 @@ class AffilieOrderController extends Controller
                 $data['customer'],
                 (float) ($data['shipping'] ?? 0),
                 $request->user()?->id,
+                $data['fulfillment_mode'] ?? null,
             );
         } catch (AffilieOrderException $e) {
             return response()->json([
@@ -179,7 +182,7 @@ class AffilieOrderController extends Controller
         ], 201);
     }
 
-    /** @return array{id:int,name:string,image:?string,base:float,suggested:float,stock:int,code:string} */
+    /** @return array{id:int,name:string,image:?string,base:float,suggested:float,markup_percent:float,stock:int,code:string} */
     private function productPayload(Product $p, ?Affilie $affilie): array
     {
         $base = (float) $p->affiliateBasePrice();
@@ -194,6 +197,7 @@ class AffilieOrderController extends Controller
             'image'     => $img,
             'base'      => round($base, 3),
             'suggested' => $affilie ? round((float) $affilie->suggestedSellingPrice($p), 3) : round($base, 3),
+            'markup_percent' => $affilie?->defaultMarkupPercent() ?? 0.0,
             'stock'     => (int) ($p->qte ?? 0),
             'code'      => (string) ($p->code_product ?? ''),
         ];

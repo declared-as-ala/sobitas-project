@@ -14,10 +14,13 @@ class Commande extends Model
 
     public const STATUS_NEW = 'nouvelle_commande';
 
+    public const FULFILLMENT_DELIVERY = 'delivery';
+    public const FULFILLMENT_PICKUP = 'pickup';
+
     protected $fillable = [
         'numero', 'order_token', 'nom', 'prenom', 'email', 'phone', 'pays', 'region', 'ville',
         'code_postale', 'adresse1', 'adresse2', 'etat', 'prix_ht', 'prix_ttc',
-        'frais_livraison', 'remise', 'note', 'user_id', 'client_id', 'quotation_id', 'livraison',
+        'frais_livraison', 'fulfillment_mode', 'remise', 'note', 'user_id', 'client_id', 'quotation_id', 'livraison',
         'livraison_nom', 'livraison_prenom', 'livraison_email', 'livraison_phone',
         'livraison_region', 'livraison_ville', 'livraison_code_postale',
         'livraison_adresse1', 'livraison_adresse2', 'sms_sent',

@@ -31,16 +31,19 @@ use Illuminate\Support\Facades\Schema;
  */
 class AffilieOrderService
 {
+    public const DELIVERY_FEE = 10.0;
+
     /**
      * @param  Affilie  $affilie   the acting affiliate — resolved from session/token, NEVER from input.
-     * @param  array<int|string, array{produit_id:int, qte:int, prix_unitaire:float}>  $lines
+     * @param  array<int|string, array{produit_id:int, qte:int, prix_unitaire:float, arome?:?string}>  $lines
      * @param  array{nom?:?string, phone?:?string, email?:?string, region?:?string, ville?:?string, adresse1?:?string, code_postale?:?string, note?:?string}  $customer
      * @param  float     $shipping   delivery fee (collected by the courier; excluded from the gain).
      * @param  int|null  $createdBy  id of the user creating the row (for the ledger's created_by).
+     * @param  string|null  $fulfillmentMode  null preserves the caller's legacy shipping fee.
      *
      * @throws AffilieOrderException
      */
-    public function create(Affilie $affilie, array $lines, array $customer, float $shipping = 0.0, ?int $createdBy = null): Commande
+    public function create(Affilie $affilie, array $lines, array $customer, float $shipping = 0.0, ?int $createdBy = null, ?string $fulfillmentMode = null): Commande
     {
         if ($affilie->status !== AffilieStatus::Active) {
             throw new AffilieOrderException('account', __('Votre compte affilié n’est pas actif : vous ne pouvez pas créer de commande.'));
@@ -57,13 +60,18 @@ class AffilieOrderService
             static fn (array $l): float => round($l['qte'] * $l['prix_unitaire'], 3),
             $validated
         )), 3);
+        if ($fulfillmentMode === Commande::FULFILLMENT_PICKUP) {
+            $shipping = 0.0;
+        } elseif ($fulfillmentMode === Commande::FULFILLMENT_DELIVERY) {
+            $shipping = self::DELIVERY_FEE;
+        }
         $shipping = round(max(0.0, $shipping), 3);
         $totalTtc = round($subtotal + $shipping, 3);
         $earning  = round(array_sum(array_column($validated, 'earning')), 3);
 
         // ONE transaction, opened here and not inherited from a panel: a failure on the third line
         // must not leave the first two products decremented with no order to account for them.
-        return DB::transaction(function () use ($customer, $affilie, $validated, $subtotal, $shipping, $totalTtc, $earning, $createdBy): Commande {
+        return DB::transaction(function () use ($customer, $affilie, $validated, $subtotal, $shipping, $totalTtc, $earning, $createdBy, $fulfillmentMode): Commande {
             $this->decrementStock($validated);
 
             $year   = (int) date('Y');
@@ -100,6 +108,7 @@ class AffilieOrderService
             $commande->affilie_id      = $affilie->id;
             $commande->prix_ht         = $subtotal;
             $commande->frais_livraison = $shipping;
+            $commande->fulfillment_mode = $fulfillmentMode ?? Commande::FULFILLMENT_DELIVERY;
             $commande->prix_ttc        = $totalTtc;
             $commande->remise          = 0;
             $commande->save();
@@ -109,6 +118,7 @@ class AffilieOrderService
                 $detail->commande_id   = $commande->id;
                 $detail->produit_id    = $line['produit_id'];
                 $detail->qte           = $line['qte'];
+                $detail->arome         = $line['arome'];
                 // THE AFFILIATE'S SELLING PRICE — orderSpreadCommission() subtracts prix_affilie
                 // from this, so this column IS the affiliate's earning. Never the shelf price.
                 $detail->prix_unitaire = $line['prix_unitaire'];
@@ -126,7 +136,7 @@ class AffilieOrderService
     /**
      * Server-side re-validation of every line, before any write. Client state is never trusted.
      *
-     * @return list<array{produit_id:int, qte:int, prix_unitaire:float, earning:float, designation:string, key:int|string}>
+     * @return list<array{produit_id:int, qte:int, prix_unitaire:float, arome:?string, earning:float, designation:string, key:int|string}>
      *
      * @throws AffilieOrderException
      */
@@ -181,6 +191,7 @@ class AffilieOrderService
                 'produit_id'    => $productId,
                 'qte'           => $qte,
                 'prix_unitaire' => $price,
+                'arome'         => isset($row['arome']) ? (string) $row['arome'] : null,
                 'earning'       => round(max(0.0, $price - $base) * $qte, 3),
                 'designation'   => (string) ($product->designation_fr ?? ('#'.$productId)),
                 'key'           => $key,

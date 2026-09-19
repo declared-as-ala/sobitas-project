@@ -113,6 +113,7 @@ class CreateAffilieCommande extends CreateRecord
                 'image'     => $img,
                 'base'      => round($base, 3),
                 'suggested' => $affilie ? round((float) $affilie->suggestedSellingPrice($p), 3) : round($base, 3),
+                'markup_percent' => $affilie?->defaultMarkupPercent() ?? 0.0,
                 'stock'     => (int) ($p->qte ?? 0),
                 'code'      => (string) ($p->code_product ?? ''),
             ];
@@ -175,6 +176,7 @@ class CreateAffilieCommande extends CreateRecord
                 'produit_id'    => (int) ($row['produit_id'] ?? 0),
                 'qte'           => (int) ($row['qte'] ?? 0),
                 'prix_unitaire' => (float) ($row['prix_unitaire'] ?? 0),
+                'arome'         => $row['arome'] ?? null,
             ];
         }
 
