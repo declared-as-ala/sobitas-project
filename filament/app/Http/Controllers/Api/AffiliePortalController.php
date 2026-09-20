@@ -58,10 +58,21 @@ class AffiliePortalController extends Controller
         $payable = app(AffilieTransactionService::class)->payableBalance($a);
         $held    = max(0.0, round($balance - $payable, 3));
 
+        // "En attente de livraison" = pending commissions still in flight. A commission whose order
+        // has since been cancelled/returned must NEVER show here, even if its row was left Pending by
+        // a cancel path that bypassed the observer (bulk/raw update, import). This defensive exclusion
+        // makes the figure self-heal: the standard cancel already flips the row to Cancelled, and this
+        // guarantees a cancelled order can never inflate "pending" regardless. Ticket commissions
+        // (no commande_id) are unaffected — whereNotExists keeps them counted.
         $pending = (float) AffilieTransaction::query()
-            ->where('affilie_id', $a->id)
+            ->where('affilie_transactions.affilie_id', $a->id)
             ->where('type', AffilieTransactionType::Commission)
             ->where('status', AffilieTransactionStatus::Pending)
+            ->whereNotExists(fn ($q) => $q
+                ->selectRaw('1')
+                ->from('commandes')
+                ->whereColumn('commandes.id', 'affilie_transactions.commande_id')
+                ->whereIn('commandes.etat', PointsService::CANCELLED_STATUSES))
             ->sum('amount');
 
         $orders          = Commande::query()->where('affilie_id', $a->id);
@@ -119,8 +130,12 @@ class AffiliePortalController extends Controller
         $a       = $this->affilie($request);
         $perPage = min(50, max(5, (int) $request->query('per_page', 20)));
 
+        // Qualify affilie_id: the $rows query leftJoins `commandes`, which ALSO has an affilie_id
+        // column, so an unqualified filter is an ambiguous-column SQL error (1052) → 500 → the
+        // "Impossible de charger vos commissions" banner. The qualified column is valid with or
+        // without the join, so the summary sums below (which clone $base un-joined) still work.
         $base = AffilieTransaction::query()
-            ->where('affilie_id', $a->id)
+            ->where('affilie_transactions.affilie_id', $a->id)
             ->whereIn('type', [
                 AffilieTransactionType::Commission,
                 AffilieTransactionType::Adjustment,
