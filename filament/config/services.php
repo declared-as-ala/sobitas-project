@@ -65,7 +65,10 @@ return [
     |   Authorised redirect URIs:       none — this flow never redirects.
     */
     'google' => [
-        'client_id' => env('GOOGLE_CLIENT_ID'),
+        // Defaults to the live public Web client id so the flow works without a manual VPS .env
+        // edit; a GOOGLE_CLIENT_ID in the environment still overrides it. Public by design (it is
+        // the same value baked into the storefront button) — never a secret.
+        'client_id' => env('GOOGLE_CLIENT_ID', '926214409192-sba76vc2a22l67s6u4thrf47apgano2k.apps.googleusercontent.com'),
     ],
 
     /*

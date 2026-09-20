@@ -5,13 +5,12 @@ import { useId, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import type { LucideIcon } from 'lucide-react';
-import { ArrowLeft, CircleDollarSign, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { ArrowLeft, BadgeCheck, Coins, Eye, EyeOff, Loader2, Truck } from 'lucide-react';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { cn } from '@/app/components/ui/utils';
 import { Container } from '@/app/components/layout/Container';
-import { AuthBrandMark } from '@/app/components/auth/AuthBrandMark';
 
 export function AuthShell({ children, compact = false, artwork, artworkLabel }: { children: ReactNode; compact?: boolean; artwork?: ReactNode; artworkLabel?: string }) {
   const { headerLogoUrl } = useSiteLogos();
@@ -24,10 +23,15 @@ export function AuthShell({ children, compact = false, artwork, artworkLabel }: 
       <Container width="wide" bleed className="flex sm:px-4 lg:px-6 xl:px-8">
         <main className="relative flex w-full flex-col bg-elevated sm:rounded-xl lg:grid lg:min-h-[40rem] lg:grid-cols-2 lg:border lg:border-hairline">
           <aside
-            className="relative hidden overflow-hidden bg-sunken lg:order-2 lg:block lg:rounded-e-xl lg:border-s lg:border-hairline"
-            aria-label={artworkLabel ?? (artwork ? 'Vérification Protein.tn' : 'Programme fidélité Protein.tn')}
+            className={cn(
+              'relative overflow-hidden bg-sunken lg:order-2 lg:h-auto lg:rounded-e-xl lg:border-s lg:border-hairline',
+              // Photo panel on the right on desktop; a hero band on top on mobile. Verification
+              // screens (artwork) keep their own art, desktop-only, as before.
+              artwork ? 'hidden lg:block' : 'block h-44 sm:h-56 lg:block lg:h-auto'
+            )}
+            aria-label={artworkLabel ?? (artwork ? 'Vérification Protein.tn' : 'Athlète Protein.tn')}
           >
-            {artwork ?? <AuthLoyaltyPanel />}
+            {artwork ?? <AuthAthletePanel />}
           </aside>
 
           {/* Mobile spends its height on the form: no artwork, overlapping card or fixed-height
@@ -67,14 +71,6 @@ export function AuthShell({ children, compact = false, artwork, artworkLabel }: 
 
             <div data-auth-body="" className={cn('flex items-start sm:py-6 lg:flex-1 lg:items-center', compact && 'pb-4 pt-3')}>
               <div data-auth-card="" className="mx-auto w-full max-w-lg">
-                {/* The emblem only appears where there is vertical room for it (taller phones); on
-                    a short viewport the auth height budget is already tight, so it is hidden to keep
-                    the card fitting without a scroll. */}
-                {!artwork && (
-                  <div className="hidden [@media(min-height:780px)]:block">
-                    <AuthBrandMark />
-                  </div>
-                )}
                 {children}
               </div>
             </div>
@@ -85,36 +81,31 @@ export function AuthShell({ children, compact = false, artwork, artworkLabel }: 
   );
 }
 
-/** The account's benefit is loyalty; delivery and authenticity also apply to guest orders.
- * Use the review section's factual dl and filled, hairline-bordered card vocabulary. */
-function AuthLoyaltyPanel() {
+/**
+ * The brand side of the split-screen auth: a Protein.tn athlete in training. On desktop it is the
+ * full-height right panel with a caption plate over the photo; on mobile it is a hero band across
+ * the top. A dark scrim (bg-black, per DS) carries the caption so it stays legible over the image.
+ */
+function AuthAthletePanel() {
   return (
-    <div className="flex h-full flex-col justify-center p-8 xl:p-12">
-      <div className="flex items-center gap-3">
-        <CircleDollarSign className="h-5 w-5 text-brand" aria-hidden="true" />
-        <span className="pt-kicker text-ink-2">Programme fidélité</span>
-      </div>
-      <h2 className="mt-6 max-w-sm font-display text-4xl font-bold uppercase leading-tight tracking-tight text-ink-1">
-        Vos achats vous rapportent.
-      </h2>
-      <p className="mt-4 max-w-sm text-sm leading-relaxed text-ink-2">
-        Retrouvez vos Protinas dans votre compte et utilisez-les sur votre prochaine commande.
-      </p>
-      <div className="mt-8 rounded-xl border border-hairline bg-elevated p-6">
-        <p className="font-display text-6xl font-bold leading-none tracking-tight text-ink-1">5 %</p>
-        <p className="mt-3 text-sm leading-relaxed text-ink-2">
-          de vos achats en Protinas, après remises et hors livraison.
+    <div className="relative h-full w-full">
+      <Image
+        src="/auth/protein-athlete-studio-v3.png"
+        alt="Athlète Protein.tn en plein entraînement"
+        fill
+        priority
+        sizes="(min-width: 1024px) 50vw, 100vw"
+        className="object-cover object-[center_22%] lg:object-[center_18%]"
+      />
+      <div className="absolute inset-x-0 bottom-0 hidden bg-black/45 p-8 lg:block xl:p-10">
+        <p className="max-w-sm font-display text-2xl font-bold uppercase leading-tight tracking-tight text-white xl:text-[2rem]">
+          Votre performance commence ici.
         </p>
-        <dl className="mt-6 space-y-4 border-t border-hairline pt-4">
-          <div>
-            <dt className="text-xs text-ink-3">Créditées</dt>
-            <dd className="mt-1 text-sm font-semibold text-ink-1">Une fois la commande livrée</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-ink-3">Valeur de vos points</dt>
-            <dd className="mt-1 text-sm font-semibold text-ink-1">20 Protinas = 1 DT de remise</dd>
-          </div>
-        </dl>
+        <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium text-white/90">
+          <span className="inline-flex items-center gap-1.5"><Truck className="h-4 w-4" aria-hidden="true" /> Livraison rapide</span>
+          <span className="inline-flex items-center gap-1.5"><BadgeCheck className="h-4 w-4" aria-hidden="true" /> 100% authentique</span>
+          <span className="inline-flex items-center gap-1.5"><Coins className="h-4 w-4" aria-hidden="true" /> 5% en Protinas</span>
+        </div>
       </div>
     </div>
   );
