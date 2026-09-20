@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\AffiliePayoutMethod;
 use App\Enums\AffiliePayoutStatus;
 use App\Enums\AffilieTransactionStatus;
 use App\Enums\AffilieTransactionType;
@@ -15,6 +16,9 @@ use App\Services\PointsService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Validation\Rule;
 
 /**
  * The read side of the /affiliate portal (protein.tn/affiliate/*). Every route here is behind
@@ -257,10 +261,69 @@ class AffiliePortalController extends Controller
             'reference'      => $a->reference,
             'type'           => $a->type?->value,
             'status'         => $a->status?->value,
-            'payment_method' => $a->payment_method,
+            // Effective method (defaults to Aramex when unset) + its label, plus any pending change
+            // request the affiliate has submitted and the team has not yet actioned.
+            'payment_method'                 => $a->effectivePaymentMethod()->value,
+            'payment_method_label'           => $a->effectivePaymentMethod()->label(),
+            'payment_method_requested'       => $a->payment_method_requested ?: null,
+            'payment_method_requested_label' => $a->payment_method_requested
+                ? (AffiliePayoutMethod::tryFrom($a->payment_method_requested)?->label())
+                : null,
             'bank_name'      => $a->bank_name,
             'rib_or_iban'    => $a->rib_or_iban,
         ];
+    }
+
+    /**
+     * POST /affilie/profile/payment-method-request — the affiliate REQUESTS a payout-method change.
+     *
+     * It never changes the method itself (that stays admin-approved, so a compromised portal session
+     * cannot redirect a payout). It records the desired method + timestamp and logs the request; an
+     * admin approves or refuses it from the affiliate's profile. Requesting the current method (or a
+     * value equal to the effective one) simply clears any pending request — the "cancel" path.
+     */
+    public function requestPaymentMethod(Request $request): JsonResponse
+    {
+        $a = $this->affilie($request);
+
+        $data = $request->validate([
+            'method' => ['required', 'string', Rule::in(array_keys(AffiliePayoutMethod::options()))],
+        ]);
+
+        $requested = $data['method'];
+        $current   = $a->effectivePaymentMethod()->value;
+
+        if ($requested === $current) {
+            $a->forceFill([
+                'payment_method_requested'    => null,
+                'payment_method_requested_at' => null,
+            ])->save();
+
+            return response()->json($this->profilePayload($a->fresh()));
+        }
+
+        $a->forceFill([
+            'payment_method_requested'    => $requested,
+            'payment_method_requested_at' => now(),
+        ])->save();
+
+        // Durable trail so the change request is never invisible, even before an admin acts on it.
+        try {
+            if (class_exists(\App\Models\AuditLog::class) && Schema::hasTable('audit_logs')) {
+                \App\Models\AuditLog::create([
+                    'user_id'     => Auth::id(),
+                    'action'      => 'affilie.payment_method_change_requested',
+                    'entity_type' => 'affilie',
+                    'entity_id'   => $a->getKey(),
+                    'before'      => ['payment_method' => $current],
+                    'after'       => ['payment_method_requested' => $requested],
+                ]);
+            }
+        } catch (\Throwable) {
+            // Best-effort: a logging failure must never block the request.
+        }
+
+        return response()->json($this->profilePayload($a->fresh()));
     }
 
     /** @return array{label:string, tone:string} as a positional [label, tone]. */

@@ -244,8 +244,19 @@ export interface AffiliateProfile {
   reference: string | null;
   type: string | null;
   status: string | null;
+  /** Effective payout method value ('cash' | 'bank'); defaults to Aramex ('bank') when unset. */
   payment_method: string | null;
+  payment_method_label: string | null;
+  /** A pending change the affiliate requested, awaiting the team's approval (null = none). */
+  payment_method_requested: string | null;
+  payment_method_requested_label: string | null;
 }
+
+/** The two payout methods an affiliate can pick between (mirrors the backend AffiliePayoutMethod). */
+export const AFFILIATE_PAYMENT_METHODS: { value: 'bank' | 'cash'; label: string }[] = [
+  { value: 'bank', label: 'Livraison Aramex (colis)' },
+  { value: 'cash', label: 'Retrait au magasin (espèces)' },
+];
 
 /** The contact fields an affiliate may edit (payout details stay admin-managed). */
 export interface AffiliateProfileContact {
@@ -274,5 +285,14 @@ export async function getAffiliateProfile(): Promise<AffiliateProfile> {
 
 export async function updateAffiliateProfile(contact: AffiliateProfileContact): Promise<AffiliateProfile> {
   const { data } = await client.put<AffiliateProfile>('/affilie/profile', contact);
+  return data;
+}
+
+/**
+ * Request a payout-method change. The team must approve it — this only records the request.
+ * Passing the method already in effect clears any pending request (the "cancel" path).
+ */
+export async function requestAffiliatePaymentMethod(method: 'bank' | 'cash'): Promise<AffiliateProfile> {
+  const { data } = await client.post<AffiliateProfile>('/affilie/profile/payment-method-request', { method });
   return data;
 }

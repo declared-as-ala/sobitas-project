@@ -313,7 +313,15 @@ class AffilieResource extends Resource
                         ->label('Méthode de paiement')
                         ->options(\App\Enums\AffiliePayoutMethod::options())
                         ->native(false)
-                        ->helperText('Paiements le 1er de chaque mois : retrait en espèces au magasin ou livraison Aramex à l’adresse de l’affilié.'),
+                        ->helperText('Paiements le 1er de chaque mois : retrait en espèces au magasin ou livraison Aramex à l’adresse de l’affilié. Par défaut : livraison Aramex.'),
+                    Forms\Components\Placeholder::make('payment_method_requested_display')
+                        ->label('Changement demandé par l’affilié')
+                        ->visible(fn (?Affilie $record): bool => (bool) $record && filled($record->payment_method_requested))
+                        ->content(fn (?Affilie $record): string => $record && filled($record->payment_method_requested)
+                            ? (\App\Enums\AffiliePayoutMethod::tryFrom((string) $record->payment_method_requested)?->label() ?? (string) $record->payment_method_requested)
+                                .($record->payment_method_requested_at ? ' — demandé le '.$record->payment_method_requested_at->format('d/m/Y H:i') : '')
+                                .' · à approuver/refuser via le menu « Plus » de la liste.'
+                            : 'Aucune demande en attente.'),
                     Forms\Components\Textarea::make('payout_notes')
                         ->label('Notes paiement')
                         ->columnSpanFull(),
@@ -370,6 +378,14 @@ class AffilieResource extends Resource
 
                         return AffilieStatus::tryFrom((string) $state)?->label() ?? (string) $state;
                     }),
+                Tables\Columns\TextColumn::make('payment_method_requested')
+                    ->label('Demande paiement')
+                    ->badge()
+                    ->color('warning')
+                    ->icon('heroicon-o-clock')
+                    ->formatStateUsing(fn (?string $state): string => \App\Enums\AffiliePayoutMethod::tryFrom((string) $state)?->label() ?? (string) $state)
+                    ->placeholder('—')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('kyc_status')
                     ->label('KYC')
                     ->badge()
@@ -621,6 +637,58 @@ class AffilieResource extends Resource
                             $record->update(['status' => AffilieStatus::Active]);
                             static::audit('affilie.activated', $record, $before, ['status' => AffilieStatus::Active->value]);
                         }),
+
+                    Actions\Action::make('approvePaymentMethod')
+                        ->label('Approuver la méthode de paiement')
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(fn (Affilie $record): bool => filled($record->payment_method_requested))
+                        ->requiresConfirmation()
+                        ->modalHeading('Approuver le changement de méthode de paiement')
+                        ->modalDescription(fn (Affilie $record): string => 'Nouvelle méthode : '
+                            .(\App\Enums\AffiliePayoutMethod::tryFrom((string) $record->payment_method_requested)?->label() ?? '—'))
+                        ->action(function (Affilie $record): void {
+                            $requested = (string) $record->payment_method_requested;
+                            if (\App\Enums\AffiliePayoutMethod::tryFrom($requested) === null) {
+                                return;
+                            }
+                            $before = ['payment_method' => $record->payment_method];
+                            $record->forceFill([
+                                'payment_method'              => $requested,
+                                'payment_method_requested'    => null,
+                                'payment_method_requested_at' => null,
+                            ])->save();
+                            static::audit('affilie.payment_method_changed', $record, $before, ['payment_method' => $requested]);
+                            static::notifyAffiliate(
+                                $record,
+                                'Méthode de paiement mise à jour',
+                                'Votre méthode de paiement est désormais : '.(\App\Enums\AffiliePayoutMethod::tryFrom($requested)?->label() ?? $requested).'.',
+                                true,
+                            );
+                            Notification::make()->title('Méthode de paiement mise à jour')->success()->send();
+                        }),
+
+                    Actions\Action::make('rejectPaymentMethod')
+                        ->label('Refuser la méthode demandée')
+                        ->icon('heroicon-o-x-circle')
+                        ->color('danger')
+                        ->visible(fn (Affilie $record): bool => filled($record->payment_method_requested))
+                        ->requiresConfirmation()
+                        ->action(function (Affilie $record): void {
+                            $before = ['payment_method_requested' => $record->payment_method_requested];
+                            $record->forceFill([
+                                'payment_method_requested'    => null,
+                                'payment_method_requested_at' => null,
+                            ])->save();
+                            static::audit('affilie.payment_method_change_refused', $record, $before, ['payment_method_requested' => null]);
+                            static::notifyAffiliate(
+                                $record,
+                                'Demande de changement refusée',
+                                'Votre demande de changement de méthode de paiement n’a pas été acceptée. Contactez l’équipe pour en savoir plus.',
+                                false,
+                            );
+                            Notification::make()->title('Demande refusée')->warning()->send();
+                        }),
                 ])->label('Plus'),
             ])
             ->bulkActions([]);
@@ -771,6 +839,26 @@ class AffilieResource extends Resource
             'before' => $before ?: null,
             'after' => $after ?: null,
         ]);
+    }
+
+    /**
+     * Best-effort in-app notification to the affiliate's panel user (bell). The affiliate panel has
+     * databaseNotifications() enabled, so this reaches them; a failure must never break the admin action.
+     */
+    protected static function notifyAffiliate(Affilie $record, string $title, string $body, bool $success): void
+    {
+        try {
+            $user = $record->user;
+            if (! $user) {
+                return;
+            }
+
+            $notification = Notification::make()->title($title)->body($body);
+            $success ? $notification->success() : $notification->warning();
+            $notification->sendToDatabase($user);
+        } catch (\Throwable) {
+            // no-op
+        }
     }
 
     /**

@@ -273,6 +273,8 @@ Route::middleware(['auth:sanctum', 'affilie'])->prefix('affilie')->group(functio
         ->middleware('throttle:120,1');
     Route::put('/profile', [\App\Http\Controllers\Api\AffiliePortalController::class, 'updateProfile'])
         ->middleware('throttle:30,1');
+    Route::post('/profile/payment-method-request', [\App\Http\Controllers\Api\AffiliePortalController::class, 'requestPaymentMethod'])
+        ->middleware('throttle:30,1');
 });
 
 // ── Authenticated Routes ──────────────────────────────

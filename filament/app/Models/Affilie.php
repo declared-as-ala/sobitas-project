@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AffiliePayoutMethod;
 use App\Enums\AffilieStatus;
 use App\Enums\AffilieType;
 use Illuminate\Database\Eloquent\Builder;
@@ -55,6 +56,8 @@ class Affilie extends Model
         'total_earned',
         'total_paid',
         'payment_method',
+        'payment_method_requested',
+        'payment_method_requested_at',
         'bank_name',
         'rib_or_iban',
         'payout_notes',
@@ -90,7 +93,18 @@ class Affilie extends Model
         'kyc_reviewed_at' => 'datetime',
         'phone_verified_at' => 'datetime',
         'email_verified_at' => 'datetime',
+        'payment_method_requested_at' => 'datetime',
     ];
+
+    /**
+     * The payout method that actually applies, defaulting to Aramex (the legacy `bank` value, now
+     * "Livraison Aramex (colis)") when the affiliate never chose one. Every surface reads through
+     * this so an unset method reads as Aramex rather than "Non renseigné", without a data backfill.
+     */
+    public function effectivePaymentMethod(): AffiliePayoutMethod
+    {
+        return AffiliePayoutMethod::tryFrom((string) $this->payment_method) ?? AffiliePayoutMethod::Bank;
+    }
 
     public function user(): BelongsTo
     {
