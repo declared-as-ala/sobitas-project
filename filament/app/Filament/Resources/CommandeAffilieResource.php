@@ -72,7 +72,7 @@ class CommandeAffilieResource extends Resource
     {
         return parent::getEloquentQuery()
             ->whereNotNull('affilie_id')
-            ->with(['affilie', 'affilieTransactions', 'details.product']);
+            ->with(['affilie', 'affilieTransactions', 'details.product', 'latestShipment']);
     }
 
     private static function ledgerGain(Commande $record): string
@@ -118,6 +118,16 @@ class CommandeAffilieResource extends Resource
                 TextColumn::make('etat')->label('État')->badge()
                     ->formatStateUsing(fn ($state): string => Commande::getStatusLabel((string) $state))
                     ->color(fn ($state): string => Commande::getStatusColor((string) $state)),
+                TextColumn::make('latestShipment.aramex_status')->label('Suivi Aramex')->badge()
+                    ->placeholder('—')
+                    ->formatStateUsing(fn (string $state): string => \App\Support\Aramex\AramexStatusCodes::describe($state) ?? $state)
+                    ->color(fn (string $state): string => match (\App\Support\Aramex\AramexStatusCodes::bucket($state)) {
+                        'delivered' => 'success',
+                        'returned'  => 'danger',
+                        'transit'   => 'info',
+                        default     => 'gray',
+                    })
+                    ->tooltip(fn (?string $state): ?string => $state ? 'Statut réel Aramex ('.$state.')' : null),
                 TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

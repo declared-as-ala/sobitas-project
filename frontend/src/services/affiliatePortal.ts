@@ -104,6 +104,11 @@ export interface AffiliateOrder {
   status: string;
   status_label: string;
   status_tone: OrderTone;
+  /** The real Aramex courier status for this order's latest shipment, when one exists. */
+  aramex_status: string | null;
+  aramex_status_label: string | null;
+  aramex_tone: OrderTone | null;
+  aramex_delivered_at: string | null;
   customer: string | null;
   phone: string | null;
   ville: string | null;

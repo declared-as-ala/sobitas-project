@@ -1,12 +1,28 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Package, ShoppingBag, AlertCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Plus, Package, ShoppingBag, AlertCircle, ChevronLeft, ChevronRight, Truck } from 'lucide-react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { cn } from '@/app/components/ui/utils';
 import {
-  getAffiliateOrders, fmtDT, type AffiliateOrder, type AffiliateOrdersPage,
+  getAffiliateOrders, fmtDT, type AffiliateOrder, type AffiliateOrdersPage, type OrderTone,
 } from '@/services/affiliatePortal';
 import { StatusBadge, fmtDate } from '../ui';
+
+/** The real Aramex status, shown under the shop status as a compact tone-coloured line. */
+const ARAMEX_TEXT: Record<OrderTone, string> = {
+  ok: 'text-ok', warn: 'text-warn', destructive: 'text-destructive',
+  brand: 'text-brand', info: 'text-ink-3', neutral: 'text-ink-3',
+};
+
+function AramexLine({ label, tone }: { label: string | null; tone: OrderTone | null }) {
+  if (!label) return null;
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-[11px] font-medium', ARAMEX_TEXT[tone ?? 'neutral'])}>
+      <Truck className="h-3 w-3 shrink-0" aria-hidden /> {label}
+    </span>
+  );
+}
 
 export function OrdersClient() {
   const [page, setPage] = useState(1);
@@ -85,7 +101,12 @@ export function OrdersClient() {
                     <td className="px-4 py-3 text-center tabular-nums text-ink-2">{o.items_count}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-ink-1">{fmtDT(o.total)}</td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums text-brand">{fmtDT(o.commission)}</td>
-                    <td className="px-4 py-3 text-right"><StatusBadge label={o.status_label} tone={o.status_tone} /></td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex flex-col items-end gap-1">
+                        <StatusBadge label={o.status_label} tone={o.status_tone} />
+                        <AramexLine label={o.aramex_status_label} tone={o.aramex_tone} />
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -101,7 +122,10 @@ export function OrdersClient() {
                     <div className="font-semibold text-ink-1">{o.numero}</div>
                     <div className="text-xs text-ink-3">{fmtDate(o.created_at)}</div>
                   </div>
-                  <StatusBadge label={o.status_label} tone={o.status_tone} />
+                  <div className="flex flex-col items-end gap-1">
+                    <StatusBadge label={o.status_label} tone={o.status_tone} />
+                    <AramexLine label={o.aramex_status_label} tone={o.aramex_tone} />
+                  </div>
                 </div>
                 <div className="mt-3 text-sm text-ink-2">{o.customer ?? '—'}{o.ville ? ` · ${o.ville}` : ''}</div>
                 <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3 text-sm">

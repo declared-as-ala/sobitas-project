@@ -233,4 +233,30 @@ final class AramexStatusCodes
     {
         return in_array(strtoupper(trim($code)), self::TERMINAL, true);
     }
+
+    /**
+     * A coarse lifecycle bucket for colouring a status chip, so every surface (admin lists, the
+     * affiliate portal, the tracking widget) agrees on what "green/red/blue" means for a code
+     * instead of each hand-maintaining its own — the mismatch that once had SH005 (Delivered) shown
+     * as "En livraison" in blue while SH006 wore the "Livré" green.
+     *
+     * Returns: 'delivered' (consignee has the goods) · 'returned' (terminal return/confiscation) ·
+     * 'transit' (out for delivery) · 'other' (everything still in flight / on hold).
+     */
+    public static function bucket(string $code): string
+    {
+        $code = strtoupper(trim($code));
+
+        if (in_array($code, self::DELIVERED, true)) {
+            return 'delivered';
+        }
+        if (in_array($code, self::TERMINAL, true)) {
+            return 'returned';
+        }
+        if (in_array($code, ['SH003', 'SH004'], true)) {
+            return 'transit';
+        }
+
+        return 'other';
+    }
 }

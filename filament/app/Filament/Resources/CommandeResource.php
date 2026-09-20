@@ -117,7 +117,7 @@ class CommandeResource extends Resource
                 if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', 'client_id')) {
                     $columns[] = 'client_id';
                 }
-                return $query->whereNull('affilie_id')->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1'])->select($columns);
+                return $query->whereNull('affilie_id')->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1', 'latestShipment'])->select($columns);
             })
             ->columns([
                 Tables\Columns\TextColumn::make('numero')
@@ -169,6 +169,19 @@ class CommandeResource extends Resource
                     ->badge()
                     ->color(fn (string $state): string => Commande::getStatusColor($state))
                     ->formatStateUsing(fn (string $state): string => Commande::getStatusLabel($state)),
+                Tables\Columns\TextColumn::make('latestShipment.aramex_status')
+                    ->label('Suivi Aramex')
+                    ->badge()
+                    ->placeholder('—')
+                    ->formatStateUsing(fn (string $state): string => \App\Support\Aramex\AramexStatusCodes::describe($state) ?? $state)
+                    ->color(fn (string $state): string => match (\App\Support\Aramex\AramexStatusCodes::bucket($state)) {
+                        'delivered' => 'success',
+                        'returned'  => 'danger',
+                        'transit'   => 'info',
+                        default     => 'gray',
+                    })
+                    ->tooltip(fn (?string $state): ?string => $state ? 'Statut réel Aramex ('.$state.')' : null)
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('region')
                     ->label('Région')
                     ->toggleable(),

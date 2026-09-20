@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Models\Facture;
 use App\Services\AramexTrackingSync;
+use App\Support\Aramex\AramexStatusCodes;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
 use Illuminate\Support\Facades\Schema;
@@ -70,28 +71,26 @@ class AramexTrackingWidget extends Widget
 
     public static function statusLabel(string $code): string
     {
-        return match ($code) {
-            'SH001' => 'Créé',
-            'SH002' => 'En attente collecte',
-            'SH003' => 'Collecté',
-            'SH004' => 'En transit',
-            'SH005' => 'En livraison',
-            'SH006' => 'Livré',
-            'SH069' => 'Tentative échouée',
-            'annulé' => 'Annulé',
-            default  => $code,
-        };
+        if ($code === 'annulé') {
+            return 'Annulé';
+        }
+
+        // Aramex's own description is the source of truth — the previous hand-written map had
+        // SH005 (Delivered) and SH006 (Collected by Consignee) inverted.
+        return AramexStatusCodes::describe($code) ?? $code;
     }
 
     public static function statusColor(string $code): string
     {
-        return match ($code) {
-            'SH006'  => 'green',
-            'SH005'  => 'blue',
-            'SH003', 'SH004' => 'indigo',
-            'SH069'  => 'orange',
-            'annulé' => 'red',
-            default  => 'gray',
+        if ($code === 'annulé') {
+            return 'red';
+        }
+
+        return match (AramexStatusCodes::bucket($code)) {
+            'delivered' => 'green',
+            'returned'  => 'red',
+            'transit'   => 'blue',
+            default     => 'gray',
         };
     }
 }
