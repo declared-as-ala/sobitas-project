@@ -6,6 +6,7 @@ use App\Enums\AffilieStatus;
 use App\Enums\AffilieType;
 use App\Filament\Resources\AffilieResource\Pages;
 use App\Filament\Resources\AffilieResource\RelationManagers\AffilieCodesRelationManager;
+use App\Filament\Resources\AffilieResource\RelationManagers\AffilieTransactionsRelationManager;
 use App\Models\Affilie;
 use App\Models\AuditLog;
 use App\Models\User;
@@ -826,6 +827,7 @@ class AffilieResource extends Resource
     {
         return [
             AffilieCodesRelationManager::class,
+            AffilieTransactionsRelationManager::class,
         ];
     }
 
