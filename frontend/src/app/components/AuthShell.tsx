@@ -11,6 +11,7 @@ import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { cn } from '@/app/components/ui/utils';
 import { Container } from '@/app/components/layout/Container';
+import { AuthBrandMark } from '@/app/components/auth/AuthBrandMark';
 
 export function AuthShell({ children, compact = false, artwork, artworkLabel }: { children: ReactNode; compact?: boolean; artwork?: ReactNode; artworkLabel?: string }) {
   const { headerLogoUrl } = useSiteLogos();
@@ -66,6 +67,14 @@ export function AuthShell({ children, compact = false, artwork, artworkLabel }: 
 
             <div data-auth-body="" className={cn('flex items-start sm:py-6 lg:flex-1 lg:items-center', compact && 'pb-4 pt-3')}>
               <div data-auth-card="" className="mx-auto w-full max-w-lg">
+                {/* The emblem only appears where there is vertical room for it (taller phones); on
+                    a short viewport the auth height budget is already tight, so it is hidden to keep
+                    the card fitting without a scroll. */}
+                {!artwork && (
+                  <div className="hidden [@media(min-height:780px)]:block">
+                    <AuthBrandMark />
+                  </div>
+                )}
                 {children}
               </div>
             </div>
@@ -120,7 +129,9 @@ interface AuthCardHeaderProps {
 
 export function AuthCardHeader({ kicker, title, subtitle, subtitleDesktopOnly }: AuthCardHeaderProps) {
   return (
-    <div className="mb-2 sm:mb-6">
+    // Centered on mobile so the emblem, title and subtitle read as one tidy hero above the
+    // left-aligned form; the desktop card keeps its original left alignment (sm:text-start).
+    <div className="mb-2 text-center sm:mb-6 sm:text-start">
       {kicker && (
         <span className="mb-2 hidden items-center gap-2 font-display text-[10px] font-bold uppercase tracking-[0.18em] text-brand sm:inline-flex">
           <span className="h-px w-4 bg-brand" aria-hidden="true" />
@@ -133,7 +144,7 @@ export function AuthCardHeader({ kicker, title, subtitle, subtitleDesktopOnly }:
       {subtitle && (
         <p
           className={cn(
-            'mt-2 text-sm leading-relaxed text-ink-2',
+            'mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink-2 sm:mx-0',
             subtitleDesktopOnly && 'hidden sm:block'
           )}
         >
