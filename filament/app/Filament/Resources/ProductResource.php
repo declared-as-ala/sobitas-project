@@ -355,7 +355,7 @@ class ProductResource extends Resource
                                     Forms\Components\DateTimePicker::make("promo_expiration_date")
                                         ->label("Date d'expiration de la promotion")
                                         ->prefixIcon('heroicon-o-clock')
-                                        ->helperText("Après cette date, le produit n'apparaît plus dans les Ventes Flash.")
+                                        ->helperText("Fin de la promo : après cette date, le site réaffiche le prix normal et le produit quitte les Ventes Flash. Laissez vide pour une promo permanente (sans date de fin). Une date déjà passée = promo terminée.")
                                         ->columnSpanFull(),
                                 ]),
                         ]),
