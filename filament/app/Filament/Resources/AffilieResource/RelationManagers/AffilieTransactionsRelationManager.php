@@ -22,7 +22,7 @@ class AffilieTransactionsRelationManager extends RelationManager
 
     protected static ?string $title = 'Historique des transactions';
 
-    protected static ?string $icon = 'heroicon-o-clock';
+    protected static string | \BackedEnum | null $icon = 'heroicon-o-clock';
 
     /** Append-only ledger — never created, edited or deleted from the UI. */
     protected static bool $isReadOnly = true;
