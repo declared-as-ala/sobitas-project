@@ -5,6 +5,7 @@ namespace App\Filament\Resources\CommandeAffilieResource\Pages;
 use App\Filament\Resources\CommandeAffilieResource;
 use App\Filament\Resources\CommandeResource;
 use App\Models\Commande;
+use App\Services\PointsService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
@@ -43,12 +44,58 @@ class ViewCommandeAffilie extends ViewRecord
                 }),
         ];
 
-        return array_merge($actions, $facture ? [
-            Action::make('print_bl')
+        if ($facture) {
+            $actions[] = Action::make('print_bl')
                 ->label('Imprimer le BL')
                 ->icon('heroicon-o-printer')
                 ->url(route('factures.print', ['facture' => $facture->id]))
-                ->openUrlInNewTab(),
-        ] : []);
+                ->openUrlInNewTab();
+        }
+
+        // Annuler une commande affilié : passe l'état à « annuler », ce qui déclenche
+        // CommandeObserver — la commission en attente est retirée (elle réapparaît dans les
+        // transactions de l'affilié) et l'affilié est notifié (e-mail + cloche). On masque le
+        // bouton si la commande est déjà annulée/retournée.
+        $actions[] = Action::make('cancelOrder')
+            ->label('Annuler la commande')
+            ->icon('heroicon-o-x-circle')
+            ->color('danger')
+            ->visible(fn () => ! in_array((string) $this->record->etat, PointsService::CANCELLED_STATUSES, true))
+            ->requiresConfirmation()
+            ->modalIcon('heroicon-o-exclamation-triangle')
+            ->modalHeading('Annuler cette commande affilié')
+            ->modalDescription(
+                'La commande passera au statut « annulée ». La commission en attente de l\'affilié '
+                .'sera retirée et apparaîtra dans ses transactions, et l\'affilié en sera informé '
+                .'(e-mail + notification). Si un bon de livraison a déjà été créé, l\'expédition '
+                .'Aramex n\'est pas annulée automatiquement — gérez-la côté Aramex.'
+            )
+            ->modalSubmitActionLabel('Confirmer l\'annulation')
+            ->modalCancelActionLabel('Retour')
+            ->action(function () {
+                try {
+                    $this->record->etat = 'annuler';
+                    $this->record->save();
+
+                    Notification::make()
+                        ->title('Commande annulée')
+                        ->body('L\'affilié a été notifié et sa commission en attente a été retirée.')
+                        ->success()
+                        ->send();
+                } catch (\Throwable $e) {
+                    \Illuminate\Support\Facades\Log::error('Affiliate order cancel failed', [
+                        'commande_id' => $this->record->id,
+                        'error'       => $e->getMessage(),
+                    ]);
+
+                    Notification::make()
+                        ->title('Échec de l\'annulation')
+                        ->body('La commande n\'a pas pu être annulée. Réessayez.')
+                        ->danger()
+                        ->send();
+                }
+            });
+
+        return $actions;
     }
 }
