@@ -115,19 +115,12 @@ class CommandeAffilieResource extends Resource
                 TextColumn::make('prix_ttc')->label('Total client (DT)')->numeric(decimalPlaces: 3)->alignEnd()->sortable(),
                 TextColumn::make('gain')->label('Gain affilié')->alignEnd()
                     ->getStateUsing(fn (Commande $record): string => static::ledgerGain($record)),
-                TextColumn::make('etat')->label('État')->badge()
-                    ->formatStateUsing(fn ($state): string => Commande::getStatusLabel((string) $state))
-                    ->color(fn ($state): string => Commande::getStatusColor((string) $state)),
-                TextColumn::make('latestShipment.aramex_status')->label('Suivi Aramex')->badge()
-                    ->placeholder('—')
-                    ->formatStateUsing(fn (string $state): string => \App\Support\Aramex\AramexStatusCodes::describe($state) ?? $state)
-                    ->color(fn (string $state): string => match (\App\Support\Aramex\AramexStatusCodes::bucket($state)) {
-                        'delivered' => 'success',
-                        'returned'  => 'danger',
-                        'transit'   => 'info',
-                        default     => 'gray',
-                    })
-                    ->tooltip(fn (?string $state): ?string => $state ? 'Statut réel Aramex ('.$state.')' : null),
+                // ONE status: Aramex's real courier state once a shipment exists, the shop's own
+                // état before that (and for pickup). Short label; full Aramex sentence in the tooltip.
+                TextColumn::make('etat')->label('Statut')->badge()
+                    ->getStateUsing(fn (Commande $record): string => $record->unifiedStatusLabel())
+                    ->color(fn (Commande $record): string => $record->unifiedStatusColor())
+                    ->tooltip(fn (Commande $record): ?string => $record->aramexStatusDescription()),
                 TextColumn::make('created_at')->label('Date')->dateTime('d/m/Y H:i')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')

@@ -11,7 +11,6 @@ use App\Models\Commande;
 use App\Models\Product;
 use App\Services\Affilie\AffilieOrderException;
 use App\Services\Affilie\AffilieOrderService;
-use App\Support\Aramex\AramexStatusCodes;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -38,14 +37,6 @@ class AffilieOrderController extends Controller
         'info'    => 'info',
         'primary' => 'brand',
         'gray'    => 'neutral',
-    ];
-
-    /** Aramex lifecycle bucket → storefront tone, so the courier chip reads like the shop's. */
-    private const ARAMEX_TONE = [
-        'delivered' => 'ok',
-        'returned'  => 'destructive',
-        'transit'   => 'brand',
-        'other'     => 'neutral',
     ];
 
     private function affilie(Request $request): Affilie
@@ -108,28 +99,21 @@ class AffilieOrderController extends Controller
             'data' => collect($orders->items())->map(function (Commande $o): array {
                 $etat = (string) ($o->etat ?? Commande::STATUS_NEW);
 
-                // The real courier status, straight from the latest Aramex shipment on this order,
-                // so the affiliate sees exactly what Aramex reports — not just the shop's coarse état.
-                $aramexCode = $o->latestShipment?->aramex_status;
-                $aramexCode = $aramexCode !== null && trim((string) $aramexCode) !== '' ? (string) $aramexCode : null;
-
                 return [
-                    'id'                  => (int) $o->id,
-                    'numero'              => (string) ($o->numero ?? ('#'.$o->id)),
-                    'created_at'          => optional($o->created_at)->toIso8601String(),
-                    'status'              => $etat,
-                    'status_label'        => Commande::getStatusLabel($etat),
-                    'status_tone'         => self::STATUS_TONE[Commande::getStatusColor($etat)] ?? 'neutral',
-                    'aramex_status'       => $aramexCode,
-                    'aramex_status_label' => $aramexCode ? (AramexStatusCodes::describe($aramexCode) ?? $aramexCode) : null,
-                    'aramex_tone'         => $aramexCode ? (self::ARAMEX_TONE[AramexStatusCodes::bucket($aramexCode)] ?? 'neutral') : null,
-                    'aramex_delivered_at' => optional($o->latestShipment?->aramex_delivered_at)->toIso8601String(),
-                    'customer'            => trim((string) ($o->livraison_nom ?? $o->nom ?? '')) ?: null,
-                    'phone'               => $o->livraison_phone ?? $o->phone ?? null,
-                    'ville'               => $o->livraison_ville ?? $o->ville ?? null,
-                    'items_count'         => (int) ($o->items_count ?? 0),
-                    'total'               => round((float) ($o->prix_ttc ?? 0), 3),
-                    'commission'          => round((float) ($o->commission_sum ?? 0), 3),
+                    'id'           => (int) $o->id,
+                    'numero'       => (string) ($o->numero ?? ('#'.$o->id)),
+                    'created_at'   => optional($o->created_at)->toIso8601String(),
+                    // ONE status: Aramex's real courier state once a shipment exists, the shop's own
+                    // état before that. Same resolver the admin lists use, so all surfaces agree.
+                    'status'       => $etat,
+                    'status_label' => $o->unifiedStatusLabel(),
+                    'status_tone'  => self::STATUS_TONE[$o->unifiedStatusColor()] ?? 'neutral',
+                    'customer'     => trim((string) ($o->livraison_nom ?? $o->nom ?? '')) ?: null,
+                    'phone'        => $o->livraison_phone ?? $o->phone ?? null,
+                    'ville'        => $o->livraison_ville ?? $o->ville ?? null,
+                    'items_count'  => (int) ($o->items_count ?? 0),
+                    'total'        => round((float) ($o->prix_ttc ?? 0), 3),
+                    'commission'   => round((float) ($o->commission_sum ?? 0), 3),
                 ];
             })->all(),
             'meta' => [

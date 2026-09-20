@@ -164,24 +164,14 @@ class CommandeResource extends Resource
                     ->label('Total')
                     ->money('TND')
                     ->sortable(),
+                // ONE status: Aramex's real courier state once a shipment exists, the shop's own
+                // état before that (and for pickup). Short label; full Aramex sentence in the tooltip.
                 Tables\Columns\TextColumn::make('etat')
-                    ->label('État')
+                    ->label('Statut')
                     ->badge()
-                    ->color(fn (string $state): string => Commande::getStatusColor($state))
-                    ->formatStateUsing(fn (string $state): string => Commande::getStatusLabel($state)),
-                Tables\Columns\TextColumn::make('latestShipment.aramex_status')
-                    ->label('Suivi Aramex')
-                    ->badge()
-                    ->placeholder('—')
-                    ->formatStateUsing(fn (string $state): string => \App\Support\Aramex\AramexStatusCodes::describe($state) ?? $state)
-                    ->color(fn (string $state): string => match (\App\Support\Aramex\AramexStatusCodes::bucket($state)) {
-                        'delivered' => 'success',
-                        'returned'  => 'danger',
-                        'transit'   => 'info',
-                        default     => 'gray',
-                    })
-                    ->tooltip(fn (?string $state): ?string => $state ? 'Statut réel Aramex ('.$state.')' : null)
-                    ->toggleable(),
+                    ->getStateUsing(fn (Commande $record): string => $record->unifiedStatusLabel())
+                    ->color(fn (Commande $record): string => $record->unifiedStatusColor())
+                    ->tooltip(fn (Commande $record): ?string => $record->aramexStatusDescription()),
                 Tables\Columns\TextColumn::make('region')
                     ->label('Région')
                     ->toggleable(),

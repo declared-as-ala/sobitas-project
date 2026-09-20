@@ -221,6 +221,71 @@ class Commande extends Model
         return self::STATUS_COLORS[$status] ?? 'gray';
     }
 
+    /** Cancel is a shop decision; return can be either a shop status or an Aramex terminal code. */
+    private const CANCEL_STATES = ['annuler', 'annulee', 'annulée'];
+
+    private const RETURN_STATES = ['retour', 'retourner', 'retournee', 'retournée'];
+
+    /**
+     * The ONE status shown everywhere (admin lists + affiliate portal). Aramex owns the delivery
+     * lifecycle, so once a shipment exists its real courier status drives the label; before that,
+     * and for pickup orders, the shop's own `etat` does. A shop cancel/return is authoritative and
+     * overrides any courier ping. Kept to short order-state words, never Aramex's long sentence.
+     */
+    public function unifiedStatusLabel(): string
+    {
+        $etat = (string) ($this->etat ?? self::STATUS_NEW);
+
+        if (in_array($etat, self::CANCEL_STATES, true)) {
+            return 'Annulée';
+        }
+        if (in_array($etat, self::RETURN_STATES, true)) {
+            return 'Retournée';
+        }
+
+        $code = $this->latestShipment?->aramex_status;
+        if ($code !== null && trim((string) $code) !== '') {
+            return \App\Support\Aramex\AramexStatusCodes::shortLabel((string) $code);
+        }
+
+        return self::getStatusLabel($etat);
+    }
+
+    /** Filament badge colour matching unifiedStatusLabel(). */
+    public function unifiedStatusColor(): string
+    {
+        $etat = (string) ($this->etat ?? self::STATUS_NEW);
+
+        if (in_array($etat, self::CANCEL_STATES, true) || in_array($etat, self::RETURN_STATES, true)) {
+            return 'danger';
+        }
+
+        $code = $this->latestShipment?->aramex_status;
+        if ($code !== null && trim((string) $code) !== '') {
+            return match (\App\Support\Aramex\AramexStatusCodes::bucket((string) $code)) {
+                'delivered' => 'success',
+                'returned'  => 'danger',
+                'transit'   => 'info',
+                default     => 'warning',
+            };
+        }
+
+        return self::getStatusColor($etat);
+    }
+
+    /** The full Aramex sentence for a tooltip, when a shipment exists (else null). */
+    public function aramexStatusDescription(): ?string
+    {
+        $code = $this->latestShipment?->aramex_status;
+        if ($code === null || trim((string) $code) === '') {
+            return null;
+        }
+
+        $desc = \App\Support\Aramex\AramexStatusCodes::describe((string) $code);
+
+        return $desc ? $desc.' ('.$code.')' : (string) $code;
+    }
+
     public static function getStatusOptions(): array
     {
         return [
