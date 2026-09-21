@@ -56,10 +56,14 @@ two newest `log/*.md` (what was done, what was pending), `git log --oneline -20 
 
 ### 2. Health check — the self-healing loop (never skip)
 ```bash
-node seo-agent/tools/audit-live.mjs          # exit 1 = P0 present
+node seo-agent/tools/audit-live.mjs --sample=40   # watchlist + 40 random catalogue pages; exit 1 = P0
 curl -s -A Googlebot https://protein.tn/robots.txt | head -20
 curl -s -A Googlebot https://protein.tn/sitemap.xml | grep -c '<loc>'
 ```
+The random sample rotates daily (same seed all day), so over a month the audit walks ~1,200
+catalogue pages you never look at by hand — that is how site-wide bugs (a builder regression, a
+broken canonical rule, a mojibake pattern) get caught. A P0 on a sampled page is as urgent as one
+on the watchlist, and the fix is always the builder, never the page.
 Any **P0** (non-200 on a watch URL, `noindex` on a product/category, missing or wrong canonical,
 missing title/description, product page without Product JSON-LD) is today's job, before anything
 else: find the cause in the code (`git log -p` on the files that shape that surface is usually
@@ -74,6 +78,14 @@ without FAQ, thin < 250 words) are the enrichment worklist for step 4.
   `--query="creatine tunisie"`, `--inspect=/path` (index status of one URL).
 - Without GSC: `ls protein.tn/` for the newest export folder; `node frontend/scripts/analyze-gsc.mjs`
   reads it. Say in the log that numbers are from the export dated X.
+- **Keyword discovery** — `node seo-agent/tools/suggest.mjs` (Google autocomplete, hl=fr gl=tn;
+  seeds = the head terms; add `--deep` once a week): popularity-ranked queries Tunisians type
+  ("creatine tunisie 1kg", "whey protein tunisie promotion", "creatine tunisie creapure"…), tagged
+  commercial/informational and mapped to the page that should own them. Add the commercial ones
+  that are missing to `KEYWORDS.md` (page + "?" position), and use the long-tail modifiers
+  (format, brand, "prix", "promotion") in the category copy, chips and FAQ — that is how a page
+  earns the head term. Google's SERP itself cannot be scraped (JS-only + 429), so positions come
+  from GSC or a WebSearch look, never from a script.
 - **SERP look, 5 rows of `KEYWORDS.md` per run** (rotate; oldest `checked` first): WebSearch
   `<query>` (add "tunisie" where the row has it) and, for the top result, WebFetch its page to see
   the competitor's title/description/H1/schema. Record: who is 1–5, where we are, what their title

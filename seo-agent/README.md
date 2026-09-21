@@ -13,8 +13,9 @@ VPS tasks it queued and reverts if a deploy fails. No PC, no permission prompts,
 | `watchlist.txt` | URLs audited every morning (Googlebot UA) |
 | `ops/queue.txt` | VPS tasks to run after landing (allow-listed in the land workflow) |
 | `log/YYYY-MM-DD.md` | one entry per run — read the newest two to see what happened |
-| `tools/audit-live.mjs` | live SEO surface audit; exit 1 on a P0 |
+| `tools/audit-live.mjs` | live SEO surface audit (watchlist + `--sample=N` random catalogue pages); exit 1 on a P0 |
 | `tools/gsc.mjs` | Search Console pull (needs `GSC_SERVICE_ACCOUNT_JSON_B64` in the cloud env) |
+| `tools/suggest.mjs` | keyword discovery from Google autocomplete (fr, gl=tn), intent-tagged, mapped to pages |
 | `data/gsc-latest.json` | compact output of the last GSC pull (overwritten) |
 
 Product content lever: `filament/resources/seo/products/*.json` → `php artisan

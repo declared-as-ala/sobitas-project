@@ -4,6 +4,9 @@
  *   node seo-agent/tools/audit-live.mjs                      # every URL in seo-agent/watchlist.txt
  *   node seo-agent/tools/audit-live.mjs /creatine /whey-proteine   # ad hoc
  *   node seo-agent/tools/audit-live.mjs --json               # machine-readable
+ *   node seo-agent/tools/audit-live.mjs --sample=40          # + 40 random product URLs from the sitemaps
+ *                                                            #   (bug-finding beyond the watchlist; the seed
+ *                                                            #   rotates daily so a month covers ~1,200 pages)
  *
  * Fetches with a Googlebot UA (the storefront serves crawlers a dedicated view), concurrency 2
  * (an earlier probe at 6 produced 502s whose error page is noindex — a checker that changes what it
@@ -28,14 +31,39 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 
 const argv = process.argv.slice(2);
 const json = argv.includes('--json');
+const sampleArg = argv.find((a) => a.startsWith('--sample='));
+const sampleN = sampleArg ? Math.max(0, Math.min(200, Number(sampleArg.split('=')[1]) || 0)) : 0;
 let urls = argv.filter((a) => a.startsWith('/'));
-if (urls.length === 0) {
+if (urls.length === 0 || sampleN > 0) {
   const file = path.resolve(here, '..', 'watchlist.txt');
   if (!existsSync(file)) {
     console.error('no watchlist.txt and no URLs given');
     process.exit(2);
   }
-  urls = readFileSync(file, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+  if (urls.length === 0) urls = readFileSync(file, 'utf8').split(/\r?\n/).map((l) => l.trim()).filter((l) => l && !l.startsWith('#'));
+}
+
+// Deterministic daily sample: same seed all day (re-runs compare like with like), new pages tomorrow.
+async function sampleProducts(n) {
+  const locs = [];
+  for (let i = 0; i < 12; i += 1) {
+    let res;
+    try { res = await fetch(`${ORIGIN}/sitemaps/products-${i}.xml`, { headers: { 'user-agent': UA } }); } catch { break; }
+    if (!res.ok) break;
+    const xml = await res.text();
+    for (const m of xml.matchAll(/<loc>([^<]+)<\/loc>/g)) locs.push(m[1].replace(ORIGIN, ''));
+  }
+  if (locs.length === 0) return [];
+  let seed = Number(new Date().toISOString().slice(0, 10).replace(/-/g, '')) % 2147483647;
+  const rnd = () => (seed = (seed * 48271) % 2147483647) / 2147483647;
+  const picked = new Set();
+  while (picked.size < Math.min(n, locs.length)) picked.add(locs[Math.floor(rnd() * locs.length)]);
+  return [...picked];
+}
+if (sampleN > 0) {
+  const extra = (await sampleProducts(sampleN)).filter((u) => !urls.includes(u));
+  urls = [...urls, ...extra];
+  console.error(`(sample: +${extra.length} product URLs from the sitemaps)`);
 }
 
 const decode = (s) => s
