@@ -88,7 +88,7 @@ class ReviewsPublishBacklog extends Command
 
         Review::query()
             ->where('publier', '!=', 1)
-            ->select(['id', 'product_id', 'note', 'text_hash'])
+            ->select(['id', 'product_id', 'stars', 'text_hash'])
             ->chunkById(5000, function ($chunk) use (&$toPublish, &$dupes, &$noProduct, &$badRating, &$seen, $limit): bool {
                 foreach ($chunk as $r) {
                     if (count($toPublish) >= $limit) {
@@ -98,8 +98,8 @@ class ReviewsPublishBacklog extends Command
                         $noProduct++;
                         continue;
                     }
-                    $note = (int) $r->note;
-                    if ($note < 1 || $note > 5) {
+                    $stars = (int) $r->stars;
+                    if ($stars < 1 || $stars > 5) {
                         $badRating++;
                         continue;
                     }
