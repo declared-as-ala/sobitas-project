@@ -429,9 +429,19 @@ export function mergeCategorySeoForSlug(
 
   if (!json) return merged;
 
-  const h1 = json.h1?.trim() || merged.h1;
-  const metaTitle = json.metaTitle?.trim() || merged.metaTitle;
-  const metaDescription = json.metaDescription?.trim() || merged.metaDescription;
+  /*
+   * The SERP fields are plain text: pictographs are stripped at this seam so no JSON file can
+   * ship an emoji (🇹🇳, 💪…) into a <title> or snippet. Several pre-08/09 guides still carry the
+   * flag; sanitising here beats re-editing 51 files and protects every future one.
+   */
+  const stripPictographs = (s: string): string =>
+    s.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F1E6}-\u{1F1FF}]/gu, '').replace(/ {2,}/g, ' ').trim();
+  const stripOptional = (s: string | undefined): string | undefined =>
+    s === undefined ? undefined : stripPictographs(s);
+
+  const h1 = stripPictographs(json.h1?.trim() || merged.h1);
+  const metaTitle = stripOptional(json.metaTitle?.trim() || merged.metaTitle);
+  const metaDescription = stripOptional(json.metaDescription?.trim() || merged.metaDescription);
 
   return {
     ...merged,

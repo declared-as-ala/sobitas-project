@@ -121,6 +121,10 @@ on:
           # clobbered — and each save runs the same revalidate/sitemap/IndexNow machinery.
           - seo-legacy-copy-dry-run
           - seo-legacy-copy-apply
+          # Publish the unpublished review backlog, deduped by (product, text_hash). Visibility
+          # only: verified/commande_id are never written, so star ratings stay attested-only.
+          - reviews-publish-backlog-dry-run
+          - reviews-publish-backlog-apply
           # staging table only: no customer-visible effect
           - catalog-discover
           - catalog-hydrate-now
@@ -667,6 +671,20 @@ jobs:
             seo-legacy-copy-apply)
               # Seeds the FAQ pairs onto the products above — empty faq column only, idempotent.
               ARGS="seo:products-seed-copy --apply"
+              WRITES=yes
+              ;;
+            reviews-publish-backlog-dry-run)
+              # Counts what would be published and what dedup skips. Writes nothing.
+              ARGS="reviews:publish-backlog"
+              WRITES=no
+              ;;
+            reviews-publish-backlog-apply)
+              # Owner decision 21/09/2026: show the collected review backlog on the product pages
+              # again. Direct chunked publier=1 updates (no observer, no points settlement, no
+              # score changes); dedup keeps one review per (product, text_hash). Star ratings are
+              # untouched — they remain attested-only (scopeAttested / isAttestedPurchase), and the
+              # honest way to grow them stays reviews-backfill-apply.
+              ARGS="reviews:publish-backlog --apply"
               WRITES=yes
               ;;
             seo-robots-fix)
