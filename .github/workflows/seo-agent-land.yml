@@ -258,22 +258,25 @@ jobs:
           echo "merged=true" >> "$GITHUB_OUTPUT"
           echo "Landed $BRANCH on main as $(git rev-parse --short HEAD)"
 
-      - name: Open a PR instead (policy violation or conflict)
+      - name: Hand it to the owner (policy violation or conflict)
         if: steps.src.outputs.none != 'true' && steps.change.outputs.empty != 'true' && (steps.policy.outputs.ok != 'true' || steps.merge.outputs.merged == 'false')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           REASON=$(cat policy-reason.txt 2>/dev/null || echo "not auto-landed")
+          # Keep the work reachable in THIS repository, then open an issue with the compare link.
+          # (A PR is not possible: this repository's Actions policy forbids GITHUB_TOKEN from
+          # creating pull requests — an owner-only setting.)
+          git push origin "HEAD:refs/heads/$BRANCH" 2>/dev/null || git push -f origin "HEAD:refs/heads/$BRANCH" || true
+          COMPARE="https://github.com/${{ github.repository }}/compare/main...$(printf '%s' "$BRANCH" | sed 's|/|%2F|g')?expand=1"
+          gh label create seo-agent --color D93F0B --description "Opened by the SEO agent land workflow" --force >/dev/null 2>&1 || true
           TITLE="SEO daily ($BRANCH): needs owner review"
-          if [ "${{ steps.src.outputs.source }}" = "pad" ]; then
-            git push origin "refs/heads/$BRANCH:refs/heads/$BRANCH" || true
+          if [ "$(gh issue list --label seo-agent --state open --search "$BRANCH in:title" --json number --jq 'length')" = "0" ]; then
+            BODY=$(printf 'The land workflow did not auto-merge this routine branch.\n\nReason:\n\n    %s\n\nBranch: %s - open a PR from %s and merge by hand, or push a fix to the branch and re-run the workflow.\n\nGenerated with Claude Code' "$REASON" "$BRANCH" "$COMPARE")
+            gh issue create --title "$TITLE" --label seo-agent --body "$BODY" || true
           fi
-          if gh pr list --head "$BRANCH" --state open --json number --jq 'length' | grep -q '^0$'; then
-            gh pr create --base main --head "$BRANCH" --title "$TITLE" \
-              --body "$(printf 'The land workflow did not auto-merge this routine branch.\n\nReason:\n```\n%s\n```\n\nReview and merge by hand, or push a fix to the branch (the workflow re-runs).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' "$REASON")"
-          fi
-          echo "::warning::$BRANCH was not landed: $REASON"
+          echo "::warning::$BRANCH was not landed: $REASON — $COMPARE"
 
       - name: Deploy — dispatch and wait
         if: steps.merge.outputs.merged == 'true'
