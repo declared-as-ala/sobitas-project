@@ -82,10 +82,11 @@ jobs:
           else
             WANT="${{ github.event.inputs.branch }}"
             git remote add pad "$LANDING_PAD"
-            git fetch pad 'refs/heads/claude/seo-*:refs/remotes/pad/*' --quiet || true
+            git fetch pad '+refs/heads/claude/*:refs/remotes/pad/claude/*' || echo "::warning::could not fetch the landing pad"
+            echo "Landing-pad branches:"; git for-each-ref --format='  %(refname:strip=3) %(objectname:short) %(committerdate:iso)' 'refs/remotes/pad/claude/seo-*'
             BRANCH=""
             # Newest branch first (by commit date); skip anything already contained in main.
-            for ref in $(git for-each-ref --sort=-committerdate --format='%(refname:strip=3)' 'refs/remotes/pad/' ); do
+            for ref in $(git for-each-ref --sort=-committerdate --format='%(refname:strip=3)' 'refs/remotes/pad/claude/seo-*' ); do
               [ -n "$WANT" ] && [ "$ref" != "$WANT" ] && continue
               if git merge-base --is-ancestor "pad/$ref" origin/main; then
                 echo "pad/$ref already landed — skipping"; continue
