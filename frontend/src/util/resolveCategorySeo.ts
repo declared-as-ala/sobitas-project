@@ -392,76 +392,19 @@ export function mergeCategorySeo(
   };
 }
 
-/**
- * Slugs whose h1 / metaTitle / metaDescription are written HERE, in content/categories/*.json,
- * and must beat whatever the Filament category record says.
+/*
+ * ── EVERY content/categories/*.json h1 / metaTitle / metaDescription NOW APPLIES ─────────────
  *
- * Everywhere else the CMS wins, and that is the right default: a shop owner editing a category
- * expects the edit to show. For these slugs it is wrong, because their titles are not decoration
- * — they are written against Search Console and SemRush data to win one named query, and a
- * well-meaning CMS edit silently undoes the targeting with no error and no diff to review.
+ * Until 21/09/2026 these fields only reached the page for ~16 slugs listed in a curated
+ * SEARCH_CONSOLE_CURATED_SLUGS set (its per-slug Search-Console rationale lives in git history);
+ * for the other ~35 categories with a reviewed JSON guide, the CMS title silently won and the
+ * targeting written in the JSON never rendered — the exact trap /prise-de-masse documented.
  *
- * ── mass-gainers AND prise-de-masse JOINED ON 08/09/2026, AND WHY THEY HAD TO ────────────────
- * The two pages were fighting over `mass gainer` (1600/mo). The fix gave the deep guide to
- * /mass-gainers and rewrote /prise-de-masse as an objective hub — but the hub's whole job is to
- * stop claiming the term, and its CMS title is `Prise de Masse Tunisie | Gainers & Mass Gainers`.
- * The rewrite was measured on a real build and the rendered title did not move one character:
- * mergeCategorySeo had discarded the JSON title because the slug was not in this set.
- *
- * So the consolidation was, until this line, a content change with its most important signal —
- * the <title> — left saying the opposite. The alternative fix is blanking meta_title in Filament,
- * which works until the next person fills it in again.
+ * Owner decision 21/09/2026: every category and subcategory fights for its query. A slug WITH a
+ * JSON file renders the JSON's h1/title/description (they are reviewed, query-targeted copy); a
+ * slug WITHOUT one keeps the CMS values, so the shop owner's edits still show everywhere no guide
+ * exists. To hand a specific slug back to the CMS, blank those three fields in its JSON file.
  */
-const SEARCH_CONSOLE_CURATED_SLUGS = new Set([
-  'proteines',
-  'whey-proteine',
-  'creatine',
-  'whey-isolate',
-  'omega-3',
-  'pre-workout',
-  'mass-gainers',
-  'prise-de-masse',
-  // /performance was a SECOND door on `pre workout tunisie`: it ranked 47 for that query while
-  // /pre-workout ranked 24, on a page holding 3 keywords and 0 traffic. Its title and H1 come
-  // from Filament — `Compléments Performance Tunisie | Créatine, BCAA & Pre-Workout` — so the
-  // reviewed copy in content/categories/performance.json could not reach the page without this
-  // entry. It narrows the hub to objectives and links DOWN to /pre-workout instead of competing.
-  'performance',
-  /*
-   * ── SEVEN MICRONUTRIENT PAGES ADDED 08/09/2026, FROM SEARCH CONSOLE (last 3 months) ──────────
-   * Each of these renders a CMS title that names the category but not the query, and each earns
-   * impressions it converts at ~0%. Measured, not assumed (protein.tn/Queries.csv + Pages.csv,
-   * Search type = Web, last 3 months):
-   *
-   *     /caseine      141 impr,  0 clicks  (0.00%)  pos 27.8   CMS title: "Caséine en Tunisie"
-   *     /collagene    123 impr,  2 clicks  (1.63%)  pos 31.2   CMS title: "Collagène en Tunisie"
-   *     /magnesium     89 impr,  2 clicks  (2.25%)  pos 18.8   + 179 impr / 2 clicks on
-   *                                                            "magnesium (bis)glycinate
-   *                                                            weightworld" at pos 4.6–9.5
-   *     /vitamines     61 impr,  1 click   (1.64%)  pos 29.9   + "one a day" 148 impr, 0 clicks
-   *     /l-arginine    88 impr,  5 clicks  (5.68%)  pos 18.9   "arginine prix tunisie" 40 impr,
-   *                                                            0 clicks, pos 8.2
-   *     /zinc          31 impr,  1 click   (3.23%)  pos 26.1   + "zinc (bisglycinate)
-   *                                                            weightworld" 129 impr / 2 clicks
-   *     /mineraux      23 impr,  0 clicks  (0.00%)  pos  3.8   — position 3.8 and nobody clicks
-   *
-   * The reviewed titles live in content/categories/*.json and name the form the searcher typed
-   * (bisglycinate, picolinate, marin, One A Day, électrolytes). Without this entry mergeCategorySeo
-   * keeps the CMS title and the edit is invisible — the same trap /prise-de-masse hit above.
-   *
-   * Their JSON h1/metaTitle/metaDescription were rewritten in the same change: they previously
-   * carried a 🇹🇳 flag emoji and a frozen floor price ("dès 70 DT") that would have shipped into
-   * the SERP snippet the moment the slug was curated, so promoting the slug without rewriting the
-   * copy would have been a downgrade, not a fix.
-   */
-  'caseine',
-  'collagene',
-  'magnesium',
-  'vitamines',
-  'l-arginine',
-  'zinc',
-  'mineraux',
-]);
 
 export function mergeCategorySeoForSlug(
   slug: string,
@@ -484,7 +427,7 @@ export function mergeCategorySeoForSlug(
     relatedCategorySlugs: base.relatedCategorySlugs.filter((s) => !self.has(s)),
   };
 
-  if (!SEARCH_CONSOLE_CURATED_SLUGS.has(slug) || !json) return merged;
+  if (!json) return merged;
 
   const h1 = json.h1?.trim() || merged.h1;
   const metaTitle = json.metaTitle?.trim() || merged.metaTitle;

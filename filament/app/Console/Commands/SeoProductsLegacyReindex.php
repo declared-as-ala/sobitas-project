@@ -54,13 +54,15 @@ class SeoProductsLegacyReindex extends Command
 {
     protected $signature = 'seo:products-legacy-reindex
                             {--apply : Write seo_robots_index = 1 on the products that clear the gate (report only without it)}
-                            {--ids= : Comma-separated product ids to restrict the pass to (still measured against the gate)}';
+                            {--ids= : Comma-separated product ids to restrict the pass to (still measured against the gate)}
+                            {--force : Index every selected product regardless of the word gate. Owner decision 21/09/2026: no published product stays noindex; the word counts are still printed so thin pages remain visible as an enrichment worklist.}';
 
     protected $description = 'Re-measure legacy (non-imported) published products held at noindex; index the ones whose page clears catalog.promotion.min_body_words';
 
     public function handle(): int
     {
         $apply = (bool) $this->option('apply');
+        $force = (bool) $this->option('force');
         $ids = $this->requestedIds();
         if ($ids === false) {
             $this->error('--ids must be a comma-separated list of positive integers, e.g. --ids=545,461');
@@ -89,7 +91,11 @@ class SeoProductsLegacyReindex extends Command
             $candidates->count(),
             $ids === null ? '' : ', restricted to '.count($ids).' requested id(s)',
         ));
-        $this->line(sprintf('  gate: catalog.promotion.min_body_words = %d  (page body = description + nutrition + FAQ)', $min));
+        $this->line(sprintf(
+            '  gate: catalog.promotion.min_body_words = %d  (page body = description + nutrition + FAQ)%s',
+            $min,
+            $force ? '  — BYPASSED by --force' : '',
+        ));
 
         if ($ids !== null) {
             $missing = array_values(array_diff($ids, $candidates->pluck('id')->all()));
@@ -115,7 +121,7 @@ class SeoProductsLegacyReindex extends Command
                 $product->faq,
             );
             $row = ['product' => $product, 'words' => $words];
-            if (PromotionGate::indexable($words, $min)) {
+            if ($force || PromotionGate::indexable($words, $min)) {
                 $clears[] = $row;
             } else {
                 $short[] = $row;
