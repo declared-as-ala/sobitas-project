@@ -3,3 +3,4 @@
 # task — only names from its ALLOWED list are accepted — then empties this file on main.
 # Typical: seo-copy-apply (after adding filament/resources/seo/products/*.json entries),
 #          seo-legacy-reindex-apply, catalog-reindex, seo-robots-audit, seo-copy-dry-run.
+# smoke test 2026-09-21T22:58:15Z: push path verified from the cloud routine
