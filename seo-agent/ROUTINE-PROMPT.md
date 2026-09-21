@@ -47,9 +47,8 @@ STEP 4 — RECORD AND SHIP: write seo-agent/log/<today>.md (signals with source 
 what changed and why with the query and numbers, what you queued, tomorrow's first action);
 update BACKLOG.md, KEYWORDS.md (only observed positions), watchlist.txt, ops/queue.txt.
 `git add` explicit paths only, commit as `seo(daily): <what, for which query>`, then `git fetch
-origin main && git rebase origin/main` (resolve any conflict by keeping YOUR version of
-seo-agent/*, content JSON and resources/seo files, and main's version of everything else, exactly
-as PLAYBOOK step 6 shows) and push the branch EXACTLY ONCE at the very end: `git push -u origin <branch>`; if GitHub refuses with
+origin main && (git rebase -X theirs origin/main || git rebase --abort)` (hunk-level: your
+lines win only where both sides edited the same lines; re-run the JSON gate) and push the branch EXACTLY ONCE at the very end: `git push -u origin <branch>`; if GitHub refuses with
 "Claude doesn't have GitHub access", push the same branch to the landing pad instead —
 `git push https://github.com/koussay183/sobitas-seo-work.git HEAD:refs/heads/<branch>` — the land
 workflow (.github/workflows/seo-agent-land.yml) pulls from there every 20 minutes. Either way it

@@ -223,8 +223,17 @@ jobs:
               printf '%s\n' "$CONFLICTED"
               printf '%s\n' "$CONFLICTED" | while read -r f; do
                 [ -n "$f" ] || continue
-                if git cat-file -e "$BRANCH:$f" 2>/dev/null; then
-                  git checkout --theirs -- "$f" && git add -- "$f"
+                if git cat-file -e "$BRANCH:$f" 2>/dev/null && git cat-file -e "origin/main:$f" 2>/dev/null; then
+                  # HUNK-level, not whole-file: keep every non-conflicting change from BOTH sides and
+                  # take the branch's text only where the two sides edited the same lines. A whole-file
+                  # `checkout --theirs` would silently drop what the owner added to the same file.
+                  git show ":1:$f" > /tmp/base 2>/dev/null || : > /tmp/base
+                  git show ":2:$f" > /tmp/ours
+                  git show ":3:$f" > /tmp/theirs
+                  git merge-file --theirs -p /tmp/ours /tmp/base /tmp/theirs > "$f" || true
+                  git add -- "$f"
+                elif git cat-file -e "$BRANCH:$f" 2>/dev/null; then
+                  git checkout --theirs -- "$f" && git add -- "$f"   # added on the branch only
                 else
                   git rm -q -- "$f"   # deleted/renamed on the branch
                 fi
