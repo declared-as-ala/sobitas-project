@@ -121,6 +121,26 @@ Do NOT: touch `filament/database/migrations`, `.github/workflows`, `.env*`, Dock
 auth, payment, cart, or anything unrelated to SEO; create products; change prices or stock;
 write anything you cannot source; produce thin or duplicate copy; add emoji to titles.
 
+### 4b. Weekly rhythm (so the days compound instead of repeating)
+The P0 loop runs every day; the *theme* of the day rotates unless a P0 or an unlanded branch
+overrides it (`date -u +%u`: 1 = Monday):
+- **Mon — keywords & map.** `suggest.mjs --deep` on the head terms, GSC/WebSearch positions for
+  10 rows, refresh `KEYWORDS.md` (new commercial rows, observed positions, "Held" moves), pick
+  the week's target category.
+- **Tue — the category landing page.** Commercial-first template on the week's category
+  (BACKLOG P1): H1, grid first, chips, comparison table, FAQ, guide last. Gate + ship.
+- **Wed — in-stock products of that category.** 3–8 `resources/seo/products` entries (title,
+  description, guide block, FAQ) for its best sellers; queue `seo-copy-apply`.
+- **Thu — CTR pass.** Page-one zero-click rows: rewrite title/description of the ranking page
+  (category JSON or product entry with `force`), one intent word + price anchor + proof.
+- **Fri — technical sweep.** `audit-live.mjs --sample=120`; fix every builder-level P1 pattern
+  (missing FAQ block on a page type, description length rule, hreflang, schema field); verify
+  sitemaps/robots; `check:url-contract`.
+- **Sat — internal links & cannibalisation.** Split queries from GSC: decide the winner, add
+  exact-anchor links (category ↔ products ↔ related), record the blog links the owner must add.
+- **Sun — review & plan.** Re-run the audit, compare `KEYWORDS.md` positions week over week,
+  rewrite BACKLOG priorities for next week, note what worked in the log.
+
 ### 5. Gate (must pass, no exceptions)
 ```bash
 cd frontend
