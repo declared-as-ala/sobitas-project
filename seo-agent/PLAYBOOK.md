@@ -162,6 +162,25 @@ and ship the rest. The land workflow re-runs the same gates and refuses the bran
   `seo(daily): ` and says what changed and for which query, then push the branch
   `claude/seo-daily-YYYY-MM-DD` (create it from `main` at the START of the run so the whole run is
   on it). **Push exactly once, at the end** — every push triggers the land workflow.
+- **Rebase before you push — this is what makes conflicts impossible.** Your run takes an hour
+  and `main` moves (the owner, the land workflow's queue commits, other sessions). Right before
+  the push:
+  ```bash
+  git fetch origin main
+  git rebase origin/main || {
+    # Conflicts are almost always your own memory files or content JSON. Keep YOUR version of
+    # those, then continue; never hand-merge code — drop that file's change instead.
+    for f in $(git diff --name-only --diff-filter=U); do
+      case "$f" in seo-agent/*|frontend/content/categories/*|filament/resources/seo/*) git checkout --theirs -- "$f"; git add -- "$f";;
+        *) git checkout --ours -- "$f"; git add -- "$f";; esac
+    done
+    GIT_EDITOR=true git rebase --continue
+  }
+  ```
+  (During a rebase `--theirs` is the commit being replayed — yours; `--ours` is `main`.) Then
+  re-run the JSON parse gate. The land workflow applies the same rule on its side, so a branch
+  that still conflicts can only be one that touched code the owner also touched — rare, and it
+  becomes a PR instead of a broken deploy.
 - **Where to push.** Try `git push -u origin <branch>` first. If GitHub answers
   `Claude doesn't have GitHub access to declared-as-ala/sobitas-project` (the Claude GitHub App is
   not installed on the main repo), push to the **landing pad** instead — it is a public mirror

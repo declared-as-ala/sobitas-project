@@ -207,16 +207,46 @@ jobs:
           git config user.email "seo-agent@protein.tn"
           git checkout -B main origin/main
           SUBJECT=$(git log -1 --format=%s "$BRANCH")
-          if git merge --no-ff --no-edit -m "seo-agent: land $BRANCH — $SUBJECT" "$BRANCH"; then
-            git push origin main
-            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-            echo "merged=true" >> "$GITHUB_OUTPUT"
-            echo "Landed $BRANCH on main as $(git rev-parse --short HEAD)"
+          MSG="seo-agent: land $BRANCH — $SUBJECT"
+          if git merge --no-ff --no-edit -m "$MSG" "$BRANCH"; then
+            :
           else
-            git merge --abort || true
-            echo "merged=false" >> "$GITHUB_OUTPUT"
-            echo "MERGE CONFLICT with main — leaving a PR for the owner." > policy-reason.txt
+            # A conflict is almost always the routine's OWN memory files (log/backlog/keywords) or
+            # a content JSON that main also touched since the run cloned. Those files belong to the
+            # routine: take the branch's version and keep going. Anything else (source code) is
+            # left to a human — an auto-resolved code conflict is how a deploy breaks silently.
+            CONFLICTED=$(git diff --name-only --diff-filter=U)
+            OWN='^(seo-agent/|frontend/content/categories/|filament/resources/seo/)'
+            FOREIGN=$(printf '%s\n' "$CONFLICTED" | grep -vE "$OWN" || true)
+            if [ -z "$FOREIGN" ]; then
+              echo "Conflicts only in routine-owned files — resolving with the branch's version:"
+              printf '%s\n' "$CONFLICTED"
+              printf '%s\n' "$CONFLICTED" | while read -r f; do
+                [ -n "$f" ] || continue
+                if git cat-file -e "$BRANCH:$f" 2>/dev/null; then
+                  git checkout --theirs -- "$f" && git add -- "$f"
+                else
+                  git rm -q -- "$f"   # deleted/renamed on the branch
+                fi
+              done
+              git -c core.editor=true commit -q -m "$MSG" -m "Conflicts in routine-owned files resolved with the branch's version: $(printf '%s ' $CONFLICTED)"
+            else
+              git merge --abort || true
+              echo "merged=false" >> "$GITHUB_OUTPUT"
+              printf 'MERGE CONFLICT in files the routine does not own:\n%s\n' "$FOREIGN" > policy-reason.txt
+              cat policy-reason.txt
+              exit 0
+            fi
           fi
+          # Re-run the JSON gate on the merge result: an auto-resolved content file must still parse.
+          for f in $(git diff --name-only HEAD~1 HEAD -- '*.json'); do
+            [ -f "$f" ] || continue
+            node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f" || { echo "INVALID JSON after merge: $f"; git reset -q --hard origin/main; echo "merged=false" >> "$GITHUB_OUTPUT"; echo "merge produced invalid JSON in $f" > policy-reason.txt; exit 0; }
+          done
+          git push origin main
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "merged=true" >> "$GITHUB_OUTPUT"
+          echo "Landed $BRANCH on main as $(git rev-parse --short HEAD)"
 
       - name: Open a PR instead (policy violation or conflict)
         if: steps.src.outputs.none != 'true' && steps.change.outputs.empty != 'true' && (steps.policy.outputs.ok != 'true' || steps.merge.outputs.merged == 'false')
