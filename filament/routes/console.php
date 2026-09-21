@@ -109,6 +109,56 @@ Schedule::command('aramex:sync-tracking')
     });
 
 /*
+ * ── THE INDEX-EVERYTHING RATCHET (owner decision 21/09/2026) ────────────────────────────────
+ * "No published product stays noindex, ever — even thin pages." The one-off sweep on 21/09 took
+ * the catalogue from ~3,900 noindexed to 0 of 11,368; these two entries keep it at 0 without a
+ * human clicking vps-run buttons: every import wave, restore or admin mistake that reintroduces
+ * seo_robots_index = 0 is healed within a day, through the same observer machinery (revalidate,
+ * sitemap, IndexNow). --limit=500 is a MEMORY budget, not a convenience: a 20,000 wave was
+ * OOM-killed (exit 137) on 21/09. 500/day also matches how many new products a day realistically
+ * brings. Both are idempotent no-ops when nothing is held back.
+ */
+Schedule::command('catalog:iherb:promote --reindex --force-index --limit=500')
+    ->dailyAt('03:10')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/seo-index-ratchet.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'catalog reindex ratchet FAILED — newly imported products may be sitting at noindex. '
+            .'See storage/logs/seo-index-ratchet.log.',
+        );
+    });
+Schedule::command('seo:products-legacy-reindex --apply --force')
+    ->dailyAt('03:35')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/seo-index-ratchet.log'))
+    ->onFailure(function (): void {
+        \Illuminate\Support\Facades\Log::error(
+            'legacy reindex ratchet FAILED — hand-built products may be sitting at noindex. '
+            .'See storage/logs/seo-index-ratchet.log.',
+        );
+    });
+
+/*
+ * ── THE ATTESTED-STAR ENGINE, ON A DRIP ─────────────────────────────────────────────────────
+ * reviews:send-due-requests (10:00 above) only looks 3-21 days back; this weekly catch-up walks
+ * the 180-day backlog of delivered-but-never-asked orders, 25 throttled emails at a time. Every
+ * reply that comes through the tokenised link carries a commande_id — an ATTESTED review, the only
+ * kind that moves the star rating on the page and in Product JSON-LD. This is the honest engine
+ * behind the SERP stars; it only has fuel when orders actually reach `livrée` (Aramex sync above +
+ * the admin's bulk "Marquer livrées"). The weekly rescore keeps text_hash/dedup current for the
+ * moderation queue.
+ */
+Schedule::command('reviews:backfill-requests --days=180 --limit=25 --sleep=2')
+    ->weeklyOn(1, '10:30')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/reviews-backfill.log'));
+Schedule::command('reviews:rescore --apply --limit=5000')
+    ->weeklyOn(7, '04:10')
+    ->withoutOverlapping()
+    ->appendOutputTo(storage_path('logs/reviews-rescore.log'));
+
+/*
  * ── AFFILIATE PAYOUTS ─ MONTHLY, AND DELIBERATELY WITHOUT AUTHORITY TO PAY ────────────────
  * Placed directly after aramex:sync-tracking because it is downstream of it: that command is what
  * moves orders to "livrée", which is what accrues commission, which is what this assembles.
