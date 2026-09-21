@@ -6,9 +6,10 @@ to #3) that has an actionable page. Positions come from GSC (`tools/gsc.mjs --qu
 credential exists, else from a live SERP look (WebSearch / WebFetch of a Google results page for
 `<query>` with `gl=tn&hl=fr`). Never write a position you did not observe.
 
-Competitors seen in Tunisian SERPs: **housenutrition.tn** (the one to beat — tidy titles
-"Product – Brand | House Nutrition", price + stock + review stars in SERP), tunisianutrition.tn,
-nutrition-plus.tn, jumia.com.tn, mytek.tn (generic), pharmacies. Their weak points: thin category
+Competitors seen in Tunisian SERPs: **housenutrition.tn** and **nutribeast.tn** (the two to
+beat — plain commercial category pages, tidy titles "Product – Brand | Shop", price + stock +
+review stars in SERP), protein-shop-tunisia.tn, wildkard.tn, tunisianutrition.tn,
+nutrition-plus.tn, parashop.tn / pharmacies (fat burners, omega-3), jumia.com.tn, ubuy.tn. Their weak points: thin category
 copy, no FAQ, no comparison content, few blog links. Our edge: 224 blog articles, category guides,
 FAQ schema, real stock and price on every page.
 

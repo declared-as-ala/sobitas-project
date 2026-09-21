@@ -41,6 +41,20 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ## P1 — the ranking levers (in-stock products first)
 
+- [ ] **Commercial-first category landing pages — `/creatine` first** (owner analysis 21/09:
+  House Nutrition / NutriBeast win "créatine tunisie" with a plain shop page; ours buries the
+  grid under the guide). In `frontend/src/app/(shop)/category/[slug]/page.tsx` (+ the category
+  JSON): H1 = the head term ("Créatine en Tunisie"), one commercial sentence, **product grid
+  immediately** (in-stock first), format/type chips, a compact comparison table (type · format ·
+  prix · prix/100 g, computed from the API — no invented numbers), FAQ, then the guide. Keep every
+  existing block (nothing deleted, only reordered) so the 250-word gate and FAQ schema stay.
+  Measure before/after with audit-live + a screenshot at 390/1440. Then whey-proteine,
+  mass-gainers, pre-workout, proteines. One category per run, gates green, design-system clean.
+- [ ] **Topical hierarchy for Google**: category → brand-within-category → product. Add a
+  "Marques" strip on the four money categories (OstroVit, Biotech USA, Optimum Nutrition… linking
+  to `/marques/<brand>` or the filtered listing), and make every in-stock product page link back
+  to its category with the exact head-term anchor. Internal links are the cheapest authority.
+
 - [ ] **Product FAQ + guide on the watchlist products that have none** (audit-live P1 on 21/09):
   Ostrovit creatine, ISO 100 Dymatize, Nitro-Tech Whey Gold, C4 Original. Write
   `filament/resources/seo/products/<date>.json` entries (README there), queue `seo-copy-apply`.

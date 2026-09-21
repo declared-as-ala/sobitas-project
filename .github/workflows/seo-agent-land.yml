@@ -23,6 +23,19 @@ on:
     branches:
       - "claude/seo-daily-*"
       - "claude/seo-*"
+  # The cloud routine cannot push to THIS repository unless the Claude GitHub App is installed on
+  # it (only the repository owner can do that). Until then it pushes its branch to a public
+  # landing pad — koussay183/sobitas-seo-work — and this workflow pulls from there: on a schedule
+  # after the 05:30 UTC run, and on demand. Fetching a public repo needs no credential; the merge
+  # and the deploys use this repository's own GITHUB_TOKEN exactly as on a direct push.
+  schedule:
+    - cron: "*/20 6-10 * * *"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Landing-pad branch to land (blank = newest unlanded claude/seo-* branch)"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -35,7 +48,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  BRANCH: ${{ github.ref_name }}
+  LANDING_PAD: https://github.com/koussay183/sobitas-seo-work.git
   # vps-run.yml tasks the routine may queue. Everything else in queue.txt is ignored and reported.
   ALLOWED_TASKS: >-
     seo-copy-dry-run seo-copy-apply seo-legacy-reindex-dry-run seo-legacy-reindex-apply
@@ -56,11 +69,46 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Identify the change
-        id: change
+      - name: Resolve the branch to land (direct push, or pulled from the landing pad)
+        id: src
         run: |
           set -euo pipefail
           git fetch origin main --quiet
+          if [ "${{ github.event_name }}" = "push" ]; then
+            BRANCH="${{ github.ref_name }}"
+            git fetch origin "refs/heads/$BRANCH:refs/heads/$BRANCH" --quiet 2>/dev/null || true
+            git checkout -q "$BRANCH"
+            echo "source=origin" >> "$GITHUB_OUTPUT"
+          else
+            WANT="${{ github.event.inputs.branch }}"
+            git remote add pad "$LANDING_PAD"
+            git fetch pad 'refs/heads/claude/seo-*:refs/remotes/pad/*' --quiet || true
+            BRANCH=""
+            # Newest branch first (by commit date); skip anything already contained in main.
+            for ref in $(git for-each-ref --sort=-committerdate --format='%(refname:strip=3)' 'refs/remotes/pad/' ); do
+              [ -n "$WANT" ] && [ "$ref" != "$WANT" ] && continue
+              if git merge-base --is-ancestor "pad/$ref" origin/main; then
+                echo "pad/$ref already landed — skipping"; continue
+              fi
+              BRANCH="$ref"; break
+            done
+            if [ -z "$BRANCH" ]; then
+              echo "No unlanded claude/seo-* branch on the landing pad — nothing to do."
+              echo "none=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+            git checkout -q -B "$BRANCH" "pad/$BRANCH"
+            echo "source=pad" >> "$GITHUB_OUTPUT"
+          fi
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "BRANCH=$BRANCH" >> "$GITHUB_ENV"
+          echo "Landing branch: $BRANCH (from ${{ github.event_name }})"
+
+      - name: Identify the change
+        if: steps.src.outputs.none != 'true'
+        id: change
+        run: |
+          set -euo pipefail
           BASE=$(git merge-base origin/main HEAD)
           echo "base=$BASE" >> "$GITHUB_OUTPUT"
           git diff --name-only "$BASE" HEAD > changed.txt
@@ -76,7 +124,7 @@ jobs:
           fi
 
       - name: Policy check (paths the routine may touch)
-        if: steps.change.outputs.empty != 'true'
+        if: steps.src.outputs.none != 'true' && steps.change.outputs.empty != 'true'
         id: policy
         run: |
           set -euo pipefail
@@ -158,8 +206,8 @@ jobs:
           git config user.name "seo-agent[bot]"
           git config user.email "seo-agent@protein.tn"
           git checkout -B main origin/main
-          SUBJECT=$(git log -1 --format=%s "origin/$BRANCH")
-          if git merge --no-ff --no-edit -m "seo-agent: land $BRANCH — $SUBJECT" "origin/$BRANCH"; then
+          SUBJECT=$(git log -1 --format=%s "$BRANCH")
+          if git merge --no-ff --no-edit -m "seo-agent: land $BRANCH — $SUBJECT" "$BRANCH"; then
             git push origin main
             echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
             echo "merged=true" >> "$GITHUB_OUTPUT"
@@ -171,13 +219,16 @@ jobs:
           fi
 
       - name: Open a PR instead (policy violation or conflict)
-        if: steps.change.outputs.empty != 'true' && (steps.policy.outputs.ok != 'true' || steps.merge.outputs.merged == 'false')
+        if: steps.src.outputs.none != 'true' && steps.change.outputs.empty != 'true' && (steps.policy.outputs.ok != 'true' || steps.merge.outputs.merged == 'false')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           REASON=$(cat policy-reason.txt 2>/dev/null || echo "not auto-landed")
           TITLE="SEO daily ($BRANCH): needs owner review"
+          if [ "${{ steps.src.outputs.source }}" = "pad" ]; then
+            git push origin "refs/heads/$BRANCH:refs/heads/$BRANCH" || true
+          fi
           if gh pr list --head "$BRANCH" --state open --json number --jq 'length' | grep -q '^0$'; then
             gh pr create --base main --head "$BRANCH" --title "$TITLE" \
               --body "$(printf 'The land workflow did not auto-merge this routine branch.\n\nReason:\n```\n%s\n```\n\nReview and merge by hand, or push a fix to the branch (the workflow re-runs).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' "$REASON")"
@@ -295,6 +346,6 @@ jobs:
           git commit -m "seo-agent: ops queue consumed ($(echo $TASKS | tr '\n' ' '))" || true
           git push origin main
 
-      - name: Delete the landed branch
-        if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result != 'failure'
+      - name: Delete the landed branch (direct pushes only; landing-pad branches are inert once merged)
+        if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result != 'failure' && steps.src.outputs.source == 'origin'
         run: git push origin --delete "$BRANCH" || true

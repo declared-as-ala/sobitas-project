@@ -130,8 +130,34 @@ and ship the rest. The land workflow re-runs the same gates and refuses the bran
   `seo(daily): ` and says what changed and for which query, then push the branch
   `claude/seo-daily-YYYY-MM-DD` (create it from `main` at the START of the run so the whole run is
   on it). **Push exactly once, at the end** — every push triggers the land workflow.
+- **Where to push.** Try `git push -u origin <branch>` first. If GitHub answers
+  `Claude doesn't have GitHub access to declared-as-ala/sobitas-project` (the Claude GitHub App is
+  not installed on the main repo), push to the **landing pad** instead — it is a public mirror
+  owned by the same person, and the main repo's land workflow pulls from it every 20 minutes
+  between 06:00 and 11:00 UTC (and on demand):
+  ```bash
+  git push https://github.com/koussay183/sobitas-seo-work.git HEAD:refs/heads/<branch>
+  ```
+  Either destination ends in the same gates → merge → deploy. Say in the log which one you used.
+  Never fall back to a patch file: a patch nobody applies is a day lost.
 - Finish with a 6-line summary: signals · P0s fixed · what shipped (files) · queued VPS tasks ·
   what needs the owner · tomorrow's first action.
+
+## What "rank top 5" means on this market (owner's analysis, 21/09/2026)
+- `site:` shows we are indexed; the gap is **authority and commercial clarity**, not indexing.
+  House Nutrition and NutriBeast win head terms with plain commercial category pages: H1 =
+  the query, products immediately, price + stock visible, tidy titles. Do not try to beat them
+  with more text — beat them with a **better commercial landing page** and then compounding
+  authority (internal links from the 224 blog posts, product → category → home hierarchy).
+- Category template to converge on (do `/creatine` first, then whey, mass gainer, pre-workout):
+  H1 "Créatine en Tunisie" → one-sentence commercial intro (monohydrate, Creapure, micronisée —
+  prix, marques, livraison) → **product grid first** (24–50, in-stock first) → filters/format
+  chips (monohydrate · Creapure · gélules · 150 g/300 g/500 g/1 kg) → a small comparison table
+  (product · type · format · prix · prix/100 g) → FAQ → the educational guide LAST.
+- Work the striking-distance queries GSC already shows (impressions at positions 5–30) before
+  any new keyword; every category page must target ONE head term and its sub-categories DIFFERENT
+  ones (no two JSONs with the same `metaTitle` intent).
+- Product schema is presentation, not ranking: keep it valid, but never expect it to move rank.
 
 ## Judgement
 Measure, don't guess: verify meta/status against a real fetch with the Googlebot UA (page-body
