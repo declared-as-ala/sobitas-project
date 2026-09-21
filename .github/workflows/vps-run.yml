@@ -121,6 +121,11 @@ on:
           # clobbered — and each save runs the same revalidate/sitemap/IndexNow machinery.
           - seo-legacy-copy-dry-run
           - seo-legacy-copy-apply
+          # Repo-authored product copy (filament/resources/seo/products/*.json, written by the cloud
+          # SEO routine): meta title/description, an appended keyed HTML block, merged FAQ pairs.
+          # Additive and idempotent; the dry run prints the per-product plan and writes nothing.
+          - seo-copy-dry-run
+          - seo-copy-apply
           # Publish the unpublished review backlog, deduped by (product, text_hash). Visibility
           # only: verified/commande_id are never written, so star ratings stay attested-only.
           - reviews-publish-backlog-dry-run
@@ -671,6 +676,18 @@ jobs:
             seo-legacy-copy-apply)
               # Seeds the FAQ pairs onto the products above — empty faq column only, idempotent.
               ARGS="seo:products-seed-copy --apply"
+              WRITES=yes
+              ;;
+            seo-copy-dry-run)
+              # Per-product plan for resources/seo/products/*.json. Writes nothing.
+              ARGS="seo:products-apply-copy"
+              WRITES=no
+              ;;
+            seo-copy-apply)
+              # Applies the JSON entries through the model (observer revalidates + sitemap +
+              # IndexNow). Never shrinks content; meta_* fill empty columns unless "force": true.
+              # Queued automatically by seo-agent-land.yml after a routine run lands.
+              ARGS="seo:products-apply-copy --apply"
               WRITES=yes
               ;;
             reviews-publish-backlog-dry-run)

@@ -1,0 +1,36 @@
+# URLs the routine audits every morning (Googlebot UA). One path per line; # = comment.
+# Keep it to the pages that carry the money queries — add a URL when you start working on it,
+# remove it after two clean weeks. Order = priority. Slugs verified against sitemaps/products-0.xml
+# on 21/09/2026 — check there before adding one (a wrong slug 301s to its category and the audit
+# flags a false canonical mismatch).
+
+# Home + hubs
+/
+/blog
+
+# Categories fighting for head terms (KEYWORDS.md)
+/whey-proteine
+/creatine
+/proteines
+/prise-de-masse
+/mass-gainers
+/pre-workout
+/bruleurs-de-graisse
+/bcaa
+/omega-3
+/barres-proteinees
+/whey-isolate
+/vitamines
+
+# In-stock best sellers with product-name searches (KEYWORDS.md, "product-name SERPs")
+/creatine/creatine-monohydrate-300g-ostrovit
+/creatine/100-creatine-monohydrate-300g-biotech-usa
+/whey-isolate/iso-100-dymatize-2-3kg
+/whey-proteine/100-whey-gold-standard-2-27kg
+/mass-gainers/serious-mass-5-45-kg-optimum-nutrition
+/mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone
+/whey-proteine/nitro-tech-whey-gold-2-3kg
+/whey-proteine/big-whey-2kg-big-ramy-labs
+/pre-workout/c4-original-pre-workout-cellucor
+/pre-workout/psychotic-pre-workout
+/bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps

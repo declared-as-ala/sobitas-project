@@ -1,0 +1,300 @@
+name: SEO agent — land and deploy
+
+# The cloud SEO routine (seo-agent/PLAYBOOK.md) cannot push to main: Claude Code on the web only
+# pushes `claude/`-prefixed branches. This workflow is the bridge that makes its work land on
+# production without a human in the loop — and the fence that makes that safe:
+#
+#   push claude/seo-daily-*  →  policy check  →  gates (typecheck, lint:design, url contract,
+#   JSON, php -l)  →  merge --no-ff into main  →  dispatch deploy-frontend / deploy-filament for
+#   the paths touched  →  wait for them  →  on failure: revert the merge, redeploy, open an issue
+#   →  dispatch the VPS tasks the routine queued in seo-agent/ops/queue.txt  →  delete the branch.
+#
+# Why dispatch instead of relying on the push to main: a push made with GITHUB_TOKEN never
+# triggers another workflow (GitHub's recursion guard), so the deploys must be started explicitly
+# — `workflow_dispatch` is the documented exception. deploy-filament.yml additionally requires
+# `enabled=true` on manual runs.
+#
+# Why a policy check: the routine runs with no permission prompts. The paths it may touch are
+# therefore fixed HERE, in a file it is forbidden to edit (see FORBIDDEN below), and a branch that
+# steps outside is turned into an ordinary PR for the owner instead of being merged.
+
+on:
+  push:
+    branches:
+      - "claude/seo-daily-*"
+      - "claude/seo-*"
+
+permissions:
+  contents: write
+  actions: write
+  pull-requests: write
+  issues: write
+
+concurrency:
+  group: seo-agent-land
+  cancel-in-progress: false
+
+env:
+  BRANCH: ${{ github.ref_name }}
+  # vps-run.yml tasks the routine may queue. Everything else in queue.txt is ignored and reported.
+  ALLOWED_TASKS: >-
+    seo-copy-dry-run seo-copy-apply seo-legacy-reindex-dry-run seo-legacy-reindex-apply
+    seo-legacy-copy-dry-run seo-legacy-copy-apply catalog-reindex seo-robots-audit
+    seo-robots-fix catalog-status reviews-publish-backlog-dry-run
+  # Tasks that vps-run.yml gates behind confirm=APPLY (its "WRITES: these need confirm=APPLY" list).
+  WRITING_TASKS: >-
+    seo-copy-apply seo-legacy-reindex-apply seo-legacy-copy-apply catalog-reindex seo-robots-fix
+
+jobs:
+  land:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout (full history, both branches)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Identify the change
+        id: change
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          BASE=$(git merge-base origin/main HEAD)
+          echo "base=$BASE" >> "$GITHUB_OUTPUT"
+          git diff --name-only "$BASE" HEAD > changed.txt
+          echo "== files changed vs main ($(wc -l < changed.txt)) =="
+          cat changed.txt
+          FRONTEND=$(grep -cE '^frontend/' changed.txt || true)
+          FILAMENT=$(grep -cE '^filament/' changed.txt || true)
+          echo "frontend=$FRONTEND" >> "$GITHUB_OUTPUT"
+          echo "filament=$FILAMENT" >> "$GITHUB_OUTPUT"
+          if [ ! -s changed.txt ]; then
+            echo "Nothing differs from main — nothing to land."
+            echo "empty=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Policy check (paths the routine may touch)
+        if: steps.change.outputs.empty != 'true'
+        id: policy
+        run: |
+          set -euo pipefail
+          # Forbidden anywhere: infrastructure, secrets, schema, money paths.
+          FORBIDDEN='^(\.github/|filament/database/migrations/|docker-compose|nginx/|ops/|scripts/vps|.*\.env|.*\.sql$|filament/config/(app|database|services|mail|queue)\.php|filament/app/Http/Controllers/Api/(ClientController|CommandeController|PaymentController|AffilieOrderController)|frontend/src/app/\(shop\)/(checkout|panier|cart)|frontend/src/middleware\.ts$)'
+          BAD=$(grep -E "$FORBIDDEN" changed.txt || true)
+          MAX=80
+          COUNT=$(wc -l < changed.txt)
+          REASON=""
+          if [ -n "$BAD" ]; then REASON="touches forbidden paths:\n$BAD"; fi
+          if [ "$COUNT" -gt "$MAX" ]; then REASON="${REASON}\n${COUNT} files changed (max ${MAX})"; fi
+          # A deleted file is never auto-landed (the routine adds and edits; deletions are for humans).
+          DELETED=$(git diff --name-only --diff-filter=D "${{ steps.change.outputs.base }}" HEAD || true)
+          if [ -n "$DELETED" ]; then REASON="${REASON}\ndeletes files:\n$DELETED"; fi
+          if [ -n "$REASON" ]; then
+            printf "POLICY VIOLATION — will open a PR instead of landing:\n%b\n" "$REASON"
+            printf "%b" "$REASON" > policy-reason.txt
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up Node
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true' && steps.change.outputs.frontend != '0'
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Gate — frontend (typecheck, lint:design, url contract)
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true' && steps.change.outputs.frontend != '0'
+        id: gate_frontend
+        working-directory: frontend
+        run: |
+          set -euo pipefail
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          npm run lint:design
+          node scripts/check-url-contract.mjs
+          git checkout -- tsconfig.json || true
+
+      - name: Gate — JSON content parses
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for f in $(grep -E '\.json$' changed.txt || true); do
+            [ -f "$f" ] || continue
+            if ! node -e "JSON.parse(require('fs').readFileSync(process.argv[1],'utf8'))" "$f"; then
+              echo "INVALID JSON: $f"; FAIL=1
+            fi
+          done
+          exit $FAIL
+
+      - name: Set up PHP
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true' && steps.change.outputs.filament != '0'
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: none
+
+      - name: Gate — PHP syntax
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true' && steps.change.outputs.filament != '0'
+        run: |
+          set -euo pipefail
+          FAIL=0
+          for f in $(grep -E '^filament/.*\.php$' changed.txt || true); do
+            [ -f "$f" ] || continue
+            php -l "$f" || FAIL=1
+          done
+          exit $FAIL
+
+      - name: Merge into main
+        if: steps.change.outputs.empty != 'true' && steps.policy.outputs.ok == 'true'
+        id: merge
+        run: |
+          set -euo pipefail
+          git config user.name "seo-agent[bot]"
+          git config user.email "seo-agent@protein.tn"
+          git checkout -B main origin/main
+          SUBJECT=$(git log -1 --format=%s "origin/$BRANCH")
+          if git merge --no-ff --no-edit -m "seo-agent: land $BRANCH — $SUBJECT" "origin/$BRANCH"; then
+            git push origin main
+            echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+            echo "merged=true" >> "$GITHUB_OUTPUT"
+            echo "Landed $BRANCH on main as $(git rev-parse --short HEAD)"
+          else
+            git merge --abort || true
+            echo "merged=false" >> "$GITHUB_OUTPUT"
+            echo "MERGE CONFLICT with main — leaving a PR for the owner." > policy-reason.txt
+          fi
+
+      - name: Open a PR instead (policy violation or conflict)
+        if: steps.change.outputs.empty != 'true' && (steps.policy.outputs.ok != 'true' || steps.merge.outputs.merged == 'false')
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          REASON=$(cat policy-reason.txt 2>/dev/null || echo "not auto-landed")
+          TITLE="SEO daily ($BRANCH): needs owner review"
+          if gh pr list --head "$BRANCH" --state open --json number --jq 'length' | grep -q '^0$'; then
+            gh pr create --base main --head "$BRANCH" --title "$TITLE" \
+              --body "$(printf 'The land workflow did not auto-merge this routine branch.\n\nReason:\n```\n%s\n```\n\nReview and merge by hand, or push a fix to the branch (the workflow re-runs).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' "$REASON")"
+          fi
+          echo "::warning::$BRANCH was not landed: $REASON"
+
+      - name: Deploy — dispatch and wait
+        if: steps.merge.outputs.merged == 'true'
+        id: deploy
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          SINCE=$(date -u +%Y-%m-%dT%H:%M:%S+00:00)
+          WANT=""
+          if [ "${{ steps.change.outputs.frontend }}" != "0" ]; then
+            gh workflow run deploy-frontend.yml --ref main
+            WANT="$WANT deploy-frontend.yml"
+          fi
+          if [ "${{ steps.change.outputs.filament }}" != "0" ]; then
+            gh workflow run deploy-filament.yml --ref main -f enabled=true
+            WANT="$WANT deploy-filament.yml"
+          fi
+          if [ -z "$WANT" ]; then
+            echo "No frontend/ or filament/ change — nothing to deploy."
+            echo "result=skipped" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Dispatched:$WANT — waiting (the run appears after a few seconds)."
+          sleep 30
+          RESULT=success
+          for WF in $WANT; do
+            RUN_ID=""
+            for i in $(seq 1 12); do
+              RUN_ID=$(gh run list --workflow "$WF" --branch main --event workflow_dispatch --created ">=$SINCE" --limit 1 --json databaseId --jq '.[0].databaseId' || true)
+              [ -n "$RUN_ID" ] && [ "$RUN_ID" != "null" ] && break
+              sleep 10
+            done
+            if [ -z "$RUN_ID" ] || [ "$RUN_ID" = "null" ]; then
+              echo "::warning::could not find the dispatched run for $WF"; RESULT=unknown; continue
+            fi
+            echo "Watching $WF run $RUN_ID"
+            if gh run watch "$RUN_ID" --exit-status --interval 30 > /dev/null; then
+              echo "$WF: success"
+            else
+              echo "$WF: FAILED (run $RUN_ID)"
+              echo "https://github.com/${{ github.repository }}/actions/runs/$RUN_ID" >> failed-runs.txt
+              RESULT=failure
+            fi
+          done
+          echo "result=$RESULT" >> "$GITHUB_OUTPUT"
+
+      - name: Revert on deploy failure
+        if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git checkout -B main origin/main
+          if git revert --no-edit -m 1 "${{ steps.merge.outputs.sha }}"; then
+            git commit --amend --no-edit -m "seo-agent: revert ${{ steps.merge.outputs.sha }} ($BRANCH) — deploy failed"
+            git push origin main
+            # Put production back on the previous build for the paths that failed.
+            if [ "${{ steps.change.outputs.frontend }}" != "0" ]; then gh workflow run deploy-frontend.yml --ref main; fi
+            if [ "${{ steps.change.outputs.filament }}" != "0" ]; then gh workflow run deploy-filament.yml --ref main -f enabled=true; fi
+            REVERTED="reverted on main as $(git rev-parse --short HEAD) and redeployed"
+          else
+            git revert --abort || true
+            REVERTED="AUTOMATIC REVERT FAILED (conflict) — main still carries the failing merge"
+          fi
+          gh label create seo-agent --color D93F0B --description "Opened by the SEO agent land workflow" --force >/dev/null 2>&1 || true
+          gh issue create --title "SEO agent: deploy failed for $BRANCH" \
+            --label "seo-agent" \
+            --body "$(printf 'The merge of `%s` (%s) broke a deploy.\n\nFailed run(s):\n%s\n\n%s\n\nThe routine will read this in its next run (git log shows the revert).\n\n🤖 Generated with [Claude Code](https://claude.com/claude-code)' "$BRANCH" "${{ steps.merge.outputs.sha }}" "$(cat failed-runs.txt)" "$REVERTED")" || true
+          echo "::error::deploy failed — $REVERTED"
+          exit 1
+
+      - name: VPS task queue
+        if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result != 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          git fetch origin main --quiet
+          git checkout -B main origin/main
+          QUEUE=seo-agent/ops/queue.txt
+          [ -f "$QUEUE" ] || { echo "no queue file"; exit 0; }
+          TASKS=$(grep -vE '^\s*(#|$)' "$QUEUE" | tr -d '\r' | awk '{print $1}' | sort -u || true)
+          if [ -z "$TASKS" ]; then echo "queue empty"; exit 0; fi
+          # A filament deploy just happened when filament/ changed; give the VPS time to swap the
+          # container before running artisan against it.
+          if [ "${{ steps.change.outputs.filament }}" != "0" ]; then echo "waiting 120s for the backend container"; sleep 120; fi
+          for T in $TASKS; do
+            case " $ALLOWED_TASKS " in
+              *" $T "*) ;;
+              *) echo "::warning::queue: '$T' is not an allowed task — ignored"; continue ;;
+            esac
+            CONFIRM=""
+            case " $WRITING_TASKS " in *" $T "*) CONFIRM="-f confirm=APPLY" ;; esac
+            echo "dispatching vps-run: $T $CONFIRM"
+            gh workflow run vps-run.yml --ref main -f task="$T" $CONFIRM
+            sleep 5
+          done
+          # Consume the queue on main so the same task is not re-run tomorrow.
+          {
+            echo "# VPS tasks to run after this branch lands (one task name per line, # = comment)."
+            echo "# The land workflow dispatches each allowed line as a vps-run.yml task, then empties this file."
+            echo "# Allowed: $ALLOWED_TASKS"
+            echo "# Consumed on $(date -u +%Y-%m-%dT%H:%MZ): $(echo $TASKS | tr '\n' ' ')"
+          } > "$QUEUE"
+          git config user.name "seo-agent[bot]"
+          git config user.email "seo-agent@protein.tn"
+          git add "$QUEUE"
+          git commit -m "seo-agent: ops queue consumed ($(echo $TASKS | tr '\n' ' '))" || true
+          git push origin main
+
+      - name: Delete the landed branch
+        if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result != 'failure'
+        run: git push origin --delete "$BRANCH" || true

@@ -1,0 +1,5 @@
+# VPS tasks to run after this branch lands (one task name per line, # = comment).
+# The land workflow (.github/workflows/seo-agent-land.yml) dispatches each line as a vps-run.yml
+# task — only names from its ALLOWED list are accepted — then empties this file on main.
+# Typical: seo-copy-apply (after adding filament/resources/seo/products/*.json entries),
+#          seo-legacy-reindex-apply, catalog-reindex, seo-robots-audit, seo-copy-dry-run.
