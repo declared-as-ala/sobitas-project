@@ -116,6 +116,11 @@ on:
           - seo-legacy-reindex-dry-run
           # Same gate, same flip, for the products catalog-reindex cannot reach (see the arm).
           - seo-legacy-reindex-apply
+          # Additive product-FAQ seeding for the thin hand-built products the reindex report lists
+          # BELOW THE GATE. Writes ONLY where the faq column is empty — a human FAQ is never
+          # clobbered — and each save runs the same revalidate/sitemap/IndexNow machinery.
+          - seo-legacy-copy-dry-run
+          - seo-legacy-copy-apply
           # staging table only: no customer-visible effect
           - catalog-discover
           - catalog-hydrate-now
@@ -653,6 +658,17 @@ jobs:
               ARGS="seo:products-legacy-reindex --apply --force"
               WRITES=yes
               ;;
+            seo-legacy-copy-dry-run)
+              # Prints which thin hand-built products would receive the seeded FAQ and the word
+              # count before/after. Writes nothing.
+              ARGS="seo:products-seed-copy"
+              WRITES=no
+              ;;
+            seo-legacy-copy-apply)
+              # Seeds the FAQ pairs onto the products above — empty faq column only, idempotent.
+              ARGS="seo:products-seed-copy --apply"
+              WRITES=yes
+              ;;
             seo-robots-fix)
               # Sets seo_robots_follow = 1 on published products explicitly marked nofollow.
               #
@@ -674,9 +690,12 @@ jobs:
               # indexable, word gate or not ("no noindex on any product, even thin pages — I know
               # what I say"). The previous stance (gate-only, to keep thin pages out) is recorded in
               # git history; the enrichment pipeline remains the fix for the thin bodies themselves.
-              # --limit lifts the default 100-product wave so ONE click sweeps the whole backlog;
-              # SeoNotifier batches the sitemap bust and suppresses per-URL IndexNow at this scale.
-              ARGS="catalog:iherb:promote --reindex --force-index --limit=20000"
+              # --limit=500 replaces the default 100-product wave. NOT larger: a --limit=20000
+              # attempt on 21/09/2026 was OOM-killed (artisan exit 137) — the command holds the
+              # wave's full rows and queues every ProductSeoObserver callback until termination, so
+              # the wave size is a memory budget, not a convenience. Click repeatedly (idempotent)
+              # until the run reports nothing left to flip; ~6.4k held-back products = ~13 clicks.
+              ARGS="catalog:iherb:promote --reindex --force-index --limit=500"
               WRITES=yes
               ;;
             *)
