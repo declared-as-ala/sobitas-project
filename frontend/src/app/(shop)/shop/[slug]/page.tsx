@@ -71,13 +71,10 @@ function buildCategoryRedirectUrl(slug: string): string {
   return `/${encodeURIComponent(slug)}`;
 }
 
-/** CTR-optimized product title for Tunisia SERP (aim: position #1). Format: Product Name – Prix Tunisie & Livraison Rapide | Protéine Tunisie */
-function productTitle(product: Product): string {
-  const explicit = product.seo?.title || product.seo_title || product.meta_title;
-  if (explicit?.trim()) return explicit.trim();
-  const name = product.designation_fr ?? product.slug ?? 'Produit';
-  return `${name} – Prix Tunisie & Livraison Rapide | Protéine Tunisie`;
-}
+// One title source for every product surface: the shared humanized builder (sentence case, French
+// units, brand at the tail; a human-written CMS title still wins). This route redirects almost
+// every product to its canonical /{subcat}/{slug} page, so this is the rare no-subcategory fallback.
+import { productTitle } from '@/util/productMetaDescription';
 
 /** Meta description: benefit + authenticity + delivery + location (Tunisie). Max 160 chars. */
 function productDescription(product: Product, productName: string): string {
