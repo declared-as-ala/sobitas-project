@@ -246,6 +246,16 @@ class ClientController extends Controller
      * once per session. If sign-in volume ever makes that round trip matter, swap the body of
      * verifyGoogleIdToken() and nothing else changes.
      */
+    /**
+     * The public Web client id(s) a Google ID token may be minted for. Kept in CODE (not only
+     * config) so the `aud` check is immune to a stale/wrong GOOGLE_CLIENT_ID in the server .env or a
+     * cached config — the value is public by design (it ships in the storefront button), so this is
+     * safe. The token's `aud` must equal the configured client id OR one of these.
+     */
+    private const GOOGLE_CLIENT_IDS = [
+        '926214409192-sba76vc2a22l67s6u4thrf47apgano2k.apps.googleusercontent.com',
+    ];
+
     public function googleLogin(Request $request): JsonResponse
     {
         $validated = $request->validate([
@@ -253,7 +263,8 @@ class ClientController extends Controller
         ]);
 
         $clientId = (string) config('services.google.client_id', '');
-        if ($clientId === '') {
+        // Only 503 when we have NO acceptable audience at all — the code constant is a valid one.
+        if ($clientId === '' && self::GOOGLE_CLIENT_IDS === []) {
             // Configuration, not a client error: the button should not have rendered.
             return response()->json([
                 'message' => 'La connexion Google n’est pas encore configurée.',
@@ -303,7 +314,7 @@ class ClientController extends Controller
             if (empty($user->email_verified_at)) {
                 $changes['email_verified_at'] = now();
             }
-            if ($picture !== '' && empty($user->avatar)) {
+            if ($picture !== '' && empty($user->avatar) && Schema::hasColumn('users', 'avatar')) {
                 $changes['avatar'] = $picture;
             }
             if ($changes) {
@@ -330,7 +341,7 @@ class ClientController extends Controller
             if ($hasGoogleColumn) {
                 $attributes['google_id'] = $googleId;
             }
-            if ($picture !== '') {
+            if ($picture !== '' && Schema::hasColumn('users', 'avatar')) {
                 $attributes['avatar'] = $picture;
             }
 
@@ -381,8 +392,18 @@ class ClientController extends Controller
         }
 
         // `aud` — the token was issued FOR US. Without this check any Google app's token works.
-        if (! hash_equals($clientId, (string) ($claims['aud'] ?? ''))) {
-            Log::warning('Google token rejected: audience mismatch');
+        // Accept the configured client id OR a known public one (immune to a wrong server .env).
+        $aud = (string) ($claims['aud'] ?? '');
+        $accepted = array_values(array_filter(array_unique(array_merge([$clientId], self::GOOGLE_CLIENT_IDS))));
+        $audOk = false;
+        foreach ($accepted as $acceptedId) {
+            if (hash_equals((string) $acceptedId, $aud)) {
+                $audOk = true;
+                break;
+            }
+        }
+        if (! $audOk) {
+            Log::warning('Google token rejected: audience mismatch', ['aud' => $aud, 'configured' => $clientId]);
 
             return null;
         }
