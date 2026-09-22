@@ -6,6 +6,9 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 22/09/2026:** the URL-case contract, the bars category page and the omega-3 retarget
+shipped on `claude/seo-daily-2026-09-22` (see `log/2026-09-22.md`); live audit 65 URLs, 0 P0.
+
 **State on 21/09/2026 (owner session, all live):** every published product is `index, follow`
 (11,368/11,368, 0 noindex — owner decision, thin pages included); sitemap 11,367 product URLs;
 all 51 category JSONs render their titles; every product `<title>`/description humanized by
@@ -18,26 +21,38 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ## P0 — land what is already written but never reached main
 
-- [ ] **Salvage PR #222 (`origin/seo/daily-2026-09-19`) + #223 (`origin/seo/daily-2026-09-21`).**
-  `git fetch origin seo/daily-2026-09-19 seo/daily-2026-09-21`, then cherry-pick BY FILE onto
-  today's branch (`git checkout origin/seo/daily-2026-09-21 -- <path>`), gate, ship:
-  1. `frontend/content/categories/barres-proteinees.json` (16/09 "protein bar chocolate" page —
-     52 impr/7d at pos 9.8, 0 clicks; live page is 177 words with the generic title) — take it.
-  2. `frontend/content/categories/omega-3.json` from #223 (re-targeted to "omega 3 tunisie / prix
-     omega 3 tunisie", real `bestProductSlugs`) — take it; verify every slug in it exists in
-     `https://protein.tn/sitemaps/products-0.xml`.
-  3. `frontend/src/util/productUrl.ts` + `app/(shop)/[slug]/[productSlug]/page.tsx` +
-     `app/(shop)/category/[slug]/page.tsx` + `app/x-crawler/product/[...slug]/page.tsx` +
-     `util/sitemapSources.ts` (19/09: folds the category segment to lowercase — fixes the
-     infinite redirect loop on the 33 `/Intra-Workout/…` URLs GSC reports as "Redirect error").
-     Read the diff first; if main's versions of the two route files moved, re-apply by hand.
-  4. `filament/app/Filament/Resources/CategResource.php`, `SousCategoryResource.php` (slug
-     lowercased on save) and `filament/config/catalog.php` — take them if the diff is only that.
-  5. Do NOT take `productMetaDescription.ts`, `resolveCategorySeo.ts`, `SeoProductsRobotsAudit.php`,
-     `LegacyProductPage.php` from the branch — main superseded them on 21/09 (curated list
-     removed, humanizer added, `--force`). Compare before deciding anything else.
-  After landing: `content/categories/Intra-Workout.json` never loads on prod (case-sensitive
-  loader) — rename to `intra-workout.json` in the same run if its copy is fine.
+- [x] ~~**Salvage PR #222 / #223 — the three repo-side items**~~ — shipped 22/09 on
+  `claude/seo-daily-2026-09-22`, cherry-picked BY FILE and re-verified live first:
+  1. `frontend/content/categories/barres-proteinees.json` (new) — landed corrected: title 61 → 58
+     and re-led with the query (`Protein Bar Chocolat Tunisie – Prix & Marques | Protein.tn`),
+     price anchor `dès 36 DT` (the rayon's real floor), honest `sur commande` (all 88 products are
+     `qte = 0`), **four unverifiable figures replaced** with values read off the products' own
+     fiches, and two `bestProductSlugs` corrected to the `-161140` / `-161141` variants the grid
+     actually renders. 177 words → ~1,780 + a FAQPage.
+  2. `frontend/content/categories/omega-3.json` — the six lines of #223 applied surgically, minus
+     its "au meilleur prix" (Tunisian pharmacies sell omega-3 at 20–60 DT against our cheapest
+     in-stock 99 DT). The three `bestProductSlugs` on main did NOT exist in any product sitemap,
+     so the "meilleurs produits" block was rendering empty; the replacements are verified present
+     AND on page 1 of the live listing, which is what `resolveBestProducts` needs.
+  3. The URL-case contract (`urlSlug` / `sameUrlSlug` in `productUrl.ts`, both guards in
+     `app/(shop)/[slug]/[productSlug]/page.tsx`, the guard in `app/x-crawler/product/[...slug]`,
+     `util/sitemapSources.ts`, the `bestProductSlugs` href in `app/(shop)/category/[slug]`, and
+     `util/productComparison.ts`) — the `/Intra-Workout` loop was re-measured live on 22/09 and
+     was **still looping** (upper 301 → lower 308 → upper, 12 products, all still in the
+     sitemap). Taking the branch's `productUrl.ts` wholesale would have deleted the `'affiliate'`
+     reserved-route entry main added later; re-inserted.
+- [ ] **`filament/.../CategResource.php` + `SousCategoryResource.php` — lowercase the slug on
+  save** (item 4 of the old salvage list, still open). The frontend now folds the segment
+  wherever it builds or compares a URL, so the loop cannot come back on the storefront — but the
+  DB can still take a hand-typed `Intra-Workout`, which keeps the sitemap/API values ugly and any
+  future consumer exposed. Small, PHP-lint-only diff; compare against main before taking it.
+- [ ] **Rewrite `frontend/content/categories/Intra-Workout.json`, then alias it.** Nobody loads
+  it (the loader's path is case-sensitive; the route always sees `intra-workout`) and today that
+  is a mercy: its `h1` is a title string ("Intra-Workout Tunisie – Hydratation & Performance |
+  Protein.tn"), its `metaTitle` carries a 🇹🇳, the intro is 671 chars, 2 FAQs. Fix the h1 to a
+  real heading, write the copy to the page standard, then add `'intra-workout': 'Intra-Workout'`
+  to `CONTENT_SLUG_ALIASES` — **not** a rename: the land workflow refuses any branch that deletes
+  a file.
 
 ## P1 — the ranking levers (in-stock products first)
 
@@ -88,6 +103,22 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ## P2 — technical & tooling
 
+- [ ] **323 duplicate product URL pairs** `(needs: owner)` — found 22/09, evidence in
+  `seo-agent/data/duplicate-product-slugs.json`. A slug ending in `-<5+ digits>` whose stem is
+  also a published product; both members answer 200 and are self-canonical (duplicate content),
+  and on `/barres-proteinees` the suffixed member is priced 54 DT while the stem is 117–169 DT
+  for the same bar — **two prices for one product**. Concentrated in vitamines (86), antioxydants
+  (58), sommeil-stress (54), plantes-et-herbes (20), boosters-hormonaux (18). Per pair: keep one,
+  Filament Redirections row (301) on the other. The routine never picks the survivor or touches a
+  price — owner's call which SKU is real.
+- [ ] **Extend `suggest.mjs` seeds beyond the head terms.** On 22/09 it surfaced only whey /
+  creatine / mass / proteine long-tails because the seed list is the head terms only — nothing
+  for bars, omega-3, bcaa, pre-workout, brûleurs. Add the money-category terms to the seed array
+  so weekly discovery covers every category we own a page for.
+- [ ] **Title > 65 on the long-name iHerb PDPs** — 17 of 40 sampled 22/09 (66–74 chars), a
+  humanizer pattern, not per-page. If the next `--sample` repeats it on the same page type the
+  checklist promotes it to P0 → fix in `productMetaDescription.ts` (truncate to ≤ 60 at a word
+  boundary, keep brand + format).
 - [x] ~~`blog:apply-links` artisan command~~ — NOT needed (verified 22/09): blog → category links
   are already repo-controlled and live (`frontend/src/util/internalLinks.ts` first-mention
   injector + `frontend/src/config/blogSeoConfig.ts` per-article links/FAQ; a 30-article sample

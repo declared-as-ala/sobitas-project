@@ -1,0 +1,3240 @@
+{
+  "generated_utc": "2026-09-22T00:51:55Z",
+  "source": "https://protein.tn/sitemaps/products-{0,1,2}.xml fetched with the Googlebot UA",
+  "method": "a product slug ending in -<5+ digits> whose stem is ALSO a published product slug",
+  "product_urls_in_sitemaps": 11367,
+  "duplicate_pairs": 323,
+  "note": "Both members answer 200 and are self-canonical. Spot-checked 22/09 on /barres-proteinees: the suffixed member is the one the listing grid links and is priced 54 DT, the stem member is priced 117-169 DT for the same bar and format. Retire-or-keep is an owner decision (Filament Redirections row); prices and stock are never touched by the routine.",
+  "pairs": [
+    {
+      "base_slug": "21st-century-calcium-500-d3-400-comprimes",
+      "suffixed_slug": "21st-century-calcium-500-d3-400-comprimes-52829",
+      "base_urls": [
+        "/mineraux/21st-century-calcium-500-d3-400-comprimes"
+      ],
+      "suffixed_urls": [
+        "/mineraux/21st-century-calcium-500-d3-400-comprimes-52829"
+      ]
+    },
+    {
+      "base_slug": "21st-century-calcium-500-d3-90-comprimes",
+      "suffixed_slug": "21st-century-calcium-500-d3-90-comprimes-52827",
+      "base_urls": [
+        "/mineraux/21st-century-calcium-500-d3-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/mineraux/21st-century-calcium-500-d3-90-comprimes-52827"
+      ]
+    },
+    {
+      "base_slug": "21st-century-glucosamine-chondroitin-250-mg",
+      "suffixed_slug": "21st-century-glucosamine-chondroitin-250-mg-43771",
+      "base_urls": [
+        "/articulations/21st-century-glucosamine-chondroitin-250-mg"
+      ],
+      "suffixed_urls": [
+        "/articulations/21st-century-glucosamine-chondroitin-250-mg-43771"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-b-12-cherry-110-comprimes",
+      "suffixed_slug": "21st-century-vitamin-b-12-cherry-110-comprimes-41308",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-b-12-cherry-110-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-b-12-cherry-110-comprimes-41308"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-c-prolonged-release-110-comprimes",
+      "suffixed_slug": "21st-century-vitamin-c-prolonged-release-110-comprimes-43741",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-c-prolonged-release-110-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-c-prolonged-release-110-comprimes-43741"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-c-with-rose-hips-110-comprimes",
+      "suffixed_slug": "21st-century-vitamin-c-with-rose-hips-110-comprimes-43743",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-c-with-rose-hips-110-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-c-with-rose-hips-110-comprimes-43743"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-d3-110-comprimes",
+      "suffixed_slug": "21st-century-vitamin-d3-110-comprimes-37351",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-d3-110-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-d3-110-comprimes-37351"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-d3-110-comprimes",
+      "suffixed_slug": "21st-century-vitamin-d3-110-comprimes-37355",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-d3-110-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-d3-110-comprimes-37355"
+      ]
+    },
+    {
+      "base_slug": "21st-century-vitamin-e-110-capsules-molles",
+      "suffixed_slug": "21st-century-vitamin-e-110-capsules-molles-43747",
+      "base_urls": [
+        "/vitamines/21st-century-vitamin-e-110-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/21st-century-vitamin-e-110-capsules-molles-43747"
+      ]
+    },
+    {
+      "base_slug": "ancient-nutrition-once-daily-probiotics-30-gelules",
+      "suffixed_slug": "ancient-nutrition-once-daily-probiotics-30-gelules-145239",
+      "base_urls": [
+        "/probiotiques/ancient-nutrition-once-daily-probiotics-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/ancient-nutrition-once-daily-probiotics-30-gelules-145239"
+      ]
+    },
+    {
+      "base_slug": "ancient-nutrition-womens-once-daily-probiotics-30-gelules",
+      "suffixed_slug": "ancient-nutrition-womens-once-daily-probiotics-30-gelules-145238",
+      "base_urls": [
+        "/probiotiques/ancient-nutrition-womens-once-daily-probiotics-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/ancient-nutrition-womens-once-daily-probiotics-30-gelules-145238"
+      ]
+    },
+    {
+      "base_slug": "aurora-nutrascience-liposomal-coq10pqq-20-ml",
+      "suffixed_slug": "aurora-nutrascience-liposomal-coq10pqq-20-ml-148725",
+      "base_urls": [
+        "/antioxydants/aurora-nutrascience-liposomal-coq10pqq-20-ml"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/aurora-nutrascience-liposomal-coq10pqq-20-ml-148725"
+      ]
+    },
+    {
+      "base_slug": "aurora-nutrascience-ultra-liposomal-sleep-support-10-ml",
+      "suffixed_slug": "aurora-nutrascience-ultra-liposomal-sleep-support-10-ml-146503",
+      "base_urls": [
+        "/sommeil-stress/aurora-nutrascience-ultra-liposomal-sleep-support-10-ml"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/aurora-nutrascience-ultra-liposomal-sleep-support-10-ml-146503"
+      ]
+    },
+    {
+      "base_slug": "best-naturals-chromium-picolinate-240-comprimes",
+      "suffixed_slug": "best-naturals-chromium-picolinate-240-comprimes-125063",
+      "base_urls": [
+        "/mineraux/best-naturals-chromium-picolinate-240-comprimes"
+      ],
+      "suffixed_urls": [
+        "/mineraux/best-naturals-chromium-picolinate-240-comprimes-125063"
+      ]
+    },
+    {
+      "base_slug": "best-naturals-coq10-60-gelules",
+      "suffixed_slug": "best-naturals-coq10-60-gelules-125096",
+      "base_urls": [
+        "/antioxydants/best-naturals-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/best-naturals-coq10-60-gelules-125096"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-biotin-5000-g",
+      "suffixed_slug": "bluebonnet-nutrition-biotin-5000-g-12122",
+      "base_urls": [
+        "/beaute-cheveux/bluebonnet-nutrition-biotin-5000-g"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/bluebonnet-nutrition-biotin-5000-g-12122"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-earthsweet-chewables-melatonin-raspberry-5-mg",
+      "suffixed_slug": "bluebonnet-nutrition-earthsweet-chewables-melatonin-raspberry-5-mg-106359",
+      "base_urls": [
+        "/sommeil-stress/bluebonnet-nutrition-earthsweet-chewables-melatonin-raspberry-5-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/bluebonnet-nutrition-earthsweet-chewables-melatonin-raspberry-5-mg-106359"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml",
+      "suffixed_slug": "bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml-27905",
+      "base_urls": [
+        "/vitamines/bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml"
+      ],
+      "suffixed_urls": [
+        "/vitamines/bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml-27905"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml",
+      "suffixed_slug": "bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml-27906",
+      "base_urls": [
+        "/vitamines/bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml"
+      ],
+      "suffixed_urls": [
+        "/vitamines/bluebonnet-nutrition-liquid-vitamin-d3-drops-citrus-30-ml-27906"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-vitamin-c-1000-mg",
+      "suffixed_slug": "bluebonnet-nutrition-vitamin-c-1000-mg-106361",
+      "base_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-c-1000-mg"
+      ],
+      "suffixed_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-c-1000-mg-106361"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-vitamin-d3-125-g",
+      "suffixed_slug": "bluebonnet-nutrition-vitamin-d3-125-g-106358",
+      "base_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-d3-125-g"
+      ],
+      "suffixed_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-d3-125-g-106358"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-vitamin-d3-250-capsules-molles",
+      "suffixed_slug": "bluebonnet-nutrition-vitamin-d3-250-capsules-molles-53032",
+      "base_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-d3-250-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/bluebonnet-nutrition-vitamin-d3-250-capsules-molles-53032"
+      ]
+    },
+    {
+      "base_slug": "bluebonnet-nutrition-zinc-picolinate-50-mg",
+      "suffixed_slug": "bluebonnet-nutrition-zinc-picolinate-50-mg-106363",
+      "base_urls": [
+        "/zinc/bluebonnet-nutrition-zinc-picolinate-50-mg"
+      ],
+      "suffixed_urls": [
+        "/zinc/bluebonnet-nutrition-zinc-picolinate-50-mg-106363"
+      ]
+    },
+    {
+      "base_slug": "california-gold-nutrition-astaxanthin-astalif-pure-icelandic-12-mg",
+      "suffixed_slug": "california-gold-nutrition-astaxanthin-astalif-pure-icelandic-12-mg-71684",
+      "base_urls": [
+        "/antioxydants/california-gold-nutrition-astaxanthin-astalif-pure-icelandic-12-mg"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/california-gold-nutrition-astaxanthin-astalif-pure-icelandic-12-mg-71684"
+      ]
+    },
+    {
+      "base_slug": "california-gold-nutrition-biotin-30-gelules-vegetales",
+      "suffixed_slug": "california-gold-nutrition-biotin-30-gelules-vegetales-97425",
+      "base_urls": [
+        "/beaute-cheveux/california-gold-nutrition-biotin-30-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/california-gold-nutrition-biotin-30-gelules-vegetales-97425"
+      ]
+    },
+    {
+      "base_slug": "california-gold-nutrition-coq10-100-mg",
+      "suffixed_slug": "california-gold-nutrition-coq10-100-mg-61074",
+      "base_urls": [
+        "/antioxydants/california-gold-nutrition-coq10-100-mg"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/california-gold-nutrition-coq10-100-mg-61074"
+      ]
+    },
+    {
+      "base_slug": "california-gold-nutrition-l-theanine-featuring-alphawave-60-gelules-vegetales",
+      "suffixed_slug": "california-gold-nutrition-l-theanine-featuring-alphawave-60-gelules-vegetales-83283",
+      "base_urls": [
+        "/sommeil-stress/california-gold-nutrition-l-theanine-featuring-alphawave-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/california-gold-nutrition-l-theanine-featuring-alphawave-60-gelules-vegetales-83283"
+      ]
+    },
+    {
+      "base_slug": "california-gold-nutrition-serrapeptase-proteolytic-enzyme-180-gelules-vegetales",
+      "suffixed_slug": "california-gold-nutrition-serrapeptase-proteolytic-enzyme-180-gelules-vegetales-97404",
+      "base_urls": [
+        "/digestion/california-gold-nutrition-serrapeptase-proteolytic-enzyme-180-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/digestion/california-gold-nutrition-serrapeptase-proteolytic-enzyme-180-gelules-vegetales-97404"
+      ]
+    },
+    {
+      "base_slug": "carlson-coq10-30-capsules-molles",
+      "suffixed_slug": "carlson-coq10-30-capsules-molles-125618",
+      "base_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles-125618"
+      ]
+    },
+    {
+      "base_slug": "carlson-coq10-30-capsules-molles",
+      "suffixed_slug": "carlson-coq10-30-capsules-molles-125621",
+      "base_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles-125621"
+      ]
+    },
+    {
+      "base_slug": "carlson-coq10-30-capsules-molles",
+      "suffixed_slug": "carlson-coq10-30-capsules-molles-125623",
+      "base_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/carlson-coq10-30-capsules-molles-125623"
+      ]
+    },
+    {
+      "base_slug": "carlson-coq10-60-capsules-molles",
+      "suffixed_slug": "carlson-coq10-60-capsules-molles-125620",
+      "base_urls": [
+        "/antioxydants/carlson-coq10-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/carlson-coq10-60-capsules-molles-125620"
+      ]
+    },
+    {
+      "base_slug": "carlson-coq10-90-capsules-molles",
+      "suffixed_slug": "carlson-coq10-90-capsules-molles-13377",
+      "base_urls": [
+        "/antioxydants/carlson-coq10-90-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/carlson-coq10-90-capsules-molles-13377"
+      ]
+    },
+    {
+      "base_slug": "carlson-e-gems-elite-vitamin-e-with-tocopherols-tocotrienols-120-capsules-molles",
+      "suffixed_slug": "carlson-e-gems-elite-vitamin-e-with-tocopherols-tocotrienols-120-capsules-molles-15359",
+      "base_urls": [
+        "/vitamines/carlson-e-gems-elite-vitamin-e-with-tocopherols-tocotrienols-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-e-gems-elite-vitamin-e-with-tocopherols-tocotrienols-120-capsules-molles-15359"
+      ]
+    },
+    {
+      "base_slug": "carlson-folic-acid-800-g",
+      "suffixed_slug": "carlson-folic-acid-800-g-125483",
+      "base_urls": [
+        "/vitamines/carlson-folic-acid-800-g"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-folic-acid-800-g-125483"
+      ]
+    },
+    {
+      "base_slug": "carlson-melatonin-gummies-natural-strawberry-25-mg",
+      "suffixed_slug": "carlson-melatonin-gummies-natural-strawberry-25-mg-125579",
+      "base_urls": [
+        "/sommeil-stress/carlson-melatonin-gummies-natural-strawberry-25-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/carlson-melatonin-gummies-natural-strawberry-25-mg-125579"
+      ]
+    },
+    {
+      "base_slug": "carlson-solar-d-gems-natural-lemon-360-capsules-molles",
+      "suffixed_slug": "carlson-solar-d-gems-natural-lemon-360-capsules-molles-13422",
+      "base_urls": [
+        "/omega-3/carlson-solar-d-gems-natural-lemon-360-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/carlson-solar-d-gems-natural-lemon-360-capsules-molles-13422"
+      ]
+    },
+    {
+      "base_slug": "carlson-vitamin-a-250-capsules-molles",
+      "suffixed_slug": "carlson-vitamin-a-250-capsules-molles-14656",
+      "base_urls": [
+        "/vitamines/carlson-vitamin-a-250-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-vitamin-a-250-capsules-molles-14656"
+      ]
+    },
+    {
+      "base_slug": "carlson-vitamin-a-250-capsules-molles",
+      "suffixed_slug": "carlson-vitamin-a-250-capsules-molles-15282",
+      "base_urls": [
+        "/vitamines/carlson-vitamin-a-250-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-vitamin-a-250-capsules-molles-15282"
+      ]
+    },
+    {
+      "base_slug": "carlson-vitamin-d3-120-capsules-molles",
+      "suffixed_slug": "carlson-vitamin-d3-120-capsules-molles-22614",
+      "base_urls": [
+        "/vitamines/carlson-vitamin-d3-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-vitamin-d3-120-capsules-molles-22614"
+      ]
+    },
+    {
+      "base_slug": "carlson-vitamin-d3-360-capsules-molles",
+      "suffixed_slug": "carlson-vitamin-d3-360-capsules-molles-103607",
+      "base_urls": [
+        "/vitamines/carlson-vitamin-d3-360-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-vitamin-d3-360-capsules-molles-103607"
+      ]
+    },
+    {
+      "base_slug": "carlson-vitamin-d3-360-capsules-molles",
+      "suffixed_slug": "carlson-vitamin-d3-360-capsules-molles-99559",
+      "base_urls": [
+        "/vitamines/carlson-vitamin-d3-360-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/carlson-vitamin-d3-360-capsules-molles-99559"
+      ]
+    },
+    {
+      "base_slug": "carlson-wild-norwegian-natural-lemon-180-capsules-molles",
+      "suffixed_slug": "carlson-wild-norwegian-natural-lemon-180-capsules-molles-22620",
+      "base_urls": [
+        "/omega-3/carlson-wild-norwegian-natural-lemon-180-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/carlson-wild-norwegian-natural-lemon-180-capsules-molles-22620"
+      ]
+    },
+    {
+      "base_slug": "country-life-vitamin-d3-200-capsules-molles",
+      "suffixed_slug": "country-life-vitamin-d3-200-capsules-molles-11618",
+      "base_urls": [
+        "/vitamines/country-life-vitamin-d3-200-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/country-life-vitamin-d3-200-capsules-molles-11618"
+      ]
+    },
+    {
+      "base_slug": "country-life-vitamin-d3-200-capsules-molles",
+      "suffixed_slug": "country-life-vitamin-d3-200-capsules-molles-18038",
+      "base_urls": [
+        "/vitamines/country-life-vitamin-d3-200-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/country-life-vitamin-d3-200-capsules-molles-18038"
+      ]
+    },
+    {
+      "base_slug": "davinci-laboratories-micronized-dhea-90-gelules",
+      "suffixed_slug": "davinci-laboratories-micronized-dhea-90-gelules-115584",
+      "base_urls": [
+        "/boosters-hormonaux/davinci-laboratories-micronized-dhea-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/davinci-laboratories-micronized-dhea-90-gelules-115584"
+      ]
+    },
+    {
+      "base_slug": "ddrops-liquid-vitamin-d3-5-ml",
+      "suffixed_slug": "ddrops-liquid-vitamin-d3-5-ml-51075",
+      "base_urls": [
+        "/vitamines/ddrops-liquid-vitamin-d3-5-ml"
+      ],
+      "suffixed_urls": [
+        "/vitamines/ddrops-liquid-vitamin-d3-5-ml-51075"
+      ]
+    },
+    {
+      "base_slug": "deva-vegan-vitamin-d2-90-comprimes",
+      "suffixed_slug": "deva-vegan-vitamin-d2-90-comprimes-35608",
+      "base_urls": [
+        "/vitamines/deva-vegan-vitamin-d2-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/deva-vegan-vitamin-d2-90-comprimes-35608"
+      ]
+    },
+    {
+      "base_slug": "deva-vegan-vitamin-d3-90-comprimes",
+      "suffixed_slug": "deva-vegan-vitamin-d3-90-comprimes-120302",
+      "base_urls": [
+        "/vitamines/deva-vegan-vitamin-d3-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/deva-vegan-vitamin-d3-90-comprimes-120302"
+      ]
+    },
+    {
+      "base_slug": "doctors-best-biotin-120-gelules-vegetales",
+      "suffixed_slug": "doctors-best-biotin-120-gelules-vegetales-63468",
+      "base_urls": [
+        "/beaute-cheveux/doctors-best-biotin-120-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/doctors-best-biotin-120-gelules-vegetales-63468"
+      ]
+    },
+    {
+      "base_slug": "doctors-best-high-absorption-coq10-180-gelules-vegetales",
+      "suffixed_slug": "doctors-best-high-absorption-coq10-180-gelules-vegetales-55718",
+      "base_urls": [
+        "/antioxydants/doctors-best-high-absorption-coq10-180-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/doctors-best-high-absorption-coq10-180-gelules-vegetales-55718"
+      ]
+    },
+    {
+      "base_slug": "doctors-best-vitamin-c-120-gelules-vegetales",
+      "suffixed_slug": "doctors-best-vitamin-c-120-gelules-vegetales-38048",
+      "base_urls": [
+        "/vitamines/doctors-best-vitamin-c-120-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/doctors-best-vitamin-c-120-gelules-vegetales-38048"
+      ]
+    },
+    {
+      "base_slug": "doctors-best-vitamin-d3-180-capsules-molles",
+      "suffixed_slug": "doctors-best-vitamin-d3-180-capsules-molles-17137",
+      "base_urls": [
+        "/vitamines/doctors-best-vitamin-d3-180-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/doctors-best-vitamin-d3-180-capsules-molles-17137"
+      ]
+    },
+    {
+      "base_slug": "doctors-best-vitamin-d3-180-capsules-molles",
+      "suffixed_slug": "doctors-best-vitamin-d3-180-capsules-molles-21367",
+      "base_urls": [
+        "/vitamines/doctors-best-vitamin-d3-180-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/doctors-best-vitamin-d3-180-capsules-molles-21367"
+      ]
+    },
+    {
+      "base_slug": "dr-mercola-astaxanthin-30-gelules",
+      "suffixed_slug": "dr-mercola-astaxanthin-30-gelules-123129",
+      "base_urls": [
+        "/antioxydants/dr-mercola-astaxanthin-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/dr-mercola-astaxanthin-30-gelules-123129"
+      ]
+    },
+    {
+      "base_slug": "dr-mercola-astaxanthin-90-gelules",
+      "suffixed_slug": "dr-mercola-astaxanthin-90-gelules-123130",
+      "base_urls": [
+        "/antioxydants/dr-mercola-astaxanthin-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/dr-mercola-astaxanthin-90-gelules-123130"
+      ]
+    },
+    {
+      "base_slug": "dr-mercola-sleep-support-30-gelules",
+      "suffixed_slug": "dr-mercola-sleep-support-30-gelules-114734",
+      "base_urls": [
+        "/sommeil-stress/dr-mercola-sleep-support-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/dr-mercola-sleep-support-30-gelules-114734"
+      ]
+    },
+    {
+      "base_slug": "dr-mercola-sleep-support-30-gelules",
+      "suffixed_slug": "dr-mercola-sleep-support-30-gelules-136393",
+      "base_urls": [
+        "/sommeil-stress/dr-mercola-sleep-support-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/dr-mercola-sleep-support-30-gelules-136393"
+      ]
+    },
+    {
+      "base_slug": "esterc-24-hour-immune-support-1000-mg",
+      "suffixed_slug": "esterc-24-hour-immune-support-1000-mg-145407",
+      "base_urls": [
+        "/immunite/esterc-24-hour-immune-support-1000-mg"
+      ],
+      "suffixed_urls": [
+        "/immunite/esterc-24-hour-immune-support-1000-mg-145407"
+      ]
+    },
+    {
+      "base_slug": "futurebiotics-coq10-60-gelules-vegetales",
+      "suffixed_slug": "futurebiotics-coq10-60-gelules-vegetales-157059",
+      "base_urls": [
+        "/antioxydants/futurebiotics-coq10-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/futurebiotics-coq10-60-gelules-vegetales-157059"
+      ]
+    },
+    {
+      "base_slug": "garden-of-life-raw-probiotics-90-gelules-vegetales",
+      "suffixed_slug": "garden-of-life-raw-probiotics-90-gelules-vegetales-27368",
+      "base_urls": [
+        "/probiotiques/garden-of-life-raw-probiotics-90-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/garden-of-life-raw-probiotics-90-gelules-vegetales-27368"
+      ]
+    },
+    {
+      "base_slug": "garden-of-life-vitamin-code-120-gelules-vegetales",
+      "suffixed_slug": "garden-of-life-vitamin-code-120-gelules-vegetales-46037",
+      "base_urls": [
+        "/vitamines/garden-of-life-vitamin-code-120-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/garden-of-life-vitamin-code-120-gelules-vegetales-46037"
+      ]
+    },
+    {
+      "base_slug": "garden-of-life-vitamin-code-60-gelules-vegetales",
+      "suffixed_slug": "garden-of-life-vitamin-code-60-gelules-vegetales-39195",
+      "base_urls": [
+        "/vitamines/garden-of-life-vitamin-code-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/garden-of-life-vitamin-code-60-gelules-vegetales-39195"
+      ]
+    },
+    {
+      "base_slug": "global-healing-ultimate-enzymes-120-gelules",
+      "suffixed_slug": "global-healing-ultimate-enzymes-120-gelules-161199",
+      "base_urls": [
+        "/digestion/global-healing-ultimate-enzymes-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/digestion/global-healing-ultimate-enzymes-120-gelules-161199"
+      ]
+    },
+    {
+      "base_slug": "healthy-origins-natural-astaxanthin-150-capsules-molles",
+      "suffixed_slug": "healthy-origins-natural-astaxanthin-150-capsules-molles-61658",
+      "base_urls": [
+        "/antioxydants/healthy-origins-natural-astaxanthin-150-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/healthy-origins-natural-astaxanthin-150-capsules-molles-61658"
+      ]
+    },
+    {
+      "base_slug": "healthy-origins-vitamin-d3-120-capsules-molles",
+      "suffixed_slug": "healthy-origins-vitamin-d3-120-capsules-molles-21314",
+      "base_urls": [
+        "/vitamines/healthy-origins-vitamin-d3-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/healthy-origins-vitamin-d3-120-capsules-molles-21314"
+      ]
+    },
+    {
+      "base_slug": "healthy-origins-vitamin-d3-360-capsules-molles",
+      "suffixed_slug": "healthy-origins-vitamin-d3-360-capsules-molles-21298",
+      "base_urls": [
+        "/vitamines/healthy-origins-vitamin-d3-360-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/healthy-origins-vitamin-d3-360-capsules-molles-21298"
+      ]
+    },
+    {
+      "base_slug": "irwin-naturals-power-to-sleep-pm-60-liquid-soft-gels",
+      "suffixed_slug": "irwin-naturals-power-to-sleep-pm-60-liquid-soft-gels-68758",
+      "base_urls": [
+        "/sommeil-stress/irwin-naturals-power-to-sleep-pm-60-liquid-soft-gels"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/irwin-naturals-power-to-sleep-pm-60-liquid-soft-gels-68758"
+      ]
+    },
+    {
+      "base_slug": "jarrow-formulas-jarro-dophilus-eps-60-gelules-vegetales",
+      "suffixed_slug": "jarrow-formulas-jarro-dophilus-eps-60-gelules-vegetales-69653",
+      "base_urls": [
+        "/probiotiques/jarrow-formulas-jarro-dophilus-eps-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/jarrow-formulas-jarro-dophilus-eps-60-gelules-vegetales-69653"
+      ]
+    },
+    {
+      "base_slug": "jarrow-formulas-vegan-fem-dophilus-30-gelules-vegetales",
+      "suffixed_slug": "jarrow-formulas-vegan-fem-dophilus-30-gelules-vegetales-64486",
+      "base_urls": [
+        "/probiotiques/jarrow-formulas-vegan-fem-dophilus-30-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/jarrow-formulas-vegan-fem-dophilus-30-gelules-vegetales-64486"
+      ]
+    },
+    {
+      "base_slug": "jungkwanjang-korean-red-ginseng-extract-everytime-grapefruit-10-ml",
+      "suffixed_slug": "jungkwanjang-korean-red-ginseng-extract-everytime-grapefruit-10-ml-148982",
+      "base_urls": [
+        "/plantes-et-herbes/jungkwanjang-korean-red-ginseng-extract-everytime-grapefruit-10-ml"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/jungkwanjang-korean-red-ginseng-extract-everytime-grapefruit-10-ml-148982"
+      ]
+    },
+    {
+      "base_slug": "jungkwanjang-korean-red-ginseng-extract-everytime-lemon-10-ml",
+      "suffixed_slug": "jungkwanjang-korean-red-ginseng-extract-everytime-lemon-10-ml-149378",
+      "base_urls": [
+        "/plantes-et-herbes/jungkwanjang-korean-red-ginseng-extract-everytime-lemon-10-ml"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/jungkwanjang-korean-red-ginseng-extract-everytime-lemon-10-ml-149378"
+      ]
+    },
+    {
+      "base_slug": "kal-dhea-60-comprimes",
+      "suffixed_slug": "kal-dhea-60-comprimes-123516",
+      "base_urls": [
+        "/boosters-hormonaux/kal-dhea-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/kal-dhea-60-comprimes-123516"
+      ]
+    },
+    {
+      "base_slug": "kal-dhea-60-comprimes",
+      "suffixed_slug": "kal-dhea-60-comprimes-70137",
+      "base_urls": [
+        "/boosters-hormonaux/kal-dhea-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/kal-dhea-60-comprimes-70137"
+      ]
+    },
+    {
+      "base_slug": "kal-melatonin-120-comprimes",
+      "suffixed_slug": "kal-melatonin-120-comprimes-121441",
+      "base_urls": [
+        "/sommeil-stress/kal-melatonin-120-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/kal-melatonin-120-comprimes-121441"
+      ]
+    },
+    {
+      "base_slug": "kal-methyl-folate-90-comprimes",
+      "suffixed_slug": "kal-methyl-folate-90-comprimes-88949",
+      "base_urls": [
+        "/vitamines/kal-methyl-folate-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/kal-methyl-folate-90-comprimes-88949"
+      ]
+    },
+    {
+      "base_slug": "kirkman-labs-alpha-lipoic-acid-90-gelules",
+      "suffixed_slug": "kirkman-labs-alpha-lipoic-acid-90-gelules-58801",
+      "base_urls": [
+        "/antioxydants/kirkman-labs-alpha-lipoic-acid-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/kirkman-labs-alpha-lipoic-acid-90-gelules-58801"
+      ]
+    },
+    {
+      "base_slug": "kyolic-aged-garlic-extract-300-gelules",
+      "suffixed_slug": "kyolic-aged-garlic-extract-300-gelules-71351",
+      "base_urls": [
+        "/plantes-et-herbes/kyolic-aged-garlic-extract-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/kyolic-aged-garlic-extract-300-gelules-71351"
+      ]
+    },
+    {
+      "base_slug": "life-extension-magnesium-caps-100-gelules-vegetales",
+      "suffixed_slug": "life-extension-magnesium-caps-100-gelules-vegetales-133613",
+      "base_urls": [
+        "/magnesium/life-extension-magnesium-caps-100-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/magnesium/life-extension-magnesium-caps-100-gelules-vegetales-133613"
+      ]
+    },
+    {
+      "base_slug": "life-extension-same-s-adenosyl-methionine-400-mg",
+      "suffixed_slug": "life-extension-same-s-adenosyl-methionine-400-mg-83562",
+      "base_urls": [
+        "/acides-amines/life-extension-same-s-adenosyl-methionine-400-mg"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/life-extension-same-s-adenosyl-methionine-400-mg-83562"
+      ]
+    },
+    {
+      "base_slug": "life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles",
+      "suffixed_slug": "life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles-29353",
+      "base_urls": [
+        "/antioxydants/life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles-29353"
+      ]
+    },
+    {
+      "base_slug": "life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles",
+      "suffixed_slug": "life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles-80052",
+      "base_urls": [
+        "/antioxydants/life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/life-extension-super-ubiquinol-coq10-with-enhanced-mitochondrial-support-30-capsules-molles-80052"
+      ]
+    },
+    {
+      "base_slug": "life-extension-vitamin-d3-60-capsules-molles",
+      "suffixed_slug": "life-extension-vitamin-d3-60-capsules-molles-46683",
+      "base_urls": [
+        "/vitamines/life-extension-vitamin-d3-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/life-extension-vitamin-d3-60-capsules-molles-46683"
+      ]
+    },
+    {
+      "base_slug": "mason-natural-folic-acid-100-comprimes",
+      "suffixed_slug": "mason-natural-folic-acid-100-comprimes-81377",
+      "base_urls": [
+        "/vitamines/mason-natural-folic-acid-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/mason-natural-folic-acid-100-comprimes-81377"
+      ]
+    },
+    {
+      "base_slug": "mason-natural-melatonin-60-comprimes",
+      "suffixed_slug": "mason-natural-melatonin-60-comprimes-81386",
+      "base_urls": [
+        "/sommeil-stress/mason-natural-melatonin-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/mason-natural-melatonin-60-comprimes-81386"
+      ]
+    },
+    {
+      "base_slug": "mason-natural-vitamin-d3-120-capsules-molles",
+      "suffixed_slug": "mason-natural-vitamin-d3-120-capsules-molles-50348",
+      "base_urls": [
+        "/vitamines/mason-natural-vitamin-d3-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/mason-natural-vitamin-d3-120-capsules-molles-50348"
+      ]
+    },
+    {
+      "base_slug": "mason-natural-vitamin-d3-300-capsules-molles",
+      "suffixed_slug": "mason-natural-vitamin-d3-300-capsules-molles-151908",
+      "base_urls": [
+        "/vitamines/mason-natural-vitamin-d3-300-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/mason-natural-vitamin-d3-300-capsules-molles-151908"
+      ]
+    },
+    {
+      "base_slug": "megafood-advanced-multivitamin-60-comprimes",
+      "suffixed_slug": "megafood-advanced-multivitamin-60-comprimes-46500",
+      "base_urls": [
+        "/vitamines/megafood-advanced-multivitamin-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/megafood-advanced-multivitamin-60-comprimes-46500"
+      ]
+    },
+    {
+      "base_slug": "megafood-one-daily-multivitamin-30-comprimes",
+      "suffixed_slug": "megafood-one-daily-multivitamin-30-comprimes-42558",
+      "base_urls": [
+        "/vitamines/megafood-one-daily-multivitamin-30-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/megafood-one-daily-multivitamin-30-comprimes-42558"
+      ]
+    },
+    {
+      "base_slug": "megafood-turmeric-curcumin-90-comprimes",
+      "suffixed_slug": "megafood-turmeric-curcumin-90-comprimes-63482",
+      "base_urls": [
+        "/articulations/megafood-turmeric-curcumin-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/articulations/megafood-turmeric-curcumin-90-comprimes-63482"
+      ]
+    },
+    {
+      "base_slug": "megafood-vitamin-d3-60-comprimes",
+      "suffixed_slug": "megafood-vitamin-d3-60-comprimes-42556",
+      "base_urls": [
+        "/vitamines/megafood-vitamin-d3-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/megafood-vitamin-d3-60-comprimes-42556"
+      ]
+    },
+    {
+      "base_slug": "megafood-vitamin-d3-90-comprimes",
+      "suffixed_slug": "megafood-vitamin-d3-90-comprimes-19118",
+      "base_urls": [
+        "/vitamines/megafood-vitamin-d3-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/megafood-vitamin-d3-90-comprimes-19118"
+      ]
+    },
+    {
+      "base_slug": "metabolic-maintenance-coq10-60-gelules-vegetales",
+      "suffixed_slug": "metabolic-maintenance-coq10-60-gelules-vegetales-37573",
+      "base_urls": [
+        "/antioxydants/metabolic-maintenance-coq10-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/metabolic-maintenance-coq10-60-gelules-vegetales-37573"
+      ]
+    },
+    {
+      "base_slug": "metabolic-maintenance-vitamin-d3-with-vitamin-k2-mk-7-60-gelules-vegetales",
+      "suffixed_slug": "metabolic-maintenance-vitamin-d3-with-vitamin-k2-mk-7-60-gelules-vegetales-37556",
+      "base_urls": [
+        "/vitamines/metabolic-maintenance-vitamin-d3-with-vitamin-k2-mk-7-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/metabolic-maintenance-vitamin-d3-with-vitamin-k2-mk-7-60-gelules-vegetales-37556"
+      ]
+    },
+    {
+      "base_slug": "metagenics-coq10-st-60-capsules-molles",
+      "suffixed_slug": "metagenics-coq10-st-60-capsules-molles-125392",
+      "base_urls": [
+        "/antioxydants/metagenics-coq10-st-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/metagenics-coq10-st-60-capsules-molles-125392"
+      ]
+    },
+    {
+      "base_slug": "micro-ingredients-biotin-365-capsules-molles",
+      "suffixed_slug": "micro-ingredients-biotin-365-capsules-molles-149855",
+      "base_urls": [
+        "/beaute-cheveux/micro-ingredients-biotin-365-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/micro-ingredients-biotin-365-capsules-molles-149855"
+      ]
+    },
+    {
+      "base_slug": "micro-ingredients-coq10-240-capsules-molles",
+      "suffixed_slug": "micro-ingredients-coq10-240-capsules-molles-154725",
+      "base_urls": [
+        "/antioxydants/micro-ingredients-coq10-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/micro-ingredients-coq10-240-capsules-molles-154725"
+      ]
+    },
+    {
+      "base_slug": "micro-ingredients-l-theanine-400-capsules-molles",
+      "suffixed_slug": "micro-ingredients-l-theanine-400-capsules-molles-156529",
+      "base_urls": [
+        "/sommeil-stress/micro-ingredients-l-theanine-400-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/micro-ingredients-l-theanine-400-capsules-molles-156529"
+      ]
+    },
+    {
+      "base_slug": "micro-ingredients-vitamin-d3-k2-180-capsules-molles",
+      "suffixed_slug": "micro-ingredients-vitamin-d3-k2-180-capsules-molles-156616",
+      "base_urls": [
+        "/vitamines/micro-ingredients-vitamin-d3-k2-180-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/micro-ingredients-vitamin-d3-k2-180-capsules-molles-156616"
+      ]
+    },
+    {
+      "base_slug": "micro-ingredients-vitamin-d3-k2-300-capsules-molles",
+      "suffixed_slug": "micro-ingredients-vitamin-d3-k2-300-capsules-molles-156465",
+      "base_urls": [
+        "/vitamines/micro-ingredients-vitamin-d3-k2-300-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/micro-ingredients-vitamin-d3-k2-300-capsules-molles-156465"
+      ]
+    },
+    {
+      "base_slug": "minami-nutrition-garden-of-life-orange-60-capsules-molles",
+      "suffixed_slug": "minami-nutrition-garden-of-life-orange-60-capsules-molles-21001",
+      "base_urls": [
+        "/omega-3/minami-nutrition-garden-of-life-orange-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/minami-nutrition-garden-of-life-orange-60-capsules-molles-21001"
+      ]
+    },
+    {
+      "base_slug": "mrm-nutrition-dhea-60-gelules-veganes",
+      "suffixed_slug": "mrm-nutrition-dhea-60-gelules-veganes-128524",
+      "base_urls": [
+        "/boosters-hormonaux/mrm-nutrition-dhea-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/mrm-nutrition-dhea-60-gelules-veganes-128524"
+      ]
+    },
+    {
+      "base_slug": "mrm-nutrition-vegan-vitamin-d3-60-gelules-veganes",
+      "suffixed_slug": "mrm-nutrition-vegan-vitamin-d3-60-gelules-veganes-50385",
+      "base_urls": [
+        "/vitamines/mrm-nutrition-vegan-vitamin-d3-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/mrm-nutrition-vegan-vitamin-d3-60-gelules-veganes-50385"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-60-comprimes",
+      "suffixed_slug": "natrol-melatonin-60-comprimes-24653",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-60-comprimes-24653"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-fast-dissolve-strawberry-150-comprimes",
+      "suffixed_slug": "natrol-melatonin-fast-dissolve-strawberry-150-comprimes-106949",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-150-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-150-comprimes-106949"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-fast-dissolve-strawberry-90-comprimes",
+      "suffixed_slug": "natrol-melatonin-fast-dissolve-strawberry-90-comprimes-36903",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-90-comprimes-36903"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-fast-dissolve-strawberry-90-comprimes",
+      "suffixed_slug": "natrol-melatonin-fast-dissolve-strawberry-90-comprimes-48755",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-fast-dissolve-strawberry-90-comprimes-48755"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-gummies-strawberry-90-gommes",
+      "suffixed_slug": "natrol-melatonin-gummies-strawberry-90-gommes-81536",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-gummies-strawberry-90-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-gummies-strawberry-90-gommes-81536"
+      ]
+    },
+    {
+      "base_slug": "natrol-melatonin-time-release-100-comprimes",
+      "suffixed_slug": "natrol-melatonin-time-release-100-comprimes-98696",
+      "base_urls": [
+        "/sommeil-stress/natrol-melatonin-time-release-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natrol-melatonin-time-release-100-comprimes-98696"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-acidophilus-bifidus-90-gelules",
+      "suffixed_slug": "natural-factors-acidophilus-bifidus-90-gelules-105654",
+      "base_urls": [
+        "/probiotiques/natural-factors-acidophilus-bifidus-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/natural-factors-acidophilus-bifidus-90-gelules-105654"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-alpha-lipoic-acid-60-gelules",
+      "suffixed_slug": "natural-factors-alpha-lipoic-acid-60-gelules-105672",
+      "base_urls": [
+        "/antioxydants/natural-factors-alpha-lipoic-acid-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/natural-factors-alpha-lipoic-acid-60-gelules-105672"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-biotin-60-gelules-vegetales",
+      "suffixed_slug": "natural-factors-biotin-60-gelules-vegetales-77679",
+      "base_urls": [
+        "/beaute-cheveux/natural-factors-biotin-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/natural-factors-biotin-60-gelules-vegetales-77679"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-curcuminrich-theracurmin-120-gelules-vegetales",
+      "suffixed_slug": "natural-factors-curcuminrich-theracurmin-120-gelules-vegetales-105927",
+      "base_urls": [
+        "/articulations/natural-factors-curcuminrich-theracurmin-120-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/articulations/natural-factors-curcuminrich-theracurmin-120-gelules-vegetales-105927"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-curcuminrich-theracurmin-60-gelules-vegetales",
+      "suffixed_slug": "natural-factors-curcuminrich-theracurmin-60-gelules-vegetales-59626",
+      "base_urls": [
+        "/articulations/natural-factors-curcuminrich-theracurmin-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/articulations/natural-factors-curcuminrich-theracurmin-60-gelules-vegetales-59626"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-micronized-l-glutamine-90-gelules-vegetales",
+      "suffixed_slug": "natural-factors-micronized-l-glutamine-90-gelules-vegetales-105715",
+      "base_urls": [
+        "/glutamine/natural-factors-micronized-l-glutamine-90-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/glutamine/natural-factors-micronized-l-glutamine-90-gelules-vegetales-105715"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-mixed-vitamin-e-90-capsules-molles",
+      "suffixed_slug": "natural-factors-mixed-vitamin-e-90-capsules-molles-118656",
+      "base_urls": [
+        "/vitamines/natural-factors-mixed-vitamin-e-90-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-mixed-vitamin-e-90-capsules-molles-118656"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-quercetin-lipomicel-matrix-250-mg",
+      "suffixed_slug": "natural-factors-quercetin-lipomicel-matrix-250-mg-103834",
+      "base_urls": [
+        "/antioxydants/natural-factors-quercetin-lipomicel-matrix-250-mg"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/natural-factors-quercetin-lipomicel-matrix-250-mg-103834"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-quercetin-lipomicel-matrix-250-mg",
+      "suffixed_slug": "natural-factors-quercetin-lipomicel-matrix-250-mg-113338",
+      "base_urls": [
+        "/antioxydants/natural-factors-quercetin-lipomicel-matrix-250-mg"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/natural-factors-quercetin-lipomicel-matrix-250-mg-113338"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-stress-relax-melatonin-1-mg",
+      "suffixed_slug": "natural-factors-stress-relax-melatonin-1-mg-104928",
+      "base_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-melatonin-1-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-melatonin-1-mg-104928"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-stress-relax-melatonin-5-mg",
+      "suffixed_slug": "natural-factors-stress-relax-melatonin-5-mg-47312",
+      "base_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-melatonin-5-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-melatonin-5-mg-47312"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-stress-relax-pharma-gaba-60-gelules-vegetales",
+      "suffixed_slug": "natural-factors-stress-relax-pharma-gaba-60-gelules-vegetales-85647",
+      "base_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-pharma-gaba-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-pharma-gaba-60-gelules-vegetales-85647"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-stress-relax-tranquil-sleep-60-chewable-tablets",
+      "suffixed_slug": "natural-factors-stress-relax-tranquil-sleep-60-chewable-tablets-85655",
+      "base_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-tranquil-sleep-60-chewable-tablets"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natural-factors-stress-relax-tranquil-sleep-60-chewable-tablets-85655"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-vitamin-c-tropical-fruit-flavor-chew-500-mg",
+      "suffixed_slug": "natural-factors-vitamin-c-tropical-fruit-flavor-chew-500-mg-105646",
+      "base_urls": [
+        "/vitamines/natural-factors-vitamin-c-tropical-fruit-flavor-chew-500-mg"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-vitamin-c-tropical-fruit-flavor-chew-500-mg-105646"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-vitamin-d3-120-capsules-molles",
+      "suffixed_slug": "natural-factors-vitamin-d3-120-capsules-molles-101712",
+      "base_urls": [
+        "/vitamines/natural-factors-vitamin-d3-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-vitamin-d3-120-capsules-molles-101712"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-vitamin-d3-120-capsules-molles",
+      "suffixed_slug": "natural-factors-vitamin-d3-120-capsules-molles-20867",
+      "base_urls": [
+        "/vitamines/natural-factors-vitamin-d3-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-vitamin-d3-120-capsules-molles-20867"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-vitamin-d3-240-capsules-molles",
+      "suffixed_slug": "natural-factors-vitamin-d3-240-capsules-molles-47348",
+      "base_urls": [
+        "/vitamines/natural-factors-vitamin-d3-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-vitamin-d3-240-capsules-molles-47348"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-vitamin-d3-k2-60-capsules-molles",
+      "suffixed_slug": "natural-factors-vitamin-d3-k2-60-capsules-molles-161207",
+      "base_urls": [
+        "/vitamines/natural-factors-vitamin-d3-k2-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-vitamin-d3-k2-60-capsules-molles-161207"
+      ]
+    },
+    {
+      "base_slug": "natural-factors-whole-earth-sea-60-gelules-vegetales",
+      "suffixed_slug": "natural-factors-whole-earth-sea-60-gelules-vegetales-149769",
+      "base_urls": [
+        "/vitamines/natural-factors-whole-earth-sea-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/natural-factors-whole-earth-sea-60-gelules-vegetales-149769"
+      ]
+    },
+    {
+      "base_slug": "nature-made-coq10-40-capsules-molles",
+      "suffixed_slug": "nature-made-coq10-40-capsules-molles-145562",
+      "base_urls": [
+        "/antioxydants/nature-made-coq10-40-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/nature-made-coq10-40-capsules-molles-145562"
+      ]
+    },
+    {
+      "base_slug": "naturelo-whole-food-complete-multivitamin-120-gelules-vegetales",
+      "suffixed_slug": "naturelo-whole-food-complete-multivitamin-120-gelules-vegetales-97679",
+      "base_urls": [
+        "/vitamines/naturelo-whole-food-complete-multivitamin-120-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/naturelo-whole-food-complete-multivitamin-120-gelules-vegetales-97679"
+      ]
+    },
+    {
+      "base_slug": "natures-bounty-biotin-10000-g",
+      "suffixed_slug": "natures-bounty-biotin-10000-g-146092",
+      "base_urls": [
+        "/beaute-cheveux/natures-bounty-biotin-10000-g"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/natures-bounty-biotin-10000-g-146092"
+      ]
+    },
+    {
+      "base_slug": "natures-bounty-biotin-5000-g",
+      "suffixed_slug": "natures-bounty-biotin-5000-g-32139",
+      "base_urls": [
+        "/beaute-cheveux/natures-bounty-biotin-5000-g"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/natures-bounty-biotin-5000-g-32139"
+      ]
+    },
+    {
+      "base_slug": "natures-bounty-optimal-solutions-hair-skin-nails-gummies-strawberry-40-gommes",
+      "suffixed_slug": "natures-bounty-optimal-solutions-hair-skin-nails-gummies-strawberry-40-gommes-146103",
+      "base_urls": [
+        "/beaute-cheveux/natures-bounty-optimal-solutions-hair-skin-nails-gummies-strawberry-40-gommes"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/natures-bounty-optimal-solutions-hair-skin-nails-gummies-strawberry-40-gommes-146103"
+      ]
+    },
+    {
+      "base_slug": "natures-craft-dhea-120-gelules",
+      "suffixed_slug": "natures-craft-dhea-120-gelules-149963",
+      "base_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-120-gelules-149963"
+      ]
+    },
+    {
+      "base_slug": "natures-craft-dhea-60-gelules",
+      "suffixed_slug": "natures-craft-dhea-60-gelules-146263",
+      "base_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-60-gelules-146263"
+      ]
+    },
+    {
+      "base_slug": "natures-craft-dhea-60-gelules",
+      "suffixed_slug": "natures-craft-dhea-60-gelules-160247",
+      "base_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/natures-craft-dhea-60-gelules-160247"
+      ]
+    },
+    {
+      "base_slug": "natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes",
+      "suffixed_slug": "natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes-119566",
+      "base_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes-119566"
+      ]
+    },
+    {
+      "base_slug": "natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes",
+      "suffixed_slug": "natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes-122758",
+      "base_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-gummies-delicious-mixed-berry-60-gommes-122758"
+      ]
+    },
+    {
+      "base_slug": "natures-truth-sleep-melatonin-natural-berry-12-mg",
+      "suffixed_slug": "natures-truth-sleep-melatonin-natural-berry-12-mg-141907",
+      "base_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-natural-berry-12-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-natural-berry-12-mg-141907"
+      ]
+    },
+    {
+      "base_slug": "natures-truth-sleep-melatonin-natural-berry-5-mg",
+      "suffixed_slug": "natures-truth-sleep-melatonin-natural-berry-5-mg-137286",
+      "base_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-natural-berry-5-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/natures-truth-sleep-melatonin-natural-berry-5-mg-137286"
+      ]
+    },
+    {
+      "base_slug": "natures-truth-womens-care-33-gelules-veganes",
+      "suffixed_slug": "natures-truth-womens-care-33-gelules-veganes-146434",
+      "base_urls": [
+        "/probiotiques/natures-truth-womens-care-33-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/natures-truth-womens-care-33-gelules-veganes-146434"
+      ]
+    },
+    {
+      "base_slug": "natures-way-garlicin-cardio-350-mg",
+      "suffixed_slug": "natures-way-garlicin-cardio-350-mg-50873",
+      "base_urls": [
+        "/plantes-et-herbes/natures-way-garlicin-cardio-350-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/natures-way-garlicin-cardio-350-mg-50873"
+      ]
+    },
+    {
+      "base_slug": "natures-way-sambucus-traditional-immune-syrup-elderberry-120-ml",
+      "suffixed_slug": "natures-way-sambucus-traditional-immune-syrup-elderberry-120-ml-43058",
+      "base_urls": [
+        "/immunite/natures-way-sambucus-traditional-immune-syrup-elderberry-120-ml"
+      ],
+      "suffixed_urls": [
+        "/immunite/natures-way-sambucus-traditional-immune-syrup-elderberry-120-ml-43058"
+      ]
+    },
+    {
+      "base_slug": "natures-way-turmeric-500-mg",
+      "suffixed_slug": "natures-way-turmeric-500-mg-50934",
+      "base_urls": [
+        "/articulations/natures-way-turmeric-500-mg"
+      ],
+      "suffixed_urls": [
+        "/articulations/natures-way-turmeric-500-mg-50934"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-beyond-coq10-ubiquinol-30-capsules-molles",
+      "suffixed_slug": "naturesplus-beyond-coq10-ubiquinol-30-capsules-molles-141499",
+      "base_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-30-capsules-molles-141499"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-beyond-coq10-ubiquinol-30-capsules-molles",
+      "suffixed_slug": "naturesplus-beyond-coq10-ubiquinol-30-capsules-molles-141587",
+      "base_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-30-capsules-molles-141587"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-beyond-coq10-ubiquinol-60-capsules-molles",
+      "suffixed_slug": "naturesplus-beyond-coq10-ubiquinol-60-capsules-molles-23862",
+      "base_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/naturesplus-beyond-coq10-ubiquinol-60-capsules-molles-23862"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-fast-acting-melatonin-90-comprimes",
+      "suffixed_slug": "naturesplus-fast-acting-melatonin-90-comprimes-113990",
+      "base_urls": [
+        "/sommeil-stress/naturesplus-fast-acting-melatonin-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/naturesplus-fast-acting-melatonin-90-comprimes-113990"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-melatonin-90-comprimes",
+      "suffixed_slug": "naturesplus-melatonin-90-comprimes-109509",
+      "base_urls": [
+        "/sommeil-stress/naturesplus-melatonin-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/naturesplus-melatonin-90-comprimes-109509"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-melatonin-90-comprimes",
+      "suffixed_slug": "naturesplus-melatonin-90-comprimes-109510",
+      "base_urls": [
+        "/sommeil-stress/naturesplus-melatonin-90-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/naturesplus-melatonin-90-comprimes-109510"
+      ]
+    },
+    {
+      "base_slug": "naturesplus-source-of-life-garden-60-gelules-veganes",
+      "suffixed_slug": "naturesplus-source-of-life-garden-60-gelules-veganes-24625",
+      "base_urls": [
+        "/vitamines/naturesplus-source-of-life-garden-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/naturesplus-source-of-life-garden-60-gelules-veganes-24625"
+      ]
+    },
+    {
+      "base_slug": "nordic-naturals-omega-3-lemon-60-capsules-molles",
+      "suffixed_slug": "nordic-naturals-omega-3-lemon-60-capsules-molles-38840",
+      "base_urls": [
+        "/omega-3/nordic-naturals-omega-3-lemon-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/nordic-naturals-omega-3-lemon-60-capsules-molles-38840"
+      ]
+    },
+    {
+      "base_slug": "nordic-naturals-vitamin-c-gummies-tangerine-60-gommes",
+      "suffixed_slug": "nordic-naturals-vitamin-c-gummies-tangerine-60-gommes-136107",
+      "base_urls": [
+        "/vitamines/nordic-naturals-vitamin-c-gummies-tangerine-60-gommes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nordic-naturals-vitamin-c-gummies-tangerine-60-gommes-136107"
+      ]
+    },
+    {
+      "base_slug": "nordic-naturals-vitamin-d3-gummies-wild-berry-3-gommes",
+      "suffixed_slug": "nordic-naturals-vitamin-d3-gummies-wild-berry-3-gommes-52883",
+      "base_urls": [
+        "/vitamines/nordic-naturals-vitamin-d3-gummies-wild-berry-3-gommes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nordic-naturals-vitamin-d3-gummies-wild-berry-3-gommes-52883"
+      ]
+    },
+    {
+      "base_slug": "now-foods-alpha-lipoic-acid-60-gelules-vegetales",
+      "suffixed_slug": "now-foods-alpha-lipoic-acid-60-gelules-vegetales-102326",
+      "base_urls": [
+        "/antioxydants/now-foods-alpha-lipoic-acid-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/now-foods-alpha-lipoic-acid-60-gelules-vegetales-102326"
+      ]
+    },
+    {
+      "base_slug": "now-foods-alpha-lipoic-acid-60-gelules-vegetales",
+      "suffixed_slug": "now-foods-alpha-lipoic-acid-60-gelules-vegetales-120074",
+      "base_urls": [
+        "/antioxydants/now-foods-alpha-lipoic-acid-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/now-foods-alpha-lipoic-acid-60-gelules-vegetales-120074"
+      ]
+    },
+    {
+      "base_slug": "now-foods-coq10-60-gelules-vegetales",
+      "suffixed_slug": "now-foods-coq10-60-gelules-vegetales-116706",
+      "base_urls": [
+        "/antioxydants/now-foods-coq10-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/now-foods-coq10-60-gelules-vegetales-116706"
+      ]
+    },
+    {
+      "base_slug": "now-foods-l-carnitine-60-gelules-vegetales",
+      "suffixed_slug": "now-foods-l-carnitine-60-gelules-vegetales-37830",
+      "base_urls": [
+        "/l-carnitine/now-foods-l-carnitine-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/l-carnitine/now-foods-l-carnitine-60-gelules-vegetales-37830"
+      ]
+    },
+    {
+      "base_slug": "now-foods-l-lysine-100-comprimes",
+      "suffixed_slug": "now-foods-l-lysine-100-comprimes-102336",
+      "base_urls": [
+        "/acides-amines/now-foods-l-lysine-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/now-foods-l-lysine-100-comprimes-102336"
+      ]
+    },
+    {
+      "base_slug": "now-foods-l-lysine-250-comprimes",
+      "suffixed_slug": "now-foods-l-lysine-250-comprimes-78200",
+      "base_urls": [
+        "/acides-amines/now-foods-l-lysine-250-comprimes"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/now-foods-l-lysine-250-comprimes-78200"
+      ]
+    },
+    {
+      "base_slug": "now-foods-melatonin-180-gelules-vegetales",
+      "suffixed_slug": "now-foods-melatonin-180-gelules-vegetales-23505",
+      "base_urls": [
+        "/sommeil-stress/now-foods-melatonin-180-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/now-foods-melatonin-180-gelules-vegetales-23505"
+      ]
+    },
+    {
+      "base_slug": "now-foods-mk-7-vitamin-k-2-60-gelules-vegetales",
+      "suffixed_slug": "now-foods-mk-7-vitamin-k-2-60-gelules-vegetales-36220",
+      "base_urls": [
+        "/vitamines/now-foods-mk-7-vitamin-k-2-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/now-foods-mk-7-vitamin-k-2-60-gelules-vegetales-36220"
+      ]
+    },
+    {
+      "base_slug": "now-foods-taurine-100-gelules-vegetales",
+      "suffixed_slug": "now-foods-taurine-100-gelules-vegetales-15787",
+      "base_urls": [
+        "/acides-amines/now-foods-taurine-100-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/now-foods-taurine-100-gelules-vegetales-15787"
+      ]
+    },
+    {
+      "base_slug": "now-foods-vitamin-d-3-high-potency-120-capsules-molles",
+      "suffixed_slug": "now-foods-vitamin-d-3-high-potency-120-capsules-molles-52326",
+      "base_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-120-capsules-molles-52326"
+      ]
+    },
+    {
+      "base_slug": "now-foods-vitamin-d-3-high-potency-240-capsules-molles",
+      "suffixed_slug": "now-foods-vitamin-d-3-high-potency-240-capsules-molles-104103",
+      "base_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-240-capsules-molles-104103"
+      ]
+    },
+    {
+      "base_slug": "now-foods-vitamin-d-3-high-potency-240-capsules-molles",
+      "suffixed_slug": "now-foods-vitamin-d-3-high-potency-240-capsules-molles-22335",
+      "base_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-240-capsules-molles-22335"
+      ]
+    },
+    {
+      "base_slug": "now-foods-vitamin-d-3-high-potency-30-capsules-molles",
+      "suffixed_slug": "now-foods-vitamin-d-3-high-potency-30-capsules-molles-140407",
+      "base_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/now-foods-vitamin-d-3-high-potency-30-capsules-molles-140407"
+      ]
+    },
+    {
+      "base_slug": "nutiva-organic-hemp-protein-powder-136-kg",
+      "suffixed_slug": "nutiva-organic-hemp-protein-powder-136-kg-12647",
+      "base_urls": [
+        "/proteines-vegetales/nutiva-organic-hemp-protein-powder-136-kg"
+      ],
+      "suffixed_urls": [
+        "/proteines-vegetales/nutiva-organic-hemp-protein-powder-136-kg-12647"
+      ]
+    },
+    {
+      "base_slug": "nutricost-5-htp-30-gelules",
+      "suffixed_slug": "nutricost-5-htp-30-gelules-145330",
+      "base_urls": [
+        "/sommeil-stress/nutricost-5-htp-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-5-htp-30-gelules-145330"
+      ]
+    },
+    {
+      "base_slug": "nutricost-astaxanthin-120-capsules-molles",
+      "suffixed_slug": "nutricost-astaxanthin-120-capsules-molles-132855",
+      "base_urls": [
+        "/antioxydants/nutricost-astaxanthin-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/nutricost-astaxanthin-120-capsules-molles-132855"
+      ]
+    },
+    {
+      "base_slug": "nutricost-astaxanthin-120-capsules-molles",
+      "suffixed_slug": "nutricost-astaxanthin-120-capsules-molles-145309",
+      "base_urls": [
+        "/antioxydants/nutricost-astaxanthin-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/nutricost-astaxanthin-120-capsules-molles-145309"
+      ]
+    },
+    {
+      "base_slug": "nutricost-bee-propolis-120-gelules",
+      "suffixed_slug": "nutricost-bee-propolis-120-gelules-136767",
+      "base_urls": [
+        "/immunite/nutricost-bee-propolis-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/immunite/nutricost-bee-propolis-120-gelules-136767"
+      ]
+    },
+    {
+      "base_slug": "nutricost-biotin-150-capsules-molles",
+      "suffixed_slug": "nutricost-biotin-150-capsules-molles-135572",
+      "base_urls": [
+        "/beaute-cheveux/nutricost-biotin-150-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/nutricost-biotin-150-capsules-molles-135572"
+      ]
+    },
+    {
+      "base_slug": "nutricost-coq10-60-gelules",
+      "suffixed_slug": "nutricost-coq10-60-gelules-136788",
+      "base_urls": [
+        "/antioxydants/nutricost-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/nutricost-coq10-60-gelules-136788"
+      ]
+    },
+    {
+      "base_slug": "nutricost-dhea-120-gelules",
+      "suffixed_slug": "nutricost-dhea-120-gelules-132281",
+      "base_urls": [
+        "/boosters-hormonaux/nutricost-dhea-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/nutricost-dhea-120-gelules-132281"
+      ]
+    },
+    {
+      "base_slug": "nutricost-dhea-120-gelules",
+      "suffixed_slug": "nutricost-dhea-120-gelules-135528",
+      "base_urls": [
+        "/boosters-hormonaux/nutricost-dhea-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/nutricost-dhea-120-gelules-135528"
+      ]
+    },
+    {
+      "base_slug": "nutricost-dhea-240-gelules",
+      "suffixed_slug": "nutricost-dhea-240-gelules-128947",
+      "base_urls": [
+        "/boosters-hormonaux/nutricost-dhea-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/nutricost-dhea-240-gelules-128947"
+      ]
+    },
+    {
+      "base_slug": "nutricost-dhea-240-gelules",
+      "suffixed_slug": "nutricost-dhea-240-gelules-131990",
+      "base_urls": [
+        "/boosters-hormonaux/nutricost-dhea-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/nutricost-dhea-240-gelules-131990"
+      ]
+    },
+    {
+      "base_slug": "nutricost-gaba-sans-arome-500-g",
+      "suffixed_slug": "nutricost-gaba-sans-arome-500-g-147642",
+      "base_urls": [
+        "/sommeil-stress/nutricost-gaba-sans-arome-500-g"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-gaba-sans-arome-500-g-147642"
+      ]
+    },
+    {
+      "base_slug": "nutricost-iron-chelate-from-ferrochel-240-gelules",
+      "suffixed_slug": "nutricost-iron-chelate-from-ferrochel-240-gelules-153900",
+      "base_urls": [
+        "/mineraux/nutricost-iron-chelate-from-ferrochel-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/nutricost-iron-chelate-from-ferrochel-240-gelules-153900"
+      ]
+    },
+    {
+      "base_slug": "nutricost-lactobacillus-acidophilus-120-gelules",
+      "suffixed_slug": "nutricost-lactobacillus-acidophilus-120-gelules-149549",
+      "base_urls": [
+        "/probiotiques/nutricost-lactobacillus-acidophilus-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/nutricost-lactobacillus-acidophilus-120-gelules-149549"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-240-comprimes",
+      "suffixed_slug": "nutricost-melatonin-240-comprimes-132243",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes-132243"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-240-comprimes",
+      "suffixed_slug": "nutricost-melatonin-240-comprimes-135549",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes-135549"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-240-comprimes",
+      "suffixed_slug": "nutricost-melatonin-240-comprimes-135653",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-comprimes-135653"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-240-gelules",
+      "suffixed_slug": "nutricost-melatonin-240-gelules-136846",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-gelules-136846"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-240-gelules",
+      "suffixed_slug": "nutricost-melatonin-240-gelules-141698",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-240-gelules-141698"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-gummies-strawberry-180-gommes",
+      "suffixed_slug": "nutricost-melatonin-gummies-strawberry-180-gommes-131998",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes-131998"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-gummies-strawberry-180-gommes",
+      "suffixed_slug": "nutricost-melatonin-gummies-strawberry-180-gommes-135533",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes-135533"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-gummies-strawberry-180-gommes",
+      "suffixed_slug": "nutricost-melatonin-gummies-strawberry-180-gommes-137338",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes-137338"
+      ]
+    },
+    {
+      "base_slug": "nutricost-melatonin-gummies-strawberry-180-gommes",
+      "suffixed_slug": "nutricost-melatonin-gummies-strawberry-180-gommes-147393",
+      "base_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/nutricost-melatonin-gummies-strawberry-180-gommes-147393"
+      ]
+    },
+    {
+      "base_slug": "nutricost-milk-thistle-120-gelules",
+      "suffixed_slug": "nutricost-milk-thistle-120-gelules-147394",
+      "base_urls": [
+        "/plantes-et-herbes/nutricost-milk-thistle-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/nutricost-milk-thistle-120-gelules-147394"
+      ]
+    },
+    {
+      "base_slug": "nutricost-selenium-240-gelules",
+      "suffixed_slug": "nutricost-selenium-240-gelules-141690",
+      "base_urls": [
+        "/mineraux/nutricost-selenium-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/nutricost-selenium-240-gelules-141690"
+      ]
+    },
+    {
+      "base_slug": "nutricost-vitamin-b12-240-gelules",
+      "suffixed_slug": "nutricost-vitamin-b12-240-gelules-135630",
+      "base_urls": [
+        "/vitamines/nutricost-vitamin-b12-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nutricost-vitamin-b12-240-gelules-135630"
+      ]
+    },
+    {
+      "base_slug": "nutricost-vitamin-b12-240-gelules",
+      "suffixed_slug": "nutricost-vitamin-b12-240-gelules-140768",
+      "base_urls": [
+        "/vitamines/nutricost-vitamin-b12-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nutricost-vitamin-b12-240-gelules-140768"
+      ]
+    },
+    {
+      "base_slug": "nutricost-vitamin-b2-30-gelules",
+      "suffixed_slug": "nutricost-vitamin-b2-30-gelules-145446",
+      "base_urls": [
+        "/vitamines/nutricost-vitamin-b2-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nutricost-vitamin-b2-30-gelules-145446"
+      ]
+    },
+    {
+      "base_slug": "nutricost-vitamin-d3-240-capsules-molles",
+      "suffixed_slug": "nutricost-vitamin-d3-240-capsules-molles-135647",
+      "base_urls": [
+        "/vitamines/nutricost-vitamin-d3-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nutricost-vitamin-d3-240-capsules-molles-135647"
+      ]
+    },
+    {
+      "base_slug": "nutricost-vitamin-d3-240-capsules-molles",
+      "suffixed_slug": "nutricost-vitamin-d3-240-capsules-molles-145298",
+      "base_urls": [
+        "/vitamines/nutricost-vitamin-d3-240-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/nutricost-vitamin-d3-240-capsules-molles-145298"
+      ]
+    },
+    {
+      "base_slug": "oceanblue-professional-orange-120-capsules-molles",
+      "suffixed_slug": "oceanblue-professional-orange-120-capsules-molles-161331",
+      "base_urls": [
+        "/omega-3/oceanblue-professional-orange-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/oceanblue-professional-orange-120-capsules-molles-161331"
+      ]
+    },
+    {
+      "base_slug": "oceanblue-professional-orange-60-capsules-molles",
+      "suffixed_slug": "oceanblue-professional-orange-60-capsules-molles-132120",
+      "base_urls": [
+        "/omega-3/oceanblue-professional-orange-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/oceanblue-professional-orange-60-capsules-molles-132120"
+      ]
+    },
+    {
+      "base_slug": "oceanblue-professional-orange-60-capsules-molles",
+      "suffixed_slug": "oceanblue-professional-orange-60-capsules-molles-132122",
+      "base_urls": [
+        "/omega-3/oceanblue-professional-orange-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/oceanblue-professional-orange-60-capsules-molles-132122"
+      ]
+    },
+    {
+      "base_slug": "olly-sleep-gummies-blackberry-zen-120-gommes",
+      "suffixed_slug": "olly-sleep-gummies-blackberry-zen-120-gommes-156244",
+      "base_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-120-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-120-gommes-156244"
+      ]
+    },
+    {
+      "base_slug": "olly-sleep-gummies-blackberry-zen-50-gommes",
+      "suffixed_slug": "olly-sleep-gummies-blackberry-zen-50-gommes-119167",
+      "base_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-50-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-50-gommes-119167"
+      ]
+    },
+    {
+      "base_slug": "olly-sleep-gummies-blackberry-zen-60-gommes",
+      "suffixed_slug": "olly-sleep-gummies-blackberry-zen-60-gommes-156245",
+      "base_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-60-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-60-gommes-156245"
+      ]
+    },
+    {
+      "base_slug": "olly-sleep-gummies-blackberry-zen-90-gommes",
+      "suffixed_slug": "olly-sleep-gummies-blackberry-zen-90-gommes-156246",
+      "base_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-90-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/olly-sleep-gummies-blackberry-zen-90-gommes-156246"
+      ]
+    },
+    {
+      "base_slug": "protocol-for-life-balance-krill-oil-60-capsules-molles",
+      "suffixed_slug": "protocol-for-life-balance-krill-oil-60-capsules-molles-116715",
+      "base_urls": [
+        "/omega-3/protocol-for-life-balance-krill-oil-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/protocol-for-life-balance-krill-oil-60-capsules-molles-116715"
+      ]
+    },
+    {
+      "base_slug": "protocol-for-life-balance-resveratrol-60-gelules-vegetales",
+      "suffixed_slug": "protocol-for-life-balance-resveratrol-60-gelules-vegetales-156737",
+      "base_urls": [
+        "/antioxydants/protocol-for-life-balance-resveratrol-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/protocol-for-life-balance-resveratrol-60-gelules-vegetales-156737"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-7-keto-dhea-60-gelules",
+      "suffixed_slug": "pure-encapsulations-7-keto-dhea-60-gelules-158056",
+      "base_urls": [
+        "/boosters-hormonaux/pure-encapsulations-7-keto-dhea-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/pure-encapsulations-7-keto-dhea-60-gelules-158056"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-7-keto-dhea-60-gelules",
+      "suffixed_slug": "pure-encapsulations-7-keto-dhea-60-gelules-158057",
+      "base_urls": [
+        "/boosters-hormonaux/pure-encapsulations-7-keto-dhea-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/pure-encapsulations-7-keto-dhea-60-gelules-158057"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-coq10-60-gelules",
+      "suffixed_slug": "pure-encapsulations-coq10-60-gelules-51861",
+      "base_urls": [
+        "/antioxydants/pure-encapsulations-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/pure-encapsulations-coq10-60-gelules-51861"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-coq10-60-gelules",
+      "suffixed_slug": "pure-encapsulations-coq10-60-gelules-51881",
+      "base_urls": [
+        "/antioxydants/pure-encapsulations-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/pure-encapsulations-coq10-60-gelules-51881"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-vitamin-d3-120-gelules",
+      "suffixed_slug": "pure-encapsulations-vitamin-d3-120-gelules-51821",
+      "base_urls": [
+        "/vitamines/pure-encapsulations-vitamin-d3-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/pure-encapsulations-vitamin-d3-120-gelules-51821"
+      ]
+    },
+    {
+      "base_slug": "pure-encapsulations-vitamin-d3-120-gelules",
+      "suffixed_slug": "pure-encapsulations-vitamin-d3-120-gelules-51826",
+      "base_urls": [
+        "/vitamines/pure-encapsulations-vitamin-d3-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/pure-encapsulations-vitamin-d3-120-gelules-51826"
+      ]
+    },
+    {
+      "base_slug": "quest-nutrition-protein-bar-crispy-chocolate-caramel-pecan-60-g",
+      "suffixed_slug": "quest-nutrition-protein-bar-crispy-chocolate-caramel-pecan-60-g-161140",
+      "base_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-crispy-chocolate-caramel-pecan-60-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-crispy-chocolate-caramel-pecan-60-g-161140"
+      ]
+    },
+    {
+      "base_slug": "quest-nutrition-protein-bar-crispy-cookies-cream-52-g",
+      "suffixed_slug": "quest-nutrition-protein-bar-crispy-cookies-cream-52-g-161141",
+      "base_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-crispy-cookies-cream-52-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-crispy-cookies-cream-52-g-161141"
+      ]
+    },
+    {
+      "base_slug": "quest-nutrition-protein-bar-strawberry-shortcake-60-g",
+      "suffixed_slug": "quest-nutrition-protein-bar-strawberry-shortcake-60-g-152022",
+      "base_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-strawberry-shortcake-60-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/quest-nutrition-protein-bar-strawberry-shortcake-60-g-152022"
+      ]
+    },
+    {
+      "base_slug": "qunol-turmeric-90-gelules",
+      "suffixed_slug": "qunol-turmeric-90-gelules-157246",
+      "base_urls": [
+        "/articulations/qunol-turmeric-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/articulations/qunol-turmeric-90-gelules-157246"
+      ]
+    },
+    {
+      "base_slug": "qunol-ultra-coq10-30-capsules-molles",
+      "suffixed_slug": "qunol-ultra-coq10-30-capsules-molles-157201",
+      "base_urls": [
+        "/antioxydants/qunol-ultra-coq10-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/qunol-ultra-coq10-30-capsules-molles-157201"
+      ]
+    },
+    {
+      "base_slug": "qunol-ultra-coq10-60-capsules-molles",
+      "suffixed_slug": "qunol-ultra-coq10-60-capsules-molles-126283",
+      "base_urls": [
+        "/antioxydants/qunol-ultra-coq10-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/qunol-ultra-coq10-60-capsules-molles-126283"
+      ]
+    },
+    {
+      "base_slug": "qunol-ultra-coq10-90-capsules-molles",
+      "suffixed_slug": "qunol-ultra-coq10-90-capsules-molles-157202",
+      "base_urls": [
+        "/antioxydants/qunol-ultra-coq10-90-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/qunol-ultra-coq10-90-capsules-molles-157202"
+      ]
+    },
+    {
+      "base_slug": "renew-life-ultimate-flora-probiotic-30-delayed-release-vegan-capsules",
+      "suffixed_slug": "renew-life-ultimate-flora-probiotic-30-delayed-release-vegan-capsules-101804",
+      "base_urls": [
+        "/probiotiques/renew-life-ultimate-flora-probiotic-30-delayed-release-vegan-capsules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/renew-life-ultimate-flora-probiotic-30-delayed-release-vegan-capsules-101804"
+      ]
+    },
+    {
+      "base_slug": "renew-life-womens-once-daily-ultimate-flora-pre-probiotic-30-delayed-release-vegan-capsules",
+      "suffixed_slug": "renew-life-womens-once-daily-ultimate-flora-pre-probiotic-30-delayed-release-vegan-capsules-103597",
+      "base_urls": [
+        "/probiotiques/renew-life-womens-once-daily-ultimate-flora-pre-probiotic-30-delayed-release-vegan-capsules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/renew-life-womens-once-daily-ultimate-flora-pre-probiotic-30-delayed-release-vegan-capsules-103597"
+      ]
+    },
+    {
+      "base_slug": "reserveage-beauty-resveratrol-30-gelules-vegetales",
+      "suffixed_slug": "reserveage-beauty-resveratrol-30-gelules-vegetales-126552",
+      "base_urls": [
+        "/antioxydants/reserveage-beauty-resveratrol-30-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/reserveage-beauty-resveratrol-30-gelules-vegetales-126552"
+      ]
+    },
+    {
+      "base_slug": "reserveage-beauty-resveratrol-30-gelules-vegetales",
+      "suffixed_slug": "reserveage-beauty-resveratrol-30-gelules-vegetales-137970",
+      "base_urls": [
+        "/antioxydants/reserveage-beauty-resveratrol-30-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/reserveage-beauty-resveratrol-30-gelules-vegetales-137970"
+      ]
+    },
+    {
+      "base_slug": "ritual-essential-for-women-mint-60-gelules-veganes",
+      "suffixed_slug": "ritual-essential-for-women-mint-60-gelules-veganes-153100",
+      "base_urls": [
+        "/vitamines/ritual-essential-for-women-mint-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/ritual-essential-for-women-mint-60-gelules-veganes-153100"
+      ]
+    },
+    {
+      "base_slug": "schiff-megared-vanilla-80-capsules-molles",
+      "suffixed_slug": "schiff-megared-vanilla-80-capsules-molles-104675",
+      "base_urls": [
+        "/omega-3/schiff-megared-vanilla-80-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/schiff-megared-vanilla-80-capsules-molles-104675"
+      ]
+    },
+    {
+      "base_slug": "solaray-gtf-chromium-200-g",
+      "suffixed_slug": "solaray-gtf-chromium-200-g-124349",
+      "base_urls": [
+        "/mineraux/solaray-gtf-chromium-200-g"
+      ],
+      "suffixed_urls": [
+        "/mineraux/solaray-gtf-chromium-200-g-124349"
+      ]
+    },
+    {
+      "base_slug": "solaray-l-lysine-500-mg",
+      "suffixed_slug": "solaray-l-lysine-500-mg-88933",
+      "base_urls": [
+        "/acides-amines/solaray-l-lysine-500-mg"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/solaray-l-lysine-500-mg-88933"
+      ]
+    },
+    {
+      "base_slug": "solaray-l-tyrosine-500-mg",
+      "suffixed_slug": "solaray-l-tyrosine-500-mg-124571",
+      "base_urls": [
+        "/acides-amines/solaray-l-tyrosine-500-mg"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/solaray-l-tyrosine-500-mg-124571"
+      ]
+    },
+    {
+      "base_slug": "solaray-once-daily-high-energy-multivitamin-120-vegcaps",
+      "suffixed_slug": "solaray-once-daily-high-energy-multivitamin-120-vegcaps-106013",
+      "base_urls": [
+        "/vitamines/solaray-once-daily-high-energy-multivitamin-120-vegcaps"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solaray-once-daily-high-energy-multivitamin-120-vegcaps-106013"
+      ]
+    },
+    {
+      "base_slug": "solaray-potassium-99-mg",
+      "suffixed_slug": "solaray-potassium-99-mg-123898",
+      "base_urls": [
+        "/mineraux/solaray-potassium-99-mg"
+      ],
+      "suffixed_urls": [
+        "/mineraux/solaray-potassium-99-mg-123898"
+      ]
+    },
+    {
+      "base_slug": "solaray-selenium-100-g",
+      "suffixed_slug": "solaray-selenium-100-g-123892",
+      "base_urls": [
+        "/mineraux/solaray-selenium-100-g"
+      ],
+      "suffixed_urls": [
+        "/mineraux/solaray-selenium-100-g-123892"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-astragalus-400-mg",
+      "suffixed_slug": "solaray-true-herbs-astragalus-400-mg-124540",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-astragalus-400-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-astragalus-400-mg-124540"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-cascara-sagrada-450-mg",
+      "suffixed_slug": "solaray-true-herbs-cascara-sagrada-450-mg-124381",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-cascara-sagrada-450-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-cascara-sagrada-450-mg-124381"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-cayenne-515-mg",
+      "suffixed_slug": "solaray-true-herbs-cayenne-515-mg-124937",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-cayenne-515-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-cayenne-515-mg-124937"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-korean-ginseng-550-mg",
+      "suffixed_slug": "solaray-true-herbs-korean-ginseng-550-mg-124546",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-korean-ginseng-550-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-korean-ginseng-550-mg-124546"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-saw-palmetto-580-mg",
+      "suffixed_slug": "solaray-true-herbs-saw-palmetto-580-mg-123919",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-saw-palmetto-580-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-saw-palmetto-580-mg-123919"
+      ]
+    },
+    {
+      "base_slug": "solaray-true-herbs-saw-palmetto-580-mg",
+      "suffixed_slug": "solaray-true-herbs-saw-palmetto-580-mg-88934",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-saw-palmetto-580-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-true-herbs-saw-palmetto-580-mg-88934"
+      ]
+    },
+    {
+      "base_slug": "solaray-vital-extracts-60-vegcaps-grape-seed",
+      "suffixed_slug": "solaray-vital-extracts-60-vegcaps-grape-seed-123922",
+      "base_urls": [
+        "/antioxydants/solaray-vital-extracts-60-vegcaps-grape-seed"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/solaray-vital-extracts-60-vegcaps-grape-seed-123922"
+      ]
+    },
+    {
+      "base_slug": "solaray-vital-extracts-bilberry-60-mg",
+      "suffixed_slug": "solaray-vital-extracts-bilberry-60-mg-124971",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-vital-extracts-bilberry-60-mg"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-vital-extracts-bilberry-60-mg-124971"
+      ]
+    },
+    {
+      "base_slug": "solaray-vital-extracts-milk-thistle-60-vegcaps",
+      "suffixed_slug": "solaray-vital-extracts-milk-thistle-60-vegcaps-70083",
+      "base_urls": [
+        "/plantes-et-herbes/solaray-vital-extracts-milk-thistle-60-vegcaps"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/solaray-vital-extracts-milk-thistle-60-vegcaps-70083"
+      ]
+    },
+    {
+      "base_slug": "solgar-biotin-super-high-potency-10000-g",
+      "suffixed_slug": "solgar-biotin-super-high-potency-10000-g-126682",
+      "base_urls": [
+        "/beaute-cheveux/solgar-biotin-super-high-potency-10000-g"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/solgar-biotin-super-high-potency-10000-g-126682"
+      ]
+    },
+    {
+      "base_slug": "solgar-gaba-500-mg",
+      "suffixed_slug": "solgar-gaba-500-mg-13090",
+      "base_urls": [
+        "/sommeil-stress/solgar-gaba-500-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/solgar-gaba-500-mg-13090"
+      ]
+    },
+    {
+      "base_slug": "solgar-l-lysine-free-form-500-mg",
+      "suffixed_slug": "solgar-l-lysine-free-form-500-mg-13014",
+      "base_urls": [
+        "/acides-amines/solgar-l-lysine-free-form-500-mg"
+      ],
+      "suffixed_urls": [
+        "/acides-amines/solgar-l-lysine-free-form-500-mg-13014"
+      ]
+    },
+    {
+      "base_slug": "solgar-selenium-yeast-free-100-comprimes",
+      "suffixed_slug": "solgar-selenium-yeast-free-100-comprimes-126706",
+      "base_urls": [
+        "/mineraux/solgar-selenium-yeast-free-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/mineraux/solgar-selenium-yeast-free-100-comprimes-126706"
+      ]
+    },
+    {
+      "base_slug": "solgar-vitamin-b12-100-comprimes",
+      "suffixed_slug": "solgar-vitamin-b12-100-comprimes-48609",
+      "base_urls": [
+        "/vitamines/solgar-vitamin-b12-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solgar-vitamin-b12-100-comprimes-48609"
+      ]
+    },
+    {
+      "base_slug": "solgar-vitamin-b6-100-comprimes",
+      "suffixed_slug": "solgar-vitamin-b6-100-comprimes-48607",
+      "base_urls": [
+        "/vitamines/solgar-vitamin-b6-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solgar-vitamin-b6-100-comprimes-48607"
+      ]
+    },
+    {
+      "base_slug": "solgar-vitamin-b6-100-comprimes",
+      "suffixed_slug": "solgar-vitamin-b6-100-comprimes-48608",
+      "base_urls": [
+        "/vitamines/solgar-vitamin-b6-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solgar-vitamin-b6-100-comprimes-48608"
+      ]
+    },
+    {
+      "base_slug": "solgar-vitamin-e-100-capsules-molles",
+      "suffixed_slug": "solgar-vitamin-e-100-capsules-molles-48611",
+      "base_urls": [
+        "/vitamines/solgar-vitamin-e-100-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solgar-vitamin-e-100-capsules-molles-48611"
+      ]
+    },
+    {
+      "base_slug": "solgar-vitamin-e-naturally-sourced-100-capsules-molles",
+      "suffixed_slug": "solgar-vitamin-e-naturally-sourced-100-capsules-molles-48629",
+      "base_urls": [
+        "/vitamines/solgar-vitamin-e-naturally-sourced-100-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/solgar-vitamin-e-naturally-sourced-100-capsules-molles-48629"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-alpha-lipoic-acid-120-gelules",
+      "suffixed_slug": "source-naturals-alpha-lipoic-acid-120-gelules-144240",
+      "base_urls": [
+        "/antioxydants/source-naturals-alpha-lipoic-acid-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/source-naturals-alpha-lipoic-acid-120-gelules-144240"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-alpha-lipoic-acid-60-gelules",
+      "suffixed_slug": "source-naturals-alpha-lipoic-acid-60-gelules-38661",
+      "base_urls": [
+        "/antioxydants/source-naturals-alpha-lipoic-acid-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/source-naturals-alpha-lipoic-acid-60-gelules-38661"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-arctic-pure-120-capsules-molles",
+      "suffixed_slug": "source-naturals-arctic-pure-120-capsules-molles-144237",
+      "base_urls": [
+        "/omega-3/source-naturals-arctic-pure-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/source-naturals-arctic-pure-120-capsules-molles-144237"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-arctic-pure-60-capsules-molles",
+      "suffixed_slug": "source-naturals-arctic-pure-60-capsules-molles-38657",
+      "base_urls": [
+        "/omega-3/source-naturals-arctic-pure-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/source-naturals-arctic-pure-60-capsules-molles-38657"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-biotin-120-comprimes",
+      "suffixed_slug": "source-naturals-biotin-120-comprimes-64685",
+      "base_urls": [
+        "/beaute-cheveux/source-naturals-biotin-120-comprimes"
+      ],
+      "suffixed_urls": [
+        "/beaute-cheveux/source-naturals-biotin-120-comprimes-64685"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-sleep-science-melatonin-60-comprimes",
+      "suffixed_slug": "source-naturals-sleep-science-melatonin-60-comprimes-144197",
+      "base_urls": [
+        "/sommeil-stress/source-naturals-sleep-science-melatonin-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/source-naturals-sleep-science-melatonin-60-comprimes-144197"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-sleep-science-melatonin-time-release-60-comprimes",
+      "suffixed_slug": "source-naturals-sleep-science-melatonin-time-release-60-comprimes-144198",
+      "base_urls": [
+        "/sommeil-stress/source-naturals-sleep-science-melatonin-time-release-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/source-naturals-sleep-science-melatonin-time-release-60-comprimes-144198"
+      ]
+    },
+    {
+      "base_slug": "source-naturals-yaeyama-chlorella-300-comprimes",
+      "suffixed_slug": "source-naturals-yaeyama-chlorella-300-comprimes-144141",
+      "base_urls": [
+        "/plantes-et-herbes/source-naturals-yaeyama-chlorella-300-comprimes"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/source-naturals-yaeyama-chlorella-300-comprimes-144141"
+      ]
+    },
+    {
+      "base_slug": "superior-source-methylcobalamin-b-12-b-6-folic-acid-60-microlingual-instant-dissolve-tablets",
+      "suffixed_slug": "superior-source-methylcobalamin-b-12-b-6-folic-acid-60-microlingual-instant-dissolve-tablets-26986",
+      "base_urls": [
+        "/vitamines/superior-source-methylcobalamin-b-12-b-6-folic-acid-60-microlingual-instant-dissolve-tablets"
+      ],
+      "suffixed_urls": [
+        "/vitamines/superior-source-methylcobalamin-b-12-b-6-folic-acid-60-microlingual-instant-dissolve-tablets-26986"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-albion-manganese-180-gelules",
+      "suffixed_slug": "swanson-vitamins-albion-manganese-180-gelules-118589",
+      "base_urls": [
+        "/vitamines/swanson-vitamins-albion-manganese-180-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/swanson-vitamins-albion-manganese-180-gelules-118589"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-bacopa-monnieri-90-gelules",
+      "suffixed_slug": "swanson-vitamins-bacopa-monnieri-90-gelules-119452",
+      "base_urls": [
+        "/plantes-et-herbes/swanson-vitamins-bacopa-monnieri-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/swanson-vitamins-bacopa-monnieri-90-gelules-119452"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-bilberry-standardized-bilberry-60-gelules",
+      "suffixed_slug": "swanson-vitamins-bilberry-standardized-bilberry-60-gelules-117924",
+      "base_urls": [
+        "/plantes-et-herbes/swanson-vitamins-bilberry-standardized-bilberry-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/swanson-vitamins-bilberry-standardized-bilberry-60-gelules-117924"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-lyc-o-mato-lycopene-60-capsules-molles",
+      "suffixed_slug": "swanson-vitamins-lyc-o-mato-lycopene-60-capsules-molles-119508",
+      "base_urls": [
+        "/vitamines/swanson-vitamins-lyc-o-mato-lycopene-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/swanson-vitamins-lyc-o-mato-lycopene-60-capsules-molles-119508"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-nadh-peppermint-30-pastilles",
+      "suffixed_slug": "swanson-vitamins-nadh-peppermint-30-pastilles-119515",
+      "base_urls": [
+        "/vitamines/swanson-vitamins-nadh-peppermint-30-pastilles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/swanson-vitamins-nadh-peppermint-30-pastilles-119515"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-nattokinase-30-gelules",
+      "suffixed_slug": "swanson-vitamins-nattokinase-30-gelules-118163",
+      "base_urls": [
+        "/plantes-et-herbes/swanson-vitamins-nattokinase-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/swanson-vitamins-nattokinase-30-gelules-118163"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-natural-vitamin-k2-30-capsules-molles",
+      "suffixed_slug": "swanson-vitamins-natural-vitamin-k2-30-capsules-molles-109053",
+      "base_urls": [
+        "/vitamines/swanson-vitamins-natural-vitamin-k2-30-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/swanson-vitamins-natural-vitamin-k2-30-capsules-molles-109053"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-resveratrol-30-gelules",
+      "suffixed_slug": "swanson-vitamins-resveratrol-30-gelules-118106",
+      "base_urls": [
+        "/antioxydants/swanson-vitamins-resveratrol-30-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/swanson-vitamins-resveratrol-30-gelules-118106"
+      ]
+    },
+    {
+      "base_slug": "swanson-vitamins-vitamins-d3-k2-60-gelules-vegetales",
+      "suffixed_slug": "swanson-vitamins-vitamins-d3-k2-60-gelules-vegetales-118400",
+      "base_urls": [
+        "/vitamines/swanson-vitamins-vitamins-d3-k2-60-gelules-vegetales"
+      ],
+      "suffixed_urls": [
+        "/vitamines/swanson-vitamins-vitamins-d3-k2-60-gelules-vegetales-118400"
+      ]
+    },
+    {
+      "base_slug": "terra-origin-healthy-creatine-sans-arome-515-g",
+      "suffixed_slug": "terra-origin-healthy-creatine-sans-arome-515-g-161216",
+      "base_urls": [
+        "/creatine/terra-origin-healthy-creatine-sans-arome-515-g"
+      ],
+      "suffixed_urls": [
+        "/creatine/terra-origin-healthy-creatine-sans-arome-515-g-161216"
+      ]
+    },
+    {
+      "base_slug": "terry-naturally-curamed-superior-absorption-curcumin-120-capsules-molles",
+      "suffixed_slug": "terry-naturally-curamed-superior-absorption-curcumin-120-capsules-molles-45900",
+      "base_urls": [
+        "/articulations/terry-naturally-curamed-superior-absorption-curcumin-120-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/articulations/terry-naturally-curamed-superior-absorption-curcumin-120-capsules-molles-45900"
+      ]
+    },
+    {
+      "base_slug": "terry-naturally-curamed-superior-absorption-curcumin-60-capsules-molles",
+      "suffixed_slug": "terry-naturally-curamed-superior-absorption-curcumin-60-capsules-molles-23136",
+      "base_urls": [
+        "/articulations/terry-naturally-curamed-superior-absorption-curcumin-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/articulations/terry-naturally-curamed-superior-absorption-curcumin-60-capsules-molles-23136"
+      ]
+    },
+    {
+      "base_slug": "terry-naturally-melatonin-ep120-60-comprimes",
+      "suffixed_slug": "terry-naturally-melatonin-ep120-60-comprimes-122443",
+      "base_urls": [
+        "/sommeil-stress/terry-naturally-melatonin-ep120-60-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/terry-naturally-melatonin-ep120-60-comprimes-122443"
+      ]
+    },
+    {
+      "base_slug": "terry-naturally-tri-iodine-90-gelules",
+      "suffixed_slug": "terry-naturally-tri-iodine-90-gelules-23508",
+      "base_urls": [
+        "/mineraux/terry-naturally-tri-iodine-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/terry-naturally-tri-iodine-90-gelules-23508"
+      ]
+    },
+    {
+      "base_slug": "terry-naturally-tri-iodine-90-gelules",
+      "suffixed_slug": "terry-naturally-tri-iodine-90-gelules-78873",
+      "base_urls": [
+        "/mineraux/terry-naturally-tri-iodine-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/terry-naturally-tri-iodine-90-gelules-78873"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-carnipure-l-carnitine-50-comprimes",
+      "suffixed_slug": "the-vitamin-shoppe-carnipure-l-carnitine-50-comprimes-146887",
+      "base_urls": [
+        "/l-carnitine/the-vitamin-shoppe-carnipure-l-carnitine-50-comprimes"
+      ],
+      "suffixed_urls": [
+        "/l-carnitine/the-vitamin-shoppe-carnipure-l-carnitine-50-comprimes-146887"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-comfort-iron-25-mg",
+      "suffixed_slug": "the-vitamin-shoppe-comfort-iron-25-mg-146913",
+      "base_urls": [
+        "/vitamines/the-vitamin-shoppe-comfort-iron-25-mg"
+      ],
+      "suffixed_urls": [
+        "/vitamines/the-vitamin-shoppe-comfort-iron-25-mg-146913"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml",
+      "suffixed_slug": "the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml-146883",
+      "base_urls": [
+        "/vitamines/the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml"
+      ],
+      "suffixed_urls": [
+        "/vitamines/the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml-146883"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml",
+      "suffixed_slug": "the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml-146890",
+      "base_urls": [
+        "/vitamines/the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml"
+      ],
+      "suffixed_urls": [
+        "/vitamines/the-vitamin-shoppe-liquid-vitamin-d3-citrus-30-ml-146890"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-milk-thistle-extract-100-gelules",
+      "suffixed_slug": "the-vitamin-shoppe-milk-thistle-extract-100-gelules-144049",
+      "base_urls": [
+        "/plantes-et-herbes/the-vitamin-shoppe-milk-thistle-extract-100-gelules"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/the-vitamin-shoppe-milk-thistle-extract-100-gelules-144049"
+      ]
+    },
+    {
+      "base_slug": "the-vitamin-shoppe-vitamin-e-60-capsules-molles",
+      "suffixed_slug": "the-vitamin-shoppe-vitamin-e-60-capsules-molles-144036",
+      "base_urls": [
+        "/vitamines/the-vitamin-shoppe-vitamin-e-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/vitamines/the-vitamin-shoppe-vitamin-e-60-capsules-molles-144036"
+      ]
+    },
+    {
+      "base_slug": "think-delight-protein-bar-chocolate-mousse-pie-34-g",
+      "suffixed_slug": "think-delight-protein-bar-chocolate-mousse-pie-34-g-120609",
+      "base_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-mousse-pie-34-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-mousse-pie-34-g-120609"
+      ]
+    },
+    {
+      "base_slug": "think-delight-protein-bar-chocolate-peanut-butter-cookie-dough-34-g",
+      "suffixed_slug": "think-delight-protein-bar-chocolate-peanut-butter-cookie-dough-34-g-120607",
+      "base_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-peanut-butter-cookie-dough-34-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-peanut-butter-cookie-dough-34-g-120607"
+      ]
+    },
+    {
+      "base_slug": "think-delight-protein-bar-chocolate-peanut-butter-pie-40-g",
+      "suffixed_slug": "think-delight-protein-bar-chocolate-peanut-butter-pie-40-g-120618",
+      "base_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-peanut-butter-pie-40-g"
+      ],
+      "suffixed_urls": [
+        "/barres-proteinees/think-delight-protein-bar-chocolate-peanut-butter-pie-40-g-120618"
+      ]
+    },
+    {
+      "base_slug": "thorne-curcumin-phytosome-120-gelules",
+      "suffixed_slug": "thorne-curcumin-phytosome-120-gelules-73164",
+      "base_urls": [
+        "/articulations/thorne-curcumin-phytosome-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/articulations/thorne-curcumin-phytosome-120-gelules-73164"
+      ]
+    },
+    {
+      "base_slug": "thorne-zinc-bisglycinate-60-gelules",
+      "suffixed_slug": "thorne-zinc-bisglycinate-60-gelules-101384",
+      "base_urls": [
+        "/zinc/thorne-zinc-bisglycinate-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/zinc/thorne-zinc-bisglycinate-60-gelules-101384"
+      ]
+    },
+    {
+      "base_slug": "thorne-zinc-picolinate-60-gelules",
+      "suffixed_slug": "thorne-zinc-picolinate-60-gelules-103185",
+      "base_urls": [
+        "/zinc/thorne-zinc-picolinate-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/zinc/thorne-zinc-picolinate-60-gelules-103185"
+      ]
+    },
+    {
+      "base_slug": "vibrant-health-green-vibrance-25-billion-probiotics-165-g",
+      "suffixed_slug": "vibrant-health-green-vibrance-25-billion-probiotics-165-g-29436",
+      "base_urls": [
+        "/probiotiques/vibrant-health-green-vibrance-25-billion-probiotics-165-g"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/vibrant-health-green-vibrance-25-billion-probiotics-165-g-29436"
+      ]
+    },
+    {
+      "base_slug": "vitacost-7-keto-dhea-120-gelules",
+      "suffixed_slug": "vitacost-7-keto-dhea-120-gelules-158579",
+      "base_urls": [
+        "/boosters-hormonaux/vitacost-7-keto-dhea-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/vitacost-7-keto-dhea-120-gelules-158579"
+      ]
+    },
+    {
+      "base_slug": "vitacost-alpha-lipoic-acid-120-gelules",
+      "suffixed_slug": "vitacost-alpha-lipoic-acid-120-gelules-159092",
+      "base_urls": [
+        "/antioxydants/vitacost-alpha-lipoic-acid-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-alpha-lipoic-acid-120-gelules-159092"
+      ]
+    },
+    {
+      "base_slug": "vitacost-alpha-lipoic-acid-240-gelules",
+      "suffixed_slug": "vitacost-alpha-lipoic-acid-240-gelules-159129",
+      "base_urls": [
+        "/antioxydants/vitacost-alpha-lipoic-acid-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-alpha-lipoic-acid-240-gelules-159129"
+      ]
+    },
+    {
+      "base_slug": "vitacost-chromium-300-gelules",
+      "suffixed_slug": "vitacost-chromium-300-gelules-158585",
+      "base_urls": [
+        "/mineraux/vitacost-chromium-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/vitacost-chromium-300-gelules-158585"
+      ]
+    },
+    {
+      "base_slug": "vitacost-chromium-300-gelules",
+      "suffixed_slug": "vitacost-chromium-300-gelules-158614",
+      "base_urls": [
+        "/mineraux/vitacost-chromium-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/mineraux/vitacost-chromium-300-gelules-158614"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-120-gelules",
+      "suffixed_slug": "vitacost-coq10-120-gelules-159112",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules-159112"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-120-gelules",
+      "suffixed_slug": "vitacost-coq10-120-gelules-159127",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules-159127"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-120-gelules",
+      "suffixed_slug": "vitacost-coq10-120-gelules-159365",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules-159365"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-120-gelules",
+      "suffixed_slug": "vitacost-coq10-120-gelules-159463",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-120-gelules-159463"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-240-gelules",
+      "suffixed_slug": "vitacost-coq10-240-gelules-159111",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-240-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-240-gelules-159111"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-60-gelules",
+      "suffixed_slug": "vitacost-coq10-60-gelules-158592",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules-158592"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-60-gelules",
+      "suffixed_slug": "vitacost-coq10-60-gelules-159089",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules-159089"
+      ]
+    },
+    {
+      "base_slug": "vitacost-coq10-60-gelules",
+      "suffixed_slug": "vitacost-coq10-60-gelules-159366",
+      "base_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-coq10-60-gelules-159366"
+      ]
+    },
+    {
+      "base_slug": "vitacost-dhea-300-gelules",
+      "suffixed_slug": "vitacost-dhea-300-gelules-159105",
+      "base_urls": [
+        "/boosters-hormonaux/vitacost-dhea-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/vitacost-dhea-300-gelules-159105"
+      ]
+    },
+    {
+      "base_slug": "vitacost-dhea-300-gelules",
+      "suffixed_slug": "vitacost-dhea-300-gelules-159450",
+      "base_urls": [
+        "/boosters-hormonaux/vitacost-dhea-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/vitacost-dhea-300-gelules-159450"
+      ]
+    },
+    {
+      "base_slug": "vitacost-melatonin-100-comprimes",
+      "suffixed_slug": "vitacost-melatonin-100-comprimes-159481",
+      "base_urls": [
+        "/sommeil-stress/vitacost-melatonin-100-comprimes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vitacost-melatonin-100-comprimes-159481"
+      ]
+    },
+    {
+      "base_slug": "vitacost-melatonin-300-gelules",
+      "suffixed_slug": "vitacost-melatonin-300-gelules-158637",
+      "base_urls": [
+        "/sommeil-stress/vitacost-melatonin-300-gelules"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vitacost-melatonin-300-gelules-158637"
+      ]
+    },
+    {
+      "base_slug": "vitacost-root2-120-gelules",
+      "suffixed_slug": "vitacost-root2-120-gelules-159381",
+      "base_urls": [
+        "/articulations/vitacost-root2-120-gelules"
+      ],
+      "suffixed_urls": [
+        "/immunite/vitacost-root2-120-gelules-159381"
+      ]
+    },
+    {
+      "base_slug": "vitacost-root2-60-gelules",
+      "suffixed_slug": "vitacost-root2-60-gelules-158801",
+      "base_urls": [
+        "/immunite/vitacost-root2-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/articulations/vitacost-root2-60-gelules-158801"
+      ]
+    },
+    {
+      "base_slug": "vitacost-root2-spirulina-algae-360-comprimes",
+      "suffixed_slug": "vitacost-root2-spirulina-algae-360-comprimes-158633",
+      "base_urls": [
+        "/plantes-et-herbes/vitacost-root2-spirulina-algae-360-comprimes"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/vitacost-root2-spirulina-algae-360-comprimes-158633"
+      ]
+    },
+    {
+      "base_slug": "vitacost-synergy-60-capsules-molles",
+      "suffixed_slug": "vitacost-synergy-60-capsules-molles-159016",
+      "base_urls": [
+        "/antioxydants/vitacost-synergy-60-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-synergy-60-capsules-molles-159016"
+      ]
+    },
+    {
+      "base_slug": "vitacost-synergy-60-gelules",
+      "suffixed_slug": "vitacost-synergy-60-gelules-158697",
+      "base_urls": [
+        "/sommeil-stress/vitacost-synergy-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-synergy-60-gelules-158697"
+      ]
+    },
+    {
+      "base_slug": "vitacost-synergy-glucosamine-chondroitin-240-comprimes",
+      "suffixed_slug": "vitacost-synergy-glucosamine-chondroitin-240-comprimes-158541",
+      "base_urls": [
+        "/articulations/vitacost-synergy-glucosamine-chondroitin-240-comprimes"
+      ],
+      "suffixed_urls": [
+        "/articulations/vitacost-synergy-glucosamine-chondroitin-240-comprimes-158541"
+      ]
+    },
+    {
+      "base_slug": "vitacost-trans-resveratrol-60-gelules",
+      "suffixed_slug": "vitacost-trans-resveratrol-60-gelules-159139",
+      "base_urls": [
+        "/antioxydants/vitacost-trans-resveratrol-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/antioxydants/vitacost-trans-resveratrol-60-gelules-159139"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-5-htp-60-gelules-veganes",
+      "suffixed_slug": "vital-nutrients-5-htp-60-gelules-veganes-138828",
+      "base_urls": [
+        "/sommeil-stress/vital-nutrients-5-htp-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vital-nutrients-5-htp-60-gelules-veganes-138828"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-berberine-60-gelules-veganes",
+      "suffixed_slug": "vital-nutrients-berberine-60-gelules-veganes-132038",
+      "base_urls": [
+        "/plantes-et-herbes/vital-nutrients-berberine-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/plantes-et-herbes/vital-nutrients-berberine-60-gelules-veganes-132038"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-dhea-micronized-60-gelules-veganes",
+      "suffixed_slug": "vital-nutrients-dhea-micronized-60-gelules-veganes-143733",
+      "base_urls": [
+        "/boosters-hormonaux/vital-nutrients-dhea-micronized-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/vital-nutrients-dhea-micronized-60-gelules-veganes-143733"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-dhea-micronized-60-gelules-veganes",
+      "suffixed_slug": "vital-nutrients-dhea-micronized-60-gelules-veganes-156990",
+      "base_urls": [
+        "/boosters-hormonaux/vital-nutrients-dhea-micronized-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/boosters-hormonaux/vital-nutrients-dhea-micronized-60-gelules-veganes-156990"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-melatonin-60-gelules-veganes",
+      "suffixed_slug": "vital-nutrients-melatonin-60-gelules-veganes-156989",
+      "base_urls": [
+        "/sommeil-stress/vital-nutrients-melatonin-60-gelules-veganes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vital-nutrients-melatonin-60-gelules-veganes-156989"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-ultra-pure-lemon-90-capsules-molles",
+      "suffixed_slug": "vital-nutrients-ultra-pure-lemon-90-capsules-molles-134871",
+      "base_urls": [
+        "/omega-3/vital-nutrients-ultra-pure-lemon-90-capsules-molles"
+      ],
+      "suffixed_urls": [
+        "/omega-3/vital-nutrients-ultra-pure-lemon-90-capsules-molles-134871"
+      ]
+    },
+    {
+      "base_slug": "vital-nutrients-vitamin-d3-90-gelules",
+      "suffixed_slug": "vital-nutrients-vitamin-d3-90-gelules-132067",
+      "base_urls": [
+        "/vitamines/vital-nutrients-vitamin-d3-90-gelules"
+      ],
+      "suffixed_urls": [
+        "/vitamines/vital-nutrients-vitamin-d3-90-gelules-132067"
+      ]
+    },
+    {
+      "base_slug": "vitamatic-folic-acid-500-comprimes",
+      "suffixed_slug": "vitamatic-folic-acid-500-comprimes-154004",
+      "base_urls": [
+        "/vitamines/vitamatic-folic-acid-500-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/vitamatic-folic-acid-500-comprimes-154004"
+      ]
+    },
+    {
+      "base_slug": "vitamatic-melatonin-natural-berry-20-mg",
+      "suffixed_slug": "vitamatic-melatonin-natural-berry-20-mg-147578",
+      "base_urls": [
+        "/sommeil-stress/vitamatic-melatonin-natural-berry-20-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vitamatic-melatonin-natural-berry-20-mg-147578"
+      ]
+    },
+    {
+      "base_slug": "vitamatic-vegan-melatonin-gummies-natural-strawberry-60-gommes",
+      "suffixed_slug": "vitamatic-vegan-melatonin-gummies-natural-strawberry-60-gommes-126580",
+      "base_urls": [
+        "/sommeil-stress/vitamatic-vegan-melatonin-gummies-natural-strawberry-60-gommes"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/vitamatic-vegan-melatonin-gummies-natural-strawberry-60-gommes-126580"
+      ]
+    },
+    {
+      "base_slug": "vitamatic-vitamin-b6-250-comprimes",
+      "suffixed_slug": "vitamatic-vitamin-b6-250-comprimes-154057",
+      "base_urls": [
+        "/vitamines/vitamatic-vitamin-b6-250-comprimes"
+      ],
+      "suffixed_urls": [
+        "/vitamines/vitamatic-vitamin-b6-250-comprimes-154057"
+      ]
+    },
+    {
+      "base_slug": "zahler-candaid-with-probiotics-60-gelules",
+      "suffixed_slug": "zahler-candaid-with-probiotics-60-gelules-155231",
+      "base_urls": [
+        "/probiotiques/zahler-candaid-with-probiotics-60-gelules"
+      ],
+      "suffixed_urls": [
+        "/probiotiques/zahler-candaid-with-probiotics-60-gelules-155231"
+      ]
+    },
+    {
+      "base_slug": "zahler-melatonin-chewables-orange-5-mg",
+      "suffixed_slug": "zahler-melatonin-chewables-orange-5-mg-138179",
+      "base_urls": [
+        "/sommeil-stress/zahler-melatonin-chewables-orange-5-mg"
+      ],
+      "suffixed_urls": [
+        "/sommeil-stress/zahler-melatonin-chewables-orange-5-mg-138179"
+      ]
+    }
+  ]
+}

@@ -35,7 +35,7 @@ import {
   sanitizeBackendProductJsonLd,
 } from '@/util/structuredData';
 import { buildVideoObjectSchema } from '@/util/officialVideo';
-import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory, sameUrlSlug } from '@/util/productUrl';
 import { retiredSlugDestination } from '@/util/retiredSlug';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
@@ -193,7 +193,7 @@ export default async function CrawlerProductPage({ params }: PageProps) {
    * belongs at /shop/{slug} and never under a category at all.
    */
   const ownCategory = getProductPrimarySubCategory(product)?.slug;
-  if (claimedCategory && ownCategory && claimedCategory !== ownCategory) {
+  if (claimedCategory && ownCategory && !sameUrlSlug(claimedCategory, ownCategory)) {
     permanentRedirect(buildProductCanonicalUrl(product));
   }
 
