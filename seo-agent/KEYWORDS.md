@@ -39,6 +39,16 @@ Legend — page: the URL that SHOULD rank · pos: last observed (date) · note: 
 | vitamines tunisie | /vitamines | ? | ? | 566 words only — thin |
 | complement alimentaire tunisie | / or /proteines | ? | ? | check |
 
+**Note 22/09/2026 (run 2), no position observed — a template change, recorded so the next
+re-check knows what moved.** Every row above whose `page` is a category page gained editorial text
+*for human visitors* on 22/09: the page intro used to be clamped to 520 characters for people and
+printed whole for Googlebot, so /creatine 369, /whey-proteine 635, /mass-gainers 967,
+/pre-workout 690 and /proteines 187 words were bot-only (measured, both UAs). Googlebot's view is
+**unchanged** — nothing was added to or removed from what Google reads — so no ranking move should
+be attributed to it; what changed is that the page stopped being a parity risk and shoppers can now
+read the price, format and delivery paragraphs. Re-check these rows from 06/10 as usual, and do not
+credit or blame this change for a delta.
+
 ## Product-name SERPs (in-stock best sellers; House Nutrition style "Product – Brand" + price)
 
 | query | page | pos (date) | note |

@@ -68,6 +68,11 @@ line until then.
    before anything else; fix the builder, never the page. A P1 that repeats on two consecutive
    runs on the same page type (unparseable JSON-LD, missing FAQ on in-stock PDPs, description
    rule, `Offer.url ≠ canonical`) is promoted to P0.
+3b. **Bot/human parity.** `node seo-agent/tools/parity-check.mjs` (the four money categories +
+   /proteines). Exit 1 = a page serves Googlebot editorial text a visitor cannot reach; that is a
+   cloaking exposure and it is **today's job**, fixed in BOTH views, never by deleting the human
+   copy. Human-only words are not a finding (the crawler route has no header, footer or facets).
+   Exit 2 = could not measure; re-run tomorrow, never a P0.
 4. **Robots + sitemaps.** `curl -s -A Googlebot https://protein.tn/robots.txt | head -20`;
    `<loc>` count per sitemap file vs yesterday's log. Δ > 5 % on any file without a landed cause
    → P0.
@@ -252,6 +257,10 @@ measure", never a P0; land each alone and run it once in the log before its rule
   they disagree, P0 on two consecutive runs), PDP link contract (parent-category link with the
   head-term anchor, brand link, ≥ 4 siblings), money category ≥ 3 brand hrefs, hrefs with
   `?search=|?sort=|?brand=`, uppercase segments, trailing slash, hrefs that HEAD to 404 or > 1 hop.
+- ~~**`parity-check.mjs`**~~ — BUILT 22/09/2026 and in the daily checklist as step 3b. Googlebot
+  vs Chrome, 6-word-shingle diff of the visible text; budgets BOT-ONLY words only. Its first run
+  found 2,848 bot-only words across the five money categories (cause: the human intro clamp) and
+  its second, after the fix, 123 — all of it product-name noise.
 - **`crawl-links.mjs --full`** (Sundays) — BFS from `/`, `<a href>` only, UA
   `ProteinTnSeoBot/1.0 (+https://protein.tn; internal link audit)`, concurrency 2, 250–400 ms
   gap, robots-aware, ≤ 3 pages per pager, no facet recursion; abort "inconclusive" if > 2 %
@@ -343,8 +352,10 @@ and ship the rest. The land workflow re-runs the same gates and refuses the bran
 - **The surface Google reads on a category is `app/x-crawler/category/[slug]/page.tsx` +
   `CrawlerCategoryView.tsx`** (middleware rewrites bot UAs there), not the human page. Every
   category change must ship in BOTH views, and the two views must be textually equal: a
-  bot-only paragraph is the cloaking example Google names. Gate: bot-vs-Chrome visible-word diff
-  = 0 on the four money categories.
+  bot-only paragraph is the cloaking example Google names. Gate: `parity-check.mjs`, built
+  22/09/2026, must report 0 pages over budget. The repo-side half of this shipped 22/09 (the human
+  category page renders its intro in full); the middleware half is `(needs: owner)` — forbidden
+  path — and is now an upgrade, not a repair.
 - **Content volume is not the lever.** `/creatine` bot view has 3,069 words; House Nutrition
   ranks with ~290, GainLab with 47. Stop adding guide paragraphs to money categories; fix the
   link skeleton (breadcrumb parent, brand strip, indexable pagination) and the one-URL-per-intent

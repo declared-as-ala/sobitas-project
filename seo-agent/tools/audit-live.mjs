@@ -104,6 +104,7 @@ async function probe(pathname) {
     return out;
   }
   out.status = res.status;
+  out.finalAbsolute = res.url;
   out.finalUrl = res.url.replace(ORIGIN, '') || '/';
   if (res.status !== 200) {
     out.problems.push(['P0', `HTTP ${res.status}`]);
@@ -149,7 +150,14 @@ async function probe(pathname) {
   const isPage = out.kind === 'product' || out.kind === 'category';
   if (out.robots && /noindex/i.test(out.robots) && isPage) out.problems.push(['P0', `robots "${out.robots}"`]);
   if (!out.canonical) out.problems.push(['P0', 'no canonical']);
-  else if (out.canonical.replace(/\/$/, '') !== (ORIGIN + pathname).replace(/\/$/, '')) out.problems.push(['P0', `canonical → ${out.canonical}`]);
+  // Compare against the URL actually served, not the one asked for. A watch URL may be a
+  // deliberate redirect SOURCE — `/Intra-Workout/<p>` is in watchlist.txt precisely to prove it
+  // 301s once and stops — and there the correct canonical is the redirect TARGET. Comparing to
+  // `pathname` made that correct page a P0 every single day, and a P0 that is always red is a P0
+  // nobody reads. Where nothing redirects, finalAbsolute === ORIGIN + pathname and this is the
+  // same check it always was.
+  else if (out.canonical.replace(/\/$/, '') !== (out.finalAbsolute || ORIGIN + pathname).replace(/\/$/, ''))
+    out.problems.push(['P0', `canonical → ${out.canonical} (served ${out.finalUrl})`]);
   if (!out.title) out.problems.push(['P0', 'no <title>']);
   else if (out.title.length > 65) out.problems.push(['P1', `title ${out.title.length} chars`]);
   if (!out.description) out.problems.push(['P0', 'no meta description']);
