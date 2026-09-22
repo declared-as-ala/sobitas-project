@@ -21,10 +21,10 @@ Legend — page: the URL that SHOULD rank · pos: last observed (date) · note: 
 | --- | --- | --- | --- | --- |
 | proteine tunisie | /proteines | 153 | 23.9 (13/09) | homepage + blog outrank the catalogue page; strengthen /proteines intro + internal links from blog posts |
 | protein tunisie | / | 420 | ~5 (13/09) | brand-ish query, homepage holds it; keep |
-| whey protein tunisie | /whey-proteine | 92 | 18.5 (13/09) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks |
+| whey protein tunisie | /whey-proteine | 92 | 18.5 (13/09) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks. SERP look 22/09 (US-geo): the **homepage**, not `/whey-proteine`, is our result in the set — decide which should win the head term |
 | whey protein 1kg prix tunisie | /whey-proteine | 33 | 9.8 (21/09) | 0 clicks: title/description work (price angle) |
 | whey gold standard prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 22 | 6.2 (21/09) | 0 clicks; find which URL ranks (exact-page filter) |
-| creatine tunisie | /creatine | 50 | 16.0 (13/09) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning |
+| creatine tunisie | /creatine | 50 | 16.0 (13/09) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning. SERP look 22/09 (US-geo): gainlabnutrition.com ranks ahead of us; `/creatine`, our blog price post, and legacy `/product-category/creatines/` all appear — one head term, three of our URLs |
 | creatine monohydrate | /creatine | 70 | 21.9 (13/09) | global phrase; local intent weak — secondary |
 | prix creatine tunisie | /creatine | ? | ? | check |
 | mass gainer tunisie | /mass-gainers | ? | ? | check |
@@ -33,8 +33,8 @@ Legend — page: the URL that SHOULD rank · pos: last observed (date) · note: 
 | pre workout tunisie | /pre-workout | 155 | 6.8 (13/09) | ranks on the Born Rage PDP, not the category — decide which should win |
 | bruleur de graisse tunisie | /bruleurs-de-graisse | ? | ? | check |
 | bcaa tunisie | /bcaa | ? | ? | check |
-| omega 3 tunisie | /omega-3 | 46 | 10.5 (21/09) | dead SKU held the query; retire + retarget shipped on the 21/09 branch (unmerged) |
-| protein bar chocolate | /barres-proteinees | 52 | 9.8 (20/09) | 0 clicks; the curated JSON (16/09 branch) is NOT on main — land it |
+| omega 3 tunisie | /omega-3 | 46 | 10.5 (21/09) | retarget + real `bestProductSlugs` (empty block fixed) shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look 22/09 (US-geo, no TN pos): pharmacies (parapharmacie/tunisiepara), wildkard, nutribeast own the set; still showing our old `/category/omega-3` title |
+| protein bar chocolate | /barres-proteinees | 52 | 9.8 (20/09) | **bars category page shipped 22/09** (177→~1,800 words, FAQPage, price anchor `dès 36 DT`, `sur commande`). SERP look 22/09 (US-geo): we are absent; protein-shop-tunisia, housenutrition, nutribeast, stock-x, geantdrive hold it. Re-check TN pos after deploy + reindex |
 | collagene tunisie | /collagene ? | ? | ? | check the category exists + copy |
 | vitamines tunisie | /vitamines | ? | ? | 566 words only — thin |
 | complement alimentaire tunisie | / or /proteines | ? | ? | check |

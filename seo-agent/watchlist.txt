@@ -21,6 +21,11 @@
 /barres-proteinees
 /whey-isolate
 /vitamines
+/intra-workout
+
+# In-loop-fix verification (case contract shipped 22/09) — the uppercase must 301 once and stop
+/Intra-Workout/nutrabio-intra-blast-advanced-intra-workout-tropical-fruit-punch-717-g
+/intra-workout/nutrabio-intra-blast-advanced-intra-workout-tropical-fruit-punch-717-g
 
 # In-stock best sellers with product-name searches (KEYWORDS.md, "product-name SERPs")
 /creatine/creatine-monohydrate-300g-ostrovit

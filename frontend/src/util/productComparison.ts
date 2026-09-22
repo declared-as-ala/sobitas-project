@@ -22,7 +22,7 @@
 import type { Product } from '@/types';
 import { getPriceDisplay } from './productPrice';
 import { isInStock } from './cartStock';
-import { getProductLink, getProductPrimarySubCategory } from './productUrl';
+import { getProductLink, getProductPrimarySubCategory, urlSlug } from './productUrl';
 import { comparisonFacts, type ComparisonFacts } from './productComparisonFacts';
 import { getProductStockStatus } from './cartStock';
 
@@ -138,7 +138,7 @@ export function buildComparison(
       url: getProductLink(p),
       brand: p.brand?.designation_fr ?? '',
       category: sub?.designation_fr ?? '',
-      categoryUrl: sub?.slug ? `/${sub.slug}` : '',
+      categoryUrl: sub?.slug ? `/${urlSlug(sub.slug)}` : '',
       format: extractFormat(p.designation_fr),
       price: finalPrice,
       /* Only meaningful alongside `hasPromo`; a stale `prix` on a product whose promo expired must

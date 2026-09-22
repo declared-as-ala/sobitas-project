@@ -15,7 +15,7 @@ import {
   validateStructuredData,
 } from '@/util/structuredData';
 import { buildVideoObjectSchema } from '@/util/officialVideo';
-import { buildProductCanonicalUrl, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildProductCanonicalUrl, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory, sameUrlSlug } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import type { Product } from '@/types';
 import { productDescription, productTitle } from '@/util/productMetaDescription';
@@ -98,7 +98,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
     // Validate product belongs to claimed subcategory
     const subCategory = getProductPrimarySubCategory(product);
-    if (subCategory && subCategory.slug !== cleanSubCatSlug) {
+    if (subCategory && !sameUrlSlug(subCategory.slug, cleanSubCatSlug)) {
       // Product exists but in different subcategory - redirect to correct URL
       const correctUrl = buildProductCanonicalUrl(product);
       return {
@@ -254,7 +254,7 @@ export default async function NewProductPage({ params }: PageProps) {
   // Validate product belongs to the claimed subcategory
   const subCategory = getProductPrimarySubCategory(product);
   
-  if (subCategory && subCategory.slug !== cleanSubCatSlug) {
+  if (subCategory && !sameUrlSlug(subCategory.slug, cleanSubCatSlug)) {
     // Wrong subcategory - redirect to correct URL
     const correctUrl = buildProductCanonicalUrl(product);
     permanentRedirect(correctUrl);

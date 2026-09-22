@@ -5,7 +5,7 @@ import type { Product, Article, Category, Brand, SubCategory, Page } from '@/typ
 import { brandNameToSlug } from '@/util/brandSlug';
 import { listCategorySeoSlugs } from '@/util/categorySeoContent';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
-import { getProductPrimarySubCategory } from '@/util/productUrl';
+import { getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { crawlPaginated, describeCrawl, type PaginatedCrawl } from '@/util/sitemapCrawl';
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
@@ -581,7 +581,7 @@ const productsSource: SitemapSource = {
 
       const coverImg = toSitemapImage(p.cover);
       entries.push({
-        url: `${ctx.baseUrl}/${encodeURIComponent(subCategorySlug)}/${encodeURIComponent(p.slug)}`,
+        url: `${ctx.baseUrl}/${encodeURIComponent(urlSlug(subCategorySlug))}/${encodeURIComponent(p.slug)}`,
         lastModified: getLastModified(p as { updated_at?: string; created_at?: string }),
         changeFrequency: 'weekly',
         priority: 0.7,
