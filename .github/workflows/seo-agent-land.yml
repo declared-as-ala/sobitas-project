@@ -29,7 +29,7 @@ on:
   # after the 05:30 UTC run, and on demand. Fetching a public repo needs no credential; the merge
   # and the deploys use this repository's own GITHUB_TOKEN exactly as on a direct push.
   schedule:
-    - cron: "*/20 6-10 * * *"
+    - cron: "*/20 5-23 * * *"
   workflow_dispatch:
     inputs:
       branch:
@@ -61,7 +61,7 @@ env:
 jobs:
   land:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 150
     steps:
       - name: Checkout (full history, both branches)
         uses: actions/checkout@v4
@@ -388,6 +388,36 @@ jobs:
           git add "$QUEUE"
           git commit -m "seo-agent: ops queue consumed ($(echo $TASKS | tr '\n' ' '))" || true
           git push origin main
+
+      - name: Land log (what happened, for tomorrow's run)
+        if: always() && steps.src.outputs.none != 'true' && steps.change.outputs.empty != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set +e
+          git fetch origin main --quiet
+          git checkout -q -B main origin/main
+          mkdir -p seo-agent/log/land
+          F="seo-agent/log/land/$(date -u +%Y-%m-%d).md"
+          OUTCOME="handed-off"
+          [ "${{ steps.merge.outputs.merged }}" = "true" ] && OUTCOME="landed"
+          [ "${{ steps.deploy.outputs.result }}" = "failure" ] && OUTCOME="reverted"
+          {
+            echo "## $(date -u +%H:%MZ) · $BRANCH · $OUTCOME"
+            echo "- run: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }} (trigger: ${{ github.event_name }}, source: ${{ steps.src.outputs.source }})"
+            [ -n "${{ steps.merge.outputs.sha }}" ] && echo "- merge commit: ${{ steps.merge.outputs.sha }}"
+            echo "- deploy: ${{ steps.deploy.outputs.result }}"
+            [ -f failed-runs.txt ] && sed 's/^/- failed run: /' failed-runs.txt
+            [ -f policy-reason.txt ] && { echo '- reason:'; sed 's/^/    /' policy-reason.txt; }
+            [ -f changed.txt ] && echo "- files: $(wc -l < changed.txt) ($(head -5 changed.txt | paste -sd ' ')...)"
+            echo "- vps queue: $(grep -vE '^[[:space:]]*(#|$)' seo-agent/ops/queue.txt 2>/dev/null | paste -sd ' ' || echo none)"
+            echo
+          } >> "$F"
+          git config user.name "seo-agent[bot]"
+          git config user.email "seo-agent@protein.tn"
+          git add "$F"
+          git commit -q -m "seo-agent: land log $(date -u +%Y-%m-%d) — $BRANCH $OUTCOME" || exit 0
+          git push origin main || { git pull --rebase -q origin main && git push origin main; } || echo "::warning::could not write the land log"
 
       - name: Delete the landed branch (direct pushes only; landing-pad branches are inert once merged)
         if: steps.merge.outputs.merged == 'true' && steps.deploy.outputs.result != 'failure' && steps.src.outputs.source == 'origin'

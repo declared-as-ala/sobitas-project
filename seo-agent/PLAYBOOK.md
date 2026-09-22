@@ -30,7 +30,14 @@ gates below are not optional, and "when unsure, do the smaller safe change" is t
 - Live: https://protein.tn (storefront), https://admin.protein.tn/api (public read API used
   by the frontend, e.g. `/api/productsBySubCategoryId/<slug>?meta_only=1`). Product stock/price
   are real; `BackOrder` in the schema means qte ≤ 0.
-- Blog: 224 published articles in the DB (`/blog/<slug>`), not editable from the repo yet.
+- Blog: 224 published articles in the DB (`/blog/<slug>`). Their BODY is DB-only, but their
+  internal links ARE repo-controlled: `frontend/src/util/internalLinks.ts` injects first-mention
+  links at render time from the taxonomy + synonym map built in
+  `frontend/src/app/(shop)/blog/[slug]/page.tsx`, and `frontend/src/config/blogSeoConfig.ts`
+  carries per-article `openingLinkHtml` / `bodyLinkHtml` / `internalLinks` / `faqs` / headline /
+  metaDescription. Change anchors and targets THERE (typecheck + lint gate, deploys with the
+  frontend) — never write links into `articles.description` (TipTap JSON round-trips, duplicate
+  links, no revert path).
 - Google: property `sc-domain:protein.tn`. GSC is reachable through `tools/gsc.mjs` **only when
   the environment variable `GSC_SERVICE_ACCOUNT_JSON(_B64)` is set**. Without it: the CSV exports
   in `protein.tn/` (dated) + live SERP looks. **Never invent a GSC number.**
@@ -38,6 +45,64 @@ gates below are not optional, and "when unsure, do the smaller safe change" is t
   `deploy-frontend.yml` / `deploy-filament.yml` for the paths you touched, watches them, and
   reverts your merge if a deploy fails (you will see `seo-agent: revert …` in `git log` the next
   morning — treat it as a P0 bug report against yourself).
+
+## Daily expert checklist (the senior-SEO morning, ≤ 25 min before any editing)
+
+Each line ends with the threshold that turns the check into today's job. Tools marked ⚙ do not
+exist yet — build them on the Friday sweep (see "Tools to build"), one per run, and skip the
+line until then.
+
+1. **Yesterday's landing.** `git log --oneline -20 origin/main`: `seo-agent: land …` = landed;
+   `seo-agent: revert …` = P0 against yourself (the commit names the failing run); nothing = read
+   `seo-agent/log/land/*.md` (workflow-written) and any open issue labelled `seo-agent` — a
+   hand-off issue with reason "forbidden path" or "deletes files" is NOT retried (owner's
+   call); "foreign conflict" → re-derive the change on today's branch, never re-push the old one.
+2. **Google weather.** `node seo-agent/tools/google-status.mjs` → paste its first line at the
+   top of today's log. `yes` (or an update ended < 7 days ago) = **attribution mode**: credit or
+   blame no delta on your own change, no revert / re-targeting / template-wide title formula /
+   canonical rewrite because of a mid-rollout move; verified-defect repairs, copy, FAQ and
+   product entries continue; commit messages carry `[during <update>]`. It also appends new
+   Search Central rule changes to `data/rule-changes.md` — triage each new row the day it
+   appears (max 3 BACKLOG items per run; anything that removes markup is `(needs: owner)`).
+3. **Live audit.** `node seo-agent/tools/audit-live.mjs --sample=40`. Exit 1 = P0 = today's job
+   before anything else; fix the builder, never the page. A P1 that repeats on two consecutive
+   runs on the same page type (unparseable JSON-LD, missing FAQ on in-stock PDPs, description
+   rule, `Offer.url ≠ canonical`) is promoted to P0.
+4. **Robots + sitemaps.** `curl -s -A Googlebot https://protein.tn/robots.txt | head -20`;
+   `<loc>` count per sitemap file vs yesterday's log. Δ > 5 % on any file without a landed cause
+   → P0.
+5. **Link graph** ⚙ `graph-api.mjs`: orphans (in sitemap, in no listing), listed products with
+   qte ≤ 0, brands without a page. New orphans on in-stock indexable products → Saturday; > 50
+   → today.
+6. **GSC read** (only with `GSC_SERVICE_ACCOUNT_JSON_B64`; otherwise write "no credential —
+   export dated X" and skip 6–7). `node seo-agent/tools/gsc.mjs --days=7`: totals + striking
+   distance + zero-click + split queries. Alert only when the same page family moves the same
+   direction two windows in a row and |Δclicks| > 20 % on ≥ 150 clicks/week; a family touched
+   by a `seo-agent:` commit in the last 14 days is "observe, do not act".
+7. **Index sample** (credential only) `gsc.mjs --inspect=<url>` on today's touched URLs +
+   the watchlist money pages: verdict ≠ PASS on a watchlist URL, or `googleCanonical ≠
+   userCanonical`, → builder/redirect rule today.
+8. **Category sweep** ⚙ `category-sweep.mjs` (read-only): duplicate titles, title/H1 term
+   disagreement, words-above-grid. Money category > 100 words above the grid or a duplicate
+   `metaTitle` intent → Tuesday's target.
+9. **SERP look, 5 `KEYWORDS.md` rows** (oldest `checked` first): WebSearch + WebFetch the #1
+   result; update the row. A drop ≥ 3 positions on ≥ 50 impressions → Thursday/Saturday
+   worklist, never a same-day rewrite.
+10. **Keyword discovery** (Mondays, or when a row is new): `node seo-agent/tools/suggest.mjs`.
+11. **Pick ONE theme** (priority order in step 4 below) and do it completely.
+12. **Budget.** Push by **09:00 UTC** at the latest. At 08:45 with unfinished files:
+    `git checkout -- <those files>`, mark them `[~]` in BACKLOG with the file list, commit the
+    rest, rebase, push once.
+
+**Triage runbook when step 6 alerts** (all of it before any change; finding + decision in the
+log): (1) `git log --oneline -30 origin/main` for `seo-agent: revert|land` and deploy commits in
+the drop week; (2) `audit-live.mjs --sample=120` on the losing page family; (3) robots + sitemap
+counts vs yesterday; (4) `gsc.mjs --inspect=<losing URL>`; (5) `gsc.mjs --page=<url>` —
+impressions fell = ranking/indexing, clicks-only = SERP/title; (6) WebSearch the query, note who
+took the slot; (7) `google-status.mjs` overlap. Decisions = {wait, flag-to-owner, technical-fix}.
+Technical-fix only when a live P0 confirms it. **No autonomous revert of anything**; "index
+everything" and "attested-only stars" are never revertible. A content refresh needs a decline
+confirmed over ≥ 28 days and is scheduled as a normal theme.
 
 ## Every run, in order
 
@@ -122,24 +187,81 @@ auth, payment, cart, or anything unrelated to SEO; create products; change price
 write anything you cannot source; produce thin or duplicate copy; add emoji to titles.
 
 ### 4b. Weekly rhythm (so the days compound instead of repeating)
-The P0 loop runs every day; the *theme* of the day rotates unless a P0 or an unlanded branch
-overrides it (`date -u +%u`: 1 = Monday):
-- **Mon — keywords & map.** `suggest.mjs --deep` on the head terms, GSC/WebSearch positions for
-  10 rows, refresh `KEYWORDS.md` (new commercial rows, observed positions, "Held" moves), pick
-  the week's target category.
-- **Tue — the category landing page.** Commercial-first template on the week's category
-  (BACKLOG P1): H1, grid first, chips, comparison table, FAQ, guide last. Gate + ship.
+The P0 loop runs every day; the *theme* rotates unless a P0 or an unlanded branch overrides it
+(`date -u +%u`: 1 = Monday):
+- **Mon — keywords & map.** `suggest.mjs --deep` on the head terms, 10 rows of observed
+  positions, refresh `KEYWORDS.md` (new commercial rows, "Held" moves), pick the week's target
+  category (worst words-above-grid × impressions).
+- **Tue — the category landing page.** Converge the week's category to the page standard below
+  (JSON + `category/[slug]/page.tsx` ORDER only; nothing deleted). Any PDP-builder change ships
+  in `ProductDetailClient.tsx` AND `CrawlerProductView.tsx` together (both views must expose
+  the same content and hrefs).
 - **Wed — in-stock products of that category.** 3–8 `resources/seo/products` entries (title,
-  description, guide block, FAQ) for its best sellers; queue `seo-copy-apply`.
-- **Thu — CTR pass.** Page-one zero-click rows: rewrite title/description of the ranking page
-  (category JSON or product entry with `force`), one intent word + price anchor + proof.
-- **Fri — technical sweep.** `audit-live.mjs --sample=120`; fix every builder-level P1 pattern
-  (missing FAQ block on a page type, description length rule, hreflang, schema field); verify
-  sitemaps/robots; `check:url-contract`.
-- **Sat — internal links & cannibalisation.** Split queries from GSC: decide the winner, add
-  exact-anchor links (category ↔ products ↔ related), record the blog links the owner must add.
-- **Sun — review & plan.** Re-run the audit, compare `KEYWORDS.md` positions week over week,
-  rewrite BACKLOG priorities for next week, note what worked in the log.
+  description, guide block, FAQ) for its best sellers; queue `seo-copy-apply`. Next morning,
+  read the vps-run tail in `log/land/` — `[X] COMMAND FAILED` means it did not apply, green or not.
+- **Thu — CTR pass.** Page-one zero-click rows (credential) or the SERP-look rows: rewrite
+  title/description of the ranking page — one intent word + price anchor + proof. Log
+  before/after and re-check the row in 3 weeks (`KEYWORDS.md` note).
+- **Fri — technical sweep + one tool.** `audit-live.mjs --sample=120`; every schema/link P1
+  PATTERN fixed at builder level; `check:url-contract`; read `data/rule-changes.md`; then build
+  ONE of the missing tools (⚙) and run it once in the log before its rules apply.
+- **Sat — internal links & cannibalisation.** Split queries: pick the winner (category for head
+  terms, PDP for product names), exact-anchor links category ↔ products ↔ related, blog anchors
+  via `blogSeoConfig.ts` / the synonym map (never the DB), breadcrumb head-term anchor, brand
+  href from slug not name. Dead SKUs that rank → `(needs: owner)` Redirections row.
+- **Sun — review.** Compare `KEYWORDS.md` week over week, re-run the audit, rewrite BACKLOG
+  priorities for next week, note what worked. First Sunday of the month: `gsc.mjs --days=28`,
+  count of `(needs: owner)` items, a ≤ 5-item plan in the log.
+
+### 4c. Category & product page standard (converge every money page to this)
+**Category** (e.g. `/creatine`): `<title>` ≤ 60 = `<Terme exact> Tunisie – Prix, Marques &
+Livraison | Protein.tn` (brand last, one intent word, no emoji); one `<h1>` sharing the primary
+term ("Créatine en Tunisie"); description 120–155 with price anchor + proof ("Créatine
+monohydrate et Creapure dès 70 DT. Stock réel, livraison 24–72 h partout en Tunisie, paiement à
+la livraison."). Above the fold: H1 → one commercial sentence (≤ 40 words) → **product grid**
+(24–48, in-stock first) → format/type chips → comparison table (produit · type · format · prix ·
+prix/100 g, computed from the API) → FAQ (5–8, PAA-shaped) → guide LAST (600–1,200 words). Words
+between H1 and first card ≤ 100; unique words below the grid ≥ 150. Schema: BreadcrumbList,
+CollectionPage + ItemList (URLs ⊆ grid hrefs), FAQPage. Sub-categories target DIFFERENT terms
+than the parent. `?page=N` = 200, self-canonical, `noindex, follow` — recorded, never flagged.
+
+**Product** (in-stock PDP): `meta_title` ≤ 60 = "Créatine Monohydrate OstroVit 300 g – Prix
+Tunisie | Protein.tn"; description 130–155 = price + stock + delivery. Order: H1 → price +
+availability → buy → breadcrumb/category link with the head-term anchor → brand link (href from
+brand slug) → ≥ 4 related in-stock products (server-rendered) → guide 200–400 words (H2
+"Pourquoi choisir…", "Comment prendre…", "Pour qui…") → 4–6 FAQ. Schema: Product with image,
+sku, brand.name, Offer{price > 0, TND, availability ∈ enum, url == canonical, itemCondition,
+hasMerchantReturnPolicy, priceValidUntil ≥ today}; visible `N DT` == Offer.price; ratings only
+from attested reviews. Out of stock: never noindex, never delete — qte ≤ 0 → `BackOrder`,
+`force_out_of_stock` → `OutOfStock`, page stays with in-stock alternatives. Googlebot render and
+browser render must expose the same internal hrefs (ignoring nav/footer); a diff is a P1.
+
+### 4d. Tools to build (⚙ — one per Friday; read-only, no credentials, exit 2 = "could not
+measure", never a P0; land each alone and run it once in the log before its rules apply)
+- **`category-sweep.mjs`** — every `frontend/content/categories/*.json` slug + API categories,
+  fetched live: title ≤ 60 with the KEYWORDS primary term + "Tunisie", brand last; exactly one
+  H1 sharing the term; duplicate titles/descriptions site-wide and parent vs sub; words H1 →
+  first card (≤ 100), unique words below the grid (≥ 150); mojibake (`Ã©`, `â€`); 8-word shingle
+  overlap > 30 % between two JSONs = duplicate. Output `data/category-sweep.json` + a ranked table.
+- **`graph-api.mjs`** (~1 min) — for each listing slug in `sitemaps/listings.xml` call
+  `productsBySubCategoryId/<slug>`, union product slugs, diff vs `sitemaps/products-*.xml` →
+  orphans, listed qte ≤ 0, brand_id without a page; `data/graph-latest.json` with new/fixed/open.
+- **`audit-live.mjs` extensions** — `--probes` (`/does-not-exist` = 404, `/<money-cat>?page=2`
+  self-canonical 200), `X-Robots-Tag` folded into the noindex rule, `Offer.url == canonical`,
+  `priceValidUntil ≥ today`, availability vs `/api/productsBySubCategoryId/<category>` (P1 when
+  they disagree, P0 on two consecutive runs), PDP link contract (parent-category link with the
+  head-term anchor, brand link, ≥ 4 siblings), money category ≥ 3 brand hrefs, hrefs with
+  `?search=|?sort=|?brand=`, uppercase segments, trailing slash, hrefs that HEAD to 404 or > 1 hop.
+- **`crawl-links.mjs --full`** (Sundays) — BFS from `/`, `<a href>` only, UA
+  `ProteinTnSeoBot/1.0 (+https://protein.tn; internal link audit)`, concurrency 2, 250–400 ms
+  gap, robots-aware, ≤ 3 pages per pager, no facet recursion; abort "inconclusive" if > 2 %
+  non-2xx/3xx. Flags: 4xx targets with the linking page, chains > 1 hop, 301 sources in
+  templates, non-canonical hrefs, phantom `bestProductSlugs`, zero-inbound indexable in-stock
+  products, Googlebot-vs-browser href parity on 20 PDPs. `data/crawl-latest.json`.
+- **`gsc.mjs --inspect-sample=N`** (credential only; cap 150, Friday 300, ≤ 60/min, stop on
+  429): today's touched URLs + a daily-seeded random draw per sitemap file →
+  `data/index-sample.json` + one line per run in `data/index-trend.jsonl`. Findings feed only
+  content/canonical fixes through the gates — never a noindex, never same-day.
 
 ### 5. Gate (must pass, no exceptions)
 ```bash
@@ -149,6 +271,8 @@ git checkout -- tsconfig.json           # Next rewrites it on every run
 cd ..
 for f in $(git diff --name-only -- '*.json'); do node -e "JSON.parse(require('fs').readFileSync('$f','utf8'))" || exit 1; done
 ```
+Never dump `env` / `printenv` into `log/`; if `git diff` contains `BEGIN PRIVATE KEY`,
+`"private_key"` or `"client_email"`, drop that file before committing.
 If a gate fails and you cannot fix it in 15 minutes, drop that change (`git checkout -- <file>`)
 and ship the rest. The land workflow re-runs the same gates and refuses the branch otherwise.
 

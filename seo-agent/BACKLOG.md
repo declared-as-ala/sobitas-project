@@ -68,8 +68,10 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
   queries"): `creatine tunisie`, `proteine tunisie`, `whey protein tunisie`, `serious mass
   tunisie`. For each: strengthen the category page (intro answers the query in sentence one, FAQ
   mirrors People-Also-Ask, best products block), and add exact-anchor internal links from the
-  ranking blog posts — blog HTML is in the DB, so record the needed links as `(needs: owner)` until
-  a `blog:apply-links` command exists (P2 below).
+  ranking blog posts via `frontend/src/config/blogSeoConfig.ts` (per-article `bodyLinkHtml` /
+  `internalLinks`) and the synonym map in `app/(shop)/blog/[slug]/page.tsx` — repo-controlled,
+  no owner needed. One head term per target page (the injector routes "mass gainer" to
+  `/prise-de-masse` today — decide the winner before adding anchors).
 - [ ] **Page-one zero-click queries** (`gsc.mjs` section 2): rewrite title/description of the
   ranking page for CTR — price anchor, stock, delivery, brand. Category → JSON; product → JSON
   entry with `force: true` and the GSC numbers in `why`.
@@ -86,9 +88,11 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ## P2 — technical & tooling
 
-- [ ] **`blog:apply-links` artisan command** (mirror of `seo:products-apply-copy`): a JSON of
-  `{slug: {append_html, links: [{anchor, href}]}}` applied to blog articles, so cannibalisation
-  fixes and internal linking stop needing the owner. Add `blog-links-dry-run/apply` to vps-run.
+- [x] ~~`blog:apply-links` artisan command~~ — NOT needed (verified 22/09): blog → category links
+  are already repo-controlled and live (`frontend/src/util/internalLinks.ts` first-mention
+  injector + `frontend/src/config/blogSeoConfig.ts` per-article links/FAQ; a 30-article sample
+  showed ~4 injected category anchors per post). Edit those files to change anchors/targets;
+  never write links into `articles.description`.
 - [ ] **GSC credential** `(needs: owner)`: without `GSC_SERVICE_ACCOUNT_JSON_B64` in the cloud
   environment, the routine works from the dated CSV exports in `protein.tn/` and live SERP looks.
   Steps are printed by `node seo-agent/tools/gsc.mjs`.
