@@ -374,3 +374,27 @@ beat big risky ones. The owner reads `log/` — write it for a human who has 2 m
   Do not fabricate reviews or ratings; the review-request engine is scheduled on the VPS.
 - Categories & sub-categories fight for head terms; products fight for product-name terms; the
   blog supports both with internal links and must not outrank the catalogue for money queries.
+
+## The one P0 the audit pass left open, and why it is not code (22/09/2026)
+`http://www.protein.tn/*` is a two-hop chain: Cloudflare 301s to `https://www`, then Next 308s to
+the apex. Hop 1 is a Cloudflare zone setting and hop 2 is `redirects.js`, so no repo change can
+collapse it — a Cloudflare Single Redirect rule (`http.host eq "www.protein.tn"` → apex, 301,
+preserving path and query) removes both. It matters more than its size suggests: `www.protein.tn/`
+holds 1,969 impressions at position 5.1 over 28 days, almost all of it from the Google Business
+Profile, whose website field points at the www host. Fixing the Business Profile field is the
+higher-value half and it is an owner action. URL Inspection on 22/09 confirms Google's selected
+canonical is already `https://protein.tn/`, so nothing is broken — it is pure crawl waste.
+
+## Do not re-open these (refuted 22/09/2026 with evidence)
+A 15-dimension audit raised 145 findings; ten were refuted by a skeptic reading the code and
+production. The full reasons are in `SEO_AUDIT.md` under "Checked and rejected". The three most
+likely to be re-discovered:
+- **"Bot-only category intro is cloaking"** — true on 21/09, fixed by the routine's own 06:03 run on
+  22/09 (`85b370ab`). Measure before re-reporting: the gap is now 123 words, all product names.
+- **"Product images point at the iHerb CDN, not our host"** — observed correctly, but hotlinking is
+  the deliberate arrangement for the imported catalogue; changing it is a licensing and storage
+  decision, not an SEO defect.
+- **"Product `lastmod` is a batch stamp"** — the mechanism is real but the headline was wrong by
+  more than half, and the ongoing risk is already handled.
+The lesson generalises: a stale worktree makes a fixed defect look live. `git fetch origin main`
+before believing any finding that cites a line number.
