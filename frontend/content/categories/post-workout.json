@@ -1,11 +1,11 @@
 {
   "h1": "Post-Workout Tunisie – Récupération & Reconstruction",
-  "metaTitle": "Post-Workout Tunisie : Récupération dès 45 DT | Protein.tn",
-  "metaDescription": "Achetez vos compléments post-workout en Tunisie dès 45 DT : récupération, reconstruction musculaire. Livraison 24h Tunis, Sousse, Sfax.",
+  "metaTitle": "Post-Workout Tunisie : Récupération après la Séance | Protein.tn",
+  "metaDescription": "Post-workout en Tunisie : protéines, glucides et formules recovery pour reconstruire après la séance. Livraison 24–72h, paiement à la livraison.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>nutrition post-workout</strong> est cruciale pour maximiser les résultats de votre entraînement. Après l'effort, le corps a besoin de protéines pour réparer les fibres musculaires et de glucides pour reconstituer les réserves d'énergie. Sur <strong>Protein.tn</strong>, découvrez notre sélection de compléments post-workout en Tunisie : recovery, protéines, glucides.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Post-Workout Tunisie : Prix et Livraison</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>compléments post-workout en Tunisie</strong> : à partir de 45 DT. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>nutrition post-workout</strong> est cruciale pour maximiser les résultats de votre entraînement. Après l'effort, le corps a besoin de protéines pour réparer les fibres musculaires et de glucides pour reconstituer les réserves d'énergie. Sur <strong>Protein.tn</strong>, découvrez notre sélection de compléments post-workout en Tunisie : recovery, protéines, glucides.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Post-Workout Tunisie : Prix et Livraison</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les tarifs à jour et le stock réel des <strong>compléments post-workout en Tunisie</strong> sont affichés sur chaque fiche produit. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
   "howToChooseTitle": "Comment optimiser sa récupération post-workout ?",
-  "howToChooseBody": "<ul><li><strong>Protéines</strong> : whey isolate ou concentrée dans les 30 minutes post-entraînement.</li><li><strong>Glucides</strong> : index glycémique élevé pour reconstituer le glycogène.</li><li><strong>BCEA</strong> : acides aminés essentiels pour la synthèse protéique.</li><li><strong>Créatine</strong> : idéale en post-workout pour la saturation musculaire.</li><li><strong>Glutamine</strong> : pour la récupération et l'immunité.</li><li><strong>Hydratation</strong> : indispensable après l'effort.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
+  "howToChooseBody": "<ul><li><strong>Protéines</strong> : whey isolate ou concentrée dans les 30 minutes post-entraînement.</li><li><strong>Glucides</strong> : index glycémique élevé pour reconstituer le glycogène.</li><li><strong><a href=\"/eaa\">EAA</a></strong> : les neuf acides aminés essentiels, pour soutenir la synthèse protéique.</li><li><strong>Créatine</strong> : idéale en post-workout pour la saturation musculaire.</li><li><strong>Glutamine</strong> : pour la récupération et l'immunité.</li><li><strong>Hydratation</strong> : indispensable après l'effort.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [
     {
       "question": "Que prendre après l'entraînement ?",
@@ -13,15 +13,15 @@
     },
     {
       "question": "Pourquoi la fenêtre anabolique est-elle importante ?",
-      "answer": "Les 30-60 minutes après l'entraînement sont le moment où le corps absorle mieux les nutriments pour la récupération et la synthèse protéique."
+      "answer": "Les 30-60 minutes après l'entraînement sont le moment où le corps absorbe mieux les nutriments pour la récupération et la synthèse protéique."
     }
   ],
   "relatedCategorySlugs": [
-    "pre-workout",
     "whey-proteine",
-    "bcaa",
-    "creatine",
-    "glutamine"
+    "glutamine",
+    "eaa",
+    "pre-workout",
+    "intra-workout"
   ],
   "bestProductSlugs": []
 }

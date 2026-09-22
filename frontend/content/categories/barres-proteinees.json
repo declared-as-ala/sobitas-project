@@ -1,7 +1,7 @@
 {
   "h1": "Barres protéinées & protein bars en Tunisie",
-  "metaTitle": "Protein Bar Chocolat Tunisie – Prix & Marques | Protein.tn",
-  "metaDescription": "Protein bar chocolat, caramel, cookies : barres protéinées Quest, Simply Protein, Balanced Tiger en Tunisie dès 36 DT. 6 à 20 g de protéines, sur commande.",
+  "metaTitle": "Protein Bar Chocolat Tunisie : barres protéinées | Protein.tn",
+  "metaDescription": "Protein bar chocolat, caramel ou cookies : barres Quest, Simply Protein et Balanced Tiger, de 6 à 20 g de protéines par barre. Sur commande.",
   "ogImage": "https://protein.tn/og-banner.jpg",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Cette page réunit les <strong>protein bars</strong> proposées sur Protein.tn : des <strong>barres protéinées</strong> de marques importées — Quest Nutrition, Simply Protein, Balanced Tiger, Atkins, think!, Barebells, ProBar, Raw Nutrition, No Cow — déclinées en chocolat, caramel, cookies &amp; cream, brownie ou beurre de cacahuète. Chaque fiche affiche le poids de la barre, la composition déclarée par la marque et la disponibilité du moment.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Une barre protéinée est un en-cas formulé pour apporter davantage de protéines qu’une barre de céréales ou qu’une barre chocolatée classique, dans un format qui se glisse dans un sac de sport sans préparation. Sur les fiches détaillées de ce rayon, une barre de 25 à 60 g apporte entre <strong>6 et 20 g de protéines</strong>, pour 0 à 5 g de sucres déclarés ; la source de protéines (lait, blanc d’œuf, soja, pois, riz) et la nature des fibres ou des édulcorants varient d’une marque à l’autre. La comparaison se fait donc sur le tableau nutritionnel et la liste d’ingrédients, pas sur le visuel de l’emballage.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>chocolat</strong> est la saveur la plus représentée du rayon : chocolat noir, chocolat-caramel, chocolate chip cookie dough, brownie, peanut butter chocolate. Sur une protein bar, il désigne le plus souvent un enrobage ou des pépites ; le cacao apporte peu de protéines, et une partie des lipides et des sucres de la barre vient de là. Deux barres chocolat de même poids peuvent afficher des teneurs en sucres, en fibres et en protéines très différentes : lisez les lignes « protéines » et « sucres » plutôt que le nom de la saveur.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les références de cette catégorie sont proposées <strong>sur commande</strong> : le délai et les conditions de livraison sont affichés sur chaque fiche avant validation du panier, avec paiement à la livraison. Le guide ci-dessous explique comment lire l’étiquette d’une barre protéinée, comment comparer une protein bar chocolat à une autre, et quelle place lui donner à côté d’une <a href=\"/whey-proteine\">whey protéine</a>, d’une <a href=\"/proteines-vegetales\">protéine végétale</a> ou d’un repas.</p>",
   "howToChooseTitle": "Comment choisir sa barre protéinée en Tunisie ?",
@@ -45,11 +45,10 @@
     }
   ],
   "relatedCategorySlugs": [
+    "proteines",
     "whey-proteine",
     "proteines-vegetales",
-    "proteines",
-    "caseine",
-    "bruleurs-de-graisse"
+    "caseine"
   ],
   "bestProductSlugs": [
     "quest-nutrition-protein-bar-crispy-chocolate-caramel-pecan-60-g-161140",

@@ -1,7 +1,7 @@
 {
-  "h1": "Gainers protéinés en Tunisie : lean gainer et gainer riche en protéines",
-  "metaTitle": "Gainer Protéiné Tunisie : Lean Gainer dès 120 DT | Protein.tn",
-  "metaDescription": "Achetez vos gainers protéinés en Tunisie dès 120 DT : protéines + glucides pour la prise de masse musculaire. Livraison 24h Tunis, Sousse, Sfax.",
+  "h1": "Lean gainer en Tunisie : les gainers protéinés, ratio 1:2",
+  "metaTitle": "Lean Gainer en Tunisie : Gainers Protéinés | Protein.tn",
+  "metaDescription": "Le lean gainer en Tunisie : 400 à 700 kcal par dose et environ deux parts de glucides pour une de protéines, pour grossir sans excès. Livraison 24-72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>gainers protéinés</strong> sont des compléments qui combinent protéines de qualité et glucides pour favoriser la prise de masse musculaire. Plus équilibrés que les mass gainers ultra-caloriques, ils conviennent à ceux qui veulent augmenter leur masse musculaire sans excès de gras. Sur <strong>Protein.tn</strong>, retrouvez notre sélection en Tunisie.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Gainer protéiné ou mass gainer ?</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La différence tient à la densité calorique et au ratio entre glucides et protéines. Un <strong>gainer protéiné</strong>, souvent appelé lean gainer, se situe généralement entre 400 et 700 kcal par dose, avec un ratio proche de 1:2 — une part de protéines pour deux parts de glucides. Un <strong>mass gainer</strong> dépasse 1000 kcal par dose, avec un ratio de 1:4 ou plus. Le premier vise une prise de masse progressive en limitant la part de gras ; le second s'adresse à ceux qui n'arrivent pas du tout à augmenter leur poids.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Ce qu'apporte réellement un gainer protéiné</h2><ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\"><li><strong>Des calories sous forme buvable</strong> : utile quand l'appétit, et non la motivation, est ce qui bloque la prise de poids.</li><li><strong>Des protéines en quantité utile</strong> : 30 à 40 g par dose, soit l'équivalent d'une bonne portion de viande ou de poisson.</li><li><strong>Des glucides autour de la séance</strong> : ils reconstituent les réserves de glycogène et facilitent l'enchaînement des entraînements.</li><li><strong>Une progression maîtrisable</strong> : la dose se fractionne, ce qui permet d'ajuster le surplus calorique semaine après semaine.</li><li><strong>Un usage souple</strong> : en collation entre deux repas, ou après l'entraînement quand le repas suivant est encore loin.</li></ul><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Un gainer reste un complément : il s'ajoute à une alimentation structurée et à un entraînement en force régulier, il ne les remplace pas. Ces informations sont données à titre indicatif — en cas de pathologie ou de traitement en cours, demandez l'avis d'un professionnel de santé.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Gainers Protéinés Tunisie : Prix et Livraison</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>gainers protéinés en Tunisie</strong> : à partir de 120 DT pour 2-3 kg. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison.</p>",
   "howToChooseTitle": "Comment choisir son gainer protéiné en Tunisie ?",
@@ -45,11 +45,11 @@
     }
   ],
   "relatedCategorySlugs": [
-    "mass-gainers",
     "prise-de-masse",
+    "mass-gainers",
+    "glucides",
     "whey-proteine",
-    "creatine",
-    "glucides"
+    "creatine"
   ],
   "bestProductSlugs": []
 }

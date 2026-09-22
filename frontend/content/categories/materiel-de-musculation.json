@@ -1,12 +1,25 @@
 {
-  "h1": "Matériel de Musculation Tunisie – Équipement Fitness",
-  "metaTitle": "Matériel Musculation Tunisie : Fitness à Domicile | Protein.tn",
-  "metaDescription": "Achetez votre matériel de musculation en Tunisie : haltères, barres, élastiques, tapis. Équipez votre home gym. Livraison 24h Tunis, Sousse, Sfax.",
+  "h1": "Matériel de musculation en Tunisie : machines, bancs et barres",
+  "metaTitle": "Matériel de Musculation Tunisie : Machines et Bancs | Protein.tn",
+  "metaDescription": "Matériel de musculation en Tunisie : machines guidées, bancs réglables, barres, disques et racks pour votre home gym. Livraison 24–72h partout en Tunisie.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>matériel de musculation</strong> pour votre home gym : haltères, barres, poids, élastiques, tapis de sol. Tout pour vous entraîner chez vous en Tunisie. Sur <strong>Protein.tn</strong>, retrouvez notre sélection d'équipements fitness.</p>",
+  "intro": "<p>Le <strong>matériel de musculation</strong> réuni sur cette page, c'est l'équipement lourd : machines guidées, bancs réglables, barres, disques et racks de rangement, de quoi monter un vrai home gym en Tunisie. Chaque référence est affichée avec son prix en dinars et son stock réel, et vous payez à la réception.</p>\n\n<h2>Machines, bancs, barres : par quoi commencer ?</h2>\n<p>Un banc réglable, une barre olympique et un jeu de disques couvrent déjà la majorité des mouvements de base. Les machines guidées — presse à cuisses, poulie, station multifonction — viennent ensuite, quand la place et le budget suivent : elles encadrent le mouvement et rendent le travail lourd possible sans partenaire.</p>\n\n<h2>Le reste de l'équipement sportif</h2>\n<p>Les gants, ceintures, sangles et bandes de maintien ne sont pas sur cette page : ils sont regroupés sur <a href=\"/accessoires\">les accessoires de musculation</a>. Les tapis roulants, vélos, rameurs et elliptiques ont leur propre rayon, <a href=\"/cardio-fitness\">cardio et fitness</a>. Pour parcourir l'ensemble, remontez à <a href=\"/equipement\">l'équipement de sport</a>.</p>",
   "howToChooseTitle": "Comment choisir son matériel de musculation ?",
-  "howToChooseBody": "<ul><li><strong>Haltères</strong> : réglables ou fixes selon votre budget.</li><li><strong>Barres</strong> : barre droite, barre EZ, barre de traction.</li><li><strong>Poids</strong> : disques en fonte ou caoutchouc.</li><li><strong>Élastiques</strong> : plusieurs niveaux de résistance.</li><li><strong>Tapis</strong> : antidérapant pour le sol.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
-  "faqs": [],
-  "relatedCategorySlugs": [],
+  "howToChooseBody": "<ul><li><strong>Banc réglable</strong> : le premier achat vraiment utile — dossier inclinable pour le développé couché, incliné et les épaules.</li><li><strong>Barre et disques</strong> : barre olympique pour les charges lourdes, barre EZ pour les bras, disques en fonte ou caoutchoutés selon votre sol.</li><li><strong>Haltères</strong> : réglables quand la place manque, fixes avec un support quand vous montez une vraie salle.</li><li><strong>Machines guidées</strong> : presse à cuisses, poulie, station multifonction — mouvement encadré, utile pour s'entraîner seul.</li><li><strong>Rangement</strong> : un rack à disques ou à haltères protège le sol et prolonge la vie du matériel.</li><li><strong>Livraison</strong> : 24–72h partout en Tunisie, paiement à la réception.</li></ul>",
+  "faqs": [
+    {
+      "question": "Quel matériel de musculation pour commencer chez soi ?",
+      "answer": "Un banc réglable, une barre avec ses disques et une paire d'haltères couvrent l'essentiel des mouvements. Les machines guidées viennent dans un second temps, quand la place le permet."
+    },
+    {
+      "question": "Quelle différence entre le matériel de musculation et les accessoires ?",
+      "answer": "Le matériel regroupe les machines, bancs, barres, disques et racks. Les gants, ceintures, sangles et bandes de maintien sont des accessoires et se trouvent sur la page Accessoires."
+    }
+  ],
+  "relatedCategorySlugs": [
+    "equipement",
+    "accessoires",
+    "cardio-fitness"
+  ],
   "bestProductSlugs": []
 }

@@ -1,11 +1,11 @@
 {
-  "h1": "Intra-Workout Tunisie – Hydratation & Performance",
-  "metaTitle": "Intra-Workout Tunisie : Pendant l'Entraînement | Protein.tn",
-  "metaDescription": "Achetez vos compléments intra-workout en Tunisie : BCAA, électrolytes, glucides. Restez performant pendant l'effort. Livraison 24h Tunis, Sousse, Sfax.",
+  "h1": "Intra-workout en Tunisie : tenir l'intensité sur la durée",
+  "metaTitle": "Intra-Workout Tunisie : Électrolytes et Hydratation | Protein.tn",
+  "metaDescription": "Intra-workout en Tunisie : électrolytes, glucides et boissons d'effort pour tenir l'intensité sur les séances longues. Livraison 24–72h en Tunisie.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>nutrition intra-workout</strong> maintient votre performance pendant l'entraînement. BCAA, électrolytes, glucides à chaîne ramifiée — tout pour rester hydraté, énergisé et éviter le catabolisme. Sur <strong>Protein.tn</strong>, retrouvez notre sélection intra-workout en Tunisie.</p><h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Intra-Workout Tunisie : Prix et Livraison</h2><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\"><strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison disponible.</p>",
+  "intro": "<p>La <strong>nutrition intra-workout</strong> sert à tenir l'intensité du début à la fin de la séance : rester hydraté, remplacer les minéraux perdus dans la sueur et, sur les séances longues, garder du carburant disponible. Sur <strong>Protein.tn</strong>, retrouvez les boissons d'effort, les électrolytes et les glucides à diluer dans la gourde.</p><h2>Ce que l'on prend pendant l'effort</h2><p>Trois leviers, dans cet ordre : l'eau, les <strong>électrolytes</strong> (sodium, potassium, magnésium), puis les <strong>glucides</strong> si la séance dépasse l'heure. Les acides aminés libres n'arrivent qu'ensuite, et seulement si l'apport en protéines de la journée est bas — c'est le sujet des <a href=\"/eaa\">EAA</a>.</p><h2>Intra-workout : livraison partout en Tunisie</h2><p><strong>Protein.tn</strong> livre en 24 à 72 heures partout en Tunisie, avec paiement à la livraison.</p>",
   "howToChooseTitle": "Comment choisir son intra-workout ?",
-  "howToChooseBody": "<ul><li><strong>BCAA</strong> : 5-10g pendant l'entraînement pour prévenir le catabolisme.</li><li><strong>Électrolytes</strong> : sodium, potassium, magnésium pour l'hydratation.</li><li><strong>Glucides</strong> : pour maintenir l'énergie pendant les séances longues.</li><li><strong>Citrulline</strong> : pour le pump et le flux sanguin.</li><li><strong>Format</strong> : poudre à mélanger dans votre gourde.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
+  "howToChooseBody": "<ul><li><strong>Électrolytes</strong> : sodium, potassium et magnésium, le premier vrai levier sur une séance qui fait transpirer.</li><li><strong>Glucides</strong> : utiles au-delà d'une heure d'effort, pour maintenir l'intensité sur la fin de séance.</li><li><strong>Acides aminés</strong> : un appoint, pas une base — voir les <a href=\"/eaa\">EAA</a> si vous vous entraînez à jeun.</li><li><strong>Congestion</strong> : la <a href=\"/citrulline\">citrulline</a> se prend avant la séance, pas pendant.</li><li><strong>Format</strong> : une poudre qui se dissout vraiment dans la gourde, sans dépôt au fond.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [
     {
       "question": "Qu'est-ce qu'un complément intra-workout ?",
@@ -19,9 +19,9 @@
   "relatedCategorySlugs": [
     "pre-workout",
     "post-workout",
-    "bcaa",
+    "eaa",
     "citrulline",
-    "whey-proteine"
+    "performance"
   ],
   "bestProductSlugs": []
 }
