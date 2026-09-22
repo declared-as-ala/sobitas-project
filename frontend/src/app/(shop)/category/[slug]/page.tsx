@@ -8,7 +8,11 @@ import { getCategories, getInStockCount, getShopFacets } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
 // no canonical — the exact shell measured under crawl load).
-import { getCachedCategoryOrSubCategoryMetadata as fetchCategoryOrSubCategory } from '@/services/getCachedProductDetails';
+import {
+  getCachedCategoryOrSubCategoryMetadata as fetchCategoryOrSubCategory,
+  getCachedAllBrands,
+} from '@/services/getCachedProductDetails';
+import type { Brand } from '@/types';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
@@ -24,7 +28,7 @@ import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisi
 import { getProductLink, getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
-import { CategorySeoLanding } from '@/app/(shop)/category/CategorySeoLanding';
+import { CategorySeoLanding, COMPARISON_SLUGS } from '@/app/(shop)/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
 import { Suspense } from 'react';
@@ -610,6 +614,39 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   }
 }
 
+
+/**
+ * Brand lookup for the comparison table, fetched ONLY for the slugs that mount it.
+ *
+ * ── WHY THIS EXISTS ─────────────────────────────────────────────────────────────────────────────
+ * The table needs brand NAMES; the listing payload carries `brand_id` and nothing else. The obvious
+ * source, `sub.brands` / `cat.brands`, is empty on this route and always will be: this page awaits
+ * `getCachedCategoryOrSubCategoryMetadata`, which calls the taxonomy endpoints with `?meta_only=1`,
+ * and that payload answers `brands: []` and `products: []` by design. Measured live 22/09/2026:
+ * GET /api/productsBySubCategoryId/creatine?meta_only=1 -> keys {sous_category, seo, breadcrumb,
+ * products, brands, sous_categories}, brands 0, products 0.
+ *
+ * The crawler route reads `data.brands` off the FULL payload (getCachedCategoryOrSubCategory, no
+ * meta_only) and so had a populated list. Passing the empty one here therefore did not merely make
+ * the table miss — it made it render for Googlebot and for nobody else, on the one page in this
+ * cluster that has to rank. That is the cloaking shape the gate was written to prevent, so the gate
+ * did its job and stayed shut; this is the missing input, not a loosened condition.
+ *
+ * ── WHY IT IS GATED ON THE SLUG ─────────────────────────────────────────────────────────────────
+ * getAllBrands is a 566-row fetch. Calling it on all ~50 category renders to serve one table would
+ * be a real cost for no gain, so it is awaited only when the slug actually mounts the table. It is
+ * request-deduped by React `cache()`, so metadata and body share the one call.
+ */
+async function comparisonBrands(slug: string): Promise<Brand[]> {
+  if (!COMPARISON_SLUGS.has(slug)) return [];
+  try {
+    return await getCachedAllBrands();
+  } catch {
+    // A brand-list outage must cost the table, never the page: the gate sees [] and stays shut.
+    return [];
+  }
+}
+
 export default async function CategoryPage({ params, searchParams }: PageProps) {
   const { slug } = await params;
   const listingQuery = parseShopQuery(searchParams ? await searchParams : undefined);
@@ -813,11 +850,42 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         hasHowTo ||
         hasLongBottom ||
         relatedCategories.length > 0 ||
-        bestProducts.length > 0;
+        bestProducts.length > 0 ||
+        /* A slug that mounts the comparison table must get the below-fold instance even if the CMS
+           has written it no copy at all: the table IS content below the fold, and without this
+           clause a category with a product grid and an empty SEO record would build the rows, pass
+           the gate inside the component, and then never render it because the component itself was
+           never mounted. /creatine has an intro, FAQs and lateral links, so this changes nothing
+           today — it is here so the gate cannot be switched on for a slug where it silently dies. */
+        COMPARISON_SLUGS.has(canonicalSlug);
       const categorySeoLandingBottom = !isPaged && hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}
+          /*
+            ── THE COMPARISON TABLE'S TWO INPUTS, BOTH ALREADY FETCHED ──────────────────────────
+            NO NEW REQUEST IS MADE FOR EITHER, and that is the whole reason the table was written
+            as a pure server component that fetches nothing.
+
+            `products` is the exact array the grid above is drawing — the page of 24 that
+            `loadListingPage` returned for THIS URL, not a second, differently-sorted call. The
+            table therefore ranks the products the shopper can already see, which is what makes it
+            a summary of the page rather than a second, competing listing.
+
+            `brands` comes off the taxonomy payload this route awaited before it knew which branch
+            to take (`productsBySubCategoryId`, which returns `brands` beside `products` — the
+            brands of every product in the subcategory, so it is a superset of this page's 24).
+            It is needed because the listing endpoint cannot supply it: `shopQueryToApiParams`
+            sends `light=1` to /api/all_products precisely to drop the 56 KB brand list, so
+            `productsData.brands` is ALWAYS `[]` on this route. Passing that would have satisfied
+            the prop and failed the gate, which requires a non-empty lookup — the table would have
+            stayed dark while looking wired up.
+
+            Both are passed only to the below-fold instance. The header instance renders above the
+            grid, where a price table would sit before the products it compares.
+          */
+          products={productsData.products}
+          brands={await comparisonBrands(canonicalSlug)}
           intro={introForLandingSub}
           longBottomHtml={merged.longBottomHtml?.trim() ? merged.longBottomHtml : null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
@@ -1001,11 +1069,27 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         hasHowToCat ||
         hasLongBottomCat ||
         relatedCategories.length > 0 ||
-        bestProducts.length > 0;
+        bestProducts.length > 0 ||
+        // Same clause, same reason as the subcategory branch above.
+        COMPARISON_SLUGS.has(canonicalSlug);
       const categorySeoLandingBottom = !isPaged && hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}
+          /*
+            The same two props as the subcategory branch, from the same two places: the page of
+            products `loadListingPage` already returned, and the brand list the taxonomy payload
+            already carried (`productsByCategoryId` returns `brands` beside `products`).
+
+            /creatine resolves as a SUBcategory, so this branch is not what lights the table up
+            today — `fetchCategoryOrSubCategory` tries productsBySubCategoryId first and it answers
+            200 for this slug. It is wired anyway because leaving one of two symmetric branches
+            unfed turns "add a slug to COMPARISON_SLUGS" into a coin flip: a top-level category
+            added to that set would pass the gate in the crawler view and fail it here, which is
+            exactly the bot-only render the gate exists to make impossible.
+          */
+          products={productsData.products}
+          brands={await comparisonBrands(canonicalSlug)}
           intro={introForLandingCat}
           longBottomHtml={mergedCat.longBottomHtml?.trim() ? mergedCat.longBottomHtml : null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}

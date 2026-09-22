@@ -294,6 +294,24 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     );
     const products: Product[] = (productsData.products ?? []) as Product[];
     /*
+     * ── THE BRAND LOOKUP THE COMPARISON TABLE NEEDS, OFF A PAYLOAD ALREADY IN HAND ────────────
+     * NO EXTRA REQUEST. `catResult` was awaited at the top of this branch to resolve the slug, and
+     * both taxonomy endpoints return `brands` beside `products` (productsBySubCategoryId and
+     * productsByCategoryId each build it from their own product set, so it covers every product
+     * this listing can show, not just page 1's).
+     *
+     * It cannot come from `productsData`. `shopQueryToApiParams` sends `light=1` to
+     * /api/all_products to drop the 566-row brand list — 56 KB against 12 KB of products — so
+     * `productsData.brands` is ALWAYS `[]` here. Passing that would fill the prop and still fail
+     * the `brands.length > 0` clause of the gate below, leaving the table dark on both renders
+     * while every line of wiring looked correct.
+     *
+     * The human route reads the SAME field off the SAME endpoint (through its own request-scoped
+     * memo of it), so the two renders resolve identical brand names for identical rows — which is
+     * the property the gate is protecting.
+     */
+    const listingBrands: Brand[] = ((data as { brands?: Brand[] }).brands ?? []) as Brand[];
+    /*
      * ── PAGE 2+ CARRIES THE PRODUCTS AND NOTHING ELSE ─────────────────────────────────────────
      *
      * Measured live as Googlebot on 22/09/2026: /creatine?page=2 was 183 KB and shipped the SAME
@@ -453,6 +471,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
           faqs={faqs}
           breadcrumbs={breadcrumbs}
           products={products}
+          brands={listingBrands}
           subCategories={subCats}
           relatedCategories={relatedCategories}
           pagination={{

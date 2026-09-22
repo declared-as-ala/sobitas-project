@@ -28,7 +28,7 @@ export interface BlogSeoEntry {
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   'creatine-a-quoi-ca-sert-et-pourquoi-en-prendre': {
     headline: "Créatine : à quoi ça sert et pourquoi en prendre ?",
-    openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, retrouvez notre sélection de <a href=\"/creatine\">créatine monohydrate en Tunisie</a>.</p>",
+    openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, vous pouvez <a href=\"/creatine\">voir nos créatines disponibles en Tunisie</a>.</p>",
     dateModified: '2026-09-08',
     lang: 'fr',
     faqs: [],
@@ -481,10 +481,32 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
 
   // ── Creatine commercial intent blog posts ─────────────────────────────────
 
+  /*
+   * 22/09/2026 — TWO CHANGES, both structural.
+   *
+   * 1. The body link became the opening link. openingLinkHtml is PREPENDED to the body and
+   *    bodyLinkHtml is APPENDED (blog/[slug]/page.tsx, lines 284-300), so an entry carrying
+   *    both renders two links to the same URL out of one article. The first anchor is the one
+   *    Google weighs, so only that one is kept.
+   *
+   * 2. The first FAQ asserted that creatine "commence à environ 29 DT pour un format 300 g"
+   *    and "monte jusqu'à 120–150 DT" for 1 kg. Checked against the live catalogue on
+   *    22/09/2026 (Googlebot fetch of /creatine): the cheapest in-stock creatine of ANY size
+   *    is 59 DT (Real Pharm 150 g), the cheapest 300 g is 99 DT, and no 1 kg format is listed
+   *    at all. These FAQs ship as FAQPage schema on the best-earning creatine URL we own
+   *    (34 clicks / 3 months), so the figure was a false structured-data price claim. It is
+   *    replaced by the method — prix du pot ÷ poids net — which carries no number that can go
+   *    stale, and the live prices are one click away on /creatine.
+   *
+   *    The second FAQ is deliberately left alone: "30 à 40 % moins cher au gramme" states a
+   *    relationship between formats, not a price, and nothing in the catalogue contradicts it.
+   */
   'prix-de-la-creatine-en-tunisie': {
-    bodyLinkHtml: '<p>Pour comparer les offres avec ces critères, consultez les <a href="/creatine">prix et formats des créatines disponibles en Tunisie</a>.</p>',
+    openingLinkHtml:
+      '<p>Pour appliquer ces critères aux produits réellement en rayon, vous pouvez <a href="/creatine">comparer nos créatines et leurs prix du jour</a>.</p>',
+    dateModified: '2026-09-22',
     faqs: [
-      { question: "Quel est le prix moyen de la créatine en Tunisie ?", answer: "Le prix de la créatine monohydrate en Tunisie commence à environ 29 DT pour un format 300 g et monte jusqu'à 120–150 DT pour les formats 1 kg de marques premium comme Optimum Nutrition ou MuscleTech. Le format et la marque influencent fortement le prix au gramme." },
+      { question: "Comment comparer le prix d'une créatine en Tunisie ?", answer: "Ne comparez pas le prix affiché mais le prix au gramme : divisez le prix du pot par son poids net en grammes. Deux pots vendus au même prix ne contiennent pas forcément la même quantité, et un format plus grand fait presque toujours baisser le coût au gramme. Les prix à jour de chaque référence sont affichés sur la page créatine de Protein.tn." },
       { question: "Comment comparer les prix de la créatine selon le format ?", answer: "Calculez toujours le prix au gramme (prix total ÷ poids net en grammes). Un format 1 kg est généralement 30 à 40 % moins cher au gramme qu'un 300 g. Les formats Creapure® sont un peu plus chers mais garantissent une pureté maximale." },
     ],
     internalLinks: [
@@ -528,7 +550,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     metaDescription:
       'Ce que la créatine fait réellement, à quelle dose, et les critères à vérifier sur une marque avant d’acheter : pureté, format, étiquette.',
     openingLinkHtml:
-      '<p>Pour passer au choix d’un pot, voir notre page <a href="/creatine">créatine Tunisie</a>.</p>',
+      '<p>Pour passer du principe au choix d’un pot, parcourez <a href="/creatine">notre sélection de créatine</a> en Tunisie.</p>',
     dateModified: '2026-09-22',
     faqs: [
       { question: "Quelles marques de créatine sont disponibles en Tunisie ?", answer: "Optimum Nutrition, MuscleTech, BSN, Quamtrax, Kevin Levrone et d'autres marques internationales sont disponibles sur Protein.tn avec livraison rapide partout en Tunisie." },
@@ -541,6 +563,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   'meilleure-creatine-2026-notre-guide-pour-bien-choisir': {
+    openingLinkHtml:
+      '<p>Les critères ci-dessous s’appliquent aux produits en rayon : <a href="/creatine">voir les créatines disponibles</a> chez Protein.tn.</p>',
+    dateModified: '2026-09-22',
     faqs: [
       { question: "Quelle est la meilleure créatine en 2026 ?", answer: "La créatine monohydrate reste la référence en 2026 : la mieux documentée, la plus abordable et la plus efficace. Pour une pureté maximale, les produits Creapure® sont le choix des athlètes de compétition. La créatine micronisée est idéale pour une meilleure dissolution et tolérance digestive." },
       { question: "La créatine Creapure® est-elle disponible en Tunisie ?", answer: "Oui, plusieurs produits certifiés Creapure® sont disponibles sur Protein.tn avec livraison rapide partout en Tunisie et paiement à la livraison." },
@@ -553,7 +578,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
 
   'les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis': {
     openingLinkHtml:
-      '<p>Toutes les marques comparées ici sont listées avec leur prix du jour sur notre page <a href="/creatine">créatine Tunisie</a>.</p>',
+      '<p>Toutes les marques comparées ici sont listées avec leur prix du jour sur notre page <a href="/creatine">créatine en Tunisie</a>.</p>',
     dateModified: '2026-09-22',
     faqs: [
       { question: "Quelle est la meilleure marque de créatine disponible en Tunisie ?", answer: "Optimum Nutrition (Micronized Creatine), MuscleTech (Platinum Creatine), Quamtrax et BSN sont parmi les meilleures marques disponibles en Tunisie. Le choix dépend de votre budget et de vos préférences (poudre ou capsules, monohydrate ou Creapure®)." },
@@ -565,12 +590,28 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
   },
 
+  /*
+   * 22/09/2026 — RETARGETED. Live <title> was "Créatine Tunisie : prix comparatif et comment
+   * choisir", i.e. both head terms /creatine is titled for, on an article that earned 0 clicks
+   * for 5 impressions in the 28 days to 22/09/2026 (Pages.csv). No measured traffic to lose,
+   * one claimant removed from "créatine tunisie" / "créatine prix tunisie". The headline now
+   * names the choice question the body actually answers; the URL and the body are untouched.
+   *
+   * The old FAQ's "60 DT pour 1 kg … 30 DT pour un 300 g" went with it. It was written as an
+   * illustration but shipped as FAQPage schema, where it reads as a price claim — and no
+   * creatine in the live catalogue is anywhere near those prices (cheapest 300 g in stock =
+   * 99 DT on 22/09/2026). Its replacement states the ratio method and names no dinar figure.
+   */
   'creatine-prix-en-tunisie-et-comment-choisir-le-meilleur-produit': {
+    headline: 'Créatine monohydrate, micronisée ou Creapure® : laquelle choisir',
+    metaDescription:
+      'Ce qui sépare réellement une créatine monohydrate classique, une version micronisée et un label Creapure®, et comment arbitrer entre les trois.',
     openingLinkHtml:
-      '<p>Les prix du jour, par format et par marque, sont sur notre page <a href="/creatine">créatine prix Tunisie</a>.</p>',
+      '<p>Une fois le type choisi, <a href="/creatine">les prix des créatines disponibles en Tunisie</a> sont affichés format par format.</p>',
     dateModified: '2026-09-22',
     faqs: [
-      { question: "Comment choisir la meilleure créatine selon son prix en Tunisie ?", answer: "Comparez le prix au gramme plutôt que le prix total. Une créatine monohydrate à 60 DT pour 1 kg est plus économique qu'un 300 g à 30 DT. Pour un maximum de qualité, choisissez un produit certifié Creapure® même à prix légèrement supérieur." },
+      { question: "Faut-il payer plus cher pour une créatine micronisée ou Creapure® ?", answer: "La micronisation ne change pas la molécule : elle réduit la taille des particules, ce qui améliore la dissolution dans l'eau et la tolérance digestive. Le label Creapure® atteste d'un site de production et d'un contrôle de pureté. Ni l'un ni l'autre n'augmente l'efficacité de la créatine : ils se paient pour le confort d'utilisation et la traçabilité." },
+      { question: "Comment comparer deux créatines dont les prix diffèrent ?", answer: "Ramenez chaque pot au prix au gramme : prix du pot ÷ poids net en grammes. C'est le seul calcul qui rend deux formats comparables, et il fait souvent apparaître qu'un pot affiché plus cher revient moins cher à l'usage." },
     ],
     internalLinks: [
       { anchor: 'prix de la créatine chez Protein.tn', href: '/creatine' },
@@ -579,18 +620,36 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   'meilleur-creatine-pour-prise-de-masse': {
+    openingLinkHtml:
+      '<p>Pour choisir un produit, <a href="/creatine">nos créatines monohydrate en Tunisie</a> sont listées avec leurs formats et leurs prix.</p>',
+    dateModified: '2026-09-22',
     faqs: [
       { question: "Quelle créatine prendre pour la prise de masse ?", answer: "La créatine monohydrate est la meilleure option pour la prise de masse : elle augmente la force pour des séances plus efficaces, favorise la volumisation musculaire et est abordable. Associez-la à une whey protein de qualité et un surplus calorique pour des résultats optimaux." },
       { question: "Créatine et whey protein : peut-on les combiner ?", answer: "Oui, c'est même recommandé. La créatine améliore la force pendant l'entraînement, la whey optimise la récupération et la synthèse protéique après. Prenez 3–5 g de créatine n'importe quand dans la journée et votre shaker de whey dans l'heure post-entraînement." },
     ],
     internalLinks: [
-      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine et prise de masse', href: '/creatine' },
       { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
       { anchor: 'mass gainer pour la prise de masse en Tunisie', href: '/mass-gainers' },
     ],
   },
 
+  /*
+   * 22/09/2026 — RETARGETED. Live <title> was "Acheter créatine originale en Tunisie : le
+   * guide complet" — a transactional title on an article with no row at all in the 28-day
+   * Pages export (0 clicks, 0 recorded impressions), while a second post,
+   * ou-acheter-de-la-creatine-en-tunisie, already holds the same "où acheter" intent at
+   * pos 10.8. That one earns impressions and is left alone; this one now names the
+   * authenticity check it genuinely documents, so the buying intent is left to /creatine.
+   * URL and body unchanged.
+   */
   'ou-acheter-de-la-creatine-originale-en-tunisie-le-guide-complet': {
+    headline: 'Créatine authentique : les points à vérifier sur un pot',
+    metaDescription:
+      'Sceau de sécurité, numéro de lot, date de péremption, mention de l’importateur : ce qu’il faut contrôler sur un pot de créatine avant de l’ouvrir.',
+    openingLinkHtml:
+      '<p>Si vous préférez partir d’une référence déjà tracée, voici <a href="/creatine">notre sélection de créatines originales</a>.</p>',
+    dateModified: '2026-09-22',
     faqs: [
       { question: "Comment reconnaître une créatine originale en Tunisie ?", answer: "Une créatine originale porte un sceau de sécurité intact, un numéro de lot lisible et une date de péremption claire. Les produits Creapure® ont un logo distinctif sur l'emballage. Achetez toujours auprès d'un distributeur agréé comme Protein.tn." },
       { question: "Protein.tn vend-il de la créatine originale ?", answer: "Oui. Protein.tn importe directement ses créatines auprès des fabricants ou distributeurs officiels. Chaque produit a un numéro de lot traçable. Livraison partout en Tunisie avec paiement à la livraison." },
@@ -603,14 +662,14 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
 
   'quelle-est-la-meilleure-creatine-monohydrate-en-tunisie': {
     openingLinkHtml:
-      '<p>Formats, marques et prix des <a href="/creatine">créatines monohydrate disponibles en Tunisie</a>.</p>',
+      '<p>Pour passer du comparatif au produit, vous pouvez <a href="/creatine">découvrir les créatines monohydrate</a> vendues en Tunisie, avec leurs formats et leurs prix.</p>',
     dateModified: '2026-09-22',
     faqs: [
       { question: "Quelle créatine monohydrate choisir en Tunisie ?", answer: "Optimum Nutrition Micronized Creatine et MuscleTech Platinum Creatine sont parmi les meilleures options disponibles en Tunisie. Pour la pureté maximale, choisissez un produit Creapure®. Comparez les prix et les formats sur Protein.tn." },
       { question: "La créatine monohydrate micronisée est-elle meilleure ?", answer: "La créatine micronisée est chimiquement identique à la monohydrate classique, mais ses particules ultra-fines améliorent la solubilité dans l'eau et la tolérance digestive. Elle est préférable si vous avez un estomac sensible ou si votre créatine ne se dissout pas bien." },
     ],
     internalLinks: [
-      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'comparer les créatines monohydrate', href: '/creatine' },
       { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
@@ -624,7 +683,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    */
   'meilleures-marques-de-creatine-en-tunisie': {
     openingLinkHtml:
-      '<p>Formats, marques et prix des <a href="/creatine">créatines disponibles en Tunisie</a>.</p>',
+      '<p>Les produits évoqués ici sont regroupés dans <a href="/creatine">notre rayon créatine en Tunisie</a>, avec leurs formats et leurs prix.</p>',
     dateModified: '2026-09-22',
     faqs: [
       { question: "La créatine fait-elle gonfler ou prendre du poids chez la femme ?", answer: "La créatine retient de l'eau à l'intérieur du muscle, pas sous la peau. La variation observée sur la balance les premières semaines vient de cette eau intramusculaire, et elle n'est pas de la masse grasse." },
@@ -632,7 +691,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { question: "La créatine présente-t-elle un risque pour les reins ?", answer: "Chez des personnes en bonne santé, la créatine monohydrate aux doses recommandées (3–5 g/j) est considérée comme sûre. Si vous avez des problèmes rénaux préexistants, ou en cas de grossesse ou d'allaitement, demandez l'avis de votre médecin avant de commencer." },
     ],
     internalLinks: [
-      { anchor: 'créatine Tunisie', href: '/creatine' },
+      { anchor: 'rayon créatine', href: '/creatine' },
       { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },
@@ -648,6 +707,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     headline: 'Prix de la créatine : calculer le coût au gramme selon le format',
     metaDescription:
       'Comment ramener le prix d’une créatine au gramme, ce que change le passage d’un 300 g à un 1 kg, et pourquoi un label de pureté se paie un peu plus cher.',
+    openingLinkHtml:
+      '<p>Le calcul ci-dessous s’applique directement aux pots en rayon : <a href="/creatine">comparer le prix au gramme de nos créatines</a>.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
@@ -660,6 +721,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     headline: 'Créatine : ce qui fait varier le prix d’un pot à l’autre',
     metaDescription:
       'Format, marque, pureté certifiée et micronisation : les quatre facteurs qui expliquent l’écart de prix entre deux pots de créatine monohydrate.',
+    openingLinkHtml:
+      '<p>Ces facteurs se lisent directement sur <a href="/creatine">les formats de créatine disponibles en Tunisie</a>.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
@@ -672,11 +735,13 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     headline: 'Créatine : qualité, pureté et ce que valent les labels',
     metaDescription:
       'Ce que recouvrent les mentions Creapure®, micronisée et monohydrate sur un pot de créatine, et comment vérifier la traçabilité d’un lot.',
+    openingLinkHtml:
+      '<p>Pour retrouver ces mentions sur des étiquettes réelles, parcourez <a href="/creatine">nos créatines monohydrate</a> vendues en Tunisie.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'créatine monohydrate : formats et marques', href: '/creatine' },
       { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
     ],
   },

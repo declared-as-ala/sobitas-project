@@ -26,9 +26,32 @@ import { buildProductAlt } from '@/util/productAlt';
 import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
 import { getProductLink } from '@/util/productUrl';
-import type { Product } from '@/types';
+import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
+import type { Brand, Product } from '@/types';
 
 export type CrawlerListLink = { name: string; url: string };
+
+/**
+ * Categories that mount the price-comparison table under their product list.
+ *
+ * A DELIBERATE COPY of the set in app/(shop)/category/CategorySeoLanding.tsx, not an import: that
+ * module pulls next/image and the icon set, and this file is the lean server render the bot route
+ * gets. The two lists must be edited together — the gate exists so both renders switch at once,
+ * and a table that appears for Googlebot and not for a shopper is the parity break this whole
+ * component is written to avoid.
+ */
+const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine']);
+
+/** The taxonomy slug this listing is, read off the breadcrumb trail's own last entry — which is
+ *  this page. Neither call site passes a slug, and both build that last crumb as `/${cleanSlug}`. */
+function slugFromBreadcrumbs(breadcrumbs: CrawlerListLink[]): string {
+  const last = breadcrumbs[breadcrumbs.length - 1];
+  return (last?.url ?? '')
+    .replace(/^https?:\/\/(?:www\.)?protein\.tn\//i, '')
+    .replace(/^\//, '')
+    .split(/[?#]/, 1)[0]
+    .replace(/\/$/, '');
+}
 
 export function CrawlerCategoryView({
   title,
@@ -40,6 +63,7 @@ export function CrawlerCategoryView({
   faqs = [],
   breadcrumbs,
   products,
+  brands = [],
   subCategories = [],
   relatedCategories = [],
   pagination = null,
@@ -57,6 +81,9 @@ export function CrawlerCategoryView({
   faqs?: Array<{ question: string; answer: string }>;
   breadcrumbs: CrawlerListLink[];
   products: Product[];
+  /** Optional brand lookup for the comparison table's Marque column; the listing payload carries
+   *  `brand_id` but no brand object. Omitted, the column drops itself rather than printing blanks. */
+  brands?: Brand[];
   subCategories?: CrawlerListLink[];
   relatedCategories?: CrawlerListLink[];
   /**
@@ -100,6 +127,62 @@ export function CrawlerCategoryView({
       ? `Produits ${title}`
       : title);
 
+  /*
+    ── THE GRID GETS A HEADING THAT NAMES THE GRID ──────────────────────────────────────────────
+    It read "Produits (24)" on every one of these pages — a label that tells a reader nothing the
+    <ul> under it does not, and tells a search engine nothing at all. The H1 is the only line on
+    the page that says what the page is about, and the H1 is an editorial sentence; between it and
+    the product list there was no heading carrying the category's own name.
+
+    Built from `title` by apposition (`Nom en Tunisie : N produits au catalogue`) rather than by
+    inlining the name into a sentence: French category names are not reliably pluralisable from
+    code — "Créatine" would become "Créatine disponibles" — and a colon reads correctly for every
+    one of the fifty, and for a brand listing too.
+
+    "au catalogue", not "disponibles": this list includes out-of-stock products with their real
+    stock labels, and a count of 24 under the word "disponibles" would be a claim the page itself
+    contradicts three lines down. Every word here is already visible to a shopper — the category
+    name is in the H1, the count is beside the human grid — so the two renders say the same thing.
+
+    TWO CALL SITES ALREADY QUALIFY THEIR OWN TITLE. x-crawler/shop passes
+    "Boutique — Protéines & Compléments Alimentaires en Tunisie", so a blind append gives
+    "… en Tunisie en Tunisie", and since that title IS the h1 there, the qualified form would also
+    restate the h1 word for word two lines below it. Both are handled: the suffix is added only
+    when the title does not already carry it, and when the result equals the h1 the heading falls
+    back to the plain count — on a page whose h1 already names the catalogue and the country, the
+    grid label has nothing left to add.
+  */
+  const geoTitle = /\ben\s+tunisie\b/i.test(title) ? title : `${title} en Tunisie`;
+  const gridHeading =
+    productLinks.length === 0
+      ? geoTitle
+      : geoTitle === heading
+        ? `Produits (${productLinks.length})`
+        : `${geoTitle} : ${productLinks.length} produits au catalogue`;
+
+  /*
+    Same gate, same rows, same position as the human render — see COMPARISON_SLUGS above.
+
+    `brands.length > 0` is the clause that keeps the two renders honest. This route already has
+    `products`, so without it the table would light up for Googlebot while the human category page
+    — whose own route does not pass either prop yet — showed nothing. That is a bot-only module on
+    the one page in this cluster that has to rank, and no amount of "it only restates the grid"
+    makes it something this component is allowed to do. Both renders now require the same two
+    props, so they switch on together or not at all. It is not a make-weight either: the listing
+    payload carries `brand_id` and no brand object, so an unresolved `brands` costs the table its
+    Marque column outright.
+
+    First page only: the table's promise is "the cheapest, cheapest first", and on page 2 it would
+    rank the second dozen while saying that. The human page agrees by construction — its
+    below-fold block is not rendered at all on a paginated URL.
+  */
+  const showComparison =
+    kind !== 'brand' &&
+    COMPARISON_SLUGS.has(slugFromBreadcrumbs(breadcrumbs)) &&
+    (!pagination || pagination.currentPage === 1) &&
+    brands.length > 0 &&
+    buildCreatineRows(products ?? [], brands).length >= 2;
+
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
       {/* Breadcrumbs */}
@@ -142,11 +225,7 @@ export function CrawlerCategoryView({
           /mass-gainers). A listing whose first 90% is prose reads as an article, and an article
           loses transactional queries to the blog posts that really are articles. */}
       <section aria-label="Produits" className="my-6">
-        <h2 className="text-lg font-semibold">
-          {productLinks.length > 0
-            ? `Produits (${productLinks.length})`
-            : 'Produits'}
-        </h2>
+        <h2 className="text-lg font-semibold">{gridHeading}</h2>
         {productLinks.length > 0 ? (
           <ul className="mt-2 list-disc pl-5">
             {productLinks.map((p, i) => (
@@ -233,6 +312,18 @@ export function CrawlerCategoryView({
         </nav>
       )}
 
+      {/* Price comparison — directly after the product list and its pager, before the guide.
+          Identical markup to the human render: CreatineComparisonTable is a pure server component
+          with no client code, written to be mounted in both. */}
+      {showComparison && (
+        <section aria-label="Comparatif" className="my-6">
+          <h2 className="text-lg font-semibold">{`${title} : comparer les prix`}</h2>
+          <div className="mt-2">
+            <CreatineComparisonTable products={products} brands={brands} />
+          </div>
+        </section>
+      )}
+
       {/* Sub-categories under a top category (deeper crawl paths) */}
       {subCategories.length > 0 && (
         <section aria-label="Sous-catégories" className="my-6">
@@ -267,15 +358,6 @@ export function CrawlerCategoryView({
         </section>
       )}
 
-      {longBottomHtml && (
-        <section aria-label="Informations complémentaires" className="my-6">
-          <div
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: longBottomHtml }}
-          />
-        </section>
-      )}
-
       {/* FAQ as real text. The FAQPage JSON-LD is emitted by the route, but the schema is only
           valid when the same Q&A is visible in the HTML — so it must live here, not only in the
           structured data. */}
@@ -306,6 +388,24 @@ export function CrawlerCategoryView({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* The long-form CMS guide, LAST.
+          It used to sit between "Comment choisir…" and the FAQ, which put the page's longest
+          block of prose — a thousand words on the categories that have one — ahead of both the
+          quick answers and the lateral category links. Those links are this view's whole reason
+          for existing on a crawl budget: they are the paths out of this page into its neighbours,
+          and they were buried under the one block nobody reads to the end.
+
+          Mirrors the human render, where the same section is now the last block of
+          CategorySeoLanding. Nothing was dropped; only the order changed. */}
+      {longBottomHtml && (
+        <section aria-label="Guide complet" className="my-6">
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: longBottomHtml }}
+          />
         </section>
       )}
     </main>

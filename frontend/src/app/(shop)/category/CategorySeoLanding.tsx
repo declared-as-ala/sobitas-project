@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { htmlToText } from '@/util/sanitizeProductHtml';
+import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
+import type { Brand, Product } from '@/types';
 
 export interface RelatedLink {
   slug: string;
@@ -35,6 +37,17 @@ interface CategorySeoLandingProps {
   faqs: Array<{ question: string; answer: string }>;
   relatedCategories: RelatedLink[];
   bestProducts: RelatedLink[];
+  /**
+   * The products this page already fetched, for the comparison module below the grid.
+   *
+   * OPTIONAL AND INERT WHEN ABSENT. The module is mounted here rather than inside the grid so the
+   * same block can sit between the product list and the buying guide in both renders; nothing is
+   * fetched for it. A category that is not in `COMPARISON_SLUGS` ignores these entirely.
+   */
+  products?: Product[];
+  /** Brand lookup for `brand_id`; the listing payload carries no brand object. See the table's
+   *  docblock — without this the Marque column drops itself rather than printing blanks. */
+  brands?: Brand[];
   withFaqSchema?: boolean;
   section?: 'header' | 'below-fold' | 'top' | 'bottom' | 'all';
 }
@@ -47,6 +60,23 @@ const CATEGORY_ART: Record<string, string> = {
   equipement: '/media/category-art/equipement.png',
   'prise-de-masse': '/media/category-art/prise-de-masse.png',
 };
+
+/**
+ * Categories that mount the price-comparison table under their grid.
+ *
+ * A SET, NOT A FLAG, and deliberately one entry long: the owner limited this round to /creatine
+ * (22/09/2026). The table itself is category-agnostic — it reads price, format and the form printed
+ * in the product name — but "the cheapest eight, cheapest first" is only a useful summary where the
+ * products are near-substitutes, which is true of creatine tubs and false of, say, /equipement.
+ * Adding a slug here is the whole cost of extending it, once somebody has looked at that
+ * category's fill rates the way the table's docblock documents for this one.
+ *
+ * CrawlerCategoryView carries a matching copy (it derives the slug from its last breadcrumb) rather
+ * than importing this one: that file is a lean, dependency-free server render for the bot route,
+ * and importing this module would pull next/image and the icon set into it for one string. The two
+ * lists must be changed together — the whole point of the gate is that both renders switch at once.
+ */
+export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine']);
 
 const TRUST_FACTS = [
   { icon: ShieldCheck, label: 'Produits authentiques' },
@@ -74,6 +104,8 @@ export function CategorySeoLanding({
   faqs,
   relatedCategories,
   bestProducts,
+  products = [],
+  brands = [],
   withFaqSchema = true,
   section = 'all',
 }: CategorySeoLandingProps) {
@@ -87,6 +119,31 @@ export function CategorySeoLanding({
   const localArt = slug ? CATEGORY_ART[slug] : undefined;
   const desktopArt = localArt || banners?.desktop?.trim() || banners?.mobile?.trim();
   const mobileArt = localArt || banners?.mobile?.trim() || banners?.desktop?.trim();
+  /*
+    ── THE COMPARISON GATE, AND WHY IT ALSO REQUIRES `brands` ────────────────────────────────────
+    `products`/`brands` are optional here because this component is mounted by
+    app/(shop)/category/[slug]/page.tsx, which does not pass them yet. Until it does, the block is
+    inert — and CrawlerCategoryView applies the IDENTICAL gate, including the `brands` clause,
+    although its own routes already hand it `products`.
+
+    That is deliberate. Both renders switch on the same two props, so the table cannot appear for
+    Googlebot on a page where a shopper does not get it: a bot-only module on a category page is
+    the parity break this pair of components exists to prevent, and "it is only a re-presentation
+    of the products already listed above" is an argument made after the fact, not a rule.
+
+    `brands` is not a make-weight. The listing payload carries `brand_id` and no brand object, so
+    without the lookup the Marque column drops itself on every row — one of the table's four
+    columns, gone. Requiring it means the module never ships in its degraded form.
+
+    `buildCreatineRows` is the table's own row builder, exported for exactly this: the table
+    returns null below two rows, and a heading wrapped around null is an empty card. Asking the
+    same function the same question beats rendering and then discovering the answer.
+  */
+  const showComparison =
+    showDetails &&
+    Boolean(slug && COMPARISON_SLUGS.has(slug)) &&
+    brands.length > 0 &&
+    buildCreatineRows(products, brands).length >= 2;
   const faqSchema = withFaqSchema && hasFaqs && showDetails ? buildFAQPageSchemaFromQA(faqs) : null;
 
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
@@ -99,7 +156,22 @@ export function CategorySeoLanding({
 
       {showHeader ? (
         <header className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
-          <div className="grid grid-cols-1 lg:min-h-[232px] lg:grid-cols-5">
+          {/*
+            ── THE 232px FLOOR BELONGS TO THE ART, NOT TO THE CARD ──────────────────────────────
+            `lg:min-h-[232px]` was unconditional while the panel it was sizing is conditional. Six
+            categories have approved artwork (CATEGORY_ART) and the floor keeps the text column
+            from sitting shorter than the image beside it — that is a real job, on those six.
+
+            On every other category, including /creatine, `desktopArt` is undefined, the right-hand
+            cell is never rendered, and the only thing 232px buys is 232px of empty card pushed
+            between the H1 and the first product on every desktop viewport. That is the "big
+            header" complaint, literally: a reservation for something that does not exist.
+
+            Conditioned on `desktopArt` — the exact expression that decides whether the panel
+            renders — so the six art categories are byte-identical and the rest collapse to the
+            height of their own content.
+          */}
+          <div className={`grid grid-cols-1 lg:grid-cols-5${desktopArt ? ' lg:min-h-[232px]' : ''}`}>
             <div className="flex min-w-0 flex-col justify-center px-4 py-5 sm:p-6 lg:col-span-3 lg:px-8 lg:py-6">
               <p className="mb-2.5 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-brand sm:text-[11px]">
                 <span className="h-px w-5 bg-brand" aria-hidden="true" />
@@ -144,7 +216,37 @@ export function CategorySeoLanding({
         </header>
       ) : null}
 
-      {showDetails && (hasIntro || hasHowTo || hasLongBottom) ? (
+      {/*
+        ── THE COMPARISON SITS BETWEEN THE GRID AND THE PROSE ──────────────────────────────────
+        The `below-fold` instance of this component is rendered by ShopPageClient immediately under
+        the product grid, so the first block in this flow is the first thing after the last product
+        card — which is exactly where a "which of these do I buy" table is useful and exactly where
+        it stops being useful if it is below 500 words of guide.
+
+        The same block sits in the same place in CrawlerCategoryView (after the product list and
+        its pager, before "Comment choisir"). Same component, same rows, same order in both.
+      */}
+      {showComparison ? (
+        /* No card chrome on this section: the table brings its own rounded, bordered, elevated
+           scroller, and nesting that inside a second card is the card-in-card the design system
+           calls out. Heading outside, card inside — the same shape as the FAQ block below. */
+        <section aria-labelledby="category-comparison-title">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-brand">Comparatif</p>
+          <h2
+            id="category-comparison-title"
+            className="mb-3 mt-1 font-display font-compressed text-2xl font-extrabold uppercase leading-none text-ink-1 sm:text-3xl"
+          >
+            {/* Apposition, not a conjugated phrase: "Comparer les créatine" is what a template that
+                tries to inline a category name into a sentence produces, and French category names
+                are not reliably pluralisable from code. `Nom : verbe` reads correctly for every
+                one of them, and the table's own lead sentence says what the rows are. */}
+            {`${title} : comparer les prix`}
+          </h2>
+          <CreatineComparisonTable products={products} brands={brands} />
+        </section>
+      ) : null}
+
+      {showDetails && (hasIntro || hasHowTo) ? (
         <section aria-labelledby="category-guide-title" className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-6 lg:p-8">
           {/*
             ── THE INTRO RENDERS IN FULL, TO EVERYONE ────────────────────────────────────────
@@ -226,21 +328,6 @@ export function CategorySeoLanding({
             </aside>
           </div>
 
-          {hasLongBottom ? (
-            <details className="group mt-6 border-t border-rule pt-5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold text-ink-1">
-                <span>Lire le guide complet</span>
-                <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
-              </summary>
-              <article
-                /* Same block, same reason — see the note on the guide column above. This one is
-                   inside a closed <details>, so the audit never opened it: it was carrying the
-                   identical 1.03:1 bold and no guard could have said so. */
-                className="prose prose-neutral dark:prose-invert mt-4 max-w-none text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]"
-                dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
-              />
-            </details>
-          ) : null}
         </section>
       ) : null}
 
@@ -278,6 +365,37 @@ export function CategorySeoLanding({
         <section className="grid gap-4 md:grid-cols-2">
           <LinkList title="Rayons associés" icon={<Sparkles className="h-4 w-4" aria-hidden="true" />} links={relatedCategories} />
           <LinkList title="Produits à découvrir" icon={<Star className="h-4 w-4" aria-hidden="true" />} links={bestProducts} />
+        </section>
+      ) : null}
+
+      {/*
+        ── THE LONG GUIDE IS LAST, AND IT MOVED OUT OF THE BUYING-GUIDE CARD ───────────────────
+        It used to be a <details> stapled to the bottom of "Comment choisir…", which put the
+        page's longest body of text — often a thousand words of CMS prose — between the buying
+        advice and the FAQ, and above the lateral category links entirely.
+
+        Nothing is removed and nothing is hidden that was not already hidden: it is the same
+        closed <details> with the same summary. What changes is that the blocks a shopper is most
+        likely to want next (the quick answers, then the neighbouring rayons) are no longer
+        queued behind it, and the links out of this page are no longer the very last thing under
+        the longest block on it. Order matched to CrawlerCategoryView, where the same section now
+        sits last for the same reason.
+      */}
+      {showDetails && hasLongBottom ? (
+        <section aria-label="Guide complet" className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-6 lg:p-8">
+          <details className="group">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-4 font-semibold text-ink-1">
+              <span>Lire le guide complet</span>
+              <ChevronDown className="h-5 w-5 shrink-0 text-ink-3 transition-transform group-open:rotate-180" aria-hidden="true" />
+            </summary>
+            <article
+              /* `dark:prose-invert` is load-bearing — see the note on the guide column above. This
+                 block is inside a closed <details>, so the contrast audit never opened it: it was
+                 carrying the identical 1.03:1 bold and no guard could have said so. */
+              className="prose prose-neutral dark:prose-invert mt-4 max-w-none border-t border-rule pt-4 text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]"
+              dangerouslySetInnerHTML={{ __html: longBottomHtml! }}
+            />
+          </details>
         </section>
       ) : null}
     </div>

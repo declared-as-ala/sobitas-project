@@ -49,6 +49,26 @@ export interface BrandSeoEntry {
  * /mass-gainers 0/12/51.4 AND /gainers-proteines 0/10/53.3 on the same query). All four now say
  * /mass-gainers. /gainers-proteines keeps its own distinct anchor, "Gainers protéinés en Tunisie".
  *
+ * The rule is one-way, and /creatine is where the difference shows. One anchor may not serve two
+ * URLs; one URL may perfectly well be reached by twelve different anchors, and where twelve pages
+ * link to the same destination it SHOULD be. Until 22/09/2026 all twelve brand entries carrying a
+ * creatine link wrote the identical string "Créatine en Tunisie" — twelve exact-match repetitions
+ * of the head term, which is the pattern the owner named as the one to avoid. Each now says what
+ * that brand's own reader is about to find: the flavoured-creatine brand offers "Créatines
+ * aromatisées et neutres", the brand whose whey already contains 5 g of it offers "Créatines
+ * vendues seules", the brand stocking three pot sizes offers "Comparer les formats de créatine".
+ * Every one of the twelve still resolves to /creatine, and no other destination uses any of them.
+ *
+ * ── A CREATINE LINK REQUIRES A CREATINE PRODUCT ──────────────────────────────────────────────
+ * `relatedCategories` is editorial, not a taxonomy dump: a brand links to /creatine only when its
+ * own entry above names the creatine reference it sells (Micronised Creatine, Gold Creatine,
+ * COR-Performance Creatine, Cell-Tech…). Checked 22/09/2026 against both this file's transcribed
+ * catalogues and the live /creatine grid: dymatize, weightworld, william-bonac and victor-martinez
+ * list no creatine SKU anywhere, so they get no creatine link. ProActive is the one deliberate
+ * exception and it is not a loophole — its entry states outright that it sells no standalone
+ * creatine, and then tells the reader the 5 g inside Anabolic Whey 80 counts toward their daily
+ * total. "Créatines vendues seules" is the answer to the question that copy provokes.
+ *
  * ── ONLY BRANDS WHOSE PAGE ACTUALLY RESOLVES ─────────────────────────────────────────────────
  * A slug here only produces content if findBrandBySlug() resolves it, so entries exist only for
  * brands present in /all_brands. Checked on 08/09/2026 against all 582 rows: american-wolf,
@@ -140,7 +160,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     ],
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Créatines en poudre et à croquer', url: '/creatine' },
       { slug: 'pre-workout', name: 'Pré-workout en Tunisie', url: '/pre-workout' },
     ],
   },
@@ -189,7 +209,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Découvrir les créatines monohydrate', url: '/creatine' },
       { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
@@ -242,7 +262,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Voir nos créatines en Tunisie', url: '/creatine' },
       { slug: 'pre-workout', name: 'Pré-workout en Tunisie', url: '/pre-workout' },
     ],
   },
@@ -293,7 +313,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Comparer nos créatines', url: '/creatine' },
       { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
     ],
   },
@@ -344,7 +364,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Le rayon créatine en Tunisie', url: '/creatine' },
       { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
     ],
   },
@@ -395,7 +415,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Créatines disponibles en Tunisie', url: '/creatine' },
       { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
     ],
   },
@@ -446,7 +466,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Comparer les formats de créatine', url: '/creatine' },
       { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
       { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
     ],
@@ -499,7 +519,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
       { slug: 'caseine', name: 'Caséine en Tunisie', url: '/caseine' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Voir nos créatines disponibles', url: '/creatine' },
       { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
     ],
   },
@@ -631,7 +651,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Créatines aromatisées et neutres', url: '/creatine' },
       { slug: 'bruleurs-de-graisse', name: 'Brûleurs de graisse en Tunisie', url: '/bruleurs-de-graisse' },
     ],
   },
@@ -746,7 +766,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'proteines-multi-sources', name: 'Protéines multi-sources', url: '/proteines-multi-sources' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Créatines vendues seules', url: '/creatine' },
     ],
   },
 
@@ -797,7 +817,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
       { slug: 'proteine-de-boeuf', name: 'Protéine de bœuf en Tunisie', url: '/proteine-de-boeuf' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Toutes nos créatines', url: '/creatine' },
       { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
     ],
   },
@@ -950,7 +970,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
       { slug: 'gainers-proteines', name: 'Gainers protéinés en Tunisie', url: '/gainers-proteines' },
-      { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
+      { slug: 'creatine', name: 'Notre sélection de créatines', url: '/creatine' },
       { slug: 'eaa', name: 'EAA en Tunisie', url: '/eaa' },
       { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
     ],

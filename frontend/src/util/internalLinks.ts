@@ -94,6 +94,36 @@ for (const [base, spellings] of Object.entries(CHAR_ALTERNATIVES)) {
 
 const escapeRegex = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+/** Whitespace as the CMS actually writes it between two words: space, entity, or hyphen. */
+const GAP = '(?:\\s|&nbsp;|-|‑)+';
+
+/**
+ * Words that change what the term before them MEANS, and so must cancel the link.
+ *
+ * The boundary lookarounds in compileTerm already stop a term from being found inside a longer
+ * word — "créatine" is not matched inside "créatinine" (a kidney marker) or "phosphocréatine",
+ * which is the bug worth guarding first and which is guarded by construction. What they cannot
+ * see is the word AFTER a complete, correctly-bounded match, and French has one case here that
+ * matters: "créatine kinase" (CK, also written créatine phosphokinase) is a blood enzyme measured
+ * in a lab, not a tub of powder. Linking it sends a reader researching a blood test to a shop
+ * shelf, which is the definition of an irrelevant link.
+ *
+ * Keyed by the term with its accents stripped and case folded, so 'Créatine' — the category's own
+ * name, whatever an editor renames it to in Filament — and 'créatine' resolve to the same entry.
+ * A term with no entry compiles exactly as before, so this narrows nothing for any other category.
+ */
+const NOT_FOLLOWED_BY: Record<string, string[]> = {
+  creatine: ['kinase', 'phosphokinase', 'kinases'],
+};
+
+const foldTerm = (s: string) =>
+  s
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 /**
  * Compile one phrase into a pattern that matches every spelling of it.
  *
@@ -107,7 +137,7 @@ function compileTerm(term: string): string {
     // are written both ways in the corpus — "oméga 3" / "oméga-3", "pre workout" / "pre-workout",
     // "mass gainer" / "mass-gainer" — so a space-spelled term must catch the hyphenated mention too.
     // Additive: it only widens what a multi-word term matches, never narrows it.
-    if (/\s/.test(ch)) return '(?:\\s|&nbsp;|-|‑)+';
+    if (/\s/.test(ch)) return GAP;
     const base = BASE_OF[ch] ?? ch;
     const alts = CHAR_ALTERNATIVES[base];
     if (!alts) return escapeRegex(ch);
@@ -123,9 +153,19 @@ function compileTerm(term: string): string {
    */
   const letter = '[\\p{L}\\p{M}\\p{N}&;#_]';
 
+  /*
+   * A disqualifying next word is checked AFTER the closing boundary, not inside the term, because
+   * that is where the ambiguity lives: "créatine" is the right match and the right anchor in every
+   * sentence except the one where "kinase" follows it.
+   */
+  const blocked = NOT_FOLLOWED_BY[foldTerm(term)] ?? [];
+  const guard = blocked.length
+    ? `(?!${GAP}(?:${blocked.map(escapeRegex).join('|')})(?!${letter}))`
+    : '';
+
   // Trailing (?:s|es)? so a plural mention still matches its singular term, which is how these
   // words are actually written: "les protéines", "des créatines".
-  return `(?<!${letter})${parts.join('')}(?:s|es)?(?!${letter})`;
+  return `(?<!${letter})${parts.join('')}(?:s|es)?(?!${letter})${guard}`;
 }
 
 interface CompiledTarget {
