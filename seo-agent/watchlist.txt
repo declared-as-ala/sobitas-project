@@ -23,7 +23,11 @@
 /vitamines
 /intra-workout
 
-# In-loop-fix verification (case contract shipped 22/09) — the uppercase must 301 once and stop
+# In-loop-fix verification (case contract shipped 22/09) — the uppercase must 301 once and stop.
+# VERIFIED 22/09 06:00Z: upper 301s once to lower, lower is 200 + self-canonical, 0 uppercase URLs
+# left in products-*.xml. Both lines STAY: they are the standing regression test. audit-live.mjs
+# now compares a canonical against the URL actually served, so the redirect source is no longer a
+# false P0 (it was, every run, until 22/09 run 2).
 /Intra-Workout/nutrabio-intra-blast-advanced-intra-workout-tropical-fruit-punch-717-g
 /intra-workout/nutrabio-intra-blast-advanced-intra-workout-tropical-fruit-punch-717-g
 

@@ -6,8 +6,11 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
-**State on 22/09/2026:** the URL-case contract, the bars category page and the omega-3 retarget
-shipped on `claude/seo-daily-2026-09-22` (see `log/2026-09-22.md`); live audit 65 URLs, 0 P0.
+**State on 22/09/2026 (two runs):** run 1 shipped the URL-case contract, the bars category page
+and the omega-3 retarget (`log/2026-09-22.md`) — all three re-verified live on run 2: the
+`/Intra-Workout` loop is dead (301 once, self-canonical, 0 uppercase URLs left in the sitemaps).
+Run 2 shipped bot/human parity on the category template plus `parity-check.mjs`
+(`log/2026-09-22-b.md`); live audit 68 URLs, **0 P0**.
 
 **State on 21/09/2026 (owner session, all live):** every published product is `index, follow`
 (11,368/11,368, 0 noindex — owner decision, thin pages included); sitemap 11,367 product URLs;
@@ -21,16 +24,25 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ## P0 — verified fix plan (22/09/2026 diagnosis; each item names the exact surface)
 
-- [ ] **Bot/human parity on money categories (cloaking exposure).** ~350–500 words (the
-  "Prix de la créatine en Tunisie" section) render only for bot UAs:
-  `frontend/src/app/components/CategorySeoLanding.tsx` L112–114 clamps the human intro to 520
-  chars and L183 drops it when a guide exists, while `CrawlerCategoryView.tsx` prints it whole.
-  Make the two views textually identical (render the full intro to humans, or drop the bot-only
-  text) and gate with a bot-vs-Chrome visible-word diff = 0 on /creatine, /whey-proteine,
-  /mass-gainers, /pre-workout. Then (this week) exempt category routes from the bot rewrite in
-  `frontend/src/middleware.ts` ~L940–1032 — the human route already SSRs H1 + grid + guide + FAQ;
-  the "prerendered HTML is a skeleton" comment at ~L1020 is stale. (middleware.ts is on the land
-  workflow's forbidden list: that half is `(needs: owner)` — write the exact diff in the log.)
+- [x] ~~**Bot/human parity on money categories (cloaking exposure)** — repo half~~ — shipped
+  22/09 (run 2). Measured before acting, both UAs, 6-word-shingle diff: **2,848 bot-only words**
+  across /creatine 369, /whey-proteine 635, /mass-gainers 967, /pre-workout 690, /proteines 187 —
+  not "~350–500", and not four pages: **49 of the 50 category files carry both an intro and a
+  guide**, so it was every category we own. Cause exactly as diagnosed, in
+  `frontend/src/app/(shop)/category/CategorySeoLanding.tsx` (not `app/components/`): the header
+  clamps the intro to 520 chars and the guide column rendered it only when no guide existed.
+  Fixed by rendering the full intro to humans when both exist (nothing deleted, categories without
+  a guide render byte-identically). After: **123** bot-only words total, all product-name noise.
+  Gate built and now daily: `seo-agent/tools/parity-check.mjs` (PLAYBOOK step 3b).
+- [ ] `(needs: owner)` **Exempt category routes from the bot rewrite** — `frontend/src/middleware.ts`
+  is a forbidden path. Now an UPGRADE, not a repair: the parity fix above removed the risk, and
+  Googlebot would simply get the better page. Evidence: the human `/creatine` **server-rendered**
+  HTML (curl, no JS) is **3,506 visible words** including H1, grid, guide and FAQ — the
+  "prerendered HTML is a skeleton" comment at ~L1020 is stale. Change: delete the
+  `const categoryPath = pathname.match(/^\/([^/]+)\/?$/)` block (~L1019–1036) inside the bot-UA
+  branch so single-segment listings serve the real commercial page (grid, prices, stock, filters).
+  **Keep the PDP rewrite above it** — PDP parity is still open (13 bot hrefs vs 38 human). Ship it
+  alone and watch `parity-check.mjs`.
 - [ ] **Crawler-view link graph.** (a) BreadcrumbList on the bot view skips the parent
   (`x-crawler/category/[slug]/page.tsx` reads `data.category`; the API returns `breadcrumb[]` +
   `sous_category.categorie_id`) → build it from `data.breadcrumb`. (b) PDP bot view carries 13
@@ -155,6 +167,10 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
   (58), sommeil-stress (54), plantes-et-herbes (20), boosters-hormonaux (18). Per pair: keep one,
   Filament Redirections row (301) on the other. The routine never picks the survivor or touches a
   price — owner's call which SKU is real.
+- [x] ~~`audit-live.mjs` compared the canonical against the REQUESTED path~~ — fixed 22/09 (run 2).
+  A watch URL that is a deliberate redirect source (`/Intra-Workout/<p>`, kept in `watchlist.txt`
+  to prove it 301s once and stops) was reported as a P0 every run although its canonical correctly
+  points at the redirect target. Now compared against `res.url`; identical where nothing redirects.
 - [ ] **Extend `suggest.mjs` seeds beyond the head terms.** On 22/09 it surfaced only whey /
   creatine / mass / proteine long-tails because the seed list is the head terms only — nothing
   for bars, omega-3, bcaa, pre-workout, brûleurs. Add the money-category terms to the seed array

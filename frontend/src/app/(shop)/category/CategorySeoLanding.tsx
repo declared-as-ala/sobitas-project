@@ -146,6 +146,33 @@ export function CategorySeoLanding({
 
       {showDetails && (hasIntro || hasHowTo || hasLongBottom) ? (
         <section aria-labelledby="category-guide-title" className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-6 lg:p-8">
+          {/*
+            ── THE INTRO RENDERS IN FULL, TO EVERYONE ────────────────────────────────────────
+            The header above prints `htmlToText(intro, 520)` behind a 2–3 line clamp, and the
+            guide column below showed the intro ONLY when no buying guide existed. 49 of the 50
+            category content files carry both, so on every one of them the rest of the intro
+            reached nobody — except Googlebot, which is served `CrawlerCategoryView` and prints
+            `introHtml` whole.
+
+            Measured 22/09/2026 (Googlebot UA vs Chrome UA, 6-word-shingle diff of the visible
+            text): /mass-gainers 1,016 bot-only words, /pre-workout 725, /whey-proteine 692,
+            /creatine 417 — ~2,850 words on the four money categories that only a crawler could
+            read, and the gap matches `intro.length - 520` on each file to within a few percent.
+            Content a bot sees and a visitor cannot is the parity break dynamic rendering is not
+            allowed to have, on exactly the pages that have to rank.
+
+            It lands here rather than unclamped in the header because the header is the
+            commercial lede above the grid (page standard: H1 → one sentence → products), so the
+            body of the intro belongs with the rest of the editorial copy, below the fold.
+            Guarded on `hasHowTo`: a category with no guide already rendered its intro in full in
+            the column below, so those pages keep rendering exactly as they did.
+          */}
+          {hasIntro && hasHowTo ? (
+            <div className="prose prose-neutral dark:prose-invert mb-6 max-w-none border-b border-rule pb-6 text-sm leading-relaxed text-ink-2 prose-headings:font-display prose-headings:text-ink-1 prose-a:text-brand sm:text-[15px]">
+              {renderContent(intro!)}
+            </div>
+          ) : null}
+
           <div className="mb-5 flex items-start gap-3">
             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand/[0.08] text-brand">
               <BookOpen className="h-5 w-5" aria-hidden="true" />
