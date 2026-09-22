@@ -126,7 +126,25 @@ function walk(nodes: ApiNode[] | null | undefined, out: Taxonomy): void {
   for (const node of nodes) {
     if (!node || typeof node !== 'object') continue;
 
-    const slug = typeof node.slug === 'string' ? node.slug.trim() : '';
+    /* LOWERCASED AT THE DOOR, BECAUSE EVERY CALLER ALREADY IS.
+     *
+     * `sous_categories` id 43 is stored as `Intra-Workout` — the one mixed-case slug in the whole
+     * taxonomy. Middleware folds a path to lowercase before it looks anything up (retireLegacyPath,
+     * and the case-fold block above it), so `isTaxonomySlug('intra-workout')` missed the set, the
+     * product lookup missed too, and `bestCategoryForSlug` handed back the RAW key — which
+     * middleware then 301'd to `/Intra-Workout`, which the case-fold block 301'd again to
+     * `/intra-workout`. Measured on production 22/09/2026 with a Googlebot UA:
+     *
+     *     /shop/intra-workout        301 -> /Intra-Workout   301 -> /intra-workout
+     *     /category/intra-workout    301 -> /Intra-Workout   301 -> /intra-workout
+     *     /shop/intra-blast-nutrabio 301 -> /Intra-Workout   (relevance match, same chain)
+     *
+     * A two-hop chain to the destination this file already knew is the exact thing the docblock
+     * above calls "the thing this file exists to end". Folding here fixes the Set, the `terms`
+     * keys and `bestCategoryForSlug`'s return value in one place. Inline rather than importing
+     * `urlSlug` for the same reason `slugifyBrandName` below is duplicated: this module is reached
+     * from middleware, where the import graph IS the bundle. */
+    const slug = typeof node.slug === 'string' ? node.slug.trim().toLowerCase() : '';
     if (slug) {
       out.slugs.add(slug);
       const name = node.designation_fr || node.name || '';
@@ -206,8 +224,26 @@ export async function isTaxonomySlug(slug: string): Promise<boolean | null> {
   const tax = await taxonomy();
   if (!tax) return null;
 
-  return tax.slugs.has(slug);
+  // Belt-and-braces: `walk` now stores lowercase keys, but `retiredSlug.ts` and the page routes
+  // call this with whatever the URL carried. Folding both sides keeps the answer case-insensitive.
+  return tax.slugs.has(slug.trim().toLowerCase());
 }
+
+/**
+ * Where a HEAD TERM goes when the relevance match cannot discriminate further.
+ *
+ * The tie-break below prefers the SHORTEST candidate slug, which is right for "gold-creatine-300g"
+ * (→ /creatine, not a broad parent) and wrong for exactly one token on this site: a dead slug whose
+ * only significant token is `whey` scores 1 on whey-proteine (13 chars), whey-isolate (12) and
+ * whey-hydrolysee (15), so the shortest rule hands the generic whey intent to the ISOLATE subset.
+ * Measured 22/09/2026: `/product-category/whey` 301 → /whey-isolate. That is the cannibalisation
+ * redirects.js already argues against for /whey-tunisie — `whey tunisie` is a general whey query,
+ * and /whey-proteine is the page carrying it (GSC 22/09: 761 impressions, `whey tunisie` pos 63.1).
+ *
+ * Only consulted when the match was a single token and that token is listed here; a slug that also
+ * carries `isolat` or `hydrolys` scores 2 and keeps its specific rayon.
+ */
+const HEAD_TERM_HOME: Record<string, string> = { whey: 'whey-proteine' };
 
 /**
  * The most relevant category for a slug that is no longer a product, or null when nothing is
@@ -249,7 +285,17 @@ export async function bestCategoryForSlug(slug: string): Promise<string | null> 
     }
   }
 
-  return bestScore >= 1 ? bestSlug : null;
+  if (bestScore < 1 || !bestSlug) return null;
+
+  // One shared token means the shortest-slug tie-break picked the winner, not the evidence. For a
+  // head term that is a decision about which money page gets the equity — see HEAD_TERM_HOME.
+  if (bestScore === 1) {
+    const matched = [...(tax.terms.get(bestSlug) ?? [])].find((t) => want.has(t));
+    const home = matched ? HEAD_TERM_HOME[matched] : undefined;
+    if (home && tax.slugs.has(home)) return home;
+  }
+
+  return bestSlug;
 }
 
 /* ── BRANDS ───────────────────────────────────────────────────────────────────────────────────

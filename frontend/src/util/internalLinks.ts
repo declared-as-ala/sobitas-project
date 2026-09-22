@@ -152,9 +152,11 @@ function compileTargets(targets: LinkTarget[]): CompiledTarget[] {
   }
 
   /*
-   * Specific destinations get first refusal on the text. "Whey protéine" and "protéine" both occur
-   * in a whey article; linking the general category first would consume the sentence that describes
-   * the specific one, and the specific page is the better landing page for the reader.
+   * Specific destinations get first refusal on the SAME words. "Whey protéine" and "protéine" both
+   * start at the same offset in "la whey protéine"; linking the general category there would
+   * consume the phrase that describes the specific one, and the specific page is the better landing
+   * page for the reader. This order is the tie-break injectInternalLinks applies at equal offsets —
+   * which mention comes first in the prose decides everything else.
    */
   return compiled.sort((a, b) => b.weight - a.weight);
 }
@@ -227,22 +229,42 @@ export function injectInternalLinks(
      * later match can be found inside them because no later match is ever LOOKED for inside them.
      * Nesting is therefore impossible by construction rather than by care.
      */
+    /*
+     * Targets are taken in DOCUMENT order, not in target-weight order.
+     *
+     * Weight order was the first implementation and it loses links: `cursor` only moves forward, so
+     * a heavy target whose mention sits LATE in the paragraph dragged the cursor past every earlier
+     * mention, and the lighter targets that owned those mentions then found nothing. One paragraph
+     * saying "la whey est une protéine rapide, la whey isolate encore plus" produced a single link,
+     * to the isolate page, and lost both the whey and the protéine link that preceded it.
+     *
+     * Weight still breaks ties — `<` keeps the first target found at a given offset, and `compiled`
+     * is sorted longest-phrase-first — so a specific destination still gets first refusal on the
+     * same words: "whey protéine" beats "protéine" where both start at that offset.
+     */
     let cursor = 0;
-    for (const target of compiled) {
-      if (placed >= max) break;
-      if (used.has(target.href)) continue;
+    while (placed < max) {
+      let best: { target: CompiledTarget; index: number; matched: string } | null = null;
 
-      const match = target.regex.exec(text.slice(cursor));
-      if (!match) continue;
+      for (const target of compiled) {
+        if (used.has(target.href)) continue;
+        const match = target.regex.exec(text.slice(cursor));
+        if (!match) continue;
+        if (!best || match.index < best.index) {
+          best = { target, index: match.index, matched: match[0] };
+        }
+      }
 
-      const at = cursor + match.index;
+      if (!best) break;
+
+      const at = cursor + best.index;
       // The matched prose IS the anchor text. Rewriting it to "protéines en Tunisie" would be
       // keyword-stuffing a sentence somebody else wrote, and it would read as generated.
-      const anchor = `<a href="${target.href}" class="${className}">${match[0]}</a>`;
-      text = text.slice(0, at) + anchor + text.slice(at + match[0].length);
+      const anchor = `<a href="${best.target.href}" class="${className}">${best.matched}</a>`;
+      text = text.slice(0, at) + anchor + text.slice(at + best.matched.length);
       cursor = at + anchor.length;
 
-      used.add(target.href);
+      used.add(best.target.href);
       placed++;
     }
     tokens[i] = text;
@@ -259,21 +281,36 @@ export function injectInternalLinks(
  * Whey Protéine, "créatine monohydrate" for Créatine — keyed by slug.
  *
  * The current page is excluded by the caller, not here: a page must never link to itself.
+ *
+ * `options.allowSlugs` narrows the taxonomy to the destinations worth spending the per-article link
+ * budget on. Without it, every lifestyle hub joins in and the widest, vaguest names win the budget:
+ * "SANTÉ & VITALITÉ", "Glucides & Énergie" and "Sommeil & Stress" contributed the terms "santé",
+ * "énergie" and "stress", so four of an article's six slots went to words that say nothing about
+ * their destination ("énergie" in a créatine sentence pointed at a carbohydrate category) and the
+ * pages that sell were left with the bare-word anchor or none at all (measured live 22/09/2026).
+ * Omit it and nothing is filtered, which is what the test harness and any other caller rely on.
  */
 export function targetsFromTaxonomy(
   categories: Array<{ slug?: string | null; designation_fr?: string | null; sous_categories?: Array<{ slug?: string | null; designation_fr?: string | null }> | null }>,
-  extra: Record<string, string[]> = {}
+  extra: Record<string, string[]> = {},
+  options: { allowSlugs?: readonly string[] } = {}
 ): LinkTarget[] {
   const targets: LinkTarget[] = [];
+  const allow = options.allowSlugs ? new Set(options.allowSlugs) : null;
 
   const push = (slug?: string | null, name?: string | null) => {
     if (!slug || !name) return;
+    if (allow && !allow.has(slug)) return;
     const clean = name.replace(/\s+/g, ' ').trim();
     if (!clean) return;
     const terms = [clean, ...(extra[slug] ?? [])];
     // "&" reads as two words to the matcher and never appears that way in prose. A name like
-    // "SANTÉ & VITALITÉ" contributes its halves instead, which are what an article actually says.
-    if (clean.includes('&')) terms.push(...clean.split('&').map((s) => s.trim()).filter(Boolean));
+    // "Barres & Snacks Protéinés" contributes its halves instead, which are what an article
+    // actually says — but only the halves long enough to still name the destination: a 6-letter
+    // half like "Barres" matches prose that is not about the category at all.
+    if (clean.includes('&')) {
+      terms.push(...clean.split('&').map((s) => s.trim()).filter((s) => s.length >= 8));
+    }
     targets.push({ href: `/${slug}`, terms });
   };
 

@@ -14,24 +14,31 @@ import { revalidatePath, revalidateTag } from 'next/cache';
  */
 
 /**
- * Fail-closed secret check. Revalidation is a cache-invalidation primitive — leaving it open
- * lets anyone trigger arbitrary revalidations (cache-stampede DoS). If REVALIDATE_SECRET is
- * unset/empty we REJECT (never allow), and otherwise require it via ?secret= or Bearer header.
+ * Shared secret with the Laravel caller. Falls back to the same committed default that
+ * `filament/config/services.php` ('services.frontend.revalidate_secret') and the IndexNow route
+ * already use, so every legitimate caller — SeoNotifier and SlideCacheObserver, which both attach
+ * it with `withToken($secret)` — keeps working with zero config. Set REVALIDATE_SECRET on BOTH the
+ * frontend and the backend to rotate it.
+ */
+const SECRET = process.env.REVALIDATE_SECRET || 'c3f8316bd2ab7f577f093d1ac33005e3c561060921578c0c';
+
+/**
+ * Fail-closed secret check. Revalidation is a cache-invalidation primitive — leaving it open lets
+ * anyone trigger arbitrary revalidations (cache-stampede DoS) and, via ?tag=sitemap, force a full
+ * catalogue re-crawl on every request.
+ *
+ * This used to return true when REVALIDATE_SECRET was unset, on the assumption that the backend
+ * called in anonymously. It does not: both callers send the secret as a Bearer token and read it
+ * from a config default identical to the constant above, so requiring it changes nothing for them
+ * and closes the endpoint to everyone else.
  */
 function verifySecret(request: NextRequest): boolean {
-  const expected = process.env.REVALIDATE_SECRET;
-  // Enforce the secret on GET + POST WHEN it is configured. It is NOT set in prod today, and the
-  // backend's on-demand revalidation currently relies on this being open — so stay open when unset
-  // to avoid freezing content. TODO(ops): set REVALIDATE_SECRET (frontend env + backend caller) and
-  // this becomes fully fail-closed with zero code change.
-  if (!expected) return true;
-
   const secret = new URL(request.url).searchParams.get('secret');
-  if (secret === expected) return true;
+  if (secret === SECRET) return true;
 
   const authHeader = request.headers.get('authorization');
   const token = authHeader?.replace(/^Bearer\s+/i, '');
-  if (token === expected) return true;
+  if (token === SECRET) return true;
 
   return false;
 }

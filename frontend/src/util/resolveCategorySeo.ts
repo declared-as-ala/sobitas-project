@@ -144,6 +144,16 @@ function apiHasUsableSeo(api: CategorySeoFromApi | null | undefined): boolean {
   return true;
 }
 
+/** Visible word count of an HTML fragment — the fair unit for "is this section worth rendering". */
+function textWordCount(html: string | undefined | null): number {
+  const text = String(html ?? '')
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&[a-z]+;|&#\d+;/gi, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text ? text.split(' ').length : 0;
+}
+
 /** Visible text length of an HTML fragment — the only fair way to compare two intros. */
 function textLength(html: string | undefined | null): number {
   return String(html ?? '')
@@ -320,11 +330,28 @@ export function mergeCategorySeo(
 
   const h1 = useApi ? (api!.h1 ?? '').trim() || (j.h1 ?? '') : (j.h1 ?? '');
   const intro = richerIntro(useApi ? (api!.short_intro_html ?? '').trim() : '', (j.intro ?? '').trim());
-  const apiLongBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
-  const longBottomHtml = isSubstantivelyDuplicateHtml(intro, apiLongBottomHtml) ? '' : apiLongBottomHtml;
-
   const howToChooseTitle = ((j.howToChooseTitle ?? '') as string).trim();
   const howToChooseBody = ((j.howToChooseBody ?? '') as string).trim();
+
+  /*
+   * ── THE CMS "LONG BOTTOM" BLOCK EARNS ITS PLACE OR IT DOES NOT RENDER ────────────────────────
+   *
+   * Two ways it failed to. (1) A STUB: /whey-proteine's was `<h2>Whey Protein en Tunisie</h2><p>
+   * Disponible sur Protein.tn.</p>` — eight words under a heading, shipped to Googlebot as a
+   * section. The duplicate check could never catch it because the helper bails out below 35
+   * meaningful words on either side, so anything thin was automatically "not a duplicate". A
+   * section that short is thin content whether or not it repeats anything: 40 visible words is the
+   * floor. (2) A SECOND DELIVERY BLOCK: six money pages rendered the JSON's "Livraison X à Tunis,
+   * Sousse, Sfax…" H2 and then a CMS "Livraison X Tunisie" H2 covering the same facts, because the
+   * comparison only looked at the intro and those delivery paragraphs live in the buying guide.
+   * The primary is now the intro AND the guide — everything the reader has already been told.
+   */
+  const apiLongBottomHtml = useApi ? (api!.long_bottom_html ?? '').trim() : '';
+  const curatedBodyHtml = [intro, howToChooseBody].filter(Boolean).join('\n');
+  const longBottomHtml =
+    textWordCount(apiLongBottomHtml) < 40 || isSubstantivelyDuplicateHtml(curatedBodyHtml, apiLongBottomHtml)
+      ? ''
+      : apiLongBottomHtml;
 
   const faqsFromApi = Array.isArray(api?.faq)
     ? api!.faq.filter((x) => x && typeof x.question === 'string' && typeof x.answer === 'string')
@@ -431,15 +458,41 @@ export function mergeCategorySeoForSlug(
 
   /*
    * The SERP fields are plain text: pictographs are stripped at this seam so no JSON file can
-   * ship an emoji (🇹🇳, 💪…) into a <title> or snippet. Several pre-08/09 guides still carry the
-   * flag; sanitising here beats re-editing 51 files and protects every future one.
+   * ship an emoji (🇹🇳, 💪…) into a <title> or snippet.
+   *
+   * DELETING the flag was the bug, though: its authors used " 🇹🇳 " AS the separator between the
+   * head term and the value proposition, so "BCAA Tunisie 🇹🇳 Acides Aminés dès 70 DT" shipped as
+   * "BCAA Tunisie Acides Aminés dès 70 DT" — a run-on keyword string on 18 live titles, which
+   * reads like stuffing and costs CTR. A pictograph run BETWEEN two words therefore becomes " | ";
+   * one already next to a separator, or at either end, is simply removed. The 31 JSON files that
+   * carried the flag were swept to a written separator on 22/09 (and the prebuild check now
+   * refuses a new one), so this is the net for whatever gets pasted in next.
    */
   const stripPictographs = (s: string): string =>
-    s.replace(/[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F1E6}-\u{1F1FF}]/gu, '').replace(/ {2,}/g, ' ').trim();
+    s
+      .replace(
+        /\s*[\p{Extended_Pictographic}\u{FE0F}\u{200D}\u{1F1E6}-\u{1F1FF}]+\s*/gu,
+        (run, offset: number, whole: string) => {
+          const before = whole.slice(0, offset).trim();
+          const after = whole.slice(offset + run.length).trim();
+          if (!before || !after) return ' ';
+          return /[|:–—-]$/.test(before) || /^[|:–—-]/.test(after) ? ' ' : ' | ';
+        }
+      )
+      .replace(/ {2,}/g, ' ')
+      .trim();
   const stripOptional = (s: string | undefined): string | undefined =>
     s === undefined ? undefined : stripPictographs(s);
 
-  const h1 = stripPictographs(json.h1?.trim() || merged.h1);
+  /*
+   * The H1 never carries the brand: the <title> already says "| Protein.tn", and this same string
+   * is reused as the CollectionPage name, the ItemList name and the last breadcrumb crumb, so the
+   * suffix leaked "Protein.tn" into three structured-data names. Applied to h1 ONLY — the title
+   * wants its brand token.
+   */
+  const stripBrandSuffix = (s: string): string => s.replace(/\s*\|\s*Protein\.tn\s*$/i, '').trim();
+
+  const h1 = stripBrandSuffix(stripPictographs(json.h1?.trim() || merged.h1));
   const metaTitle = stripOptional(json.metaTitle?.trim() || merged.metaTitle);
   const metaDescription = stripOptional(json.metaDescription?.trim() || merged.metaDescription);
 

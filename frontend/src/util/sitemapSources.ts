@@ -1,9 +1,10 @@
 import type { MetadataRoute } from 'next';
 
+import { CATEGORY_CONTENT_DATES } from '@/generated/categoryContentDates';
 import { getApiPage, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { brandNameToSlug } from '@/util/brandSlug';
-import { listCategorySeoSlugs } from '@/util/categorySeoContent';
+import { CONTENT_SLUG_ALIASES, listCategorySeoSlugs } from '@/util/categorySeoContent';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { crawlPaginated, describeCrawl, type PaginatedCrawl } from '@/util/sitemapCrawl';
@@ -109,12 +110,27 @@ export type SitemapBuildContext = {
    * deleted three live brand pages the first time this was measured.
    */
   brandIdsWithProducts: Set<number>;
+  /**
+   * The subset of the above whose products are also INDEXABLE. Populated by `products`.
+   *
+   * Reporting only — nothing is dropped from the sitemap on it, see `brandsSource`. It exists so the
+   * build log carries the one number the "should a brand page with only noindex SKUs be submitted?"
+   * question needs, instead of that question being re-argued from a sampled curl each time.
+   */
+  brandIdsWithIndexableProducts: Set<number>;
   /** Lowercased subcategory slugs with at least one PUBLISHED product — same rule. From `products`. */
   subCategorySlugsWithProducts: Set<string>;
   /** Lowercased category + subcategory slugs that exist in the backend. Populated by `taxonomy`. */
   liveCategorySlugs: Set<string>;
   /** Lowercased slugs that have an editorial content file in content/categories/. */
   contentFileSlugs: Set<string>;
+  /**
+   * Content-file slug → the date that file was last committed. From src/generated/categoryContentDates.ts.
+   *
+   * A category's text lives in content/categories/{slug}.json, not in its DB row, so the row's
+   * updated_at is NOT the date the page last changed. See `contentFileLastModified`.
+   */
+  contentFileDates: Map<string, Date>;
   /** The category rows, kept so `products` can rebuild a missing subcategory relation. */
   categories: Category[];
 };
@@ -186,6 +202,41 @@ export function getLastModified(item: { updated_at?: string | null; created_at?:
   if (!raw) return undefined;
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? undefined : parsed;
+}
+
+/**
+ * The <lastmod> a CATEGORY URL deserves: the later of its DB row and its editorial content file.
+ *
+ * ── WHY THE ROW ALONE IS THE WRONG DATE ────────────────────────────────────────────────────────
+ * Everything Google reads on /creatine above the product grid — H1, intro, "comment choisir", FAQ —
+ * comes from content/categories/creatine.json (categorySeoContent.ts), which never touches the
+ * Categ/SousCategory row. Measured 2026-09-22: listings.xml advertised /creatine as last modified
+ * 2026-08-14 and /barres-proteinees as 2026-08-10, while creatine.json had been rewritten on 08–09/09
+ * and barres-proteinees.json that same morning. The pages the programme invests the most in were the
+ * ones telling Google they had not changed in five weeks — and lastmod is the only sitemap field
+ * Google uses to schedule a recrawl.
+ *
+ * ── WHY max() AND NOT "the content date wins" ──────────────────────────────────────────────────
+ * Both dates are real changes to the same page: the row moves when the admin edits the listing's own
+ * fields, the file moves when the copy is rewritten. The page last changed at whichever came later.
+ * Taking the content date unconditionally would REGRESS a category whose row was edited yesterday.
+ *
+ * The dates come from a generated MODULE (scripts/gen-category-content-dates.mjs) rather than from
+ * the filesystem. /sitemap.xml is force-dynamic, so it runs inside the container, and the container
+ * is assembled from .next/standalone + public only (frontend/Dockerfile) — content/ reaches it only
+ * if Next's file tracing happened to pull the directory in, which is not a thing a <lastmod> should
+ * depend on. A module is bundled, so it is there by construction.
+ *
+ * Slugs resolve through CONTENT_SLUG_ALIASES exactly as the page does, so /whey-proteine gets
+ * whey-protein.json's date and /mass-gainers gets mass-gainer.json's — the file each URL actually
+ * renders. A slug with no content file returns the row's date unchanged, which is every brand.
+ */
+function contentFileLastModified(slug: string, ctx: SitemapBuildContext, rowDate?: Date): Date | undefined {
+  const key = slug.trim().toLowerCase();
+  const contentDate = ctx.contentFileDates.get(CONTENT_SLUG_ALIASES[key] ?? key);
+  if (!contentDate) return rowDate;
+  if (!rowDate) return contentDate;
+  return contentDate.getTime() > rowDate.getTime() ? contentDate : rowDate;
 }
 
 /**
@@ -422,11 +473,23 @@ export async function loadSharedContext(baseUrl: string): Promise<{ ctx: Sitemap
   const ctx: SitemapBuildContext = {
     baseUrl,
     brandIdsWithProducts: new Set<number>(),
+    brandIdsWithIndexableProducts: new Set<number>(),
     subCategorySlugsWithProducts: new Set<string>(),
     liveCategorySlugs: new Set<string>(),
     contentFileSlugs: new Set<string>(),
+    contentFileDates: new Map<string, Date>(),
     categories: [],
   };
+
+  /*
+   * Editorial content dates, baked in at build time. An unparseable or missing entry is simply not
+   * added: the affected URL then keeps its DB <lastmod>, which is the honest degradation — a wrong
+   * date spent sitewide is worse than an old one, see getLastModified().
+   */
+  for (const [slug, iso] of Object.entries(CATEGORY_CONTENT_DATES)) {
+    const parsed = new Date(iso);
+    if (!Number.isNaN(parsed.getTime())) ctx.contentFileDates.set(slug.toLowerCase(), parsed);
+  }
 
   /*
    * Slugs that have an editorial content file. Loaded up front because BOTH the taxonomy source
@@ -571,6 +634,9 @@ const productsSource: SitemapSource = {
       }
 
       publishable++;
+      // Reporting only — see brandsSource. Recorded here, AFTER the robots filter, so the two sets
+      // differ by exactly the brands whose entire published range is noindexed.
+      if (Number.isFinite(brandId) && brandId > 0) ctx.brandIdsWithIndexableProducts.add(brandId);
 
       if (!subCategorySlug) {
         // Skipped rather than emitted as /shop/{slug}, which middleware immediately 301s → a
@@ -635,14 +701,25 @@ const taxonomySource: SitemapSource = {
   needs: ['products'],
   load: async (ctx) => {
     const entries: SourceEntry[] = [];
+    /*
+     * How many URLs the editorial file dated rather than the DB row. Counted because the failure
+     * mode of the generated date map is SILENT — an empty module (no git history at build time)
+     * leaves every date exactly as it was before, 200 everywhere, and the only trace is this number
+     * going to zero.
+     */
+    let datedByContentFile = 0;
 
     for (const category of ctx.categories) {
       if (!category.slug) continue;
 
       if (category.sitemap_include !== false && category.robots_index !== false) {
+        const categorySlug = category.slug.toLowerCase();
+        const rowDate = getLastModified(category as { updated_at?: string; created_at?: string });
+        const lastModified = contentFileLastModified(categorySlug, ctx, rowDate);
+        if (lastModified !== rowDate) datedByContentFile++;
         entries.push({
-          url: `${ctx.baseUrl}/${encodeURIComponent(category.slug.toLowerCase())}`,
-          lastModified: getLastModified(category as { updated_at?: string; created_at?: string }),
+          url: `${ctx.baseUrl}/${encodeURIComponent(categorySlug)}`,
+          lastModified,
           changeFrequency: normalizeSitemapChangefreq(category.sitemap_changefreq ?? undefined),
           priority: clampPriority(category.sitemap_priority ?? undefined, 0.85),
         });
@@ -663,9 +740,13 @@ const taxonomySource: SitemapSource = {
         const slug = subCategory.slug.toLowerCase();
         if (!ctx.subCategorySlugsWithProducts.has(slug) && !ctx.contentFileSlugs.has(slug)) continue;
 
+        const rowDate = getLastModified(subCategory as { updated_at?: string; created_at?: string });
+        const lastModified = contentFileLastModified(slug, ctx, rowDate);
+        if (lastModified !== rowDate) datedByContentFile++;
+
         entries.push({
           url: `${ctx.baseUrl}/${encodeURIComponent(slug)}`,
-          lastModified: getLastModified(subCategory as { updated_at?: string; created_at?: string }),
+          lastModified,
           changeFrequency: normalizeSitemapChangefreq(subCategory.sitemap_changefreq ?? undefined),
           priority: clampPriority(subCategory.sitemap_priority ?? undefined, 0.8),
         });
@@ -677,7 +758,9 @@ const taxonomySource: SitemapSource = {
       // The /categories crawl that produced ctx.categories was verified in loadSharedContext, and it
       // throws rather than returning short — so reaching here means the taxonomy is complete.
       verified: true,
-      note: `[sitemap] taxonomy: ${entries.length} category/subcategory URL(s) from ${ctx.categories.length} category row(s)`,
+      note:
+        `[sitemap] taxonomy: ${entries.length} category/subcategory URL(s) from ${ctx.categories.length} ` +
+        `category row(s) (${datedByContentFile} dated by their content file)`,
     };
   },
 };
@@ -704,6 +787,10 @@ const categoryGuidesSource: SitemapSource = {
       if (!ctx.liveCategorySlugs.has(slug)) continue;
       entries.push({
         url: `${ctx.baseUrl}/${encodeURIComponent(slug)}`,
+        // Dedupe is first-writer-wins, so taxonomy's entry normally wins and this date is unused.
+        // It is set anyway: the day a slug reaches Google only through this source, it must not be
+        // the one listing URL in the file with no <lastmod> at all.
+        lastModified: contentFileLastModified(slug, ctx, undefined),
         changeFrequency: 'weekly',
         priority: 0.8,
       });
@@ -729,21 +816,48 @@ const brandsSource: SitemapSource = {
     });
 
     const entries: SourceEntry[] = [];
+    let withoutIndexableProducts = 0;
     for (const brand of crawl.rows) {
       // A brand page with no products is a heading and nothing to buy — a soft 404, and unlike
       // subcategories there is no editorial fallback for brands. Self-correcting: the day a brand
       // gets an indexable product it returns to the sitemap on the next crawl.
       if (!brand.id || !brand.designation_fr) continue;
       if (!ctx.brandIdsWithProducts.has(Number(brand.id))) continue;
+
+      /*
+       * ── WHY THESE STAY IN THE SITEMAP, AND WHY THEY ARE DEMOTED INSTEAD ──────────────────────
+       * 579 of the 634 URLs in listings.xml are brands, and many of them list one to three products
+       * that are themselves noindex (the iHerb import), so the page is indexable but every link on
+       * it goes somewhere Google is told not to index. The obvious move is to drop those URLs.
+       *
+       * GSC 22/09 (28 d) says no: 122 single-segment URLs earned clicks, and the long tail of them
+       * IS these pages — /qualia (1 product) 1 click, /musclepharm 2, /swanson-vitamins 2,
+       * /doctor-s-best 9 clicks at 47% CTR, /neurogum 9 at 64%, /maryruth-s 4 at 44%. Dropping a URL
+       * with clicks from the sitemap to save crawl budget trades a measured gain for a modelled one.
+       *
+       * `priority` is the honest lever here. It is a within-site hint, it cannot remove a URL, and
+       * Google is free to ignore it — which is exactly the risk profile this deserves until the
+       * 21/09 legacy re-index has been confirmed in Search Console and the counts can be re-read on
+       * a catalogue whose best-sellers are no longer wrongly noindexed.
+       */
+      const hasIndexableProducts = ctx.brandIdsWithIndexableProducts.has(Number(brand.id));
+      if (!hasIndexableProducts) withoutIndexableProducts++;
+
       entries.push({
         url: `${ctx.baseUrl}/${brandNameToSlug(brand.designation_fr)}`,
         lastModified: getLastModified(brand as { updated_at?: string; created_at?: string }),
         changeFrequency: 'weekly',
-        priority: 0.75,
+        priority: hasIndexableProducts ? 0.75 : 0.4,
       });
     }
 
-    return { entries, verified, note: `${note} → ${entries.length} brand URL(s)` };
+    return {
+      entries,
+      verified,
+      note:
+        `${note} → ${entries.length} brand URL(s) ` +
+        `(${withoutIndexableProducts} with no indexable product, demoted to priority 0.4)`,
+    };
   },
 };
 

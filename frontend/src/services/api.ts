@@ -1069,8 +1069,36 @@ export const getProductsByBrand = async (brandId: number): Promise<{
   brands: Brand[];
   brand: Brand;
 }> => {
-  const response = await api.get(`/productsByBrandId/${brandId}`);
-  return response.data;
+  // ASK FOR EVERY PRODUCT OF THE BRAND, NOT THE FIRST PAGE.
+  //
+  // Same defect, same fix, as fetchCategoryOrSubCategory above: this called
+  // /productsByBrandId with no pagination parameters and the endpoint defaults to per_page = 20.
+  // A brand page has no "load more" and no pagination UI, so those 20 WERE the brand as far as a
+  // shopper — and as far as Googlebot — could tell. Measured against the live API on 22/09/2026:
+  // /productsByBrandId/17 (Optimum Nutrition) reports products_meta.total = 50, and
+  // https://protein.tn/optimum-nutrition rendered `Produits (20)` with 20 product links, so 30
+  // Optimum Nutrition PDPs had no link from their own brand page in EITHER render.
+  //
+  // 100 is the endpoint's MAX_PER_PAGE, so the loop below is what makes this correct rather than
+  // merely bigger: a brand that grows past 100 keeps working instead of silently truncating
+  // again. No brand reaches 100 today, so this costs a single request.
+  const PER_PAGE = 100;
+  const first = await api.get(`/productsByBrandId/${brandId}?per_page=${PER_PAGE}&page=1`);
+  const data = first.data;
+  const lastPage = Number(data?.products_meta?.last_page ?? 1);
+  if (!Array.isArray(data?.products) || !(lastPage > 1)) return data;
+
+  const rest = await Promise.all(
+    Array.from({ length: lastPage - 1 }, (_, i) =>
+      api
+        .get(`/productsByBrandId/${brandId}?per_page=${PER_PAGE}&page=${i + 2}`)
+        // One failed page must not empty the brand — render what we have.
+        .then((r) => (Array.isArray(r.data?.products) ? (r.data.products as Product[]) : []))
+        .catch(() => [] as Product[])
+    )
+  );
+
+  return { ...data, products: (data.products as Product[]).concat(...rest) };
 };
 
 /**
@@ -1246,24 +1274,72 @@ export const getTags = async (): Promise<any[]> => {
 //   Data Cache entirely (every request looks like a different URL).
 // ─────────────────────────────────────────────────────────
 
-export const getAllArticles = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles?per_page=100`, {
+/** /all_articles reported meta.total = 224 over 3 pages on 22/09/2026. Mirrors util/blogSlugs.ts. */
+const ARTICLES_MAX_PAGES = 10;
+/** The backend's MAX_PER_PAGE — asking for more is silently clamped, so the loop is the only way out. */
+const ARTICLES_PER_PAGE = 100;
+
+/**
+ * EVERY published article, not the first 100.
+ *
+ * Both exported article-corpus calls stopped at one page of 100, and every blog link surface
+ * reads that array: the /blog SSR `<details>` archive, its page count, its ItemList and the
+ * "Articles similaires" pool on an article. Measured 22/09/2026 — /blog served Googlebot exactly
+ * 100 unique /blog/{slug} hrefs while sitemaps/blog.xml listed 223, so 123 articles had ZERO
+ * internal inbound links and were reachable only through the sitemap. Among them the two
+ * best-performing blog URLs on the site. util/sitemapSources.ts:787 documents the identical
+ * defect and fixed it for the sitemap crawler only; this is the page-side half.
+ *
+ * Shared by the server and client variants on purpose: the client refresh corpus feeding
+ * BlogPageClient must be the same set as the SSR one, or pagination changes under the reader.
+ */
+async function fetchAllArticlePages(init: RequestInit & { next?: { tags: string[] } }): Promise<Article[]> {
+  const out: Article[] = [];
+
+  for (let page = 1; page <= ARTICLES_MAX_PAGES; page++) {
+    const response = await fetch(`${API_URL}/all_articles?per_page=${ARTICLES_PER_PAGE}&page=${page}`, init);
+
+    if (!response.ok) {
+      // Page 1 failing is a real outage and the callers handle it. A later page failing must not
+      // throw away the articles we already have — a short list beats an empty blog.
+      if (page === 1) throw new Error(`Failed to fetch articles: ${response.statusText}`);
+      break;
+    }
+
+    const data = await response.json();
+    // Backend returns paginated {data:[...], meta, links} or plain array
+    const rows: Article[] = Array.isArray(data)
+      ? data
+      : (Array.isArray(data?.data) ? data.data : (data.articles || []));
+    out.push(...rows);
+
+    // A plain array carries no meta, so it is by definition the whole set.
+    if (Array.isArray(data)) break;
+    if (rows.length < ARTICLES_PER_PAGE) break;
+    // Only a meta that NAMES a further page earns another request. Verified 22/09/2026:
+    // /all_articles?per_page=100&page=N returns {data, meta:{page,per_page,total,last_page:3}}
+    // and pages 1 and 2 share zero ids. The legacy `{articles:[...]}` shape the row-reader above
+    // still tolerates carries NO meta and there is no evidence it reads `page` — without this
+    // guard a full 100 from that shape would be appended ten times over, duplicating every
+    // /blog link. Stopping there degrades to the previous single-page behaviour, never worse.
+    const lastPage = Number(data?.meta?.last_page ?? 0);
+    if (!Number.isFinite(lastPage) || page >= lastPage) break;
+  }
+
+  return out;
+}
+
+export const getAllArticles = async (): Promise<Article[]> =>
+  fetchAllArticlePages({
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
       'Accept': 'application/json',
     },
-    next: { tags: ['blog'] }, // ISR: cached until revalidateTag('blog')
+    // ISR: cached until revalidateTag('blog'). The tag rides on EVERY page request, so
+    // POST /api/revalidate-blog still purges the whole corpus, not just page 1.
+    next: { tags: ['blog'] },
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch articles: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  // Backend returns paginated {data:[...], meta, links} or plain array
-  return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.articles || []));
-};
 
 const ARTICLE_RETRY_DELAYS_MS = [800, 2500, 6000];
 
@@ -1384,8 +1460,10 @@ export const getArticlesByBlogTag = async (
  * Uses cache:'no-store' + no-cache headers (browser → origin, no Next.js
  * Data Cache involved).  No ?_t= needed.
  */
-export const getAllArticlesClient = async (): Promise<Article[]> => {
-  const response = await fetch(`${API_URL}/all_articles?per_page=100`, {
+export const getAllArticlesClient = async (): Promise<Article[]> =>
+  // Same corpus as getAllArticles — see fetchAllArticlePages. If this one stayed capped at 100,
+  // the client refresh would silently shrink the archive the server had just rendered.
+  fetchAllArticlePages({
     method: 'GET',
     headers: {
       'Content-Type': 'application/json',
@@ -1395,15 +1473,6 @@ export const getAllArticlesClient = async (): Promise<Article[]> => {
     },
     cache: 'no-store',
   });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch articles: ${response.statusText}`);
-  }
-
-  const data = await response.json();
-  // Backend returns paginated {data:[...], meta, links} or plain array
-  return Array.isArray(data) ? data : (Array.isArray(data?.data) ? data.data : (data.articles || []));
-};
 
 // Media
 export const getMedia = async (): Promise<any> => {

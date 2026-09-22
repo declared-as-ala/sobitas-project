@@ -28,6 +28,10 @@
  *   headingOverride  same, for the visible H1 (the CMS body's own <h1> is the accented
  *                    "Protéine Tunisie : Guide complet…"; see PageContentClient)
  *   commercialLinks  routes the intent UP, high in the body, with anchors that carry the query
+ *   navLabel         (22/09/2026) closes the footer half of the same problem, which the note
+ *                    above described but did not fix — FooterClient now prints this instead of
+ *                    the CMS title. /creatine-monohydrate-tunisie got the same treatment the
+ *                    same day; it is the second and last commercial guide in that column.
  *
  * Anything a page does not declare here is left exactly as the CMS authored it.
  */
@@ -41,6 +45,16 @@ export interface CmsPageCommercialLink {
 }
 
 export interface CmsPageSeoEntry {
+  /**
+   * Anchor text wherever the site's own chrome links this page — today the footer's
+   * "Services & Ventes" column, which renders on every page. The footer used to print the raw CMS
+   * title, so the two strongest exact-match anchors the site owns ("Proteine Tunisie",
+   * "Créatine Monohydrate Tunisie") were spent sitewide on guide pages that sell nothing, while
+   * /proteines and /creatine sat at positions 19 and 22. A nav label describes the PAGE
+   * ("Guide : …"); the commercial phrase belongs to the category link one column to the left.
+   * The link itself is kept — the guides would otherwise have no inbound link but the sitemap.
+   */
+  navLabel?: string;
   /** <title>, shared by the root, /page/ and crawler metadata paths. */
   titleOverride?: string;
   /**
@@ -57,6 +71,7 @@ export interface CmsPageSeoEntry {
 
 const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
   'proteine-tunisie': {
+    navLabel: 'Guide : bien choisir sa protéine',
     titleOverride: 'Comment choisir sa protéine ? Guide Tunisie | Protein.tn',
     headingOverride: 'Comment choisir sa protéine ? Le guide',
     commercialIntro: 'Vous voulez acheter directement ?',
@@ -70,6 +85,42 @@ const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
         anchor: 'whey protein en Tunisie',
         href: '/whey-proteine',
         hint: 'La catégorie whey, marque par marque, avec les formats disponibles.',
+      },
+    ],
+  },
+  /*
+   * The same shape as /proteine-tunisie, one page later. /creatine-monohydrate-tunisie is a
+   * ~1,200-word guide with no products, no FAQPage and no CollectionPage; its only route toward
+   * the catalogue is a CMS-authored button pointing at the legacy /category/creatine, which 308s.
+   * So it answers the "créatine monohydrate tunisie" query in Google's index (28 d: 0 clicks /
+   * 39 impressions / position 13.6) without ever handing that intent to /creatine (2 / 204 / 22).
+   *
+   * NO `titleOverride` here, deliberately. The live <title> is already guide-framed ("Créatine
+   * Monohydrate en Tunisie : guide expert & prix 2026") and it is what earns those impressions;
+   * rewriting it would risk the only thing the page does well.
+   *
+   * ── WHAT `headingOverride` DOES AND DOES NOT DO ON THIS PAGE (verified 22/09/2026) ──────────
+   * It does NOT replace the H1 here, unlike on /proteine-tunisie. PageContentClient strips only a
+   * LEADING <h1> from the CMS body (anchored regex, PageContentClient.tsx:50). This body does not
+   * open with its heading — it opens with a <div> holding a JSON-LD <script>, then a
+   * <section class="wh-hero">, and the <h1> is nested inside. So the strip misses, `bodyHasOwnH1`
+   * stays true, and the override renders as the large aria-hidden <p> above the article while the
+   * body's own "Créatine Monohydrate Tunisie : Le Guide Expert 2026" remains the page's single H1.
+   * Measured with a Googlebot UA: /proteine-tunisie's H1 is its override; this page's H1 is still
+   * the body's. What the override still buys is the biggest VISIBLE line on the page, which used
+   * to repeat the bare commercial phrase (page.title) and now reads as a guide.
+   * Actually moving the H1 needs PageContentClient's strip to handle a non-leading body h1 — that
+   * file is out of this batch's scope; left for the owner. Do not claim this finding is closed.
+   */
+  'creatine-monohydrate-tunisie': {
+    navLabel: 'Guide : la créatine monohydrate',
+    headingOverride: 'Comment choisir sa créatine monohydrate ? Le guide',
+    commercialIntro: 'Vous voulez acheter directement ?',
+    commercialLinks: [
+      {
+        anchor: 'créatine monohydrate en Tunisie',
+        href: '/creatine',
+        hint: 'Toute la catégorie créatine : marques, formats et prix du jour.',
       },
     ],
   },
@@ -91,4 +142,9 @@ export function getCmsPageSeoEntry(slug: string): CmsPageSeoEntry | undefined {
 
 export function getCmsPageTitleOverride(slug: string): string | undefined {
   return getCmsPageSeoEntry(slug)?.titleOverride;
+}
+
+/** Anchor text for a CMS page in the site chrome; `undefined` means "use the CMS title". */
+export function getCmsPageNavLabel(slug: string): string | undefined {
+  return getCmsPageSeoEntry(slug)?.navLabel;
 }

@@ -1,16 +1,12 @@
 {
-  "h1": "Matériel de Musculation Tunisie – Équipement Fitness | Protein.tn",
-  "metaTitle": "Matériel Musculation Tunisie 🇹🇳 Fitness à Domicile | Protein.tn",
+  "h1": "Matériel de Musculation Tunisie – Équipement Fitness",
+  "metaTitle": "Matériel Musculation Tunisie : Fitness à Domicile | Protein.tn",
   "metaDescription": "Achetez votre matériel de musculation en Tunisie : haltères, barres, élastiques, tapis. Équipez votre home gym. Livraison 24h Tunis, Sousse, Sfax.",
-  "ogImage": "https://protein.tn/favicon-512x512.png",
+  "ogImage": "https://protein.tn/og-banner.jpg",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>matériel de musculation</strong> pour votre home gym : haltères, barres, poids, élastiques, tapis de sol. Tout pour vous entraîner chez vous en Tunisie. Sur <strong>Protein.tn</strong>, retrouvez notre sélection d'équipements fitness.</p>",
   "howToChooseTitle": "Comment choisir son matériel de musculation ?",
   "howToChooseBody": "<ul><li><strong>Haltères</strong> : réglables ou fixes selon votre budget.</li><li><strong>Barres</strong> : barre droite, barre EZ, barre de traction.</li><li><strong>Poids</strong> : disques en fonte ou caoutchouc.</li><li><strong>Élastiques</strong> : plusieurs niveaux de résistance.</li><li><strong>Tapis</strong> : antidérapant pour le sol.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [],
-  "relatedCategorySlugs": [
-    "equipement-cardio-fitness",
-    "bandes-de-soutien-musculaire",
-    "ceinture-de-musculation"
-  ],
+  "relatedCategorySlugs": [],
   "bestProductSlugs": []
 }

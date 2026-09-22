@@ -29,16 +29,33 @@ interface HomePageClientProps {
   brands?: Brand[];
 }
 
-/** High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.). */
+/**
+ * High-intent category URLs — reinforces internal linking for rankings (créatine, whey, etc.).
+ *
+ * This <nav> is rendered server-side, so it is the ONLY crawlable path from the homepage to a
+ * sub-category: the mega-menu (ProductsDropdown) and the mobile drawer (a Radix Sheet) exist in
+ * the DOM only after a hover or a tap, and Googlebot neither hovers nor taps. Before 22/09/2026
+ * the SSR homepage — the site's one page with real authority — linked 15 of the 634 URLs in
+ * sitemaps/listings.xml, and every sub-category below already earned impressions with no homepage
+ * link at all (GSC 28 d to 19/09: /whey-isolate 231 impr, /omega-3 196, /whey-hydrolysee 107,
+ * /vitamines 95, /caseine 30, /zma 16). /mass-gainers is deliberately absent: the CategoryRail
+ * text row above already gives it its first anchor.
+ */
 const PRIORITY_SHOP_CATEGORY_LINKS = [
   { href: '/whey-proteine', label: 'Whey protein en Tunisie' },
   { href: '/creatine', label: 'Créatine monohydrate en Tunisie' },
-  { href: '/proteines', label: 'Catalogue de protéines' },
+  { href: '/proteines', label: 'Protéines en Tunisie' },
   { href: '/dymatize', label: 'Dymatize Tunisie' },
   { href: '/bcaa', label: 'BCAA Tunisie' },
   { href: '/glutamine', label: 'Glutamine Tunisie' },
   { href: '/pre-workout', label: 'Pre workout Tunisie' },
   { href: '/acides-amines', label: 'Acides aminés Tunisie' },
+  { href: '/whey-isolate', label: 'Whey isolate Tunisie' },
+  { href: '/whey-hydrolysee', label: 'Whey hydrolysée Tunisie' },
+  { href: '/caseine', label: 'Caséine Tunisie' },
+  { href: '/omega-3', label: 'Oméga 3 Tunisie' },
+  { href: '/vitamines', label: 'Vitamines Tunisie' },
+  { href: '/zma', label: 'ZMA Tunisie' },
 ] as const;
 
 function transformProduct(product: Product) {
@@ -306,8 +323,12 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
         {/* CategoryRail sits DIRECTLY under the hero (owner request): shopping paths one tap from
             the fold, no copy strip in between. The page's single <h1> used to live in that strip;
-            it now lives in the crawlable SEO block near the bottom (still exactly one h1, still
-            carrying the "Protéine Tunisie" query), so removing the strip costs no ranking signal. */}
+            it is now the sr-only one at the top of <main> (still exactly one h1, still carrying
+            the "Protéine Tunisie" query). NOTE (22/09/2026): sr-only means no visitor ever sees
+            the heading that targets the head term, and Google de-weights text it considers
+            hidden — making it visible reverses the owner's "no copy strip" instruction, so it is
+            an OWNER DECISION, not a silent fix. Do not move the h1 into Hero: a slide is an image
+            and carries no text (owner, 03/08/2026). */}
         {/* IT ALSO CARRIES THE PAGE'S FIRST COMMERCIAL ANCHORS (P1, 08/09/2026). The row of text
             links at the foot of that band — "Protéine Tunisie" → /proteines, "Whey Protein
             Tunisie" → /whey-proteine, "Mass Gainer en Tunisie" → /mass-gainers, "Créatine

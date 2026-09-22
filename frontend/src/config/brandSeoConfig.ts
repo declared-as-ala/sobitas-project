@@ -40,6 +40,15 @@ export interface BrandSeoEntry {
  * daily and the product grid above the copy already renders the live values — a number frozen
  * into this file would be a contradiction on the same screen within a week.
  *
+ * ── ONE ANCHOR, ONE DESTINATION ──────────────────────────────────────────────────────────────
+ * `relatedCategories` is the only internal-link surface a brand page has, so the same anchor text
+ * must always point at the same URL. "Mass gainers en Tunisie" pointed at /gainers-proteines in
+ * two entries (dymatize, ostrovit) and at /mass-gainers in two others (muscletech, biotech-usa) —
+ * four brand pages splitting the exact anchor Google reads for `mass gainer tunisie` across two
+ * self-canonical 200s, which is the cannibalisation the audit found on that query (GSC 22/09:
+ * /mass-gainers 0/12/51.4 AND /gainers-proteines 0/10/53.3 on the same query). All four now say
+ * /mass-gainers. /gainers-proteines keeps its own distinct anchor, "Gainers protéinés en Tunisie".
+ *
  * ── ONLY BRANDS WHOSE PAGE ACTUALLY RESOLVES ─────────────────────────────────────────────────
  * A slug here only produces content if findBrandBySlug() resolves it, so entries exist only for
  * brands present in /all_brands. Checked on 08/09/2026 against all 582 rows: american-wolf,
@@ -82,7 +91,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'gainers-proteines', name: 'Mass gainers en Tunisie', url: '/gainers-proteines' },
+      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
     ],
   },
 
@@ -283,7 +292,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     ],
     relatedCategories: [
       { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'gainers-proteines', name: 'Mass gainers en Tunisie', url: '/gainers-proteines' },
+      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
       { slug: 'creatine', name: 'Créatine en Tunisie', url: '/creatine' },
       { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
     ],

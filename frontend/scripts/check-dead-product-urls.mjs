@@ -176,7 +176,10 @@ const CASES = [
      /products/* and nested-product 404s after the generic resolver pass, and must now terminate
      as 410 even when the taxonomy cache is cold. */
   { path: '/products/amino-target-xplode-275-g', why: 'confirmed retired product slug' },
-  { path: '/pre-workout/king-real-preworkout-500gr-real-pharm', why: 'confirmed retired nested product' },
+  // RENAMED, not retired: the API 404s the old slug but …-real-pharm-tunisie is live and in stock,
+  // so this must 301 onto it and finish 200. It was a 410 until 22/09/2026.
+  { path: '/pre-workout/king-real-preworkout-500gr-real-pharm', why: 'renamed product — must 301 to the live PDP, never 410' },
+  { path: '/products/citruargin-300-g', why: 'renamed product — must 301 to /citrulline/citruargin-300-g-real-pharm' },
   { path: '/cardio-fitness/ring-de-boxe', why: 'confirmed retired product from canonical-conflict export' },
 
   /* ── CASE ─────────────────────────────────────────────────────────────────────────────────

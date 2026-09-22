@@ -20,8 +20,9 @@
  */
 
 import type { Metadata } from 'next';
+import { unstable_cache } from 'next/cache';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
-import { getProductsByBrand } from '@/services/api';
+import { getCategories } from '@/services/api';
 // Request-scoped cache. A single bot request used to resolve the same category up to THREE times
 // (hasCategoryOrSubCategory here, generateCategoryMetadata's own fetch, then the page body) and
 // look up brands/CMS pages twice — all separate HTTP calls against the shared per-IP bucket,
@@ -49,7 +50,8 @@ import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchem
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import { sanitizeProductHtml, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
-import type { Brand, Page, Product } from '@/types';
+import { categoryAnchor } from '@/util/categoryAnchor';
+import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
@@ -94,6 +96,47 @@ async function findPageBySlug(slug: string): Promise<Page | null> {
   }
 }
 
+/**
+ * The taxonomy, on the SAME cache key, TTL and tag as the human category route
+ * (loadCategoryListingSupport in app/(shop)/category/[slug]/page.tsx): a bot request warms the
+ * entry a shopper hits and vice versa, so the lateral-link fix below costs no extra origin call
+ * in steady state.
+ */
+const getCachedCategories = unstable_cache(() => getCategories(), ['shop-categories'], {
+  revalidate: 3600,
+  tags: ['categories'],
+});
+
+/**
+ * Resolve related slugs to real links — the crawler half of `resolveRelatedCategories()` in
+ * app/(shop)/category/[slug]/page.tsx, which that module does not export.
+ *
+ * Three rules, and all three are why the raw `slug.replace(/-/g, ' ')` it replaces was wrong:
+ * a slug absent from the taxonomy is DROPPED rather than linked (/materiel-de-musculation was
+ * linking /equipement-cardio-fitness and /bandes-de-soutien-musculaire, both 308s, the second one
+ * back to itself), the anchor is the real `designation_fr` through categoryAnchor() instead of
+ * "gainers proteines" / "sante vitalite", and the href goes through canonicalCategoryPath() so an
+ * aliased slug never links a redirect.
+ */
+function resolveRelatedCategoryLinks(slugs: string[], categories: Category[]): CrawlerListLink[] {
+  const out: CrawlerListLink[] = [];
+  for (const s of slugs.slice(0, 6)) {
+    const cat = categories.find((c) => c.slug === s);
+    if (cat) {
+      out.push({ name: categoryAnchor(cat.slug, cat.designation_fr), url: canonicalCategoryPath(cat.slug) });
+      continue;
+    }
+    for (const c of categories) {
+      const sub = (c.sous_categories ?? []).find((sc: SubCategory) => sc.slug === s);
+      if (sub) {
+        out.push({ name: categoryAnchor(sub.slug, sub.designation_fr), url: canonicalCategoryPath(sub.slug) });
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
   try {
     await fetchCategoryOrSubCategory(slug);
@@ -112,7 +155,24 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
   }
   try {
     if (await hasCategoryOrSubCategory(cleanSlug)) {
-      // Reuse the human category page's metadata (same title/description, canonical → /{slug}).
+      /*
+       * Reuse the human category page's metadata (same title/description, canonical → /{slug}).
+       *
+       * THIS DELEGATION IS ALSO WHERE THE OUT-OF-RANGE ?page=N FIX COMES FROM — do not
+       * re-implement it here. app/(shop)/category/[slug] now detects `page > totalPages` (guarded
+       * on `total > 0`, so an outage cannot collapse every paginated listing onto page 1) and
+       * canonicalises the overflow to the LAST REAL page, on top of the `noindex, follow` it
+       * already emitted for page > 1 and the per-page title/description suffix. `searchParams` is
+       * forwarded above, so a bot rewritten to /x-crawler/category/creatine?page=99999 receives
+       * byte-identical head directives to a shopper on /creatine?page=99999.
+       *
+       * The body agrees with it by construction: `loadListingPage` clamps `currentPage` down to
+       * `totalPages`, so the CollectionPage/ItemList @id and the pager this route renders for an
+       * overflowed page already point at the same last real page the canonical names. A crawler
+       * route cannot mirror the other half of a "status" fix — it is reached by an internal
+       * middleware REWRITE of /{slug}, so redirecting from here would move the bot off the URL it
+       * is indexing; the head is the whole lever this route has, and it is pulled above.
+       */
       return generateCategoryMetadata({ params, searchParams });
     }
     const brand = await findBrandBySlug(cleanSlug);
@@ -233,6 +293,40 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
         : { categories: [cleanSlug], subcategories: [] }
     );
     const products: Product[] = (productsData.products ?? []) as Product[];
+    /*
+     * ── PAGE 2+ CARRIES THE PRODUCTS AND NOTHING ELSE ─────────────────────────────────────────
+     *
+     * Measured live as Googlebot on 22/09/2026: /creatine?page=2 was 183 KB and shipped the SAME
+     * H1, the SAME nine <h2>, the same intro, the same buying guide, the same closing copy and a
+     * SECOND FAQPage node as page 1 — on every page of a ten-page series, on 55 listings. This
+     * route passed the editorial props unconditionally, so the one render Google reads repeated
+     * page 1's whole body ten times over.
+     *
+     * Google's FAQPage guidance is one marked-up instance per page, for Q&A that is visible on
+     * THAT page. Reprinting page 1's Q&A on ten URLs and marking all ten up is the misuse the
+     * guidance names, not a rich-result multiplier.
+     *
+     * Page 1 is untouched, byte for byte, including the frozen categories. Page N keeps its H1,
+     * its breadcrumb, its twelve products (with image, price and stock label), its Product +
+     * ItemList + CollectionPage + BreadcrumbList markup, its subcategory and lateral links and
+     * its pager — everything that makes it a crawl path — and drops only the copy that belongs to
+     * page 1. The human route already tells Google the same thing from the other side: its
+     * generateMetadata (which this route delegates to, above) gives page N its own title, its own
+     * description and `noindex, follow`.
+     *
+     * Derived from the REQUESTED page as well as the resolved one: loadListingPage clamps
+     * `currentPage` down to `totalPages`, so ?page=5 on a one-page category resolves to 1 and
+     * would otherwise re-print the whole editorial block at a second URL.
+     */
+    const isPaged = listingQuery.page > 1 || serverPagination.currentPage > 1;
+    // Built exactly as before; `isPaged` decides at the render site below whether they are passed.
+    const howToChooseTitle = merged.howToChooseTitle?.trim() || null;
+    const howToChooseBody = merged.howToChooseBody?.trim()
+      ? sanitizeProductHtml(merged.howToChooseBody)
+      : null;
+    const longBottomHtml = merged.longBottomHtml?.trim()
+      ? sanitizeProductHtml(merged.longBottomHtml)
+      : null;
     const subCats: CrawlerListLink[] = !isSub
       ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
           .filter((sc) => sc?.slug && sc?.designation_fr)
@@ -242,25 +336,58 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     // Parent category in the trail for a SUBcategory. Without it the crawler breadcrumb jumped
     // Accueil > Boutique > Créatine, losing the only structural link from a subcategory up to its
     // parent — 41 of 47 category pages were handing Googlebot ZERO links to any other category.
+    //
+    // READ THE KEY THE PAYLOAD ACTUALLY CARRIES. This was `data.category`, which
+    // productsBySubCategoryId never sends (its top-level keys are sous_category, seo, breadcrumb,
+    // products, brands, sous_categories); the parent is eager-loaded at `sous_category.categorie`,
+    // which is what the human route reads. So the fix above shipped 08/09 and was dead code until
+    // 22/09: live bot HTML of /creatine, /bcaa and /vitamines contained no /performance,
+    // /sante-vitalite link at all while the browser render showed the parent crumb.
     const parentCat = isSub
-      ? (data as { category?: { slug?: string; designation_fr?: string } }).category
+      ? (data as { sous_category?: { categorie?: { slug?: string; designation_fr?: string } } })
+          .sous_category?.categorie
       : undefined;
     const breadcrumbs: CrawlerListLink[] = [
       { name: 'Accueil', url: '/' },
       { name: 'Boutique', url: '/shop' },
       ...(parentCat?.slug && parentCat?.designation_fr
-        ? [{ name: parentCat.designation_fr, url: `/${parentCat.slug}` }]
+        ? // .trim(): the stored value is "PROTÉINES " with a trailing space.
+          [{ name: parentCat.designation_fr.trim(), url: canonicalCategoryPath(parentCat.slug) }]
         : []),
-      { name: title, url: `/${cleanSlug}` },
+      // Same precedence as the human route: the short taxonomy label, not the 50-character H1.
+      // A breadcrumb rich result showing "Créatine monohydrate en Tunisie : prix et formats"
+      // where the browser render says "Créatine" is two entities for one URL.
+      { name: merged.breadcrumbLabel?.trim() || title, url: `/${cleanSlug}` },
     ];
 
-    // Related categories — the same list the human page renders. The prop already existed on
-    // CrawlerCategoryView and was simply never passed, so topical link equity stopped dead at the
-    // crawler boundary.
-    const relatedCategories: CrawlerListLink[] = (merged.relatedCategorySlugs ?? [])
+    // Related categories — the same list, with the same anchors and the same fallbacks, as the
+    // human page. Two things were missing and both cost link equity on the only render Google
+    // reads: the anchors were slug words ("gainers proteines", "sante vitalite") instead of the
+    // category names, and an UNCURATED subcategory (21 under /sante-vitalite alone) got no list at
+    // all — so with the dead parent crumb above it linked to no category whatsoever.
+    const categories = await getCachedCategories().catch(() => [] as Category[]);
+    const curatedSlugs = (merged.relatedCategorySlugs ?? [])
       .map((s) => String(s ?? '').trim())
-      .filter((s) => s && s.toLowerCase() !== cleanSlug.toLowerCase())
-      .map((s) => ({ name: s.replace(/-/g, ' '), url: `/${s}` }));
+      .filter((s) => s && s.toLowerCase() !== cleanSlug.toLowerCase());
+    // Mirrors app/(shop)/category/[slug]/page.tsx: siblings + parent for a subcategory, the other
+    // top categories for a category.
+    const relatedSlugs = curatedSlugs.length
+      ? curatedSlugs
+      : isSub
+        ? (() => {
+            const parentSlug = parentCat?.slug;
+            const parent = parentSlug ? categories.find((c) => c.slug === parentSlug) : undefined;
+            const siblingSlugs = (parent?.sous_categories ?? [])
+              .map((sc: SubCategory) => sc.slug)
+              .filter((s): s is string => Boolean(s) && s.toLowerCase() !== cleanSlug.toLowerCase());
+            return (parentSlug ? [...siblingSlugs, parentSlug] : siblingSlugs).slice(0, 6);
+          })()
+        : categories.filter((c) => c.slug !== cleanSlug).slice(0, 6).map((c) => c.slug);
+    // A transient taxonomy failure (429 on the shared per-IP bucket, 5xx) must not delete the
+    // lateral links; fall back to the previous slug-derived anchors rather than to nothing.
+    const relatedCategories: CrawlerListLink[] = categories.length
+      ? resolveRelatedCategoryLinks(relatedSlugs, categories)
+      : curatedSlugs.map((s) => ({ name: s.replace(/-/g, ' '), url: canonicalCategoryPath(s) }));
     const productListItems = products
       .filter((p) => p && p.designation_fr)
       .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
@@ -283,7 +410,9 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     // the crawler — Google saw zero FAQ markup on these pages. Safe to emit here because the same
     // Q&A is now rendered as visible text in CrawlerCategoryView; FAQ schema without matching
     // on-page content is a structured-data violation, not a shortcut.
-    const faqs = merged.faqs ?? [];
+    // Empty on page 2+ — see the isPaged note above. The schema follows the visible text on the
+    // same line, because that is the only thing that makes emitting it legitimate at all.
+    const faqs = isPaged ? [] : (merged.faqs ?? []);
     const faqSchema = faqs.length ? buildFAQPageSchemaFromQA(faqs) : null;
     /*
      * ── THE PRODUCT NODES WERE ON THE HUMAN PAGE ONLY ─────────────────────────────────────────
@@ -296,8 +425,11 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
      *     /creatine                      same, both
      *
      * So the one view Google reads carried the least. Same builder, same slice, same six products
-     * CrawlerCategoryView already renders as visible cards with their prices — Google's merchant
-     * listing guidance covers exactly this case, and the nodes' canonical URLs point at the PDPs
+     * CrawlerCategoryView renders — each with its cover image, its price and its stock label since
+     * 22/09/2026. Until then this comment was false and the Offer prices marked up here appeared
+     * nowhere on the page, which is the structured-data rule ("mark up what the user sees") that
+     * merchant-listing eligibility turns on — Google's merchant listing guidance covers exactly
+     * this case, and the nodes' canonical URLs point at the PDPs
      * rather than at this page, so they consolidate to the product rather than competing with it.
      */
     const productSchemas = products
@@ -314,10 +446,10 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
         {productSchemas.map((schema, i) => ldScript(schema, `product-ld-${i}`))}
         <CrawlerCategoryView
           title={title}
-          introHtml={introHtml}
-          howToChooseTitle={merged.howToChooseTitle?.trim() || null}
-          howToChooseBody={merged.howToChooseBody?.trim() ? sanitizeProductHtml(merged.howToChooseBody) : null}
-          longBottomHtml={merged.longBottomHtml?.trim() ? sanitizeProductHtml(merged.longBottomHtml) : null}
+          introHtml={isPaged ? null : introHtml}
+          howToChooseTitle={isPaged ? null : howToChooseTitle}
+          howToChooseBody={isPaged ? null : howToChooseBody}
+          longBottomHtml={isPaged ? null : longBottomHtml}
           faqs={faqs}
           breadcrumbs={breadcrumbs}
           products={products}
@@ -337,14 +469,21 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
   // 2. Brand listing
   const brand = await findBrandBySlug(cleanSlug);
   if (brand?.id) {
-    // loadForCache: a failed getProductsByBrand() during `next build` must not bake an empty brand
+    // loadForCache: a failed brand listing fetch during `next build` must not bake an empty brand
     // listing for the crawler — noStore() defers the render to runtime where the API is reachable.
     // rethrow: on a route whose ONLY visitor is a crawler, noStore() is not enough. It keeps the
     // empty render out of the Full Route Cache but still hands Googlebot a 200 with an empty
     // product list — a soft-404 it records immediately. A 5xx is retried; an empty 200 is not.
+    //
+    // Cached, not raw. generateMetadata above already fetched this exact listing through
+    // getCachedProductsByBrand (it is what decides `index: brandProductCount > 0`), and the raw
+    // call made the body fetch it a SECOND time — two identical requests against the shared per-IP
+    // bucket on every brand render, and the bot is the only visitor this route has, so the bot is
+    // exactly who paid for it. The request-scoped cache() wrapper exists for this; the human brand
+    // route at app/(shop)/[slug]/page.tsx was switched to the same helper for the same reason.
     const result = await loadForCache(
-      () => getProductsByBrand(brand.id),
-      { products: [] as Product[] } as Awaited<ReturnType<typeof getProductsByBrand>>,
+      () => getCachedProductsByBrand(brand.id),
+      { products: [] as Product[] } as Awaited<ReturnType<typeof getCachedProductsByBrand>>,
       { rethrow: true },
     );
     const products: Product[] = (result as { products?: Product[] }).products ?? [];

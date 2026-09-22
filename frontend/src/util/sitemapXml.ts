@@ -78,7 +78,32 @@ const MAX_URLS_PER_CHILD = 5000;
  */
 const MAX_URLS_PER_SITEMAP = 50000;
 
-export const SITEMAP_CACHE_HEADER = 'public, max-age=0, s-maxage=3600, stale-while-revalidate=86400';
+/**
+ * What the EDGE is allowed to serve, which is a different question from how long the data crawl is
+ * memoised — and conflating the two is what made an admin's "publish" invisible for a day.
+ *
+ * Measured 2026-09-22 (Googlebot UA): /sitemap.xml, /sitemaps/listings.xml and /sitemaps/products-*.xml
+ * all answer `cf-cache-status: HIT` with an Age in the thousands, so Cloudflare caches these files
+ * and honours this header. It used to say `s-maxage=3600, stale-while-revalidate=86400`. The origin
+ * bust — Filament's SeoNotifier::bustSitemapCache POSTs /api/revalidate?tag=sitemap over the docker
+ * network — clears Next's unstable_cache and nothing else, so a product flipped noindex→index or a
+ * rewritten category guide could sit behind a fresh edge copy for an hour and then behind a STALE
+ * one for up to 24h more while Cloudflare revalidated in the background. Each child and the index
+ * also expire independently, so the index could advertise a lastmod the cached child did not carry.
+ *
+ * 300s is the whole fix, and it is nearly free: the origin still answers every one of these from the
+ * 1h unstable_cache entry (sitemapData.ts), so an edge revalidation costs a cache read plus an XML
+ * render — not a catalogue crawl. Worst-case staleness drops from ~25h to ~10min.
+ *
+ * Deliberately NOT done here: purging Cloudflare from SeoNotifier. It needs a zone API token in the
+ * filament .env, adds a third network dependency to every observer save, and buys under five minutes
+ * once the TTL is 300.
+ *
+ * If a deployed /sitemap.xml still shows an Age climbing past ~600, this header is not what decides
+ * it: a Cloudflare Cache Rule is overriding Edge TTL, and only the dashboard can set that back to
+ * "respect origin".
+ */
+export const SITEMAP_CACHE_HEADER = 'public, max-age=0, s-maxage=300, stale-while-revalidate=300';
 
 /** XML text escaping. URLs carry `&` (and admin copy can carry anything), which would break the doc. */
 function xmlEscape(value: string): string {

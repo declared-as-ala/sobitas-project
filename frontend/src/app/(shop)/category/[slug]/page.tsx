@@ -325,6 +325,20 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const apiSeo = (data as any).seo as CategorySeoFromApi | undefined;
     const seoJson = await getCategorySeoContent(canonicalSlug);
     const merged = mergeCategorySeoForSlug(canonicalSlug, seoJson, apiSeo);
+    // Empty-subcategory exemption — see the robots note at the return below. `pagination.total` is
+    // the published count for the whole subcategory; `products.length` is the fallback for payloads
+    // that ship the first page without a pagination envelope. `undefined` — neither field present —
+    // means the payload shape changed, and that must read as "indexable", never as "zero": a wrong
+    // noindex applied to all 50 subcategories at once is the expensive direction to fail in.
+    const subProductCount: number | undefined =
+      type === 'subcategory'
+        ? ((data as any).pagination?.total ?? (data as any).products?.length)
+        : undefined;
+    const indexable =
+      type !== 'subcategory' ||
+      subProductCount === undefined ||
+      subProductCount > 0 ||
+      seoJson !== null;
     let metaTitle =
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
@@ -384,6 +398,25 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       const lastSpace = cut.lastIndexOf(' ');
       metaTitle = lastSpace > 40 ? cut.slice(0, lastSpace) : cut;
     }
+    /*
+     * ── PAGE N GETS ITS OWN TITLE. /shop HAS DONE THIS SINCE IT PAGINATED ─────────────────────
+     *
+     * Measured live 22/09/2026 as Googlebot: /creatine and /creatine?page=2 shipped the SAME
+     * <title> ("Créatine Monohydrate Tunisie | Prix & Achat | Protein.tn") and the same H1, on ten
+     * pages of the series; /shop?page=2 already reads "… — Page 2 | Protein.tn" (`suffix` in
+     * shop/page.tsx). Two URLs with one title is the duplicate signal, and it is the half of it
+     * that can be fixed from here — the repeated landing copy lives in the crawler view.
+     *
+     * Appended AFTER the length clamp, not before: clamping a suffixed title chops the suffix off
+     * again, which is the one part of the string that has to survive. A page-N title running a few
+     * characters past the SERP budget costs nothing — these URLs are not ranking targets, they are
+     * a crawl path, and uniqueness is the only job the title has here.
+     *
+     * Page 1 is untouched, byte for byte, on every category including the frozen ones.
+     */
+    if (metaQuery.page > 1) {
+      metaTitle = `${metaTitle} — Page ${metaQuery.page}`;
+    }
     const tunisiaKeywords = getTunisiaKeywordsForCategory(canonicalSlug);
     // A CMS description only wins if it is long enough to BE a description.
     //
@@ -423,13 +456,47 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
      * pointing every page of a series at one URL is the mistake described above, spelled out by
      * hand.
      */
+    /*
+     * ── ?page BEYOND THE LAST PAGE CANONICALISES TO THE LAST REAL PAGE ────────────────────────
+     *
+     * Measured live 22/09/2026 as Googlebot: /creatine?page=99999 answered HTTP 200, 128 KB, zero
+     * product links, and `<link rel="canonical" href="https://protein.tn/creatine?page=99999">` —
+     * a soft 404 that asserts a URL which does not exist, on every one of 55 listings. /shop
+     * closed the identical hole in its own generateMetadata (read the ?page=N-beyond-the-end note
+     * there for why the head has to do the work the status line cannot on this route).
+     *
+     * The fetch is the SAME `unstable_cache` entry the page body is about to read, keyed
+     * identically by `loadListingPage`, so this is a cache lookup rather than a second round trip,
+     * and it only runs when page > 1.
+     *
+     * `total > 0` IS THE OUTAGE GUARD AND IS NOT OPTIONAL: `loadForCache` turns a 429 or a 5xx
+     * into an empty response whose `last_page` falls back to 1. Without the guard, every real
+     * paginated listing on the site would canonicalise to page 1 for the length of the incident —
+     * a far more expensive mistake than the one being fixed.
+     */
+    let overflowedTo: number | null = null;
+    if (metaQuery.page > 1) {
+      const { serverPagination } = await loadListingPage(
+        metaQuery,
+        type === 'subcategory'
+          ? { subcategories: [canonicalSlug], categories: [] }
+          : { categories: [canonicalSlug], subcategories: [] }
+      );
+      if (serverPagination.total > 0 && metaQuery.page > serverPagination.totalPages) {
+        overflowedTo = serverPagination.totalPages;
+      }
+    }
     const canonicalUrl = metaQuery.page > 1
-      ? await resolveCanonicalUrl(undefined, buildShopUrl({ ...EMPTY_SHOP_QUERY, page: metaQuery.page }, `/${encodeURIComponent(canonicalSlug)}`))
+      ? await resolveCanonicalUrl(undefined, buildShopUrl({ ...EMPTY_SHOP_QUERY, page: overflowedTo ?? metaQuery.page }, `/${encodeURIComponent(canonicalSlug)}`))
       : await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
     /* truncateAtWord, not slice: a blunt cut produced "…ongles et peau. Livra" on
        /beaute-cheveux — mid-word, no ellipsis, live in the SERP. The helper backs off to a
        sentence, then a clause, then a word boundary, and drops a dangling function word. */
-    const descTrimmed = truncateAtWord(description, 155);
+    // Page N carries a `Page N — ` prefix for the same reason the title does: one description
+    // across ten URLs is a duplicate signal. Budget kept at ~155 by trimming the body first.
+    const descTrimmed = metaQuery.page > 1
+      ? `Page ${metaQuery.page} — ${truncateAtWord(description, 140)}`
+      : truncateAtWord(description, 155);
     const ogImageRaw = merged.ogImage || undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
@@ -448,35 +515,68 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       ...(allKeywords ? { keywords: allKeywords } : {}),
       alternates: { canonical: canonicalUrl },
       /*
-       * ── PAGE 1 IS INDEXED. ?page=2 AND BEYOND ARE `noindex, follow` ──────────────────────────
-       * The first clause is unchanged and still says what it always said: a resolved category or
-       * subcategory is indexable no matter what the admin's own robots flag claims, because a live
-       * listing accidentally flagged noindex in Filament is how ranking surfaces disappear.
+       * ── EVERY PAGE OF THE SERIES IS INDEXABLE UNLESS IT HAS NOTHING TO SELL ─────────────────
+       * The first clause still says what it always said: a resolved category or subcategory is
+       * indexable no matter what the admin's own robots flag claims, because a live listing
+       * accidentally flagged noindex in Filament is how ranking surfaces disappear.
        *
-       * The second clause is new, and it is the same directive /shop's generateMetadata emits for
-       * the same reason — read the long note there. A paged listing carries the page-1 H1 and
-       * ~310 words of shared furniture; its only unique content is twelve tiles that each already
-       * have an indexable URL of their own. Across the site 473 of 1,107 indexable listing URLs are
-       * pagination, and every one of them competes with the canonical listing for the query the
-       * canonical listing should win.
+       * The one exemption is the EMPTY SUBCATEGORY, and it exists so that this page and the
+       * sitemap stop disagreeing about the same URL. util/sitemapSources.ts:663-664 already drops
+       * a subcategory with no published product and no content file ("a listing page with zero
+       * products is a heading, a breadcrumb, and nothing to buy … soft 404"), while this route
+       * kept serving it `index, follow` — measured 22/09/2026, /vetements: HTTP 200, index/follow,
+       * "Aucun produit disponible pour le moment", 0 occurrences in /sitemaps/listings.xml, and
+       * linked from the nav on every page. The brand branch of the crawler route has implemented
+       * exactly this rule since it was written (x-crawler/category/[slug]/page.tsx:149,
+       * `index: brandProductCount > 0`). Self-correcting, like both of them: the day the
+       * subcategory gets its first product it is indexable again with no intervention.
        *
-       * `follow` STAYS TRUE and that is the whole point of choosing this directive over any other.
-       * /sante-vitalite holds 8,849 products; ?page=2…N is the only path to the ones past the
-       * twenty-fourth, and this route lost `generateStaticParams` specifically so that path could
-       * exist (see app/[slug]/page.tsx). noindex removes the near-duplicate from the index;
-       * follow keeps the crawl path through it wide open. Never write nofollow here.
+       * The count comes from the taxonomy payload already fetched above, NOT from
+       * loadListingPage — that helper converts a transient 429/5xx into an empty product list, and
+       * a wrong noindex on a healthy listing costs far more than a wrong index on an empty one.
+       * `fetchCategoryOrSubCategory` throws on a transient error instead, and the catch below
+       * rethrows it.
        *
-       * The self-canonical above is deliberately NOT collapsed to page 1 — noindex and canonical
-       * answer different questions, and pointing every page of the series at /{slug} would tell
-       * Google the deep products' listing does not exist. Self-canonical + noindex,follow is the
-       * shape Google has recommended since rel=prev/next was retired in 2019; no rel=prev/next is
-       * emitted here or anywhere else.
+       * Scoped to subcategories only, mirroring the sitemap rule: a top-level category with no
+       * products of its own still lists its subcategories and is not a dead end.
+       *
+       * ── ?page=2+ NO LONGER CARRIES noindex. THIS CLAUSE WAS REMOVED ON PURPOSE ──────────────
+       *
+       * The `metaQuery.page > 1` clause that used to sit in front of `!indexable` argued that a
+       * paged listing is a near-duplicate of page 1 and should be kept out of the index while
+       * staying crawlable. Two things make that the wrong trade on this site.
+       *
+       * 1. `noindex, follow` DOES NOT STAY `follow`. Google has been explicit that a long-lived
+       *    noindex on a URL degrades in practice to `noindex, nofollow`: once a page stops being
+       *    indexed it stops being recrawled often, and the links on it stop being followed. The
+       *    directive that was chosen *because* it kept the crawl path open is the one that closes
+       *    it after a few months. /sante-vitalite holds 8,849 products and shows 24 a page;
+       *    ?page=2…N is the ONLY internal path to the other 8,825 — this route gave up
+       *    `generateStaticParams` specifically so that path could exist (see app/[slug]/page.tsx).
+       *    Strangling it is the most expensive thing this file can do.
+       *
+       * 2. THE DUPLICATE IT WAS DEFENDING AGAINST IS BEING REMOVED IN THIS SAME COMMIT. The
+       *    "~310 words of shared furniture" the old note cited — intro, buying guide, long-bottom,
+       *    FAQ and the FAQPage JSON-LD — no longer render on page > 1: the crawler view drops them
+       *    in x-crawler/category/[slug]/page.tsx and the human view drops them below via
+       *    `isPaged`. Page N's title now ends "— Page N", its description starts "Page N — ", and
+       *    it self-canonicalises. What is left on the URL is 24 product tiles that appear nowhere
+       *    else. That is not a duplicate of page 1; it is the rest of the catalogue.
+       *
+       * Google's own pagination guidance since rel=prev/next was retired in 2019 is exactly this
+       * shape: each page self-canonical, each page indexable, no rel=prev/next (none is emitted
+       * here or anywhere else). Indexable does not mean it will rank — Google is free to fold a
+       * thin page N out of the SERP on its own — but it keeps the page crawled, which is the only
+       * property the deep catalogue actually needs.
+       *
+       * The empty-subcategory rule above is unchanged and is now the ONLY reason this route emits
+       * noindex: a listing with nothing to sell, on any page number.
        *
        * This is read by BOTH views: /{slug} delegates its metadata here, and so does
        * /x-crawler/category/[slug] — the route middleware rewrites Googlebot to. One edit, no
        * drift between what a shopper and a crawler are told.
        */
-      robots: metaQuery.page > 1 ? { index: false, follow: true } : { index: true, follow: true },
+      robots: !indexable ? { index: false, follow: true } : { index: true, follow: true },
       openGraph: {
         title: ogTitleMeta,
         description: ogDescMeta.slice(0, 200),
@@ -558,6 +658,24 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       ]);
       const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
+      /*
+       * ── THE LANDING COPY BELONGS TO PAGE 1 ONLY ────────────────────────────────────────────
+       *
+       * generateMetadata above now lets ?page=2+ be indexed, and that is only defensible if page N
+       * stops repeating page 1's editorial block. The intro, the buying guide, the long bottom
+       * copy, the FAQ accordion and the FAQPage JSON-LD are the same ~310 words on every page of
+       * the series; the crawler view drops them for the same reason, in the same commit
+       * (x-crawler/category/[slug]/page.tsx). What stays on page N: the H1 header card, the
+       * breadcrumb, the 24 product tiles and the pager.
+       *
+       * `serverQuery.page`, not `listingQuery.page` — it is the page the API actually returned, so
+       * a ?page=99999 that clamps back to the last real page is treated as that page rather than
+       * as "paged" forever.
+       *
+       * The FAQPage schema in particular MUST NOT repeat: the same Q&A block on 473 URLs is a
+       * duplicate-structured-data signal, and only page 1 has any claim to the rich result.
+       */
+      const isPaged = serverQuery.page > 1;
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const parentCat = sub.sous_category?.categorie;
       const seoJson = await getCategorySeoContent(canonicalSlug);
@@ -568,11 +686,30 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         merged.h1?.trim() ||
         sub.sous_category?.designation_fr ||
         canonicalSlug;
+      /*
+       * ── THE TRAIL IS Accueil › Boutique › Parent › Cette page, IN EVERY PLACE THAT DRAWS IT ──
+       *
+       * The visible breadcrumb (ShopPageClient, `breadcrumbItems.push({ label: 'Boutique' })`),
+       * the PDP trail (util/productUrl.ts) and the crawler trail
+       * (x-crawler/category/[slug]/page.tsx) all carry the 'Boutique' crumb. This JSON-LD was the
+       * only one that skipped it, so the BreadcrumbList a shopper's page emitted described a
+       * different site structure from the one Googlebot was handed on the same URL — and from the
+       * trail rendered a few hundred pixels below it.
+       *
+       * The parent crumb is built exactly as the crawler route builds it:
+       *   .trim()                — the stored value is "PROTÉINES ", with a trailing space.
+       *   canonicalCategoryPath() — an aliased parent slug would otherwise put a URL that 301s
+       *                             inside the breadcrumb, which is a redirect in a rich result.
+       */
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
+        { name: 'Boutique', url: '/shop' },
         ...(parentCat?.slug
           ? [
-              { name: parentCat.designation_fr || parentCat.slug, url: `/${parentCat.slug}` },
+              {
+                name: String(parentCat.designation_fr || parentCat.slug).trim(),
+                url: canonicalCategoryPath(parentCat.slug),
+              },
               { name: subCrumbName, url: `/${canonicalSlug}` },
             ]
           : [{ name: subCrumbName, url: `/${canonicalSlug}` }]),
@@ -597,7 +734,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       // page 1's ItemList and Product entities. Besides mismatching the visible grid, every page in
       // a category series then emitted duplicate product schema.
       const currentPageProducts = (productsData.products ?? []) as any[];
-      const productList = currentPageProducts.slice(0, 20)
+      /* No .slice(0, 20) here. The grid renders SHOP_PER_PAGE = 24 tiles, so a 20-item cut made
+         `numberOfItems` under-report the page by four products and left the last four rows of
+         every listing out of the only list markup they appear in. buildItemListSchema already
+         caps `itemListElement` at 30 — one page's worth plus headroom — so the payload stays the
+         same size and the count now matches what is on screen. */
+      const productList = currentPageProducts
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
@@ -643,14 +785,16 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         merged.bestProductSlugs?.length ? merged.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
-      const faqPageSchema = merged.faqs?.length ? buildFAQPageSchemaFromQA(merged.faqs) : null;
+      const faqPageSchema = !isPaged && merged.faqs?.length ? buildFAQPageSchemaFromQA(merged.faqs) : null;
       if (faqPageSchema) validateStructuredData(faqPageSchema, 'FAQPage');
+      // Page N keeps the header card — it carries the H1, and passing null here would make
+      // ShopPageClient fall back to its own generic subcategory heading — but not the intro.
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}
           banners={merged.banners}
-          intro={introForLandingSub}
+          intro={isPaged ? null : introForLandingSub}
           longBottomHtml={null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
@@ -670,7 +814,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         hasLongBottom ||
         relatedCategories.length > 0 ||
         bestProducts.length > 0;
-      const categorySeoLandingBottom = hasSeoContentBelow ? (
+      const categorySeoLandingBottom = !isPaged && hasSeoContentBelow ? (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}
@@ -755,13 +899,19 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       ]);
       const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
+      // Same rule as the subcategory branch: the landing copy and the FAQPage schema are page-1
+      // furniture. Read the note there for why indexable pagination requires this.
+      const isPaged = serverQuery.page > 1;
       const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
       const seoJsonCat = await getCategorySeoContent(canonicalSlug);
       const apiSeoCat = (cat as { seo?: CategorySeoFromApi }).seo;
       const mergedCat = mergeCategorySeoForSlug(canonicalSlug, seoJsonCat, apiSeoCat);
       const catCrumbName = mergedCat.breadcrumbLabel || mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
+      // Same trail as the subcategory branch above, the visible breadcrumb and the crawler view:
+      // Accueil › Boutique › Cette catégorie. 'Boutique' was missing here too.
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
+        { name: 'Boutique', url: '/shop' },
         { name: catCrumbName, url: `/${canonicalSlug}` },
       ];
       const pageTitleCat = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
@@ -780,7 +930,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       // As in the subcategory branch, schema follows the current page rather than the taxonomy
       // endpoint's permanently fixed page-1 sample.
       const currentPageProductsCat = (productsData.products ?? []) as any[];
-      const productListCat = currentPageProductsCat.slice(0, 20)
+      // Same as the subcategory branch: no 20-item cut, the page shows 24 and the helper caps at 30.
+      const productListCat = currentPageProductsCat
         // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
@@ -821,14 +972,17 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         mergedCat.bestProductSlugs?.length ? mergedCat.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
-      const faqPageSchemaCat = mergedCat.faqs?.length ? buildFAQPageSchemaFromQA(mergedCat.faqs) : null;
+      const faqPageSchemaCat = !isPaged && mergedCat.faqs?.length ? buildFAQPageSchemaFromQA(mergedCat.faqs) : null;
       if (faqPageSchemaCat) validateStructuredData(faqPageSchemaCat, 'FAQPage');
+      // The header card stays on page N so the category keeps its own H1: passing null here would
+      // hand ShopPageClient's fallback heading ("Boutique — Protéines & Compléments…") to every
+      // paginated category URL, which is a worse duplicate than the one being removed.
       const categorySeoLanding = (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}
           banners={mergedCat.banners}
-          intro={introForLandingCat}
+          intro={isPaged ? null : introForLandingCat}
           longBottomHtml={null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
@@ -848,7 +1002,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         hasLongBottomCat ||
         relatedCategories.length > 0 ||
         bestProducts.length > 0;
-      const categorySeoLandingBottom = hasSeoContentBelowCat ? (
+      const categorySeoLandingBottom = !isPaged && hasSeoContentBelowCat ? (
         <CategorySeoLanding
           title={title}
           slug={canonicalSlug}

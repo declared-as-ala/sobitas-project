@@ -25,6 +25,7 @@ import { productDescription, productTitle } from '@/util/productMetaDescription'
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getSimilarProducts } from '@/services/api';
+import { getComplementProducts } from '@/services/productComplements';
 import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { CrawlerProductView } from '@/app/components/crawler/CrawlerProductView';
 import {
@@ -213,9 +214,25 @@ export default async function CrawlerProductPage({ params }: PageProps) {
     permanentRedirect(`/shop/${product.slug ?? cleanSlug}`);
   }
 
-  const similarProducts = product.sous_categorie_id
-    ? await getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
-    : [];
+  /*
+   * Both rails, overlapped — the same pair the human route awaits in app/(shop)/[slug]/[productSlug].
+   *
+   * `similarProducts` is the product's own sub-category (the comparison table and the sibling list).
+   * `complementProducts` is the OTHER shelves, and it is the only thing on this page that links off
+   * its own category: without it the crawler PDP was a dead end for crawl equity, pointing only at
+   * its category, its brand and its siblings while a browser also got a shaker, a creatine and a
+   * whey. Awaiting them in sequence would add a second round trip to TTFB for nothing.
+   *
+   * The complement fetch is a few 3 KB queries and returns [] immediately for a product that is not
+   * itself addable, which is 10,535 of 10,669 of them — so on almost every catalogue product this
+   * costs one filtered query and renders nothing, exactly as on the human route.
+   */
+  const [similarProducts, complementProducts] = await Promise.all([
+    product.sous_categorie_id
+      ? getSimilarProducts(product.sous_categorie_id).then((s) => s?.products ?? []).catch(() => [] as Product[])
+      : Promise.resolve([] as Product[]),
+    getComplementProducts(product).catch(() => [] as Product[]),
+  ]);
 
   const canonicalUrl = buildProductCanonicalUrl(product);
   const apiLd = product.json_ld_product;
@@ -259,7 +276,7 @@ export default async function CrawlerProductPage({ params }: PageProps) {
       {videoSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(videoSchema) }} />
       )}
-      <CrawlerProductView product={product} similarProducts={similarProducts} />
+      <CrawlerProductView product={product} similarProducts={similarProducts} complementProducts={complementProducts} />
     </>
   );
 }

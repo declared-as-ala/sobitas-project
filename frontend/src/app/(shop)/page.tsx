@@ -4,7 +4,7 @@ import { getAccueil, getCategories, getBestSellers, getNewProducts, getAllBrands
 import { getServerSlides } from '@/services/siteChrome.server';
 import { buildHeroImageSet, type HeroSlide } from '@/util/heroImage';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
-import { buildWebPageSchema, buildItemListSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { buildWebPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { HomePageClient } from '@/app/components/HomePageClient';
@@ -21,8 +21,12 @@ const HOME_TITLE = 'Protéine Tunisie | Protein.tn, boutique à Sousse';
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
   const title = HOME_TITLE;
+  // 139 chars. The previous one was 187 and Google cut it mid-sentence on the SERP that earns
+  // "protein tunisie" (125 clicks, position 5.5) — the homepage's best query, where the snippet is
+  // the whole CTR lever. Same head terms, same Sousse proof, nothing past the ~155-char fold.
+  // This const also feeds openGraph and twitter below, so one edit covers all three.
   const description =
-    'Achetez whey, créatine, gainer, BCAA et compléments alimentaires en Tunisie chez Protein.tn (Sousse). Produits authentiques, livraison rapide à Sousse, Tunis et partout en Tunisie.';
+    'Protéine Tunisie : whey, créatine, gainer, BCAA et compléments authentiques chez Protein.tn (Sousse). Livraison rapide partout en Tunisie.';
 
   return {
     // absolute: the homepage title already reads as a full brand title; without this the root
@@ -192,14 +196,20 @@ export default async function Home() {
     baseUrl,
     {
       description: 'Achetez whey protein, créatine, vitamines et compléments alimentaires en Tunisie avec livraison rapide et produits authentiques.',
-      withBreadcrumb: true,
+      /*
+        NO `withBreadcrumb` HERE, AND NO BreadcrumbList BELOW. The home page used to emit a
+        one-item trail — `[{ name: 'Accueil', url: '/' }]` — which is a breadcrumb with nowhere
+        to go: it describes no hierarchy, it has no visible counterpart anywhere in the hero, and
+        Google's structured-data policy asks that markup represent content a visitor can actually
+        see. A page node pointing at it with `breadcrumb: {@id}` only made the dangling reference
+        official. The root of the site is the one URL that legitimately has no trail above it.
+      */
       withItemList: featuredUnique.length > 0,
       // The home page is the Organization's own page — the one relation on this site that is
       // unambiguously true, and the node layout.tsx already ships is what it points at.
       about: { '@id': `${baseUrl.replace(/\/$/, '')}/#organization` },
     }
   );
-  const breadcrumbSchema = buildBreadcrumbListSchema([{ name: 'Accueil', url: '/' }], baseUrl, { pageUrl: '/' });
   const itemListSchema = featuredUnique.length > 0
     ? buildItemListSchema(
         featuredUnique.slice(0, 20).map((p) => ({ name: p.designation_fr || 'Produit', url: buildProductUrlPath(p) })),
@@ -211,7 +221,6 @@ export default async function Home() {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       {itemListSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }} />
       )}

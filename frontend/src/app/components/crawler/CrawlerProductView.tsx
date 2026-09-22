@@ -10,7 +10,10 @@
  *   • The complete content is present in the FIRST byte of HTML (no "crawled –
  *     currently not indexed" from thin client shells, no LCP hidden behind
  *     motion opacity:0).
- *   • Zero JavaScript → fast for Googlebot's render budget.
+ *   • Zero JavaScript in THIS component → fast for Googlebot's render budget. (Since 22/09/2026
+ *     the route is wrapped by app/x-crawler/layout.tsx, which mounts the same header and footer
+ *     the human page mounts: a page that offers a crawler fewer links than a user is not parity,
+ *     and it was costing every money page its site-wide internal links. See that file.)
  *   • One clean H1, real breadcrumbs, all reviews and FAQ inline, complete
  *     internal links — the "all best practices on one page" the design can't
  *     always afford for humans.
@@ -24,6 +27,7 @@ import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
+import { brandNameToSlug } from '@/util/brandSlug';
 import { buildComparison } from '@/util/productComparison';
 import { ComparisonNutrition } from '@/app/components/product/ComparisonNutrition';
 import { visibleNutrients } from '@/util/productComparisonFacts';
@@ -47,9 +51,13 @@ function reviewRating(r: { stars?: number; note?: number }): number {
 export function CrawlerProductView({
   product,
   similarProducts = [],
+  complementProducts = [],
 }: {
   product: Product;
   similarProducts?: Product[];
+  /* The other shelves — a creatine and a shaker for a whey. Same list the human page turns into
+     "Complétez votre commande"; see services/productComplements.ts. */
+  complementProducts?: Product[];
 }) {
   const breadcrumbs = getProductBreadcrumbs(product);
   const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(product);
@@ -115,11 +123,19 @@ export function CrawlerProductView({
    */
   const sourceSections = productSourceSections(product);
   const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
-  const sourceGallery = productSourceGallery(product);
+  /*
+   * gallery[0] IS the cover on every imported product, so the same file used to be emitted twice
+   * on the only render Google reads — once as the hero and once as "photo 1/7" — with two
+   * different alt strings competing for one image. The human page dedups the same list with a Set
+   * (ProductDetailClient.tsx:462-468); this is that rule, expressed against the resolved URL
+   * because `cover` has already been through getStorageUrl. The "photo i/n" numbering follows the
+   * filtered array, so it renumbers itself.
+   */
+  const sourceGallery = productSourceGallery(product).filter((url) => getStorageUrl(url) !== cover);
   const sourceAttribution = productSourceAttribution(product);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
+    <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-ink-1">
       {/* Breadcrumbs */}
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
         <ol className="flex flex-wrap gap-1">
@@ -127,7 +143,7 @@ export function CrawlerProductView({
             <li key={b.url} className="flex items-center gap-1">
               {i > 0 && <span aria-hidden>›</span>}
               {i < breadcrumbs.length - 1 ? (
-                <a href={b.url} className="text-red-700 underline">
+                <a href={b.url} className="text-brand underline">
                   {b.name}
                 </a>
               ) : (
@@ -143,10 +159,10 @@ export function CrawlerProductView({
           <h1 className="text-2xl font-bold">{product.designation_fr}</h1>
           {brandName && (
             <p className="mt-1 text-sm">
-              Marque : <a className="text-red-700 underline" href={`/${brandName.toLowerCase().replace(/\s+/g, '-')}`}>{brandName}</a>
+              Marque : <a className="text-brand underline" href={`/${brandNameToSlug(brandName)}`}>{brandName}</a>
             </p>
           )}
-          <p className="mt-1 text-xs text-gray-500">Référence : {sku}</p>
+          <p className="mt-1 text-xs text-ink-3">Référence : {sku}</p>
         </header>
 
         {cover && (
@@ -167,7 +183,7 @@ export function CrawlerProductView({
             {hasPromo && oldPrice ? (
               <>
                 {' '}
-                <s className="text-base font-normal text-gray-500">{formatTnd(oldPrice)}</s>{' '}
+                <s className="text-base font-normal text-ink-3">{formatTnd(oldPrice)}</s>{' '}
                 <span className="text-base font-medium text-green-700">En promotion</span>
               </>
             ) : null}
@@ -177,7 +193,7 @@ export function CrawlerProductView({
             <strong>{stockStatus.isUnknown ? 'Disponibilité à confirmer' : stockStatus.stockLabel}</strong>
             {inStock ? ' · Livraison 24-72h partout en Tunisie.' : ''}
           </p>
-          <p className="mt-1 text-sm text-gray-600">
+          <p className="mt-1 text-sm text-ink-2">
             Livraison gratuite dès 300 DT · Paiement à la livraison · Retour sous 7 jours.
           </p>
         </section>
@@ -367,7 +383,7 @@ export function CrawlerProductView({
           Null for every product with no transcribed content, which is all 309 legacy products.
         */}
         {sourceAttribution && (
-          <p className="my-6 text-xs text-gray-600">{sourceAttribution}</p>
+          <p className="my-6 text-xs text-ink-2">{sourceAttribution}</p>
         )}
 
         {/* Reviews — all published, inline */}
@@ -378,12 +394,12 @@ export function CrawlerProductView({
             </h2>
             <ul className="mt-2 space-y-3">
               {reviews.map((r) => (
-                <li key={r.id} className="border-l-2 border-gray-200 pl-3">
+                <li key={r.id} className="border-l-2 border-hairline pl-3">
                   <p className="text-sm font-medium">
                     {(r.user?.name || 'Client')} — {reviewRating(r)}/5
                     {r.created_at ? ` · ${String(r.created_at).slice(0, 10)}` : ''}
                   </p>
-                  {r.comment && <p className="text-sm text-gray-700">{r.comment}</p>}
+                  {r.comment && <p className="text-sm text-ink-2">{r.comment}</p>}
                 </li>
               ))}
             </ul>
@@ -398,7 +414,7 @@ export function CrawlerProductView({
               {faq.map((f, i) => (
                 <div key={i}>
                   <dt className="font-medium">{f.q}</dt>
-                  <dd className="text-sm text-gray-700">{f.a}</dd>
+                  <dd className="text-sm text-ink-2">{f.a}</dd>
                 </div>
               ))}
             </dl>
@@ -418,7 +434,7 @@ export function CrawlerProductView({
             <h2 className="text-lg font-semibold">Vidéo officielle</h2>
             <p className="mt-1 text-sm">
               <a
-                className="text-red-700 underline"
+                className="text-brand underline"
                 href={watchUrl(officialVideoId)}
                 rel="noopener nofollow"
                 target="_blank"
@@ -459,7 +475,7 @@ export function CrawlerProductView({
                     proteins. It was a false statement served to a crawler on ~6,133 pages, and it
                     was avoidable — each row's own category is now a COLUMN, so the table shows the
                     truth per row instead of asserting a wrong one over all of them. */}
-                <caption className="pb-2 text-left text-gray-600">
+                <caption className="pb-2 text-left text-ink-2">
                   Produit consulté et alternatives en stock. Vérifiez la taille des portions et l’étiquette du format choisi.
                 </caption>
                 <thead>
@@ -482,7 +498,7 @@ export function CrawlerProductView({
                         {row.isCurrent ? (
                           <span aria-current="true"><strong>{row.name}</strong> (cette page)</span>
                         ) : (
-                          <a className="text-red-700 underline" href={row.url}>{row.name}</a>
+                          <a className="text-brand underline" href={row.url}>{row.name}</a>
                         )}
                       </th>
                       <td className="border-b p-2">{row.brand || '—'}</td>
@@ -514,6 +530,46 @@ export function CrawlerProductView({
           </section>
         )}
 
+        {/*
+          "Complétez votre commande" — the OTHER shelves, which is the only place this page links
+          off its own category.
+
+          The human page has rendered this block since 17/08/2026 (FrequentlyBoughtTogether, fed by
+          getComplementProducts); the crawler route fetched `similar` alone, so the surface Google
+          actually reads was a dead end: measured 22/09/2026 on
+          /mass-gainers/serious-mass-5-45-kg-optimum-nutrition, every internal link in the bot HTML
+          pointed back at /mass-gainers, its brand or a sibling gainer, while the browser also got a
+          shaker, a creatine and a whey. Same products, same heading, no checkboxes — the selection
+          UI is interactive and this view is a pure server component.
+
+          TWO IS THE FLOOR, BECAUSE THE HUMAN BLOCK HAS THE SAME FLOOR. FrequentlyBoughtTogether
+          returns null below MIN_COMPANIONS = 2, so rendering on one companion would put an anchor
+          in the bot HTML that no browser is ever shown — the bot-only content this route exists to
+          avoid. This block is a projection of the human one, never a superset.
+
+          THE COPY MAKES NO BEHAVIOURAL CLAIM. util/productComplements.ts states plainly that the
+          shelf map is editorial convention and NOT co-occurrence (no order has ever been marked
+          `livree`, so no basket history exists) — which is why the heading is "complétez votre
+          commande" and not "frequently bought together". A line saying these are the products
+          usually taken with this one would assert exactly the data we do not have, to the one
+          reader that quotes pages verbatim. It is framed as a suggestion instead.
+        */}
+        {complementProducts.length >= 2 && (
+          <section aria-label="Complétez votre commande" className="my-6">
+            <h2 className="text-lg font-semibold">Complétez votre commande</h2>
+            <p className="text-sm text-ink-2">Suggestions pour compléter ce produit.</p>
+            <ul className="mt-2 list-disc pl-5">
+              {complementProducts.map((p) => (
+                <li key={p.id}>
+                  <a className="text-brand underline" href={getProductLink(p)}>
+                    {p.designation_fr}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         {/* Internal links: the full sibling set, for crawl depth beyond the compared few. */}
         {similarProducts.length > 0 && (
           <section aria-label="Produits similaires" className="my-6">
@@ -521,7 +577,7 @@ export function CrawlerProductView({
             <ul className="list-disc pl-5">
               {similarProducts.slice(0, 12).map((p) => (
                 <li key={p.id}>
-                  <a className="text-red-700 underline" href={getProductLink(p)}>
+                  <a className="text-brand underline" href={getProductLink(p)}>
                     {p.designation_fr}
                   </a>
                 </li>

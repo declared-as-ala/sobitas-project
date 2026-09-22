@@ -14,7 +14,17 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
   const entry = getBlogSeoEntry(slug);
   if (!entry) return null;
 
-  const { faqs, internalLinks } = entry;
+  const { faqs } = entry;
+  /*
+   * One chip per destination. Thirteen entries listed the same anchor+href two to four times, so
+   * the block rendered "créatine monohydrate en Tunisie → /creatine" twice in a row: no extra
+   * signal (Google weighs the first anchor to a URL on a page), and a repeated exact-match phrase
+   * is what a generated keyword strip looks like. The first occurrence wins, so the editorial
+   * order of each entry is preserved.
+   */
+  const internalLinks = entry.internalLinks.filter(
+    (link, i, all) => all.findIndex((other) => other.href === link.href) === i
+  );
   const hasFaqs = faqs.length > 0;
   const hasLinks = internalLinks.length > 0;
   if (!hasFaqs && !hasLinks) return null;

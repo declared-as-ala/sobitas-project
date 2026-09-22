@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Suspense } from 'react';
 import { ArrowUpRight, BookOpen, ChevronDown } from 'lucide-react';
 import { Section } from '@/app/components/layout/Section';
+import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { getAllArticles, getBlogCategories, getBlogTags } from '@/services/api';
 import { getLatestSportsNutritionResearch } from '@/services/pubmed';
@@ -22,7 +23,11 @@ type BlogSearchParams = Promise<Record<string, string | string[] | undefined>>;
 export async function generateMetadata(props: { searchParams?: BlogSearchParams }): Promise<Metadata> {
   const searchParams = props.searchParams ? await props.searchParams : {};
   const pageNum = Math.max(1, parseInt(String(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page || '1'), 10) || 1);
-  const search = stripTrackingFromSearch(searchParams);
+  // Allow-list, not a block-list: `page` is the ONLY query param this route consumes (see the
+  // `page` reads below and in BlogPageClient), so every other key renders byte-identical HTML.
+  // Echoing an unknown param into the canonical made /blog?igshid=… a self-canonical indexable
+  // duplicate of the hub (verified live 22/09/2026). Collapsing them here also folds ?page=1.
+  const search = pageNum > 1 ? `page=${pageNum}` : '';
   const path = '/blog';
   const canonical = buildCanonicalUrl(path, search ? `?${search}` : undefined);
   const totalArticles = await getTotalArticles();
@@ -55,17 +60,6 @@ export async function generateMetadata(props: { searchParams?: BlogSearchParams 
       follow: true,
     },
   };
-}
-
-function stripTrackingFromSearch(searchParams: Record<string, string | string[] | undefined>): string {
-  const p = new URLSearchParams();
-  const skip = /^(utm_[a-z_]*|fbclid|gclid|srsltid|msclkid|mc_[a-z_]*|ref|source)$/i;
-  Object.entries(searchParams).forEach(([key, value]) => {
-    if (skip.test(key)) return;
-    const v = Array.isArray(value) ? value[0] : value;
-    if (v != null && v !== '') p.set(key, v);
-  });
-  return p.toString();
 }
 
 async function getTotalArticles(): Promise<number> {
@@ -136,12 +130,23 @@ export default async function BlogPage(props: { searchParams?: BlogSearchParams 
     Number.parseInt(String(Array.isArray(searchParams.page) ? searchParams.page[0] : searchParams.page || '1'), 10) || 1
   );
 
-  const collectionSchema = buildCollectionPageSchema(
-    'Blog Nutrition Sportive & Compléments Alimentaires en Tunisie',
-    '/blog',
-    baseUrl,
-    { description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.' }
-  );
+  /*
+    ── THREE NODES, ONE GRAPH ────────────────────────────────────────────────────────────────
+    These three blocks used to be islands: a CollectionPage with nothing but a description, an
+    ItemList with nothing but a name, and a BreadcrumbList with no `@id` at all. Three entities
+    on one URL, none of them saying it was related to either of the others — which is not how
+    any other listing on the site describes itself (see app/(shop)/category/[slug]/page.tsx).
+
+    The builders already take the additive arguments that wire them together, so nothing here
+    needs new markup: `pageUrl` gives the list and the trail the `@id`s that `buildPageNode`
+    derives for this URL, and `withItemList` / `withBreadcrumb` make the page node point at
+    them. `BLOG_PAGE_URL` is one constant precisely because all three have to be built from the
+    SAME string or the references dangle.
+
+    `withBreadcrumb` is only honest now that the trail is rendered below — see the <Section>
+    carrying ShopBreadcrumbs in the markup.
+  */
+  const BLOG_PAGE_URL = '/blog';
   const itemListSchema = list.length > 0
     ? buildItemListSchema(
         list.slice(0, 20).map((a: { designation_fr?: string; slug?: string }) => ({
@@ -149,12 +154,23 @@ export default async function BlogPage(props: { searchParams?: BlogSearchParams 
           url: `/blog/${encodeURIComponent(a.slug || '')}`,
         })),
         baseUrl,
-        { name: 'Articles' }
+        { name: 'Articles', pageUrl: BLOG_PAGE_URL }
       )
     : null;
+  const collectionSchema = buildCollectionPageSchema(
+    'Blog Nutrition Sportive & Compléments Alimentaires en Tunisie',
+    BLOG_PAGE_URL,
+    baseUrl,
+    {
+      description: 'Guides, conseils prise de masse, choix whey et créatine. Tout pour la nutrition sportive en Tunisie.',
+      withBreadcrumb: true,
+      withItemList: itemListSchema != null,
+    }
+  );
   const breadcrumbSchema = buildBreadcrumbListSchema(
-    [{ name: 'Accueil', url: '/' }, { name: 'Blog', url: '/blog' }],
-    baseUrl
+    [{ name: 'Accueil', url: '/' }, { name: 'Blog', url: BLOG_PAGE_URL }],
+    baseUrl,
+    { pageUrl: BLOG_PAGE_URL }
   );
 
   return (
@@ -165,6 +181,15 @@ export default async function BlogPage(props: { searchParams?: BlogSearchParams 
       )}
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
       <main className="min-h-screen bg-canvas">
+        {/* The BreadcrumbList above claimed Accueil › Blog while the page showed neither — and
+            the index had no link back to the root from its own content either. `ShopBreadcrumbs`
+            is the site's listing breadcrumb; it supplies the "Accueil" crumb and leaves the last
+            one unlinked, so the two visible labels are exactly the two ListItem names. `strip`
+            is the one-row band step; the band below keeps its own `first`, so no seam is drawn
+            between the crumb row and the page head it introduces. */}
+        <Section spacing="strip" width="wide" first>
+          <ShopBreadcrumbs items={[{ label: 'Blog' }]} />
+        </Section>
         <Suspense fallback={<BlogListSkeleton />}>
           <BlogPageClient
             articles={indexArticles}

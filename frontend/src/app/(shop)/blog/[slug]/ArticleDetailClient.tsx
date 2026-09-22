@@ -5,7 +5,7 @@ import { SafeImage } from '@/app/components/SafeImage';
 import { Button } from '@/app/components/ui/button';
 import { BlogRecommendedProducts } from '@/app/(shop)/blog/BlogRecommendedProducts';
 import { BlogCard } from '@/app/(shop)/blog/BlogCard';
-import { ArrowLeft, Calendar, Clock, Share2, Sparkles, FolderOpen, Tag } from 'lucide-react';
+import { ArrowLeft, Calendar, ChevronRight, Clock, Share2, Sparkles, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
@@ -185,6 +185,13 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
   const arabic = isArabicArticle(articleLanguage);
   const displayType = arabic ? 'article-arabic-type' : 'font-display uppercase tracking-tight';
   const kickerType = arabic ? 'article-arabic-type' : 'font-display uppercase tracking-[0.2em]';
+  /* The visible counterpart of the BreadcrumbList the server component emits for this URL —
+     same three names, in the same order, localised by the same `arabic` test. See the <nav>. */
+  const breadcrumbTrail: Array<{ label: string; href?: string }> = [
+    { label: arabic ? 'الرئيسية' : 'Accueil', href: '/' },
+    { label: arabic ? 'المدونة' : 'Blog', href: '/blog' },
+    { label: decodeHtmlEntities(article.designation_fr || article.slug || 'Article') },
+  ];
   const contentRef = useRef<HTMLDivElement>(null);
   const [mounted, setMounted] = useState(false);
   const articleDate = article.created_at ? new Date(article.created_at) : new Date();
@@ -289,17 +296,47 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
       
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 lg:py-12">
         <div>
-          {/* Back to blog — real link so the "Retour au blog" label is truthful for search/social arrivals */}
-          <Button
-            asChild
-            variant="ghost"
-            className="mb-4 sm:mb-6 min-h-11 text-ink-2 hover:text-red-600 dark:hover:text-red-400"
-          >
-            <Link href="/blog">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Retour au blog
-            </Link>
-          </Button>
+          {/*
+            ── THE TRAIL THE PAGE WAS ALREADY CLAIMING ─────────────────────────────────────
+            The server component emits a three-item BreadcrumbList for this URL (Accueil › Blog
+            › titre — see ../page.tsx) while the article rendered a single "Retour au blog"
+            button: markup describing a hierarchy no visitor could see, which is the one thing
+            Google's structured-data policy asks us not to do. So the row becomes the trail.
+
+            Nothing new is invented here: this is the markup shape the PRODUCT page already
+            uses for its own trail (ProductDetailClient) — the same <ol>, the same crumb-link
+            class with its `-my-3.5 py-3.5` tap-target idiom, the same truncated `aria-current`
+            leaf. The back affordance survives inside it, because "Blog" is a real link to
+            /blog; it is simply no longer the only thing in the row.
+
+            The two parent labels mirror the SAME `arabic ?` conditional the schema is built
+            with, so the visible names match the ListItem names character for character on
+            Arabic articles too. The leaf is the decoded title, like the <h1> below it.
+          */}
+          <nav aria-label="Fil d'Ariane" className="mb-4 text-xs text-ink-3 sm:mb-6 sm:text-sm">
+            <ol className="flex flex-nowrap items-center gap-x-1.5 overflow-x-auto scrollbar-hide">
+              {breadcrumbTrail.map((crumb, index) => (
+                <li key={crumb.href ?? 'leaf'} className="flex shrink-0 items-center gap-x-1.5">
+                  {index > 0 && <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />}
+                  {crumb.href && index < breadcrumbTrail.length - 1 ? (
+                    <Link
+                      href={crumb.href}
+                      className="-my-3.5 inline-flex items-center whitespace-nowrap rounded-md py-3.5 underline-offset-2 transition-colors hover:text-brand hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                    >
+                      {crumb.label}
+                    </Link>
+                  ) : (
+                    <span
+                      className="max-w-[46vw] truncate whitespace-nowrap font-medium text-ink-1 sm:max-w-none"
+                      aria-current="page"
+                    >
+                      {crumb.label}
+                    </span>
+                  )}
+                </li>
+              ))}
+            </ol>
+          </nav>
 
           <article className="bg-elevated rounded-xl border border-hairline shadow-sm overflow-hidden">
             {/* Article Header */}

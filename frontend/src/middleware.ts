@@ -5,7 +5,8 @@ import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
 import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug } from '@/util/taxonomySlugs';
-import { isArticleSlug } from '@/util/blogSlugs';
+import { resolveArticleSlug } from '@/util/blogSlugs';
+import { blogHref } from '@/util/blogSlug';
 import {
   AFFILIATE_COOKIE,
   AFFILIATE_COOKIE_MAX_AGE,
@@ -82,11 +83,16 @@ const API_BASE =
  * honest and faster for Google to remove than a repeatedly crawled 404. Keep this deliberately
  * small and evidence-based: a slug must never be added here merely because a single request timed
  * out — the product API must positively answer 404.
+ *
+ * ── AND A 404 ON THE SLUG IS NOT A 404 ON THE PRODUCT ────────────────────────────────────────
+ * That criterion is necessary and NOT sufficient, which this list learned the hard way: a RENAMED
+ * product also 404s its old slug, and two entries admitted on that evidence were still on sale.
+ * Before adding a slug, grep redirects.js for a successor and check the catalogue for the same
+ * product under a new name. If one exists it belongs in RESLUGGED_PRODUCT_SLUGS below, not here.
  */
 const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
   'amino-target-xplode-275-g',
   'kolagen-60-caps-real-pharm',
-  'citruargin-300-g',
   'whey-pro-warriors-2kg-warriors',
   'compact-whey-gold-protein-1kg',
   'blackweiler-shred-480g-olimp-sport-nutrition',
@@ -95,13 +101,62 @@ const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
   'amino-eaa-ultra-speed-300-g',
   'creatine-monohydrate-powder-250g',
   'citrulline-synergy-240-g',
-  'king-real-preworkout-500gr-real-pharm',
   'ring-de-boxe',
   // The same retired product was published with its legacy numeric id appended. GSC still crawls
   // that exact address; the canonical slug above is already confirmed gone, so this variant must
   // be terminal too instead of falling through to a repeatable route-level 404.
   'ring-de-boxe-40',
 ]);
+
+/**
+ * Products that were RE-SLUGGED, not retired.
+ *
+ * The set above admits a slug when the product API answers 404 for it — necessary, but not
+ * sufficient: a RENAME also 404s the old slug. Two entries were admitted on that evidence and are
+ * still on sale under a new slug, so every legacy address except `/shop/…` (which redirects.js
+ * rescues, because next.config redirects run before middleware) was answering 410 Gone for a live,
+ * in-stock product. Measured 22/09/2026 with a Googlebot UA:
+ *
+ *     /product/king-real-preworkout-500gr-real-pharm            410
+ *     /pre-workout/king-real-preworkout-500gr-real-pharm-tunisie 200  index,follow  InStock
+ *     /products/citruargin-300-g                                410
+ *     /citrulline/citruargin-300-g-real-pharm                   200  index,follow  InStock
+ *
+ * 410 is the strongest "drop this and stop coming back" signal there is; spending it on a money
+ * page (pre-workout is one of the five curated categories) throws away every WordPress-era link.
+ * Consulted BEFORE the 410 set, and each destination was verified 200 before being written here.
+ */
+const RESLUGGED_PRODUCT_SLUGS = new Map<string, string>([
+  ['king-real-preworkout-500gr-real-pharm', '/pre-workout/king-real-preworkout-500gr-real-pharm-tunisie'],
+  ['citruargin-300-g', '/citrulline/citruargin-300-g-real-pharm'],
+]);
+
+/**
+ * Legacy brand names that slugify to something the catalogue no longer uses.
+ *
+ * `/brand/OLIMP` folds to `olimp`, the brand is served at `/olimp-sport-nutrition`, so
+ * `isBrandSlug` said false and the URL fell through to `retireLegacyPath` → no taxonomy, no
+ * product, no token overlap → 410 Gone for a live commercial listing. Same shape for a corporate
+ * suffix that was dropped (`BSN SUPPLEMENTS` → bsn, `Quamtrax Nutrition` → quamtrax) and for
+ * names the old site misspelled (`KIVEN LEVRONE`, `NUTRIX RESEARCH`). A brand that still exists
+ * has MOVED, not gone, and 410 forfeits every WordPress-era link to it.
+ *
+ * Hand-curated rather than inferred: a prefix heuristic would let live brands like `pure` swallow
+ * any unknown `/brand/pure-*` URL. Applied BEFORE isBrandSlug, so the existing live-brand check
+ * still validates the target and a stale alias degrades to today's behaviour instead of 301ing
+ * into a 404. Covers the spaced `/brand/NAME/{id}` forms too, since both go through slugifyName.
+ * Every target verified 200 with a Googlebot UA on 22/09/2026.
+ *
+ * NOT here: RULE 1. `/brand/RULE-1` already 301s to `/rule-1`, which is a live brand page.
+ */
+const LEGACY_BRAND_ALIASES: Record<string, string> = {
+  olimp: 'olimp-sport-nutrition',
+  'bsn-supplements': 'bsn',
+  'quamtrax-nutrition': 'quamtrax',
+  'kiven-levrone': 'kevin-levrone',
+  'nutrix-research': 'nutrex-research',
+  'galvanize-nutrition': 'galvanize-chrome',
+};
 
 const CONFIRMED_RETIRED_ASSETS = new Set([
   '/_next/static/media/8e9860b6e62d6359-s.p.woff2',
@@ -192,7 +247,10 @@ async function classifyNonProduct(slug: string): Promise<ShopResolution> {
   // null = the taxonomy could not be read. Unknown is not evidence of absence, and acting on it
   // would 410 live category pages during a backend hiccup.
   if (isCategory === null) return { kind: 'unknown' };
-  if (isCategory) return { kind: 'redirect', to: `/${slug}` };
+  // FOLDED, because `isTaxonomySlug` folds. Every taxonomy slug is stored lowercase (walk() in
+  // util/taxonomySlugs.ts), so `/shop/Whey-Isolate` now matches — and returning the caller's own
+  // casing would 301 to `/Whey-Isolate`, which the case-fold block 301s again. One hop, not two.
+  if (isCategory) return { kind: 'redirect', to: `/${lowercasePreservingEscapes(slug)}` };
 
   return { kind: 'gone', slug };
 }
@@ -334,7 +392,12 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // when the taxonomy lookup was unavailable. The product API positively reports each slug 404,
   // so terminal retirement here does not depend on a second backend call or a warm cache.
   const retiredProductSlug = pathname.split('/').filter(Boolean).at(-1)?.toLowerCase();
-  if (retiredProductSlug && CONFIRMED_RETIRED_PRODUCT_SLUGS.has(retiredProductSlug)) return gone();
+  if (retiredProductSlug) {
+    // A rename is not a retirement. See RESLUGGED_PRODUCT_SLUGS.
+    const reslugged = RESLUGGED_PRODUCT_SLUGS.get(retiredProductSlug);
+    if (reslugged && pathname !== reslugged) return redirectPreservingQuery(request, reslugged);
+    if (CONFIRMED_RETIRED_PRODUCT_SLUGS.has(retiredProductSlug)) return gone();
+  }
 
   /* ── Machine paths from the old Laravel deployment → 410 ─────────────────────────────────────
    *
@@ -593,15 +656,32 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // the same reason /shop/:slug, /brand/:slug and /product/:slug are resolved here and not in
   // their routes.
   //
-  // isArticleSlug is three-valued and this only acts on a definitive `false`; `null` (backend
+  // resolveArticleSlug is three-valued and this only acts on a definitive `false`; `null` (backend
   // unreachable, timeout, empty payload) falls through to the page exactly as before. See
   // util/blogSlugs.ts for why a cache miss forces one refresh before it is believed.
+  //
+  // AND A HYPHENATED LEGACY SPELLING IS NOT A DEAD ARTICLE. The old site wrote `/blogs/ما-هو-أفضل-
+  // كرياتين-في-تونس؟` where the CMS slug has spaces; redirects.js rewrites only the `/blogs` prefix,
+  // so it arrived here as a slug the exact Set could not see and 12 live, sitemap-listed articles
+  // were answered 301-into-a-410 — a hop spent to say "permanently gone" about a page returning 200.
+  // The fold in blogSlugs.ts recognises the spelling; blogHref re-encodes to the exact form the
+  // sitemap and the canonical carry, so the next request is an exact hit and the hop cannot loop.
   const blogArticle = pathname.match(/^\/blog\/([^/]+)\/?$/);
   if (blogArticle?.[1]) {
     let articleSlug = blogArticle[1];
     try { articleSlug = decodeURIComponent(articleSlug); } catch { /* keep raw */ }
-    if ((await isArticleSlug(articleSlug)) === false) {
+    const realSlug = await resolveArticleSlug(articleSlug);
+    if (realSlug === false) {
       return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+    }
+    if (typeof realSlug === 'string') {
+      /* Compared as HREFS, not as slugs, and that is what makes a loop impossible. Some CMS slugs
+         carry a literal newline (`أفضل مكملات…` is one, and it is a ranking URL); blogHref collapses
+         whitespace, so the space form and the newline form encode to the SAME href. Comparing raw
+         slugs would see them as different and redirect the destination back onto itself forever.
+         Anything that still differs is a genuine spelling change, and one hop settles it. */
+      const target = blogHref(realSlug);
+      if (target !== blogHref(articleSlug)) return redirectPreservingQuery(request, target);
     }
   }
 
@@ -622,7 +702,12 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
       if (term) searchUrl.searchParams.set('search', term);
       return NextResponse.redirect(searchUrl, 301);
     }
-    const WP_HOME_PARAMS = ['p', 'page_id', 'author', 'm', 'cat', 'product_cat', 'attachment_id', 'paged'];
+    /* `product`, `post_type` and `product_tag` are WooCommerce's NON-pretty permalink shapes
+       (`/?product={slug}`, `/?post_type=product&p={id}`) and `add-to-cart` is its action URL.
+       Measured 22/09/2026: `/?product=abc` answered 200 with the full 822 KB homepage — an
+       unbounded query space rendering a duplicate of home, crawled in full every time. The
+       canonical already consolidates them; stripping the param stops the render. */
+    const WP_HOME_PARAMS = ['p', 'page_id', 'author', 'm', 'cat', 'product_cat', 'product_tag', 'product', 'post_type', 'add-to-cart', 'attachment_id', 'paged'];
     if (WP_HOME_PARAMS.some((k) => searchParams.has(k))) {
       // Strip the legacy param → canonical homepage (no redirect loop: "/" has none of these).
       return NextResponse.redirect(new URL('/', request.url), 301);
@@ -710,7 +795,9 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
     } else {
       // /shop/{cat}/{subcat} → the subcategory is served at /{subcat}, whatever its parent.
       const known = await isTaxonomySlug(second);
-      if (known === true) return redirectPreservingQuery(request, `/${encodeURIComponent(second)}`);
+      // Lowercased for the same reason as classifyNonProduct: the taxonomy is stored folded, so
+      // echoing the request's casing back would add a second hop through the case-fold block.
+      if (known === true) return redirectPreservingQuery(request, `/${encodeURIComponent(second.toLowerCase())}`);
       if (known === false) {
         // Not taxonomy. It may still be a product sitting under a category segment, which is the
         // one live shape this path can legitimately carry.
@@ -732,19 +819,43 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // WooCommerce always put the PRODUCT in the last segment, so resolve that segment with the same
   // resolver resolveShopSlug uses:
   //   • product found      → ONE 301 to its canonical /{subcat}/{slug} (link equity kept)
-  //   • definitive API 404 → 410, the URL class is permanently gone with WordPress
+  //   • definitive API 404 → the subcategory, then the category, then the relevance match, and
+  //                          only 410 when none of the three can place it (see below)
   //   • API error (null)   → fall through; never guess while the backend is unhealthy
-  // NOTE: /shop/{a}/{b}/reviews resolves its last segment as "reviews" and will 410 rather than
-  // 404. Both are terminal and neither is a live route (the real reviews route is 3 segments).
-  const wpNestedShop = pathname.match(/^\/shop\/[^/]+\/[^/]+\/([^/]+?)(?:\/reviews)?\/?$/);
-  if (wpNestedShop?.[1]) {
-    let lastSegment = wpNestedShop[1];
-    try { lastSegment = decodeURIComponent(lastSegment); } catch { /* keep raw */ }
-    const nested = await lookupProduct(lastSegment);
-    if (typeof nested === 'string') return redirectPreservingQuery(request, nested);
-    if (nested === false) {
-      return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });
+  // NOTE: /shop/{a}/{b}/reviews resolves its last segment as "reviews" and will terminate rather
+  // than 404. Neither is a live route (the real reviews route is 3 segments).
+  //
+  // ── AND THE CATEGORY IS ALREADY IN THE PATH ─────────────────────────────────────────────────
+  // The bare 410 that used to end this block threw away the two segments WooCommerce puts in front
+  // of the product. `/shop/proteines/whey-isolate/iso-100-2-3-kg-dymatize/` answered Gone while
+  // `/whey-isolate` — literally in the URL — is a live 200 listing, and the product itself is alive
+  // under a new slug. Google's guidance, quoted in goneOrCategory below, is to send a discontinued
+  // product to its RELEVANT category and reserve 410 for when none exists; here one was known and
+  // ignored. resolveShopSlug also adds the legacy `-N` suffix retry the old lookupProduct call
+  // skipped, so a re-slugged product is recovered before any of this is reached.
+  const wpNestedShop = pathname.match(/^\/shop\/([^/]+)\/([^/]+)\/([^/]+?)(?:\/reviews)?\/?$/);
+  if (wpNestedShop?.[3]) {
+    const decode = (v: string) => { try { return decodeURIComponent(v); } catch { return v; } };
+    const category = decode(wpNestedShop[1]!);
+    const subcategory = decode(wpNestedShop[2]!);
+
+    const nested = await resolveShopSlug(decode(wpNestedShop[3]!));
+    if (nested.kind === 'redirect') return redirectPreservingQuery(request, nested.to);
+    if (nested.kind === 'gone') {
+      // Most specific first: the subcategory sits closer to the product than its parent does.
+      for (const segment of [subcategory, category]) {
+        const known = await isTaxonomySlug(segment);
+        // null is "the taxonomy could not be read" — never spendable as evidence of absence.
+        if (known === null) return NextResponse.next();
+        // Folded: the taxonomy is stored lowercase, and echoing the URL's casing back would turn
+        // this one hop into two through the case-fold block above.
+        if (known) return redirectPreservingQuery(request, `/${encodeURIComponent(segment.toLowerCase())}`);
+      }
+      // Neither segment is taxonomy either. goneOrCategory still demands a real token overlap
+      // before it spends a redirect, and 410s when there is none.
+      return goneOrCategory(request, nested.slug);
     }
+    // 'unknown' — the backend could not answer. Fall through rather than guess while it is sick.
   }
 
   // NOTE: /en/… and /ar/… are NO LONGER stripped-and-301'd here. They are first-class SSR locales
@@ -846,7 +957,8 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // 404'd for every multi-word/uppercase brand. Lands on /{brand-slug}, which resolves.
   const legacyBrand = pathname.match(/^\/brands?\/(.+?)(?:\/\d+)?\/?$/);
   if (legacyBrand?.[1]) {
-    const slug = slugifyName(legacyBrand[1]);
+    const named = slugifyName(legacyBrand[1]);
+    const slug = LEGACY_BRAND_ALIASES[named] ?? named;
     if (slug) {
       /* CHECKED, not assumed. Slugifying "JX FITNESS" to `jx-fitness` is the easy half; the half
          that matters is knowing whether that brand still exists, because 301ing to a brand page

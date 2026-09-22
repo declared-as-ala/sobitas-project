@@ -43,6 +43,18 @@ const MAX_PAGES = 10;
 const PER_PAGE = 100;
 
 let cache: Set<string> | null = null;
+/**
+ * fold(slug) → the REAL slug, for the legacy shapes that only differ by punctuation.
+ *
+ * The WordPress-era site published article URLs with hyphens where the CMS slug has spaces, and
+ * sometimes without the accents: `/blogs/ما-هو-أفضل-كرياتين-في-تونس؟`, `/blogs/Le-magnésium-:-la-
+ * condition-cachée…`. redirects.js rewrites only the `/blogs` prefix, so those arrive at
+ * `/blog/{hyphenated}` and the exact Set below cannot see that the article is alive — which turned
+ * a legacy link into a 301 INTO a 410 for 12 live, sitemap-listed articles (measured 22/09/2026).
+ * The fold is only a spelling normalisation: it never invents a successor, and a key that two
+ * different live articles fold to is dropped rather than guessed at.
+ */
+let folded: Map<string, string> | null = null;
 let cacheAt = 0;
 /**
  * Did the crawl behind `cache` reach the END of the article list?
@@ -76,9 +88,27 @@ function rowsOf(body: unknown): unknown[] | null {
  */
 const CRAWL_DEADLINE_MS = 4000;
 
+/**
+ * Strip everything a legacy URL could plausibly have changed: accents, case, and the run of
+ * punctuation/whitespace that the old site turned into a hyphen. Letters and digits of ANY script
+ * survive (`\p{L}`/`\p{N}`, not `[a-z0-9]`), because most of these articles are Arabic and an
+ * ASCII-only fold would collapse every one of them to the empty string.
+ */
+function fold(slug: string): string {
+  return slug
+    .normalize('NFD')
+    .replace(/\p{M}+/gu, '')
+    .toLowerCase()
+    .replace(/[^\p{L}\p{N}]+/gu, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
 async function refresh(): Promise<void> {
   try {
     const next = new Set<string>();
+    const nextFolded = new Map<string, string>();
+    /** Folded keys claimed by two different articles: ambiguous, so never redirected. */
+    const collisions = new Set<string>();
     const deadline = Date.now() + CRAWL_DEADLINE_MS;
     let complete = false;
 
@@ -98,7 +128,15 @@ async function refresh(): Promise<void> {
       if (!rows) return;
 
       for (const row of rows as Array<{ slug?: string }>) {
-        if (row?.slug) next.add(String(row.slug));
+        if (!row?.slug) continue;
+        const slug = String(row.slug);
+        next.add(slug);
+
+        const key = fold(slug);
+        if (!key) continue;
+        const claimed = nextFolded.get(key);
+        if (claimed !== undefined && claimed !== slug) collisions.add(key);
+        else nextFolded.set(key, slug);
       }
 
       const meta = (body as { meta?: { last_page?: number } })?.meta;
@@ -112,7 +150,10 @@ async function refresh(): Promise<void> {
     // that every article on the site had ceased to exist — and 410 all 223 of them.
     if (next.size === 0) return;
 
+    for (const key of collisions) nextFolded.delete(key);
+
     cache = next;
+    folded = nextFolded;
     cacheAt = Date.now();
     cacheComplete = complete;
   } catch {
@@ -141,12 +182,29 @@ async function articles(): Promise<Set<string> | null> {
  * it. Only `false` is a positive statement that no such article exists.
  */
 export async function isArticleSlug(slug: string): Promise<boolean | null> {
+  const resolved = await resolveArticleSlug(slug);
+  if (resolved === null) return null;
+  return resolved !== false;
+}
+
+/**
+ * The REAL article slug behind `slug`, so a legacy spelling can be redirected instead of retired.
+ *
+ * Returns the slug itself on an exact hit, the live slug on a punctuation-only fold hit, `false`
+ * only when a COMPLETE crawl says no such article exists, and `null` for "could not find out".
+ * `isArticleSlug` is a thin wrapper over this; the three-valued contract is unchanged, and the
+ * fold is consulted only after the exact match has already failed.
+ */
+export async function resolveArticleSlug(slug: string): Promise<string | false | null> {
   const clean = (slug || '').trim();
   if (!clean) return null;
 
   const set = await articles();
   if (!set) return null;
-  if (set.has(clean)) return true;
+  if (set.has(clean)) return clean;
+
+  const byFold = folded?.get(fold(clean));
+  if (byFold) return byFold;
 
   // Absent from a warm cache. Before believing that — and 410ing a URL — spend one refresh, so an
   // article published since the last one is not retired by its own freshness. Rate-limited,
@@ -157,7 +215,9 @@ export async function isArticleSlug(slug: string): Promise<boolean | null> {
     lastMissRefresh = now;
     await refresh();
     if (!cache) return null;
-    if (cache.has(clean)) return true;
+    if (cache.has(clean)) return clean;
+    const retry = folded?.get(fold(clean));
+    if (retry) return retry;
   }
 
   // Only a COMPLETE crawl may assert absence. Anything else is "could not find out", which the

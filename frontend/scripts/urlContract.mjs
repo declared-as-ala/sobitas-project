@@ -324,9 +324,17 @@ export const MUST_BE_TERMINAL = [
   '/2023/01', '/tag/whey', '/author/admin', '/xmlrpc.php',
   '/foo.php', '/index.php', '/.env', '/page/undefined', '/cart-2', '/checkout-2',
   '/products/amino-target-xplode-275-g',
-  '/pre-workout/king-real-preworkout-500gr-real-pharm',
   '/cardio-fitness/ring-de-boxe',
 ];
+
+/*
+ * NOT in MUST_BE_TERMINAL, and the reason is worth keeping:
+ * '/pre-workout/king-real-preworkout-500gr-real-pharm' sat here until 22/09/2026 because the
+ * product API answers 404 for it. It answers 404 because the product was RENAMED
+ * (…-500gr-real-pharm-tunisie, live and in stock), not retired — and a 404 from the API cannot
+ * tell those two apart. Asserting 410 here was asserting that a live product is permanently gone.
+ * middleware now 301s it onto the live PDP, so a first-hop 410 would be the failure, not the pass.
+ */
 
 /** Replace the {n} nonce so a probe measures the origin rather than a CDN entry a prior run made. */
 export function withNonce(probe, nonce) {

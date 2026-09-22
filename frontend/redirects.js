@@ -134,6 +134,11 @@ function buildRedirects() {
      * still move something.
      */
     p('/blog/qu-est-ce-que-la-proteine-whey', '/blog/whey-protein-en-tunisie'),
+    /* Year rename, not a retirement: the 2025 slug is 410 today while the 2026 slug is 200
+       and in sitemaps/blog.xml (verified 22/09/2026). Same article, so the legacy address
+       belongs on it rather than on a Gone. The slug fold added to util/blogSlugs.ts cannot
+       reach this one — the words differ, not the punctuation. */
+    p('/blog/meilleure-creatine-2025-notre-guide-pour-bien-choisir', '/blog/meilleure-creatine-2026-notre-guide-pour-bien-choisir'),
     p('/nutrition-guide', '/blog/nutrition-guide-complet-pour-une-sante-optimale'),
     p('/programme-dentrainement-musculation', '/blog/equipez-vous-pour-la-performance-le-guide-complet-du-materiel-de-musculation-protein-tn'),
     p('/programme-dentrainement-musculation/', '/blog/equipez-vous-pour-la-performance-le-guide-complet-du-materiel-de-musculation-protein-tn'),
@@ -279,7 +284,11 @@ function buildRedirects() {
     p('/eaa-bcaa-390gr-challenger-nutrition', '/bcaa'),
     p('/fat-burner', '/bruleurs-de-graisse'),
     p('/glutamine/', '/glutamine'),
-    p('/gold-creatine-kevin-levrone-300-g', '/whey-isolate/gold-iso-2-kg-kevin-levrone'),
+    /* The SAME product is live and indexable at /creatine/gold-creatine-kevin-levrone-300-g
+       (verified 200, index,follow, InStock on 22/09/2026). Sending a creatine URL to a whey
+       isolate PDP was a bulk-mapping slip: Google reads a redirect to an unrelated page as a
+       soft 404, so the hop was spent and the creatine intent earned nothing. */
+    p('/gold-creatine-kevin-levrone-300-g', '/creatine/gold-creatine-kevin-levrone-300-g'),
     p('/gold-l-carnitine-3000-500ml', '/bruleurs-de-graisse'),
     /* The brand exists and is served at /gold-s-gym (verified 200); the missing apostrophe in
        the old slug was sending it to the brand index instead. */
@@ -477,7 +486,13 @@ function buildRedirects() {
     p('/category/prise-de-masse', '/prise-de-masse'),
     p('/category/proteine', '/proteines'),
     p('/category/proteine-de-boeuf', '/proteine-de-boeuf'),
-    p('/category/proteine-whey', '/whey-isolate'),
+    /* BROAD WHEY GOES TO THE BROAD RAYON — same rule as /whey-tunisie above (see the block at
+       the legacy category roots). Legacy WooCommerce had `proteine-whey` and `isolat-de-whey`
+       as SIBLING subcategories, so `proteine-whey` named generic whey, not the isolate subset;
+       the bare `/proteine-whey` rule above already sends it to /whey-proteine. These three prefixed
+       spellings were the outlier and were handing /category/proteine-whey's equity (191 impr,
+       pos 43.4) to the narrower page, splitting one legacy intent across two targets. */
+    p('/category/proteine-whey', '/whey-proteine'),
     p('/category/proteines', '/proteines'),
     p('/category/proteines-pour-cheveux', '/beaute-cheveux'),
     p('/category/t-shirts-de-sport', '/vetements'),
@@ -495,7 +510,7 @@ function buildRedirects() {
     p('/subcategories/equipement-cardio-fitness', '/cardio-fitness'),
     p('/subcategories/fat-burner', '/bruleurs-de-graisse'),
     p('/subcategories/materiel-de-musculation', '/materiel-de-musculation'),
-    p('/subcategories/proteine-whey', '/whey-isolate'),
+    p('/subcategories/proteine-whey', '/whey-proteine'), // broad whey — see /category/proteine-whey
 
     // ── /product-category/  (WordPress legacy) ────────────────────────────
     //
@@ -508,6 +523,11 @@ function buildRedirects() {
     p('/product-category/perte-de-poids', '/bruleurs-de-graisse'),
     p('/product-category/prise-de-masse', '/prise-de-masse'),
     p('/product-category/proteines', '/proteines'),
+    /* Named explicitly rather than left to the runtime relevance match, which sent it to
+       /whey-isolate (measured 301 on 22/09/2026). Same reason as every other single-segment
+       /product-category path in this block: an explicit rule stops the destination drifting
+       with the taxonomy. */
+    p('/product-category/whey', '/whey-proteine'),
     p('/product-category/perte-de-poids/cla', '/cla'),
     p('/product-category/vetements-et-accessoires-de-musculation/ceinture-de-musculation-abdominal', '/materiel-de-musculation'),
     p('/product-category/acides-amines/vitamines', '/vitamines'),
@@ -549,7 +569,7 @@ function buildRedirects() {
     p('/shop/equipements-et-accessoires-sportifs/materiel-de-musculation', '/materiel-de-musculation'),
     p('/shop/perte-de-poids/fat-burner', '/bruleurs-de-graisse'),
     p('/shop/proteines/isolat-de-whey', '/whey-isolate'),
-    p('/shop/proteines/proteine-whey', '/whey-isolate'),
+    p('/shop/proteines/proteine-whey', '/whey-proteine'), // broad whey — see /category/proteine-whey
     // NOTE: /shop/{cat}/{subcat}/{product} is handled by the nested-shop resolver in
     // src/middleware.ts, which resolves the LAST segment to the real product (one 301) or
     // returns 410. Do NOT re-add 4-segment /shop rules here — next.config redirects run BEFORE

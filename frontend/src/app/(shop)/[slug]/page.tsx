@@ -3,7 +3,7 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import CategoryPage, { generateMetadata as generateCategoryMetadata } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
-import { getCategories, getProductsByBrand, getStorageUrl } from '@/services/api';
+import { getCategories, getStorageUrl } from '@/services/api';
 // Request-scoped cache. This route probes category -> brand -> CMS page in generateMetadata AND
 // again in the page body — up to SIX separate API calls per request, the biggest single
 // amplifier against the shared per-IP bucket, and six independent chances for metadata to fail
@@ -125,8 +125,10 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
   }
 
   return {
-    // absolute: the brand title already ends with "| Protéine Tunisie"; without this the root
-    // layout template would append the brand a second time on these ranking-surface pages.
+    // absolute: buildBrandMetaTitle already returns a finished SERP title, brand suffix included
+    // (curated entries carry their own; the default ends on "— Protein.tn"). Without this the
+    // root layout template would append "| Protéine Tunisie" on top of it on these
+    // ranking-surface pages. The crawler route declares the same `absolute` for the same URL.
     title: { absolute: title },
     description,
     alternates: { canonical },
@@ -201,7 +203,11 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
 
   const brand = await findBrandBySlug(cleanSlug);
   if (brand?.id) {
-    const result = await getProductsByBrand(brand.id);
+    // Cached, not raw: generateMetadata already fetched this exact listing through
+    // getCachedProductsByBrand (see metadataForBrand), and the raw call made the body fetch it a
+    // second time — two identical requests against the shared per-IP bucket on every one of the
+    // 579 brand renders. The request-scoped cache() wrapper exists for precisely this.
+    const result = await getCachedProductsByBrand(brand.id);
     const categories = result.categories || await getCategories();
     // Resolve each product's subcategory so links + the ItemList below are canonical
     // /{subcat}/{slug} (not the /shop/{slug} 301). No-op if categories lack sous_categories.

@@ -52,6 +52,27 @@ function buildArticleDescription(raw: string, title: string): string {
   });
 }
 
+/**
+ * The only shop categories an article body may be linked into.
+ *
+ * The taxonomy also holds lifestyle hubs — "SANTÉ & VITALITÉ", "Glucides & Énergie",
+ * "Sommeil & Stress", "PERFORMANCE", "Digestion & Transit" — whose names reduce to the ordinary
+ * words "santé", "énergie", "stress", "performance", "digestion". Those words occur in every
+ * article, so those hubs were winning four of the six link slots on anchors that say nothing about
+ * where they lead, and the pages that actually sell were left with a bare-word anchor or none
+ * (measured on the live bodies, 22/09/2026). This list is the commercial set; everything else in
+ * the taxonomy is reachable from the nav and the category pages, not from the prose.
+ */
+const LINKABLE_CATEGORY_SLUGS = [
+  'proteines', 'whey-proteine', 'whey-isolate', 'whey-hydrolysee', 'caseine',
+  'proteines-vegetales', 'proteines-multi-sources', 'proteine-de-boeuf', 'barres-proteinees',
+  'creatine', 'bcaa', 'eaa', 'acides-amines', 'glutamine', 'beta-alanine', 'citrulline', 'l-arginine',
+  'pre-workout', 'post-workout',
+  'prise-de-masse', 'mass-gainers', 'gainers-proteines',
+  'perte-de-poids', 'bruleurs-de-graisse', 'l-carnitine', 'cla',
+  'omega-3', 'vitamines', 'mineraux', 'magnesium', 'zinc', 'collagene',
+] as const;
+
 const ARTICLE_TOPIC_PATTERNS = [
   /\bwhey\b/i,
   /cr[eé]atine/i,
@@ -290,12 +311,26 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
      * to rank for. Everything else is derived from the live taxonomy, so renaming a category in
      * Filament updates the linking with no code change.
      */
-    const linkTargets: LinkTarget[] = targetsFromTaxonomy(categories, {
-      'whey-proteine': ['whey', 'whey isolate', 'protéine de lactosérum', 'واي بروتين', 'الواي بروتين', 'مصل اللبن', 'بروتين مصل اللبن'],
+    const linkTargets: LinkTarget[] = targetsFromTaxonomy(
+      categories,
+      {
+      // "whey isolate" belongs to /whey-isolate below, not here: the compiler tries the longest
+      // phrase first, so leaving it on /whey-proteine handed the isolate page's own query away.
+      'whey-proteine': ['whey', 'protéine de lactosérum', 'واي بروتين', 'الواي بروتين', 'مصل اللبن', 'بروتين مصل اللبن'],
+      // The longest term here (26 chars) outweighs /whey-proteine's "protéine de lactosérum" (22),
+      // so an article whose first whey mention IS an isolate mention now lands on the isolate page.
+      'whey-isolate': ['whey isolate', 'isolat de whey', 'whey protein isolate', 'isolat de protéine de whey'],
       creatine: ['créatine monohydrate', 'monohydrate de créatine', 'كرياتين', 'الكرياتين', 'كرياتين مونوهيدرات', 'الكرياتين مونوهيدرات'],
       proteines: ['protéine en poudre', 'poudre de protéine', 'مسحوق البروتين', 'بروتين بودرة'],
-      'prise-de-masse': ['gainer', 'mass gainer', 'ماس جينر', 'زيادة الوزن', 'زيادة الكتلة العضلية'],
-      'acides-amines': ['bcaa', 'acides aminés', 'الأحماض الأمينية', 'احماض امينية'],
+      // "gainer"/"mass gainer" moved off /prise-de-masse: docs/seo-opportunity-map.md §P4 names
+      // /mass-gainers the winner of the gainer intent and /prise-de-masse the objective hub that
+      // must stop competing for it. The hub keeps its own phrase via the category name
+      // ("PRISE DE MASSE") plus the Arabic synonyms a name cannot supply.
+      'mass-gainers': ['mass gainer', 'weight gainer', 'gainer', 'ماس جينر'],
+      'prise-de-masse': ['زيادة الوزن', 'زيادة الكتلة العضلية'],
+      // "bcaa" is /bcaa's own name, not a synonym of its sibling /acides-amines; keeping it here
+      // meant the parent category took the first BCAA mention whenever it came first in the prose.
+      'acides-amines': ['acides aminés', 'الأحماض الأمينية', 'احماض امينية'],
       // Widened 16/09/2026 to route the blog's authority into more category pages — the same
       // de-cannibalization lever, extended. A synonym for a slug not in the live taxonomy is a
       // no-op (targetsFromTaxonomy only emits targets for categories that exist), so this is safe.
@@ -308,7 +343,9 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       'proteines-vegetales': ['protéine végétale', 'proteine vegetale', 'protéine vegan', 'بروتين نباتي', 'البروتين النباتي'],
       vitamines: ['vitamine', 'complément vitaminé', 'فيتامينات', 'الفيتامينات'],
       magnesium: ['magnésium', 'magnesium', 'مغنيسيوم', 'المغنيسيوم'],
-    });
+      },
+      { allowSlugs: LINKABLE_CATEGORY_SLUGS }
+    );
 
     /*
      * Related by SUBJECT, with the newest posts as the fallback when an article shares no

@@ -16,6 +16,43 @@ import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 const SELECTED_BRANDS = 24;
 const SKELETON_TILES = SELECTED_BRANDS;
 
+/**
+ * WHICH 24, and why it is not "the first 24".
+ *
+ * `/api/all_brands` is ordered by `designation_fr`, so slicing it gave the homepage — the only
+ * page on the site with real authority — a wall of ACTIVLAB…MUSCLETECH: every brand page from A
+ * to M and none after it. That is an alphabetical accident, not a selection. The brands that
+ * actually earn clicks were left with one inbound link each (the `/brands` hub, one link among
+ * 683): GSC 28 d to 19/09 — /optimum-nutrition 47 clicks / 1,614 impressions, /weightworld 14,
+ * /ostrovit 12, /now-foods 12, /vital-proteins 11, /william-bonac 10, /big-ramy-labs 8,
+ * /proactive 7, /rule-one-proteins 8, /victor-martinez 5.
+ *
+ * So the wall is the same size and the same markup; it is ordered by demand first, then by the
+ * API's alphabetical order for everything else. Slugs are what `brandNameToSlug` produces from
+ * `designation_fr` — the same value the tile's href uses — so a typo here costs nothing but the
+ * hoist. Keep the list short: past ~24 entries it stops being a priority list.
+ */
+const FEATURED_BRAND_SLUGS: readonly string[] = [
+  'optimum-nutrition',
+  'dymatize',
+  'biotech-usa',
+  'weightworld',
+  'ostrovit',
+  'now-foods',
+  'muscletech',
+  'vital-proteins',
+  'william-bonac',
+  'big-ramy-labs',
+  'rule-one-proteins',
+  'proactive',
+  'victor-martinez',
+  'gsn-great-sport-nutrition',
+  'ultimate-nutrition',
+  'kevin-levrone',
+  'olimp-sport-nutrition',
+  'real-pharm',
+];
+
 // Content-box reservations are measured separately from Section padding and its seam.
 const BAND_LAYOUT = '[&.pt-defer]:[contain-intrinsic-size:auto_256px] sm:[&.pt-defer]:[contain-intrinsic-size:auto_231px] lg:[&.pt-defer]:[contain-intrinsic-size:auto_316px]';
 const RAIL_LAYOUT = 'scrollbar-hide grid grid-flow-col grid-rows-2 auto-cols-[44%] gap-px overflow-x-auto snap-x snap-proximity rounded-xl border border-rule-strong bg-rule-strong sm:auto-cols-[24%] lg:grid-flow-row lg:grid-rows-none lg:grid-cols-8 lg:auto-cols-auto lg:overflow-hidden';
@@ -99,7 +136,13 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   const selectedBrands = useMemo(() => {
     const withLogo = brands.filter((b) => Boolean(b.logo));
     const source = withLogo.length >= 8 ? withLogo : brands;
-    return source.slice(0, SELECTED_BRANDS);
+    // Featured first, in the order listed; everything else keeps the API's alphabetical order.
+    // `sort` is stable in every engine we ship to, so the tail never reshuffles between renders.
+    const rank = (b: Brand) => {
+      const i = FEATURED_BRAND_SLUGS.indexOf(nameToSlug(b.designation_fr));
+      return i === -1 ? FEATURED_BRAND_SLUGS.length : i;
+    };
+    return [...source].sort((a, b) => rank(a) - rank(b)).slice(0, SELECTED_BRANDS);
   }, [brands]);
 
   if (isLoading) {

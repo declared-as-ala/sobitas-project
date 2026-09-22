@@ -93,7 +93,7 @@ export function HeroBestSellers({ products }: { products: HeroBestSeller[] }) {
       {/* The header is the panel's only tinted area — a 1px rule plus a sand fill, which is what
           separates it from the rows without spending a heading size on the job. */}
       <div className="flex items-center justify-between gap-3 border-b border-hairline bg-sunken px-4 py-3">
-        <h2 className="pt-kicker text-ink-1">Meilleures ventes</h2>
+        <p className="pt-kicker text-ink-1">Meilleures ventes</p>
         <span className="pt-kicker text-[10px] text-brand">Top 3</span>
       </div>
 

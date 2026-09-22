@@ -8,7 +8,8 @@ import { ArrowUp, ArrowUpRight, ChevronDown, Facebook, Instagram, Linkedin, Load
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter } from '@/services/api';
-import { CONTACT_PHONE, CONTACT_PHONE_FIXE, LEGAL_IDENTITY } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, LEGAL_IDENTITY, SOCIAL_PROFILES } from '@/util/company';
+import { getCmsPageNavLabel } from '@/config/cmsPageSeoConfig';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { cn } from '@/app/components/ui/utils';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
@@ -85,32 +86,74 @@ const NAVIGATION: Array<[string, string]> = [
   ['/proteine-sousse', 'Protéine à Sousse'],
 ];
 
+/*
+ * Five gainer URLs answer "mass gainer tunisie" and none of them is in the top 20. The site
+ * already picked a winner — docs/seo-opportunity-map.md ("/mass-gainers commercial, /prise-de-masse
+ * hub"), the CategoryRail text row, and scripts/check-commercial-intent-map.mjs all point there —
+ * but this list, which renders on EVERY page, was still the sitewide vote for /gainers-proteines
+ * (GSC 28 d: 0 clicks / 48 impressions / position 46.5). Google's canonicalisation guidance is to
+ * link the chosen URL consistently, so the footer now votes with the rest of the site.
+ * /gainers-proteines is NOT redirected or noindexed — that is the owner's call, not this file's.
+ */
 const CATEGORIES: Array<[string, string]> = [
   ['/proteines', 'Protéines en poudre'],
   ['/whey-proteine', 'Whey protein en Tunisie'],
   ['/creatine', 'Créatine monohydrate en Tunisie'],
-  ['/gainers-proteines', 'Gainers'],
+  ['/mass-gainers', 'Mass gainer en Tunisie'],
   ['/prise-de-masse', 'Prise de masse'],
   ['/perte-de-poids', 'Perte de poids'],
   ['/pre-workout', 'Pre-workout'],
   ['/brands', 'Toutes les marques'],
 ];
 
-const SOCIALS: Array<{ href: string; label: string; icon: React.ReactNode }> = [
-  { href: 'https://facebook.com/proteinetunisie', label: 'Facebook', icon: <Facebook className="h-[18px] w-[18px]" /> },
-  { href: 'https://www.instagram.com/sobitas.proteine.tunisie/', label: 'Instagram', icon: <Instagram className="h-[18px] w-[18px]" /> },
-  { href: 'https://www.linkedin.com/in/sobitas-proteine-tunisie-b63b671a8/', label: 'LinkedIn', icon: <Linkedin className="h-[18px] w-[18px]" /> },
-  {
-    href: 'https://www.tiktok.com/@sobitas.proteine.tunisie',
-    label: 'TikTok',
-    icon: (
-      <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-        <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
-      </svg>
-    ),
-  },
-  { href: 'https://www.youtube.com/@proteine-tunisie', label: 'YouTube', icon: <Youtube className="h-[18px] w-[18px]" /> },
-];
+const TikTokIcon = (
+  <svg className="h-[18px] w-[18px]" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z" />
+  </svg>
+);
+
+type FooterSocial = { href: string; label: string; icon: React.ReactNode };
+
+/**
+ * The five networks this row has icons for, keyed by bare hostname.
+ *
+ * ── WHY THIS IS DERIVED AND NOT TYPED OUT ───────────────────────────────────────────────────
+ * The footer used to hardcode its own five URLs, and four of them named different accounts than
+ * `SOCIAL_PROFILES` — the list every `sameAs` in the site's Organization and LocalBusiness schema
+ * reads from, taken from the shop's Google Business Profile and verified 19/09/2026. So each page
+ * told Google two different stories about who this shop is on social media, and the visible
+ * YouTube link was `@proteine-tunisie`, a handle company.ts records as one of the two 404s it
+ * removed for exactly that reason.
+ *
+ * Deriving the row means the two can never diverge again: retire a profile in company.ts and it
+ * leaves the footer and every `sameAs` in the same commit. Profiles with no icon here (Pinterest,
+ * X) simply do not render — the row keeps the five marks it was designed around.
+ */
+const SOCIAL_ICONS: Record<string, { label: string; icon: React.ReactNode }> = {
+  'facebook.com': { label: 'Facebook', icon: <Facebook className="h-[18px] w-[18px]" /> },
+  'instagram.com': { label: 'Instagram', icon: <Instagram className="h-[18px] w-[18px]" /> },
+  'linkedin.com': { label: 'LinkedIn', icon: <Linkedin className="h-[18px] w-[18px]" /> },
+  'tiktok.com': { label: 'TikTok', icon: TikTokIcon },
+  'youtube.com': { label: 'YouTube', icon: <Youtube className="h-[18px] w-[18px]" /> },
+};
+
+/** Bare hostname -> the profile URL company.ts holds for it. */
+const SOCIAL_URL_BY_HOST: Record<string, string> = SOCIAL_PROFILES.reduce<Record<string, string>>((acc, href) => {
+  try {
+    const host = new URL(href).hostname.replace(/^www\./, '');
+    if (!(host in acc)) acc[host] = href;
+  } catch {
+    /* a malformed entry in company.ts must not take the whole footer down */
+  }
+  return acc;
+}, {});
+
+// Iterated in SOCIAL_ICONS order, not SOCIAL_PROFILES order, so the row of marks keeps the exact
+// sequence it was designed with (Facebook, Instagram, LinkedIn, TikTok, YouTube).
+const SOCIALS: FooterSocial[] = Object.entries(SOCIAL_ICONS).flatMap(([host, meta]): FooterSocial[] => {
+  const href = SOCIAL_URL_BY_HOST[host];
+  return href ? [{ href, label: meta.label, icon: meta.icon }] : [];
+});
 
 /** The rail. `max-w-site` (1600) is THE page container — see tailwind.config.ts. */
 const RAIL = 'mx-auto w-full max-w-site px-4 sm:px-6 lg:px-8';
@@ -316,8 +359,11 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
             {footerPages.map((p) => (
               <li key={p.id}>
                 {p.slug ? (
+                  /* The anchor is the CMS title unless cmsPageSeoConfig names a nav label — see the
+                     note on `navLabel` there. Two of these pages are retargeted guides whose CMS
+                     titles are the exact commercial phrases /proteines and /creatine need. */
                   <LinkWithLoading href={`/${p.slug}`} className={FOOTER_LINK}>
-                    {p.title}
+                    {getCmsPageNavLabel(p.slug) ?? p.title}
                   </LinkWithLoading>
                 ) : (
                   <span className="flex min-h-[44px] items-center text-sm text-ink-3 sm:min-h-[34px]">
@@ -458,10 +504,18 @@ function FooterHeading({ children }: { children: React.ReactNode }) {
  * makes the desktop state a fact of the stylesheet rather than of React — so the columns are open
  * at `sm` even before hydration, and a crawler at any width sees every link in the markup.
  *
- * The heading is rendered TWICE and exactly one is ever displayed: a `<button>` below `sm`, a
- * plain `<h2>` from `sm`. That is deliberate rather than lazy — `aria-expanded` on a control that
- * cannot collapse anything is a lie to a screen reader, and `display: none` keeps the unused one
- * out of the accessibility tree entirely.
+ * The title is rendered TWICE and exactly one is ever displayed: inside a `<button>` below `sm`,
+ * as a plain `<h2>` from `sm`. That is deliberate rather than lazy — `aria-expanded` on a control
+ * that cannot collapse anything is a lie to a screen reader, and `display: none` keeps the unused
+ * one out of the accessibility tree entirely.
+ *
+ * Only the `sm` copy is an `<h2>`, though (22/09/2026). `display: none` hides an element from the
+ * accessibility tree but NOT from the HTML Google parses, so shipping both as headings put four
+ * duplicate h2s — "Navigation", "Navigation", "Catégories", "Catégories", … — into the outline of
+ * every page on the site. The phone copy is a `<span>` carrying FooterHeading's exact classes, so
+ * the pixels are unchanged and the button's accessible name is still the title. Do not "simplify"
+ * this into one `<h2>` wrapping both: a parser reads through `display: none` and would see the
+ * title twice inside a single heading.
  */
 function FooterGroup({ title, children }: { title: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -474,7 +528,8 @@ function FooterGroup({ title, children }: { title: string; children: React.React
         aria-expanded={open}
         className="flex min-h-[52px] w-full items-center justify-between gap-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:hidden"
       >
-        <FooterHeading>{title}</FooterHeading>
+        {/* FooterHeading's classes, without the <h2> — see the note above. */}
+        <span className="font-display text-sm font-bold uppercase tracking-wide text-ink-1">{title}</span>
         <ChevronDown
           className={cn('h-4 w-4 shrink-0 text-ink-3 transition-transform duration-200', open && 'rotate-180')}
           aria-hidden="true"

@@ -1,4 +1,6 @@
 import { Metadata } from 'next';
+import { Section } from '@/app/components/layout/Section';
+import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { getAllBrands, getInStockBrandCounts, getShopFacets } from '@/services/api';
 import { loadForCache } from '@/util/loadForCache';
 import {
@@ -93,6 +95,17 @@ export default async function BrandsPage() {
   const inStockBrandCount = entries.filter((e) => e.stock > 0).length;
   const totalProducts = facets?.total_published ?? 0;
 
+  /*
+    ── THE TRAIL IS RENDERED, NOT JUST DECLARED ──────────────────────────────────────────────
+    This BreadcrumbList described a hierarchy — Accueil › Marques — that no visitor could see:
+    the page opened straight on its hero plate with no link back to the root from its own main
+    content. Google asks that structured data represent content on the page, so the fix is the
+    one that helps both readers at once: render the trail. `ShopBreadcrumbs` is the site's
+    listing-page breadcrumb (it is what /shop and every category page use); it injects the
+    "Accueil" crumb itself and renders the last item as unlinked text, so the visible labels are
+    "Accueil" and "Marques" — the same two strings, character for character, as the ListItem
+    names below.
+  */
   const breadcrumbSchema = buildBreadcrumbListSchema(
     [
       { name: 'Accueil', url: '/' },
@@ -141,6 +154,12 @@ export default async function BrandsPage() {
       {faqSchema && (
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }} />
       )}
+      {/* `strip` is the one-row band step, and `first` because this row now sits against the
+          header — the hero band below keeps its own `first` and simply draws no seam, which is
+          right: a crumb row and the page head it introduces read as one block. */}
+      <Section spacing="strip" width="wide" first>
+        <ShopBreadcrumbs items={[{ label: 'Marques' }]} />
+      </Section>
       <BrandsPageContent
         entries={entries}
         featured={featured}

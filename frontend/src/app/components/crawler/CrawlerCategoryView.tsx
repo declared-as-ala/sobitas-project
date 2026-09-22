@@ -11,11 +11,20 @@
  * intro, and a complete <ul> of crawlable product links.
  *
  * COMPLIANCE: content parity with the human page (same title, intro and products the
- * interactive page shows on its first data page). The canonical + robots on the route point
- * back at the real /{slug} URL. This is dynamic rendering, not cloaking. See util/isCrawler.ts.
+ * interactive page shows on its first data page) — and, since 22/09/2026, parity of ORDER and of
+ * what each product entry says. The human grid shows an image, a price and a stock label after
+ * ~190 words; this view showed a bare link list after ~2,850 and no image or price at all, while
+ * the route emitted Product/Offer JSON-LD carrying those prices. Both halves are fixed here: the
+ * product list sits directly under the intro, and each entry carries the cover, the price and the
+ * stock label the card shows. The canonical + robots on the route point back at the real /{slug}
+ * URL. This is dynamic rendering, not cloaking. See util/isCrawler.ts.
  */
 
+import { getStorageUrl } from '@/services/api';
 import { categoryAnchor } from '@/util/categoryAnchor';
+import { buildProductAlt } from '@/util/productAlt';
+import { formatTnd, getPriceDisplay } from '@/util/productPrice';
+import { getProductStockStatus } from '@/util/cartStock';
 import { getProductLink } from '@/util/productUrl';
 import type { Product } from '@/types';
 
@@ -69,7 +78,21 @@ export function CrawlerCategoryView({
 }) {
   const productLinks = (products ?? [])
     .filter((p) => p && p.designation_fr)
-    .map((p) => ({ name: p.designation_fr as string, url: getProductLink(p) }))
+    .map((p) => {
+      const price = getPriceDisplay(p);
+      return {
+        name: p.designation_fr as string,
+        url: getProductLink(p),
+        cover: p.cover ? getStorageUrl(p.cover) : '',
+        alt: buildProductAlt(p),
+        // formatTnd, not the card's rounded price: this string has to equal the `offers.price`
+        // the route emits for the first six products, and Google only grants merchant-listing
+        // eligibility when the marked-up price is visible on the page.
+        price: formatTnd(price.finalPrice),
+        oldPrice: price.hasPromo && price.oldPrice ? formatTnd(price.oldPrice) : null,
+        stockLabel: getProductStockStatus(p).stockLabel,
+      };
+    })
     .filter((p) => p.url && p.url !== '/shop/');
 
   const heading = headingOverride ||
@@ -111,52 +134,13 @@ export function CrawlerCategoryView({
         </section>
       )}
 
-      {/* "Comment choisir…" guide.
-          Previously omitted, and with it most of the page. Measured before this change, the
-          human /creatine rendered 1,605 words while the crawler view handed Googlebot 173 — the
-          editorial guide, the buying advice and every FAQ were dropped, so Google judged the
-          category on ~11% of its content. For a page whose whole job is to rank for
-          "créatine tunisie", that was the single biggest thing holding it back. It is also a
-          content-parity break: dynamic rendering is only defensible while both views say the
-          same thing. */}
-      {howToChooseTitle && howToChooseBody && (
-        <section aria-label="Guide d'achat" className="my-6">
-          <h2 className="text-lg font-semibold">{howToChooseTitle}</h2>
-          <div
-            className="prose prose-sm mt-2 max-w-none"
-            dangerouslySetInnerHTML={{ __html: howToChooseBody }}
-          />
-        </section>
-      )}
-
-      {longBottomHtml && (
-        <section aria-label="Informations complémentaires" className="my-6">
-          <div
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: longBottomHtml }}
-          />
-        </section>
-      )}
-
-      {/* FAQ as real text. The FAQPage JSON-LD is emitted by the route, but the schema is only
-          valid when the same Q&A is visible in the HTML — so it must live here, not only in the
-          structured data. */}
-      {faqs.length > 0 && (
-        <section aria-label="Questions fréquentes" className="my-6">
-          <h2 className="text-lg font-semibold">Questions fréquentes</h2>
-          <dl className="mt-2">
-            {faqs.map((f, i) => (
-              <div key={`${f.question}-${i}`} className="mt-3">
-                <dt className="font-semibold">{f.question}</dt>
-                <dd className="prose prose-sm max-w-none">{f.answer}</dd>
-              </div>
-            ))}
-          </dl>
-        </section>
-      )}
-
       {/* Complete product link list — the crawlable internal-link graph the client grid
-          hides behind hydration. */}
+          hides behind hydration.
+          ORDER MATTERS: this block sits directly under the intro, ahead of the buying guide and
+          the FAQ, because the human page shows its grid after ~190 words while this view used to
+          bury the list under ~2,850 (measured 22/09/2026 on /creatine, /whey-proteine,
+          /mass-gainers). A listing whose first 90% is prose reads as an article, and an article
+          loses transactional queries to the blog posts that really are articles. */}
       <section aria-label="Produits" className="my-6">
         <h2 className="text-lg font-semibold">
           {productLinks.length > 0
@@ -166,10 +150,25 @@ export function CrawlerCategoryView({
         {productLinks.length > 0 ? (
           <ul className="mt-2 list-disc pl-5">
             {productLinks.map((p, i) => (
-              <li key={`${p.url}-${i}`}>
+              <li key={`${p.url}-${i}`} className="mt-2">
+                {p.cover && (
+                  // Plain <img>, as in CrawlerProductView: next/image would add JS and a loader
+                  // round-trip to a route whose only visitor is a crawler.
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={p.cover}
+                    alt={p.alt}
+                    width={300}
+                    height={300}
+                    loading="lazy"
+                    className="h-auto w-24 rounded border"
+                  />
+                )}
                 <a className="text-red-700 underline" href={p.url}>
                   {p.name}
-                </a>
+                </a>{' '}
+                — {p.price}
+                {p.oldPrice && <> (au lieu de {p.oldPrice})</>} · {p.stockLabel}
               </li>
             ))}
           </ul>
@@ -247,6 +246,50 @@ export function CrawlerCategoryView({
               </li>
             ))}
           </ul>
+        </section>
+      )}
+
+      {/* "Comment choisir…" guide.
+          Previously omitted, and with it most of the page. Measured before this change, the
+          human /creatine rendered 1,605 words while the crawler view handed Googlebot 173 — the
+          editorial guide, the buying advice and every FAQ were dropped, so Google judged the
+          category on ~11% of its content. For a page whose whole job is to rank for
+          "créatine tunisie", that was the single biggest thing holding it back. It is also a
+          content-parity break: dynamic rendering is only defensible while both views say the
+          same thing. */}
+      {howToChooseTitle && howToChooseBody && (
+        <section aria-label="Guide d'achat" className="my-6">
+          <h2 className="text-lg font-semibold">{howToChooseTitle}</h2>
+          <div
+            className="prose prose-sm mt-2 max-w-none"
+            dangerouslySetInnerHTML={{ __html: howToChooseBody }}
+          />
+        </section>
+      )}
+
+      {longBottomHtml && (
+        <section aria-label="Informations complémentaires" className="my-6">
+          <div
+            className="prose prose-sm max-w-none"
+            dangerouslySetInnerHTML={{ __html: longBottomHtml }}
+          />
+        </section>
+      )}
+
+      {/* FAQ as real text. The FAQPage JSON-LD is emitted by the route, but the schema is only
+          valid when the same Q&A is visible in the HTML — so it must live here, not only in the
+          structured data. */}
+      {faqs.length > 0 && (
+        <section aria-label="Questions fréquentes" className="my-6">
+          <h2 className="text-lg font-semibold">Questions fréquentes</h2>
+          <dl className="mt-2">
+            {faqs.map((f, i) => (
+              <div key={`${f.question}-${i}`} className="mt-3">
+                <dt className="font-semibold">{f.question}</dt>
+                <dd className="prose prose-sm max-w-none">{f.answer}</dd>
+              </div>
+            ))}
+          </dl>
         </section>
       )}
 

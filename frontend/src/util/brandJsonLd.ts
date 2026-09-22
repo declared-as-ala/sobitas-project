@@ -78,9 +78,24 @@ export function buildBrandLandingSchemas({
     about: buildBrandSchema(brand, baseUrl) ?? undefined,
   });
 
+  /*
+   * NO PRE-SLICE. `listItems` is every product the caller passed, and `getProductsByBrand` now
+   * pages through the brand's whole catalogue (services/api.ts) instead of taking the endpoint's
+   * default first 20, so `numberOfItems` counts the brand as the page actually renders it.
+   *
+   * This used to be `listItems.slice(0, 20)`, which made `numberOfItems` say 20 whatever the page
+   * listed: the crawler view (CrawlerCategoryView) renders EVERY product of the brand as a link
+   * and prints the real count in its own "Produits (N)" heading, so on any brand holding more than
+   * 20 the list and the visible grid contradicted each other — and the products past the 20th
+   * appeared in no listing markup at all. /optimum-nutrition holds 50, not the 20 an earlier note
+   * here claimed, so there was never a brand page where the defect was invisible.
+   *
+   * buildItemListSchema keeps its own 30-entry cap on `itemListElement` (payload size, documented
+   * there), which caps the enumerated entries only, not the count.
+   */
   const itemList =
     listItems.length > 0
-      ? buildItemListSchema(listItems.slice(0, 20), baseUrl, {
+      ? buildItemListSchema(listItems, baseUrl, {
           name: `Produits ${brand.designation_fr}`,
           pageUrl: path,
         })

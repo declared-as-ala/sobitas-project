@@ -50,11 +50,19 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   // Proteins – general
   'proteine': 'proteines',
   'proteines-tunisie': 'proteines',
-  // BCAA – common URL variants
+  /**
+   * BCAA – URL variants only.
+   *
+   * `/acides-amines` and `/eaa` are NOT variants: they are live rayons of their own (redirects.js
+   * deliberately removed the old `/acides-amines` → `/bcaa` 308 because "Not a duplicate of
+   * /bcaa"), and aliasing them here made all three URLs render the same title, H1 and 1,900-word
+   * intro — three self-canonical indexable pages competing for one intent. `/acides-amines` is the
+   * amino-acid parent (EAA, BCAA, glutamine, arginine), `/eaa` sells essential aminos. Each now
+   * has a file of its own — acides-amines.json (the parent hub, routing into EAA/BCAA/glutamine/
+   * arginine/citrulline) and eaa.json (the nine essentials, and how they differ from BCAA).
+   */
   'bcaa': 'bcaa',
   'bcaa-tunisie': 'bcaa',
-  'acides-amines': 'bcaa',
-  'eaa': 'bcaa',
   // Glutamine
   'glutamine': 'glutamine',
   'glutamine-tunisie': 'glutamine',
@@ -63,7 +71,9 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   'bruleur-de-graisse': 'bruleurs-de-graisse',
   'fat-burner': 'bruleurs-de-graisse',
   'perte-de-poids': 'bruleurs-de-graisse',
-  'l-carnitine': 'bruleurs-de-graisse',
+  // No `'l-carnitine'` entry: the two sub-categories share ZERO products (85 vs 95 references,
+  // empty intersection 08/09/2026), so the shared hub guide was factually wrong on /l-carnitine.
+  // It has its own file (l-carnitine.json) with its own buying guide; the alias hid it.
   'cla': 'bruleurs-de-graisse',
   'minceur': 'bruleurs-de-graisse',
   // Antioxydants & Articulations
@@ -77,6 +87,32 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   'cheveux': 'beaute-cheveux',
 };
 
+/**
+ * ── ONE FILE, ONE SERP IDENTITY ──────────────────────────────────────────────────────────────
+ *
+ * An alias lets several URLs SHARE a hub's body copy (intro, buying guide, FAQ, related links) —
+ * that is the point of the map above and it stays. What must never be shared is the SERP identity:
+ * the h1, the <title> and the meta description. Since the 21/09/2026 decision in
+ * resolveCategorySeo.ts every slug with a content file renders that file's three SERP fields, so
+ * the aliases silently fanned ONE title/H1/description across four fat-burner URLs and three amino
+ * URLs — /perte-de-poids (a parent category) and /l-carnitine were both titled "Brûleur de
+ * Graisse", /eaa was titled "BCAA". Google keeps one URL per duplicate set and drops the rest.
+ *
+ * So: only the file's owning slug gets h1/metaTitle/metaDescription; every other slug reading the
+ * same file keeps the hub body and falls back to its own CMS title/H1/description, as it did
+ * before 21/09. The owner is the slug with the file's name, EXCEPT where the live URL differs from
+ * the filename — `/mass-gainers` and `/whey-proteine` are the ranking URLs and their files are
+ * named after the singular/English variant that 308s into them.
+ */
+const CONTENT_SERP_OWNER: Record<string, string> = {
+  'mass-gainer': 'mass-gainers',
+  'whey-protein': 'whey-proteine',
+};
+
+function serpOwnerSlug(contentSlug: string): string {
+  return CONTENT_SERP_OWNER[contentSlug] ?? contentSlug;
+}
+
 function getContentPath(contentSlug: string): string {
   const safeSlug = contentSlug.replace(/[^a-z0-9-]/gi, '');
   return path.join(process.cwd(), CONTENT_DIR, `${safeSlug}.json`);
@@ -86,7 +122,9 @@ function getContentPath(contentSlug: string): string {
  * Resolve canonical slug to content file slug (with alias support).
  */
 function resolveContentSlug(slug: string): string {
-  const trimmed = slug.trim();
+  // Lowercased: the route lowercases every slug before it gets here, and the VPS filesystem is
+  // case-sensitive — a mixed-case slug (the DB has `Intra-Workout`) would otherwise miss its file.
+  const trimmed = slug.trim().toLowerCase();
   return CONTENT_SLUG_ALIASES[trimmed] ?? trimmed;
 }
 
@@ -97,13 +135,15 @@ function resolveContentSlug(slug: string): string {
 export async function getCategorySeoContent(slug: string): Promise<Partial<CategorySeoContent> | null> {
   if (!slug?.trim()) return null;
   const contentSlug = resolveContentSlug(slug);
+  // See CONTENT_SERP_OWNER: an aliased URL shares the hub's body, never its title/H1/description.
+  const ownsSerpFields = serpOwnerSlug(contentSlug) === slug.trim().toLowerCase();
   try {
     const filePath = getContentPath(contentSlug);
     const raw = await fs.readFile(filePath, 'utf-8');
     const data = JSON.parse(raw) as Partial<CategorySeoContent>;
     if (!data || typeof data !== 'object') return null;
     return {
-      h1: typeof data.h1 === 'string' ? data.h1 : undefined,
+      h1: ownsSerpFields && typeof data.h1 === 'string' ? data.h1 : undefined,
       intro: typeof data.intro === 'string' ? data.intro : undefined,
       howToChooseTitle: typeof data.howToChooseTitle === 'string' ? data.howToChooseTitle : undefined,
       howToChooseBody: typeof data.howToChooseBody === 'string' ? data.howToChooseBody : undefined,
@@ -116,8 +156,12 @@ export async function getCategorySeoContent(slug: string): Promise<Partial<Categ
       bestProductSlugs: Array.isArray(data.bestProductSlugs)
         ? data.bestProductSlugs.filter((s) => typeof s === 'string')
         : [],
-      metaTitle: typeof data.metaTitle === 'string' ? data.metaTitle.trim() || undefined : undefined,
-      metaDescription: typeof data.metaDescription === 'string' ? data.metaDescription.trim() || undefined : undefined,
+      metaTitle:
+        ownsSerpFields && typeof data.metaTitle === 'string' ? data.metaTitle.trim() || undefined : undefined,
+      metaDescription:
+        ownsSerpFields && typeof data.metaDescription === 'string'
+          ? data.metaDescription.trim() || undefined
+          : undefined,
       ogImage: typeof data.ogImage === 'string' ? data.ogImage.trim() || undefined : undefined,
     };
   } catch (error) {

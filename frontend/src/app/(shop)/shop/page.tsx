@@ -44,7 +44,9 @@ import { ShopPageClient } from './ShopPageClient';
  *     set per ten minutes across all visitors, not one per render.
  *
  * The facet noindex rules stay where they are — `X-Robots-Tag: noindex, follow` in next.config.js,
- * matched per query key. They are evaluated per request and work regardless of how this renders.
+ * matched per query key. They are evaluated per request and work regardless of how this renders,
+ * and since 22/09/2026 generateMetadata emits the matching page-level directive as well so the
+ * two halves of the response stop contradicting each other (see the robots note below).
  */
 
 type PageProps = {
@@ -77,11 +79,11 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
    * and declared itself canonical and indexable: an unbounded space of indexable empty pages
    * hanging off the site's most important listing URL.
    *
-   * (The 470 REAL page numbers are noindex,follow now too — see the robots note at the return
-   * below — but that is decided HERE rather than by adding `page` to FACET_KEYS, because those
-   * header rules only match `source: '/shop'` and every category and subcategory listing paginates
-   * as well. One rule in generateMetadata covers /shop, /{category} and /{subcategory}, and the
-   * same object is what /x-crawler/shop re-exports, so the bot and the shopper cannot disagree.)
+   * (The 470 REAL page numbers are indexable again — see the robots note at the return below.
+   * Only the past-the-end case is decided here, and it is decided HERE rather than by adding
+   * `page` to FACET_KEYS because a header rule cannot know where the series ends. The object this
+   * function returns is what /x-crawler/shop re-exports, so the bot and the shopper cannot
+   * disagree.)
    *
    * THE FIRST ATTEMPT PUT THIS IN THE PAGE BODY AND IT SILENTLY DID NOT WORK. `permanentRedirect`
    * throws NEXT_REDIRECT, and in the page component that throw happens after `await getShopData`
@@ -111,6 +113,20 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
    * cache lookup, not a second round trip — and it only runs when `page > 1`.
    */
   let overflowedTo: number | null = null;
+  /*
+   * True only when the probe came back WITHOUT a pagination envelope on a paged URL, i.e.
+   * loadForCache turned a 429/5xx/timeout into the empty fallback above.
+   *
+   * This mattered less when every ?page=N was noindex regardless: an outage produced an empty grid
+   * that was never going to be indexed anyway. Now that the real page numbers are indexable, an
+   * outage would hand Googlebot an EMPTY listing carrying `index, follow` and a self-canonical —
+   * up to 473 URLs asserting themselves as thin pages for the length of the incident. Treat "I do
+   * not know how long this series is" as a reason not to invite indexing of what was rendered.
+   *
+   * It is deliberately NOT `!probe.products.length`: a healthy last page can legitimately be short,
+   * and an empty page inside a healthy series is the overflow case, which `overflowedTo` covers.
+   */
+  let paginationUnknown = false;
   if (isPaged) {
     const probe = await loadForCache(
       cachedShopPageFor(query),
@@ -118,9 +134,10 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     );
     const lastPage = Math.max(1, probe.pagination?.last_page ?? 1);
     // `probe.pagination` guards an outage: loadForCache returns an empty response on a throw,
-    // lastPage falls back to 1, and without this every paginated page would go noindex for the
-    // length of it.
-    if (probe.pagination && query.page > lastPage) overflowedTo = lastPage;
+    // lastPage falls back to 1, and without this every paginated page would canonicalise to page 1
+    // for the length of it.
+    if (!probe.pagination) paginationUnknown = true;
+    else if (query.page > lastPage) overflowedTo = lastPage;
   }
 
   // Shared with the JSON-LD and the crawler route — see util/shopJsonLd.ts. It used to be spelled
@@ -152,37 +169,65 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     title: { absolute: title },
     description,
     /*
-     * ── EVERY ?page=N, N ≥ 2, IS `noindex, follow`. PAGE 1 IS UNTOUCHED ───────────────────────
-     * This widens a directive that already existed one line below for the overflow case
-     * (?page=99999). It is the SAME mechanism for the same reason — the status line cannot be
-     * owned from here (see the long note above), so the head is where the indexing decision is
-     * made — applied to the whole tail of the series rather than only to the part past the end.
+     * ── ?page=N IS INDEXABLE AGAIN. FACETS AND PAST-THE-END ARE `noindex, follow` ─────────────
      *
-     * WHY. 473 of the site's 1,107 indexable listing URLs are pagination. They average ~310 words,
-     * they carry the page-1 H1 verbatim, and their only unique content is twelve product tiles
-     * that each have their own indexable URL already. So the index holds 473 near-duplicates of
-     * /shop, all answering the same query, all competing with the one URL that should win it —
-     * which is this site's central diagnosis (docs/seo-opportunity-map.md), not a theoretical risk.
+     * THIS REVERSES THE BLANKET `isPaged` NOINDEX THAT USED TO LIVE HERE. Read why before undoing
+     * it again.
      *
-     * `follow: true` IS THE LOAD-BEARING HALF and must stay. The pager is the only crawl path to
-     * the 11,263rd product: /shop links page 2, page 2 links page 3, and nothing else on the site
-     * links the middle of that chain. `noindex, nofollow` would close it and orphan the tail of the
-     * catalogue. `noindex, follow` keeps every one of those anchors crawlable while removing the
-     * page itself from the index — the pages stay a road, they stop being a destination.
+     * The old rule noindexed all 473 paginated /shop URLs because they were near-duplicates of
+     * page 1. That was measured and it was true of the CATEGORY pager — but not of this one.
+     * Live 22/09/2026, Googlebot UA, /shop vs /shop?page=2: the title already differs (` — Page 2`,
+     * built from `suffix` above), the crawler view carries one sentence of intro and no FAQ, both
+     * pages emit two <h2>s and zero FAQPage blocks. The only thing page 2 repeats is the H1, which
+     * Google does not require to be unique across a paginated sequence.
+     *
+     * What noindex cost instead is the crawl path. Google's pagination guidance is self-canonical
+     * + indexable, and Mueller's position (office-hours, Dec 2017) is that a long-lived
+     * `noindex, follow` decays to `noindex, nofollow`: once the URL drops out of the index Google
+     * stops re-crawling it, and `follow` stops meaning anything. The pager is the only internal
+     * link path into the middle of a 474-page chain — /shop links page 2, page 2 links page 3, and
+     * nothing else on the site links the rest. Letting that decay orphans the tail of an 11,000-
+     * product catalogue from internal PageRank (the sitemap still discovers the PDPs; it does not
+     * pass equity to them).
+     *
+     * And the flip can only add. GSC 23/08→19/09 still shows paginated listings ranking WHILE
+     * noindexed — /shop?page=172, ?page=440, ?page=432 and ?page=423 took a click each, and
+     * /pre-workout?page=9 took 1 click from 14 impressions at position 43.9. Those are URLs Google
+     * is being told to drop; the deep-page demand for them is real. Page 1 is untouched.
+     *
+     * WHAT STAYS NOINDEX:
+     *   • The overflow case (?page=99999) — an unbounded space of empty pages hanging off the
+     *     site's biggest listing. `overflowedTo` is only ever set when `isPaged`, and it keeps its
+     *     last-page canonical below.
+     *   • A paged URL rendered during an API outage (`paginationUnknown` — see the probe above).
+     *     The grid is empty and the series length is unknown, so the page has nothing to index.
+     *   • Faceted views (?brand=72, ?search=whey, ?sort=…). These were noindexed ONLY by the
+     *     `X-Robots-Tag` header in next.config.js, while this page-level meta said `index, follow`
+     *     in the same response — measured live 22/09/2026 on /shop?brand=72 and /shop?search=whey.
+     *     Google resolves a conflict to the most restrictive directive so the outcome was already
+     *     right, but a response that carries both directives is one no one can read.
+     *
+     *     BE CLEAR ABOUT WHAT THIS CLAUSE CAN AND CANNOT REACH. Every UA in util/isCrawler.ts —
+     *     Googlebot, bingbot, GPTBot and the rest — is rewritten by middleware.ts to
+     *     /x-crawler/shop with ONLY `page` forwarded, so `query` here is unfiltered for them and
+     *     this clause never fires; the header is what noindexes those requests and it must stay.
+     *     What the clause fixes is every other reader of the same URL: an unlisted or brand-new
+     *     crawler, a preview/unfurler, and URL Inspection's rendered HTML. `isShopFiltered`
+     *     already ignores `page`, so the two clauses above do not overlap. The header also covers
+     *     keys the parser does not model (`filter`, `orderby`), which is a second reason to keep
+     *     it.
      *
      * WHAT IS DELIBERATELY NOT CHANGED:
-     *   • The self-canonical. A paged view is not a duplicate of page 1 and must not claim to be
-     *     (see the canonical note above); noindex and rel=canonical answer two different questions
-     *     and pointing ?page=7 at /shop would tell Google those twelve products' listing does not
-     *     exist. Self-canonical + noindex,follow is Google's own post-rel=prev/next shape.
+     *   • The self-canonical on a paged view. noindex and rel=canonical answer two different
+     *     questions; pointing ?page=7 at /shop would tell Google those twelve products' listing
+     *     does not exist.
      *   • rel=prev/next. Retired in 2019, not reintroduced.
-     *   • Page 1: `isPaged` is false at page 1, so the key is absent from the object entirely and
-     *     the root layout's index/follow applies exactly as before, byte for byte.
-     *
-     * The overflow case (?page=99999) is a strict subset of this — `overflowedTo` is only ever set
-     * when `isPaged` — so it keeps its directive and keeps its last-page canonical below.
+     *   • Unfiltered page 1: both clauses are false, the key is absent from the object entirely,
+     *     and the root layout's index/follow applies exactly as before, byte for byte.
      */
-    ...(isPaged ? { robots: { index: false, follow: true } } : {}),
+    ...(overflowedTo !== null || paginationUnknown || isShopFiltered(query)
+      ? { robots: { index: false, follow: true } }
+      : {}),
     alternates: { canonical },
     openGraph: {
       title: { absolute: title },

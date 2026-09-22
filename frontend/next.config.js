@@ -69,9 +69,11 @@ const nextConfig = {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },
   async headers() {
-    // Faceted /shop views must not be indexed as duplicates of the boutique — this is what stopped
-    // /shop?search=WHEY%20PROTEIN, /shop?brand=9 and the literal /shop?search={search_term_string}
-    // (169 impressions at position 76) accumulating in the index.
+    // Faceted listing views must not be indexed as duplicates of the listing they filter — this is
+    // what stopped /shop?search=WHEY%20PROTEIN, /shop?brand=9 and the literal
+    // /shop?search={search_term_string} (169 impressions at position 76) accumulating in the index.
+    // Since 22/09/2026 the same rule covers every /{category|subcategory|brand} listing; see the
+    // `/:slug` note above FACET_KEYS below.
     //
     // This used to be `robots: { index: false }` inside generateMetadata, but reading searchParams
     // there is a dynamic API: it opted the whole route out of static rendering, so /shop answered
@@ -101,9 +103,35 @@ const nextConfig = {
      *
      * `page` stays absent on purpose: that is what keeps the 470 real paginated pages indexable.
      */
+    /*
+     * ── THE RULE COVERS EVERY SINGLE-SEGMENT LISTING, NOT ONLY /shop ────────────────────────
+     *
+     * `source` was '/shop'. But /shop is one of 56 listing URLs: every category, subcategory and
+     * brand lives at /{slug} and takes the SAME facet keys through the same parser. Measured live
+     * 22/09/2026 as Googlebot:
+     *
+     *     /shop?brand=72       X-Robots-Tag: noindex, follow      <meta robots> index, follow
+     *     /creatine?brand=72   (no X-Robots-Tag)                  <meta robots> index, follow
+     *
+     * Same facet, same duplicate slice of the catalogue, two different policies — and the second
+     * one is indexable with nothing but a rel=canonical hint arguing against it. The index has
+     * already shown it takes these: /shop?brand=8 and /shop?search=GAINER&sort=relevance both
+     * accumulated impressions before the /shop rule existed.
+     *
+     * IT HAS TO BE A HEADER, NOT generateMetadata. middleware.ts rewrites crawler UAs to
+     * /x-crawler/category/{slug} and forwards ONLY `page` — the facets are stripped before the
+     * route runs, so `searchParams` inside generateMetadata can never see brand/sort/flavors for
+     * the visitor this is aimed at. next.config headers match the ORIGINAL request URL, before the
+     * rewrite, which is why /shop?brand=72 carries the header today. This is the only layer that
+     * works.
+     *
+     * `/:slug` matches exactly ONE path segment, so PDPs (/creatine/{product}) and blog articles
+     * (/blog/{slug}) are untouched. Reserved single-segment routes (/blog?search=…, /account…)
+     * pick up noindex,follow when a facet key is present, which is correct for them too.
+     */
     const FACET_KEYS = ['search', 'brand', 'brands', 'category', 'categories', 'subcategory', 'subcategories', 'orderby', 'sort', 'min_price', 'max_price', 'filter', 'flavors', 'in_stock'];
     const facetedShopNoindex = FACET_KEYS.map((key) => ({
-      source: '/shop',
+      source: '/:slug',
       has: [{ type: 'query', key }],
       headers: [{ key: 'X-Robots-Tag', value: 'noindex, follow' }],
     }));

@@ -29,7 +29,7 @@
     "DS002": 9,
     "DS003": 18,
     "DS004": 4,
-    "DS011": 18
+    "DS011": 16
   },
   "src/app/(shop)/blog/[slug]/loading.tsx": {
     "DS001": 4,
@@ -278,11 +278,6 @@
   "src/app/components/crawler/CrawlerCategoryView.tsx": {
     "DS003": 2,
     "DS011": 4
-  },
-  "src/app/components/crawler/CrawlerProductView.tsx": {
-    "DS003": 8,
-    "DS004": 1,
-    "DS011": 5
   },
   "src/app/components/layout/Container.tsx": {
     "DS007": 1
