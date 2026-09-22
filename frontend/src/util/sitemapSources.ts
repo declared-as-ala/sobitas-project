@@ -4,6 +4,7 @@ import { CATEGORY_CONTENT_DATES } from '@/generated/categoryContentDates';
 import { getApiPage, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
 import { brandNameToSlug } from '@/util/brandSlug';
+import { hasStockData, isInStock, type ProductLike } from '@/util/cartStock';
 import { CONTENT_SLUG_ALIASES, listCategorySeoSlugs } from '@/util/categorySeoContent';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
@@ -120,6 +121,46 @@ export type SitemapBuildContext = {
   brandIdsWithIndexableProducts: Set<number>;
   /** Lowercased subcategory slugs with at least one PUBLISHED product — same rule. From `products`. */
   subCategorySlugsWithProducts: Set<string>;
+  /**
+   * Lowercased subcategory slugs with at least one published product the crawl could SEE in stock.
+   * Populated by `products`, and only ever read together with `sawProductStockSignal` below.
+   *
+   * ── WHY THIS IS EMPTY TODAY, AND WHY THE FIELD EXISTS ANYWAY ──────────────────────────────────
+   * The page is being changed to noindex a listing with nothing buyable on it. The sitemap must
+   * agree with that, and the only honest way to agree is to evaluate the same condition — but the
+   * crawl this file runs CANNOT see stock. Measured 22/09/2026, `/all_products?fields=index`
+   * returns exactly: id, slug, designation_fr, cover, brand_id, sous_categorie_id, publier,
+   * seo_robots_index, updated_at, created_at, sous_categorie. No `qte`, no `rupture`, no
+   * `force_out_of_stock`. `/shop_facets` does not close the gap either: its `category_counts` map
+   * is keyed by the six TOP-LEVEL category slugs and carries no in-stock dimension at all.
+   *
+   * The two ways to close it, and why one of them is the cheap one:
+   *   • ONE COLUMN on the index projection (ApisController::PRODUCT_LISTING → add `qte` and
+   *     `rupture`). Zero extra requests, the existing 23-request crawl answers the question, and
+   *     the code below starts working the moment the field arrives. This is the cheapest correct
+   *     option and it is a backend change, not a frontend one.
+   *   • ~50 extra listing calls, one per subcategory, INSIDE the force-dynamic request a crawler is
+   *     waiting on, against the 600 GET/min-per-IP bucket the whole SSR container shares with real
+   *     page renders. That is the load pattern that took the site down on 10/08 (see the
+   *     `?fields=index` note in `productsSource`). Not acceptable.
+   *
+   * So the gate is written, wired and INERT: with no stock field on any row `sawProductStockSignal`
+   * stays false and nothing is dropped. Guessing — dropping the nine zero-stock listings by name,
+   * or inferring stock from a count — is the one thing that must not happen here, because an
+   * inconsistent sitemap is worse than a stale one.
+   */
+  subCategorySlugsWithStock: Set<string>;
+  /**
+   * True once ANY crawled product row carried readable stock data (`hasStockData`).
+   *
+   * This is the third state the stock helpers exist to name: "in stock", "out of stock", and "this
+   * payload has no idea". While it is false, `subCategorySlugsWithStock` means nothing and every
+   * listing keeps its sitemap entry. Never collapse this into `subCategorySlugsWithStock.size > 0`:
+   * a crawl that returned stock for every row and found the whole catalogue out of stock is a real
+   * outcome that must NOT read as "no data" — and the reverse, treating no-data as out-of-stock,
+   * would empty the listings section of the sitemap in one deploy.
+   */
+  sawProductStockSignal: boolean;
   /** Lowercased category + subcategory slugs that exist in the backend. Populated by `taxonomy`. */
   liveCategorySlugs: Set<string>;
   /** Lowercased slugs that have an editorial content file in content/categories/. */
@@ -237,6 +278,32 @@ function contentFileLastModified(slug: string, ctx: SitemapBuildContext, rowDate
   if (!contentDate) return rowDate;
   if (!rowDate) return contentDate;
   return contentDate.getTime() > rowDate.getTime() ? contentDate : rowDate;
+}
+
+/**
+ * Does this URL slug render an editorial guide? Resolved THROUGH THE ALIAS MAP, exactly as the page
+ * resolves it.
+ *
+ * ── THE KEY SPACES WERE DIFFERENT, AND ONLY ONE OF THEM IS A URL ──────────────────────────────
+ * `ctx.contentFileSlugs` comes from `listCategorySeoSlugs()`, which lists content/categories/*.json
+ * and strips the extension — so it holds FILE names: `whey-protein`, `mass-gainer`,
+ * `bruleurs-de-graisse`. The page asks the same question with `getCategorySeoContent(slug)`, which
+ * runs the URL slug through CONTENT_SLUG_ALIASES first.
+ *
+ * Two callers here were comparing a URL slug against that set directly, so every URL whose guide
+ * arrives via an alias read as "has no content file": `/whey-proteine` (whey-protein.json),
+ * `/mass-gainers` (mass-gainer.json), `/cla` and `/minceur` (bruleurs-de-graisse.json),
+ * `/creatine-monohydrate`, `/proteines-tunisie`, `/beaute-et-cheveux`, and the rest of the map.
+ * Today those URLs also have products, so the taxonomy source keeps them for the other half of its
+ * condition and nothing is visibly wrong — which is exactly what makes it worth fixing now: the
+ * day one of them is emptied, the sitemap drops a URL the page is still serving `index, follow`,
+ * for a reason that is a spelling difference between a filename and a route.
+ *
+ * One resolution, shared with the page. A slug with no file and no alias returns false, as before.
+ */
+function hasEditorialGuide(slug: string, ctx: SitemapBuildContext): boolean {
+  const key = slug.trim().toLowerCase();
+  return ctx.contentFileSlugs.has(CONTENT_SLUG_ALIASES[key] ?? key);
 }
 
 /**
@@ -475,6 +542,8 @@ export async function loadSharedContext(baseUrl: string): Promise<{ ctx: Sitemap
     brandIdsWithProducts: new Set<number>(),
     brandIdsWithIndexableProducts: new Set<number>(),
     subCategorySlugsWithProducts: new Set<string>(),
+    subCategorySlugsWithStock: new Set<string>(),
+    sawProductStockSignal: false,
     liveCategorySlugs: new Set<string>(),
     contentFileSlugs: new Set<string>(),
     contentFileDates: new Map<string, Date>(),
@@ -609,6 +678,27 @@ const productsSource: SitemapSource = {
       if (subCategorySlug) ctx.subCategorySlugsWithProducts.add(subCategorySlug.toLowerCase());
 
       /*
+       * Stock, recorded through the app's ONE implementation of "is this available"
+       * (util/cartStock.ts), not a re-derivation — `rupture` and `force_out_of_stock` are both
+       * authoritative and both arrive as boolean OR 0/1, and this file is the last place that
+       * should own a fourth copy of that truth table.
+       *
+       * `hasStockData` first, because absence is a third state: a row with no stock columns must
+       * not be counted as out of stock. See the field docs on ctx.subCategorySlugsWithStock — with
+       * today's `?fields=index` projection this branch never runs, and the gate below stays inert.
+       *
+       * Recorded on `publier`, before the robots filter, for the same reason the two lines above
+       * are: what makes a listing non-empty is what it RENDERS, and a listing renders every
+       * published product whatever its own page's robots flag says.
+       */
+      if (hasStockData(p as unknown as ProductLike)) {
+        ctx.sawProductStockSignal = true;
+        if (subCategorySlug && isInStock(p as unknown as ProductLike)) {
+          ctx.subCategorySlugsWithStock.add(subCategorySlug.toLowerCase());
+        }
+      }
+
+      /*
        * Never submit a URL that renders <meta robots="noindex"> — that is exactly the "Submitted URL
        * marked noindex" bucket in Search Console.
        *
@@ -708,6 +798,36 @@ const taxonomySource: SitemapSource = {
      * going to zero.
      */
     let datedByContentFile = 0;
+    /** Subcategory URLs withheld because nothing in them is buyable. Inert today — see below. */
+    let droppedNothingInStock = 0;
+    /**
+     * Subcategory URLs this source SUBMITS that the live page answers `noindex, follow` for.
+     *
+     * ── THE BUG IS ON THE PAGE, AND THIS IS HOW THE SITEMAP REPORTS IT INSTEAD OF INHERITING IT ──
+     * Measured 22/09/2026 with a Googlebot UA: /proteines-multi-sources, /probiotiques and
+     * /accessoires are all HTTP 200, all in listings.xml, and all serve `noindex, follow` —
+     * /proteines-multi-sources while its own API row carries 68 published products and
+     * robots_index = true. Ten of the fifty subcategory URLs in listings.xml are in that state.
+     *
+     * The cause is NOT in this file. The category route decides indexability from
+     *
+     *     subProductCount = data.pagination?.total ?? data.products?.length
+     *
+     * over a payload fetched with `?meta_only=1`, and that payload (verified against
+     * /api/productsBySubCategoryId/proteines-multi-sources?meta_only=1) returns NO `pagination`
+     * key and `products: []`. So `?? products.length` yields 0 rather than the `undefined` the
+     * route's own comment relies on to mean "payload shape changed → stay indexable", and the rule
+     * collapses to "no editorial content file → noindex" for EVERY subcategory, whatever it holds.
+     * The 39 subcategories that do have a guide read `index, follow` and hide the fault; the 11
+     * that do not are noindexed regardless of stock, products or admin flag.
+     *
+     * This source deliberately does NOT follow the page into that. Dropping these ten URLs would
+     * encode the defect in the sitemap and quietly retire /proteines-multi-sources and its 68
+     * products' breadcrumb parent — and the rule that a listing with stock stays indexable is the
+     * one being defended, not the page's accidental reading of an empty array. So: submitted,
+     * counted, and said out loud on every build until the route is fixed.
+     */
+    const submittedButPageNoindexes: string[] = [];
 
     for (const category of ctx.categories) {
       if (!category.slug) continue;
@@ -738,7 +858,37 @@ const taxonomySource: SitemapSource = {
          * intervention — which is the "automatic for future edits" property, applied to listings.
          */
         const slug = subCategory.slug.toLowerCase();
-        if (!ctx.subCategorySlugsWithProducts.has(slug) && !ctx.contentFileSlugs.has(slug)) continue;
+        const guided = hasEditorialGuide(slug, ctx);
+        if (!ctx.subCategorySlugsWithProducts.has(slug) && !guided) continue;
+
+        /*
+         * ── THE IN-STOCK HALF OF THE SAME RULE ──────────────────────────────────────────────────
+         * The page is being changed to noindex a listing with nothing buyable. This is where the
+         * sitemap agrees with it — and it agrees only when it can actually SEE stock. While
+         * `sawProductStockSignal` is false (which is the case with today's projection, measured:
+         * `?fields=index` returns no stock column at all) this condition is skipped entirely and
+         * the entry is emitted exactly as before. See ctx.subCategorySlugsWithStock for the
+         * measurement and for the one-column backend change that switches it on.
+         *
+         * The editorial exemption carries over from the rule above: a documented listing is worth
+         * indexing on its own merits. IF the page lands a stricter rule — noindex on an empty
+         * listing even when it has a guide — this clause has to lose `&& !guided` in the same
+         * commit, or the two disagree again in the other direction.
+         */
+        if (
+          ctx.sawProductStockSignal &&
+          !ctx.subCategorySlugsWithStock.has(slug) &&
+          !guided
+        ) {
+          droppedNothingInStock++;
+          continue;
+        }
+
+        /*
+         * What the LIVE page would answer for this URL right now. Counted, never acted on — see the
+         * warning below.
+         */
+        if (!guided) submittedButPageNoindexes.push(slug);
 
         const rowDate = getLastModified(subCategory as { updated_at?: string; created_at?: string });
         const lastModified = contentFileLastModified(slug, ctx, rowDate);
@@ -753,6 +903,18 @@ const taxonomySource: SitemapSource = {
       }
     }
 
+    if (submittedButPageNoindexes.length > 0) {
+      console.warn(
+        `[sitemap] taxonomy: ${submittedButPageNoindexes.length} subcategory URL(s) are submitted here ` +
+        `but the category route serves them "noindex, follow" — "Submitted URL marked noindex" in ` +
+        `Search Console, one row each: ${submittedButPageNoindexes.join(', ')}. This is a defect in ` +
+        `app/(shop)/category/[slug]/page.tsx, NOT in the sitemap: its subProductCount reads ` +
+        `products.length off a ?meta_only=1 payload that always returns an empty array, so every ` +
+        `subcategory without a content/categories/*.json file is noindexed however much it stocks. ` +
+        `Fix the route; do not silence this by dropping the URLs.`
+      );
+    }
+
     return {
       entries,
       // The /categories crawl that produced ctx.categories was verified in loadSharedContext, and it
@@ -760,7 +922,10 @@ const taxonomySource: SitemapSource = {
       verified: true,
       note:
         `[sitemap] taxonomy: ${entries.length} category/subcategory URL(s) from ${ctx.categories.length} ` +
-        `category row(s) (${datedByContentFile} dated by their content file)`,
+        `category row(s) (${datedByContentFile} dated by their content file, ` +
+        `${droppedNothingInStock} withheld with nothing in stock` +
+        `${ctx.sawProductStockSignal ? '' : ' — stock not visible in this crawl, gate inert'}, ` +
+        `${submittedButPageNoindexes.length} submitted that the page currently noindexes)`,
     };
   },
 };

@@ -28,6 +28,9 @@ import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisi
 import { getProductLink, getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
+// ONE definition of availability for the whole app. The robots gate below reads the same helper
+// the product card, the PDP, the cart and the JSON-LD availability read — see the note there.
+import { isInStock, type ProductLike } from '@/util/cartStock';
 import { CategorySeoLanding, COMPARISON_SLUGS } from '@/app/(shop)/category/CategorySeoLanding';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
@@ -329,20 +332,26 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const apiSeo = (data as any).seo as CategorySeoFromApi | undefined;
     const seoJson = await getCategorySeoContent(canonicalSlug);
     const merged = mergeCategorySeoForSlug(canonicalSlug, seoJson, apiSeo);
-    // Empty-subcategory exemption — see the robots note at the return below. `pagination.total` is
-    // the published count for the whole subcategory; `products.length` is the fallback for payloads
-    // that ship the first page without a pagination envelope. `undefined` — neither field present —
-    // means the payload shape changed, and that must read as "indexable", never as "zero": a wrong
-    // noindex applied to all 50 subcategories at once is the expensive direction to fail in.
-    const subProductCount: number | undefined =
-      type === 'subcategory'
-        ? ((data as any).pagination?.total ?? (data as any).products?.length)
-        : undefined;
-    const indexable =
-      type !== 'subcategory' ||
-      subProductCount === undefined ||
-      subProductCount > 0 ||
-      seoJson !== null;
+    /*
+     * ── THE EMPTY-SUBCATEGORY COUNT CANNOT COME FROM THIS PAYLOAD ─────────────────────────────
+     * It used to: `(data as any).pagination?.total ?? (data as any).products?.length`. The guard
+     * around it was written for a payload whose shape might change, and reasoned that `undefined`
+     * must read as "indexable" because a wrong noindex across 50 subcategories is the expensive
+     * direction to fail in. That reasoning was right and the implementation still failed, because
+     * `fetchCategoryOrSubCategory` calls the taxonomy endpoint with `?meta_only=1`, which answers
+     * `products: []` and no pagination BY DESIGN. An empty array is present, so the `undefined`
+     * escape never fired and every subcategory counted zero.
+     *
+     * Measured on production 22/09/2026 before the fix: /accessoires served `noindex, follow` with
+     * 15 products on the page, /proteines-multi-sources with 24, /enfants with 24, /cardio-fitness
+     * with 8. The only thing saving /creatine and the rest was the `seoJson !== null` clause — a
+     * curated content file — so indexability was tracking which categories someone had written copy
+     * for, not which ones had anything to sell. /accessoires holds dip-belt, 42 clicks in 90 days.
+     *
+     * The real count is `serverPagination.total` from the listing the page is about to render
+     * anyway, so the decision moves below, next to the stock gate that already reads it.
+     */
+    const hasEditorialGuide = seoJson !== null;
     let metaTitle =
       merged.metaTitle && merged.metaTitle.length <= META_TITLE_MAX_LEN
         ? merged.metaTitle
@@ -478,18 +487,107 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
      * paginated listing on the site would canonicalise to page 1 for the length of the incident —
      * a far more expensive mistake than the one being fixed.
      */
+    const listingScope: Partial<ShopQuery> =
+      type === 'subcategory'
+        ? { subcategories: [canonicalSlug], categories: [] }
+        : { categories: [canonicalSlug], subcategories: [] };
     let overflowedTo: number | null = null;
+    /*
+     * ── A LISTING WHERE NOTHING ON THE PAGE CAN BE BOUGHT IS noindex, follow ──────────────────
+     *
+     * Measured live 22/09/2026 (browser UA, production). Each product card renders its
+     * `stockLabel` once, so the label census below is a direct read of getProductStockStatus on
+     * the very payload this route serves:
+     *
+     *     /cla /probiotiques /digestion /immunite /sommeil-stress /plantes-et-herbes
+     *     /glucides-energie                24 products shown, 24 "Sur commande",  0 in stock
+     *     /intra-workout                   24 products shown, 24 "Sur commande",  0 in stock
+     *     /post-workout                    18 products shown, 18 "Sur commande",  0 in stock
+     *     /creatine                        24 shown, 8 "En stock", 16 "Sur commande"
+     *     /mass-gainers                    7 "En stock", 9 "Sur commande"
+     *
+     * Nine full pages of 24 tiles where every single add-to-cart is refused. Google has already
+     * priced them: in the 28-day Search Console export, seven of the nine do not appear in
+     * Pages.csv at all, and the two that do are /cla (1 click, 2 impressions) and
+     * /glucides-energie (1 click, 1 impression). Over three months it is /cla 2 clicks,
+     * /post-workout 1, /glucides-energie 1, /intra-workout 0 clicks on 14 impressions. Roughly
+     * one click a month across the whole set, against 1,255 URLs already sitting in
+     * crawled-currently-not-indexed. Keeping them indexed spends crawl budget to rank a page
+     * whose entire job — selling something — it cannot do.
+     *
+     * WHY noindex AND NOT 410 OR 301. Stock comes back. A 410 destroys the URL and the products'
+     * breadcrumb parent permanently; a 301 tells Google the concept does not exist. `noindex,
+     * follow` is the only directive that reverses itself: the day one product in the category is
+     * back in stock, the next render emits `index, follow` again with no intervention and no
+     * deploy. Same self-correcting shape as the empty-subcategory rule above and the empty-brand
+     * rule in the crawler route.
+     *
+     * `follow` IS THE POINT, not a detail. These nine categories are the crawl path to several
+     * hundred product pages, and an out-of-stock PRODUCT stays fully indexable with
+     * availability BackOrder/OutOfStock — that is Google's own guidance and those PDPs hold the
+     * long tail (/plantes-et-herbes/… alone took 20 clicks on 184 impressions in 28 days while
+     * its parent category took none). Nothing here touches a product.
+     *
+     * THREE CONSTRAINTS, EACH OF WHICH HAD TO BE WRITTEN DOWN:
+     *
+     * 1. PAGE 1 ONLY. A deep page of a big category running out of stock says nothing about the
+     *    category — /sante-vitalite?page=300 is 24 back-order items out of 8,849 and its parent
+     *    is perfectly healthy. Only the page a searcher actually lands on gets a vote, so the
+     *    test is scoped to `page === 1` and page 2+ keeps the unconditional `index, follow` the
+     *    note below argues for.
+     *
+     * 2. AN API OUTAGE MUST NOT NOINDEX THE SITE. `loadForCache` deliberately converts a 429 or
+     *    a 5xx into an empty result so the render is not cached — which means "zero products"
+     *    and "the origin is down" arrive here as the same object. `serverPagination.total > 0`
+     *    is the existing discriminator (see the overflow note above, where it stops an outage
+     *    collapsing every paginated listing onto page 1) and it is reused verbatim, with
+     *    `shown.length > 0` beside it. During an incident `total` is 0, the condition is false,
+     *    and every category on the site stays indexable. Failing that way round is not optional:
+     *    a wrong noindex applied to all 55 listings at once is unrecoverable for weeks, a wrong
+     *    index on an empty page costs one crawl.
+     *
+     * 3. ONE DEFINITION OF "IN STOCK", NOT A SECOND ONE. `isInStock` is a thin wrapper over
+     *    getProductStockStatus — the same helper the card, the PDP, the cart and the
+     *    availability in the JSON-LD all read. Re-deriving it from `qte`/`rupture` here is how
+     *    this class of bug starts: a page that says noindex while the grid it renders says
+     *    "En stock". It also inherits the right default for free — a payload carrying NO stock
+     *    columns is `isUnknown`, which reads as in stock, so if a future endpoint drops those
+     *    fields the symptom is that this gate stops firing rather than that it fires on
+     *    everything.
+     *
+     * Both views are covered by one edit: /x-crawler/category/[slug] delegates its entire
+     * metadata to this function for category and subcategory slugs, so a bot and a shopper
+     * cannot be told different things about the same URL.
+     */
+    let nothingBuyableHere = false;
+    // `undefined` = not established (page 2+, or an outage). Never treated as empty.
+    let publishedTotal: number | undefined;
     if (metaQuery.page > 1) {
-      const { serverPagination } = await loadListingPage(
-        metaQuery,
-        type === 'subcategory'
-          ? { subcategories: [canonicalSlug], categories: [] }
-          : { categories: [canonicalSlug], subcategories: [] }
-      );
+      const { serverPagination } = await loadListingPage(metaQuery, listingScope);
       if (serverPagination.total > 0 && metaQuery.page > serverPagination.totalPages) {
         overflowedTo = serverPagination.totalPages;
       }
+    } else {
+      // Same `unstable_cache` entry the page body is about to read, keyed identically by
+      // `loadListingPage` — a cache lookup, not a second round trip.
+      const { productsData, serverPagination } = await loadListingPage(metaQuery, listingScope);
+      const shown = (productsData.products ?? []) as ProductLike[];
+      publishedTotal = serverPagination.total;
+      nothingBuyableHere =
+        serverPagination.total > 0 && shown.length > 0 && shown.every((p) => !isInStock(p));
     }
+    /*
+     * A subcategory is noindex only when the listing itself reports zero published products AND no
+     * editorial guide stands in for them. `loadListingPage` turns a 429/5xx into an empty result,
+     * so an outage would read as zero — which is why page 2+ and any page that never established a
+     * total leave `publishedTotal` undefined and the page indexable. Failing that way round is not
+     * optional: the alternative is noindexing every listing on the site during an incident.
+     */
+    const indexable =
+      type !== 'subcategory' ||
+      hasEditorialGuide ||
+      publishedTotal === undefined ||
+      publishedTotal > 0;
     const canonicalUrl = metaQuery.page > 1
       ? await resolveCanonicalUrl(undefined, buildShopUrl({ ...EMPTY_SHOP_QUERY, page: overflowedTo ?? metaQuery.page }, `/${encodeURIComponent(canonicalSlug)}`))
       : await resolveCanonicalUrl(merged.canonicalUrl, `/${encodeURIComponent(canonicalSlug)}`);
@@ -573,14 +671,20 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        * thin page N out of the SERP on its own — but it keeps the page crawled, which is the only
        * property the deep catalogue actually needs.
        *
-       * The empty-subcategory rule above is unchanged and is now the ONLY reason this route emits
-       * noindex: a listing with nothing to sell, on any page number.
+       * The empty-subcategory rule above is unchanged, and it is now joined by exactly one other
+       * reason this route emits noindex — the zero-stock gate documented beside
+       * `nothingBuyableHere`. Both say the same thing in different words: a listing with nothing
+       * to sell. The first means no products exist; the second means 24 exist and not one of
+       * them can be added to a basket. Neither is a page number rule; page 2+ of a healthy
+       * category stays `index, follow`.
        *
        * This is read by BOTH views: /{slug} delegates its metadata here, and so does
        * /x-crawler/category/[slug] — the route middleware rewrites Googlebot to. One edit, no
        * drift between what a shopper and a crawler are told.
        */
-      robots: !indexable ? { index: false, follow: true } : { index: true, follow: true },
+      robots: !indexable || nothingBuyableHere
+        ? { index: false, follow: true }
+        : { index: true, follow: true },
       openGraph: {
         title: ogTitleMeta,
         description: ogDescMeta.slice(0, 200),

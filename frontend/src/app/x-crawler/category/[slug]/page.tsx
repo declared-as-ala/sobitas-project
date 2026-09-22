@@ -172,6 +172,28 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        * route cannot mirror the other half of a "status" fix — it is reached by an internal
        * middleware REWRITE of /{slug}, so redirecting from here would move the bot off the URL it
        * is indexing; the head is the whole lever this route has, and it is pulled above.
+       *
+       * ── THE ZERO-STOCK noindex ARRIVES THROUGH THIS SAME DELEGATION. DO NOT RE-IMPLEMENT IT ──
+       *
+       * The human route now emits `index: false, follow: true` for a listing whose PAGE 1
+       * contains products but none that can be bought — nine categories measured live on
+       * 22/09/2026 render 24 tiles and 24 "Sur commande" (/cla, /post-workout, /intra-workout,
+       * /probiotiques, /digestion, /immunite, /sommeil-stress, /plantes-et-herbes,
+       * /glucides-energie), while /creatine (8 of 24 in stock) and /mass-gainers stay indexable.
+       * Read the long note beside `nothingBuyableHere` in app/(shop)/category/[slug]/page.tsx for
+       * the outage guard, the page-1 scoping and why the test goes through `isInStock` rather
+       * than re-reading `qte`/`rupture`.
+       *
+       * Because this branch returns that function's result verbatim, the bot and the shopper get
+       * byte-identical robots directives for the same slug with no second copy of the rule to
+       * drift. Copying the condition down here so the crawler "has its own" would reintroduce
+       * precisely the divergence check-crawler-parity exists to catch: a URL that is indexable
+       * for one agent and not the other is the worst of the three possible outcomes.
+       *
+       * The body below needs no change either — it renders content and schema, never robots, and
+       * `follow` keeps its product links doing the job they are there for. An out-of-stock
+       * PRODUCT stays indexable with BackOrder/OutOfStock availability; only the listing above it
+       * is withdrawn, and only while nothing on it is buyable.
        */
       return generateCategoryMetadata({ params, searchParams });
     }

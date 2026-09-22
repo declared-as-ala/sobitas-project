@@ -364,12 +364,63 @@ function buildRedirects() {
     // /musculation used to live here; combined with the admin-managed /musculation →
     // /materiel-de-musculation redirect (Filament → Redirections), it formed an infinite
     // 301/308 loop on the real page. Never re-add a rule that redirects this slug away.
-    p('/ceinture-de-musculation', '/materiel-de-musculation'),
-    p('/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
-    p('/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
+    /*
+     * ── THESE THREE POINTED AT THE WRONG PARENT UNTIL 22/09/2026. MEASURED, NOT ASSUMED. ───────
+     *
+     * Belts, gloves and straps do not live in /materiel-de-musculation. Every product behind
+     * these three terms sits under /accessoires, and the site already knows it: the PDPs under
+     * the legacy category paths 308 straight onto the accessoires parent. Measured today with a
+     * Googlebot UA:
+     *   /ceinture-de-musculation/dip-belt            308 -> /accessoires/dip-belt        (200)
+     *   /bandes-de-soutien-musculaire/lifting-straps 308 -> /accessoires/lifting-straps  (200)
+     * and /accessoires itself (200) lists dip-belt, gant-de-fitness, lifting-straps,
+     * bandes-de-poignet, bande-genoux and ceinture-dos-de-musculation on page 1 — every one of
+     * the earning gear PDPs. /materiel-de-musculation lists machines, bancs, barres et racks.
+     *
+     * So the PRODUCT hops were already right; only the CATEGORY hop was wrong, and it was wrong
+     * in the expensive direction: the three slugs that carry the belt/glove/strap intent dropped
+     * the visitor onto a page of leg presses and smith machines. The clicks are on the accessoires
+     * side of that line — /accessoires/dip-belt 42 clicks @7.97, bandes-de-poignet 18,
+     * bande-genoux 12, gant-de-fitness 9, lifting-straps 7 (Pages.csv, 3 m to 22/09/2026), against
+     * 11 clicks for the whole of /materiel-de-musculation.
+     *
+     * NOTHING BELOW CHANGES A PRODUCT URL. The PDP paths are untouched; they keep resolving in
+     * one hop to the same /accessoires/* URLs they resolve to today, which is what earns.
+     *
+     * Destination checked for a chain before it was written: /accessoires answers 200 directly as
+     * Googlebot, so each source reaches a 200 in exactly one hop. It is a live top-level listing,
+     * not an alias, so — exactly as with 'materiel-de-musculation' in the note above — never add a
+     * rule that redirects '/accessoires' away, or these three become a loop.
+     *
+     * The prefixed twins of the same three slugs (/category/…, /subcategories/…, /shop/…,
+     * /product-category/…) were repointed in the same change, for the same reason.
+     */
+    p('/ceinture-de-musculation', '/accessoires'),
+    p('/gants-de-musculation-et-fitness', '/accessoires'),
+    p('/bandes-de-soutien-musculaire', '/accessoires'),
     p('/shakers-et-bouteilles-sportives', '/accessoires'),
     p('/equipement-cardio-fitness', '/cardio-fitness'),
+    /*
+     * /t-shirts-de-sport -> /vetements is LEFT AS IT IS, having been re-measured today: /vetements
+     * answers 200 as Googlebot, so this is already a single hop onto a live page, and it is the
+     * semantically correct rayon. It is an EMPTY listing ("Aucun produit disponible", absent from
+     * /sitemaps/listings.xml), so the destination is expected to start carrying `noindex, follow`
+     * — that is correct and self-reversing: the day a t-shirt is published the page is indexable
+     * again and this redirect needs no edit. Do not repoint it at /accessoires or /equipement to
+     * chase an indexable target; that would send a clothing query to a page selling shakers.
+     */
     p('/t-shirts-de-sport', '/vetements'),
+
+    /*
+     * /complements-d-entrainement answered a hard 404 (measured 22/09/2026, Googlebot UA) while
+     * its three prefixed twins in this same file have resolved to /performance for months:
+     * /categorie/…, /categories/… and /category/complements-d-entrainement all land there. The
+     * bare slug was simply never added. The destination is not invented here — it is the mapping
+     * this file already makes for the identical slug, and /performance answers 200 directly as
+     * Googlebot, so this is one hop. content/categories/complements-d-entrainement.json is an
+     * orphan either way: the slug cannot render now and will not render after this rule.
+     */
+    p('/complements-d-entrainement', '/performance'),
 
     // ── /brand/:slug  (specific first → catch-all to /brands) ────────────
     p('/brand/BIOTECH-USA', '/biotech-usa'),
@@ -455,12 +506,12 @@ function buildRedirects() {
     p('/pack/:path*', '/packs'),
     p('/category/acides-amines', '/acides-amines'),
     p('/category/ashwagandha', '/ashwagandha'),
-    p('/category/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
+    p('/category/bandes-de-soutien-musculaire', '/accessoires'),
     p('/category/bcaa', '/bcaa'),
     p('/category/beta-alanine', '/beta-alanine'),
     p('/category/boosters-hormonaux', '/boosters-hormonaux'),
     p('/category/carbohydrates', '/glucides'),
-    p('/category/ceinture-de-musculation', '/materiel-de-musculation'),
+    p('/category/ceinture-de-musculation', '/accessoires'),
     p('/category/citrulline', '/citrulline'),
     p('/category/cla', '/cla'),
     p('/category/collagene', '/collagene'),
@@ -474,7 +525,7 @@ function buildRedirects() {
     p('/category/gainer', '/gainers-proteines'),
     p('/category/gainers-haute-energie', '/gainers-proteines'),
     p('/category/gainers-riches-en-proteines', '/gainers-proteines'),
-    p('/category/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
+    p('/category/gants-de-musculation-et-fitness', '/accessoires'),
     p('/category/glutamine', '/glutamine'),
     p('/category/hmb', '/hmb'),
     p('/category/isolat-de-whey', '/whey-isolate'),
@@ -506,7 +557,7 @@ function buildRedirects() {
     p('/subcategories/acides-amines', '/acides-amines'),
     p('/subcategories/boosters-hormonaux', '/boosters-hormonaux'),
     p('/subcategories/bruleurs-de-graisse', '/bruleurs-de-graisse'),
-    p('/subcategories/ceinture-de-musculation', '/materiel-de-musculation'),
+    p('/subcategories/ceinture-de-musculation', '/accessoires'),
     p('/subcategories/equipement-cardio-fitness', '/cardio-fitness'),
     p('/subcategories/fat-burner', '/bruleurs-de-graisse'),
     p('/subcategories/materiel-de-musculation', '/materiel-de-musculation'),
@@ -529,7 +580,7 @@ function buildRedirects() {
        with the taxonomy. */
     p('/product-category/whey', '/whey-proteine'),
     p('/product-category/perte-de-poids/cla', '/cla'),
-    p('/product-category/vetements-et-accessoires-de-musculation/ceinture-de-musculation-abdominal', '/materiel-de-musculation'),
+    p('/product-category/vetements-et-accessoires-de-musculation/ceinture-de-musculation-abdominal', '/accessoires'),
     p('/product-category/acides-amines/vitamines', '/vitamines'),
     p('/product-category/acides-amines/vitamines/', '/vitamines'),
     p('/product-category/perte-de-poids/fat-burner', '/bruleurs-de-graisse'),
@@ -562,10 +613,10 @@ function buildRedirects() {
        a 404, which is why the slug could not simply be stripped. */
     p('/shop/complements-d-entrainement/pendant-l-entrainement', '/intra-workout'),
     p('/shop/complements-d-entrainement/recuperation-apres-entrainement', '/post-workout'),
-    p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/materiel-de-musculation'),
-    p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/materiel-de-musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/bandes-de-soutien-musculaire', '/accessoires'),
+    p('/shop/equipements-et-accessoires-sportifs/ceinture-de-musculation', '/accessoires'),
     p('/shop/equipements-et-accessoires-sportifs/equipement-cardio-fitness', '/cardio-fitness'),
-    p('/shop/equipements-et-accessoires-sportifs/gants-de-musculation-et-fitness', '/materiel-de-musculation'),
+    p('/shop/equipements-et-accessoires-sportifs/gants-de-musculation-et-fitness', '/accessoires'),
     p('/shop/equipements-et-accessoires-sportifs/materiel-de-musculation', '/materiel-de-musculation'),
     p('/shop/perte-de-poids/fat-burner', '/bruleurs-de-graisse'),
     p('/shop/proteines/isolat-de-whey', '/whey-isolate'),
@@ -622,7 +673,7 @@ function buildRedirects() {
      * Accessoires; "crea-core" is creatine; "tst-gh" is a testosterone booster; "iso-gro" is an
      * isolate. All six destinations verified 200 as Googlebot.
      */
-    p('/shop/ceinture-abdominale', '/materiel-de-musculation'),
+    p('/shop/ceinture-abdominale', '/accessoires'),
     p('/shop/the-pump-261gr-challenger-nutrition', '/pre-workout'),
     p('/products/the-shadow-270g/reviews', '/pre-workout'),
     p('/product/smart-shaker/reviews', '/accessoires'),

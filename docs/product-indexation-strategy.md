@@ -1,0 +1,1 @@
+Product URL indexation is decided in [seo-indexation-strategy.md](./seo-indexation-strategy.md) — the three states and the noindex test are §1-§3 there, the category rule §4; one file so the two cannot drift apart.
