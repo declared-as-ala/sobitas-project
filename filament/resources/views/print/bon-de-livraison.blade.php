@@ -99,6 +99,22 @@
     ksort($taxBuckets, SORT_NUMERIC);
 
     $totTva  = round(array_sum(array_column($taxBuckets, 'montant')), 3);
+
+    /*
+     * ── HOW TALL THE EMPTY PART OF THE GRID IS ────────────────────────────────────────────────
+     * The reference form's column rules run to a fixed depth whatever the delivery contains, which
+     * is what makes it read as a pre-printed sheet rather than a stub. A CONSTANT filler cannot do
+     * that: at ~5mm per printed line, twenty lines plus 78mm of filler overflows A4 and pushes the
+     * tax recap, the totals and both signatures onto a second page — the totals are the part of
+     * this document people actually look for, so that is the one thing it must never do.
+     *
+     * So the filler is the REMAINDER: the frame's target depth minus what the rows already take,
+     * floored at zero. Few lines -> a tall ruled box. Many lines -> no filler at all and the grid
+     * ends where the rows end, which is correct on a page that is already full.
+     */
+    $rowDepthMm   = 5.0;   // one printed line at 7.8pt with 2px padding, measured
+    $frameDepthMm = 86.0;  // depth that leaves room for recap + totals + note + signatures on A4
+    $fillerMm     = max(0.0, $frameDepthMm - (count($rows) * $rowDepthMm));
     $tvaDisp = function ($r) { return ($r == floor($r)) ? (int) $r : $r; };
 @endphp
 
@@ -208,7 +224,7 @@ table.bl-table td.c-prod { line-height: 1.25; word-break: break-word; }
 table.bl-table td.c-ref { word-break: break-all; }
 table.bl-table thead { display: table-header-group; }
 table.bl-table tr { break-inside: avoid; page-break-inside: avoid; }
-.bl-filler td { height: 78mm; }
+.bl-filler td { height: 0; padding: 0; }   /* height comes from the inline style below */
 .bl-empty { font-style: italic; padding: 10px; text-align: center; }
 
 /* ── Tax recap | totals ──────────────────────────────────────── */
@@ -224,7 +240,7 @@ table.bl-totals td.v { text-align: right; font-variant-numeric: tabular-nums; wh
 table.bl-totals tr.grand td { font-weight: 700; }
 
 /* ── Note + signatures ───────────────────────────────────────── */
-.bl-note { margin-top: 7px; font-size: 8pt; line-height: 1.45; break-inside: avoid; page-break-inside: avoid; }
+.bl-note { margin-top: 7px; break-after: avoid; page-break-after: avoid; font-size: 8pt; line-height: 1.45; break-inside: avoid; page-break-inside: avoid; }
 .bl-note b { font-weight: 700; }
 .bl-signs { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 4px; break-inside: avoid; page-break-inside: avoid; }
 .bl-sign { flex: 0 0 45%; font-size: 8pt; font-weight: 700; text-decoration: underline; }
@@ -281,6 +297,18 @@ table.bl-totals tr.grand td { font-weight: 700; }
 }
 
 /* ── Print ───────────────────────────────────────────────────── */
+/*
+ * ── PAGE NUMBERING LIVES IN PHP, NOT IN CSS ───────────────────────────────────────────────────
+ * The obvious CSS — `@page { @top-right { content: "Page " counter(page) " / " counter(pages) } }`
+ * — is dead code in BOTH engines this document renders through: DomPDF (the PDF the business
+ * actually sends, via Barryvdh\DomPDF) has no margin-box support, and neither does Chrome's print
+ * path. It would have produced a header that silently never appeared.
+ *
+ * DomPDF's supported mechanism is page_text() from an inline PHP block, which stamps every sheet
+ * and is what the block at the end of this file uses. The browser path has no equivalent, so it
+ * keeps the static label — correct there because the adaptive filler above keeps a normal delivery
+ * on one sheet.
+ */
 @page { size: A4 portrait; margin: 10mm; }
 @media print {
     html, body { margin: 0; padding: 0; background: #fff; }
@@ -324,7 +352,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
                 <div class="bl-logo-text">SOBITAS</div>
             @endif
             <div class="bl-site">www.protein.tn</div>
-            <div class="bl-pageno">Page 1 / 1</div>
+            @if(!$isPdf)<div class="bl-pageno">Page 1</div>@endif
         </div>
     </div>
 
@@ -398,7 +426,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
             @if(empty($rows))
             <tr><td colspan="7" class="bl-empty">Aucune ligne de produit.</td></tr>
             @endif
-            <tr class="bl-filler" aria-hidden="true"><td colspan="7"></td></tr>
+            <tr class="bl-filler" aria-hidden="true"><td colspan="7" style="height:{{ $fillerMm }}mm"></td></tr>
         </tbody>
     </table>
     </div>
@@ -504,6 +532,16 @@ table.bl-totals tr.grand td { font-weight: 700; }
     words.textContent = toFr(parseFloat(el.value) || 0);
 })();
 </script>
+
+@if($isPdf)
+{{-- DomPDF stamps "Page N / M" on every sheet; {PAGE_NUM}/{PAGE_COUNT} are its own placeholders.
+     x/y are points from the top-left of the A4 sheet, landing in the header's right-hand slot. --}}
+<script type="text/php">
+    if (isset($pdf)) {
+        $pdf->page_text(468, 58, "Page {PAGE_NUM} / {PAGE_COUNT}", $fontMetrics->getFont("Arial", "normal"), 7.6, [0, 0, 0]);
+    }
+</script>
+@endif
 
 </body>
 </html>
