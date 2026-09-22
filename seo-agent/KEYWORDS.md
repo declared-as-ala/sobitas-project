@@ -6,7 +6,7 @@ to #3) that has an actionable page. Positions come from GSC (`tools/gsc.mjs --qu
 credential exists, else from a live SERP look (WebSearch / WebFetch of a Google results page for
 `<query>` with `gl=tn&hl=fr`). Never write a position you did not observe.
 
-Competitors seen in Tunisian SERPs: **housenutrition.tn** and **nutribeast.tn** (the two to
+Competitors (full dossier: `seo-agent/COMPETITORS.md`) seen in Tunisian SERPs: **housenutrition.tn** and **nutribeast.tn** (the two to
 beat — plain commercial category pages, tidy titles "Product – Brand | Shop", price + stock +
 review stars in SERP), protein-shop-tunisia.tn, wildkard.tn, tunisianutrition.tn,
 nutrition-plus.tn, parashop.tn / pharmacies (fat burners, omega-3), jumia.com.tn, ubuy.tn. Their weak points: thin category
@@ -56,9 +56,69 @@ Legend — page: the URL that SHOULD rank · pos: last observed (date) · note: 
 | lipo 6 black | /bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps | ? | 3 Lipo-6 SKUs — pick the canonical winner |
 | born rage | /pre-workout/… (find slug) | 5.3 (15/09) | the page-1 "pre workout" result |
 
+
+## Discovered 22/09/2026 (Google autocomplete fr/tn, deep run — evidence = hits / best rank, NOT a position)
+
+Work these like the head terms: the `page` column is the URL that should own the query; add a
+`page pos` observation (GSC Pages dimension) before touching anything — see PLAYBOOK "Pages
+breakdown first".
+
+| query | page | evidence | priority |
+| --- | --- | --- | --- |
+| whey protein tunisie prix | /whey-proteine | 6 hits, best 2; cluster with "whey protein prix tunisie" (4/1), "prix whey protein tunisie" (3/1) | P1 |
+| whey tunisie prix | /whey-proteine | 6 hits, best 1; plus "prix whey tunisie" (2/1), "whey prix tunisie" (1/9) | P1 |
+| whey tunisie | /whey-proteine | 4 hits, best 1; HN + GainLab lead the look; our /category/whey-proteine surfaced with title "Proteine Tunisie" in the non-Google index — confirm with GSC Pages | P1 |
+| whey isolate tunisie | /whey-isolate | 6 hits, best 1; 5 in stock (Real Isolate 1.8 kg, Iso Sensation 93, William Bonac) | P1 |
+| whey isolate tunisie prix | /whey-isolate | 6 hits, best 2; plus "whey isolate prix tunisie" (3/1), "prix whey isolate tunisie" (3/1) | P1 |
+| proteine tunisie prix | /proteines | 5 hits, best 1; plus "proteine prix tunisie" (2/1), "prix proteine tunisie" (2/1) | P1 |
+| mass gainer tunisie prix | /mass-gainers | 5 hits, best 2; plus "mass gainer prix tunisie" (3/1), "prix mass gainer tunisie" (2/1); 7 in stock | P1 |
+| pre workout prix tunisie | /pre-workout | 4 hits, best 1; plus "pre workout tunisie prix" (2/2); decide category vs Born Rage PDP first | P1 |
+| bcaa prix tunisie | /bcaa | 3 hits, best 1; plus "bcaa tunisie prix" (3/2); only Xtend + Real Pharm 8:1:1 in stock | P1 |
+| omega 3 prix tunisie | /omega-3 | 3 hits, best 1; plus "omega 3 tunisie prix" (3/2), "prix omega 3 tunisie" (1/1); lands with #223 | P1 |
+| meilleur oméga 3 tunisie | /omega-3 | 3 hits, best 1; accented form; add an H2 "Quel est le meilleur oméga 3 en Tunisie ?" | P1 |
+| collagène marin tunisie | /collagene/collagen-marine-300g-real-pharm | 4 hits, best 2; in stock; plus "collagène marin tunisie prix" (2/8) | P1 |
+| multivitamines tunisie | /vitamines | 2 hits, best 3; title already says Multivitamines; page is 566 words — rebuild with the 10 in-stock SKUs | P1 |
+| glutamine tunisie | /glutamine | 4 hits, best 1; 1 in stock (Red Rex, Big Ramy) — stock is the blocker (owner) | P1 |
+| glutamine tunisie prix | /glutamine | 4 hits, best 2; plus "glutamine prix tunisie" (2/1) | P1 |
+| whey protein 2kg prix tunisie | /whey-proteine | 3 hits, best 1; 2 kg is the in-stock format (Big Whey, Pure Whey 2.27, Gold Standard 2.27) | P1 |
+| mass gainer 7kg prix tunisie | /mass-gainers/mass-gainer-zero-7kg-eric-favre | 2 hits, best 1; 3 × 7 kg in stock (Eric Favre Zero, Big Monster HX, Instant Mass Scenit) | P1 |
+| c4 pre workout tunisie | /pre-workout/c4-original-pre-workout-cellucor | 2 hits, best 4; in stock; PDP has no FAQ, title 64 chars | P1 |
+| bcaa xtend tunisie | /bcaa/xtend-bcaa-420g | 2 hits, best 3; in stock | P1 |
+| creatine tunisie optimum nutrition | /creatine/micronised-creatine-optimum-nutrition-317g | 4 hits, best 5; in stock (qty 1000); was noindex until 21/09 — re-check 05/10 | P1 |
+| whey protein tunisie promotion | /whey-proteine (promo block), /offres secondary | 4 hits, best 5; only promo query with 4 hits | P1 |
+| omega 3 tunis | /omega-3 | 3 hits, best 3 | P2 |
+| sobitas tunisie | / | 3 hits, best 1; GSC "sobitas" 432 clicks at ~1.1 — monitor only | P2 |
+| sobitas proteine tunisie | / | 3 hits, best 2; plus "proteine tunisie sobitas" (3/5) | P2 |
+| protéine tunisie sobitas whey & matériel musculation sousse | /proteine-sousse | 2 hits, best 3; the GBP listing name; LocalBusiness.name already exact (3205bd02) | P2 |
+| protein tunisie sousse | /proteine-sousse | 3 hits, best 8; plus "proteine sousse" (1/2), "whey protein sousse" (1/1), "creatine sousse" (1/2) | P2 |
+| whey protein tunis | /whey-proteine | 3 hits, best 4; plus "whey tunis" (1/10) | P2 |
+| mass gainer tunis | /mass-gainers | 3 hits, best 3 | P2 |
+| creatine tunisie 1kg | /creatine | 4 hits, best 4; NO 1 kg creatine in stock — stock gap (owner) before any copy | P2 |
+| créatine tunisie 500g | /creatine/creatine-monohydrate-ostrovit-500gr | 3 hits, best 6; 3 × 500 g in stock (Ostrovit, Quamtrax, Real Pharm) | P2 |
+| creatine tunisie 300g | /creatine/100-creatine-monohydrate-300g-biotech-usa | 2 hits, best 10; 3 × 300 g in stock (BioTech, Kevin Levrone, Real Pharm) | P2 |
+| creatine monohydrate tunisie | /creatine | 2 hits, best 2; plus "meilleur creatine monohydrate tunisie" (2/2); the /creatine-monohydrate-tunisie guide must link here, not compete | P2 |
+| creatine biotech tunisie | /creatine/100-creatine-monohydrate-300g-biotech-usa | 1 hit, best 2; in stock; HN #1 on "creatine biotech" with 5.0(24) | P2 |
+| creatine kevin levrone tunisie | /creatine/gold-creatine-kevin-levrone-300-g | 1 hit, best 3; in stock | P2 |
+| creatine quamtrax tunisie | /creatine/creatine-monohydrate-500g-quamtrax | 1 hit, best 5; in stock | P2 |
+| meilleur creatine tunisie | /creatine | 1 hit, best 1 (tn); plus "vente creatine tunisie" (1/1) | P2 |
+| whey protein 500g prix tunisie | /whey-proteine | 2 hits, best 1; no 500 g whey in stock — stock gap (owner) | P2 |
+| whey protein optimum nutrition tunisie | /optimum-nutrition | 1 hit, best 2; brand page live, ranked 5.4-6.9 through the noindex window | P2 |
+| meilleur whey tunisie | /whey-proteine | 2 hits, best 1 (tn); plus "vente whey tunisie" (2/1) | P2 |
+| prix proteine whey tunisie | /whey-proteine | 2 hits, best 5; plus "protéine whey prix tunisie" (1/5) | P2 |
+| whey protein vanille tunisie | /whey-proteine | 1 hit, best 1; only flavour query with geo | P2 |
+| whey isolate protein tunisie | /whey-isolate | 2 hits, best 3; plus "iso whey tunisie prix" (1/5), "proteine isolate tunisie" (1/4) | P2 |
+| weight gainer tunisie | /mass-gainers | 3 hits, best 5; synonym; plus "weight gainer prix tunisie" (2/8) | P2 |
+| mass gainer 3kg prix tunisie | /mass-gainers | 2 hits, best 1; nearest stock = Instant Real Mass 2.72 kg | P2 |
+| mass gainer 5kg prix tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 1 hit, best 2; Serious Mass 5.45 + Thunder Gainer 5.4 in stock | P2 |
+| mass gainer 6kg prix tunisie | /mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone | from the 22/09 run (row truncated in the dossier); in stock | P2 |
+
+
 ## Rules for this file
 - Add a row when GSC shows a query ≥ 20 impressions/28d that maps to a page we own.
-- Update `pos (date)` only from an observation (GSC or a real SERP fetch).
+- Update `pos (date)` only from an observation (GSC or a real SERP fetch). A GSC query position
+  is an AVERAGE over every protein.tn URL shown for it — record the PAGE-level position of the
+  URL in the `page` column too (`gsc.mjs --query=<q>` → Pages), and never edit a category because
+  of a query average that a blog post or a PDP is actually earning.
 - When a row reaches ≤ 5 for 14 days, move it to the "Held" section below and stop working it.
 
 ## Held (top 5, monitor only)

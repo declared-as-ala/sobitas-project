@@ -326,6 +326,32 @@ and ship the rest. The land workflow re-runs the same gates and refuses the bran
   ones (no two JSONs with the same `metaTitle` intent).
 - Product schema is presentation, not ranking: keep it valid, but never expect it to move rank.
 
+## Pages breakdown first (verified 22/09/2026 — 21-agent diagnosis, 14 skeptics)
+- **No head-term "position" is a page position.** GSC averages every protein.tn URL shown for
+  the query; for `creatine tunisie` the URL Google picks is a PDP, a blog post or the homepage,
+  and `/creatine` itself sits at 24–43. Before ANY edit motivated by a query row, read the Pages
+  breakdown (`gsc.mjs --query=<q>`, or the owner's Chrome with `hl=fr&gl=tn&pws=0`) and record the
+  page-level position in `KEYWORDS.md`. The blog slot is a real top-5 today — never 301 it away
+  without a measured page-level replacement.
+- **The site is NOT blocked.** Verified 22/09: every listing + sampled PDP is 200, `index,
+  follow`, self-canonical, no X-Robots-Tag, sitemaps readable, CWV good (LCP 2.1 s, CLS 0.01),
+  no manual action. Stop looking for a block; work the causes below.
+- **Freeze until 05/10/2026** on titles/H1/robots of `/creatine`, `/whey-proteine`,
+  `/mass-gainers`, `/pre-workout`, `/proteines` and the in-stock watchlist PDPs: their best
+  sellers were `noindex` from ~11/08 to 21/09 (Filament NULL→OFF bug) and Google needs 2–4 weeks
+  to re-rank them. Copy, FAQ, product entries and structural fixes continue.
+- **The surface Google reads on a category is `app/x-crawler/category/[slug]/page.tsx` +
+  `CrawlerCategoryView.tsx`** (middleware rewrites bot UAs there), not the human page. Every
+  category change must ship in BOTH views, and the two views must be textually equal: a
+  bot-only paragraph is the cloaking example Google names. Gate: bot-vs-Chrome visible-word diff
+  = 0 on the four money categories.
+- **Content volume is not the lever.** `/creatine` bot view has 3,069 words; House Nutrition
+  ranks with ~290, GainLab with 47. Stop adding guide paragraphs to money categories; fix the
+  link skeleton (breadcrumb parent, brand strip, indexable pagination) and the one-URL-per-intent
+  split instead.
+- Off-site authority is NOT the gap (SemRush 07/09: protein.tn 357 referring domains vs House
+  Nutrition 96) — do not spend runs on link building; affiliate links must stay `rel=sponsored`.
+
 ## Judgement
 Measure, don't guess: verify meta/status against a real fetch with the Googlebot UA (page-body
 redirects and 404s do not set the HTTP status on this stack). Small correct compounding changes

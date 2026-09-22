@@ -19,6 +19,50 @@ from the cloud, express DB changes as Filament actions / artisan commands / `res
 
 ---
 
+## P0 — verified fix plan (22/09/2026 diagnosis; each item names the exact surface)
+
+- [ ] **Bot/human parity on money categories (cloaking exposure).** ~350–500 words (the
+  "Prix de la créatine en Tunisie" section) render only for bot UAs:
+  `frontend/src/app/components/CategorySeoLanding.tsx` L112–114 clamps the human intro to 520
+  chars and L183 drops it when a guide exists, while `CrawlerCategoryView.tsx` prints it whole.
+  Make the two views textually identical (render the full intro to humans, or drop the bot-only
+  text) and gate with a bot-vs-Chrome visible-word diff = 0 on /creatine, /whey-proteine,
+  /mass-gainers, /pre-workout. Then (this week) exempt category routes from the bot rewrite in
+  `frontend/src/middleware.ts` ~L940–1032 — the human route already SSRs H1 + grid + guide + FAQ;
+  the "prerendered HTML is a skeleton" comment at ~L1020 is stale. (middleware.ts is on the land
+  workflow's forbidden list: that half is `(needs: owner)` — write the exact diff in the log.)
+- [ ] **Crawler-view link graph.** (a) BreadcrumbList on the bot view skips the parent
+  (`x-crawler/category/[slug]/page.tsx` reads `data.category`; the API returns `breadcrumb[]` +
+  `sous_category.categorie_id`) → build it from `data.breadcrumb`. (b) PDP bot view carries 13
+  internal hrefs vs 38 human — add a footer-parity block (the same 5 hub links `ShopFooter`
+  renders) to `x-crawler/product/[...slug]/page.tsx`; parity, not a synthetic nav. (c)
+  `/creatine?page=2..10` are `noindex, follow` + self-canonical — Google's pagination guidance
+  says self-canonical, no noindex (long-term noindex,follow is treated as nofollow): switch to
+  `index, follow` in `app/(shop)/category/[slug]/page.tsx` L456–479 and `next.config.js` L83,
+  fix the comment. ~470 listing URLs become indexable — discovery, not doorways.
+- [ ] **Duplicate title:** `/perte-de-poids` carries the same title as `/bruleurs-de-graisse` —
+  retarget `frontend/content/categories/perte-de-poids.json` to "Perte de poids : compléments
+  minceur en Tunisie"; keep "Brûleur de graisse Tunisie" on /bruleurs-de-graisse only.
+- [ ] **Filament guard:** `filament/app/Filament/Resources/ProductResource.php` —
+  `Toggle::make('seo_robots_index')->default(true)` + a cast so NULL never renders as OFF (the
+  bug that noindexed the best sellers for six weeks).
+- [ ] **One URL per "prix" intent — a TEST, not a rewrite (4 weeks).** GainLab leads "créatine
+  tunisie prix" with one URL whose title = the query and a grid with stock; we split it across
+  `/blog/prix-de-la-creatine-en-tunisie` (#3) and `/creatine` (#5). Move the blog's price table
+  under the H1 of `/creatine` (`content/categories/creatine.json` + `CategorySeoLanding.tsx`
+  block order), exact-anchor links both ways (`frontend/src/config/blogSeoConfig.ts`
+  `bodyLinkHtml`), log the page-level baseline, re-read at +14 and +28 days. **No 301 before the
+  measurement** — the blog slot is a real top-5 today.
+- [ ] Cheap wins: promo block on `/whey-proteine` for "whey protein tunisie promotion" (link
+  /offres); `/vitamines` from 566 words to a real "Multivitamines Tunisie" page with the 10
+  in-stock SKUs; "Quel est le meilleur oméga 3 en Tunisie ?" H2 on `/omega-3`.
+- [ ] `(needs: owner)` **Stock is the ceiling** on several rows: creatine 8/221 in stock, no 1 kg
+  creatine, no 500 g whey, glutamine 1 SKU, BCAA 2, brûleurs 2, omega-3 3 — "creatine tunisie
+  1kg" and "whey protein 500g prix tunisie" have no product to land on. Purchasing.
+- [ ] `(needs: owner)` **Weekly Google.tn check** — 10 queries from the owner's Chrome
+  (`hl=fr&gl=tn&pws=0`) pasted into `seo-agent/log/` until the GSC credential exists; it is the
+  only non-GSC source that is actually Google Tunisia.
+
 ## P0 — land what is already written but never reached main
 
 - [x] ~~**Salvage PR #222 / #223 — the three repo-side items**~~ — shipped 22/09 on
