@@ -27,8 +27,15 @@
  *
  * WHAT IT DOES NOT FLAG
  * - Navigation the two renders legitimately differ on: the crawler pager ("Page N sur M",
- *   prev/next/last) and breadcrumb wording. Both are link skeleton, not editorial content.
+ *   prev/next/last), breadcrumb wording and the "Accès pro / Composez votre pack" chrome. All
+ *   link skeleton, not editorial content.
  * - Runs shorter than MIN_RUN words: entity/whitespace noise at tag seams.
+ * - PRODUCT-CARD TEXT. A bot-only run that is mostly card template — price, "au lieu de", stock
+ *   label, pack size, bare numbers — is catalogue-slice drift, not a cloaking claim: the two
+ *   routes render the same editorial copy and ask the API for a different slice of the grid, so
+ *   this text differs by construction and changes with every promo. It is counted in its own
+ *   column and never budgeted. See the TEMPLATE block below for the evidence and the negative
+ *   control (the 22/09 regression still scores 80–100 % editorial and would still be caught).
  *
  * EXIT CODES
  *   0  every path within budget
@@ -60,7 +67,57 @@ const IGNORE = [
   /page (suivante|précédente)/i,
   /(première|dernière) page/i,
   /^accueil boutique/i,
+  /^accès pro/i,
+  /composez votre pack/i,
 ];
+
+/*
+ * ── PRODUCT-CARD TEMPLATE TOKENS: DATA, NOT EDITORIAL CLAIMS ─────────────────────────────────
+ *
+ * Found on this tool's FIRST live run against production, 23/09/2026. It reported all five money
+ * categories over budget (719 bot-only words) and every single run was a product card:
+ *
+ *     "monohydrate ostrovit- 500gr 149 dt au lieu de 180 dt en stock"
+ *     "kg optimum nutrition 379 dt au lieu de 400 dt en stock"
+ *
+ * That is not the thing this check exists to catch. The two routes render the SAME editorial copy
+ * from the same category JSON; they differ in which SLICE of the catalogue each asks the API for
+ * (ordering, page size, promo packs), so the grid's own card text drifts apart by construction and
+ * would drift again every time stock or a promo changes. Budgeting it makes the gate permanently
+ * red — and a gate that is always red is a gate nobody reads.
+ *
+ * What Google's cloaking guidance is about is EDITORIAL text served to Googlebot and not to a
+ * visitor: the 22/09 finding, where 2,848 words of French buying copy (price paragraphs, format
+ * comparisons, delivery terms) reached the crawler only. So a run is now classified by what is
+ * left of it once the card template is removed — prices, "au lieu de", stock labels, pack sizes
+ * and bare numbers. A run that is MOSTLY template is catalogue drift; a run that still reads as
+ * prose after the strip is editorial and is budgeted exactly as before.
+ *
+ * Checked against the case that matters: the 22/09 intro sentence
+ * "créatine monohydrate et creapure dès 70 dt stock réel livraison 24 72 h partout en tunisie…"
+ * keeps ~77 % of its words after the strip and is still budgeted as editorial, so yesterday's
+ * regression would still be caught today. The 47-word /proteines pack run keeps 23 % and is not.
+ */
+const TEMPLATE = [
+  /\b\d+(?:[.,]\d+)?\s*dt\b/g,                    // 149 dt
+  /\bau lieu de\b/g,                                // promo phrasing on every discounted card
+  /\b(en stock|sur commande|stock faible|rupture de stock)\b/g,
+  /\b\d+(?:[.,]\d+)?\s*(kg|g|gr|ml|l|caps|capsules|gélules|gelules|comprimés|comprimes|servings|portions|sachets|gommes|patches)\b/g,
+  /\b\d+(?:[.,]\d+)?\b/g,                          // any bare number left over
+];
+
+/** Share of a run that is NOT product-card template. Prose stays high; a card collapses. */
+function editorialShare(run) {
+  const total = (run.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
+  if (!total) return 0;
+  let stripped = run;
+  for (const re of TEMPLATE) stripped = stripped.replace(re, ' ');
+  const left = (stripped.match(/[\p{L}\p{N}][\p{L}\p{N}'’-]*/gu) || []).length;
+  return left / total;
+}
+
+/** Below this, a bot-only run is catalogue-slice drift and is reported as context, not budgeted. */
+const EDITORIAL_SHARE = 0.5;
 
 const argv = process.argv.slice(2);
 const budget = Number((argv.find((a) => a.startsWith('--budget=')) || '').split('=')[1]) || DEFAULT_BUDGET;
@@ -151,13 +208,18 @@ for (const path of targets) {
     const botOnly = oneSidedRuns(bot, humanSh);
     const humanOnly = oneSidedRuns(human, botSh);
     const count = (runs) => runs.reduce((a, r) => a + r.split(' ').length, 0);
+    // Split before budgeting: only prose that survives the card-template strip is a finding.
+    const editorialRuns = botOnly.filter((r) => editorialShare(r) >= EDITORIAL_SHARE);
+    const catalogueRuns = botOnly.filter((r) => editorialShare(r) < EDITORIAL_SHARE);
     rows.push({
       path,
       botWords: bot.length,
       humanWords: human.length,
-      botOnly: count(botOnly),
+      botOnly: count(editorialRuns),
+      catalogue: count(catalogueRuns),
       humanOnly: count(humanOnly),
-      botRuns: botOnly,
+      botRuns: editorialRuns,
+      catalogueRuns,
     });
   } catch (err) {
     unmeasurable++;
@@ -166,18 +228,18 @@ for (const path of targets) {
 }
 
 console.log(`# Bot/human render parity — ${BASE} — budget ${budget} BOT-ONLY words per page\n`);
-console.log('| path | bot words | human words | bot-only | human-only (context) | verdict |');
-console.log('| --- | --- | --- | --- | --- | --- |');
+console.log('| path | bot words | human words | bot-only EDITORIAL | catalogue drift (context) | human-only (context) | verdict |');
+console.log('| --- | --- | --- | --- | --- | --- | --- |');
 let over = 0;
 for (const r of rows) {
   if (r.error) {
-    console.log(`| ${r.path} | – | – | – | – | could not measure (${r.error}) |`);
+    console.log(`| ${r.path} | – | – | – | – | – | could not measure (${r.error}) |`);
     continue;
   }
   const ok = r.botOnly <= budget;
   if (!ok) over++;
   console.log(
-    `| ${r.path} | ${r.botWords} | ${r.humanWords} | ${r.botOnly} | ${r.humanOnly} | ${ok ? 'ok' : `OVER by ${r.botOnly - budget}`} |`
+    `| ${r.path} | ${r.botWords} | ${r.humanWords} | ${r.botOnly} | ${r.catalogue} | ${r.humanOnly} | ${ok ? 'ok' : `OVER by ${r.botOnly - budget}`} |`
   );
 }
 
@@ -195,6 +257,9 @@ if (unmeasurable === rows.length) {
 }
 console.log(
   `\n${over} of ${rows.length - unmeasurable} measured page(s) carry more than ${budget} bot-only words.`
+);
+console.log(
+  'Catalogue drift is context, not a finding: both routes render the same editorial copy and ask the\nAPI for a different slice of the grid, so card text (name, price, stock) differs by construction.'
 );
 console.log(
   'Human-only words are context, not a finding: the crawler route has no header, footer, facets or sort controls.'

@@ -6,6 +6,14 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 23/09/2026:** live audit 68 URLs, **0 real P0**. The two `noindex` listings the audit
+printed (`/barres-proteinees`, `/intra-workout`) are the owner's dead-listing gate (`9c9dc83`)
+firing as specified — censused all 13 watchlist categories, every money category is `index,
+follow`; `audit-live.mjs` now classifies that case P2 so it cannot mask a real regression.
+`parity-check.mjs` had a first-run false positive (719 bot-only words, **all** product-card text)
+and now budgets editorial text only: **0 editorial bot-only across the five money pages**.
+Shipped FAQ + guide for the four watchlist PDPs that had none (`log/2026-09-23.md`).
+
 **State on 22/09/2026 (two runs):** run 1 shipped the URL-case contract, the bars category page
 and the omega-3 retarget (`log/2026-09-22.md`) — all three re-verified live on run 2: the
 `/Intra-Workout` loop is dead (301 once, self-canonical, 0 uppercase URLs left in the sitemaps).
@@ -150,9 +158,15 @@ record the page-level position first — never act on a query average.
 - [ ] Cheap wins: promo block on `/whey-proteine` for "whey protein tunisie promotion" (link
   /offres); `/vitamines` from 566 words to a real "Multivitamines Tunisie" page with the 10
   in-stock SKUs; "Quel est le meilleur oméga 3 en Tunisie ?" H2 on `/omega-3`.
-- [ ] `(needs: owner)` **Stock is the ceiling** on several rows: creatine 8/221 in stock, no 1 kg
-  creatine, no 500 g whey, glutamine 1 SKU, BCAA 2, brûleurs 2, omega-3 3 — "creatine tunisie
-  1kg" and "whey protein 500g prix tunisie" have no product to land on. Purchasing.
+- [ ] `(needs: owner)` **Stock is the ceiling — and since 22/09 it also controls INDEXABILITY.**
+  The dead-listing gate (`9c9dc83`) noindexes any listing whose page 1 holds nothing buyable, so
+  an empty rayon is now invisible to Google, not merely unconvincing. Live 23/09:
+  **`/barres-proteinees` 0 of 88 in stock** — it is noindex, which wastes the full category page
+  this routine shipped on 22/09 (177 → ~1,800 words + FAQPage) — and **`/intra-workout` 0 of 12+**,
+  likewise noindex days after its redirect loop was repaired. Both reverse themselves with no
+  deploy the day one product is back in stock. Also thin: creatine 16/48 on page 1, brûleurs 4,
+  BCAA 4, omega-3 6; no 1 kg creatine and no 500 g whey, so "creatine tunisie 1kg" and "whey
+  protein 500g prix tunisie" still have no product to land on. **Highest-value owner action.**
 - [ ] `(needs: owner)` **Weekly Google.tn check** — 10 queries from the owner's Chrome
   (`hl=fr&gl=tn&pws=0`) pasted into `seo-agent/log/` until the GSC credential exists; it is the
   only non-GSC source that is actually Google Tunisia.
@@ -208,10 +222,17 @@ record the page-level position first — never act on a query average.
   to `/marques/<brand>` or the filtered listing), and make every in-stock product page link back
   to its category with the exact head-term anchor. Internal links are the cheapest authority.
 
-- [ ] **Product FAQ + guide on the watchlist products that have none** (audit-live P1 on 21/09):
-  Ostrovit creatine, ISO 100 Dymatize, Nitro-Tech Whey Gold, C4 Original. Write
-  `filament/resources/seo/products/<date>.json` entries (README there), queue `seo-copy-apply`.
-  Then extend to every in-stock product in `KEYWORDS.md` "Product-name SERPs".
+- [~] **Product FAQ + guide on the watchlist products that have none** (audit-live P1 on 21/09):
+  Ostrovit creatine, ISO 100 Dymatize, Nitro-Tech Whey Gold, C4 Original — **all four written
+  23/09** in `filament/resources/seo/products/2026-09-23.json` (guide 221–269 w + 6 FAQ pairs
+  each) and `seo-copy-apply` queued. Marked `[~]` not `[x]` until the VPS run is confirmed: the
+  copy lands in the DB after the merge, so **verify the FAQPage is live tomorrow** before closing.
+  Deliberately NO `meta_title`/`meta_description` on these four — all four are already inside the
+  standard (titles 53–64, descriptions 133–158) and those strings are generated with the **live**
+  price, so writing the DB column would freeze a promo price (`productDescription()` gives the
+  explicit column precedence). Nitro Tech carries no nutritional figure at all: its fiche
+  publishes none.
+  Next: extend to every in-stock product in `KEYWORDS.md` "Product-name SERPs".
 - [ ] **Thin in-stock legacy products** (`seo:products-legacy-reindex` dry-run lists word counts —
   queue `seo-legacy-reindex-dry-run` to read them from the VPS log via `vps-run`; or measure with
   `audit-live.mjs`): shaker 450 ml (id 404), Ashwagandha BioTech (383), ring de boxe (313), Iso
@@ -240,6 +261,19 @@ record the page-level position first — never act on a query average.
   metadata source; keep "Protéine Tunisie" first.
 
 ## P2 — technical & tooling
+
+- [ ] `(needs: owner)` **Gated listings stay in `sitemaps/listings.xml` while serving noindex**
+  (found 23/09): `/barres-proteinees` and `/intra-workout` are both `<loc>` entries and both
+  answer `noindex, follow`, which GSC reports as "Submitted URL marked noindex". Not a defect to
+  fix blind — the sitemap builder cannot know, because the `?fields=index` projection carries no
+  `qte`/`rupture` (the owner documented this in `9c9dc83`: the in-stock gate there is wired but
+  inert pending one backend column). Keeping them listed also helps Google notice the day stock
+  returns. Decide deliberately; do not "fix" it by dropping the URLs.
+- [ ] **`/shop/nitro-tech-whey-gold-23-kg/` resolves in 2 hops** (→ `/whey-proteine`), a dead slug
+  variant Google still holds indexed under the stale title "Proteine Tunisie | SOBITAS" (seen in
+  the 23/09 SERP look). It works, so it is low priority; collapse to one hop in `redirects.js` on
+  a technical-sweep Friday. The live product slug `/shop/nitro-tech-whey-gold-2-3kg` is a clean
+  single hop, as are `/shop/<slug>` and `/blogs/<slug>` generally (verified 23/09).
 
 - [ ] **323 duplicate product URL pairs** `(needs: owner)` — found 22/09, evidence in
   `seo-agent/data/duplicate-product-slugs.json`. A slug ending in `-<5+ digits>` whose stem is

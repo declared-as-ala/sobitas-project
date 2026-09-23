@@ -19,6 +19,9 @@
  *       canonical pointing elsewhere · missing title/description · Product page without Product JSON-LD
  *   P1  title > 65 chars · description > 165 or < 70 chars · missing H1 · no FAQ on a product ·
  *       word count < 250 on a product · price missing in offers
+ *   P2  a CATEGORY serving `noindex, follow` where the page rendered cards and not one is buyable
+ *       — the deliberate dead-listing gate (commit 9c9dc83), self-reversing on restock. Any other
+ *       noindex, and any noindex with a single in-stock card under it, stays a P0.
  * No dependencies. Regex parsing on purpose: the run needs answers, not a DOM.
  */
 import { readFileSync, existsSync } from 'node:fs';
@@ -146,9 +149,55 @@ async function probe(pathname) {
     .replace(/<[^>]+>/g, ' ');
   out.words = decode(body).split(/\s+/).filter((w) => /[A-Za-zÀ-ÿ]{2,}/.test(w)).length;
 
+  /*
+   * Stock census of the cards this listing actually rendered. The four labels come from
+   * `getProductStockStatus` in `frontend/src/util/cartStock.ts` — the single definition the card,
+   * the PDP, the cart and the JSON-LD availability all read — so counting them here is a direct
+   * read of the same predicate the indexability gate uses, not a second guess at it.
+   * `isInStock` is `!isOutOfStock`, and `isBackOrder` implies `isOutOfStock`, so "Sur commande"
+   * and "Rupture de stock" are both NOT buyable; only "En stock" and "Stock faible" are.
+   * Counted on the script-stripped body so the Next.js flight payload cannot double-count a card.
+   * Validated 23/09/2026 against the owner's own production census in commit 9c9dc83:
+   * /creatine 8 in stock / 16 sur commande — identical.
+   */
+  const labelCount = (re) => (decode(body).match(re) || []).length;
+  out.inStockCards = labelCount(/En stock/g) + labelCount(/Stock faible/g);
+  out.deadCards = labelCount(/Sur commande/g) + labelCount(/Rupture de stock/g);
+
   // Rules
   const isPage = out.kind === 'product' || out.kind === 'category';
-  if (out.robots && /noindex/i.test(out.robots) && isPage) out.problems.push(['P0', `robots "${out.robots}"`]);
+  if (out.robots && /noindex/i.test(out.robots) && isPage) {
+    /*
+     * ── THE DEAD-LISTING GATE IS NOT A REGRESSION ────────────────────────────────────────────
+     *
+     * Commit 9c9dc83 (owner, 22/09/2026) made a listing whose page 1 holds nothing purchasable
+     * emit `noindex, follow` — deliberately, with a production census and a GSC read behind it
+     * (nine such rayons took ~1 click a month between them). It is self-reversing: the day one
+     * product is back in stock the next render is `index, follow` again, with no deploy.
+     *
+     * Flagging that as P0 would put two permanently-red lines at the top of every morning's
+     * audit, and a P0 that is always red is a P0 nobody reads — the same failure mode the
+     * canonical rule had until 22/09. So the gate firing AS SPECIFIED is recorded as P2.
+     *
+     * The rule stays narrow on purpose, because a wrong `noindex` on a healthy listing is
+     * exactly the bug that cost the best sellers six weeks of ranking (Filament NULL->OFF,
+     * ~11/08–21/09). ALL of these must hold, or it is still a P0:
+     *   - it is a category, never a product (every published product is `index` — owner, 21/09);
+     *   - the directive is `noindex, follow`, never `nofollow` — `follow` is what keeps the
+     *     crawl path to the PDPs alive and is the whole reason the gate is allowed to exist;
+     *   - the page rendered at least one card, so an API outage (0 cards) cannot silence this;
+     *   - not ONE of those cards is buyable. A single "En stock" card under a `noindex` means
+     *     the gate is firing on a live rayon, and that is a P0 of the worst kind.
+     */
+    const gateFiredAsSpecified =
+      out.kind === 'category' &&
+      /\bfollow\b/i.test(out.robots) && !/nofollow/i.test(out.robots) &&
+      out.deadCards > 0 && out.inStockCards === 0;
+    if (gateFiredAsSpecified)
+      out.problems.push(['P2', `dead-listing gate: noindex, follow with 0/${out.deadCards} buyable (expected — restock reverses it)`]);
+    else
+      out.problems.push(['P0', `robots "${out.robots}"`]);
+  }
   if (!out.canonical) out.problems.push(['P0', 'no canonical']);
   // Compare against the URL actually served, not the one asked for. A watch URL may be a
   // deliberate redirect SOURCE — `/Intra-Workout/<p>` is in watchlist.txt precisely to prove it

@@ -18,9 +18,14 @@
 /bruleurs-de-graisse
 /bcaa
 /omega-3
-/barres-proteinees
 /whey-isolate
 /vitamines
+
+# Dead rayons: page 1 has nothing buyable, so the owner's gate (9c9dc83) serves noindex, follow.
+# VERIFIED 23/09: /barres-proteinees 0 of 88 in stock, /intra-workout 0 of 12+. This is EXPECTED
+# and audit-live.mjs records it P2, not P0. They STAY on the watchlist: the day stock arrives the
+# next render is index, follow again with no deploy, and these two lines are how we notice.
+/barres-proteinees
 /intra-workout
 
 # In-loop-fix verification (case contract shipped 22/09) — the uppercase must 301 once and stop.
