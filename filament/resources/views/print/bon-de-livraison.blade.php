@@ -47,7 +47,21 @@
 
     // Single amount lead-in for the NOTE: the company note if set (it already reads "… à la
     // somme de :"), otherwise a default — never both.
-    $noteLead = trim((string) ($footerNote ?? ($coordonnee->note ?? '')));
+    /*
+     * ── THE COMPANY NOTE IS WRITTEN FOR AN INVOICE, NOT FOR THIS DOCUMENT ─────────────────────
+     * `$coordonnee->note` is the shared closing line and it reads "Arrête la présente facture à la
+     * somme de :" — the wrong document name on a bon de livraison, and missing the accent on
+     * "Arrêté". It printed verbatim here. An explicit $footerNote passed by a caller still wins;
+     * the shared invoice note is used only when it does not name a facture, and otherwise this
+     * document falls back to its own wording.
+     */
+    $noteLead = trim((string) ($footerNote ?? ''));
+    if ($noteLead === '') {
+        $companyNote = trim((string) ($coordonnee->note ?? ''));
+        $noteLead = ($companyNote !== '' && !preg_match('/factur/i', $companyNote))
+            ? $companyNote
+            : 'Arrêté le présent bon de livraison à la somme de :';
+    }
 
     /*
      * ── TVA, DERIVED THE SAME WAY THE TVA INVOICE DERIVES IT ──────────────────────────────────
@@ -97,6 +111,17 @@
         }
     }
     ksort($taxBuckets, SORT_NUMERIC);
+
+    /*
+     * ── DROP "Réf. Art." WHEN NOTHING FILLS IT ────────────────────────────────────────────────
+     * `code_product` is null on most order lines, so the column printed as a blank 16% stripe down
+     * the whole sheet — the reference form has a reference in it, which is the only reason it has
+     * the column at all. Shown when at least one line carries a code, hidden when none does, and
+     * the width goes to Désignation so the product names stop wrapping at 34%.
+     */
+    $showRef = false;
+    foreach ($rows as $r) { if (trim((string) $r['ref']) !== '') { $showRef = true; break; } }
+    $colCount = $showRef ? 7 : 6;
 
     $totTva  = round(array_sum(array_column($taxBuckets, 'montant')), 3);
 
@@ -171,10 +196,10 @@ body.doc-a4-print {
 .bl-co-name { font-size: 11.5pt; font-weight: 700; text-transform: uppercase; }
 .bl-co-addr { font-size: 7.6pt; margin: 1px 0 3px; }
 /* The reference form sets the identity lines as a two-column label grid, not as sentences. */
-.bl-co-grid { display: grid; grid-template-columns: minmax(0,1fr) minmax(0,1fr); gap: 0 10px; font-size: 7.4pt; }
+.bl-co-grid { display: grid; grid-template-columns: max-content max-content; gap: 0 26px; font-size: 7.6pt; }
 .bl-co-grid .wide { grid-column: 1 / -1; }
 .bl-idline { display: flex; gap: 4px; }
-.bl-idline b { font-weight: 400; color: var(--label); flex: 0 0 auto; min-width: 34px; }
+.bl-idline b { font-weight: 400; color: var(--label); flex: 0 0 auto; min-width: 30px; }
 .bl-idline span { font-weight: 400; word-break: break-all; }
 
 .bl-brand { flex: 0 0 auto; text-align: right; }
@@ -183,27 +208,27 @@ body.doc-a4-print {
        long and low (612x408 with generous whitespace), so at 40px the lettering fell under ~11px
        and greyed out on a mono copier. 64px puts the wordmark itself at a legible size while the
        header block beside it still fits on one A4 line. */
-    height: 64px; width: auto; display: block; margin-left: auto;
+    height: 82px; width: auto; max-width: 62mm; display: block; margin-left: auto;
 }
 .bl-logo-text { font-size: 19pt; font-weight: 800; letter-spacing: -0.02em; }
-.bl-site { font-size: 7pt; margin-top: 2px; }
-.bl-pageno { font-size: 7.6pt; margin-top: 8px; }
+.bl-site { font-size: 7.2pt; margin-top: 3px; }
+.bl-pageno { font-size: 7.4pt; margin-top: 2px; }
 
 /* ── Document title ──────────────────────────────────────────── */
-.bl-docline { text-align: right; margin-top: 4px; }
-.bl-doctitle { font-size: 11.5pt; font-weight: 700; }
+.bl-docline { text-align: right; margin-top: 9px; }
+.bl-doctitle { font-size: 12.5pt; font-weight: 700; letter-spacing: -0.01em; }
 .bl-docdate { font-size: 8pt; margin-top: 1px; }
 
 /* ── Client | payment ────────────────────────────────────────── */
 .bl-parties { display: flex; gap: 12px; align-items: stretch; margin-top: 6px; }
-.bl-client { flex: 0 0 47%; border: 1px solid var(--rule); padding: 5px 7px; }
-.bl-kv { display: flex; font-size: 7.8pt; padding: 1px 0; }
-.bl-kv dt { flex: 0 0 76px; font-weight: 700; }
+.bl-client { flex: 0 0 47%; border: 1px solid var(--rule); padding: 7px 9px; }
+.bl-kv { display: flex; font-size: 7.9pt; padding: 1.8px 0; align-items: baseline; }
+.bl-kv dt { flex: 0 0 80px; font-weight: 700; }
 .bl-kv dd { margin: 0; word-break: break-word; }
 .bl-kv dd::before { content: ': '; }
 .bl-payside { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
-.bl-payhead { font-size: 8.4pt; font-weight: 700; padding: 3px 0 5px; }
-.bl-remark { border: 1px solid var(--rule); padding: 5px 7px; font-size: 7.8pt; flex: 1; }
+.bl-payhead { font-size: 8.6pt; font-weight: 700; padding: 0 0 6px; }
+.bl-remark { border: 1px solid var(--rule); padding: 7px 9px; font-size: 7.9pt; flex: 1; min-height: 26mm; }
 .bl-webref { text-align: right; font-size: 8.4pt; font-weight: 700; margin-top: 5px; }
 
 /* ── Products ────────────────────────────────────────────────── */
@@ -218,7 +243,7 @@ table.bl-table th {
     border: 1px solid var(--rule); text-align: center;
 }
 table.bl-table td {
-    font-size: 7.8pt; padding: 2px 4px; vertical-align: top;
+    font-size: 8pt; padding: 3.5px 5px; vertical-align: top; color: var(--ink);
     border-left: 1px solid var(--rule); border-right: 1px solid var(--rule);
 }
 table.bl-table tbody tr:last-child td { border-bottom: 1px solid var(--rule); }
@@ -239,16 +264,16 @@ table.bl-tax { border-collapse: collapse; }
 table.bl-tax th, table.bl-tax td { border: 1px solid var(--rule); font-size: 7.4pt; padding: 2px 8px; text-align: center; font-variant-numeric: tabular-nums; }
 table.bl-tax th { background: var(--tint); font-weight: 700; }
 table.bl-totals { border-collapse: collapse; min-width: 68mm; }
-table.bl-totals td { font-size: 8.2pt; padding: 2.5px 8px; border: 1px solid var(--rule); }
+table.bl-totals td { font-size: 8.4pt; padding: 3.5px 9px; border: 1px solid var(--rule); }
 table.bl-totals td.k { border-right: 0; }
 table.bl-totals td.c { width: 8px; text-align: center; border-left: 0; border-right: 0; }
 table.bl-totals td.v { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; border-left: 0; }
-table.bl-totals tr.grand td { font-weight: 700; }
+table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.6px solid var(--rule); }
 
 /* ── Note + signatures ───────────────────────────────────────── */
-.bl-note { margin-top: 7px; break-after: avoid; page-break-after: avoid; font-size: 8pt; line-height: 1.45; break-inside: avoid; page-break-inside: avoid; }
+.bl-note { margin-top: 10px; break-after: avoid; page-break-after: avoid; font-size: 8pt; line-height: 1.45; break-inside: avoid; page-break-inside: avoid; }
 .bl-note b { font-weight: 700; }
-.bl-signs { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 4px; break-inside: avoid; page-break-inside: avoid; }
+.bl-signs { display: flex; justify-content: space-between; align-items: flex-start; gap: 24px; margin-top: 12px; break-inside: avoid; page-break-inside: avoid; }
 .bl-sign { flex: 0 0 45%; font-size: 8pt; font-weight: 700; text-decoration: underline; }
 .bl-sign--right { text-align: right; }
 
@@ -267,7 +292,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
 
     .bl-head { flex-direction: column-reverse; gap: 10px; }
     .bl-brand { text-align: left; width: 100%; }
-    .bl-logo { margin-left: 0; height: 68px; }
+    .bl-logo { margin-left: 0; height: 76px; max-width: 70vw; }
     .bl-pageno { margin-top: 4px; }
     .bl-co-grid { grid-template-columns: minmax(0,1fr); font-size: 8.6pt; }
     .bl-co-addr, .bl-site { font-size: 8.6pt; }
@@ -338,7 +363,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
     {{-- ── HEADER ──────────────────────────────────────────────── --}}
     <div class="bl-head">
         <div class="bl-co">
-            <div class="bl-co-name">{{ $coordonnee->designation_fr ?? $coordonnee->abbreviation ?? 'SOBITAS' }}</div>
+            <div class="bl-co-name">{{ $coordonnee->abbreviation ?? $coordonnee->designation_fr ?? 'SOBITAS' }}</div>
             @if(!empty($coordonnee?->adresse_fr))
                 <div class="bl-co-addr">{{ $coordonnee->adresse_fr }}</div>
             @endif
@@ -398,8 +423,8 @@ table.bl-totals tr.grand td { font-weight: 700; }
     <div class="bl-scroll">
     <table class="bl-table">
         <colgroup>
-            <col style="width:16%">
-            <col style="width:34%">
+            @if($showRef)<col style="width:16%">@endif
+            <col style="width:{{ $showRef ? 34 : 50 }}%">
             <col style="width:9%">
             <col style="width:10%">
             <col style="width:9%">
@@ -408,7 +433,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
         </colgroup>
         <thead>
             <tr>
-                <th class="c-left">Réf. Art.</th>
+                @if($showRef)<th class="c-left">Réf. Art.</th>@endif
                 <th class="c-left">Désignation</th>
                 <th>Qte</th>
                 <th>P.U.H.T</th>
@@ -420,7 +445,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
         <tbody>
             @foreach($rows as $row)
             <tr>
-                <td class="c-left c-ref">{{ $row['ref'] }}</td>
+                @if($showRef)<td class="c-left c-ref">{{ $row['ref'] }}</td>@endif
                 <td class="c-left c-prod">{{ $row['produit'] }}</td>
                 <td class="c-right">{{ $row['qte'] }}</td>
                 <td class="c-right">{{ $fmt($row['pu']) }}</td>
@@ -430,9 +455,9 @@ table.bl-totals tr.grand td { font-weight: 700; }
             </tr>
             @endforeach
             @if(empty($rows))
-            <tr><td colspan="7" class="bl-empty">Aucune ligne de produit.</td></tr>
+            <tr><td colspan="{{ $colCount }}" class="bl-empty">Aucune ligne de produit.</td></tr>
             @endif
-            <tr class="bl-filler" aria-hidden="true"><td colspan="7" style="height:{{ $fillerMm }}mm"></td></tr>
+            <tr class="bl-filler" aria-hidden="true"><td colspan="{{ $colCount }}" style="height:{{ $fillerMm }}mm"></td></tr>
         </tbody>
     </table>
     </div>
@@ -477,7 +502,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
 
     {{-- ── NOTE ────────────────────────────────────────────────── --}}
     <div class="bl-note">
-        {{ $noteLead !== '' ? $noteLead : 'Arrêté le Présent Bon de livraison à la somme de :' }}<br>
+        {{ $noteLead }}<br>
         <b id="bl-words">…</b>
     </div>
     <input type="hidden" id="bl-total-val" value="{{ $netAPayer }}">
