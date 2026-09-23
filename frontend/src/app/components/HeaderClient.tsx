@@ -37,8 +37,9 @@ import { useFavoritesCount } from '@/contexts/FavoritesContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Sheet, SheetContent, SheetClose, SheetTitle } from '@/app/components/ui/sheet';
 import { cn } from '@/app/components/ui/utils';
-import { getNavigationItems, getCategories } from '@/services/api';
+import { getNavigationItems } from '@/services/api';
 import { useSiteChrome } from '@/contexts/SiteChromeContext';
+import { navTaxonomy, taxonomyLabel, type TaxonomyNode } from '@/config/catalogTaxonomy';
 import { useSiteLogos } from '@/hooks/useSiteLogos';
 import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
@@ -76,6 +77,22 @@ const PACK_BUILDER_LINK: HeaderNavLink = { href: '/pack-builder', label: 'COMPOS
 
 function withPackBuilder(links: HeaderNavLink[]): HeaderNavLink[] {
   return links.some((link) => link.href === '/pack-builder') ? links : [...links, PACK_BUILDER_LINK];
+}
+
+/**
+ * THE SIDEBAR DRAWER READS THE SAME TREE AS THE DESKTOP MEGA-MENU.
+ *
+ * `navTaxonomy()` is the canonical commercial taxonomy with every `nav: false` branch pruned —
+ * six rayons and the forty categories that have something buyable on the shelf today. Static
+ * module data, evaluated once at import: no fetch, no loading state, no disagreement with
+ * ProductsDropdown about what the catalogue's shape is.
+ */
+const SIDEBAR_TREE: TaxonomyNode[] = navTaxonomy();
+
+/** The label a nav link renders: the declared commercial anchor, else the declared taxonomy label.
+ *  Never `designation_fr` — the catalogue stores shouted values with trailing spaces. */
+function taxonomyAnchor(slug: string): string {
+  return categoryAnchor(slug, taxonomyLabel(slug));
 }
 
 /*
@@ -306,23 +323,27 @@ export function HeaderClient() {
 
     Deleted here rather than hidden: ~120 lines of JSX and five pieces of state.
   */
-  /** Second level of the sidebar accordion: which category has its sub-categories open (one at a
+  /** Second level of the sidebar accordion: which rayon has its categories open (one at a
    *  time, so the list never becomes an unreadable wall on a phone). */
-  const [openCategoryId, setOpenCategoryId] = useState<number | null>(null);
+  const [openRayonSlug, setOpenRayonSlug] = useState<string | null>(null);
   const { resolvedTheme, setTheme } = useTheme();
   // Server-fetched nav (root layout → SiteChromeProvider): the real labels are in the SSR HTML,
   // so there is no first-paint "NOS PRODUITS" → "BOUTIQUE" swap anymore.
-  const { navigation: ssrNavigation, categories: ssrCategories } = useSiteChrome();
-  // The mobile Boutique accordion needs categories, but useSiteChrome().categories is empty at
-  // runtime (the server-chrome fetch doesn't populate it). Mirror the desktop ProductsDropdown:
-  // seed from SSR, then client-fetch as a fallback so the accordion always has data to expand.
-  const [sidebarCategories, setSidebarCategories] = useState(ssrCategories);
-  useEffect(() => {
-    if (ssrCategories.length === 0) {
-      getCategories().then((cats) => { if (Array.isArray(cats)) setSidebarCategories(cats); }).catch(() => {});
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const { navigation: ssrNavigation } = useSiteChrome();
+  /*
+    THE SIDEBAR ACCORDION NO LONGER FETCHES CATEGORIES AT ALL.
+
+    It used to seed from `useSiteChrome().categories` and then client-fetch `GET /api/categories`
+    as a fallback, because that context is empty at runtime. Two problems, and the second is the
+    expensive one: the drawer could open before the request landed and show BOUTIQUE with no
+    rayons under it, and — since the API tree is a stock-keeping convenience — it disagreed with
+    the desktop mega-menu about the catalogue's shape (`acides-amines` filed as a sibling of its
+    own children; `glutamine` and `hmb` under Santé & vitalité).
+
+    `navTaxonomy()` (src/config/catalogTaxonomy.ts) is static module data, pruned of the branches
+    whose every product is out of stock. It is the SAME tree ProductsDropdown renders, so the phone
+    and the desktop can no longer state two different hierarchies, and there is no loading frame.
+  */
   const [dynamicNavigation, setDynamicNavigation] = useState<{
     navbar: HeaderNavLink[];
     sidebar: HeaderNavLink[];
@@ -359,7 +380,7 @@ export function HeaderClient() {
     setMobileMenuOpen(false);
     // Reset the drawer to its resting state so the next open starts from the nav rather than
     // from a half-expanded accordion.
-    setOpenCategoryId(null);
+    setOpenRayonSlug(null);
   };
 
   const navLinks = withPackBuilder(dynamicNavigation.navbar.length > 0 ? dynamicNavigation.navbar : FALLBACK_NAV_LINKS);
@@ -1002,7 +1023,6 @@ export function HeaderClient() {
 
                     if (isProductsNavLink(link)) {
                       const shopActive = isActiveNav(link.href);
-                      const hasCategories = sidebarCategories.length > 0;
                       return (
                         <div key={`${link.href}-${link.label}`}>
                           {/*
@@ -1056,157 +1076,195 @@ export function HeaderClient() {
                             >
                               {translateLegacy(link.label)}
                             </LinkWithLoading>
-                            {hasCategories ? (
-                              <button
-                                type="button"
-                                aria-expanded={productsOpen}
-                                aria-label={
-                                  productsOpen
-                                    ? 'Masquer les rayons'
-                                    : `Afficher les rayons de ${translateLegacy(link.label)}`
-                                }
-                                onClick={() => {
-                                  // Collapsing the whole section also collapses whichever category
-                                  // was expanded, so reopening starts from a clean list.
-                                  if (productsOpen) setOpenCategoryId(null);
-                                  setProductsOpen((v) => !v);
-                                }}
-                                className="flex min-h-[52px] w-12 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
-                              >
-                                {productsOpen ? (
-                                  <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
-                                ) : (
-                                  <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
-                                )}
-                              </button>
-                            ) : (
-                              <span className="flex min-h-[52px] w-12 shrink-0 items-center justify-center" aria-hidden>
-                                <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" />
-                              </span>
-                            )}
+                            <button
+                              type="button"
+                              aria-expanded={productsOpen}
+                              aria-label={
+                                productsOpen
+                                  ? 'Masquer les rayons'
+                                  : `Afficher les rayons de ${translateLegacy(link.label)}`
+                              }
+                              onClick={() => {
+                                // Collapsing the whole section also collapses whichever rayon
+                                // was expanded, so reopening starts from a clean list.
+                                if (productsOpen) setOpenRayonSlug(null);
+                                setProductsOpen((v) => !v);
+                              }}
+                              className="flex min-h-[52px] w-12 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                            >
+                              {productsOpen ? (
+                                <ChevronUp className="h-4 w-4 shrink-0" aria-hidden />
+                              ) : (
+                                <ChevronDown className="h-4 w-4 shrink-0" aria-hidden />
+                              )}
+                            </button>
                           </div>
 
-                          {hasCategories && (
-                            <div
-                              className={cn(
-                                'grid transition-[grid-template-rows] duration-300 ease-out',
-                                productsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                              )}
-                            >
-                              <div className="overflow-hidden">
-                                <ul className="mt-1 space-y-0.5 pb-1">
-                                  {sidebarCategories.map((cat) => {
-                                    const catHref = canonicalCategoryPath(cat.slug);
-                                    const catActive = pathname === catHref;
-                                    const subs = cat.sous_categories ?? [];
-                                    const catOpen = openCategoryId === cat.id;
+                          {/*
+                            ── THE DRAWER STATES THE WHOLE HIERARCHY, NOT TWO THIRDS OF IT ─────
+                            This accordion already had three levels (BOUTIQUE > rayon > category).
+                            It has four now, because the tree has four and the third one is where
+                            the commercial relationships live: `Acides aminés` is a real page AND
+                            the parent of BCAA, EAA, glutamine, citrulline, L-arginine,
+                            bêta-alanine and HMB, and `Vitamines & minéraux` is the parent of
+                            magnésium, zinc, ZMA and minéraux. The API tree files those children
+                            as SIBLINGS of their own parent, which states nothing.
 
-                                    // Leaf category (no sub-categories): a plain link, as before.
-                                    if (subs.length === 0) {
-                                      return (
-                                        <li key={cat.id}>
-                                          <Link
-                                            href={catHref}
-                                            onClick={closeMobileMenu}
-                                            aria-current={catActive ? 'page' : undefined}
-                                            className={cn(
-                                              'flex items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-[14px] transition-colors',
-                                              catActive
-                                                ? 'font-semibold text-brand'
-                                                : 'text-ink-1 hover:bg-sunken dark:text-gray-300 dark:hover:bg-gray-800'
-                                            )}
-                                          >
-                                            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                                            <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, cat.designation_fr)}</span>
-                                            <ChevronRight className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                                          </Link>
-                                        </li>
-                                      );
-                                    }
+                            A group's heading is a LINK, not a caption, and its children are listed
+                            under it rather than behind a further tap: four taps to reach a leaf is
+                            not navigation, it is a maze. The rayon accordion stays one-open-at-a-
+                            time so the list never becomes an unreadable wall on a phone.
+                          */}
+                          <div
+                            className={cn(
+                              'grid transition-[grid-template-rows] duration-300 ease-out',
+                              productsOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                            )}
+                          >
+                            <div className="overflow-hidden">
+                              <ul className="mt-1 space-y-0.5 pb-1">
+                                {SIDEBAR_TREE.map((rayon) => {
+                                  const rayonHref = canonicalCategoryPath(rayon.slug);
+                                  const rayonActive = pathname === rayonHref;
+                                  const rayonChildren = rayon.children ?? [];
+                                  const rayonOpen = openRayonSlug === rayon.slug;
 
-                                    // Has sub-categories → the row EXPANDS a third level instead of
-                                    // navigating (owner request: tapping PROTÉINES should reveal its
-                                    // sub-categories, like the desktop mega-menu). A "Tout voir" entry
-                                    // inside keeps the category page itself one tap away.
+                                  // A rayon with nothing buyable beneath it: a plain link, as before.
+                                  if (rayonChildren.length === 0) {
                                     return (
-                                      <li key={cat.id}>
-                                        <button
-                                          type="button"
-                                          aria-expanded={catOpen}
-                                          onClick={() =>
-                                            setOpenCategoryId((prev) => (prev === cat.id ? null : cat.id))
-                                          }
+                                      <li key={rayon.slug}>
+                                        <Link
+                                          href={rayonHref}
+                                          onClick={closeMobileMenu}
+                                          aria-current={rayonActive ? 'page' : undefined}
                                           className={cn(
-                                            'flex w-full items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-left text-[14px] transition-colors',
-                                            catActive || catOpen
-                                              ? 'font-semibold text-brand'
-                                              : 'text-ink-1 hover:bg-sunken dark:text-gray-300 dark:hover:bg-gray-800'
+                                            'flex items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-[14px] transition-colors',
+                                            rayonActive ? 'font-semibold text-brand' : 'text-ink-1 hover:bg-sunken'
                                           )}
                                         >
                                           <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
-                                          <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, cat.designation_fr)}</span>
-                                          {catOpen ? (
-                                            <ChevronUp className="h-4 w-4 shrink-0 text-brand" aria-hidden />
-                                          ) : (
-                                            <ChevronDown className="h-4 w-4 shrink-0 text-gray-400" aria-hidden />
-                                          )}
-                                        </button>
-
-                                        <div
-                                          className={cn(
-                                            'grid transition-[grid-template-rows] duration-300 ease-out',
-                                            catOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
-                                          )}
-                                        >
-                                          <div className="overflow-hidden">
-                                            <ul className="space-y-0.5 py-0.5">
-                                              <li>
-                                                <Link
-                                                  href={catHref}
-                                                  onClick={closeMobileMenu}
-                                                  className="flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-brand transition-colors hover:bg-sunken dark:hover:bg-gray-800"
-                                                >
-                                                  <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(cat.slug, 'Tout voir')}</span>
-                                                  <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
-                                                </Link>
-                                              </li>
-                                              {subs.map((sub) => {
-                                                const subHref = canonicalCategoryPath(sub.slug);
-                                                const subActive = pathname === subHref;
-                                                return (
-                                                  <li key={sub.id}>
-                                                    <Link
-                                                      href={subHref}
-                                                      onClick={closeMobileMenu}
-                                                      aria-current={subActive ? 'page' : undefined}
-                                                      className={cn(
-                                                        'flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] transition-colors',
-                                                        subActive
-                                                          ? 'font-semibold text-brand'
-                                                          : 'text-ink-2 hover:bg-sunken dark:text-gray-400 dark:hover:bg-gray-800'
-                                                      )}
-                                                    >
-                                                      <span
-                                                        className="h-px w-2.5 shrink-0 bg-gray-300 dark:bg-gray-600"
-                                                        aria-hidden
-                                                      />
-                                                      <span className="min-w-0 flex-1 whitespace-normal">
-                                                        {categoryAnchor(sub.slug, sub.designation_fr)}
-                                                      </span>
-                                                    </Link>
-                                                  </li>
-                                                );
-                                              })}
-                                            </ul>
-                                          </div>
-                                        </div>
+                                          <span className="min-w-0 flex-1 whitespace-normal">{taxonomyAnchor(rayon.slug)}</span>
+                                          <ChevronRight className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                                        </Link>
                                       </li>
                                     );
-                                  })}
-                                </ul>
-                              </div>
+                                  }
+
+                                  // Has categories → the row EXPANDS instead of navigating (owner
+                                  // request: tapping PROTÉINES should reveal its categories, like
+                                  // the desktop mega-menu). A "Tout voir" entry inside keeps the
+                                  // rayon page itself one tap away.
+                                  return (
+                                    <li key={rayon.slug}>
+                                      <button
+                                        type="button"
+                                        aria-expanded={rayonOpen}
+                                        aria-label={
+                                          rayonOpen
+                                            ? `Masquer les catégories ${taxonomyLabel(rayon.slug)}`
+                                            : `Afficher les catégories ${taxonomyLabel(rayon.slug)}`
+                                        }
+                                        onClick={() =>
+                                          setOpenRayonSlug((prev) => (prev === rayon.slug ? null : rayon.slug))
+                                        }
+                                        className={cn(
+                                          'flex w-full items-center gap-2 min-h-[44px] pl-12 pr-3 rounded-xl text-left text-[14px] transition-colors',
+                                          rayonActive || rayonOpen
+                                            ? 'font-semibold text-brand'
+                                            : 'text-ink-1 hover:bg-sunken'
+                                        )}
+                                      >
+                                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" aria-hidden />
+                                        <span className="min-w-0 flex-1 whitespace-normal">{taxonomyLabel(rayon.slug)}</span>
+                                        {rayonOpen ? (
+                                          <ChevronUp className="h-4 w-4 shrink-0 text-brand" aria-hidden />
+                                        ) : (
+                                          <ChevronDown className="h-4 w-4 shrink-0 text-ink-3" aria-hidden />
+                                        )}
+                                      </button>
+
+                                      <div
+                                        className={cn(
+                                          'grid transition-[grid-template-rows] duration-300 ease-out',
+                                          rayonOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                                        )}
+                                      >
+                                        <div className="overflow-hidden">
+                                          <ul className="space-y-0.5 py-0.5">
+                                            <li>
+                                              <Link
+                                                href={rayonHref}
+                                                onClick={closeMobileMenu}
+                                                className="flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] font-semibold text-brand transition-colors hover:bg-sunken"
+                                              >
+                                                <span className="min-w-0 flex-1 whitespace-normal">{categoryAnchor(rayon.slug, 'Tout voir')}</span>
+                                                <ChevronRight className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                              </Link>
+                                            </li>
+                                            {rayonChildren.map((child) => {
+                                              const childHref = canonicalCategoryPath(child.slug);
+                                              const childActive = pathname === childHref;
+                                              const leaves = child.children ?? [];
+                                              return (
+                                                <li key={child.slug}>
+                                                  <Link
+                                                    href={childHref}
+                                                    onClick={closeMobileMenu}
+                                                    aria-current={childActive ? 'page' : undefined}
+                                                    className={cn(
+                                                      'flex items-center gap-2 min-h-11 rounded-xl pl-[4.5rem] pr-3 text-[13px] transition-colors hover:bg-sunken',
+                                                      childActive && 'font-semibold text-brand',
+                                                      !childActive && leaves.length > 0 && 'font-semibold text-ink-1',
+                                                      !childActive && leaves.length === 0 && 'text-ink-2'
+                                                    )}
+                                                  >
+                                                    <span className="h-px w-2.5 shrink-0 bg-rule" aria-hidden />
+                                                    <span className="min-w-0 flex-1 whitespace-normal">
+                                                      {taxonomyAnchor(child.slug)}
+                                                    </span>
+                                                    {leaves.length > 0 && (
+                                                      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />
+                                                    )}
+                                                  </Link>
+
+                                                  {leaves.length > 0 && (
+                                                    <ul className="space-y-0.5 py-0.5">
+                                                      {leaves.map((leaf) => {
+                                                        const leafHref = canonicalCategoryPath(leaf.slug);
+                                                        const leafActive = pathname === leafHref;
+                                                        return (
+                                                          <li key={leaf.slug}>
+                                                            <Link
+                                                              href={leafHref}
+                                                              onClick={closeMobileMenu}
+                                                              aria-current={leafActive ? 'page' : undefined}
+                                                              className={cn(
+                                                                'flex items-center gap-2 min-h-11 rounded-xl pl-24 pr-3 text-[13px] transition-colors hover:bg-sunken',
+                                                                leafActive ? 'font-semibold text-brand' : 'text-ink-2'
+                                                              )}
+                                                            >
+                                                              <span className="h-px w-2 shrink-0 bg-rule" aria-hidden />
+                                                              <span className="min-w-0 flex-1 whitespace-normal">
+                                                                {taxonomyAnchor(leaf.slug)}
+                                                              </span>
+                                                            </Link>
+                                                          </li>
+                                                        );
+                                                      })}
+                                                    </ul>
+                                                  )}
+                                                </li>
+                                              );
+                                            })}
+                                          </ul>
+                                        </div>
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
                             </div>
-                          )}
+                          </div>
                         </div>
                       );
                     }

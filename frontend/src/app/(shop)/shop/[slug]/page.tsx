@@ -6,7 +6,7 @@ import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
-import { buildProductCanonicalUrl, buildProductUrlPath, getProductPrimarySubCategory } from '@/util/productUrl';
+import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
 import {
   buildProductJsonLd,
   buildBreadcrumbListSchema,
@@ -236,20 +236,27 @@ export default async function ShopProductPage({ params }: PageProps) {
     }
   }
 
-  // Build breadcrumbs with new URLs where applicable
-  const breadcrumbItems = [
-    { name: 'Accueil', url: '/' },
-    { name: 'Boutique', url: '/shop' },
-  ];
-  const cat = safeProduct.sous_categorie?.categorie;
+  /*
+   * ── ONE TRAIL BUILDER, SO THIS ROUTE CANNOT DISAGREE WITH THE CANONICAL ONE ─────────────────
+   * This used to assemble its own trail from `sous_categorie.categorie` — the back office's
+   * parent row — which put a glutamine product under "SANTÉ & VITALITÉ" here while /glutamine and
+   * the canonical /{category}/{product} route both place it under "Performance > Acides aminés".
+   * A legacy URL that 308s into the canonical one must not describe a different site while it
+   * does so. `getProductBreadcrumbs` reads the declared taxonomy and is what every other product
+   * surface already calls.
+   */
   const sub = safeProduct.sous_categorie;
-  if (cat?.slug) breadcrumbItems.push({ name: cat.designation_fr || cat.slug, url: `/${cat.slug}` });
-  if (sub?.slug && sub.slug !== cat?.slug) breadcrumbItems.push({ name: sub.designation_fr || sub.slug, url: `/${sub.slug}` });
   // For products with subcategory, use new URL; otherwise use legacy
-  const productUrl = sub?.slug 
-    ? buildProductUrlPath(safeProduct) 
+  const productUrl = sub?.slug
+    ? buildProductUrlPath(safeProduct)
     : `/shop/${safeProduct.slug || cleanSlug}`;
-  breadcrumbItems.push({ name: safeProduct.designation_fr || safeProduct.slug || 'Produit', url: productUrl });
+  const breadcrumbItems = getProductBreadcrumbs(safeProduct);
+  // The shared builder always ends on buildProductUrlPath; this route keeps its /shop/{slug}
+  // fallback for a product with no subcategory, so the last crumb takes the URL computed above.
+  breadcrumbItems[breadcrumbItems.length - 1] = {
+    name: safeProduct.designation_fr || safeProduct.slug || 'Produit',
+    url: productUrl,
+  };
   const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbItems, baseUrl, { pageUrl: productUrl });
   validateStructuredData(breadcrumbSchema, 'BreadcrumbList');
   const webPageSchema = buildWebPageSchema(safeProduct.designation_fr, productUrl, baseUrl, {

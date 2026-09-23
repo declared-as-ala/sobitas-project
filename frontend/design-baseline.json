@@ -203,9 +203,9 @@
     "DS011": 2
   },
   "src/app/components/HeaderClient.tsx": {
-    "DS001": 16,
-    "DS002": 17,
-    "DS003": 16,
+    "DS001": 10,
+    "DS002": 13,
+    "DS003": 11,
     "DS004": 2,
     "DS005": 2,
     "DS006": 1
@@ -230,13 +230,6 @@
     "DS002": 5,
     "DS003": 2,
     "DS004": 2
-  },
-  "src/app/components/MobileProductsMenu.tsx": {
-    "DS001": 14,
-    "DS002": 19,
-    "DS003": 10,
-    "DS004": 10,
-    "DS011": 21
   },
   "src/app/components/MobileTabBar.tsx": {
     "DS001": 2,

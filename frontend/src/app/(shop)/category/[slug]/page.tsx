@@ -46,6 +46,30 @@ import {
   type RawSearchParams,
   type ShopQuery,
 } from '@/util/shopQuery';
+import Link from 'next/link';
+/*
+ * ── THIS ROUTE READS THE DECLARED TREE, IT DOES NOT RE-DERIVE ONE ────────────────────────────
+ * src/config/catalogTaxonomy.ts is the single declaration of the commercial hierarchy: six rayons,
+ * 56 slugs, and the four corrections the API tree gets wrong (acides-amines is a PARENT, not a
+ * sibling; glutamine and hmb are amino acids, not wellness; glucides-energie is a duplicate shelf;
+ * SANTÉ & VITALITÉ's twenty-one flat children are four themes). Three surfaces on this page draw
+ * relationships — the breadcrumb, the rayon child-nav and the lateral rail — and all three now read
+ * that file rather than `sous_category.categorie` or the raw category list. No URL changes: every
+ * href below still goes through canonicalCategoryPath().
+ */
+import {
+  taxonomyAncestors,
+  taxonomyChildren,
+  taxonomyDepth,
+  taxonomyLabel,
+  taxonomySiblings,
+  inGlobalNav,
+  type TaxonomyNode,
+} from '@/config/catalogTaxonomy';
+// The measured-traffic protection list. Read by the stock gate below — see the note there.
+import { protectedByTraffic } from '@/config/commercialSeoMap';
+import { Section } from '@/app/components/layout/Section';
+import { SectionHeader } from '@/app/components/SectionHeader';
 
 /**
  * One page of a listing, scoped by the path rather than by the query string.
@@ -577,6 +601,51 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
         serverPagination.total > 0 && shown.length > 0 && shown.every((p) => !isInStock(p));
     }
     /*
+     * ── DEMAND BEATS STOCK. A LISTING THAT EARNS SEARCH TRAFFIC IS NEVER noindexed FOR BEING
+     *    OUT OF STOCK ──────────────────────────────────────────────────────────────────────────
+     *
+     * The rule above was written against nine shelves that earn roughly one click a month between
+     * them, and on those it is right. But `every product on page 1 is out of stock` is a proxy for
+     * "this page has nothing to offer", and on a page with measured impressions the proxy is simply
+     * wrong — the searcher arrived, the shelf is the right shelf, and the stock level is a Tuesday
+     * fact about a warehouse. Measured 23/09/2026, Googlebot UA against production, these six were
+     * serving `noindex, follow` WHILE ranking:
+     *
+     *     /caseine            5 clicks @13.4
+     *     /barres-proteinees  157 impressions @10.3   — page one of the SERP
+     *     /hmb                1 click @7.5
+     *     /mineraux           2 clicks @22.9
+     *     /articulations      1 click
+     *     /cla                1 click @22.0
+     *
+     * /mineraux is the proof that this was a bug and not a policy: it has been a key of
+     * `protectedByTraffic` since 22/09 — the list whose whole stated rule is "a page that EARNS
+     * CLICKS is never 301'd or noindexed" (commercialSeoMap.ts, rule 4) — and it served noindex
+     * anyway, because nothing on this route had ever consulted that list. This is the wire.
+     *
+     * Google's own guidance is that an out-of-stock PRODUCT stays indexable with availability
+     * OutOfStock/BackOrder; a CATEGORY of those products, with real impressions, is the same
+     * argument one level up. Dropping it out of the index throws away a ranking that is already
+     * earned and takes weeks to win back, to save crawl budget on six URLs.
+     *
+     * NOT A BLANKET EXEMPTION. It suppresses exactly one of the two noindex reasons. The
+     * `publishedTotal === 0` rule below is untouched — a listing with zero published products is a
+     * heading with nothing under it, which no amount of past traffic makes indexable, and that rule
+     * is the fix from 9c9dc83d. The ten shelves that are genuinely dead — /probiotiques /digestion
+     * /immunite /sommeil-stress /plantes-et-herbes /glucides-energie /post-workout /intra-workout
+     * /vetements /enfants, no stock and ~no traffic, measured 23/09 — are not keys of
+     * `protectedByTraffic` and stay `noindex, follow` exactly as before.
+     *
+     * Self-correcting in both directions, like the rule it amends: the day a product comes back in
+     * stock the gate stops firing on its own, and a URL only becomes protected when someone records
+     * a measurement for it in commercialSeoMap.ts. The key is the canonical PATH, built the same
+     * way the canonical URL below is, so a slug alias can never miss its own protection entry.
+     */
+    const protectedByDemand = Object.prototype.hasOwnProperty.call(
+      protectedByTraffic,
+      `/${canonicalSlug}`
+    );
+    /*
      * A subcategory is noindex only when the listing itself reports zero published products AND no
      * editorial guide stands in for them. `loadListingPage` turns a 429/5xx into an empty result,
      * so an outage would read as zero — which is why page 2+ and any page that never established a
@@ -678,11 +747,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        * them can be added to a basket. Neither is a page number rule; page 2+ of a healthy
        * category stays `index, follow`.
        *
+       * The second of those two now carries one exemption, `protectedByDemand` — a listing that
+       * is a key of commercialSeoMap's `protectedByTraffic` keeps `index, follow` however empty
+       * its shelf is today. Read the note beside that constant: six URLs with measured clicks and
+       * impressions were being dropped out of the index for a warehouse fact. The first rule,
+       * `publishedTotal === 0`, has no exemption and is unchanged.
+       *
        * This is read by BOTH views: /{slug} delegates its metadata here, and so does
        * /x-crawler/category/[slug] — the route middleware rewrites Googlebot to. One edit, no
        * drift between what a shopper and a crawler are told.
        */
-      robots: !indexable || nothingBuyableHere
+      robots: !indexable || (nothingBuyableHere && !protectedByDemand)
         ? { index: false, follow: true }
         : { index: true, follow: true },
       openGraph: {
@@ -749,6 +824,151 @@ async function comparisonBrands(slug: string): Promise<Brand[]> {
     // A brand-list outage must cost the table, never the page: the gate sees [] and stays shut.
     return [];
   }
+}
+
+/**
+ * THE RAYON'S OWN SHELF, DRAWN FROM THE DECLARED TREE. Server component — no `'use client'`.
+ *
+ * ── WHAT THIS FIXES ─────────────────────────────────────────────────────────────────────────────
+ * Measured 23/09/2026, Googlebot UA against production: of 56 live taxonomy URLs the homepage
+ * exposes 19. ProductsDropdown renders ONE rayon panel at a time (`activeSubs.map`), so the other
+ * 37 exist in the crawler's link graph only if it first lands on a rayon page — and a rayon page
+ * that lists nothing but 24 product tiles is where that chain stops. /proteines already links its
+ * own 8 children and /performance 9 of its 10, which is why those two branches are crawled: the
+ * tree works one hop down, and the pages that do not draw it are the pages that go missing.
+ *
+ * GROUPED, NOT FLAT. `acides-amines` is declared as the PARENT of bcaa/eaa/glutamine/citrulline/
+ * l-arginine/beta-alanine/hmb, and `sante-vitalite`'s twenty-one flat API children are four themes.
+ * Rendering those as one 21-item column states nothing; rendering the group header as its own link
+ * with its children indented under it is the relationship itself, in the one place Google reads a
+ * site's hierarchy from — navigation and internal links, not URL folders.
+ *
+ * `nav: false` CHILDREN ARE INCLUDED HERE, DELIBERATELY. Nine shelves are pruned from the GLOBAL
+ * header because nothing on them is buyable today; the rayon page is exactly the surface where
+ * they stay reachable, one click from their parent, so the URL and its products' breadcrumb parent
+ * survive until stock returns. That is the bargain catalogTaxonomy.ts states in its own docblock
+ * ("`nav: false` is not a deletion"), and this block is the half of it that keeps the promise.
+ *
+ * ON EVERY PAGE OF A SERIES, NOT JUST PAGE 1. The page-1-only rule above governs the ~310 words of
+ * editorial furniture and the FAQPage JSON-LD — prose that would be duplicated across 369 URLs of
+ * /sante-vitalite. This is navigation, in the same class as the header, the footer and the pager,
+ * all of which repeat by design; scoping it to page 1 would make the children unreachable from
+ * precisely the deep pages that most need a way back up.
+ *
+ * Every href goes through canonicalCategoryPath(), so no link here spends a redirect hop (the
+ * stored taxonomy slug is `Intra-Workout` while the URL that serves it is `/intra-workout`).
+ * NOTHING in this component invents, renames or redirects a URL.
+ *
+ * `Section` renders the Container rail itself (`width` is forwarded to it), which is why there is
+ * no second <Container> here — two rails on one band is a design-system error, not belt-and-braces.
+ */
+function TaxonomyChildNav({ slug, fallbackLabel }: { slug: string; fallbackLabel: string }) {
+  const children = taxonomyChildren(slug);
+  if (children.length === 0) return null;
+
+  const label = taxonomyLabel(slug, fallbackLabel);
+  const headingId = `taxonomie-${slug}`;
+  // Depth 0 is a rayon; anything deeper is a group inside one (acides-amines, vitamines,
+  // collagene, boosters-hormonaux), where "rayon" would be the wrong French word for it.
+  const heading = taxonomyDepth(slug) === 0 ? `Tout le rayon ${label}` : `Toute la gamme ${label}`;
+
+  return (
+    <Section spacing="tight" surface="sunken" width="wide" last aria-labelledby={headingId}>
+      <SectionHeader id={headingId} title={heading} scale="3" />
+      <ul className="grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+        {children.map((child: TaxonomyNode) => (
+          <li key={child.slug} className="min-w-0">
+            <Link
+              href={canonicalCategoryPath(child.slug)}
+              prefetch={false}
+              className="inline-flex min-h-[44px] w-full items-center font-display text-sm font-semibold uppercase tracking-[0.06em] text-ink-1 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+            >
+              {taxonomyLabel(child.slug, child.label)}
+            </Link>
+            {child.children?.length ? (
+              <ul className="border-l border-hairline pl-4">
+                {child.children.map((leaf: TaxonomyNode) => (
+                  <li key={leaf.slug}>
+                    <Link
+                      href={canonicalCategoryPath(leaf.slug)}
+                      prefetch={false}
+                      className="inline-flex min-h-[44px] w-full items-center text-sm text-ink-2 transition-colors hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2"
+                    >
+                      {taxonomyLabel(leaf.slug, leaf.label)}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </li>
+        ))}
+      </ul>
+    </Section>
+  );
+}
+
+/**
+ * The lateral rail's DEFAULT, when the CMS has curated no `relatedCategorySlugs`.
+ *
+ * The two fallbacks this replaces were "every subcategory under the API parent, plus the parent"
+ * and "the first six top-level categories" — the second of which put the same six rayon links on
+ * every uncurated category page, so /creatine's lateral rail pointed at /proteines, /prise-de-masse
+ * and /equipement and at none of /pre-workout or /acides-amines. Six identical links repeated
+ * across fifty pages is a template, not a relationship.
+ *
+ * `taxonomySiblings` is the cluster a category page should actually link across: the nodes under
+ * the SAME declared parent. /creatine returns pre-workout, acides-amines, intra-workout,
+ * post-workout; /glutamine returns its six fellow amino acids rather than Ashwagandha and Zinc.
+ *
+ * Filtered by `inGlobalNav` so a shelf with nothing buyable on it is not handed a link from a page
+ * that ranks — those stay reachable from their rayon page, which is what TaxonomyChildNav is for.
+ * Capped at 6 to match `resolveRelatedCategories`, which slices there anyway.
+ *
+ * Returns [] for a slug that is not in the tree, so each call site keeps its existing API-derived
+ * fallback for the long tail of brand and shelf pages the taxonomy does not declare.
+ */
+function declaredSiblingSlugs(slug: string): string[] {
+  return taxonomySiblings(slug)
+    .filter((n) => inGlobalNav(n.slug))
+    .map((n) => n.slug)
+    .slice(0, 6);
+}
+
+/**
+ * The breadcrumb trail, as the DECLARED tree states it rather than as the API happens to store it.
+ *
+ * Both branches used to emit `Accueil > Boutique > (API parent) > page`, which is a two-level
+ * hierarchy asserted over a three-level one: /glutamine said `Santé & Vitalité > Glutamine`
+ * (the API files it next to Ashwagandha) and /magnesium said `Santé & Vitalité > Magnésium`,
+ * flattening the four themes the rayon actually has. The trail is the most-read statement of
+ * structure on the page — it is rendered visibly, it is emitted as BreadcrumbList JSON-LD, and
+ * Google reads both — so it is the one surface where the API's shape did the most damage.
+ *
+ * Now: one crumb per declared ancestor, in order.
+ *   /glutamine  ->  Accueil > Boutique > Performance > Acides aminés > Glutamine
+ *   /magnesium  ->  Accueil > Boutique > Santé & vitalité > Vitamines & minéraux > Magnésium
+ *
+ * 'Boutique' is KEPT: the visible breadcrumb (ShopPageClient), the PDP trail (util/productUrl.ts)
+ * and the crawler trail (x-crawler/category/[slug]) all carry it, and one renderer disagreeing
+ * about the site's shape is the bug this whole pass exists to remove.
+ *
+ * Labels come from taxonomyLabel() — the API stores shouted values with trailing spaces
+ * ("PROTÉINES ") — and URLs from canonicalCategoryPath(), so no crumb is ever a redirect, which
+ * in a rich result is a broken link.
+ *
+ * Falls back to the caller's API-derived parent when the slug is not in the tree, so a brand or
+ * legacy shelf page still gets a sane trail instead of losing its parent crumb.
+ */
+function declaredAncestorCrumbs(
+  slug: string,
+  apiFallback: Array<{ name: string; url: string }>
+): Array<{ name: string; url: string }> {
+  const ancestors = taxonomyAncestors(slug);
+  if (ancestors.length === 0) return apiFallback;
+  return ancestors.map((a) => ({
+    name: taxonomyLabel(a.slug, a.label),
+    url: canonicalCategoryPath(a.slug),
+  }));
 }
 
 export default async function CategoryPage({ params, searchParams }: PageProps) {
@@ -828,32 +1048,39 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         sub.sous_category?.designation_fr ||
         canonicalSlug;
       /*
-       * ── THE TRAIL IS Accueil › Boutique › Parent › Cette page, IN EVERY PLACE THAT DRAWS IT ──
+       * ── THE TRAIL IS Accueil > Boutique > (chaque ancêtre déclaré) > Cette page ───────────────
        *
        * The visible breadcrumb (ShopPageClient, `breadcrumbItems.push({ label: 'Boutique' })`),
        * the PDP trail (util/productUrl.ts) and the crawler trail
        * (x-crawler/category/[slug]/page.tsx) all carry the 'Boutique' crumb. This JSON-LD was the
        * only one that skipped it, so the BreadcrumbList a shopper's page emitted described a
        * different site structure from the one Googlebot was handed on the same URL — and from the
-       * trail rendered a few hundred pixels below it.
+       * trail rendered a few hundred pixels below it. It is kept, for the same reason.
        *
-       * The parent crumb is built exactly as the crawler route builds it:
-       *   .trim()                — the stored value is "PROTÉINES ", with a trailing space.
+       * What changed: the middle of the trail is now every DECLARED ancestor rather than the one
+       * parent the API stores. See declaredAncestorCrumbs() above for the measurement — /glutamine
+       * and /magnesium were both asserting a two-level hierarchy over a three-level one.
+       *
+       * The API parent is retained as the FALLBACK, built exactly as the crawler route builds it:
+       *   .trim()                 — the stored value is "PROTÉINES ", with a trailing space.
        *   canonicalCategoryPath() — an aliased parent slug would otherwise put a URL that 301s
        *                             inside the breadcrumb, which is a redirect in a rich result.
        */
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
         { name: 'Boutique', url: '/shop' },
-        ...(parentCat?.slug
-          ? [
-              {
-                name: String(parentCat.designation_fr || parentCat.slug).trim(),
-                url: canonicalCategoryPath(parentCat.slug),
-              },
-              { name: subCrumbName, url: `/${canonicalSlug}` },
-            ]
-          : [{ name: subCrumbName, url: `/${canonicalSlug}` }]),
+        ...declaredAncestorCrumbs(
+          canonicalSlug,
+          parentCat?.slug
+            ? [
+                {
+                  name: String(parentCat.designation_fr || parentCat.slug).trim(),
+                  url: canonicalCategoryPath(parentCat.slug),
+                },
+              ]
+            : []
+        ),
+        { name: subCrumbName, url: `/${canonicalSlug}` },
       ];
       const pageTitle = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
       const collectionDesc =
@@ -897,12 +1124,19 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         .filter(Boolean) as object[];
 
       const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
-      // Related-links fallback: uncurated subcategory pages get no relatedCategorySlugs, leaving them
-      // with no lateral internal links. Fall back to sibling subcategories under the same parent +
-      // the parent category itself so every subcategory is reachable/reaches out.
+      /*
+       * Related-links fallback. A curated `relatedCategorySlugs` (CMS or content file) still wins —
+       * an editor who has chosen the six links for a page knows more than any rule here.
+       *
+       * Uncurated, the DECLARED siblings come first (declaredSiblingSlugs above: same parent in
+       * catalogTaxonomy, nav-visible, capped at 6). The API-derived list below is kept only for a
+       * slug the tree does not declare — brand and legacy shelf pages — and is unchanged for them.
+       */
       const relatedSlugsSub = (merged.relatedCategorySlugs?.length
         ? merged.relatedCategorySlugs
         : (() => {
+            const declared = declaredSiblingSlugs(canonicalSlug);
+            if (declared.length > 0) return declared;
             const parentSlug = sub.sous_category?.categorie?.slug as string | undefined;
             const parent = parentSlug ? categories.find((c) => c.slug === parentSlug) : undefined;
             const siblingSlugs = (parent?.sous_categories ?? [])
@@ -1049,6 +1283,21 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
+          {/*
+            A node the API resolves as a SUBcategory can still be a parent in the declared tree —
+            /acides-amines holds seven children, /vitamines and /collagene four each. The block is
+            keyed on taxonomyChildren() and not on the API's category/subcategory split precisely
+            so that mismatch cannot decide whether a shelf's children are linked. It renders
+            nothing when there are none, which is the case for every leaf.
+
+            Outside the Suspense boundary: it needs no data, so it must not wait for the product
+            grid to stream. It is in the initial HTML on the first byte, for a crawler that may
+            never execute anything.
+          */}
+          <TaxonomyChildNav
+            slug={canonicalSlug}
+            fallbackLabel={String(sub.sous_category?.designation_fr ?? canonicalSlug).trim()}
+          />
         </>
       );
     }
@@ -1079,11 +1328,20 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const apiSeoCat = (cat as { seo?: CategorySeoFromApi }).seo;
       const mergedCat = mergeCategorySeoForSlug(canonicalSlug, seoJsonCat, apiSeoCat);
       const catCrumbName = mergedCat.breadcrumbLabel || mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
-      // Same trail as the subcategory branch above, the visible breadcrumb and the crawler view:
-      // Accueil › Boutique › Cette catégorie. 'Boutique' was missing here too.
+      /*
+       * Same trail as the subcategory branch above, the visible breadcrumb and the crawler view:
+       * Accueil > Boutique > (ancêtres déclarés) > Cette catégorie. 'Boutique' was missing here too.
+       *
+       * This branch never had an API parent to insert, which is exactly the gap: a node the API
+       * answers as a top-level `category` can still sit inside a rayon in the declared tree, and
+       * the trail said nothing about it. taxonomyAncestors() returns [] for a real rayon
+       * (/proteines, /performance), so those six keep the byte-identical three-crumb trail they
+       * have today — there is no parent above a rayon and none is invented.
+       */
       const breadcrumbItems = [
         { name: 'Accueil', url: '/' },
         { name: 'Boutique', url: '/shop' },
+        ...declaredAncestorCrumbs(canonicalSlug, []),
         { name: catCrumbName, url: `/${canonicalSlug}` },
       ];
       const pageTitleCat = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
@@ -1136,9 +1394,23 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             priceMin: introDataCat.priceMin,
             subcategoryNames: subcategoryNamesCat,
           });
+      /*
+       * Same rule as the subcategory branch: curated wins, then the declared siblings, then the
+       * old behaviour for a slug the tree does not declare.
+       *
+       * The old fallback here — "the first six categories that are not this one" — was the worst
+       * of the two: it put the SAME six rayon links on every uncurated category page, so the rail
+       * carried no information about the page it sat on. For a rayon, taxonomySiblings() returns
+       * the other rayons, which is the same set and correctly so; for anything nested it returns
+       * the actual cluster.
+       */
       const relatedSlugs = (mergedCat.relatedCategorySlugs?.length
         ? mergedCat.relatedCategorySlugs
-        : categories.filter((c) => c.slug !== canonicalSlug).slice(0, 6).map((c) => c.slug)) as string[];
+        : (() => {
+            const declared = declaredSiblingSlugs(canonicalSlug);
+            if (declared.length > 0) return declared;
+            return categories.filter((c) => c.slug !== canonicalSlug).slice(0, 6).map((c) => c.slug);
+          })()) as string[];
       const relatedCategories = resolveRelatedCategories(relatedSlugs, categories);
       const bestProducts = resolveBestProducts(
         mergedCat.bestProductSlugs?.length ? mergedCat.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
@@ -1250,6 +1522,18 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
+          {/*
+            THE RAYON PAGE IS THE ONLY GLOBAL PATH TO 37 OF THE 56 TAXONOMY URLs. See the docblock
+            on TaxonomyChildNav: the mega-menu holds one rayon's panel in the DOM at a time, so
+            everything that is not one of the homepage's 19 links depends on this block existing.
+
+            Outside the Suspense boundary on purpose — it reads nothing but the declared tree, so
+            it ships in the first byte rather than streaming in behind the product grid.
+          */}
+          <TaxonomyChildNav
+            slug={canonicalSlug}
+            fallbackLabel={String(cat.category?.designation_fr ?? canonicalSlug).trim()}
+          />
         </>
       );
     }

@@ -84,6 +84,26 @@ export const protectedByTraffic: Record<string, string> = {
   '/zinc': '1 click @30.86 (28 d)',
   '/materiel-de-musculation': '5 clicks / 77 impressions @10.13 (28 d), 11 clicks @9.87 (3 m) — the gear family’s best page',
   '/accessoires': '1 click @12.15 (28 d), 3 clicks (3 m) — and it holds the earning gear PDPs (dip-belt 42 clicks / 3 m, bandes-de-poignet 18, gant-de-fitness 9)',
+  /*
+   * ── ADDED 23/09/2026: SIX URLs THIS LIST WAS ALREADY MEANT TO COVER, AND DID NOT ─────────────
+   * Measured with a Googlebot UA against production: all six answered 200 and `noindex, follow`
+   * while earning search traffic. The cause was `nothingBuyableHere` in the category route, which
+   * noindexes any listing whose first page is entirely out of stock and never consulted this map —
+   * /mineraux was ALREADY a key here and was noindexed anyway, which is what proved the list was
+   * decorative at that call site rather than enforced.
+   *
+   * Out-of-stock PRODUCTS stay indexable, per Google's own guidance, because they hold long-tail
+   * and stock returns. A CATEGORY of them with measured demand is the same case: /barres-proteinees
+   * sits on page one at 10.3 with 157 impressions, and noindexing it trades a page-one listing for
+   * nothing. Demand outranks stock here; `publishedTotal === 0` — nothing published at all — is a
+   * different rule and still noindexes, correctly.
+   */
+  '/caseine': '5 clicks / 30 impressions @13.4 (28 d) — was noindexed by the out-of-stock rule',
+  '/barres-proteinees': '157 impressions @10.3 (28 d) — page one, zero clicks only because it was noindex',
+  '/hmb': '1 click / 23 impressions @7.5 (28 d) — best position in the amino family after /eaa',
+  '/articulations': '1 click (28 d)',
+  '/cla': '1 click / 2 impressions @22.0 (28 d)',
+  '/glucides': '4 clicks / 126 impressions @55.1 (28 d) — the surviving half of the duplicate carbohydrate shelf',
 };
 
 export const commercialSeoMap: Record<string, CommercialCluster> = {

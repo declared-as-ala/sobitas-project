@@ -1,3 +1,4 @@
+import { taxonomyAncestors, taxonomyLabel, taxonomyNode } from '@/config/catalogTaxonomy';
 import type { Product, SubCategory } from '@/types';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
@@ -233,34 +234,62 @@ export function isProductInSubCategory(product: Product, claimedSubCategorySlug:
 /**
  * Get the full breadcrumb trail for a product.
  * Returns array of { name, url } objects.
+ *
+ * ── THE TRAIL FOLLOWS THE DECLARED TAXONOMY, NOT THE API's PARENT COLUMN ─────────────────────
+ * This used to read `subCategory.categorie` — the parent row in the back office — and render
+ * `designation_fr` straight out of the database. Both were wrong in ways that only show up once
+ * you put two pages side by side:
+ *
+ *   1. The database parent is not the commercial parent. `glutamine` and `hmb` are filed under
+ *      SANTÉ & VITALITÉ next to Ashwagandha and Zinc, so a glutamine PDP announced
+ *      "Accueil > Boutique > SANTÉ & VITALITÉ > Glutamine" while the category page one click away
+ *      now says "Accueil > Boutique > Performance > Acides aminés > Glutamine". One URL cannot
+ *      belong to two hierarchies; a crawler reading both learns neither.
+ *   2. `designation_fr` is stored shouted and with a trailing space ("PROTÉINES "), and the tree
+ *      has a level the API does not model at all — `acides-amines` is the PARENT of bcaa, eaa,
+ *      citrulline, l-arginine, beta-alanine, glutamine and hmb, but the API lists it as their
+ *      sibling.
+ *
+ * So the ancestors and the labels both come from `catalogTaxonomy`, which is the same source the
+ * category route, the crawler views and the header now read. The API is still the fallback for any
+ * slug the tree does not know, so a shelf added in the back office this morning still gets a trail
+ * — one level deep, from its own parent row — instead of losing its breadcrumb entirely.
  */
 export function getProductBreadcrumbs(product: Product): Array<{ name: string; url: string }> {
   const breadcrumbs: Array<{ name: string; url: string }> = [
     { name: 'Accueil', url: '/' },
     { name: 'Boutique', url: '/shop' },
   ];
-  
+
   const subCategory = getProductPrimarySubCategory(product);
-  
-  if (subCategory?.categorie) {
-    breadcrumbs.push({
-      name: subCategory.categorie.designation_fr || subCategory.categorie.slug,
-      url: `/${urlSlug(subCategory.categorie.slug)}`,
-    });
+  const subSlug = subCategory?.slug ? urlSlug(subCategory.slug) : '';
+
+  if (subSlug && taxonomyNode(subSlug)) {
+    for (const ancestor of taxonomyAncestors(subSlug)) {
+      breadcrumbs.push({ name: ancestor.label, url: `/${ancestor.slug}` });
+    }
+    breadcrumbs.push({ name: taxonomyLabel(subSlug), url: `/${subSlug}` });
+  } else {
+    // Unknown to the tree: fall back to exactly what this function did before.
+    if (subCategory?.categorie) {
+      breadcrumbs.push({
+        name: String(subCategory.categorie.designation_fr || subCategory.categorie.slug).trim(),
+        url: `/${urlSlug(subCategory.categorie.slug)}`,
+      });
+    }
+    if (subSlug) {
+      breadcrumbs.push({
+        name: String(subCategory?.designation_fr || subSlug).trim(),
+        url: `/${subSlug}`,
+      });
+    }
   }
 
-  if (subCategory?.slug) {
-    breadcrumbs.push({
-      name: subCategory.designation_fr || subCategory.slug,
-      url: `/${urlSlug(subCategory.slug)}`,
-    });
-  }
-  
   breadcrumbs.push({
     name: product.designation_fr || product.slug,
     url: buildProductUrlPath(product),
   });
-  
+
   return breadcrumbs;
 }
 

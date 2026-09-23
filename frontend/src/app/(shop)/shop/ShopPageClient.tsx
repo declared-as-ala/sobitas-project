@@ -1,5 +1,6 @@
 'use client';
 
+import { taxonomyAncestors, taxonomyChildren, taxonomyLabel, taxonomyNode } from '@/config/catalogTaxonomy';
 import { categoryAnchor } from '@/util/categoryAnchor';
 import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { useState, useMemo, useEffect, useRef, Suspense } from 'react';
@@ -490,8 +491,27 @@ function ShopContent({
   // subcategories are otherwise only reachable through filter checkboxes (client state) or bot-only
   // markup, so they were never real anchors in the human DOM. Rendered as on-system pills below the
   // SEO hero so search engines can discover/relate the subcategory pages.
+  /*
+    ── ONE CHILD LIST PER RAYON PAGE, AND IT IS THE DECLARED ONE ────────────────────────────────
+    The category route renders `TaxonomyChildNav` from `catalogTaxonomy` on any slug with declared
+    children: grouped, in commercial order, with the `nav:false` shelves included because a rayon
+    page is exactly where a currently-unbuyable shelf stays reachable. This block builds a second
+    list on the same page from the API's flat `sous_categories`.
+
+    Two lists is worse than either alone. They disagree — the API has no group level, so
+    /performance would show a flat ten beside a grouped eleven — and the count beside the heading
+    ("10 catégories") would contradict the list under it. For a crawler it is the same links
+    twice under two different statements of structure, on the page whose entire job in this pass
+    is to state the structure once.
+
+    So a slug the tree declares hands this off to `TaxonomyChildNav` and renders nothing here. A
+    slug the tree does NOT know — a rayon added in the back office since the last deploy — still
+    gets this list, exactly as before, which is also the case `check-taxonomy.mjs` rule T2 exists
+    to make rare.
+  */
   const topCategorySubcategories = useMemo(() => {
     if (isSubcategory || !initialCategory) return [];
+    if (taxonomyChildren(initialCategory).length > 0) return [];
     const cat = categories.find((c) => c.slug === initialCategory);
     return (cat?.sous_categories ?? []).filter((s) => Boolean(s?.slug) && Boolean(s?.designation_fr));
   }, [categories, initialCategory, isSubcategory]);
@@ -1380,14 +1400,51 @@ function ShopContent({
         {/* Breadcrumbs */}
         {(() => {
           const breadcrumbItems = [];
-          breadcrumbItems.push({ label: 'Boutique', href: '/shop' });
-          
+          /*
+            ── A BRAND PAGE SAYS "MARQUES", NOT "BOUTIQUE" ───────────────────────────────────────
+            Every root-level slug on this site looks alike to a crawler: /creatine is a category,
+            /optimum-nutrition is a brand, /prise-de-masse is a rayon, and the URL alone says
+            nothing about which. Competitors avoid the ambiguity with /brand/ and /category/
+            prefixes; we are not moving 570 brand URLs to buy that — /optimum-nutrition earns 47
+            clicks and 1,614 impressions and is the third best page on the site.
+            The breadcrumb states the type instead, for free and with no URL change:
+            "Accueil › Marques › Optimum Nutrition" against "Accueil › Boutique › Créatine".
+            /brands is a real hub listing all 570, so the crumb is a genuine parent, not a label.
+          */
+          const isBrandView = Boolean(initialBrand);
+          breadcrumbItems.push(
+            isBrandView
+              ? { label: 'Marques', href: '/brands' }
+              : { label: 'Boutique', href: '/shop' }
+          );
+
           if (initialBrand) {
             const brand = brands.find(b => b.id === initialBrand) || safeProductsData.brands.find(b => b.id === initialBrand);
             if (brand) {
               breadcrumbItems.push({ label: brand.designation_fr });
             }
+          } else if (initialCategory && taxonomyNode(initialCategory)) {
+            /*
+              ── THE VISIBLE TRAIL AND THE JSON-LD TRAIL MUST BE THE SAME SENTENCE ──────────────
+              This branch used to walk `parentCategory` — the back office's parent row — while the
+              BreadcrumbList a few hundred pixels above it now walks `taxonomyAncestors`. On
+              /glutamine that is the difference between "Santé & vitalité › Glutamine" on screen
+              and "Performance › Acides aminés › Glutamine" in the markup: two answers to "where
+              does this page sit", on one URL, in one response. The tree also carries a level the
+              API does not model at all — acides-amines is the PARENT of bcaa, eaa, citrulline,
+              l-arginine, beta-alanine, glutamine and hmb, and the API calls it their sibling.
+              So both trails read `catalogTaxonomy` and neither reads `designation_fr`, which is
+              stored shouted and with a trailing space.
+            */
+            for (const ancestor of taxonomyAncestors(initialCategory)) {
+              breadcrumbItems.push({ label: ancestor.label, href: `/${ancestor.slug}` });
+            }
+            breadcrumbItems.push({
+              label: categoryBreadcrumbLabel?.trim() || taxonomyLabel(initialCategory),
+            });
           } else if (initialCategory) {
+            // Not in the declared tree (a shelf added in the back office since the last deploy):
+            // exactly the behaviour this block had before, so it still gets a trail.
             const category = categories.find(c => c.slug === initialCategory);
             if (category) {
               breadcrumbItems.push({

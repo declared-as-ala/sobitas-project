@@ -58,6 +58,34 @@ import { buildBrandIntroHtml } from '@/util/brandIntro';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
+/*
+ * ── THE HIERARCHY COMES FROM THE DECLARED TREE, NOT FROM THE API PAYLOAD ─────────────────────
+ * Everything below that draws a category link reads src/config/catalogTaxonomy.ts, for the same
+ * reason the human category route now does: the API's tree is a stock-keeping convenience, and on
+ * the one render Google reads it was stating relationships that are wrong. Measured live as
+ * Googlebot on 23/09/2026 (?__crawler=1 forces this route past the CDN's URL-keyed cache):
+ *
+ *     /creatine    Accueil > Boutique > PERFORMANCE > Créatine          10/56 taxonomy URLs
+ *     /glutamine   Accueil > Boutique > SANTÉ & VITALITÉ > Glutamine    13/56
+ *
+ * Two defects in four crumbs. Glutamine is an amino acid filed next to Ashwagandha, so the trail
+ * told Google the wrong parent outright; and both parents were the raw shouted `designation_fr`
+ * ("PERFORMANCE"), which is a shelf label from the back office rather than anything a buyer types.
+ *
+ * PARITY IS THE POINT, NOT A SIDE EFFECT. middleware rewrites crawler UAs here, so this route and
+ * app/(shop)/category/[slug] render the same URL for two different agents. If one states a
+ * hierarchy and the other states another, that is cloaking, and it is a worse outcome than leaving
+ * the tree flat. Both read these helpers now, so neither holds a second copy of the shape.
+ */
+import {
+  taxonomyLabel,
+  taxonomyAncestors,
+  taxonomyChildren,
+  taxonomySiblings,
+  inGlobalNav,
+  taxonomyFlatten,
+  type TaxonomyNode,
+} from '@/config/catalogTaxonomy';
 
 // Own ISR cache namespace, keyed by /x-crawler/category/{slug}.
 export const revalidate = 300;
@@ -135,6 +163,62 @@ function resolveRelatedCategoryLinks(slugs: string[], categories: Category[]): C
     }
   }
   return out;
+}
+
+/**
+ * A declared subtree as crawlable links, depth-first: every group node is followed immediately by
+ * its own children, so the flat `<ul>` CrawlerCategoryView renders still READS as the four themes
+ * under /sante-vitalite and the seven aminos under /acides-amines rather than as nineteen
+ * unexplained siblings.
+ *
+ * GROUPING IS EXPRESSED BY ORDER BECAUSE THAT IS THE ONLY CHANNEL THIS ROUTE HAS. The view takes
+ * `CrawlerListLink[]` ({ name, url }) and owns its own markup; it is shared with the human-facing
+ * brand render and is not this batch's to change. Order and anchor text are what a crawler reads
+ * off a link list anyway, and both are identical to the tree — so nothing is lost but indentation,
+ * and no second copy of the hierarchy is created to drift.
+ *
+ * `nav: false` children ARE included, deliberately. That flag withholds a slot in the header that
+ * renders on every page of the site; it is not a deletion, and the rayon page is precisely where
+ * those nine listings stay one click from their parent. The human rayon page includes them too.
+ *
+ * Labels come from taxonomyLabel() and hrefs from canonicalCategoryPath(), never from
+ * `designation_fr` — see the shouted "PERFORMANCE" measured above. None of the 56 slugs is in the
+ * redirect map canonicalCategoryPath consults, so this resolves to `/{slug}` unchanged: no URL in
+ * this file moves.
+ */
+function taxonomyTreeLinks(nodes: TaxonomyNode[]): CrawlerListLink[] {
+  // Flattening lives in catalogTaxonomy (`taxonomyFlatten`); this only projects it into links.
+  return taxonomyFlatten(nodes).map((node) => ({
+    name: taxonomyLabel(node.slug),
+    url: canonicalCategoryPath(node.slug),
+  }));
+}
+
+/**
+ * The lateral rail's declared default — THE EXACT TWIN of `declaredSiblingSlugs` in
+ * app/(shop)/category/[slug]/page.tsx, down to the filter and the cap.
+ *
+ * Both clauses are load-bearing for parity and neither is this route's own idea:
+ *   `inGlobalNav`  — a shelf with nothing buyable on it is not handed a link from a page that
+ *                    ranks. Without it, /creatine's crawler rail would carry /intra-workout and
+ *                    /post-workout — two `noindex` URLs — that the human rail does not, which is
+ *                    two link graphs for one URL under two user agents. That is the cloaking
+ *                    shape, and it is the precise thing this batch exists to remove.
+ *   `.slice(0, 6)` — resolveRelatedCategoryLinks slices there anyway; stating it here keeps the
+ *                    two files readable as the copies they are.
+ *
+ * `nav: false` nodes are still linked as CHILDREN from their own rayon page (taxonomyTreeLinks
+ * above passes them through), which is the half of the bargain that keeps them reachable. Being
+ * withheld from a SIBLING rail is not the same as being dropped from the tree.
+ *
+ * Returns [] for a slug the tree does not declare, so the API-derived fallback below survives for
+ * brand and legacy shelf pages — again, exactly as the human route does it.
+ */
+function declaredSiblingSlugs(slug: string): string[] {
+  return taxonomySiblings(slug)
+    .filter((n) => inGlobalNav(n.slug))
+    .map((n) => n.slug)
+    .slice(0, 6);
 }
 
 async function hasCategoryOrSubCategory(slug: string): Promise<boolean> {
@@ -367,11 +451,28 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const longBottomHtml = merged.longBottomHtml?.trim()
       ? sanitizeProductHtml(merged.longBottomHtml)
       : null;
-    const subCats: CrawlerListLink[] = !isSub
-      ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
-          .filter((sc) => sc?.slug && sc?.designation_fr)
-          .map((sc) => ({ name: sc.designation_fr as string, url: canonicalCategoryPath(sc.slug) }))
-      : [];
+    /*
+     * ── THE DECLARED SUBTREE, WHICH IS NOT ALWAYS THE API'S `sous_categories` ─────────────────
+     * The old condition was `!isSub`, so only the six rayons ever listed children. That is the
+     * API's shape, and it is wrong in the one place it matters most: /acides-amines is typed as a
+     * SUBcategory upstream while actually being the parent of bcaa, eaa, glutamine, citrulline,
+     * l-arginine, beta-alanine and hmb — seven URLs that consequently appeared nowhere on their
+     * own parent's page. /vitamines, /collagene, /immunite and /boosters-hormonaux are the same
+     * case under /sante-vitalite.
+     *
+     * So the gate is now "does the declared tree give this slug children", whatever the API calls
+     * it. A slug outside the taxonomy (there are none among the 56 today, but a new shelf appears
+     * in the API before it is declared here) keeps the previous behaviour exactly rather than
+     * silently losing its child links.
+     */
+    const taxonomyChildLinks = taxonomyTreeLinks(taxonomyChildren(cleanSlug));
+    const subCats: CrawlerListLink[] = taxonomyChildLinks.length
+      ? taxonomyChildLinks
+      : !isSub
+        ? (((data as { sous_categories?: Array<{ slug?: string; designation_fr?: string }> }).sous_categories) ?? [])
+            .filter((sc) => sc?.slug && sc?.designation_fr)
+            .map((sc) => ({ name: sc.designation_fr as string, url: canonicalCategoryPath(sc.slug) }))
+        : [];
 
     // Parent category in the trail for a SUBcategory. Without it the crawler breadcrumb jumped
     // Accueil > Boutique > Créatine, losing the only structural link from a subcategory up to its
@@ -387,42 +488,95 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
       ? (data as { sous_category?: { categorie?: { slug?: string; designation_fr?: string } } })
           .sous_category?.categorie
       : undefined;
+    /*
+     * ── EVERY ANCESTOR, NOT JUST THE API'S IMMEDIATE PARENT ───────────────────────────────────
+     * The trail is Accueil > Boutique > each declared ancestor > this page, which is what the
+     * human route builds from the same helper. Two things change against the payload-derived
+     * trail above it:
+     *
+     *   /glutamine   was  Accueil > Boutique > SANTÉ & VITALITÉ > Glutamine
+     *                now  Accueil > Boutique > Performance > Acides aminés > Glutamine
+     *
+     * — the right parent, and a THREE-level trail where the API can only ever describe two,
+     * because `sous_category.categorie` is a single hop and the group layer does not exist in it.
+     * The crumb text is the declared label, so "PERFORMANCE" stops being the name Google reads for
+     * /performance in the BreadcrumbList this route emits.
+     *
+     * The page's own crumb is untouched: it keeps `merged.breadcrumbLabel` precedence so the
+     * curated short label still wins over a 50-character H1, and it stays the non-linked
+     * `aria-current` entry. Nothing here changes a URL, a canonical or a status code.
+     *
+     * The gate is `ancestors.length > 0`, NOT "is this slug declared" — the twin of
+     * `declaredAncestorCrumbs(slug, apiFallback)` in the human route. A rayon is declared and has
+     * no ancestors, and both files must hand that case to the same fallback rather than one
+     * returning [] while the other returns the API parent.
+     */
+    const declaredAncestors = taxonomyAncestors(cleanSlug);
+    const taxonomyTrail: CrawlerListLink[] = declaredAncestors.length
+      ? declaredAncestors.map((a) => ({
+          name: taxonomyLabel(a.slug),
+          url: canonicalCategoryPath(a.slug),
+        }))
+      : parentCat?.slug && parentCat?.designation_fr
+        ? // .trim(): the stored value is "PROTÉINES " with a trailing space.
+          [{ name: parentCat.designation_fr.trim(), url: canonicalCategoryPath(parentCat.slug) }]
+        : [];
     const breadcrumbs: CrawlerListLink[] = [
       { name: 'Accueil', url: '/' },
       { name: 'Boutique', url: '/shop' },
-      ...(parentCat?.slug && parentCat?.designation_fr
-        ? // .trim(): the stored value is "PROTÉINES " with a trailing space.
-          [{ name: parentCat.designation_fr.trim(), url: canonicalCategoryPath(parentCat.slug) }]
-        : []),
+      ...taxonomyTrail,
       // Same precedence as the human route: the short taxonomy label, not the 50-character H1.
       // A breadcrumb rich result showing "Créatine monohydrate en Tunisie : prix et formats"
       // where the browser render says "Créatine" is two entities for one URL.
       { name: merged.breadcrumbLabel?.trim() || title, url: `/${cleanSlug}` },
     ];
 
-    // Related categories — the same list, with the same anchors and the same fallbacks, as the
-    // human page. Two things were missing and both cost link equity on the only render Google
-    // reads: the anchors were slug words ("gainers proteines", "sante vitalite") instead of the
-    // category names, and an UNCURATED subcategory (21 under /sante-vitalite alone) got no list at
-    // all — so with the dead parent crumb above it linked to no category whatsoever.
+    // Related categories — the same list, with the same anchors, as the human page. Two earlier
+    // defects are preserved as fixed below: the anchors were slug words ("gainers proteines",
+    // "sante vitalite") instead of names, and an UNCURATED subcategory (21 under /sante-vitalite
+    // alone) got no list at all, so it linked to no category whatsoever.
     const categories = await getCachedCategories().catch(() => [] as Category[]);
     const curatedSlugs = (merged.relatedCategorySlugs ?? [])
       .map((s) => String(s ?? '').trim())
       .filter((s) => s && s.toLowerCase() !== cleanSlug.toLowerCase());
-    // Mirrors app/(shop)/category/[slug]/page.tsx: siblings + parent for a subcategory, the other
-    // top categories for a category.
+    /*
+     * ── THE SAME THREE-TIER PRECEDENCE THE HUMAN ROUTE USES, IN THE SAME ORDER ────────────────
+     * curated → declared siblings → API-derived. Copied deliberately rather than improved on:
+     * this route and app/(shop)/category/[slug] render ONE URL for two user agents, so the rail
+     * they draw has to resolve to the same slugs from the same inputs. A "better" rule here is a
+     * divergence, whatever it is better at.
+     *
+     *   1. A curated `relatedCategorySlugs` still wins — an editor who chose six links for a page
+     *      knows more than any rule in this file.
+     *   2. Uncurated, `declaredSiblingSlugs` gives the cluster under the SAME declared parent:
+     *      /creatine reaches /pre-workout and /acides-amines, /glutamine reaches its fellow amino
+     *      acids rather than Ashwagandha and Zinc. Measured live on 23/09/2026, /creatine linked
+     *      none of them and /glutamine reached /acides-amines only through curated prose.
+     *   3. Undeclared slugs keep the payload-derived list below, unchanged.
+     *
+     * Names still come from resolveRelatedCategoryLinks → categoryAnchor(slug, designation_fr),
+     * NOT from taxonomyLabel, because that is what the human rail does. Where this route owns the
+     * label outright — the ancestor crumbs, the child tree, the /shop tree — it is taxonomyLabel
+     * and never a raw `designation_fr`. Here, matching the other render wins.
+     */
     const relatedSlugs = curatedSlugs.length
       ? curatedSlugs
-      : isSub
-        ? (() => {
-            const parentSlug = parentCat?.slug;
-            const parent = parentSlug ? categories.find((c) => c.slug === parentSlug) : undefined;
-            const siblingSlugs = (parent?.sous_categories ?? [])
-              .map((sc: SubCategory) => sc.slug)
-              .filter((s): s is string => Boolean(s) && s.toLowerCase() !== cleanSlug.toLowerCase());
-            return (parentSlug ? [...siblingSlugs, parentSlug] : siblingSlugs).slice(0, 6);
-          })()
-        : categories.filter((c) => c.slug !== cleanSlug).slice(0, 6).map((c) => c.slug);
+      : (() => {
+          const declared = declaredSiblingSlugs(cleanSlug);
+          if (declared.length > 0) return declared;
+          // Mirrors app/(shop)/category/[slug]/page.tsx: siblings + parent for a subcategory, the
+          // other top categories for a category.
+          return isSub
+            ? (() => {
+                const parentSlug = parentCat?.slug;
+                const parent = parentSlug ? categories.find((c) => c.slug === parentSlug) : undefined;
+                const siblingSlugs = (parent?.sous_categories ?? [])
+                  .map((sc: SubCategory) => sc.slug)
+                  .filter((s): s is string => Boolean(s) && s.toLowerCase() !== cleanSlug.toLowerCase());
+                return (parentSlug ? [...siblingSlugs, parentSlug] : siblingSlugs).slice(0, 6);
+              })()
+            : categories.filter((c) => c.slug !== cleanSlug).slice(0, 6).map((c) => c.slug);
+        })();
     // A transient taxonomy failure (429 on the shared per-IP bucket, 5xx) must not delete the
     // lateral links; fall back to the previous slug-derived anchors rather than to nothing.
     const relatedCategories: CrawlerListLink[] = categories.length

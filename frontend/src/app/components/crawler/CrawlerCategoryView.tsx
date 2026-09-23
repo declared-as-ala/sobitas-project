@@ -188,15 +188,31 @@ export function CrawlerCategoryView({
       {/* Breadcrumbs */}
       <nav aria-label="Fil d'Ariane" className="mb-6 text-sm">
         <ol className="flex flex-wrap gap-1">
+          {/*
+            ── THE CRUMB NAME IS RENDERED AS GIVEN. NO `categoryAnchor` HERE ────────────────────
+            `categoryAnchor` turns a slug into a commercial anchor — "Protéines en Tunisie" for
+            `proteines` — which is the right thing for an in-copy link and the wrong thing for a
+            breadcrumb. It was rewriting every crumb, so this bot-only view announced
+            "Accueil › Boutique › Protéines en Tunisie › Whey protéine" while the BreadcrumbList
+            JSON-LD on the same response said "Protéines", and the shopper's render said
+            "Protéines" too.
+
+            Google reads a BreadcrumbList against the trail it can see; a visible trail that
+            disagrees with its own markup is the defect, and a bot render that disagrees with the
+            human render on the same URL is the worse one — this view exists to be identical to
+            the shopper's page, not to be a better-optimised version of it. The names arriving in
+            `breadcrumbs` are already the declared `catalogTaxonomy` labels, built by the same
+            helper the human route uses.
+          */}
           {breadcrumbs.map((b, i) => (
             <li key={`${b.url}-${i}`} className="flex items-center gap-1">
               {i > 0 && <span aria-hidden>›</span>}
               {i < breadcrumbs.length - 1 ? (
                 <a href={b.url} className="text-red-700 underline">
-                  {categoryAnchor(b.url.replace(/^\//, ''), b.name)}
+                  {b.name}
                 </a>
               ) : (
-                <span aria-current="page">{categoryAnchor(b.url.replace(/^\//, ''), b.name)}</span>
+                <span aria-current="page">{b.name}</span>
               )}
             </li>
           ))}

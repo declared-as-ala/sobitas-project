@@ -7,6 +7,8 @@ import { getBaseUrl } from '@/util/canonical';
 import { buildShopSchemas, shopCanonicalPath } from '@/util/shopJsonLd';
 import { parseShopQuery, buildShopUrl, SHOP_PER_PAGE, type RawSearchParams } from '@/util/shopQuery';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
+import { navTaxonomy, taxonomyFlatten, taxonomyLabel, type TaxonomyNode } from '@/config/catalogTaxonomy';
+import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
 
 /**
  * Crawler view of /shop — the boutique, for bots.
@@ -54,6 +56,31 @@ import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/craw
 // attributes in CrawlerCategoryView are all Bing needs). A comment that describes protection the
 // code does not provide is worse than no comment.
 export { generateMetadata } from '@/app/(shop)/shop/page';
+
+/**
+ * The header's view of the tree, flattened depth-first into crawlable links: each rayon followed
+ * by its own children, each group followed by its own leaves.
+ *
+ * A DELIBERATE COPY of the identical helper in x-crawler/category/[slug]/page.tsx, on the same
+ * rule as COMPARISON_SLUGS in CrawlerCategoryView: neither route file may add a shared module in
+ * this batch, and six lines duplicated is cheaper than a route importing another route's page
+ * module. Both read catalogTaxonomy.ts, so the DATA has one home — which is the property that
+ * matters. Edit them together.
+ *
+ * `navTaxonomy()` and not `catalogTaxonomy`: this list is the boutique's own index, and the ten
+ * `nav: false` slugs are the ones whose shelves hold nothing purchasable (/probiotiques,
+ * /post-workout, /vetements …). They are `noindex, follow` on purpose and stay one click from
+ * their rayon page; putting them back in the site's largest link list would undo that on the one
+ * render that decides it. The six that DO earn clicks — /caseine, /barres-proteinees, /hmb,
+ * /mineraux, /articulations, /cla — are `nav: true` in the tree and all appear here.
+ */
+function navTreeLinks(nodes: TaxonomyNode[]): CrawlerListLink[] {
+  // Flattening lives in catalogTaxonomy (`taxonomyFlatten`); this only projects it into links.
+  return taxonomyFlatten(nodes).map((node) => ({
+    name: taxonomyLabel(node.slug),
+    url: canonicalCategoryPath(node.slug),
+  }));
+}
 
 type PageProps = { searchParams: Promise<RawSearchParams> };
 
@@ -123,11 +150,22 @@ export default async function CrawlerShopPage({ searchParams }: PageProps) {
     baseUrl: getBaseUrl(),
   });
 
-  const categoryLinks: CrawlerListLink[] = (categories ?? [])
-    .filter((c): c is typeof c & { slug: string; designation_fr: string } =>
-      Boolean(c?.slug && c?.designation_fr)
-    )
-    .map((c) => ({ name: c.designation_fr.trim(), url: `/${c.slug}` }));
+  /*
+   * ── THE WHOLE TREE, BECAUSE THIS RENDER HAS NO MEGA-MENU TO INHERIT IT FROM ────────────────
+   * This listed the API's six top-level categories by their raw `designation_fr` — the shouted
+   * shelf names ("SANTÉ & VITALITÉ") — and nothing below them. Measured live as Googlebot on
+   * 23/09/2026, /shop?__crawler=1 reached 10 of the 56 taxonomy URLs, and every one of those ten
+   * came from the header, the footer or editorial prose rather than from this list.
+   *
+   * A shopper never sees that gap: ProductsDropdown holds one rayon's children in the DOM at a
+   * time and they hover to the rest. A crawler gets exactly one render, so the 37 URLs behind that
+   * hover were reachable only by first landing on a rayon page. This route is the one place that
+   * can simply state the tree, so it does — 46 links, rayon then children, in declared order.
+   *
+   * Names through taxonomyLabel() and hrefs through canonicalCategoryPath(): no raw
+   * `designation_fr`, and not one URL changes — none of the 56 slugs is in the redirect map.
+   */
+  const categoryLinks: CrawlerListLink[] = navTreeLinks(navTaxonomy());
 
   return (
     <>

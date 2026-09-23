@@ -56,10 +56,21 @@ export function buildBrandLandingSchemas({
     brandSeo?.metaDescription ||
     `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
 
+  /*
+   * "Marques", not "Boutique" — and the same change is made in ShopPageClient so the visible trail
+   * and this one stay the same sentence.
+   *
+   * Every root-level slug here looks alike to a crawler: /creatine is a category,
+   * /optimum-nutrition is a brand, /prise-de-masse is a rayon, and nothing in the URL distinguishes
+   * them. Competitors buy that distinction with /brand/ and /category/ prefixes. We are not moving
+   * 570 brand URLs for it — /optimum-nutrition earns 47 clicks and 1,614 impressions and is the
+   * third best page on the site, so its URL does not change. The breadcrumb states the type
+   * instead, and /brands is a real hub listing all 570, so the crumb is a genuine parent.
+   */
   const breadcrumb = buildBreadcrumbListSchema(
     [
       { name: 'Accueil', url: '/' },
-      { name: 'Boutique', url: '/shop' },
+      { name: 'Marques', url: '/brands' },
       { name: brand.designation_fr, url: path },
     ],
     baseUrl,

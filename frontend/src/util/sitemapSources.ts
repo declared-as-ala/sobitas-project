@@ -1,5 +1,6 @@
 import type { MetadataRoute } from 'next';
 
+import { inGlobalNav, taxonomyNode } from '@/config/catalogTaxonomy';
 import { CATEGORY_CONTENT_DATES } from '@/generated/categoryContentDates';
 import { getApiPage, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
@@ -828,6 +829,8 @@ const taxonomySource: SitemapSource = {
      * counted, and said out loud on every build until the route is fixed.
      */
     const submittedButPageNoindexes: string[] = [];
+    /** Slugs the declared taxonomy marks `nav: false` — nothing buyable, so nothing to submit. */
+    const withheldNotInNav: string[] = [];
 
     for (const category of ctx.categories) {
       if (!category.slug) continue;
@@ -885,6 +888,36 @@ const taxonomySource: SitemapSource = {
         }
 
         /*
+         * ── THE DECLARED TAXONOMY IS NOW THE AUTHORITY THIS SOURCE WAS MISSING ──────────────────
+         * The comment above says dropping the noindexed listings by name would "encode the defect
+         * in the sitemap", and while the only available list was a hand-written guess that was
+         * true. It no longer is: `src/config/catalogTaxonomy.ts` declares every one of the 56 live
+         * taxonomy slugs, and `nav: false` marks the ones whose shelves hold nothing buyable. That
+         * list is version-controlled, carries a per-slug reason, and is checked on every build by
+         * scripts/check-taxonomy.mjs — including the rule that a slug earning clicks or impressions
+         * may NEVER be marked `nav: false`.
+         *
+         * So a `nav: false` slug is withheld here, because submitting a URL while serving it
+         * `noindex` is two contradictory instructions about the same page — "crawl this, it
+         * matters" and "do not index this" — and Search Console files it under "Submitted URL
+         * marked noindex" rather than resolving it.
+         *
+         * Withheld, not retired. The URL still answers 200, still sits under its rayon, still holds
+         * its products' breadcrumb parent, and is still linked from its rayon page. The day stock
+         * returns it flips to `nav: true` and rejoins the sitemap with no other intervention —
+         * the same self-correcting property as the zero-products rule above.
+         *
+         * Measured 23/09/2026: 15 of the URLs in listings.xml served `noindex, follow`. Six of them
+         * earn search traffic (/caseine 5 clicks @13.4, /barres-proteinees 157 impressions @10.3,
+         * /hmb, /mineraux, /articulations, /cla) — those are `nav: true`, the category route has
+         * been fixed to stop noindexing them, and they stay submitted. The rest are withheld here.
+         */
+        if (taxonomyNode(slug) && !inGlobalNav(slug)) {
+          withheldNotInNav.push(slug);
+          continue;
+        }
+
+        /*
          * What the LIVE page would answer for this URL right now. Counted, never acted on — see the
          * warning below.
          */
@@ -907,11 +940,12 @@ const taxonomySource: SitemapSource = {
       console.warn(
         `[sitemap] taxonomy: ${submittedButPageNoindexes.length} subcategory URL(s) are submitted here ` +
         `but the category route serves them "noindex, follow" — "Submitted URL marked noindex" in ` +
-        `Search Console, one row each: ${submittedButPageNoindexes.join(', ')}. This is a defect in ` +
-        `app/(shop)/category/[slug]/page.tsx, NOT in the sitemap: its subProductCount reads ` +
-        `products.length off a ?meta_only=1 payload that always returns an empty array, so every ` +
-        `subcategory without a content/categories/*.json file is noindexed however much it stocks. ` +
-        `Fix the route; do not silence this by dropping the URLs.`
+        `Search Console, one row each: ${submittedButPageNoindexes.join(', ')}. ` +
+        `The original cause — subProductCount read off an always-empty ?meta_only=1 payload — was ` +
+        `fixed in 9c9dc83d, and the nav:false slugs are now withheld above, so anything still ` +
+        `listed here is a NEW disagreement between the route and this file. Fix the route, or ` +
+        `mark the slug nav:false in src/config/catalogTaxonomy.ts with its reason. Do not silence ` +
+        `this by dropping the URLs.`
       );
     }
 
@@ -925,6 +959,8 @@ const taxonomySource: SitemapSource = {
         `category row(s) (${datedByContentFile} dated by their content file, ` +
         `${droppedNothingInStock} withheld with nothing in stock` +
         `${ctx.sawProductStockSignal ? '' : ' — stock not visible in this crawl, gate inert'}, ` +
+        `${withheldNotInNav.length} withheld as nav:false in the declared taxonomy` +
+        `${withheldNotInNav.length > 0 ? ` [${withheldNotInNav.join(', ')}]` : ''}, ` +
         `${submittedButPageNoindexes.length} submitted that the page currently noindexes)`,
     };
   },
