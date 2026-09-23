@@ -2,13 +2,57 @@
  * SEO overlay for target blog articles: FAQs + internal links with keyword anchors.
  * When an article slug matches, BlogSeoBlock renders FAQ section and "Lire aussi" links.
  * Create articles in CMS with these slugs to get full SEO benefit.
+ *
+ * ── TWO INVARIANTS THIS FILE IS CHECKED AGAINST ──────────────────────────────────────────────
+ * 1. NO TWO LINKS TO THE SAME URL MAY SHARE ANCHOR TEXT — counting `openingLinkHtml`,
+ *    `bodyLinkHtml` and `internalLinks` together, across every entry. Counted on 23/09/2026 over
+ *    the 73 entries of the last committed version (8ac1410e, 22/09/2026): 190 links, 20 distinct
+ *    (destination, anchor) pairs used more than once, and 106 links repeating a pair already
+ *    used. The worst was "whey protein en Tunisie" pointing at /whey-proteine from 19 different
+ *    entries, 23 occurrences in all. That is a footprint, not a link profile. The same count over
+ *    this file today gives 194 links and 0 repeats; if you add an entry, use a wording nobody
+ *    else uses. (An earlier draft of this comment said "101 repeats" and "20 different articles";
+ *    neither figure reproduces.)
+ * 2. NO HEADLINE, metaDescription OR FAQ ANSWER MAY STATE A DINAR PRICE, and none may claim a
+ *    brand or a label is available unless you have just read it from
+ *    admin.protein.tn/api/productsBySubCategoryId/<slug>. FAQ answers ship as FAQPage structured
+ *    data and a `headline` becomes both the <title> and the visible H1, so the rule covers all
+ *    three fields. It was written for FAQ answers alone, and a Creapure® headline went on
+ *    shipping through that gap after the FAQ answers had been cleaned — hence the wording here.
+ *    Two false prices were removed on 22/09/2026 and four brand/label claims on 23/09/2026.
+ *    RE-VERIFIED 23/09/2026 against admin.protein.tn/api/productsBySubCategoryId/creatine
+ *    (221 products returned, 8 of them with qte > 0 and rupture false): "BSN" matches zero
+ *    products and "Creapure" matches zero products, but "MuscleTech Platinum Creatine" IS listed
+ *    — PLATINUM CREATINE 400G - MUSCLETECH, id 505 — with qte 0 and rupture true. It is LISTED
+ *    BUT OUT OF STOCK. Out of stock is enough to pull a name out of an availability answer;
+ *    "absent from the catalogue" is a different, stronger claim, and writing it when the product
+ *    is merely out of stock is the exact defect this invariant exists to stop. Prices and stock
+ *    move; a method does not. Say how to compare, and link to the page that has the number.
+ *
+ *    Where to check, and one trap. "Creapure matches zero PRODUCTS" is a statement about the
+ *    `products` array of that payload, and it stays true even though a Googlebot fetch of
+ *    https://protein.tn/creatine on 23/09/2026 returns the string "Creapure" 31 times: those
+ *    come from the CATEGORY's editorial copy and FAQ, which live in the admin CMS `seo` block
+ *    (`long_bottom_html` + `faq`) and not in this repo. Read the `products` array, not the page
+ *    text. NOTE FOR WHOEVER OWNS THE CMS: that same seo block still ships, in live FAQPage
+ *    schema on /creatine, "disponible à partir de 29 DT" and "Les formats Creapure® ou les
+ *    grandes quantités (1 kg) offrent le meilleur rapport qualité/prix". Read 23/09/2026: the
+ *    cheapest in-stock creatine of any size is 70 DT, no product carries Creapure, and all
+ *    eleven 1 kg listings have qte 0. It is the same defect as the ones cleaned out of this
+ *    file, one page up, and it cannot be fixed from here.
  */
 export interface BlogSeoEntry {
   /** Optional visible H1/title refresh. The URL remains unchanged to preserve accumulated signals. */
   headline?: string;
   /** Optional search snippet aligned with the refreshed article. */
   metaDescription?: string;
-  /** Contextual link paragraph appended inside the article body; trusted editorial HTML only. */
+  /**
+   * Contextual link paragraph APPENDED at the end of the article body; trusted editorial HTML.
+   * No entry uses it since 23/09/2026 — the first anchor to a URL is the one that is weighed, so
+   * a pillar link belongs in `openingLinkHtml`. Kept because blog/[slug]/page.tsx still renders
+   * it and an article whose link genuinely belongs at the end is a legitimate future case.
+   * Never set both on one entry: that ships two links to the same URL out of one article.
+   */
   bodyLinkHtml?: string;
   /** Commercial pillar paragraph at the opening of the body, before product recommendations. */
   openingLinkHtml?: string;
@@ -40,23 +84,23 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     dateModified: '2026-09-08',
     lang: 'fr',
     faqs: [],
-    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+    internalLinks: [{ anchor: 'les whey protéine de Protein.tn', href: '/whey-proteine' }],
   },
   'protein-the-essential-guide-to-its-benefits-sources-and-role-in-health': {
     headline: "Protéines : leur rôle dans la nutrition et les sources alimentaires",
-    openingLinkHtml: "<p>Pour choisir un produit et comparer les formats et les prix actuels, retrouvez notre sélection de <a href=\"/whey-proteine\">whey protein en Tunisie</a>.</p>",
-    dateModified: '2026-09-08',
+    openingLinkHtml: "<p>Côté compléments, <a href=\"/whey-proteine\">notre sélection de whey</a> réunit les formats et les prix actuels.</p>",
+    dateModified: '2026-09-23',
     lang: 'fr',
     faqs: [],
-    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+    internalLinks: [{ anchor: 'whey protéine : le rayon complet', href: '/whey-proteine' }],
   },
   'whey-protein-et-entrainement-strategies-pour-des-gains-musculaires-optimaux-protein-tn': {
     headline: "Whey et entraînement : comment organiser ses apports en protéines",
-    openingLinkHtml: "<p>Pour choisir un produit et comparer les formats et les prix actuels, retrouvez notre sélection de <a href=\"/whey-proteine\">whey protein en Tunisie</a>.</p>",
-    dateModified: '2026-09-08',
+    openingLinkHtml: "<p>Avant de caler vos prises autour des séances, voyez <a href=\"/whey-proteine\">les whey protéine en stock</a> et leurs formats.</p>",
+    dateModified: '2026-09-23',
     lang: 'fr',
     faqs: [],
-    internalLinks: [{ anchor: 'whey protein en Tunisie', href: '/whey-proteine' }],
+    internalLinks: [{ anchor: 'whey pour l’entraînement', href: '/whey-proteine' }],
   },
   'creatine-monohydrate-tunisie-guide-d-achat-bienfaits-et-meilleures-marques': {
     headline: "Créatine monohydrate : critères de choix et lecture des étiquettes",
@@ -76,7 +120,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     dateModified: '2026-09-08',
     lang: 'fr',
     faqs: [],
-    internalLinks: [{ anchor: 'créatine monohydrate Tunisie', href: '/creatine' }],
+    // The "Lire aussi" anchor is deliberately NOT the exact query: the opening paragraph above
+    // already hands /creatine that exact anchor, and it is the one Google weighs. A second
+    // identical anchor to the same URL from the same page adds a footprint, not a signal.
+    internalLinks: [{ anchor: 'les créatines monohydrate du catalogue', href: '/creatine' }],
   },
   'impact-whey-protein-de-myprotein-avis-avantages-et-mode-d-emploi': {
     metaDescription:
@@ -85,7 +132,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'les autres whey du catalogue', href: '/whey-proteine' },
       { anchor: 'catalogue de protéines', href: '/proteines' },
     ],
   },
@@ -97,7 +144,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'toutes les whey protéine', href: '/whey-proteine' },
     ],
   },
   'cosmetiques-bio-decouvrez-les-meilleurs-produits-naturels-pour-votre-peau': {
@@ -107,7 +154,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'nos compléments protéinés', href: '/proteines' },
     ],
   },
   'parapharmacie-moins-cher-en-tunisie-ou-trouver-les-meilleurs-prix': {
@@ -118,7 +165,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'vitamines et minéraux', href: '/vitamines' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'le rayon protéines', href: '/proteines' },
     ],
   },
   'equipements-cardio-tunisie': {
@@ -132,11 +179,21 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
   },
 
+  /*
+   * 23/09/2026 — the four Arabic creatine articles get the same opening link to /creatine the
+   * French ones have. They are not a separate audience for this purpose: GSC 28 d shows
+   * /blog/ما هو أفضل كرياتين في تونس؟ holding 11 impressions of the LATIN query `creatine tunisie`
+   * at position 9.9, ahead of /creatine itself at 64. An Arabic article that ranks on the head
+   * term the category must own belongs in the same link graph, so it links up like the rest.
+   * Anchors differ from one another and from every French anchor to /creatine.
+   */
   'ما هي الأطعمة التي تحتوي على الكرياتين؟': {
     headline: 'ما هي الأطعمة التي تحتوي على الكرياتين؟ المصادر والكميات',
     metaDescription:
       'تعرف على أهم مصادر الكرياتين الطبيعية مثل اللحوم والأسماك، والفرق بينها وبين مكمل الكرياتين، مع إجابات واضحة قبل اختيار المنتج.',
-    dateModified: '2026-08-31',
+    openingLinkHtml:
+      '<p>إذا لم يكفِ الطعام وحده، يمكنك الاطلاع على <a href="/creatine">مكمل كرياتين بودرة</a> بأحجامه وأسعاره الحالية.</p>',
+    dateModified: '2026-09-23',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن الكرياتين في الطعام',
     linksHeading: 'اقرأ أيضًا عن الكرياتين والبروتين',
@@ -164,7 +221,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     headline: 'فوائد وأضرار الكرياتين: ما الذي تقوله الأدلة؟',
     metaDescription:
       'شرح متوازن لفوائد الكرياتين وآثاره الجانبية والاحتياطات المهمة، ومتى يجب استشارة الطبيب قبل استخدام مكمل الكرياتين.',
-    dateModified: '2026-08-31',
+    openingLinkHtml:
+      '<p>الأنواع المتوفرة وأحجام العبوات والأسعار الحالية على صفحة <a href="/creatine">الكرياتين وأحجام العبوات</a>.</p>',
+    dateModified: '2026-09-23',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن فوائد وأضرار الكرياتين',
     linksHeading: 'معلومات تساعدك قبل الشراء',
@@ -183,7 +242,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أنواع وأسعار الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'أنواع الكرياتين وأحجامه المتوفرة', href: '/creatine' },
       { anchor: 'مصادر الكرياتين في الطعام', href: '/blog/ما هي الأطعمة التي تحتوي على الكرياتين؟' },
       { anchor: 'مكملات غذائية في تونس', href: '/proteines' },
     ],
@@ -215,13 +274,42 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { anchor: 'دليل الكرياتين', href: '/creatine' },
     ],
   },
+  /*
+   * ── The single most valuable gainer URL we own. Handle with the numbers in front of you. ──
+   *
+   * GSC 28 d (Pages.csv, 23/08→19/09): 23 clicks / 697 impressions / pos 5.86. Where they come
+   * from matters more than the total: the click-earning gainer queries in that window are the
+   * Serious Mass long tail — `serious mass 2.7 kg tunisie prix` 11 clicks @2.35,
+   * `serious mass prix tunisie` 1/91/8.24, `optimum nutrition serious mass prix tunisie` 1/15/4.67
+   * — i.e. PRICE + product, not the bare category term. On the category term itself this post
+   * holds `mass gainer tunisie` 0/1/5.0 while /mass-gainers, the owner, sits at 0/12/51.4.
+   *
+   * 23/09/2026 — the headline was "Mass Gainer Prix Tunisie : guide d'achat 2026", which is
+   * `mass gainer prix tunisie` verbatim: an owned term in the gainer cluster. Removing the single
+   * word "Tunisie" removes the claim on all four owned terms (they all carry it) while leaving
+   * "mass gainer", "prix", "guide d'achat" and the year in place, so the price long tail that
+   * actually earns the 23 clicks still matches. That is the smallest edit that resolves the
+   * conflict, and it is a real risk on a page at position 5.86 — measure it, do not assume it.
+   *
+   * The metaDescription is deliberately NOT touched in the same pass. Moving the title and the
+   * snippet together makes the four-week read unattributable — the same reasoning the two
+   * Serious Mass entries below are annotated with.
+   *
+   * The opening anchor stays the exact-match "mass gainer prix Tunisie": this is the first link
+   * on our strongest gainer page and handing the owner the exact term is the point. It is the
+   * only occurrence of that anchor in the file; the "Lire aussi" duplicate of it was split off.
+   *
+   * The delivery figure in the last FAQ ("sous 24–72h", "paiement à la livraison") is not an
+   * invention: protein.tn's own footer reads "Paiement à la livraison, expédition sous 24–72h"
+   * (Googlebot fetch of the homepage, 23/09/2026). No FAQ in this entry states a dinar price.
+   */
   'mass-gainer-prix-tunisie-guide-complet-pour-2025': {
     openingLinkHtml:
       '<p>Les gainers disponibles, leurs formats et leurs prix du jour sont sur notre page <a href="/mass-gainers">mass gainer prix Tunisie</a>.</p>',
-    headline: 'Mass Gainer Prix Tunisie : guide d’achat 2026',
+    headline: 'Mass gainer : guide d’achat 2026, calories, glucides et prix',
     metaDescription:
       'Prix des mass gainers en Tunisie, formats, calories et marques : comparez les critères utiles pour choisir selon votre objectif et votre budget en 2026.',
-    dateModified: '2026-08-30',
+    dateModified: '2026-09-23',
     lang: 'fr',
     faqs: [
       {
@@ -246,9 +334,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'mass gainer prix Tunisie', href: '/mass-gainers' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
-      { anchor: 'créatine monohydrate en Tunisie', href: '/creatine' },
+      { anchor: 'les gainers en stock', href: '/mass-gainers' },
+      { anchor: 'toutes les protéines en poudre', href: '/proteines' },
+      { anchor: 'la créatine en complément du gainer', href: '/creatine' },
       { anchor: 'produits Dymatize en Tunisie', href: '/dymatize' },
     ],
   },
@@ -278,13 +366,13 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
   'serious-mass-d-optimum-nutrition-le-gainer-ideal-pour-une-prise-de-masse-rapide': {
     openingLinkHtml:
-      '<p><strong>Les deux formats :</strong> <a href="/mass-gainers/serious-mass-5-45-kg-optimum-nutrition">Serious Mass 5,45 kg d’Optimum Nutrition</a> et <a href="/mass-gainers/serious-mass-2-7-kg">Serious Mass 2,7 kg</a> — fiche, composition et prix du jour.</p>',
+      '<p><strong>Les deux formats :</strong> <a href="/mass-gainers/serious-mass-5-45-kg-optimum-nutrition">Serious Mass 5,45 kg</a> et <a href="/mass-gainers/serious-mass-2-7-kg">Serious Mass 2,7 kg</a> — fiche, composition et prix du jour.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
       { anchor: 'les mass gainers disponibles en Tunisie', href: '/mass-gainers' },
-      { anchor: 'Optimum Nutrition en Tunisie', href: '/optimum-nutrition' },
+      { anchor: 'la gamme Optimum Nutrition', href: '/optimum-nutrition' },
     ],
   },
 
@@ -299,13 +387,13 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     metaDescription:
       'Comment comparer le prix d’un mass gainer : coût au kilo, taille réelle d’une portion, part des glucides et des protéines dans l’étiquette.',
     openingLinkHtml:
-      '<p>Les formats et les prix actuels sont listés sur notre page <a href="/mass-gainers">mass gainer en Tunisie</a>.</p>',
+      '<p>Les formats en rayon et ce qu’ils coûtent au kilo : <a href="/mass-gainers">nos mass gainers, format par format</a>.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
       { anchor: 'comparer les mass gainers en stock', href: '/mass-gainers' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'les protéines en poudre du catalogue', href: '/proteines' },
     ],
   },
 
@@ -359,6 +447,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    *   • The two posts that EARN clicks (13 and 10 in the window) keep their title and H1. They
    *     are the site's whey result today; retitling them would trade a measured position for a
    *     hypothesis. They get the pillar anchor in the opening paragraph instead — additive.
+   *     ── REVERSED 23/09/2026, deliberately. See the note on the two entries below. The rule
+   *     above protected the URL and the ranking, but it also protected the one thing doing the
+   *     damage: both titles are head terms another page of ours must own, and one of them is
+   *     taking clicks off the HOMEPAGE. commercialSeoMap already records the opposite decision
+   *     for /blog/whey-protein-en-tunisie ("retarget the title, keep the URL"), so this file was
+   *     the one out of step. The URLs, the bodies and the FAQ blocks are untouched.
    *   • The seven that earned zero clicks get an informational headline, so their <title> stops
    *     repeating what /whey-proteine is titled for. Each headline keeps the word "whey", which
    *     topicAlignedArticleHeadline (blog/[slug]/page.tsx) requires or it falls back to the CMS H1.
@@ -366,32 +460,88 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * No openingLinkHtml on the seven: the in-content linker already gives each of them a first
    * "whey" anchor to /whey-proteine, and a seventh copy of the same paragraph across the cluster
    * is exactly the generated-looking pattern this config exists to avoid. Anchors are varied for
-   * the same reason — /whey-proteine received the identical phrase 26 times before this pass.
+   * the same reason — recounted on 23/09/2026 from the last committed version (8ac1410e),
+   * /whey-proteine took 45 links spread over only 7 distinct anchors, and the single phrase
+   * "whey protein en Tunisie" accounted for 23 of them across 19 entries. (An earlier draft of
+   * this line said "the identical phrase 26 times"; that figure does not reproduce.)
+   */
+  /*
+   * 23/09/2026 — RETARGETED. This is the one entry in the file that was fighting the HOMEPAGE.
+   *
+   * It was claiming BOTH head terms at once, through two different fields. Read on 23/09/2026:
+   *   CMS `seo_title`      "PROTÉINE en Tunisie : Guide Achat 2026, Prix & Performance Santé"
+   *   CMS `designation_fr` "Whey Proteine en Tunisie : est-ce vraiment le secret …"
+   *   rendered <title>     "Whey Proteine en Tunisie"
+   * (api/article_details/whey-protein-en-tunisie, and a Googlebot fetch of the page.) The gap
+   * between the stored title and the rendered one is topicAlignedArticleHeadline doing its job:
+   * the CMS title drops "whey", so the guard rejects it and takes the first clause of the H1.
+   * Net effect — the stored title claimed the HOMEPAGE's term and the rendered one claimed
+   * /whey-proteine's. An overlay `headline` is the only field that beats both.
+   *
+   * Two head terms, neither of them this article's to hold. GSC 28 d (Pages.csv, 23/08→19/09):
+   * the URL earns 10 clicks / 341 impressions @12.49, split
+   *   `whey protein tunisie`  4/80/12.5  — while /whey-proteine, the only URL that sells a pot,
+   *                                        is fourth on its own term at 1/25/34.4;
+   *   `proteine tunisie`      3/85/11.7  — a query where the HOMEPAGE takes 22 of 28 clicks @9.9.
+   * The second line is the reason this could not wait for a safer window: we are bidding against
+   * our own best page, and "never build anything to compete with the homepage" is a decision.
+   *
+   * What changes: the <title> and the visible H1 only (`headline` feeds both — see displayArticle
+   * in blog/[slug]/page.tsx). The headline is the question the body already answers (its own H1
+   * asks "est-ce vraiment le secret pour une meilleure santé et performance ?", and its second H2
+   * is "les réels bienfaits … sur la santé et la récupération musculaire"), keeps the word "whey"
+   * so topicAlignedArticleHeadline does not fall back to the CMS H1, and names no geography — so
+   * it claims neither `whey protein tunisie` nor `protein tunisie`.
+   * What does not change: the URL, the body, the canonical, the robots directives.
+   * Baseline to judge it against in four weeks: 10 clicks / 341 impressions / pos 12.49.
    */
   'whey-protein-en-tunisie': {
+    headline: 'La whey est-elle vraiment utile pour la santé et la récupération ?',
     metaDescription:
       'Ce que contient une whey, la différence entre concentré et isolat, quand la prendre et les critères à vérifier sur une étiquette avant de choisir un pot.',
     openingLinkHtml:
-      '<p>Pour comparer les pots en stock, les formats et les prix du jour, voir notre page <a href="/whey-proteine">whey protein en Tunisie</a>.</p>',
-    dateModified: '2026-09-22',
+      '<p>Pour comparer les pots en stock, les formats et les prix du jour, voir <a href="/whey-proteine">les pots de whey en stock</a>.</p>',
+    dateModified: '2026-09-23',
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
-      { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
+      { anchor: 'le rayon whey de Protein.tn', href: '/whey-proteine' },
+      { anchor: 'les whey isolate en stock', href: '/whey-isolate' },
     ],
   },
+  /*
+   * 23/09/2026 — RETARGETED, same reversal as the entry above.
+   *
+   * Live <title> and H1 on 23/09/2026 were both the bare head term "Whey Protéine Pas Cher
+   * Tunisie". GSC 28 d: 13 clicks / 495 impressions @14.09 — and the queries it earns them on are
+   * the ones /whey-proteine must own, not "pas cher": `whey protein tunisie` 5/137/13.9 and
+   * `whey tunisie` 0/61/14.0. So the price wording in the slug was never what ranked; the head
+   * term in the title was, and it was ranking INSTEAD of the shelf.
+   *
+   * "pas cher" is buying intent, so the new headline reads as a price guide and hands the buyer
+   * on: which format costs least for what you get, then the opening link to the shelf. It keeps
+   * "whey" for the alignment guard and drops "Tunisie", which removes the claim on both terms.
+   * Deliberately NOT "coût par portion" — that exact angle is already the headline of
+   * whey-proteine-prix-en-tunisie-comparatif-et-meilleurs-offres, and two of our own posts
+   * titled for one method is how this cluster got here.
+   * Baseline to judge it against in four weeks: 13 clicks / 495 impressions / pos 14.09.
+   */
   'whey-proteine-pas-cher-tunisie': {
+    headline: 'Whey pas chère : quel format choisir sans perdre en qualité',
     metaDescription:
-      'Ce qu’un prix bas change et ne change pas sur une whey : teneur en protéines par dose, lactose, additifs, et comment ramener chaque pot au coût par portion.',
+      // Carries "Tunisie" on purpose: localityHint (util/articleLanguage.ts) otherwise spends
+      // 55 characters of the 160-character budget appending its own boilerplate locality line.
+      // A description is not a ranking signal, so the geo word costs nothing here — unlike in
+      // the headline above, where it is exactly what had to go.
+      'Ce qu’un prix bas change et ne change pas sur une whey en Tunisie : teneur en protéines par dose, lactose, additifs et taille réelle du pot.',
     openingLinkHtml:
-      '<p>Les whey en stock, du format le plus économique au plus complet, sont sur notre page <a href="/whey-proteine">whey protéine en Tunisie</a>.</p>',
-    dateModified: '2026-09-22',
+      '<p>Du plus petit format au plus économique à l’usage, voir <a href="/whey-proteine">whey protéine : tous les formats</a> en stock.</p>',
+    dateModified: '2026-09-23',
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'whey protéine en Tunisie', href: '/whey-proteine' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'tous les formats de whey', href: '/whey-proteine' },
+      { anchor: 'toutes nos protéines', href: '/proteines' },
     ],
   },
   'proteine-whey-tunisie-guide-complet-2025': {
@@ -403,7 +553,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'whey protéine en Tunisie', href: '/whey-proteine' },
-      { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
+      { anchor: 'l’isolat de whey', href: '/whey-isolate' },
     ],
   },
   'whey-proteine-prix-en-tunisie-comparatif-et-meilleurs-offres': {
@@ -415,7 +565,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'prix des whey chez Protein.tn', href: '/whey-proteine' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'le catalogue protéines complet', href: '/proteines' },
     ],
   },
   'whey-proteine-tunisie-guide-ultime-pour-choisir-la-meilleure-proteine': {
@@ -427,7 +577,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'les whey disponibles en Tunisie', href: '/whey-proteine' },
-      { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
+      { anchor: 'nos whey isolate', href: '/whey-isolate' },
     ],
   },
   'proteine-whey-tunisie-tout-ce-que-vous-devez-savoir-avant-d-acheter': {
@@ -438,8 +588,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'voir les whey en rayon', href: '/whey-proteine' },
+      { anchor: 'les autres types de protéines', href: '/proteines' },
     ],
   },
   'proteine-whey-tunisie-le-guide-ultime-pour-musculation-et-recuperation': {
@@ -450,7 +600,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'whey protéine en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey pour la récupération', href: '/whey-proteine' },
       { anchor: 'caséine en Tunisie', href: '/caseine' },
     ],
   },
@@ -463,7 +613,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'les whey en stock', href: '/whey-proteine' },
-      { anchor: 'mass gainer en Tunisie', href: '/mass-gainers' },
+      { anchor: 'les mass gainers du catalogue', href: '/mass-gainers' },
     ],
   },
   'meilleure-proteine-whey-2026': {
@@ -475,7 +625,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'comparer les whey en stock', href: '/whey-proteine' },
-      { anchor: 'whey isolate en Tunisie', href: '/whey-isolate' },
+      { anchor: 'whey isolate : la sélection', href: '/whey-isolate' },
     ],
   },
 
@@ -490,57 +640,100 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    *    Google weighs, so only that one is kept.
    *
    * 2. The first FAQ asserted that creatine "commence à environ 29 DT pour un format 300 g"
-   *    and "monte jusqu'à 120–150 DT" for 1 kg. Checked against the live catalogue on
-   *    22/09/2026 (Googlebot fetch of /creatine): the cheapest in-stock creatine of ANY size
-   *    is 59 DT (Real Pharm 150 g), the cheapest 300 g is 99 DT, and no 1 kg format is listed
-   *    at all. These FAQs ship as FAQPage schema on the best-earning creatine URL we own
-   *    (34 clicks / 3 months), so the figure was a false structured-data price claim. It is
-   *    replaced by the method — prix du pot ÷ poids net — which carries no number that can go
-   *    stale, and the live prices are one click away on /creatine.
+   *    and "monte jusqu'à 120–150 DT" for 1 kg. These FAQs ship as FAQPage schema on the
+   *    best-earning creatine URL we own — 14 clicks / 393 impressions @8.81 over 28 days and
+   *    34 clicks / 1,274 impressions @8.73 over 3 months (protein.tn/2026-09-22-28d/Pages.csv
+   *    and .../2026-09-22-3m/Pages.csv) — so the figure was a false structured-data price claim.
+   *    It is replaced by the method — prix du pot ÷ poids net — which carries no number that can
+   *    go stale, and the live prices are one click away on /creatine.
    *
-   *    The second FAQ is deliberately left alone: "30 à 40 % moins cher au gramme" states a
-   *    relationship between formats, not a price, and nothing in the catalogue contradicts it.
+   * ── 23/09/2026: THE SECOND FAQ WAS NOT SAFE EITHER, AND THE NOTE ABOVE IT WAS WRONG ──────────
+   * The 22/09 note said "no 1 kg format is listed at all" and left the second FAQ alone because
+   * "30 à 40 % moins cher au gramme" was a relationship, not a price. Both halves fail on a read
+   * of admin.protein.tn/api/productsBySubCategoryId/creatine made on 23/09/2026 (221 products):
+   *   • ELEVEN 1 kg listings exist — nine labelled "1 kg" and two "1000 g" (Sports Research,
+   *     Force Factor, Micro Ingredients, Nutricost, California Gold Nutrition, NOW Foods x2,
+   *     NutraBio, TypeZero, Metabolic Nutrition, Ronnie Coleman). "Not listed at all" was false.
+   *   • Every one of the eleven has qte 0 and rupture true. Not one is buyable.
+   *   • Only 8 of the 221 products are in stock at all. Cheapest of any size: 70 DT (Real Pharm
+   *     150 g). Cheapest in-stock 300 g: 130 DT (Real Pharm). The 22/09 figures (59 DT / 99 DT)
+   *     do not reproduce either, so they are not repeated here.
+   * A percentage that only pays off on a format the reader cannot add to a basket is an
+   * availability claim wearing a ratio's clothes, and "les formats Creapure® sont un peu plus
+   * chers" named a label that zero of the 221 products carry. Both are gone. The replacement
+   * answers a different question from the first FAQ — is the big pot always the better buy —
+   * and states no number, no brand and no format the catalogue has to keep in stock.
    */
   'prix-de-la-creatine-en-tunisie': {
     openingLinkHtml:
       '<p>Pour appliquer ces critères aux produits réellement en rayon, vous pouvez <a href="/creatine">comparer nos créatines et leurs prix du jour</a>.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
       { question: "Comment comparer le prix d'une créatine en Tunisie ?", answer: "Ne comparez pas le prix affiché mais le prix au gramme : divisez le prix du pot par son poids net en grammes. Deux pots vendus au même prix ne contiennent pas forcément la même quantité, et un format plus grand fait presque toujours baisser le coût au gramme. Les prix à jour de chaque référence sont affichés sur la page créatine de Protein.tn." },
-      { question: "Comment comparer les prix de la créatine selon le format ?", answer: "Calculez toujours le prix au gramme (prix total ÷ poids net en grammes). Un format 1 kg est généralement 30 à 40 % moins cher au gramme qu'un 300 g. Les formats Creapure® sont un peu plus chers mais garantissent une pureté maximale." },
+      { question: "Le grand format est-il toujours le plus intéressant ?", answer: "Souvent, mais pas systématiquement : seul le prix au gramme le dit, et il faut aussi que le pot soit réellement disponible et que vous le terminiez avant sa date de péremption. Un grand format en rupture ou entamé trop longtemps ne fait économiser rien du tout. Le format et l'état du stock sont indiqués référence par référence sur la page créatine de Protein.tn." },
     ],
     internalLinks: [
       { anchor: 'créatine prix Tunisie', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protéine : formats et prix', href: '/whey-proteine' },
     ],
   },
 
+  /*
+   * 23/09/2026 — bodyLinkHtml → openingLinkHtml. The link was APPENDED to the body, i.e. after
+   * an article that is entirely about where to buy; the first anchor on the page went to
+   * whichever category the in-content linker happened to match first. Same correction, and for
+   * the same reason, as the one recorded on prix-de-la-creatine-en-tunisie above: the first
+   * anchor to a URL is the one that is weighed. The sentence is rewritten so it reads as an
+   * opening rather than a conclusion; the anchor text is unchanged.
+   *
+   * The "plus de 15 ans d'expérience" in the first FAQ is not an invented claim: protein.tn's
+   * own /qui-sommes-nous states SOBITAS has been in Sousse "depuis 2010" (Googlebot fetch,
+   * 23/09/2026), which is sixteen years. No answer here states a price.
+   */
   'ou-acheter-de-la-creatine-en-tunisie': {
-    bodyLinkHtml: '<p>Après avoir vérifié les informations du vendeur et de la référence choisie, retrouvez la <a href="/creatine">sélection de créatines disponibles chez Protein.tn</a>.</p>',
+    openingLinkHtml: '<p>Avant de comparer les vendeurs, voici la <a href="/creatine">sélection de créatines disponibles chez Protein.tn</a>, avec leurs formats et leur disponibilité du jour.</p>',
+    dateModified: '2026-09-23',
     faqs: [
       { question: "Où acheter de la créatine fiable en Tunisie ?", answer: "Privilegiez les distributeurs officiels qui importent directement avec numéros de lot traçables. Protein.tn est une référence en Tunisie avec plus de 15 ans d'expérience, des produits 100 % originaux et une livraison dans tous les gouvernorats." },
       { question: "Comment éviter les contrefaçons de créatine en Tunisie ?", answer: "Achetez uniquement auprès de sites ou magasins agréés. Vérifiez la présence d'un sceau de sécurité, d'un numéro de lot et d'une date de péremption. Méfiez-vous des prix anormalement bas et des emballages sans mention d'importateur officiel." },
     ],
     internalLinks: [
       { anchor: 'acheter de la créatine en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'acheter de la whey en Tunisie', href: '/whey-proteine' },
     ],
   },
 
+  /*
+   * PROTECTED BY TRAFFIC — 2 clicks @18.5 on `creatine tunisie` (28 d), and it is one of only
+   * two URLs taking that query's nine clicks while /creatine sits at 64. Never 301'd, never
+   * noindexed, never emptied. It is also listed as `leave-earns-clicks` in the creatine cluster.
+   *
+   * 23/09/2026 — the ONE thing it was missing: bodyLinkHtml → openingLinkHtml. The pillar link
+   * was appended at the very bottom of an article that ranks above the pillar; moving it to the
+   * opening paragraph is the whole "link UP in the first paragraph" rule, and it is additive —
+   * nothing about the title, the H1, the URL or the body changes. The anchor is new because the
+   * old wording only made sense as a closing sentence and because no two anchors to /creatine in
+   * this file may read the same.
+   */
   'creatine-tunisie': {
-    bodyLinkHtml: '<p>Pour passer de ces conseils au choix d’un produit, consultez les <a href="/creatine">créatines disponibles en Tunisie, leurs formats et leurs prix</a>.</p>',
+    openingLinkHtml: '<p>Les formats, les marques et les prix du jour sont réunis sur notre page <a href="/creatine">toutes nos créatines, format par format</a>.</p>',
+    dateModified: '2026-09-23',
     faqs: [
       { question: "Quels sont les bienfaits prouvés de la créatine ?", answer: "La créatine augmente les réserves de phosphocréatine dans les muscles, ce qui améliore la production d'ATP lors des efforts courts et intenses. Résultat : plus de force, plus de répétitions, une meilleure récupération inter-séries et une volumisation cellulaire. Ces effets sont validés par des centaines d'études." },
       { question: "Quelle est la dose de créatine recommandée ?", answer: "3 à 5 g par jour en prise continue est la dose standard recommandée. La régularité prime sur le timing : peu importe si vous la prenez avant ou après l'entraînement, l'essentiel est de ne pas oublier les jours de repos." },
     ],
     internalLinks: [
       { anchor: 'créatine Tunisie', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'nos whey protéine', href: '/whey-proteine' },
     ],
   },
 
+  // 23/09/2026 — third and last creatine post whose pillar link was appended instead of opening
+  // the body. 0 clicks / 95 impressions @57.94 (28 d), so there is nothing to protect here and
+  // nothing to lose by moving it. Every creatine entry in this file now carries openingLinkHtml.
   'creatine-tunisie-tout-ce-que-vous-devez-savoir': {
-    bodyLinkHtml: '<p>Pour retrouver les produits évoqués dans ce guide, consultez notre <a href="/creatine">catalogue de créatines en Tunisie</a>.</p>',
+    openingLinkHtml: '<p>Les produits évoqués dans ce guide sont réunis dans notre <a href="/creatine">catalogue de créatines en Tunisie</a>.</p>',
+    dateModified: '2026-09-23',
     faqs: [],
     internalLinks: [],
   },
@@ -553,40 +746,96 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       '<p>Pour passer du principe au choix d’un pot, parcourez <a href="/creatine">notre sélection de créatine</a> en Tunisie.</p>',
     dateModified: '2026-09-22',
     faqs: [
-      { question: "Quelles marques de créatine sont disponibles en Tunisie ?", answer: "Optimum Nutrition, MuscleTech, BSN, Quamtrax, Kevin Levrone et d'autres marques internationales sont disponibles sur Protein.tn avec livraison rapide partout en Tunisie." },
+      // 23/09/2026 — "BSN" removed: zero BSN references in the 221 products returned by
+      // admin.protein.tn/api/productsBySubCategoryId/creatine. The five brands kept are each
+      // present in that payload and each re-read the same day with qte > 0 and rupture false:
+      // MICRONISED CREATINE OPTIMUM NUTRITION - 317G, 100% CREATINE MONOHYDRATE 300G - BIOTECH
+      // USA, CREATINE MONOHYDRATE OSTROVIT- 500GR, CREATINE MONOHYDRATE - 500G -QUAMTRAX,
+      // GOLD CREATINE - KEVIN LEVRONE | 300 g. They are 5 of the only 8 in-stock creatines.
+      { question: "Quelles marques de créatine sont disponibles en Tunisie ?", answer: "Optimum Nutrition, Biotech USA, Ostrovit, Quamtrax et Kevin Levrone font partie des marques de créatine référencées sur Protein.tn. La disponibilité et les formats changent : la page créatine affiche l'état du stock référence par référence." },
       { question: "La créatine est-elle sûre ?", answer: "Oui, la créatine monohydrate est l'un des compléments les mieux étudiés et les plus sûrs quand elle est prise aux doses recommandées (3–5 g/j). Consultez votre médecin si vous avez des problèmes rénaux préexistants." },
     ],
     internalLinks: [
       { anchor: 'créatine en Tunisie : formats et prix', href: '/creatine' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'nos protéines en poudre', href: '/proteines' },
     ],
   },
 
+  /*
+   * Creatine cluster, supporting article 2 of 3 (see `supporting` in commercialSeoMap).
+   *
+   * 23/09/2026 — TITLE LEFT ALONE, on purpose. The live <title> is "Meilleure créatine 2026 :
+   * guide pour bien choisir": it names no geography, so it claims none of the six terms in the
+   * creatine cluster's `owns` (all of them carry "tunisie"), and it already reads informational.
+   * Its subject — the FORMS of creatine, which its body actually lists (monohydrate, HCL,
+   * MagnaPower, tamponnée, micronisée) — no longer collides with the monohydrate article above
+   * now that the latter has moved to purity. GSC 28 d: 0 clicks / 15 impressions @6.73, so there
+   * is no traffic argument either way; the argument is that there is nothing to fix.
+   *
+   * The second FAQ WAS fixed. It asserted "plusieurs produits certifiés Creapure® sont
+   * disponibles sur Protein.tn" — checked on 23/09/2026 against
+   * admin.protein.tn/api/productsBySubCategoryId/creatine: the word "Creapure" appears in ZERO
+   * of the 221 products listed. That is a false availability claim, and it shipped as FAQPage
+   * structured data on a page that sits at position 6.7. It is replaced by what the label means,
+   * which stays true whatever the catalogue holds. Same class of defect as the two false dinar
+   * prices removed on 22/09; no answer in this file states a price today.
+   */
   'meilleure-creatine-2026-notre-guide-pour-bien-choisir': {
     openingLinkHtml:
       '<p>Les critères ci-dessous s’appliquent aux produits en rayon : <a href="/creatine">voir les créatines disponibles</a> chez Protein.tn.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
-      { question: "Quelle est la meilleure créatine en 2026 ?", answer: "La créatine monohydrate reste la référence en 2026 : la mieux documentée, la plus abordable et la plus efficace. Pour une pureté maximale, les produits Creapure® sont le choix des athlètes de compétition. La créatine micronisée est idéale pour une meilleure dissolution et tolérance digestive." },
-      { question: "La créatine Creapure® est-elle disponible en Tunisie ?", answer: "Oui, plusieurs produits certifiés Creapure® sont disponibles sur Protein.tn avec livraison rapide partout en Tunisie et paiement à la livraison." },
+      { question: "Quelle est la meilleure créatine en 2026 ?", answer: "La créatine monohydrate reste la référence en 2026 : la mieux documentée, la plus abordable et la plus efficace. La créatine micronisée est du monohydrate à particules plus fines, plus facile à dissoudre et souvent mieux tolérée. Les autres formes (HCL, tamponnée, chélatée) n'ont pas le même niveau de preuves." },
+      { question: "Qu'est-ce que le label Creapure® change sur un pot de créatine ?", answer: "Creapure® est une marque de créatine monohydrate produite sur un site unique en Allemagne, avec des contrôles de pureté publiés. Le label atteste donc de la traçabilité et du procédé, pas d'une efficacité supérieure : la molécule reste la même. Vérifiez sur l'étiquette du produit qui vous intéresse s'il porte ce label, car toutes les créatines n'en disposent pas." },
     ],
     internalLinks: [
       { anchor: 'les créatines en stock chez Protein.tn', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'la whey disponible en Tunisie', href: '/whey-proteine' },
     ],
   },
 
+  /*
+   * Creatine cluster, supporting article 3 of 3. THE SECOND-BEST CREATINE URL WE OWN.
+   *
+   * GSC 28 d (Pages.csv, 23/08→19/09): 10 clicks / 193 impressions / pos 5.99 — behind only
+   * /blog/prix-de-la-creatine-en-tunisie (14 clicks) and far ahead of /creatine itself
+   * (2 clicks / 204 impressions @22.2). On the owned term `creatine tunisie` it holds 0/5/4.6
+   * while /creatine sits at 0/8/64.0.
+   *
+   * 23/09/2026 — TITLE LEFT ALONE, and this one is a judgement call worth stating. The live
+   * <title> "Meilleures marques de créatine en Tunisie : comparatif" does contain the string
+   * "créatine en Tunisie", so a mechanical read of the owns-list would retarget it. Three things
+   * say don't: (1) commercialSeoMap lists this URL under `supporting`, not `conflicts` — a brand
+   * comparison is a different question from "buy creatine", which is exactly what rule 2 asks of
+   * a supporting page; (2) it already links UP with its own distinct anchor; (3) ten measured
+   * clicks at position 6 is the largest downside in this batch and the smallest argument for it.
+   * The protected-by-traffic rule is not a title freeze, but "retarget" has to buy something,
+   * and here it buys a wording change on a page that is already doing its job. It belongs in
+   * `protectedByTraffic` in commercialSeoMap, which this pass does not own.
+   *
+   * The first FAQ WAS corrected, and the reason recorded for it was itself wrong. Re-checked on
+   * 23/09/2026 against admin.protein.tn/api/productsBySubCategoryId/creatine (221 products):
+   *   • "BSN" — zero products of any kind. Absent from the catalogue, as first written.
+   *   • "MuscleTech Platinum Creatine" — LISTED BUT OUT OF STOCK. PLATINUM CREATINE 400G -
+   *     MUSCLETECH (id 505) is in the payload with qte 0 and rupture true, as are the other
+   *     three MuscleTech entries (Creatine Chews x2, Cell-Tech). An earlier draft of this note
+   *     said there was "no Platinum Creatine among the 221 listed"; that is false.
+   * The edit stands on the corrected reason: a FAQPage answer on the page literally titled
+   * "meilleures marques" that names a product nobody can add to a basket sends the reader to an
+   * out-of-stock shelf, which is reason enough. It is not the same as saying we never carried it.
+   * The five replacement brands were re-read the same day and all five are in stock.
+   */
   'les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis': {
     openingLinkHtml:
       '<p>Toutes les marques comparées ici sont listées avec leur prix du jour sur notre page <a href="/creatine">créatine en Tunisie</a>.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
-      { question: "Quelle est la meilleure marque de créatine disponible en Tunisie ?", answer: "Optimum Nutrition (Micronized Creatine), MuscleTech (Platinum Creatine), Quamtrax et BSN sont parmi les meilleures marques disponibles en Tunisie. Le choix dépend de votre budget et de vos préférences (poudre ou capsules, monohydrate ou Creapure®)." },
-      { question: "Où comparer les marques de créatine en Tunisie ?", answer: "Protein.tn regroupe les meilleures marques disponibles avec des descriptions détaillées, les prix en dinars et la disponibilité en temps réel." },
+      { question: "Quelle est la meilleure marque de créatine disponible en Tunisie ?", answer: "Il n'y a pas de marque supérieure en soi : la créatine monohydrate est la même molécule d'un fabricant à l'autre. Optimum Nutrition, Biotech USA, Ostrovit, Quamtrax et Kevin Levrone sont parmi les marques référencées sur Protein.tn ; départagez-les sur le format, la forme (poudre ou gélules), la lisibilité de l'étiquette et le prix au gramme." },
+      { question: "Où comparer les marques de créatine en Tunisie ?", answer: "Protein.tn regroupe les marques référencées avec des descriptions détaillées, les prix en dinars et la disponibilité en temps réel." },
     ],
     internalLinks: [
       { anchor: 'comparer les créatines en stock', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'les marques de whey en stock', href: '/whey-proteine' },
     ],
   },
 
@@ -598,24 +847,40 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * names the choice question the body actually answers; the URL and the body are untouched.
    *
    * The old FAQ's "60 DT pour 1 kg … 30 DT pour un 300 g" went with it. It was written as an
-   * illustration but shipped as FAQPage schema, where it reads as a price claim — and no
-   * creatine in the live catalogue is anywhere near those prices (cheapest 300 g in stock =
-   * 99 DT on 22/09/2026). Its replacement states the ratio method and names no dinar figure.
+   * illustration but shipped as FAQPage schema, where it reads as a price claim. Its replacement
+   * states the ratio method and names no dinar figure. (The 22/09 note here also quoted "cheapest
+   * 300 g in stock = 99 DT"; re-read on 23/09/2026 it is 130 DT, Real Pharm 300 g — which is why
+   * a comment is the only place a dinar figure belongs, and only with the date it was read.)
+   *
+   * ── 23/09/2026: THE HEADLINE WAS THE LAST CREAPURE® CLAIM LEFT ───────────────────────────────
+   * The pass that stripped Creapure® from the FAQ answers left it in the `headline`, which feeds
+   * BOTH the <title> and the visible H1 (displayArticle + generateMetadata in
+   * blog/[slug]/page.tsx). So the one field with the widest reach kept offering a three-way
+   * choice — monohydrate / micronisée / Creapure® — between forms that are not all on the shelf.
+   * Read on 23/09/2026 from admin.protein.tn/api/productsBySubCategoryId/creatine: of 221
+   * products only 8 have qte > 0 and rupture false, and "Creapure" matches zero products in the
+   * whole payload. Capsules are listed but every one is out of stock; all 8 in-stock references
+   * are powders, of which exactly one is sold as micronised (MICRONISED CREATINE OPTIMUM
+   * NUTRITION - 317G) and seven as plain monohydrate. Two forms, not three.
+   * Invariant 2 at the top of this file was widened at the same time to cover `headline` and
+   * `metaDescription`, not just FAQ answers, because this is precisely the gap it missed.
+   * The headline is reworded to the two forms a reader can actually choose between, keeps
+   * "créatine" for topicAlignedArticleHeadline, and still names no geography.
    */
   'creatine-prix-en-tunisie-et-comment-choisir-le-meilleur-produit': {
-    headline: 'Créatine monohydrate, micronisée ou Creapure® : laquelle choisir',
+    headline: 'Créatine monohydrate ou micronisée : ce qui change vraiment',
     metaDescription:
-      'Ce qui sépare réellement une créatine monohydrate classique, une version micronisée et un label Creapure®, et comment arbitrer entre les trois.',
+      'Micronisée ou monohydrate classique : ce que la taille des particules change à la dissolution, à la digestion et au prix d’une créatine en Tunisie.',
     openingLinkHtml:
       '<p>Une fois le type choisi, <a href="/creatine">les prix des créatines disponibles en Tunisie</a> sont affichés format par format.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
-      { question: "Faut-il payer plus cher pour une créatine micronisée ou Creapure® ?", answer: "La micronisation ne change pas la molécule : elle réduit la taille des particules, ce qui améliore la dissolution dans l'eau et la tolérance digestive. Le label Creapure® atteste d'un site de production et d'un contrôle de pureté. Ni l'un ni l'autre n'augmente l'efficacité de la créatine : ils se paient pour le confort d'utilisation et la traçabilité." },
+      { question: "Faut-il payer plus cher pour une créatine micronisée ?", answer: "La micronisation ne change pas la molécule : elle réduit la taille des particules, ce qui améliore la dissolution dans l'eau et la tolérance digestive. Elle n'augmente pas l'efficacité de la créatine et ne se justifie donc que par le confort d'utilisation : si votre poudre actuelle se dissout bien et passe bien, le monohydrate classique fait le même travail." },
       { question: "Comment comparer deux créatines dont les prix diffèrent ?", answer: "Ramenez chaque pot au prix au gramme : prix du pot ÷ poids net en grammes. C'est le seul calcul qui rend deux formats comparables, et il fait souvent apparaître qu'un pot affiché plus cher revient moins cher à l'usage." },
     ],
     internalLinks: [
       { anchor: 'prix de la créatine chez Protein.tn', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'prix des whey protéine', href: '/whey-proteine' },
     ],
   },
 
@@ -629,7 +894,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'créatine et prise de masse', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey pour la prise de masse', href: '/whey-proteine' },
       { anchor: 'mass gainer pour la prise de masse en Tunisie', href: '/mass-gainers' },
     ],
   },
@@ -649,28 +914,78 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       'Sceau de sécurité, numéro de lot, date de péremption, mention de l’importateur : ce qu’il faut contrôler sur un pot de créatine avant de l’ouvrir.',
     openingLinkHtml:
       '<p>Si vous préférez partir d’une référence déjà tracée, voici <a href="/creatine">notre sélection de créatines originales</a>.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
-      { question: "Comment reconnaître une créatine originale en Tunisie ?", answer: "Une créatine originale porte un sceau de sécurité intact, un numéro de lot lisible et une date de péremption claire. Les produits Creapure® ont un logo distinctif sur l'emballage. Achetez toujours auprès d'un distributeur agréé comme Protein.tn." },
+      { question: "Comment reconnaître une créatine originale en Tunisie ?", answer: "Une créatine originale porte un sceau de sécurité intact, un numéro de lot lisible et une date de péremption claire. Certains pots affichent en plus un label de traçabilité : Creapure®, par exemple, atteste d'un site de production unique en Allemagne et de contrôles de pureté publiés. C'est une mention à chercher sur l'étiquette du produit qui vous intéresse, pas un critère que tous les pots portent. Achetez toujours auprès d'un distributeur agréé comme Protein.tn." },
       { question: "Protein.tn vend-il de la créatine originale ?", answer: "Oui. Protein.tn importe directement ses créatines auprès des fabricants ou distributeurs officiels. Chaque produit a un numéro de lot traçable. Livraison partout en Tunisie avec paiement à la livraison." },
     ],
     internalLinks: [
       { anchor: 'créatine originale en Tunisie', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'notre rayon whey protéine', href: '/whey-proteine' },
     ],
   },
 
+  /*
+   * Creatine cluster, supporting article 1 of 3 (see `supporting` in commercialSeoMap).
+   *
+   * 23/09/2026 — RETARGETED. Live <title> read with a Googlebot UA the same day: "Meilleure
+   * créatine monohydrate en Tunisie : Guide & Top 2026". That is `créatine monohydrate tunisie`,
+   * word for word one of the six terms in the creatine cluster's `owns` — and /creatine, the
+   * owner, holds that query at 1/7/38.1 while this post averages position 8.03.
+   *
+   * It also duplicated the subject of meilleure-creatine-2026-notre-guide-pour-bien-choisir:
+   * two supporting posts both titled "the best creatine, how to choose". The first fix aimed this
+   * one at PURITY — and that just moved the duplication, because label-reading is already owned
+   * twice over in this file: ou-acheter-de-la-creatine-originale-en-tunisie-le-guide-complet
+   * ("Créatine authentique : les points à vérifier sur un pot") and
+   * creatine-tunisie-la-meilleure-qualite-... ("Créatine : qualité, pureté et ce que valent les
+   * labels"). Three of our own posts titled for "read the label" is the same defect in a new coat.
+   *
+   * Re-read the live body with a Googlebot UA on 23/09/2026 to find what only THIS article has.
+   * Purity is not it — Creapure®/HACCP get two sentences. What no other creatine post in this
+   * file covers is the renal section and absorption: "Est-il sécurisant de consommer de la
+   * créatine pour les reins sur le long terme ?" runs several paragraphs, explains that
+   * supplementing raises measured créatinine and that "un médecin non averti pourrait croire à un
+   * problème rénal", tells the reader to speak to a nephrologist, and the body returns to
+   * biodisponibilité four times (poudre vs gélules, micronisation, hydratation). The headline now
+   * names that, which collides with nothing. It keeps "créatine" so topicAlignedArticleHeadline
+   * (blog/[slug]/page.tsx) does not fall back to the CMS H1, and it names no geography, so it
+   * claims none of the six `owns` terms. The forms stay with meilleure-creatine-2026 and
+   * label-reading stays with the two posts above.
+   *
+   * The first FAQ moves with the headline, for the same reason: a purity FAQ under a renal title
+   * would leave the incoherence in place. Its replacement is the one question this body answers
+   * that no other entry does, and it carries the medical caveat the body carries.
+   *
+   * Risk stated plainly: this URL earns 2 clicks / 115 impressions / CTR 1.74% / pos 8.03 over
+   * 28 days (protein.tn/2026-09-22-28d/Pages.csv, re-read 23/09/2026), and a title change can
+   * cost them. Baseline recorded here so the next pass reads the result rather than re-deriving
+   * the decision. URL, body, canonical and robots directives unchanged.
+   *
+   * The first FAQ named "MuscleTech Platinum Creatine" as an option available in Tunisia, and the
+   * reason first recorded for removing it was wrong. Re-checked against
+   * admin.protein.tn/api/productsBySubCategoryId/creatine on 23/09/2026: PLATINUM CREATINE 400G -
+   * MUSCLETECH (id 505) IS among the 221 listed — with qte 0 and rupture true. So are the three
+   * other MuscleTech entries (Creatine Chews x2, Cell-Tech). LISTED BUT OUT OF STOCK, not absent.
+   * That is still reason enough to pull the name out of an availability answer — a FAQPage answer
+   * naming a product with qte 0 points the reader at an empty shelf — but it is a different claim
+   * from "we do not carry it", and the stronger one must not be written. Separately, and this one
+   * does hold: zero of the 221 products carry "Creapure" anywhere in the payload.
+   */
   'quelle-est-la-meilleure-creatine-monohydrate-en-tunisie': {
+    headline: 'Créatine et reins : ce que montre vraiment un taux de créatinine',
+    metaDescription:
+      'Créatinine élevée sur une prise de sang, hydratation, digestion et absorption : ce que la créatine change réellement, en Tunisie comme ailleurs.',
     openingLinkHtml:
       '<p>Pour passer du comparatif au produit, vous pouvez <a href="/creatine">découvrir les créatines monohydrate</a> vendues en Tunisie, avec leurs formats et leurs prix.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-23',
     faqs: [
-      { question: "Quelle créatine monohydrate choisir en Tunisie ?", answer: "Optimum Nutrition Micronized Creatine et MuscleTech Platinum Creatine sont parmi les meilleures options disponibles en Tunisie. Pour la pureté maximale, choisissez un produit Creapure®. Comparez les prix et les formats sur Protein.tn." },
+      { question: "Pourquoi la créatine fait-elle monter la créatinine sur une prise de sang ?", answer: "La créatinine est un déchet issu du métabolisme de la créatine : en augmenter l'apport fait mécaniquement monter ce marqueur, et ce n'est pas en soi le signe d'une atteinte rénale. Comme le laboratoire s'en sert pour estimer la fonction rénale, un résultat élevé peut être mal interprété : signalez votre supplémentation au médecin qui lit le bilan. En cas de maladie rénale connue, de grossesse ou d'allaitement, demandez un avis médical avant de commencer." },
       { question: "La créatine monohydrate micronisée est-elle meilleure ?", answer: "La créatine micronisée est chimiquement identique à la monohydrate classique, mais ses particules ultra-fines améliorent la solubilité dans l'eau et la tolérance digestive. Elle est préférable si vous avez un estomac sensible ou si votre créatine ne se dissout pas bien." },
     ],
     internalLinks: [
       { anchor: 'comparer les créatines monohydrate', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'comparer les whey protéine', href: '/whey-proteine' },
     ],
   },
 
@@ -692,7 +1007,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'rayon créatine', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'whey protéine : notre sélection', href: '/whey-proteine' },
     ],
   },
 
@@ -714,7 +1029,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'prix des créatines par format', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'les whey protéine disponibles', href: '/whey-proteine' },
     ],
   },
   'creatine-prix-tunisie-trouvez-la-meilleure-offre-pour-maximiser-vos-gains': {
@@ -728,7 +1043,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'les créatines disponibles en Tunisie', href: '/creatine' },
-      { anchor: 'catalogue de protéines', href: '/proteines' },
+      { anchor: 'le rayon protéines et compléments', href: '/proteines' },
     ],
   },
   'creatine-tunisie-la-meilleure-qualite-a-prix-imbattable-livraison-rapide-and-gratuite-sur-protein-tn': {
@@ -742,7 +1057,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     faqs: [],
     internalLinks: [
       { anchor: 'créatine monohydrate : formats et marques', href: '/creatine' },
-      { anchor: 'whey protein en Tunisie', href: '/whey-proteine' },
+      { anchor: 'la whey protéine au catalogue', href: '/whey-proteine' },
     ],
   },
 
@@ -765,41 +1080,41 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     lang: 'fr',
     faqs: [],
     internalLinks: [
-      { anchor: 'compléments alimentaires en Tunisie', href: '/shop' },
+      { anchor: 'la boutique, rayon par rayon', href: '/shop' },
       { anchor: 'protéines en Tunisie', href: '/proteines' },
     ],
   },
   'complement-alimentaire-en-tunisie-guide-complet-pour-une-meilleure-sante': {
     openingLinkHtml:
-      '<p>Pour voir ce qui est réellement disponible et à quel prix, parcourez les <a href="/shop">compléments alimentaires en Tunisie</a>.</p>',
+      '<p>Pour voir ce qui est réellement disponible et à quel prix, parcourez <a href="/shop">tous les compléments en stock</a>.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
       { anchor: 'tous les compléments alimentaires', href: '/shop' },
-      { anchor: 'protéines en Tunisie', href: '/proteines' },
+      { anchor: 'nos protéines et compléments protéinés', href: '/proteines' },
     ],
   },
   'les-10-meilleurs-complements-alimentaires-pour-sportifs-en-tunisie': {
     openingLinkHtml:
-      '<p>Chacun des produits cités ci-dessous se retrouve dans nos <a href="/shop">compléments alimentaires en Tunisie</a>, avec son format et son prix du jour.</p>',
+      '<p>Chacun des produits cités ci-dessous se retrouve dans <a href="/shop">le catalogue de compléments</a>, avec son format et son prix du jour.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
       { anchor: 'compléments alimentaires pour sportifs', href: '/shop' },
-      { anchor: 'protéines en Tunisie', href: '/proteines' },
+      { anchor: 'les protéines pour sportifs', href: '/proteines' },
     ],
   },
   'top-5-des-complements-alimentaires-essentiels-pour-la-musculation-en-tunisie': {
     openingLinkHtml:
-      '<p>Les cinq familles citées ici sont toutes en rayon : voir les <a href="/shop">compléments alimentaires en Tunisie</a>.</p>',
+      '<p>Les cinq familles citées ici sont toutes en rayon : voir <a href="/shop">les compléments disponibles en Tunisie</a>.</p>',
     dateModified: '2026-09-22',
     lang: 'fr',
     faqs: [],
     internalLinks: [
       { anchor: 'compléments alimentaires pour la musculation', href: '/shop' },
-      { anchor: 'protéines en Tunisie', href: '/proteines' },
+      { anchor: 'les protéines pour la musculation', href: '/proteines' },
     ],
   },
 
@@ -836,16 +1151,18 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أنواع وأسعار الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'أشكال الكرياتين المتوفرة في المتجر', href: '/creatine' },
       { anchor: 'ما هو الكرياتين ودوره في الطاقة', href: '/blog/ما هو الكرياتين؟' },
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'مكملات البروتين المتوفرة', href: '/proteines' },
     ],
   },
   'كرياتين مونوهيدرات': {
     headline: 'كرياتين مونوهيدرات: كيف يعمل ولماذا يُعد المعيار الذهبي؟',
     metaDescription:
       'كرياتين مونوهيدرات هو الشكل الأنقى والأكثر دراسة: يدعم إنتاج ATP والقوة والاستشفاء والكتلة الخالية من الدهون. قارن الأنواع والأسعار المتوفرة في تونس قبل الشراء.',
-    dateModified: '2026-09-08',
+    openingLinkHtml:
+      '<p>لمقارنة المنتجات الفعلية، تصفّح <a href="/creatine">عبوات كرياتين مونوهيدرات</a> المتوفرة وأسعارها الحالية.</p>',
+    dateModified: '2026-09-23',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن كرياتين مونوهيدرات',
     linksHeading: 'قارن المنتجات المتوفرة في تونس',
@@ -872,7 +1189,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   'ما هو الكرياتين؟': {
     metaDescription:
       'الكرياتين مركّب ينتجه الجسم ويُخزَّن بنحو 95% في العضلات لإعادة تصنيع الطاقة ATP. تعرّف على دوره في القوة والاستشفاء وكيف تختار كرياتين موثوقًا في تونس.',
-    dateModified: '2026-09-08',
+    openingLinkHtml:
+      '<p>بعد فهم آلية عمله، يمكنك الاطلاع على <a href="/creatine">صفحة الكرياتين في المتجر</a> لمعرفة الأنواع والأحجام المتوفرة.</p>',
+    dateModified: '2026-09-23',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن الكرياتين',
     linksHeading: 'اقرأ أيضًا قبل اختيار مكملك',
@@ -893,7 +1212,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     internalLinks: [
       { anchor: 'الكرياتين في تونس', href: '/creatine' },
       { anchor: 'فوائد وأضرار الكرياتين', href: '/blog/ما هي فوائد وأضرار الكرياتين؟' },
-      { anchor: 'مكملات البروتين في تونس', href: '/proteines' },
+      { anchor: 'مكمل بروتين في تونس', href: '/proteines' },
     ],
   },
   'كيف تختار بروتين مصل اللبن في تونس؟ الدليل الشامل من protein.tn': {
@@ -922,9 +1241,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
-      { anchor: 'واي أيزوليت', href: '/whey-isolate' },
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'بروتين مصل اللبن المتوفر', href: '/whey-proteine' },
+      { anchor: 'الواي أيزوليت المتوفر', href: '/whey-isolate' },
+      { anchor: 'أنواع البروتين في المتجر', href: '/proteines' },
     ],
   },
   'ما هو أفضل نوع من بروتين مصل اللبن؟': {
@@ -949,9 +1268,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'أنواع الواي بروتين في المتجر', href: '/whey-proteine' },
       { anchor: 'واي أيزوليت للتنشيف', href: '/whey-isolate' },
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'تصفّح منتجات البروتين', href: '/proteines' },
     ],
   },
   'الفرق بين بروتين whey و isolate و casein: أيهم الأفضل لك؟': {
@@ -976,9 +1295,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
-      { anchor: 'واي أيزوليت', href: '/whey-isolate' },
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
+      { anchor: 'منتجات الواي بروتين', href: '/whey-proteine' },
+      { anchor: 'منتجات الأيزوليت', href: '/whey-isolate' },
+      { anchor: 'مقارنة أنواع البروتين المتوفرة', href: '/proteines' },
     ],
   },
   'كيف تختار أفضل مكمل بروتين ليناسب أهدافك الرياضية؟': {
@@ -1007,9 +1326,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
-      { anchor: 'واي أيزوليت', href: '/whey-isolate' },
+      { anchor: 'مكملات البروتين حسب الهدف', href: '/proteines' },
+      { anchor: 'واي بروتين حسب الهدف', href: '/whey-proteine' },
+      { anchor: 'واي أيزوليت في المتجر', href: '/whey-isolate' },
     ],
   },
   'كيف تختار المكمل الغذائي المناسب لهدفك الرياضي': {
@@ -1035,7 +1354,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'المكملات الغذائية في تونس', href: '/proteines' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'مكمل الكرياتين في تونس', href: '/creatine' },
       { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
     ],
   },
@@ -1062,8 +1381,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
     internalLinks: [
       { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'قسم الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'تصفّح منتجات الكرياتين', href: '/creatine' },
     ],
   },
   'فوائد المكملات الغذائية وأضرارها وكيف تستخدمها بحكمة': {
@@ -1088,9 +1407,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'المكملات والبروتين في المتجر', href: '/proteines' },
+      { anchor: 'منتجات الكرياتين المتوفرة', href: '/creatine' },
+      { anchor: 'منتجات الفيتامينات', href: '/vitamines' },
     ],
   },
   'كيف تختار مكمل غذائي آمن وفعال؟ دليل للمستهلك العربي': {
@@ -1119,9 +1438,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'تصفّح المكملات والبروتين', href: '/proteines' },
+      { anchor: 'الفيتامينات المتوفرة', href: '/vitamines' },
+      { anchor: 'الكرياتين: الأنواع والأحجام', href: '/creatine' },
     ],
   },
   'أكثر الأخطاء شيوعًا عند استخدام المكملات الغذائية': {
@@ -1146,9 +1465,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'قسم المكملات والبروتين', href: '/proteines' },
+      { anchor: 'اختيار كرياتين مناسب', href: '/creatine' },
+      { anchor: 'تصفّح الفيتامينات والمعادن', href: '/vitamines' },
     ],
   },
   'الفرق بين المكملات الغذائية والأدوية: تفسير واضح وسهل': {
@@ -1173,8 +1492,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'مكملات وبروتينات متوفرة في تونس', href: '/proteines' },
+      { anchor: 'مكملات الفيتامينات', href: '/vitamines' },
     ],
   },
   'المكملات الغذائية والنساء: ما تحتاج معرفته كل امرأة': {
@@ -1199,8 +1518,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'مكملات البروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'صفحة البروتين في المتجر', href: '/proteines' },
+      { anchor: 'صفحة الفيتامينات والمعادن', href: '/vitamines' },
     ],
   },
   'هل المكملات تعوض الغذاء الطبيعي؟ رأي الخبراء': {
@@ -1225,8 +1544,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'البروتين والمكملات الداعمة', href: '/proteines' },
+      { anchor: 'الفيتامينات والمعادن الداعمة', href: '/vitamines' },
     ],
   },
   'هل تُغني المكملات الغذائية عن الطعام؟': {
@@ -1251,8 +1570,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'المكملات الغذائية والبروتين في تونس', href: '/proteines' },
-      { anchor: 'الفيتامينات والمعادن', href: '/vitamines' },
+      { anchor: 'مكملات داعمة للنظام الغذائي', href: '/proteines' },
+      { anchor: 'مكملات الفيتامينات والمعادن', href: '/vitamines' },
     ],
   },
   'أفضل المكملات للوقاية من نقص الفيتامينات في الشتاء': {
@@ -1303,8 +1622,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'بروتين لبناء العضلات', href: '/proteines' },
+      { anchor: 'واي بروتين لبناء العضلات', href: '/whey-proteine' },
     ],
   },
   'أفضل 10 مصادر للبروتين تعزز بناء العضلات و صحة': {
@@ -1329,8 +1648,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'مكمل بروتين لتغطية احتياجك', href: '/proteines' },
+      { anchor: 'مكمل واي بروتين', href: '/whey-proteine' },
     ],
   },
   'أفضل مصادر البروتين النباتي وما أهميته': {
@@ -1355,7 +1674,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'مكملات البروتين في تونس', href: '/proteines' },
+      { anchor: 'قسم البروتين في المتجر', href: '/proteines' },
       { anchor: 'مصادر البروتين الطبيعية', href: '/blog/مصادر البروتين الطبيعية: ما هي؟' },
     ],
   },
@@ -1381,8 +1700,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'بروتين مكمّل من المتجر', href: '/proteines' },
+      { anchor: 'الواي بروتين كمصدر مكمّل', href: '/whey-proteine' },
     ],
   },
   'ما هو أفضل بروتين طبيعي للجسم؟': {
@@ -1407,8 +1726,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'منتجات البروتين المتوفرة في تونس', href: '/proteines' },
+      { anchor: 'تصفّح الواي بروتين', href: '/whey-proteine' },
     ],
   },
   'ما هي مصادر البروتين؟ دليل شامل لبناء العضلات وتحسين صحتك': {
@@ -1437,8 +1756,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'بروتين بودرة في تونس', href: '/proteines' },
+      { anchor: 'واي بروتين بودرة', href: '/whey-proteine' },
     ],
   },
   'أفضل وقت لتناول البروتين: قبل التمرين أم بعده؟': {
@@ -1463,8 +1782,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'مكملات البروتين وأحجامها', href: '/proteines' },
+      { anchor: 'واي بروتين سريع الامتصاص', href: '/whey-proteine' },
     ],
   },
   'نظام غذائي عالي البروتين لزيادة الكتلة العضلية بدون دهون': {
@@ -1489,8 +1808,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'أسعار البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'بروتين عالي الجودة في تونس', href: '/proteines' },
+      { anchor: 'الواي بروتين وأحجامه', href: '/whey-proteine' },
     ],
   },
   'بناء العضلات للمبتدئين: برنامج تدريب وتغذية خطوة بخطوة': {
@@ -1515,8 +1834,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'مكملات البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
+      { anchor: 'تسوّق مكملات البروتين', href: '/proteines' },
+      { anchor: 'قسم الواي بروتين', href: '/whey-proteine' },
     ],
   },
   'أخطاء شائعة يرتكبها رواد قاعات الرياضة وتمنعهم من تحقيق نتائج حقيقية': {
@@ -1541,9 +1860,9 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       },
     ],
     internalLinks: [
-      { anchor: 'مكملات البروتين في تونس', href: '/proteines' },
-      { anchor: 'واي بروتين في تونس', href: '/whey-proteine' },
-      { anchor: 'الكرياتين في تونس', href: '/creatine' },
+      { anchor: 'قائمة مكملات البروتين', href: '/proteines' },
+      { anchor: 'الواي بروتين في المتجر', href: '/whey-proteine' },
+      { anchor: 'شراء الكرياتين من مصدر موثوق', href: '/creatine' },
     ],
   },
 };

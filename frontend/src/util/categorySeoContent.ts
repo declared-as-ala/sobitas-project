@@ -66,16 +66,50 @@ export const CONTENT_SLUG_ALIASES: Record<string, string> = {
   // Glutamine
   'glutamine': 'glutamine',
   'glutamine-tunisie': 'glutamine',
-  // Fat burners / weight loss – all share the same hub content
+  /**
+   * FAT LOSS — an alias is safe only when the URL it names cannot be served.
+   *
+   * CONTENT_SERP_OWNER (below) stopped four URLs rendering ONE title/H1/description. It could not
+   * stop them rendering one BODY, because sharing the body is what an alias is for. Measured with a
+   * Googlebot UA on 23/09/2026, three of the five slugs listed here answered 200 — /perte-de-poids,
+   * /cla and /bruleurs-de-graisse — so three live, self-canonical, indexable URLs served the same
+   * ~1,900-word intro, buying guide and FAQ. That is the same cannibalisation the SERP fix
+   * addressed, one layer down, and inside a single family where Google has to pick one.
+   *
+   * The two that stay are the two that CANNOT collide, because the loader is never reached with
+   * them — both 308 into the owner (redirects.js, re-verified live 23/09/2026):
+   *     /bruleur-de-graisse  -> 308 -> /bruleurs-de-graisse
+   *     /fat-burner          -> 308 -> /bruleurs-de-graisse
+   * They are kept as documentation of where that legacy equity pools, and they are no-ops.
+   *
+   * REMOVED BECAUSE THEY WERE SERVING A DUPLICATE BODY — the two that actually cost a URL:
+   *   · 'perte-de-poids' — 200. It is the RAYON above this shelf in catalogTaxonomy.ts, parent of
+   *     bruleurs-de-graisse, l-carnitine and cla (confirmed against admin /api/categories, id 2,
+   *     23/09/2026). A rayon that renders its own child's buying guide has no subject of its own.
+   *   · 'cla'            — 200, and 1 click / 2 impressions @22.0 (28 d), so protected by traffic:
+   *     it keeps its URL and stays reachable, and it is a distinct ingredient, not a fat-burner
+   *     formula. Same reasoning as the 'l-carnitine' note kept below.
+   *
+   * REMOVED AS DEAD WEIGHT, which resolved no duplication at all:
+   *   · 'minceur' — 404, re-verified 23/09/2026. The slug is not a route, so the loader was never
+   *     reached with it and the alias pointed nowhere. Deleting it changed no rendered page. It is
+   *     a no-op in exactly the sense the two entries KEPT above are no-ops, and it is listed apart
+   *     from the two real fixes so this block cannot be read as "removing it fixed a duplicate".
+   *
+   * Consequence, recorded rather than hidden: dropping the two real aliases left /perte-de-poids
+   * and /cla with no body at all, and both were given a file of their own the same day.
+   * perte-de-poids.json is the rayon — it routes into bruleurs-de-graisse, l-carnitine and cla with
+   * one reason each and does not re-state the fat-burner subject. cla.json is the ingredient,
+   * written against a shelf whose 30 references were ALL out of stock on 23/09/2026
+   * (admin /api/productsBySubCategoryId/cla: every row qte 0, rupture true), so it promises no
+   * availability. Neither page shares a body with /bruleurs-de-graisse any more.
+   */
   'bruleurs-de-graisse': 'bruleurs-de-graisse',
   'bruleur-de-graisse': 'bruleurs-de-graisse',
   'fat-burner': 'bruleurs-de-graisse',
-  'perte-de-poids': 'bruleurs-de-graisse',
   // No `'l-carnitine'` entry: the two sub-categories share ZERO products (85 vs 95 references,
   // empty intersection 08/09/2026), so the shared hub guide was factually wrong on /l-carnitine.
   // It has its own file (l-carnitine.json) with its own buying guide; the alias hid it.
-  'cla': 'bruleurs-de-graisse',
-  'minceur': 'bruleurs-de-graisse',
   // Antioxydants & Articulations
   'antioxydant': 'antioxydants',
   'antioxydants': 'antioxydants',

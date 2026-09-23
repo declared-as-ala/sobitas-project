@@ -16,6 +16,7 @@ import {
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { htmlToText } from '@/util/sanitizeProductHtml';
 import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
+import { WheyComparisonTable, buildWheyRows } from '@/app/components/product/WheyComparisonTable';
 import type { Brand, Product } from '@/types';
 
 export interface RelatedLink {
@@ -64,10 +65,10 @@ const CATEGORY_ART: Record<string, string> = {
 /**
  * Categories that mount the price-comparison table under their grid.
  *
- * A SET, NOT A FLAG, and deliberately one entry long: the owner limited this round to /creatine
- * (22/09/2026). The table itself is category-agnostic — it reads price, format and the form printed
- * in the product name — but "the cheapest eight, cheapest first" is only a useful summary where the
- * products are near-substitutes, which is true of creatine tubs and false of, say, /equipement.
+ * A SET, NOT A FLAG. /creatine first (22/09/2026), /whey-proteine added 23/09/2026 with its own
+ * table and its own measured columns. "The cheapest eight, cheapest first" is only a useful summary
+ * where the products are near-substitutes, which is true of creatine tubs and whey tubs and false
+ * of, say, /equipement — so this stays a list somebody opts a category into, never a default.
  * Adding a slug here is the whole cost of extending it, once somebody has looked at that
  * category's fill rates the way the table's docblock documents for this one.
  *
@@ -76,7 +77,7 @@ const CATEGORY_ART: Record<string, string> = {
  * and importing this module would pull next/image and the icon set into it for one string. The two
  * lists must be changed together — the whole point of the gate is that both renders switch at once.
  */
-export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine']);
+export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine']);
 
 const TRUST_FACTS = [
   { icon: ShieldCheck, label: 'Produits authentiques' },
@@ -139,11 +140,21 @@ export function CategorySeoLanding({
     returns null below two rows, and a heading wrapped around null is an empty card. Asking the
     same function the same question beats rendering and then discovering the answer.
   */
-  const showComparison =
-    showDetails &&
-    Boolean(slug && COMPARISON_SLUGS.has(slug)) &&
-    brands.length > 0 &&
-    buildCreatineRows(products, brands).length >= 2;
+  /*
+    Which table a comparison slug mounts. Two categories, two builders, two column sets — the
+    creatine table ships Produit/Marque/Format/Forme/Prix and the whey table its own, because each
+    was chosen from that category's measured fill rates rather than from a shared guess. The gate
+    still asks the same question once, before rendering: is this slug opted in, do we have brands,
+    and does its builder actually return at least two comparable rows.
+  */
+  const comparisonKind = slug && COMPARISON_SLUGS.has(slug) ? slug : null;
+  const comparisonRowCount =
+    comparisonKind === 'creatine'
+      ? buildCreatineRows(products, brands).length
+      : comparisonKind === 'whey-proteine'
+        ? buildWheyRows(products, brands).length
+        : 0;
+  const showComparison = showDetails && comparisonKind !== null && brands.length > 0 && comparisonRowCount >= 2;
   const faqSchema = withFaqSchema && hasFaqs && showDetails ? buildFAQPageSchemaFromQA(faqs) : null;
 
   if (faqSchema) validateStructuredData(faqSchema, 'FAQPage');
@@ -242,7 +253,11 @@ export function CategorySeoLanding({
                 one of them, and the table's own lead sentence says what the rows are. */}
             {`${title} : comparer les prix`}
           </h2>
-          <CreatineComparisonTable products={products} brands={brands} />
+          {comparisonKind === 'whey-proteine' ? (
+            <WheyComparisonTable products={products} brands={brands} />
+          ) : (
+            <CreatineComparisonTable products={products} brands={brands} />
+          )}
         </section>
       ) : null}
 

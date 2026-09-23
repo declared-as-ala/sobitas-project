@@ -1,22 +1,41 @@
 {
-  "h1": "Whey Hydrolysée Tunisie – Absorption Ultra-Rapide",
-  "metaTitle": "Whey Hydrolysée Tunisie : Absorption Rapide | Protein.tn",
-  "metaDescription": "Achetez votre whey hydrolysée en Tunisie : absorption ultra-rapide, idéale post-workout. Livraison 24h Tunis, Sousse, Sfax.",
+  "h1": "Whey hydrolysée en Tunisie : à qui elle sert vraiment",
+  "metaTitle": "Whey Hydrolysée Tunisie : peptides et digestion | Protein.tn",
+  "metaDescription": "Whey hydrolysée en Tunisie : protéines pré-découpées en peptides. Ce que l'hydrolyse change, ce qu'elle ne change pas, et quand elle ne vaut pas son prix.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>whey hydrolysée</strong> est la forme de protéine la plus rapidement absorbée. Les protéines sont pré-digérées (hydrolysées) en peptides plus courts pour une absorption quasi-immédiate par les muscles. Idéale en post-workout immédiat. Sur <strong>Protein.tn</strong>, retrouvez la whey hydrolysée en Tunisie.</p>",
-  "howToChooseTitle": "Pourquoi choisir la whey hydrolysée ?",
-  "howToChooseBody": "<ul><li><strong>Absorption</strong> : 15-20 min, la plus rapide de toutes les whey.</li><li><strong>Post-workout</strong> : idéale immédiatement après l'entraînement.</li><li><strong>Digestibilité</strong> : très facile à digérer.</li><li><strong>Qualité</strong> : processus d'hydrolyse contrôlé.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\">La <strong>whey hydrolysée</strong> est un isolat dont les chaînes de protéines ont été coupées en peptides plus courts par des enzymes, avant la mise en pot. Le travail de digestion est donc partiellement fait à l'avance : la poudre se dissout finement et passe mieux chez les estomacs sensibles. En contrepartie, l'hydrolyse donne un goût franchement amer que les marques masquent avec des arômes soutenus. Le prix du jour et la disponibilité figurent sur chaque fiche ; le prix au kilo, lui, se calcule, et c'est le seul moyen de savoir ce que ce confort digestif vous coûte réellement. Reste à savoir à qui ce confort sert vraiment, et le guide ci-dessous le dit sans détour.</p>",
+  "howToChooseTitle": "Faut-il payer pour de l'hydrolysat ?",
+  "howToChooseBody": "<h3 class=\"text-base sm:text-lg font-semibold text-ink-1 mt-4 mb-2\">Ce que l'hydrolyse ne change pas</h3><p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\">Elle ne change pas la quantité de protéines que vous absorbez sur une journée, et aucun gain net sur la masse musculaire n'est démontré face à un <a href=\"/whey-isolate\">isolat</a> classique pour un pratiquant non compétiteur. Le vrai public de cette page est étroit : les personnes que la whey classique dérange encore après filtration, et celles qui reprennent une séance très peu de temps après la précédente. Pour tout le reste, commencez par le rayon <a href=\"/whey-proteine\">whey protéine</a> qui est nettement plus large et moins cher au kilo de poudre.</p><h3 class=\"text-base sm:text-lg font-semibold text-ink-1 mt-4 mb-2\">Ce qu'il faut vérifier avant d'acheter</h3><ul class=\"list-disc pl-5 mb-3 sm:mb-4 text-ink-2 space-y-1\"><li><strong>Le degré d'hydrolyse n'est presque jamais publié</strong> : deux pots portant le même mot peuvent être très différents. À défaut, lisez la liste d'ingrédients — « isolat de protéines de lactosérum hydrolysé » doit venir en premier, et non après un concentré.</li><li><strong>Méfiez-vous des mélanges</strong> : beaucoup de produits ajoutent une fraction hydrolysée à une base concentrée et se présentent comme hydrolysés. L'ordre des ingrédients tranche la question.</li><li><strong>Le goût</strong> : l'amertume est inhérente au procédé. Prenez le plus petit format disponible avant de vous engager sur un pot de 2 kg.</li><li><strong>Le prix au kilo de protéines</strong> : calculez-le comme partout ailleurs, en divisant le prix par le poids net imprimé sur l'emballage. C'est le seul moyen de savoir ce que le confort digestif vous coûte réellement.</li><li><strong>La tolérance</strong> : si une whey isolate passe déjà bien, l'hydrolysat n'apportera rien de mesurable. L'essayer a du sens quand l'isolate gêne encore.</li><li><strong>Les acides aminés ajoutés</strong> : leucine, isoleucine et valine libres sont courantes sur ces formules. Elles ne sont pas un défaut, mais elles comptent dans le total protéique affiché.</li></ul><p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\">À comparer avec : l'<a href=\"/whey-isolate\">isolat de whey</a>, un cran en dessous en transformation et en prix ; le <a href=\"/whey-proteine\">rayon whey complet</a>, où se trouvent les formats les plus économiques ; la <a href=\"/caseine\">caséine</a>, à l'opposé exact sur la vitesse de digestion ; et le <a href=\"/proteines\">catalogue protéines</a> pour les sources non laitières.</p>",
   "faqs": [
     {
       "question": "Différence entre whey hydrolysée et isolate ?",
-      "answer": "L'hydrolysée est encore plus rapide à absorber (15-20 min vs 30-40 min pour l'isolate) car les protéines sont pré-coupées en peptides."
+      "answer": "L'isolate est une whey très filtrée. L'hydrolysée est un isolat dont les chaînes de protéines ont été pré-découpées en peptides plus courts par des enzymes, ce qui rend la digestion plus facile. La différence porte sur le confort digestif et la vitesse d'assimilation, pas sur la quantité de protéines apportée."
+    },
+    {
+      "question": "L'hydrolysat fait-il prendre plus de muscle ?",
+      "answer": "Aucun avantage net n'est démontré sur la masse musculaire par rapport à un isolat classique chez un pratiquant non compétiteur. Ce qui détermine le résultat, c'est l'apport protéique total de la journée et l'entraînement. L'hydrolysat se justifie pour le confort digestif, pas pour un gain supplémentaire."
+    },
+    {
+      "question": "Pourquoi la whey hydrolysée a-t-elle un goût amer ?",
+      "answer": "L'amertume est une conséquence directe du procédé : couper les protéines en peptides courts libère des fragments au goût amer. Les marques la compensent avec des arômes plus soutenus et davantage d'édulcorants. C'est la raison pour laquelle il vaut mieux tester un petit format avant d'acheter un grand pot."
+    },
+    {
+      "question": "La whey hydrolysée convient-elle aux intolérants au lactose ?",
+      "answer": "Elle part d'un isolat, donc d'une base déjà très pauvre en lactose, et l'hydrolyse ne rajoute rien. Elle est donc généralement bien tolérée. En cas d'intolérance franche, vérifiez malgré tout la mention portée sur l'emballage, et sachez qu'une protéine végétale ne contient pas de lactose du tout."
+    },
+    {
+      "question": "Quand prendre la whey hydrolysée ?",
+      "answer": "Autour de l'entraînement, quand l'estomac supporte mal une poudre plus lourde, ou entre deux séances rapprochées dans la même journée. En dehors de ces cas, le moment de la prise pèse beaucoup moins que le total de protéines consommé sur la journée."
     }
   ],
   "relatedCategorySlugs": [
-    "proteines",
-    "whey-proteine",
     "whey-isolate",
-    "caseine"
+    "whey-proteine",
+    "caseine",
+    "proteines"
   ],
-  "bestProductSlugs": []
+  "bestProductSlugs": [
+    "iso-hydro-zero-1800g-william-bonac",
+    "hydro-whey-1-59-kg"
+  ]
 }

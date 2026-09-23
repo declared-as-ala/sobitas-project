@@ -59,6 +59,70 @@ export interface BrandSeoEntry {
  * vendues seules", the brand stocking three pot sizes offers "Comparer les formats de créatine".
  * Every one of the twelve still resolves to /creatine, and no other destination uses any of them.
  *
+ * ── 23/09/2026: THE CREATINE SPLIT WAS ONLY EVER APPLIED TO CREATINE ─────────────────────────
+ * That pass fixed the destination that was NOT the measured problem and left the one that was.
+ * Counted across the whole file on 23/09/2026, before this change:
+ *
+ *     /creatine        12 links, 12 distinct anchors   (already split)
+ *     /whey-proteine   15 links,  1 distinct anchor    "Whey protéine en Tunisie" x15
+ *     /whey-isolate     8 links,  1 distinct anchor    "Whey isolate en Tunisie"  x8
+ *     /pre-workout      6 links,  2 distinct anchors   "Pre-workout" x4 / "Pré-workout" x2
+ *     /mass-gainers     4 links,  1 · /glutamine 3, 1 · /vitamines 3, 1 · /bcaa 2, 1
+ *     /proteine-de-boeuf 2, 1 · /gainers-proteines 2, 1
+ *
+ * /whey-proteine is where it hurt: GSC 22/09, `whey protein tunisie` 13 clicks / 346 impressions,
+ * of which /blog/whey-proteine-pas-cher-tunisie takes 5 at 13.9 and /blog/whey-protein-en-tunisie
+ * 4 at 12.5, while the category itself sits at 34.4 with 1 click. Fifteen brand pages were handing
+ * it the same exact-match string, which is the repetition pattern — not the destination — that the
+ * creatine note above already identified as the thing to avoid.
+ *
+ * ── WHAT "ONE DISTINCT ANCHOR" MEANS, AND IN WHICH FILE (re-measured 23/09/2026) ─────────────
+ * Counted across this file today: 128 `relatedCategories` links over 28 distinct destinations,
+ * and not one destination receives the same anchor string twice. The inverse guard holds too —
+ * no anchor string here resolves to two different URLs.
+ *
+ * That sentence was only half true until today, and the missing half lived in another file. Both
+ * renders of a brand page read `relatedCategories[].name`: the human one,
+ * app/(shop)/brand/BrandSeoLanding.tsx, which has always printed `{link.name}` unchanged, and the
+ * crawler one, app/components/crawler/CrawlerCategoryView.tsx, which used to pass every name
+ * through `categoryAnchor()` first. That helper (src/util/categoryAnchor.ts) maps a slug to ONE
+ * fixed label and declares 19 of them today; 13 of the 28 destinations linked from this file are
+ * among those 19 — /whey-proteine, /creatine, /bcaa, /eaa, /glutamine, /vitamines, /mineraux,
+ * /magnesium, /zinc, /zma, /collagene, /omega-3 and /sante-vitalite. On the render that ranks,
+ * those 13 collapsed back to one string apiece whatever was written here, while the other 15 —
+ * /whey-isolate, /mass-gainers, /brands, /pre-workout, /caseine, /bruleurs-de-graisse,
+ * /proteines-multi-sources, /proteine-de-boeuf, /whey-hydrolysee, /gainers-proteines,
+ * /articulations, /antioxydants, /citrulline, /boosters-hormonaux and /glucides — kept their
+ * curated wording only because the helper has no entry for them.
+ *
+ * CrawlerCategoryView's related-category rail no longer calls `categoryAnchor()`: it renders
+ * `{c.name}`, which is what BrandSeoLanding already did. So the distinct anchors written here are
+ * the anchors both renders emit, for all 28 destinations and not just the 15 the helper ignores.
+ * The sub-categories rail in that same component still calls the helper on purpose, and that is
+ * not this file's concern: the brand branch of app/x-crawler/category/[slug]/page.tsx passes no
+ * `subCategories`, so on a brand page that rail renders nothing.
+ *
+ * The /pre-workout pair was a spelling drift rather than a duplicate: four entries wrote
+ * "Pre-workout" and two "Pré-workout" for the same shelf. `catalogTaxonomy.ts` declares the label
+ * "Pré-workout", so all six now carry the accent.
+ *
+ * ── EVERY BRAND PAGE LINKS UP TO /brands ─────────────────────────────────────────────────────
+ * Before 23/09/2026, none did — 0 of 16 entries, and the breadcrumb both routes build is
+ * `Accueil > Boutique > {marque}`, so /shop was the only thing above a brand page and the brand
+ * index was reachable from it only through the global header. /brands is a real indexed page that
+ * already earns (GSC 22/09, 28 d: 3 clicks / 235 impressions / pos 26.9) and titles itself "570+
+ * marques", so it is the natural parent of 570 brand URLs. Each entry now ends with a /brands
+ * chip whose anchor names its own brand — "Comparer Dymatize aux autres marques" — which keeps
+ * the 24 anchors distinct without inventing 24 synonyms for "toutes les marques".
+ *
+ * ── THE SUBJECT OF A BRAND PAGE IS THE BRAND ─────────────────────────────────────────────────
+ * Checked on 23/09/2026 across every entry: none leads its metaTitle or its h1 with a category
+ * head term — all 24 open with the brand name, then the brand's OWN product names.
+ * The generic fallback in util/brandMeta.ts does the same ("{Marque} Tunisie | …"). Keep it that
+ * way. A brand page titled "Créatine en Tunisie" would be a second self-canonical 200 bidding
+ * against /creatine on the query /creatine is already losing (0 clicks / 8 impressions / pos 64.0
+ * on `creatine tunisie`), which is the cannibalisation this whole file exists to avoid.
+ *
  * ── A CREATINE LINK REQUIRES A CREATINE PRODUCT ──────────────────────────────────────────────
  * `relatedCategories` is editorial, not a taxonomy dump: a brand links to /creatine only when its
  * own entry above names the creatine reference it sells (Micronised Creatine, Gold Creatine,
@@ -74,6 +138,60 @@ export interface BrandSeoEntry {
  * brands present in /all_brands. Checked on 08/09/2026 against all 582 rows: american-wolf,
  * impact-sport-nutrition, creapure, amino-complex and longevity(-plus) are not brands we carry —
  * their pages answer 404, and an entry for them would be dead config, not SEO.
+ *
+ * ── WHICH BRANDS GET AN ENTRY: THE MEASURED ONES, IN ORDER ───────────────────────────────────
+ * /all_brands returned 582 rows on 23/09/2026 and the sitemap advertises a URL for each, so the
+ * question is never "which brand deserves copy" in the abstract — it is "which brand URL is
+ * already being shown to someone". Crossing the 28-day GSC Pages export (protein.tn/2026-09-22-28d
+ * /Pages.csv, 23/08 → 19/09) against /all_brands gives 104 brand URLs with at least one
+ * impression. Ranked by clicks, the top of that list was:
+ *
+ *     /optimum-nutrition 47/1614/13.5   /dymatize 44/200/4.5     /biotech-usa 19/214/7.9
+ *     /weightworld 14/144/5.5           /muscletech 12/154/7.7   /ostrovit 12/146/7.1
+ *     /now-foods 12/58/3.1              /vital-proteins 11/52/3.4  /william-bonac 10/108/6.1
+ *     /doctor-s-best 9/19/3.3           /big-ramy-labs 8/164/6.7  /rule-one-proteins 8/50/6.7
+ *     /proactive 7/164/25.6             /mr-x-v-shape-supps 7/69/7.7  /victor-martinez 5/30/9.0
+ *     /gsn-great-sport-nutrition 4/381/8.5  /nutricost 4/25/3.6   /universal-nutrition 3/19/7.3
+ *     /olimp-sport-nutrition 2/51/7.2   /kevin-levrone 2/54/11.9  /challenger-nutrition 1/71/9.2
+ *     /ultimate-nutrition 3/54/7.9      /c4-cellucor 1/30/8.9     /real-pharm 0/19/21.2
+ *
+ * The eight added on 23/09/2026 — now-foods, vital-proteins, doctor-s-best, rule-one-proteins,
+ * mr-x-v-shape-supps, nutricost, universal-nutrition, olimp-sport-nutrition — take the file from
+ * 16 brands to 24. All eight answered 200 with `index, follow` under a Googlebot UA on 23/09/2026
+ * before a line was written for them, and all eight were falling through to the generic default
+ * title "{Marque} Tunisie | Compléments alimentaires — Protein.tn" — the same string on 566 of
+ * the 582 brand URLs, 558 of them after this change. Two were also shouting the database value at
+ * Google: "OLIMP SPORT NUTRITION Tunisie" and "MR.X  V-Shape Supps Tunisie", double space
+ * included; the curated entry is what fixes the casing on the one view that ranks.
+ *
+ * Four earning brands in that band were deliberately NOT given an entry, and the reason is the
+ * same for all four: their listing is one to four SKUs (neurogum 9 clicks / 1 product;
+ * fond-bone-broth 7 / 2; true-sea-moss 5 / 4; bpi-sports 4 / 2). A "quel produit choisir ?"
+ * section needs at least two products that differ on something; with one reference the honest
+ * output is the product page, not a brand guide. They also already rank at 1.9 to 6.7 — there is
+ * nothing here to win. If their catalogue grows, they are the next entries to write.
+ *
+ * Their product families, formats and net weights come from /api/productsByBrandId/{66,310,63,
+ * 454,36,389,25,1} read on 23/09/2026 — the same listing the grid above the copy renders. They
+ * quote NO per-portion figure at all: unlike the flagship entries there is no transcribed
+ * `nutrition_facts` behind them, so each says plainly that the pot's own label is the reference.
+ * That is also why none of them claims a benefit for a substance. Nothing here states a price, a
+ * stock level, a founding year, an award or a distributor status, because nothing on protein.tn
+ * sources any of those.
+ *
+ * ── A LINK REQUIRES A PRODUCT — RE-VERIFIED, ALL 24 ──────────────────────────────────────────
+ * Re-checked 23/09/2026 by fetching every entry's own /api/productsByBrandId listing and
+ * intersecting the `sous_categorie.slug` set with its `relatedCategories`. Every link in the file
+ * resolves to a category the brand genuinely sells into, with exactly two deliberate exceptions,
+ * both stated in the copy that surrounds them:
+ *   · proactive → /creatine — the entry says outright it sells no standalone creatine (its
+ *     listing holds only proteines-multi-sources and whey-proteine) and the anchor "Créatines
+ *     vendues seules" answers the question its own copy provokes. See the section above.
+ *   · vital-proteins → /sante-vitalite — a RAYON, not a leaf. Its five references are all
+ *     `collagene`, and catalogTaxonomy.ts declares `collagene` a child of `sante-vitalite`, so
+ *     this is the up-the-tree link, not a claim that the brand sells the whole rayon.
+ * Every non-/brands destination in the file is a slug declared in catalogTaxonomy.ts, so the
+ * names these anchors use and the parents they imply come from the one canonical tree.
  */
 const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze({
   dymatize: {
@@ -110,27 +228,28 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     ],
     relatedCategories: [
       { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-proteine', name: 'Toutes les whey protéines en Tunisie', url: '/whey-proteine' },
       { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
+      { slug: 'brands', name: 'Comparer Dymatize aux autres marques', url: '/brands' },
     ],
   },
 
   muscletech: {
     metaTitle: 'MuscleTech Tunisie | Nitro-Tech & Cell-Tech — Protein.tn',
     metaDescription:
-      'MuscleTech en Tunisie : whey Nitro-Tech 1,81 kg, ISO Whey Clear, créatines Cell-Tech et Creatine Chews, EAA+ et pré-workout EuphoriQ. Formats et prix affichés.',
+      'MuscleTech en Tunisie : whey Nitro-Tech 1,81 kg, ISO Whey Clear, quatre créatines dont Cell-Tech, EAA+ et pré-workout EuphoriQ. Formats et prix affichés.',
     h1: 'MuscleTech Tunisie : Nitro-Tech, Cell-Tech et acides aminés',
     introHtml:
-      '<p>La gamme <strong>MuscleTech vendue en Tunisie</strong> se répartit en quatre familles. Les protéines d’abord : <strong>Nitro-Tech</strong> en 1,81 kg (Milk Chocolate, Cookies &amp; Cream, Vanilla Cream, Strawberry), <strong>ISO Whey Clear</strong> en 503 g et <strong>100% Grass-Fed Whey</strong> en 816 g. Les créatines ensuite, avec <strong>Cell-Tech</strong> 1,36 kg et les <strong>Creatine Chews</strong> à croquer. Puis les acides aminés, <strong>Amino Build</strong> et <strong>Platinum 100% EAA+</strong>, et le pré-workout <strong>EuphoriQ</strong>. S’y ajoutent Hydroxycut Hardcore Elite, Platinum MultiVitamin et Clear Muscle. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
+      '<p>La gamme <strong>MuscleTech vendue en Tunisie</strong> se répartit en quatre familles. Les protéines d’abord : <strong>Nitro-Tech</strong> en 1,81 kg (Milk Chocolate, Cookies &amp; Cream, Vanilla Cream, Strawberry), <strong>ISO Whey Clear</strong> en 503 g et <strong>100% Grass-Fed Whey</strong> en 816 g. Les créatines ensuite, quatre références : <strong>Cell-Tech</strong> 1,36 kg, <strong>Platinum Creatine</strong> en pot de 400 g et deux <strong>Creatine Chews</strong> à croquer. Puis les acides aminés, <strong>Amino Build</strong> et <strong>Platinum 100% EAA+</strong>, et le pré-workout <strong>EuphoriQ</strong>. S’y ajoutent Hydroxycut Hardcore Elite, Platinum MultiVitamin et Clear Muscle. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
     howToChooseTitle: 'Quel produit MuscleTech choisir ?',
     howToChooseBody:
       '<p><strong>Nitro-Tech</strong> est la protéine la plus complète de la gamme : sur le format 1,81 kg parfum Milk Chocolate, l’étiquette du fabricant déclare 30 g de protéines et 3 g de créatine monohydrate par portion de 45 g. C’est donc une poudre à la fois protéinée et créatinée, ce qui évite d’acheter les deux séparément. <strong>ISO Whey Clear</strong> (503 g) est un isolat qui se boit clair, plus proche d’un jus que d’une boisson lactée : le choix se joue surtout sur la texture. <strong>100% Grass-Fed Whey</strong> (816 g) répond, elle, à une exigence sur l’origine du lait.</p>' +
-      '<p>Côté créatine, <strong>Cell-Tech</strong> (1,36 kg) est une poudre à diluer qui apporte aussi des glucides, tandis que les <strong>Creatine Chews</strong> sont des comprimés à croquer dosés à 1 g, sans eau ni shaker. <strong>Amino Build</strong> et <strong>Platinum 100% EAA+</strong> se placent autour de l’entraînement, une fois l’apport protéique de la journée déjà couvert par l’alimentation ou par une whey. Vérifiez toujours l’étiquette du parfum et du format retenus : les valeurs déclarées changent d’une saveur à l’autre.</p>',
+      '<p>Côté créatine, il y a quatre références et non deux. <strong>Cell-Tech</strong> (1,36 kg) est une poudre à diluer qui apporte aussi des glucides ; <strong>Platinum Creatine</strong> est un pot de 400 g ; les deux <strong>Creatine Chews</strong> sont des comprimés à croquer dosés à 1 g, sans eau ni shaker. <strong>Amino Build</strong> et <strong>Platinum 100% EAA+</strong> se placent autour de l’entraînement, une fois l’apport protéique de la journée déjà couvert par l’alimentation ou par une whey. Vérifiez toujours l’étiquette du parfum et du format retenus : les valeurs déclarées changent d’une saveur à l’autre.</p>',
     faqs: [
       {
         question: 'Quels produits MuscleTech sont disponibles en Tunisie ?',
         answer:
-          'Protein.tn référence les protéines Nitro-Tech, ISO Whey Clear et 100% Grass-Fed Whey, les créatines Cell-Tech et Creatine Chews, les acides aminés Amino Build et Platinum 100% EAA+, le pré-workout EuphoriQ, ainsi que Hydroxycut Hardcore Elite, Platinum MultiVitamin et Clear Muscle. La grille de produits de cette page indique les références et les formats effectivement proposés.',
+          'Protein.tn référence les protéines Nitro-Tech, ISO Whey Clear et 100% Grass-Fed Whey, les créatines Cell-Tech, Platinum Creatine 400 g et Creatine Chews, les acides aminés Amino Build et Platinum 100% EAA+, le pré-workout EuphoriQ, ainsi que Hydroxycut Hardcore Elite, Platinum MultiVitamin et Clear Muscle. La grille de produits de cette page indique les références et les formats effectivement proposés.',
       },
       {
         question: 'Combien de protéines contient une portion de Nitro-Tech ?',
@@ -143,9 +262,9 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
           'Nitro-Tech est une whey en poudre classique, qui se mélange en boisson lactée et contient de la créatine ajoutée. ISO Whey Clear est un isolat de lactosérum qui donne une boisson claire, sans créatine. La différence porte donc sur la texture obtenue au shaker et sur la présence ou non de créatine dans le même produit.',
       },
       {
-        question: 'Cell-Tech ou Creatine Chews : que choisir ?',
+        question: 'Quelles créatines MuscleTech sont référencées ?',
         answer:
-          'Cell-Tech est une poudre de 1,36 kg à diluer qui apporte aussi des glucides. Les Creatine Chews sont des comprimés à croquer dosés à 1 g, qui ne demandent ni eau ni shaker et se transportent facilement. Le choix tient à votre routine et au format qui vous convient, pas à la créatine elle-même, qui est la même molécule dans les deux cas.',
+          'Quatre, et pas seulement les deux les plus connues. Cell-Tech est une poudre de 1,36 kg à diluer qui apporte aussi des glucides. Platinum Creatine est un pot de 400 g. Les deux Creatine Chews sont des comprimés à croquer dosés à 1 g, qui ne demandent ni eau ni shaker et se transportent facilement. Le choix tient à votre routine et au format qui vous convient ; la composition exacte de chaque référence est imprimée sur son pot.',
       },
       {
         question: 'Quel est le prix des produits MuscleTech en Tunisie ?',
@@ -159,9 +278,10 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-proteine', name: 'Le rayon whey protéine', url: '/whey-proteine' },
       { slug: 'creatine', name: 'Créatines en poudre et à croquer', url: '/creatine' },
       { slug: 'pre-workout', name: 'Pré-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'brands', name: 'Comparer MuscleTech aux autres marques', url: '/brands' },
     ],
   },
 
@@ -211,8 +331,9 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     relatedCategories: [
       { slug: 'creatine', name: 'Découvrir les créatines monohydrate', url: '/creatine' },
       { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-proteine', name: 'Comparer les whey protéines', url: '/whey-proteine' },
       { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
+      { slug: 'brands', name: 'Comparer OstroVit aux autres marques', url: '/brands' },
     ],
   },
 
@@ -222,7 +343,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       'Kevin Levrone en Tunisie : Levro Legendary Mass 6,8 kg et 3 kg, Gold Whey, Gold ISO, Gold Creatine, Shaaboom Pump et L-Carnitine 3000. Formats et prix affichés.',
     h1: 'Kevin Levrone Tunisie : Levro Legendary Mass et série Gold',
     introHtml:
-      '<p>La gamme <strong>Kevin Levrone en Tunisie</strong> s’organise autour de la prise de masse et de la série Gold. Le gainer <strong>Levro Legendary Mass</strong> est proposé en 6,8 kg et en 3 kg. Les protéines de la série Gold suivent avec <strong>Gold Whey</strong> 2 kg et <strong>Gold ISO</strong> 2 kg. Complètent le catalogue la <strong>Gold Creatine</strong> 300 g, la <strong>Gold L-Arginine</strong> en 120 gélules, la <strong>Gold L-Carnitine 3000</strong> en flacon de 500 ml, le pré-workout <strong>Shaaboom Pump</strong> 385 g et le <strong>Gold Power Core Multivitamin</strong> en 120 comprimés. Un Pack Prise de Masse Pro regroupe plusieurs de ces références en une seule commande.</p>',
+      '<p>La gamme <strong>Kevin Levrone en Tunisie</strong> s’organise autour de la prise de masse et de la série Gold. Le gainer <strong>Levro Legendary Mass</strong> est proposé en 6,8 kg et en 3 kg. Les protéines de la série Gold suivent avec <strong>Gold Whey</strong> 2 kg et <strong>Gold ISO</strong> 2 kg. Complètent le catalogue la <strong>Gold Creatine</strong> 300 g, la <strong>Gold L-Arginine</strong> en 120 gélules, deux L-carnitines liquides — <strong>Gold L-Carnitine 3000</strong> et <strong>Anabolic L-Carnitine 3000</strong>, toutes deux en flacon de 500 ml —, le pré-workout <strong>Shaaboom Pump</strong> 385 g et le <strong>Gold Power Core Multivitamin</strong> en 120 comprimés. Un Pack Prise de Masse Pro regroupe plusieurs de ces références en une seule commande.</p>',
     howToChooseTitle: 'Quel produit Kevin Levrone choisir ?',
     howToChooseBody:
       '<p><strong>Levro Legendary Mass</strong> est le produit central de la marque, et c’est un gainer très calorique. Sur le sac de 6,8 kg, l’étiquette du fabricant déclare une portion de 200 g (4 doses) apportant 771 kcal, 42 g de protéines et 138 g de glucides, pour 34 portions par contenant. Il s’adresse donc aux personnes dont le point bloquant est la quantité de nourriture, pas à celles qui cherchent uniquement à compléter leurs protéines. Le format 3 kg reprend la même formule sur une durée plus courte.</p>' +
@@ -231,7 +352,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       {
         question: 'Quels produits Kevin Levrone sont vendus en Tunisie ?',
         answer:
-          'Protein.tn référence le gainer Levro Legendary Mass en 6,8 kg et 3 kg, les protéines Gold Whey 2 kg et Gold ISO 2 kg, la Gold Creatine 300 g, la Gold L-Arginine 120 gélules, la Gold L-Carnitine 3000 en 500 ml, le pré-workout Shaaboom Pump 385 g et le Gold Power Core Multivitamin 120 comprimés, ainsi qu’un Pack Prise de Masse Pro.',
+          'Protein.tn référence le gainer Levro Legendary Mass en 6,8 kg et 3 kg, les protéines Gold Whey 2 kg et Gold ISO 2 kg, la Gold Creatine 300 g, la Gold L-Arginine 120 gélules, la Gold L-Carnitine 3000 et l’Anabolic L-Carnitine 3000 en 500 ml, le pré-workout Shaaboom Pump 385 g et le Gold Power Core Multivitamin 120 comprimés, ainsi qu’un Pack Prise de Masse Pro.',
       },
       {
         question: 'Combien de calories dans une portion de Levro Legendary Mass ?',
@@ -260,29 +381,30 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'mass-gainers', name: 'Comparer les mass gainers', url: '/mass-gainers' },
+      { slug: 'whey-proteine', name: 'Whey protéines : tous les formats', url: '/whey-proteine' },
       { slug: 'creatine', name: 'Voir nos créatines en Tunisie', url: '/creatine' },
-      { slug: 'pre-workout', name: 'Pré-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'pre-workout', name: 'Comparer les pré-workouts', url: '/pre-workout' },
+      { slug: 'brands', name: 'Comparer Kevin Levrone aux autres marques', url: '/brands' },
     ],
   },
 
   'optimum-nutrition': {
     metaTitle: 'Optimum Nutrition Tunisie | Whey Gold Standard — Protein.tn',
     metaDescription:
-      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey 2,27 kg, Platinum Hydro Whey, Serious Mass, Micronised Creatine, BCAA 5000 et Opti-Men. Prix affichés.',
+      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey de 837 g à 4,5 kg, Platinum Hydro Whey, Serious Mass, Micronised Creatine, BCAA 5000 et Opti-Men.',
     h1: 'Optimum Nutrition Tunisie : Gold Standard, Hydro Whey et Serious Mass',
     introHtml:
-      '<p>La gamme <strong>Optimum Nutrition en Tunisie</strong> réunit les protéines <strong>Gold Standard 100% Whey</strong> en 2,27 kg (Double Rich Chocolate, Vanilla Ice Cream, Delicious Strawberry, Strawberry Banana, Rocky Road) et <strong>Platinum Hydro Whey</strong> en 820 g et 1,59 kg, le gainer <strong>Serious Mass</strong> 5,45 kg, la <strong>Micronised Creatine</strong> en 300 g et 317 g, les acides aminés <strong>Instantized BCAA 5000</strong> 345 g et <strong>Superior Amino 2222</strong> en 320 comprimés, ainsi que les multivitamines <strong>Opti-Men</strong> et <strong>Opti-Women</strong>. HMB et ZMA complètent le catalogue, aux côtés de packs qui regroupent plusieurs de ces références.</p>',
+      '<p>La gamme <strong>Optimum Nutrition en Tunisie</strong> réunit les protéines <strong>Gold Standard 100% Whey</strong>, de 837 g à 4,5 kg selon le parfum (Double Rich Chocolate, Vanilla Ice Cream, Delicious Strawberry, Strawberry Banana, Rocky Road, Banana Cream, Chocolate Malt, Chocolate Mint, Cookies &amp; Cream, Extreme Milk Chocolate, French Vanilla Creme), et <strong>Platinum Hydro Whey</strong> en 820 g, 1,59 kg, 1,6 kg et 1,64 kg, le gainer <strong>Serious Mass</strong> en 2,7 kg et 5,45 kg, la <strong>Micronised Creatine</strong> en 300 g et 317 g, les acides aminés <strong>Instantized BCAA 5000</strong> 345 g et <strong>Superior Amino 2222</strong> en 320 comprimés, ainsi que les multivitamines <strong>Opti-Men</strong> et <strong>Opti-Women</strong>. HMB et ZMA complètent le catalogue, aux côtés de packs qui regroupent plusieurs de ces références.</p>',
     howToChooseTitle: 'Quelle protéine Optimum Nutrition choisir ?',
     howToChooseBody:
-      '<p><strong>Gold Standard 100% Whey</strong> est la référence de base de la marque : sur le format 2,27 kg parfum Double Rich Chocolate, l’étiquette du fabricant déclare 24 g de protéines, 1,6 g de glucides et 116 kcal par portion de 31 g. C’est une whey polyvalente, qui convient au complément protéique quotidien quel que soit l’objectif, et le choix se fait ensuite sur le parfum. <strong>Platinum Hydro Whey</strong> repose sur une whey hydrolysée et s’adresse aux sportifs qui privilégient une digestion rapide ; elle est proposée en 820 g et 1,59 kg.</p>' +
-      '<p><strong>Serious Mass</strong> 5,45 kg est un gainer, pas une version renforcée de la whey : il apporte surtout des glucides et répond à une difficulté à atteindre l’apport calorique. La <strong>Micronised Creatine</strong> (300 g ou 317 g) est une créatine monohydrate sans arôme, à prendre indépendamment des protéines. <strong>Instantized BCAA 5000</strong> et <strong>Superior Amino 2222</strong> viennent après, une fois les protéines totales couvertes. Enfin, <strong>Opti-Men</strong> et <strong>Opti-Women</strong> sont des multivitamines quotidiennes et ne remplacent aucun des produits ci-dessus. Vérifiez l’étiquette du parfum et du format retenus.</p>',
+      '<p><strong>Gold Standard 100% Whey</strong> est la référence de base de la marque : sur le format 2,27 kg parfum Double Rich Chocolate, l’étiquette du fabricant déclare 24 g de protéines, 1,6 g de glucides et 116 kcal par portion de 31 g. C’est une whey polyvalente, qui convient au complément protéique quotidien quel que soit l’objectif, et le choix se fait ensuite sur le parfum. <strong>Platinum Hydro Whey</strong> repose sur une whey hydrolysée et s’adresse aux sportifs qui privilégient une digestion rapide ; elle est proposée en 820 g, 1,59 kg, 1,6 kg et 1,64 kg.</p>' +
+      '<p><strong>Serious Mass</strong>, en 2,7 kg et 5,45 kg, est un gainer, pas une version renforcée de la whey : il apporte surtout des glucides et répond à une difficulté à atteindre l’apport calorique. La <strong>Micronised Creatine</strong> (300 g ou 317 g) est une créatine monohydrate sans arôme, à prendre indépendamment des protéines. <strong>Instantized BCAA 5000</strong> et <strong>Superior Amino 2222</strong> viennent après, une fois les protéines totales couvertes. Enfin, <strong>Opti-Men</strong> et <strong>Opti-Women</strong> sont des multivitamines quotidiennes et ne remplacent aucun des produits ci-dessus. Vérifiez l’étiquette du parfum et du format retenus.</p>',
     faqs: [
       {
         question: 'Quels produits Optimum Nutrition sont disponibles en Tunisie ?',
         answer:
-          'Protein.tn référence la Gold Standard 100% Whey en 2,27 kg dans plusieurs parfums, la Platinum Hydro Whey en 820 g et 1,59 kg, le gainer Serious Mass 5,45 kg, la Micronised Creatine en 300 g et 317 g, l’Instantized BCAA 5000 345 g, le Superior Amino 2222 320 comprimés, les multivitamines Opti-Men et Opti-Women, ainsi que HMB et ZMA.',
+          'Protein.tn référence la Gold Standard 100% Whey de 837 g à 4,5 kg dans plusieurs parfums, la Platinum Hydro Whey en 820 g, 1,59 kg, 1,6 kg et 1,64 kg, le gainer Serious Mass en 2,7 kg et 5,45 kg, la Micronised Creatine en 300 g et 317 g, l’Instantized BCAA 5000 345 g, le Superior Amino 2222 320 comprimés, les multivitamines Opti-Men et Opti-Women, ainsi que HMB et ZMA.',
       },
       {
         question: 'Combien de protéines dans une dose de Gold Standard 100% Whey ?',
@@ -292,12 +414,12 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       {
         question: 'Quelle différence entre Gold Standard et Platinum Hydro Whey ?',
         answer:
-          'Gold Standard 100% Whey est une whey polyvalente pour l’apport protéique quotidien. Platinum Hydro Whey est construite sur une whey hydrolysée, c’est-à-dire prédécoupée, et vise une digestion plus rapide. Elle est proposée en formats plus petits, 820 g et 1,59 kg, contre 2,27 kg pour la Gold Standard.',
+          'Gold Standard 100% Whey est une whey polyvalente pour l’apport protéique quotidien. Platinum Hydro Whey est construite sur une whey hydrolysée, c’est-à-dire prédécoupée, et vise une digestion plus rapide. Elle est proposée en 820 g, 1,59 kg, 1,6 kg et 1,64 kg, quand la Gold Standard s’étend de 837 g à 4,5 kg.',
       },
       {
         question: 'Gold Standard ou Serious Mass pour prendre du poids ?',
         answer:
-          'Les deux ne répondent pas au même blocage. Si vous mangez assez mais manquez de protéines, la Gold Standard suffit. Si vous n’arrivez pas à atteindre votre apport calorique, Serious Mass apporte surtout des glucides en plus des protéines, dans un sac de 5,45 kg. Le point de départ reste votre alimentation.',
+          'Les deux ne répondent pas au même blocage. Si vous mangez assez mais manquez de protéines, la Gold Standard suffit. Si vous n’arrivez pas à atteindre votre apport calorique, Serious Mass apporte surtout des glucides en plus des protéines, en sac de 2,7 kg ou de 5,45 kg. Le point de départ reste votre alimentation.',
       },
       {
         question: 'Quel est le prix des produits Optimum Nutrition en Tunisie ?',
@@ -311,10 +433,11 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
+      { slug: 'whey-proteine', name: 'Notre sélection de whey protéines', url: '/whey-proteine' },
+      { slug: 'mass-gainers', name: 'Le rayon mass gainer', url: '/mass-gainers' },
       { slug: 'creatine', name: 'Comparer nos créatines', url: '/creatine' },
-      { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
+      { slug: 'vitamines', name: 'Le rayon vitamines et minéraux', url: '/vitamines' },
+      { slug: 'brands', name: 'Comparer Optimum Nutrition aux autres marques', url: '/brands' },
     ],
   },
 
@@ -362,10 +485,11 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Voir les whey protéines disponibles', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Comparer les whey isolate', url: '/whey-isolate' },
       { slug: 'creatine', name: 'Le rayon créatine en Tunisie', url: '/creatine' },
       { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
+      { slug: 'brands', name: 'Comparer BioTech USA aux autres marques', url: '/brands' },
     ],
   },
 
@@ -413,10 +537,11 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Whey protéines en poudre', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Le rayon whey isolate', url: '/whey-isolate' },
       { slug: 'creatine', name: 'Créatines disponibles en Tunisie', url: '/creatine' },
-      { slug: 'mass-gainers', name: 'Mass gainers en Tunisie', url: '/mass-gainers' },
+      { slug: 'mass-gainers', name: 'Mass gainers : tous les formats', url: '/mass-gainers' },
+      { slug: 'brands', name: 'Comparer GSN aux autres marques', url: '/brands' },
     ],
   },
 
@@ -464,11 +589,12 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Isolats de whey en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Découvrir le rayon whey', url: '/whey-proteine' },
       { slug: 'creatine', name: 'Comparer les formats de créatine', url: '/creatine' },
-      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
-      { slug: 'bcaa', name: 'BCAA en Tunisie', url: '/bcaa' },
+      { slug: 'pre-workout', name: 'Le rayon pré-workout', url: '/pre-workout' },
+      { slug: 'bcaa', name: 'Le rayon BCAA', url: '/bcaa' },
+      { slug: 'brands', name: 'Comparer Real Pharm aux autres marques', url: '/brands' },
     ],
   },
 
@@ -516,11 +642,12 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Whey protéines, toutes marques', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Voir les whey isolate disponibles', url: '/whey-isolate' },
       { slug: 'caseine', name: 'Caséine en Tunisie', url: '/caseine' },
       { slug: 'creatine', name: 'Voir nos créatines disponibles', url: '/creatine' },
-      { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
+      { slug: 'glutamine', name: 'Le rayon glutamine', url: '/glutamine' },
+      { slug: 'brands', name: 'Comparer Ultimate Nutrition aux autres marques', url: '/brands' },
     ],
   },
 
@@ -601,7 +728,8 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'omega-3', name: 'Oméga 3 en Tunisie', url: '/omega-3' },
       { slug: 'magnesium', name: 'Magnésium en Tunisie', url: '/magnesium' },
       { slug: 'zinc', name: 'Zinc en Tunisie', url: '/zinc' },
-      { slug: 'vitamines', name: 'Vitamines en Tunisie', url: '/vitamines' },
+      { slug: 'vitamines', name: 'Comparer les vitamines', url: '/vitamines' },
+      { slug: 'brands', name: 'Comparer WeightWorld aux autres marques', url: '/brands' },
     ],
   },
 
@@ -649,10 +777,11 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'pre-workout', name: 'Voir tous les pré-workouts', url: '/pre-workout' },
+      { slug: 'whey-proteine', name: 'Autres whey protéines du catalogue', url: '/whey-proteine' },
       { slug: 'creatine', name: 'Créatines aromatisées et neutres', url: '/creatine' },
       { slug: 'bruleurs-de-graisse', name: 'Brûleurs de graisse en Tunisie', url: '/bruleurs-de-graisse' },
+      { slug: 'brands', name: 'Comparer C4 / Cellucor aux autres marques', url: '/brands' },
     ],
   },
 
@@ -697,9 +826,13 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
    * paragraphs of reseller marketing. The numeric packaging column is quoted; not one word of
    * `claims` is, because it is exactly the kind of health claim this file forbids.
    *
-   * ── SKIPPED, WITH REASONS ────────────────────────────────────────────────────────────────────
-   * Five of the ten bare pages got no entry. All five have no measured demand in the exports, and
-   * each also fails on the catalogue:
+   * ── SKIPPED, WITH REASONS (as of 09/09/2026 — two were reversed on 23/09) ───────────────────
+   * Five of the ten bare pages got no entry that day. All five had no measured demand in the
+   * exports, and each also failed on the catalogue. Two of the five — /olimp-sport-nutrition and
+   * /mr-x-v-shape-supps — were written on 23/09/2026 all the same and have entries at the bottom
+   * of this file; the reasons below are why they waited, not why they are still missing. Their
+   * stock state is unchanged, re-read 23/09/2026: Olimp is still 5 SKUs with all 5 `rupture:
+   * true`, MR.X still 8 SKUs with 6 `rupture: true`, so neither entry states availability.
    *
    *   /monster              NO BRAND ROW. All 582 rows of /all_brands were searched for the
    *                         substring "monster" on 09/09/2026: zero hits. The slug resolves to no
@@ -764,9 +897,10 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-proteine', name: 'Comparer avec les autres whey', url: '/whey-proteine' },
       { slug: 'proteines-multi-sources', name: 'Protéines multi-sources', url: '/proteines-multi-sources' },
       { slug: 'creatine', name: 'Créatines vendues seules', url: '/creatine' },
+      { slug: 'brands', name: 'Comparer ProActive aux autres marques', url: '/brands' },
     ],
   },
 
@@ -814,11 +948,12 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Whey protéines de toutes les marques', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate : tous les formats', url: '/whey-isolate' },
       { slug: 'proteine-de-boeuf', name: 'Protéine de bœuf en Tunisie', url: '/proteine-de-boeuf' },
       { slug: 'creatine', name: 'Toutes nos créatines', url: '/creatine' },
-      { slug: 'glutamine', name: 'Glutamine en Tunisie', url: '/glutamine' },
+      { slug: 'glutamine', name: 'Comparer les glutamines', url: '/glutamine' },
+      { slug: 'brands', name: 'Comparer Big Ramy Labs aux autres marques', url: '/brands' },
     ],
   },
 
@@ -866,10 +1001,11 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Le rayon whey protéine en Tunisie', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Notre sélection de whey isolate', url: '/whey-isolate' },
       { slug: 'whey-hydrolysee', name: 'Whey hydrolysée en Tunisie', url: '/whey-hydrolysee' },
-      { slug: 'proteine-de-boeuf', name: 'Protéine de bœuf en Tunisie', url: '/proteine-de-boeuf' },
+      { slug: 'proteine-de-boeuf', name: 'Le rayon protéine de bœuf', url: '/proteine-de-boeuf' },
+      { slug: 'brands', name: 'Comparer William Bonac aux autres marques', url: '/brands' },
     ],
   },
 
@@ -918,9 +1054,10 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
     ],
     relatedCategories: [
       { slug: 'gainers-proteines', name: 'Gainers protéinés en Tunisie', url: '/gainers-proteines' },
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'whey-isolate', name: 'Whey isolate en Tunisie', url: '/whey-isolate' },
-      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'whey-proteine', name: 'Parcourir les whey protéines', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Parcourir les whey isolate', url: '/whey-isolate' },
+      { slug: 'pre-workout', name: 'Pré-workouts disponibles en Tunisie', url: '/pre-workout' },
+      { slug: 'brands', name: 'Comparer Victor Martinez aux autres marques', url: '/brands' },
     ],
   },
 
@@ -968,11 +1105,375 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       },
     ],
     relatedCategories: [
-      { slug: 'whey-proteine', name: 'Whey protéine en Tunisie', url: '/whey-proteine' },
-      { slug: 'gainers-proteines', name: 'Gainers protéinés en Tunisie', url: '/gainers-proteines' },
+      { slug: 'whey-proteine', name: 'Whey protéines : comparer les marques', url: '/whey-proteine' },
+      { slug: 'gainers-proteines', name: 'Le rayon gainers protéinés', url: '/gainers-proteines' },
       { slug: 'creatine', name: 'Notre sélection de créatines', url: '/creatine' },
       { slug: 'eaa', name: 'EAA en Tunisie', url: '/eaa' },
-      { slug: 'pre-workout', name: 'Pre-workout en Tunisie', url: '/pre-workout' },
+      { slug: 'pre-workout', name: 'Notre sélection de pré-workouts', url: '/pre-workout' },
+      { slug: 'brands', name: 'Comparer Challenger Nutrition aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'now-foods': {
+    metaTitle: 'NOW Foods Tunisie | Vitamines, Oméga 3 & Articulations',
+    metaDescription:
+      'NOW Foods en Tunisie : vitamines, minéraux, antioxydants, articulations, oméga 3, et 60 références NOW Foods Sports (whey, créatine, BCAA, végétales).',
+    h1: 'NOW Foods Tunisie : vitamines, articulations et gamme NOW Foods Sports',
+    introHtml:
+      '<p><strong>NOW Foods en Tunisie</strong> est d’abord un catalogue de santé quotidienne, et la répartition de ses références le montre : plantes et extraits, <strong>vitamines</strong>, <strong>antioxydants</strong>, <strong>minéraux</strong>, <strong>articulations</strong>, sommeil, digestion et <strong>oméga 3</strong> en forment l’essentiel. Les formats suivent la même logique — gélules végétales, capsules molles, comprimés, poudres, gommes et extraits liquides — plutôt que les gros pots de poudre. À côté, 60 références portent le nom <strong>NOW Foods Sports</strong> et couvrent la partie entraînement sur 18 rayons : <strong>Whey Protein Isolate</strong> de 544 g à 4,54 kg, <strong>Whey Protein Powder</strong> 907 g, <strong>Organic Whey Protein</strong> 454 g, <strong>Organic Plant Protein</strong> en 454 g et 544 g, <strong>Pea Protein</strong> et <strong>Soy Protein Isolate</strong>, huit créatines (<strong>Creatine Monohydrate</strong>, <strong>Micronized Creatine Monohydrate</strong>, <strong>Kre-Alkalyn Creatine</strong>), mais aussi des <strong>BCAA</strong>, des acides aminés, de la <strong>L-glutamine</strong>, de la <strong>L-carnitine</strong> liquide, de la bêta-alanine, du ZMA, du tribulus et <strong>Advanced Joint Support</strong>.</p>',
+    howToChooseTitle: 'Quel produit NOW Foods choisir ?',
+    howToChooseBody:
+      '<p>Chez cette marque, la question n’est pas « quelle whey » mais « quel rayon ». Les références les plus nombreuses relèvent du quotidien : <strong>vitamines</strong> (ADAM et EVE multivitamines, Vitamin D-3, MK-7 Vitamin K-2, Vitamin C), <strong>minéraux</strong> (Calcium Citrate, Iron Complex, Selenium, Full Spectrum Mineral Caps), <strong>magnésium</strong> (Citrate, Glycinate with BioPerine, Magtein), <strong>antioxydants</strong> (CoQ10, Alpha Lipoic Acid, Astaxanthin, Resveratrol) et <strong>articulations</strong> (Glucosamine &amp; Chondroitin, MSM Powder 227 g, Turmeric Curcumin). Ces produits se choisissent par besoin, pas par objectif sportif.</p>' +
+      '<p>Le second critère est la forme, parce que la marque décline souvent la même substance en plusieurs présentations : le magnésium existe en gélules végétales et en poudre, la vitamine D-3 en capsules molles, en comprimés à croquer et en gommes, le curcuma en gélules et en extrait liquide. Une poudre se dose librement, une gélule se transporte. Enfin, la partie entraînement se reconnaît au nom : 60 des références de cette page s’appellent <strong>NOW Foods Sports</strong>, et elles ne s’arrêtent pas aux protéines et à la créatine. Elles se répartissent sur 18 rayons du site — protéines végétales (9 références), créatine (8), whey isolate (6), BCAA (4), acides aminés (4), glucides et énergie (4), L-carnitine (4), L-arginine, tribulus et glutamine (3 chacun), whey protéine, protéines multi-sources, ZMA et bêta-alanine (2 chacun), puis articulations, vitamines, citrulline et CLA. Aucune valeur par portion n’est reprise ici : la dose, la forme et les allergènes sont imprimés sur le flacon de la référence choisie, et c’est cette étiquette qui fait foi.</p>',
+    faqs: [
+      {
+        question: 'Que vend NOW Foods en Tunisie ?',
+        answer:
+          'Le catalogue couvre surtout la santé quotidienne : plantes et extraits, vitamines, antioxydants, minéraux, magnésium, zinc, articulations, sommeil, digestion, probiotiques et oméga 3. Les 60 références nommées NOW Foods Sports ajoutent la partie entraînement, et elles touchent 18 rayons du site : protéines végétales, créatine, whey isolate, BCAA, acides aminés, glucides et énergie, L-carnitine, L-arginine, tribulus, glutamine, whey protéine, protéines multi-sources, ZMA, bêta-alanine, articulations, vitamines, citrulline et CLA. La grille de produits de cette page indique les références et les formats effectivement proposés.',
+      },
+      {
+        question: 'NOW Foods propose-t-il de la whey et de la créatine ?',
+        answer:
+          'Oui, sous le nom NOW Foods Sports. Côté protéines : Whey Protein Isolate de 544 g à 4,54 kg, Whey Protein Powder 907 g, Organic Whey Protein 454 g et, pour une version végétale, Organic Plant Protein en 454 g et 544 g, Pea Protein et Soy Protein Isolate. Côté créatine, huit références et non deux : Creatine Monohydrate en poudre de 227 g et de 1 kg comme en gélules végétales de 120 et 240, Micronized Creatine Monohydrate en 500 g et 1 kg, et Kre-Alkalyn Creatine en 120 et 240 gélules végétales.',
+      },
+      {
+        question: 'Gélules, poudre ou capsules molles : quelle différence ?',
+        answer:
+          'La même substance est souvent déclinée en plusieurs formes chez NOW Foods. La poudre permet d’ajuster la dose et revient généralement moins cher au gramme ; la gélule ou le comprimé se transportent et évitent de peser ; la capsule molle est réservée aux formes huileuses comme la vitamine D-3 ou les oméga 3. Le choix est pratique, pas qualitatif.',
+      },
+      {
+        question: 'Quelles doses pour les compléments NOW Foods ?',
+        answer:
+          'Nous n’avançons aucune valeur ici. La dose par prise, le nombre de prises par jour, la forme et les allergènes sont imprimés sur l’étiquette de chaque flacon, et varient d’une référence à l’autre au sein de la même famille. Lisez cette étiquette, et demandez l’avis d’un professionnel de santé en cas de traitement en cours.',
+      },
+      {
+        question: 'Comment commander NOW Foods en Tunisie ?',
+        answer:
+          'Choisissez la référence et le format disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'vitamines', name: 'Vitamines et minéraux en Tunisie', url: '/vitamines' },
+      { slug: 'mineraux', name: 'Minéraux en Tunisie', url: '/mineraux' },
+      { slug: 'magnesium', name: 'Comparer les magnésiums', url: '/magnesium' },
+      { slug: 'omega-3', name: 'Le rayon oméga 3', url: '/omega-3' },
+      { slug: 'articulations', name: 'Compléments pour les articulations', url: '/articulations' },
+      { slug: 'antioxydants', name: 'Antioxydants en Tunisie', url: '/antioxydants' },
+      { slug: 'brands', name: 'Comparer NOW Foods aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'doctor-s-best': {
+    metaTitle: 'Doctor’s Best Tunisie | Articulations, CoQ10 & Collagène',
+    metaDescription:
+      'Doctor’s Best en Tunisie : glucosamine-chondroïtine-MSM, High Absorption CoQ10 et Curcumin, magnésium, collagène types 1 et 3, vitamine D3 et biotine.',
+    h1: 'Doctor’s Best Tunisie : articulations, CoQ10 et collagène',
+    introHtml:
+      '<p>Le catalogue <strong>Doctor’s Best en Tunisie</strong> est concentré sur trois familles, et cela se voit dans la grille ci-dessus. Les <strong>articulations</strong> d’abord, avec Glucosamine Chondroitin MSM + Hyaluronic Acid en 150 gélules végétales, Vegan Glucosamine Chondroitin MSM, Boswellia + UC-II et High Absorption Curcumin en 120 comprimés. Les <strong>antioxydants</strong> ensuite : High Absorption CoQ10 en capsules molles, CoQ10 + Nattokinase, Alpha-Lipoic Acid 300 et 600 en 180 gélules végétales. Les <strong>vitamines</strong> enfin, dont Vitamin D3 en 180 et 360 capsules molles et Vitamin D3 + K2 MK-7. S’y ajoutent le <strong>collagène</strong> (Types 1 &amp; 3 &amp; Vitamin C, Pure Collagen Peptides 417 g), le <strong>magnésium</strong> en poudre et en gélules, la digestion, le sommeil et la beauté des cheveux.</p>',
+    howToChooseTitle: 'Quel produit Doctor’s Best choisir ?',
+    howToChooseBody:
+      '<p>La marque revient souvent sur la même substance en faisant varier un seul paramètre, et c’est là que se joue le choix. Le <strong>collagène</strong> existe en comprimés (Types 1 and 3 &amp; Vitamin C, 180 ou 540 comprimés), en gélules (240) et en poudre (Pure Collagen Types 1 and 3, 200 g ; Pure Collagen Peptides, 417 g) : la poudre se mélange à une boisson, le comprimé ne demande rien. Le <strong>magnésium</strong> suit la même logique, entre High Absorption Magnesium en 120 gélules végétales ou comprimés, la version 240 comprimés et une poudre aromatisée de 350 g.</p>' +
+      '<p>Sur les <strong>articulations</strong>, les formules se distinguent par ce qu’elles associent : glucosamine et chondroïtine seules, avec MSM, avec acide hyaluronique, avec UC-II, ou en version végane. Lisez la composition plutôt que le nom. Même remarque pour la <strong>CoQ10</strong>, proposée seule, avec PQQ, avec nattokinase ou avec NMN. Les dosages exacts, la forme et les allergènes figurent sur l’étiquette de la référence choisie ; aucune valeur n’est reprise ici, et ces produits ne remplacent ni une alimentation équilibrée ni un avis médical.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Doctor’s Best sont vendus en Tunisie ?',
+        answer:
+          'Protein.tn référence surtout les formules articulations (Glucosamine Chondroitin MSM + Hyaluronic Acid, Vegan Glucosamine Chondroitin MSM, Boswellia + UC-II, High Absorption Curcumin), les antioxydants (High Absorption CoQ10, CoQ10 + Nattokinase, Alpha-Lipoic Acid 300 et 600), les vitamines (Vitamin C, Vitamin D3, Vitamin D3 + K2 MK-7, Fully Active Folate), le collagène, le magnésium, la digestion, le sommeil et la biotine.',
+      },
+      {
+        question: 'Collagène en poudre ou en comprimés chez Doctor’s Best ?',
+        answer:
+          'Les deux existent. Pure Collagen Types 1 and 3 est proposé en poudre de 200 g et Pure Collagen Peptides en 417 g, tandis que Collagen Types 1 and 3 & Vitamin C existe en 180 ou 540 comprimés et en 240 gélules. La poudre se dose librement et se mélange à une boisson ; le comprimé se prend sans préparation. La composition annoncée diffère d’une référence à l’autre : comparez les étiquettes.',
+      },
+      {
+        question: 'Quelle différence entre les formules articulations de la marque ?',
+        answer:
+          'Elles combinent des ingrédients différents autour du même besoin : glucosamine et chondroïtine seules, avec MSM, avec acide hyaluronique, avec UC-II, en version végane, ou sous forme de curcuma et de boswellia. Le nom commercial ne suffit pas à les distinguer ; la liste des ingrédients imprimée sur le flacon, elle, le fait.',
+      },
+      {
+        question: 'Comment commander Doctor’s Best en Tunisie ?',
+        answer:
+          'Choisissez la référence et le format disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'articulations', name: 'Articulations et mobilité', url: '/articulations' },
+      { slug: 'antioxydants', name: 'Le rayon antioxydants', url: '/antioxydants' },
+      { slug: 'vitamines', name: 'Vitamines en gélules et comprimés', url: '/vitamines' },
+      { slug: 'collagene', name: 'Le rayon collagène', url: '/collagene' },
+      { slug: 'magnesium', name: 'Magnésium : tous les formats', url: '/magnesium' },
+      { slug: 'brands', name: 'Comparer Doctor’s Best aux autres marques', url: '/brands' },
+    ],
+  },
+
+  nutricost: {
+    metaTitle: 'Nutricost Tunisie | Créatine, BCAA, Whey & Vitamines',
+    metaDescription:
+      'Nutricost en Tunisie : créatine monohydrate et HCl, BCAA, EAA, citrulline, whey concentrate et isolate, caséine, pré-workout, vitamines et minéraux.',
+    h1: 'Nutricost Tunisie : créatine, acides aminés, whey et vitamines',
+    introHtml:
+      '<p><strong>Nutricost en Tunisie</strong> couvre les deux moitiés du catalogue à la fois, ce qui est rare. Côté entraînement : <strong>créatine</strong> monohydrate en quatorze références — aromatisée en 207 g, 300 g, 500 g, 520 g et 570 g, sans arôme en 454 g, 500 g et 1 kg, plus une version en 180 gélules et un Variety Pack de 6,7 g — et <strong>Creatine HCl</strong> 225 g sans arôme, <strong>BCAA</strong> en poudre et en gélules, <strong>EAA</strong> 249 g et 330 g, <strong>L-Citrulline</strong> et Citrulline Malate 2:1 de 250 g à 1,2 kg, <strong>bêta-alanine</strong>, <strong>L-Glutamine</strong> jusqu’au format 1 kg, <strong>HMB</strong>, le pré-workout <strong>PRE-X</strong>, <strong>Whey Protein Concentrate</strong> et <strong>Grass-Fed Whey</strong>, <strong>Whey Protein Isolate</strong> en 907 g et 2 268 g, et <strong>Casein Protein</strong>. Côté quotidien : plantes et extraits, vitamines, minéraux, magnésium, zinc, immunité, sommeil et collagène. La plupart des poudres existent aussi en version sans arôme.</p>',
+    howToChooseTitle: 'Quel produit Nutricost choisir ?',
+    howToChooseBody:
+      '<p>Deux décisions structurent le catalogue. La première est <strong>arôme ou sans arôme</strong> : la marque publie presque systématiquement les deux, et la version neutre se mélange à n’importe quelle boisson ou à un shake déjà parfumé, ce qui évite d’empiler deux goûts. La seconde est le <strong>format</strong> : la Citrulline Malate 2:1 va de 300 g à 1,2 kg, la L-Glutamine de 250 g à 1 kg, la Whey Protein Isolate de 907 g à 2 268 g. À dose journalière égale, seule la durée couverte par le pot change.</p>' +
+      '<p>Sur la créatine, deux formes coexistent : la <strong>monohydrate</strong>, la plus courante, et la <strong>Creatine HCl</strong> en 225 g sans arôme. Sur les protéines, <strong>Whey Protein Concentrate</strong>, <strong>Grass-Fed Whey</strong>, <strong>Whey Protein Isolate</strong> et <strong>Casein Protein</strong> ne se substituent pas l’une à l’autre : l’isolat est plus filtré, la caséine est une protéine lente, la mention grass-fed porte sur l’origine du lait. Les acides aminés — BCAA, EAA, citrulline, bêta-alanine, glutamine — viennent après, une fois l’apport protéique total couvert par l’alimentation ou par une poudre. Les valeurs par portion sont imprimées sur l’étiquette de chaque référence et ne sont pas reprises ici.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Nutricost trouve-t-on en Tunisie ?',
+        answer:
+          'Protein.tn référence côté sport la créatine monohydrate et la Creatine HCl, les BCAA en poudre et en gélules, les EAA, la L-Citrulline et la Citrulline Malate 2:1, la bêta-alanine, la L-Glutamine, le HMB, le pré-workout PRE-X, la Whey Protein Concentrate, la Grass-Fed Whey, la Whey Protein Isolate et la Casein Protein ; côté quotidien, des plantes et extraits, des vitamines, des minéraux, du magnésium, du zinc, des produits immunité, sommeil et collagène.',
+      },
+      {
+        question: 'Créatine monohydrate ou Creatine HCl chez Nutricost ?',
+        answer:
+          'Les deux formes sont référencées : la monohydrate en quatorze références — des poudres de 207 g à 1 kg, aromatisées comme sans arôme, une version en 180 gélules et un Variety Pack de 6,7 g — et la Creatine HCl en 225 g sans arôme. Ce sont deux formes différentes de la même molécule ; la dose indiquée et la solubilité annoncée diffèrent de l’une à l’autre, et ces informations figurent sur l’étiquette du pot que vous commandez.',
+      },
+      {
+        question: 'Pourquoi autant de versions « sans arôme » ?',
+        answer:
+          'La marque décline la plupart de ses poudres en version neutre et en versions aromatisées. Le sans arôme se mélange à un jus, à un shake déjà parfumé ou à de l’eau sans superposer deux goûts, et c’est utile quand vous prenez plusieurs poudres dans la même journée. L’ingrédient actif est le même ; seul l’arôme change.',
+      },
+      {
+        question: 'Quel format de Whey Protein Isolate choisir ?',
+        answer:
+          'La Whey Protein Isolate est proposée en 907 g et en 2 268 g, dans plusieurs parfums et en version sans arôme. À consommation égale, le grand format couvre simplement une période plus longue. Comparez le prix affiché des deux formats sur cette page : c’est une question de budget et de rotation, pas de qualité.',
+      },
+      {
+        question: 'Comment commander Nutricost en Tunisie ?',
+        answer:
+          'Choisissez la référence, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'creatine', name: 'Créatines : voir tout le rayon', url: '/creatine' },
+      { slug: 'whey-proteine', name: 'Parcourir tout le rayon whey', url: '/whey-proteine' },
+      { slug: 'bcaa', name: 'BCAA : tous les formats', url: '/bcaa' },
+      { slug: 'citrulline', name: 'Citrulline en Tunisie', url: '/citrulline' },
+      { slug: 'vitamines', name: 'Vitamines : comparer les marques', url: '/vitamines' },
+      { slug: 'mineraux', name: 'Le rayon minéraux', url: '/mineraux' },
+      { slug: 'brands', name: 'Comparer Nutricost aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'rule-one-proteins': {
+    metaTitle: 'Rule One Proteins Tunisie | R1 Whey, BCAA & Créatine',
+    metaDescription:
+      'Rule One Proteins en Tunisie : Whey Protein, Clear Whey Isolate, R1 Protein Whey Isolate, Essential Amino 9, BCAA, Charged Creatine, preLIFT, Roar et Clean Gainer.',
+    h1: 'Rule One Proteins Tunisie : R1 Whey, acides aminés et créatine',
+    introHtml:
+      '<p>La gamme <strong>Rule One Proteins en Tunisie</strong> est une gamme d’entraînement complète, organisée autour de six familles. Les protéines : <strong>Whey Protein</strong> de 888 g à 2,28 kg, <strong>Clear Whey Isolate</strong> 689 g qui se boit clair, <strong>R1 Protein Whey Isolate</strong> 763 g et 780 g, <strong>Casein Protein</strong> 910 g, <strong>Plant Protein</strong> 620 g et 670 g et <strong>Source7</strong>, une multi-sources en 897 g et 902 g. Les acides aminés ensuite : <strong>Essential Amino 9</strong> 330 g et 345 g, <strong>BCAA</strong> et <strong>Active BCAA</strong> de 174 g à 405 g, <strong>Energized Amino</strong> 270 g. Puis la <strong>créatine</strong>, six pots répartis sur deux produits et non sur un choix neutre/aromatisé : <strong>Creatine</strong> sans arôme en 156 g et aromatisée en 210 g (Blue Raspberry, Fruit Punch), <strong>Charged Creatine</strong> aromatisée en 240 g (Mandarin Mango, Snow Cone) et 270 g (Blue Razz Lemonade), les pré-workouts <strong>preLIFT</strong> et <strong>Roar</strong>, un <strong>Clean Gainer</strong> 2,18 kg, du collagène et deux multivitamines.</p>',
+    howToChooseTitle: 'Quel produit Rule One Proteins choisir ?',
+    howToChooseBody:
+      '<p>Sur les protéines, la marque propose trois textures pour le même besoin. <strong>Whey Protein</strong> est la poudre polyvalente, celle qui couvre l’apport quotidien, et c’est aussi la seule proposée jusqu’en 2,28 kg. <strong>R1 Protein Whey Isolate</strong> repose sur un isolat, plus filtré. <strong>Clear Whey Isolate</strong> 689 g donne une boisson claire, proche d’un jus plutôt que d’un lait : le choix se joue sur ce que vous accepterez de boire tous les jours. <strong>Casein Protein</strong> est une protéine lente, <strong>Plant Protein</strong> la version végétale, et <strong>Source7</strong> combine plusieurs sources.</p>' +
+      '<p>Côté acides aminés, <strong>Essential Amino 9</strong> couvre les neuf acides aminés essentiels tandis que les <strong>BCAA</strong> n’en apportent que trois ; <strong>Energized Amino</strong> ajoute une composante stimulante et se rapproche donc d’un pré-workout léger. Les deux pré-workouts assumés sont <strong>preLIFT</strong> (420 g à 450 g) et <strong>Roar</strong> (285 g à 315 g). Sur la créatine, la marque référence six pots et le partage n’est pas « neutre contre Charged » : <strong>Creatine</strong> existe sans arôme en 156 g, mais aussi aromatisée en 210 g (Blue Raspberry, Fruit Punch) ; <strong>Charged Creatine</strong> n’existe qu’aromatisée, en 240 g (Mandarin Mango, Snow Cone) et 270 g (Blue Razz Lemonade). Le <strong>Clean Gainer</strong> 2,18 kg, enfin, ne remplace pas une whey : il vise les apports caloriques difficiles à atteindre. Les valeurs par portion figurent sur l’étiquette du parfum et du format retenus.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Rule One Proteins sont vendus en Tunisie ?',
+        answer:
+          'Protein.tn référence les protéines Whey Protein, R1 Protein Whey Isolate, Clear Whey Isolate, Casein Protein, Plant Protein et Source7, les acides aminés Essential Amino 9, BCAA, Active BCAA et Energized Amino, la Creatine et la Charged Creatine, les pré-workouts preLIFT et Roar, le Clean Gainer, du collagène et les multivitamines Men’s Multi et Women’s Multi.',
+      },
+      {
+        question: 'Quelle différence entre Clear Whey Isolate et R1 Protein Whey Isolate ?',
+        answer:
+          'Les deux sont construites sur un isolat de lactosérum. Clear Whey Isolate, en 689 g, donne une boisson claire et légère, plus proche d’un jus que d’un lait. R1 Protein Whey Isolate, en 763 g et 780 g, se prépare en boisson lactée classique. La différence porte sur la texture obtenue au shaker, pas sur la source de protéine.',
+      },
+      {
+        question: 'Essential Amino 9 ou BCAA : que choisir ?',
+        answer:
+          'Essential Amino 9 apporte les neuf acides aminés essentiels, tandis qu’un BCAA n’en apporte que trois. Si votre apport protéique quotidien est déjà couvert par l’alimentation ou par une poudre, aucun des deux n’est indispensable ; si vous en ajoutez un, l’EAA est le plus complet des deux. La composition exacte est imprimée sur le pot.',
+      },
+      {
+        question: 'Quelles créatines Rule One Proteins sont référencées ?',
+        answer:
+          'Six pots, répartis sur deux produits — ce n’est donc pas un choix entre « sans arôme » et « Charged ». Creatine est proposée sans arôme en 156 g, mais aussi aromatisée en 210 g, en Blue Raspberry et Fruit Punch. Charged Creatine n’existe qu’aromatisée, en 240 g (Mandarin Mango, Snow Cone) et 270 g (Blue Razz Lemonade). La dose par portion figure sur l’étiquette du pot retenu.',
+      },
+      {
+        question: 'Comment commander Rule One Proteins en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-proteine', name: 'Whey protéines : voir le rayon', url: '/whey-proteine' },
+      { slug: 'whey-isolate', name: 'Whey isolate : voir le rayon', url: '/whey-isolate' },
+      { slug: 'eaa', name: 'Le rayon EAA', url: '/eaa' },
+      { slug: 'bcaa', name: 'Comparer les BCAA', url: '/bcaa' },
+      { slug: 'creatine', name: 'Créatines : comparer les marques', url: '/creatine' },
+      { slug: 'pre-workout', name: 'Pré-workouts en Tunisie', url: '/pre-workout' },
+      { slug: 'brands', name: 'Comparer Rule One Proteins aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'vital-proteins': {
+    metaTitle: 'Vital Proteins Tunisie | Collagen Peptides & Matcha',
+    metaDescription:
+      'Vital Proteins en Tunisie : Collagen Peptides 299 g, Matcha Collagen 299 g, Collagen Gummies 120 gommes et Cartilage Collagen 120 gélules. Formats affichés.',
+    h1: 'Vital Proteins Tunisie : Collagen Peptides et Matcha Collagen',
+    introHtml:
+      '<p><strong>Vital Proteins en Tunisie</strong> est une gamme mono-sujet : toutes les références proposées sur Protein.tn relèvent du <strong>collagène</strong>, et ce qui change d’une à l’autre, c’est la forme sous laquelle vous le prenez. En poudre : <strong>Collagen Peptides</strong> 299 g, en Pumpkin Spice et Salted Caramel, et <strong>Matcha Collagen</strong> 299 g, qui associe le collagène à du thé matcha. À croquer : <strong>Collagen Gummies</strong> en 120 gommes, parfum framboise. En gélules : <strong>Cartilage Collagen</strong> en 120 gélules.</p>',
+    howToChooseTitle: 'Quelle forme de collagène Vital Proteins choisir ?',
+    howToChooseBody:
+      '<p>Le choix est entièrement une question d’usage. La <strong>poudre</strong> (Collagen Peptides 299 g) se mélange dans un café, un yaourt ou une boisson et permet d’ajuster la dose ; c’est la forme la plus souple, mais elle demande une préparation. <strong>Matcha Collagen</strong> part de la même idée en y ajoutant du matcha, donc une boisson déjà constituée plutôt qu’un ingrédient neutre. Les <strong>gommes</strong> se prennent sans eau et sans shaker, ce qui compte si la contrainte est d’y penser tous les jours plutôt que de doser. Les <strong>gélules</strong> de Cartilage Collagen, enfin, sont la forme la plus discrète à transporter.</p>' +
+      '<p>Un point mérite d’être dit clairement : ces produits ne sont pas des protéines d’entraînement et ne remplacent pas une whey. Le collagène ne couvre pas le même profil d’acides aminés qu’une protéine de lactosérum ; si votre objectif est l’apport protéique quotidien, c’est vers le rayon protéines qu’il faut regarder. La dose par portion et la liste des ingrédients sont imprimées sur l’étiquette de chaque référence, et nous n’en reprenons aucune valeur ici.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Vital Proteins sont vendus en Tunisie ?',
+        answer:
+          'Protein.tn référence Collagen Peptides en 299 g (Pumpkin Spice et Salted Caramel), Matcha Collagen en 299 g, Collagen Gummies en 120 gommes parfum framboise et Cartilage Collagen en 120 gélules. La grille de produits de cette page indique les références et les formats effectivement proposés.',
+      },
+      {
+        question: 'Poudre, gommes ou gélules : quelle différence ?',
+        answer:
+          'La poudre se mélange à une boisson chaude ou froide et laisse ajuster la dose. Les gommes se prennent telles quelles, sans eau ni shaker. Les gélules sont la forme la plus discrète à transporter. La différence est pratique : c’est la régularité de la prise qui compte, et elle dépend de la forme qui s’intègre le mieux à votre journée.',
+      },
+      {
+        question: 'Le collagène remplace-t-il une whey protéine ?',
+        answer:
+          'Non. Le collagène n’apporte pas le même profil d’acides aminés qu’une protéine de lactosérum et n’est pas destiné à couvrir un apport protéique d’entraînement. Si votre objectif est le total protéique quotidien, regardez le rayon protéines ; le collagène répond à un autre besoin.',
+      },
+      {
+        question: 'Comment commander Vital Proteins en Tunisie ?',
+        answer:
+          'Choisissez la référence, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'collagene', name: 'Collagène en Tunisie', url: '/collagene' },
+      { slug: 'sante-vitalite', name: 'Rayon santé et vitalité', url: '/sante-vitalite' },
+      { slug: 'brands', name: 'Comparer Vital Proteins aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'universal-nutrition': {
+    metaTitle: 'Universal Nutrition Tunisie | Animal Pak & Animal Cuts',
+    metaDescription:
+      'Universal Nutrition en Tunisie : Animal Pak 30 et 44 packs, Animal Pak Powder, Animal Cuts, Animal Stak, Animal Omega, Carbo Plus 1 kg et ZMA Pro.',
+    h1: 'Universal Nutrition Tunisie : la gamme Animal, Carbo Plus et ZMA',
+    introHtml:
+      '<p><strong>Universal Nutrition en Tunisie</strong> se lit presque entièrement à travers sa gamme <strong>Animal</strong>, vendue en sachets journaliers plutôt qu’en gélules à compter. Le <strong>Animal Pak</strong> est le complexe multivitaminé de référence de la marque, proposé en 30 packs, en 44 packs et en version poudre de 44 doses. Autour : <strong>Animal Cuts</strong> en 42 doses, décliné en version poudre sans stimulant, <strong>Animal Stak</strong> en 23 packs, <strong>Animal Omega</strong> en 30 packs et <strong>Animal Whey Isolate Loaded</strong> 2,27 kg. Le catalogue comprend également <strong>Carbo Plus</strong> 1 kg, <strong>ZMA Pro</strong> 90 capsules, <strong>Natural Sterol</strong>, <strong>GH Max</strong>, <strong>Beef Aminos</strong> 200 comprimés et un shaker de 700 ml.</p>',
+    howToChooseTitle: 'Quel produit Universal Nutrition choisir ?',
+    howToChooseBody:
+      '<p>Une précision utile avant de choisir : <strong>Animal Pak appartient bien à Universal Nutrition</strong>. « Animal » existe aussi comme marque distincte dans notre catalogue, et les packs ne s’y trouvent pas — c’est sur cette page qu’il faut les chercher.</p>' +
+      '<p>Le <strong>Animal Pak</strong> est un complexe quotidien : il se place à côté de l’alimentation, pas à la place d’une protéine ou d’une créatine. Le choix entre 30 packs, 44 packs et la version poudre tient à la durée couverte et au format — un sachet à avaler contre une dose à diluer. <strong>Animal Cuts</strong> relève des brûleurs de graisse et existe en version sans stimulant, ce qui est le vrai critère si vous êtes sensible à la caféine ou si vous le prenez en fin de journée. <strong>Carbo Plus</strong> 1 kg n’apporte que des glucides : il complète les calories autour de l’entraînement, seul ou ajouté à un shake, et ne fait pas le travail d’un gainer complet. <strong>ZMA Pro</strong> et <strong>Animal Omega</strong> relèvent, eux, d’un usage quotidien. Les dosages sont imprimés sur l’emballage de la référence choisie.</p>',
+    faqs: [
+      {
+        question: 'Animal Pak est-il vendu sur Protein.tn ?',
+        answer:
+          'Oui, sur cette page. Animal Pak est un produit Universal Nutrition : il est référencé en 30 packs, en 44 packs et en version poudre de 44 doses. La marque « Animal » existe séparément dans notre catalogue et ne contient pas ces packs, c’est donc ici qu’il faut les chercher.',
+      },
+      {
+        question: 'Quels produits Universal Nutrition sont disponibles en Tunisie ?',
+        answer:
+          'Protein.tn référence Animal Pak en 30 packs, 44 packs et poudre, Animal Cuts en 42 doses ainsi qu’en version poudre sans stimulant, Animal Stak en 23 packs, Animal Omega en 30 packs, Animal Whey Isolate Loaded 2,27 kg, Carbo Plus 1 kg, ZMA Pro 90 capsules, Natural Sterol, GH Max, Beef Aminos 200 comprimés et un shaker de 700 ml.',
+      },
+      {
+        question: 'Quelle différence entre Animal Cuts et Animal Cuts No-Stim ?',
+        answer:
+          'Les deux relèvent du même produit, en 42 doses. La version No-Stim, proposée en poudre, est annoncée sans stimulant. C’est le critère à regarder si vous êtes sensible à la caféine ou si la prise tombe en fin de journée. La composition complète est imprimée sur l’emballage.',
+      },
+      {
+        question: 'À quoi sert Carbo Plus ?',
+        answer:
+          'Carbo Plus est une poudre de glucides en 1 kg, sans protéines. Elle sert à augmenter l’apport calorique autour de l’entraînement ou à compléter un shake protéiné. Si vous cherchez protéines et glucides dans un seul produit, un gainer complet est plus adapté qu’une poudre de glucides seule.',
+      },
+      {
+        question: 'Comment commander Universal Nutrition en Tunisie ?',
+        answer:
+          'Choisissez le produit et le format disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'vitamines', name: 'Multivitamines en Tunisie', url: '/vitamines' },
+      { slug: 'bruleurs-de-graisse', name: 'Le rayon brûleurs de graisse', url: '/bruleurs-de-graisse' },
+      { slug: 'boosters-hormonaux', name: 'Plantes et boosters', url: '/boosters-hormonaux' },
+      { slug: 'glucides', name: 'Glucides et énergie', url: '/glucides' },
+      { slug: 'zma', name: 'ZMA en Tunisie', url: '/zma' },
+      { slug: 'brands', name: 'Comparer Universal Nutrition aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'olimp-sport-nutrition': {
+    metaTitle: 'Olimp Sport Nutrition Tunisie | Gain Bolic 6000',
+    metaDescription:
+      'Olimp Sport Nutrition en Tunisie : Gain Bolic 6000 6,8 kg, Max Mass 3XL 6 kg, Whey Protein Complex 100% 2,27 kg, Pure Whey Isolate 95 2,2 kg et Platinum Multivitamin.',
+    h1: 'Olimp Sport Nutrition Tunisie : Gain Bolic 6000 et Pure Whey Isolate 95',
+    introHtml:
+      '<p>La sélection <strong>Olimp Sport Nutrition en Tunisie</strong> est courte et orientée prise de masse. Deux gainers d’abord, en très grands formats : <strong>Gain Bolic 6000</strong> en sac de 6,8 kg et <strong>Max Mass 3XL</strong> en 6 kg. Deux protéines ensuite : <strong>Whey Protein Complex 100%</strong> en 2,27 kg, une formule multi-sources, et <strong>Pure Whey Isolate 95</strong> en 2,2 kg, construite sur un isolat. Enfin <strong>Platinum Multivitamin</strong> en 90 comprimés, pour la partie quotidienne. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
+    howToChooseTitle: 'Quel produit Olimp Sport Nutrition choisir ?',
+    howToChooseBody:
+      '<p>La première question est celle du blocage que vous cherchez à lever. Si vous n’arrivez pas à atteindre votre apport calorique en mangeant, les gainers <strong>Gain Bolic 6000</strong> (6,8 kg) et <strong>Max Mass 3XL</strong> (6 kg) sont faits pour cela : ils apportent des glucides en plus des protéines, et les formats annoncés couvrent une longue période. Si au contraire vous mangez assez mais manquez de protéines, un gainer est une réponse inutilement calorique.</p>' +
+      '<p>Dans ce second cas, le choix se fait entre <strong>Whey Protein Complex 100%</strong> 2,27 kg, une formule multi-sources destinée à l’apport protéique quotidien, et <strong>Pure Whey Isolate 95</strong> 2,2 kg, bâtie sur un isolat donc plus filtrée. <strong>Platinum Multivitamin</strong>, en 90 comprimés, ne remplace aucun des deux : c’est un complexe quotidien. Les valeurs par portion dépendent du parfum et du format et sont imprimées sur l’emballage de la référence commandée.</p>',
+    faqs: [
+      {
+        question: 'Quels produits Olimp Sport Nutrition sont vendus en Tunisie ?',
+        answer:
+          'Protein.tn référence les gainers Gain Bolic 6000 en 6,8 kg et Max Mass 3XL en 6 kg, la Whey Protein Complex 100% en 2,27 kg, la Pure Whey Isolate 95 en 2,2 kg et la Platinum Multivitamin en 90 comprimés. La grille de produits de cette page indique les références et les formats effectivement proposés.',
+      },
+      {
+        question: 'Gain Bolic 6000 ou Max Mass 3XL ?',
+        answer:
+          'Les deux sont des gainers en très grand format, 6,8 kg pour Gain Bolic 6000 et 6 kg pour Max Mass 3XL. Ils répondent au même besoin : atteindre un apport calorique que l’alimentation seule ne couvre pas. Comparez la composition annoncée sur les emballages et le prix affiché des deux sacs sur cette page.',
+      },
+      {
+        question: 'Quelle différence entre Whey Protein Complex 100% et Pure Whey Isolate 95 ?',
+        answer:
+          'Whey Protein Complex 100%, en 2,27 kg, est une formule multi-sources destinée à compléter l’apport protéique quotidien. Pure Whey Isolate 95, en 2,2 kg, est construite sur un isolat, plus filtré. Le choix dépend de votre tolérance et de votre budget ; l’étiquette de chaque référence donne la composition exacte du parfum concerné.',
+      },
+      {
+        question: 'Comment commander Olimp Sport Nutrition en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'mass-gainers', name: 'Mass gainers : voir le rayon', url: '/mass-gainers' },
+      { slug: 'whey-isolate', name: 'Whey isolate : comparer les marques', url: '/whey-isolate' },
+      { slug: 'proteines-multi-sources', name: 'Protéines multi-sources en Tunisie', url: '/proteines-multi-sources' },
+      { slug: 'vitamines', name: 'Le rayon vitamines', url: '/vitamines' },
+      { slug: 'brands', name: 'Comparer Olimp Sport Nutrition aux autres marques', url: '/brands' },
+    ],
+  },
+
+  'mr-x-v-shape-supps': {
+    metaTitle: 'MR.X V-Shape Supps Tunisie | Gold Whey & Gold Isolate',
+    metaDescription:
+      'MR.X V-Shape Supps en Tunisie : Gold Whey 2 kg, Gold Isolate 2 kg, V-Zero Isopro 1,8 kg, Whey Testo et Iso Testo 1,8 kg, Creatine Monohydrate 500 g et EAA 360 g.',
+    h1: 'MR.X V-Shape Supps Tunisie : Gold Whey, Gold Isolate et Iso Testo',
+    introHtml:
+      '<p>La gamme <strong>MR.X V-Shape Supps en Tunisie</strong> tient en quelques références, toutes construites autour de la protéine. Côté isolats : <strong>Gold Isolate</strong> 2 kg, <strong>V-Zero Isopro</strong> 1,8 kg et <strong>Iso Testo</strong> 1,8 kg. Côté whey concentrée : <strong>Gold Whey</strong> 2 kg et <strong>Whey Testo</strong> 1,8 kg. Le reste du catalogue complète l’entraînement : <strong>MR X IGF-1 Anabolic Mass</strong> pour la prise de masse, <strong>Creatine Monohydrate</strong> en 500 g et <strong>MR X EAA</strong> en 360 g.</p>',
+    howToChooseTitle: 'Quel produit MR.X V-Shape Supps choisir ?',
+    howToChooseBody:
+      '<p>Le premier tri se fait entre <strong>whey concentrée</strong> et <strong>isolat</strong>. Gold Whey 2 kg et Whey Testo 1,8 kg relèvent de la première famille : ce sont les poudres polyvalentes, pour l’apport protéique de tous les jours. Gold Isolate 2 kg, V-Zero Isopro 1,8 kg et Iso Testo 1,8 kg reposent sur un isolat, plus filtré, que l’on choisit généralement pour une teneur plus basse en glucides ou en lactose. Les formats sont proches, 1,8 kg ou 2 kg, donc la décision porte sur la formule et non sur la durée couverte.</p>' +
+      '<p>Les trois autres références répondent à des besoins distincts et ne se cumulent pas par défaut. <strong>MR X IGF-1 Anabolic Mass</strong> est un gainer protéiné : il ajoute des calories quand manger davantage est le point bloquant. <strong>Creatine Monohydrate</strong> 500 g se prend indépendamment des protéines et n’a pas à être associée à un moment précis de la journée. <strong>MR X EAA</strong> 360 g se place autour de l’entraînement, une fois l’apport protéique total déjà couvert. Les valeurs par portion sont celles imprimées sur l’étiquette du format et de l’arôme commandés.</p>',
+    faqs: [
+      {
+        question: 'Quels produits MR.X V-Shape Supps sont vendus en Tunisie ?',
+        answer:
+          'Protein.tn référence les isolats Gold Isolate 2 kg, V-Zero Isopro 1,8 kg et Iso Testo 1,8 kg, les whey Gold Whey 2 kg et Whey Testo 1,8 kg, le gainer MR X IGF-1 Anabolic Mass, la Creatine Monohydrate 500 g et les MR X EAA 360 g. La grille de produits de cette page indique les références et les formats effectivement proposés.',
+      },
+      {
+        question: 'Gold Whey ou Gold Isolate : quelle différence ?',
+        answer:
+          'Gold Whey 2 kg est une whey polyvalente, destinée à compléter l’apport protéique quotidien. Gold Isolate 2 kg est construite sur un isolat, plus filtré, que l’on retient généralement pour une teneur plus basse en glucides ou en lactose. Les deux sont proposées au même format ; comparez les compositions imprimées sur les pots.',
+      },
+      {
+        question: 'La créatine MR.X est-elle aromatisée ?',
+        answer:
+          'La référence proposée est une Creatine Monohydrate en 500 g. La présence ou non d’un arôme, la dose par portion et le nombre de portions par pot sont indiqués sur l’étiquette du produit ; nous n’avançons aucune valeur ici. Elle se prend indépendamment des protéines.',
+      },
+      {
+        question: 'Comment commander MR.X V-Shape Supps en Tunisie ?',
+        answer:
+          'Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande ; le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.',
+      },
+    ],
+    relatedCategories: [
+      { slug: 'whey-isolate', name: 'Whey isolate : tout le rayon', url: '/whey-isolate' },
+      { slug: 'whey-proteine', name: 'Whey protéines du catalogue', url: '/whey-proteine' },
+      { slug: 'gainers-proteines', name: 'Gainers protéinés : voir le rayon', url: '/gainers-proteines' },
+      { slug: 'creatine', name: 'Créatine monohydrate en Tunisie', url: '/creatine' },
+      { slug: 'eaa', name: 'EAA : comparer les formats', url: '/eaa' },
+      { slug: 'brands', name: 'Comparer MR.X V-Shape Supps aux autres marques', url: '/brands' },
     ],
   },
 });

@@ -27,6 +27,7 @@ import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
 import { getProductLink } from '@/util/productUrl';
 import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
+import { WheyComparisonTable, buildWheyRows } from '@/app/components/product/WheyComparisonTable';
 import type { Brand, Product } from '@/types';
 
 export type CrawlerListLink = { name: string; url: string };
@@ -40,7 +41,7 @@ export type CrawlerListLink = { name: string; url: string };
  * and a table that appears for Googlebot and not for a shopper is the parity break this whole
  * component is written to avoid.
  */
-const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine']);
+const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine']);
 
 /** The taxonomy slug this listing is, read off the breadcrumb trail's own last entry — which is
  *  this page. Neither call site passes a slug, and both build that last crumb as `/${cleanSlug}`. */
@@ -176,12 +177,20 @@ export function CrawlerCategoryView({
     rank the second dozen while saying that. The human page agrees by construction — its
     below-fold block is not rendered at all on a paginated URL.
   */
+  const comparisonSlug = slugFromBreadcrumbs(breadcrumbs);
+  const comparisonKind =
+    kind !== 'brand' && COMPARISON_SLUGS.has(comparisonSlug) ? comparisonSlug : null;
+  const comparisonRowCount =
+    comparisonKind === 'creatine'
+      ? buildCreatineRows(products ?? [], brands).length
+      : comparisonKind === 'whey-proteine'
+        ? buildWheyRows(products ?? [], brands).length
+        : 0;
   const showComparison =
-    kind !== 'brand' &&
-    COMPARISON_SLUGS.has(slugFromBreadcrumbs(breadcrumbs)) &&
+    comparisonKind !== null &&
     (!pagination || pagination.currentPage === 1) &&
     brands.length > 0 &&
-    buildCreatineRows(products ?? [], brands).length >= 2;
+    comparisonRowCount >= 2;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-8 leading-relaxed text-gray-900">
@@ -335,7 +344,11 @@ export function CrawlerCategoryView({
         <section aria-label="Comparatif" className="my-6">
           <h2 className="text-lg font-semibold">{`${title} : comparer les prix`}</h2>
           <div className="mt-2">
-            <CreatineComparisonTable products={products} brands={brands} />
+            {comparisonKind === 'whey-proteine' ? (
+              <WheyComparisonTable products={products} brands={brands} />
+            ) : (
+              <CreatineComparisonTable products={products} brands={brands} />
+            )}
           </div>
         </section>
       )}
@@ -392,6 +405,19 @@ export function CrawlerCategoryView({
       )}
 
       {/* Related categories (lateral internal links) */}
+      {/*
+          ── THE CURATED NAME WINS ON THIS RAIL, AND ONLY ON THIS RAIL ─────────────────────────
+          `categoryAnchor` maps a slug to ONE fixed commercial label — /creatine is always
+          "Créatine monohydrate en Tunisie". That is right for navigation, where a consistent
+          scannable label beats variety, and it is what the sub-categories rail above still uses.
+
+          It is wrong here. The names in `relatedCategories` are CURATED per source page —
+          brandSeoConfig and the category content files deliberately give each linking page a
+          different phrase for the same destination, because a hundred identical exact-match
+          anchors is a footprint, not a strategy (commercialSeoMap.ts, rule 5). Re-labelling them
+          here silently collapsed that work back to one string per destination across every brand
+          page on the site, on the render that actually ranks.
+      */}
       {relatedCategories.length > 0 && (
         <section aria-label="Catégories associées" className="my-6">
           <h2 className="text-lg font-semibold">Catégories associées</h2>
@@ -399,7 +425,7 @@ export function CrawlerCategoryView({
             {relatedCategories.map((c, i) => (
               <li key={`${c.url}-${i}`}>
                 <a className="text-red-700 underline" href={c.url}>
-                  {categoryAnchor(c.url.replace(/^\//, ''), c.name)}
+                  {c.name}
                 </a>
               </li>
             ))}

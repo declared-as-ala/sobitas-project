@@ -131,6 +131,34 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     supporting: ['/blog/whey-proteine-pas-cher-tunisie', '/blog/les-avantages-de-la-whey-proteine-pour-les-athletes-tunisiens-guide-complet'],
     conflicts: [
       { url: '/blog/whey-protein-en-tunisie', reason: 'live title "PROTÉINE en Tunisie : Guide Achat 2026" fights the HOMEPAGE\'s head term, not just the category; it earns 4 clicks so retarget the title, keep the URL', action: 'leave-earns-clicks' },
+      /*
+       * ── ADDED 23/09/2026, AFTER THE FACT, ON PURPOSE ─────────────────────────────────────────
+       * This URL is in `supporting` above AND in `protectedByTraffic`, and a pass on 23/09/2026
+       * changed what it targets without recording anything here. A supporting page whose subject
+       * moves silently is worse than one that was never listed: the next reader trusts the
+       * `supporting` line and does not check the title. Hence this entry — the decision, the
+       * baseline, and the action, so nobody re-derives it.
+       *
+       * WHAT MOVED. Live <title> and H1 read with a Googlebot UA on 23/09/2026 were both the bare
+       * head term, "Whey Protéine Pas Cher Tunisie | Protéine Tunisie". blogSeoConfig now overlays
+       * the headline "Whey pas chère : quel format choisir sans perdre en qualité", which keeps
+       * "whey" for topicAlignedArticleHeadline and drops "Tunisie", so the page stops claiming
+       * `whey protein tunisie` and `whey tunisie` — both of which belong to /whey-proteine, the
+       * only URL in this cluster that can sell a pot. The URL, the body, the canonical and the
+       * robots directives are untouched; this is a retarget, never a consolidation, because the
+       * page earns clicks (rule 4).
+       *
+       * BASELINE TO JUDGE IT AGAINST IN FOUR WEEKS. Read 23/09/2026 from
+       * protein.tn/2026-09-22-28d/Pages.csv (28 days, 2026-08-23 → 2026-09-19):
+       *   /blog/whey-proteine-pas-cher-tunisie   13 clicks / 495 impressions / 2.63% / pos 14.09
+       * and from the Queries.csv of the same export, site-wide:
+       *   whey protein tunisie                   13 clicks / 346 impressions / 3.76% / pos 15.66
+       *   whey tunisie                            0 clicks / 107 impressions /    0% / pos 15.82
+       * The page↔query split for this URL (5 clicks @13.9 on `whey protein tunisie`) is the figure
+       * already recorded in `protectedByTraffic` above; it comes from a filtered GSC view, not
+       * from these two CSVs, so it is cited here as recorded rather than as re-measured.
+       */
+      { url: '/blog/whey-proteine-pas-cher-tunisie', reason: 'retargeted 23/09/2026 — title/H1 overlay only, URL and body kept. Its live title WAS the bare head term "Whey Protéine Pas Cher Tunisie" while /whey-proteine sat fourth on its own term; it now reads as a format guide and claims neither "whey protein tunisie" nor "whey tunisie". Baseline in the comment above: 13 clicks / 495 impressions @14.09 (28 d). Protected by traffic, so never 301d or noindexed', action: 'leave-earns-clicks' },
       { url: '/proteines', reason: 'the parent taxonomy hub — must cover the protein family without claiming "whey"', action: 'retarget' },
       { url: '/whey-isolate', reason: 'legitimate sub-type (3 clicks, pos 51) — keep, but it must not claim the generic "whey tunisie" head term', action: 'retarget' },
     ],
