@@ -2,6 +2,76 @@
 
 Every SEO-motivated change, why it was made, what it should do, and how to confirm it. Newest first.
 
+## 23 September 2026 — architecture pass: one declared category tree
+
+Commits: `4b465dba` (architecture), `e9a460f0` (content). Measured with a Googlebot UA against
+production on 23/09/2026; Search Console figures from `protein.tn/2026-09-22-28d/`.
+
+### The diagnosis
+
+Of the 56 live taxonomy URLs, the homepage linked **19**. `ProductsDropdown.tsx` held one rayon's
+children in the DOM at a time (`activeSubs.map`) and swapped them on hover, and the panel itself was
+portaled to `document.body`, which cannot render on the server. So the served HTML of every page
+carried zero category links from the mega-menu, and 37 of 56 category URLs were reachable only after
+landing on a rayon page.
+
+    /              97 links   19/56        /proteines    72 links   16/56 (its own 8 children)
+    /shop          61 links   10/56        /performance  69 links   17/56 (9 of its 10)
+    /creatine      72 links   10/56 (none of its six amino siblings)
+
+The tree existed one hop down. The global surface — the one on every page — was flat.
+
+### What changed
+
+`frontend/src/config/catalogTaxonomy.ts` declares the tree once. The header, the rayon pages, the
+breadcrumbs (JSON-LD, visible, every PDP route, both crawler views), the related rails and the
+sitemap all read it. **No URL changed** — a slug in that file IS the URL.
+
+Four taxonomy defects corrected, all from the live API:
+
+| defect | before | after |
+|---|---|---|
+| `acides-amines` | a *sibling* of bcaa, eaa, citrulline, l-arginine, beta-alanine | their parent |
+| `glutamine`, `hmb` | under SANTÉ & VITALITÉ, beside Ashwagandha and Zinc | under Acides aminés |
+| `glucides-energie` | 24 products, 0 in stock, duplicating `/glucides` | `nav:false`, linked only from its twin |
+| SANTÉ & VITALITÉ | 21 flat children | four themes |
+
+### Measured result (production build, Googlebot UA)
+
+- Homepage taxonomy links **19 → 46 of 56**. The 10 held back are shelves with nothing buyable;
+  they keep their URLs, keep `noindex, follow`, and stay one click away on their rayon page.
+- `/glutamine`: `Boutique › SANTÉ & VITALITÉ › Glutamine` → `Boutique › Performance › Acides aminés › Glutamine`.
+- `/magnesium`: → `Boutique › Santé & vitalité › Vitamines & minéraux › Magnésium`.
+- Brand pages: `Accueil › Boutique › Optimum Nutrition` → `Accueil › Marques › Optimum Nutrition`,
+  which states the node type without moving 570 brand URLs.
+
+### A live robots bug this pass surfaced
+
+`nothingBuyableHere` in the category route noindexed any listing whose first page was entirely out
+of stock, and never consulted `protectedByTraffic`. Six URLs served `noindex` while earning search
+traffic: `/caseine` (5 clicks @13.4), `/barres-proteinees` (157 impressions @10.3 — page one),
+`/hmb`, `/mineraux`, `/articulations`, `/cla`. `/mineraux` was already a key of that list and was
+noindexed anyway, which is what proved the list was decorative at that call site. All six are back
+to `index, follow`; the ten genuinely empty shelves still correctly serve `noindex, follow`.
+
+### Guard
+
+`frontend/scripts/check-taxonomy.mjs`, in `prebuild`. Fails the build when a declared slug is not
+live, a live slug is missing from the tree, a slug appears twice, a rayon has no visible children,
+or a `protectedByTraffic` URL is marked `nav:false`. Fails **open** on a network error. Verified by
+fault injection: exit 1 on each of the first four, exit 0 clean.
+
+### Validation
+
+    curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1)" https://protein.tn/       | grep -oE 'href="/[a-z0-9-]+"' | sort -u | wc -l     # expect the 46 nav slugs present
+    curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1)" https://protein.tn/glutamine       | grep -o 'Acides aminés'                              # breadcrumb states the declared parent
+    npm run check:taxonomy
+
+Watch in Search Console over 2–4 weeks: "Submitted URL marked noindex" should fall by the six
+rescued URLs plus the ten now withheld from the sitemap; `/whey-proteine`, `/creatine` and
+`/mass-gainers` should gain internal-link count in the Links report.
+
+
 ## 22 September 2026 — audit pass
 
 Source: `SEO_AUDIT.md` (145 findings, 135 surviving adversarial verification). Search Console data: `protein.tn/GSC-2026-09-22.md`. Implemented in ten file-disjoint batches, each reviewed by a second agent against the real diff, then typechecked, design-linted and built centrally.
