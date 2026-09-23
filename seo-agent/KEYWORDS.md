@@ -53,19 +53,40 @@ credit or blame this change for a delta.
 
 | query | page | pos (date) | note |
 | --- | --- | --- | --- |
-| creatine ostrovit | /creatine/creatine-monohydrate-300g-ostrovit | site: indexed (21/09) | House Nutrition #1 with 5.0(24); add FAQ (none), check stock (BackOrder in schema) |
+| creatine ostrovit | /creatine/creatine-monohydrate-300g-ostrovit | site: indexed (21/09) | **FAQ + guide queued 23/09** (6 pairs, 269 w). SERP look 23/09 (US-geo, no TN pos): housenutrition holds 300 g AND 500 g, plus nutribeast, gympro, body-shop, ubuy; our result still shows the legacy `/shop/` URL (1 clean 301 hop). Still `Sur commande` |
 | creatine biotech | /creatine/100-creatine-monohydrate-300g-biotech-usa | ? | title humanized 21/09 |
-| iso 100 dymatize | /whey-isolate/iso-100-dymatize-2-3kg | blog 3rd (19/09) | House Nutrition #1; PDP no FAQ, BackOrder |
+| iso 100 dymatize | /whey-isolate/iso-100-dymatize-2-3kg | blog 3rd (19/09) | **FAQ + guide queued 23/09** (6 pairs, 235 w). SERP look 23/09 (US-geo): housenutrition, dodo-nutrition, strong-nutrition (400 TND), para-plus, stock-x, body-shop; our PDP and our blog post both present. Still `Sur commande`. **Fiche carries a stale price** (body text says 480 DT, page sells 419 DT) — fix in the DB copy |
 | gold standard whey | /whey-proteine/100-whey-gold-standard-2-27kg | ? | check |
 | serious mass | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | ? | see head terms |
 | levro legendary mass | /mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone | ? | check |
-| nitro tech whey gold | /whey-proteine/nitro-tech-whey-gold-2-3kg | ? | no FAQ, BackOrder |
+| nitro tech whey gold | /whey-proteine/nitro-tech-whey-gold-2-3kg | ? | **FAQ + guide queued 23/09** (6 pairs, 221 w, qualitative only — the fiche publishes no nutritional figure). SERP look 23/09 (US-geo): gust.tn, protein-shop-tunisia (270 DT), strong-nutrition, nutribeast, body-shop, sf-nutrition, jumia; ours at 259 DT via the legacy `/shop/` URL. Still `Sur commande` |
 | big whey big ramy | /whey-proteine/big-whey-2kg-big-ramy-labs | ? | check |
-| c4 pre workout | /pre-workout/c4-original-pre-workout-cellucor | ? | no FAQ; title 64 chars |
+| c4 pre workout | /pre-workout/c4-original-pre-workout-cellucor | ? | **FAQ + guide queued 23/09** (6 pairs, 228 w, from the label transcribed 20/09: 6,5 g portion / 150 mg caféine / 1 600 mg bêta-alanine / 1 000 mg créatine nitrate). **EN STOCK** — the only one of the four. SERP look 23/09 (US-geo): housenutrition (282 g), nutribeast (195 g), strong-nutrition, gympro — and **our ranking URL is the category `/pre-workout`, not this PDP**: decide the winner on Thursday's CTR pass. Title 64 chars |
 | psychotic pre workout | /pre-workout/psychotic-pre-workout | ? | check |
 | lipo 6 black | /bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps | ? | 3 Lipo-6 SKUs — pick the canonical winner |
 | born rage | /pre-workout/… (find slug) | 5.3 (15/09) | the page-1 "pre workout" result |
 
+
+**Note 23/09/2026 — `/barres-proteinees` is `noindex` and it is a stock problem, not an SEO one.**
+The row "protein bar chocolate" above points at a category page this routine finished on 22/09,
+but the owner's dead-listing gate (`9c9dc83`) noindexes any listing with nothing buyable on page 1
+and the bars rayon is **0 of 88 in stock** (measured live 23/09). The same applies to
+`/intra-workout` (0 of 12+). Neither page can rank until stock arrives, and both reverse
+themselves automatically the day it does — so do **not** rewrite either page for ranking reasons,
+and do not read a position drop on these rows as a content failure.
+
+## Discovered 23/09/2026 (Google autocomplete fr/tn — hits = autocomplete frequency, NOT a position)
+
+| query | page | evidence | note |
+| --- | --- | --- | --- |
+| creatine prix tunisie | /creatine | 5 hits (23/09) | "prix" is the dominant Tunisian modifier on every head term |
+| prix creatine monohydrate tunisie | /creatine | 5 hits (23/09) | use in the /creatine FAQ + comparison table |
+| creatine monohydrate prix tunisie | /creatine | 3 hits (23/09) | covered by the new Ostrovit PDP guide |
+| serious mass gainer tunisie | /mass-gainers | 4 hits (23/09) | check against the existing "serious mass tunisie" row |
+| whey isolate 1kg prix | /whey-isolate | 3 hits (23/09) | **no 1 kg isolate SKU in stock** — purchasing before copy |
+| mass gainer prix tunisie | /mass-gainers | 2 hits (23/09) | new commercial row |
+| acheter creatine monohydrate | /creatine | 2 hits (23/09) | transactional; covered by the PDP guide |
+| meilleur creatine monohydrate | /creatine | 2 hits (23/09) | comparison intent — the /creatine comparison table (BACKLOG P1) is the answer |
 
 ## Discovered 22/09/2026 (Google autocomplete fr/tn, deep run — evidence = hits / best rank, NOT a position)
 

@@ -67,12 +67,18 @@ line until then.
 3. **Live audit.** `node seo-agent/tools/audit-live.mjs --sample=40`. Exit 1 = P0 = today's job
    before anything else; fix the builder, never the page. A P1 that repeats on two consecutive
    runs on the same page type (unparseable JSON-LD, missing FAQ on in-stock PDPs, description
-   rule, `Offer.url ≠ canonical`) is promoted to P0.
+   rule, `Offer.url ≠ canonical`) is promoted to P0. A **category** serving `noindex, follow`
+   where the page rendered cards and not one is buyable is the owner's deliberate dead-listing
+   gate (commit 9c9dc83, 22/09) and is reported P2, not P0 — it reverses itself on restock. Any
+   other noindex, and any noindex with a single "En stock" card under it, is still a P0.
 3b. **Bot/human parity.** `node seo-agent/tools/parity-check.mjs` (the four money categories +
-   /proteines). Exit 1 = a page serves Googlebot editorial text a visitor cannot reach; that is a
-   cloaking exposure and it is **today's job**, fixed in BOTH views, never by deleting the human
-   copy. Human-only words are not a finding (the crawler route has no header, footer or facets).
-   Exit 2 = could not measure; re-run tomorrow, never a P0.
+   /proteines). Exit 1 = a page serves Googlebot **editorial** text a visitor cannot reach; that is
+   a cloaking exposure and it is **today's job**, fixed in BOTH views, never by deleting the human
+   copy. Human-only words are not a finding (the crawler route has no header, footer or facets),
+   and neither is the **catalogue drift** column — product-card text (name, price, stock label)
+   that differs because the two routes ask the API for a different slice of the grid (23/09: 719
+   such words across the five money pages, **0** editorial). Exit 2 = could not measure; re-run
+   tomorrow, never a P0.
 4. **Robots + sitemaps.** `curl -s -A Googlebot https://protein.tn/robots.txt | head -20`;
    `<loc>` count per sitemap file vs yesterday's log. Δ > 5 % on any file without a landed cause
    → P0.
