@@ -120,14 +120,31 @@ Route::middleware(['auth', 'back.office', 'no.cache.print'])->group(function () 
     })->name('factures.print');
 
     Route::get('factures/{facture}/aramex-label', function (\App\Models\Facture $facture) {
+        // Deliberately never a 502/504 here: Cloudflare replaces those status codes with its own
+        // branded interstitial regardless of body content, so a real failure (expired label URL,
+        // Aramex timeout) rendered as a blank "Bad gateway" page inside the modal iframe instead of
+        // the reason. Returning 200 with a clear message keeps the explanation visible to staff.
         $url = $facture->aramex_label_url;
         if (! $url) {
-            abort(404, 'Étiquette Aramex non disponible');
+            return response()->view('filament.modals.aramex-label-unavailable', [
+                'message' => 'Aucune étiquette n\'a été renvoyée par Aramex pour cette expédition. Réessayez l\'envoi ou contactez le support Aramex.',
+                'hawb'    => $facture->aramex_hawb,
+            ]);
         }
+
         $pdf = app(\App\Services\AramexService::class)->fetchLabelPdf($url);
         if (! $pdf) {
-            abort(502, 'Impossible de récupérer l\'étiquette depuis Aramex');
+            \Illuminate\Support\Facades\Log::channel('daily')->warning('Aramex label fetch failed', [
+                'facture_id' => $facture->id,
+                'label_url'  => $url,
+            ]);
+
+            return response()->view('filament.modals.aramex-label-unavailable', [
+                'message' => 'Impossible de récupérer l\'étiquette depuis Aramex (lien expiré ou délai dépassé). Réessayez dans quelques minutes.',
+                'hawb'    => $facture->aramex_hawb,
+            ]);
         }
+
         return response($pdf, 200, [
             'Content-Type'        => 'application/pdf',
             'Content-Disposition' => 'inline; filename="etiquette-' . ($facture->numero ?? $facture->id) . '.pdf"',

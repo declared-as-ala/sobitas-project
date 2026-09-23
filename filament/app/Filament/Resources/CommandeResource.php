@@ -222,7 +222,7 @@ class CommandeResource extends Resource
                     ->tooltip('Bordereau Aramex')
                     ->icon('heroicon-o-document-text')
                     ->color('warning')
-                    ->visible(fn (Commande $record): bool => (bool) $record->latestShipment?->aramex_label_url)
+                    ->visible(fn (Commande $record): bool => (bool) $record->latestShipment?->aramex_hawb)
                     ->modalContent(fn (Commande $record): View => view('filament.modals.aramex-label', [
                         'url'  => route('factures.aramex-label', $record->latestShipment->id),
                         'hawb' => $record->latestShipment->aramex_hawb,

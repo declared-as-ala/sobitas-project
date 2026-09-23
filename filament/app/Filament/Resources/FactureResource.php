@@ -179,7 +179,7 @@ class FactureResource extends Resource
                     ->tooltip('Bordereau Aramex')
                     ->icon('heroicon-o-document-text')
                     ->color('warning')
-                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_label_url)
+                    ->visible(fn (Facture $record): bool => (bool) $record->aramex_hawb)
                     ->modalContent(fn (Facture $record) => view('filament.modals.aramex-label', [
                         'url'  => route('factures.aramex-label', $record->id),
                         'hawb' => $record->aramex_hawb,
