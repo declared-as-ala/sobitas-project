@@ -51,12 +51,20 @@
      * ── THE COMPANY NOTE IS WRITTEN FOR AN INVOICE, NOT FOR THIS DOCUMENT ─────────────────────
      * `$coordonnee->note` is the shared closing line and it reads "Arrête la présente facture à la
      * somme de :" — the wrong document name on a bon de livraison, and missing the accent on
-     * "Arrêté". It printed verbatim here. An explicit $footerNote passed by a caller still wins;
-     * the shared invoice note is used only when it does not name a facture, and otherwise this
-     * document falls back to its own wording.
+     * "Arrêté".
+     *
+     * A previous fix guarded only the fallback branch, on the assumption that a caller passing
+     * `$footerNote` had chosen it deliberately. It had not: DocumentPdfController passes
+     * `'footerNote' => $coordonnee->note` (three call sites, plus FactureTvaSent and
+     * QuotationSent), so the invoice line arrived through the parameter, the guard never ran, and
+     * the wrong word kept printing. Verified on the live render of BL-2026-0310.
+     *
+     * So the test is on the TEXT, not on where it came from: this document is a bon de livraison,
+     * and a closing line that calls it a facture is wrong whoever supplied it. A caller with
+     * something else to say is still honoured.
      */
     $noteLead = trim((string) ($footerNote ?? ''));
-    if ($noteLead === '') {
+    if ($noteLead === '' || preg_match('/factur/i', $noteLead)) {
         $companyNote = trim((string) ($coordonnee->note ?? ''));
         $noteLead = ($companyNote !== '' && !preg_match('/factur/i', $companyNote))
             ? $companyNote
@@ -204,15 +212,25 @@ body.doc-a4-print {
 
 .bl-brand { flex: 0 0 auto; text-align: right; }
 .bl-logo {
-    /* The one coloured element, and it has to survive being photocopied: the SOBITAS wordmark is
-       long and low (612x408 with generous whitespace), so at 40px the lettering fell under ~11px
-       and greyed out on a mono copier. 64px puts the wordmark itself at a legible size while the
-       header block beside it still fits on one A4 line. */
-    height: 82px; width: auto; max-width: 62mm; display: block; margin-left: auto;
+    /*
+      The one coloured element, and it has to survive a photocopier.
+
+      Raising this number was the wrong lever twice (40 -> 64 -> 82px) because the file was 78%
+      empty: measured, the ink in logo-sobitas.png occupied 357x90 inside a 612x408 canvas, so an
+      82px box rendered a wordmark just 18px tall and the other 64px were transparent padding.
+      The PNG has since been cropped to its ink (369x102, 3.62:1), which is why this can now be
+      SMALLER than before and still print more than twice the lettering:
+
+          before   82px box -> 18px of ink
+          now      46px box -> 46px of ink
+
+      max-width is what actually binds on a wide viewport — at 3.62:1 the box is ~167px across,
+      well inside it — and it keeps the header on one A4 line beside the identity block.
+    */
+    height: 46px; width: auto; max-width: 62mm; display: block; margin-left: auto;
 }
 .bl-logo-text { font-size: 19pt; font-weight: 800; letter-spacing: -0.02em; }
 .bl-site { font-size: 7.2pt; margin-top: 3px; }
-.bl-pageno { font-size: 7.4pt; margin-top: 2px; }
 
 /* ── Document title ──────────────────────────────────────────── */
 .bl-docline { text-align: right; margin-top: 9px; }
@@ -292,8 +310,7 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
 
     .bl-head { flex-direction: column-reverse; gap: 10px; }
     .bl-brand { text-align: left; width: 100%; }
-    .bl-logo { margin-left: 0; height: 76px; max-width: 70vw; }
-    .bl-pageno { margin-top: 4px; }
+    .bl-logo { margin-left: 0; height: 42px; max-width: 70vw; }
     .bl-co-grid { grid-template-columns: minmax(0,1fr); font-size: 8.6pt; }
     .bl-co-addr, .bl-site { font-size: 8.6pt; }
 
@@ -363,11 +380,30 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
     {{-- ── HEADER ──────────────────────────────────────────────── --}}
     <div class="bl-head">
         <div class="bl-co">
-            <div class="bl-co-name">{{ $coordonnee->abbreviation ?? $coordonnee->designation_fr ?? 'SOBITAS' }}</div>
+            {{--
+                ── THE NAME AND THE MARK HAVE TO BE THE SAME COMPANY ─────────────────────────────
+                This read `abbreviation ?? designation_fr`, and `abbreviation` is NULL in the
+                coordonnees row — so it fell through and printed the legal name, "PROTEINE
+                TUNISIE", in 17pt beside a SOBITAS logo. Two company names in one header, six
+                centimetres apart, on the document a driver hands to a customer.
+
+                `??` was the wrong operator as well: it only catches null, so an abbreviation
+                saved as an empty string would have printed a blank heading.
+
+                SOBITAS is the name on the mark and on the stamp, so it is the name in the
+                heading. The legal entity is not dropped — it moves to the identity grid below,
+                beside the Rc and the TVA number, which is where a reader looks for it anyway.
+            --}}
+            @php($blCoName = trim((string) ($coordonnee->abbreviation ?? '')))
+            @php($blLegal  = trim((string) ($coordonnee->designation_fr ?? '')))
+            <div class="bl-co-name">{{ $blCoName !== '' ? $blCoName : 'SOBITAS' }}</div>
             @if(!empty($coordonnee?->adresse_fr))
                 <div class="bl-co-addr">{{ $coordonnee->adresse_fr }}</div>
             @endif
             <div class="bl-co-grid">
+                @if($blLegal !== '' && mb_strtoupper($blLegal) !== mb_strtoupper($blCoName !== '' ? $blCoName : 'SOBITAS'))
+                    <div class="bl-idline wide"><b>Raison sociale</b><span>: {{ $blLegal }}</span></div>
+                @endif
                 <div class="bl-idline"><b>Rc</b><span>: {{ $coordonnee->registre_commerce ?? '' }}</span></div>
                 <div class="bl-idline"><b>Tva</b><span>: {{ $coordonnee->matricule ?? '' }}</span></div>
                 <div class="bl-idline"><b>Tél</b><span>: {{ $coordonnee->phone_1 ?? '' }}{{ !empty($coordonnee?->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</span></div>
@@ -383,7 +419,10 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
                 <div class="bl-logo-text">SOBITAS</div>
             @endif
             <div class="bl-site">www.protein.tn</div>
-            @if(!$isPdf)<div class="bl-pageno">Page 1</div>@endif
+            {{-- No "Page 1" here. It was a hardcoded string in the browser view — it said "1"
+                 whatever the document contained, so it carried no information at all. The PDF
+                 stamps a real counter, and only when the document actually runs to more than one
+                 sheet; see the page_script block at the foot of this file. --}}
         </div>
     </div>
 
@@ -565,11 +604,36 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
 </script>
 
 @if($isPdf)
-{{-- DomPDF stamps "Page N / M" on every sheet; {PAGE_NUM}/{PAGE_COUNT} are its own placeholders.
-     x/y are points from the top-left of the A4 sheet, landing in the header's right-hand slot. --}}
+{{--
+    A PAGE NUMBER ONLY EARNS ITS PLACE WHEN THERE IS MORE THAN ONE PAGE.
+
+    "Page 1", alone, on a one-page delivery note, answers a question nobody asked. The reason to
+    print it at all is so a document that arrives stapled, faxed or photocopied can be checked for
+    completeness — "Page 1 / 3" tells the person holding it that two sheets are missing. On a
+    single sheet there is nothing to check, and the line is just ink in the corner of the header.
+
+    `page_text` substitutes {PAGE_NUM}/{PAGE_COUNT} but cannot branch on them. `page_script` runs
+    per page with both as real PHP variables, so the count is available before anything is drawn
+    and a one-page document gets a clean header.
+--}}
 <script type="text/php">
+    /*
+      The CALLABLE signature, not the string one. dompdf 3.x still accepts a string of PHP to eval
+      and deprecates it; the closure form is the supported API and, unlike the eval, it fails loudly
+      rather than silently printing nothing.
+    */
     if (isset($pdf)) {
-        $pdf->page_text(468, 58, "Page {PAGE_NUM} / {PAGE_COUNT}", $fontMetrics->getFont("Arial", "normal"), 7.6, [0, 0, 0]);
+        $pdf->page_script(function ($pageNumber, $pageCount, $canvas, $fontMetrics) {
+            if ($pageCount > 1) {
+                $canvas->text(
+                    468, 58,
+                    'Page ' . $pageNumber . ' / ' . $pageCount,
+                    $fontMetrics->getFont('Arial', 'normal'),
+                    7.6,
+                    [0, 0, 0]
+                );
+            }
+        });
     }
 </script>
 @endif
