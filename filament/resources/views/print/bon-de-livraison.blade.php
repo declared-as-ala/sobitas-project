@@ -178,7 +178,13 @@ body.doc-a4-print {
 .bl-idline span { font-weight: 400; word-break: break-all; }
 
 .bl-brand { flex: 0 0 auto; text-align: right; }
-.bl-logo { height: 40px; width: auto; display: block; margin-left: auto; }   /* the only colour */
+.bl-logo {
+    /* The one coloured element, and it has to survive being photocopied: the SOBITAS wordmark is
+       long and low (612x408 with generous whitespace), so at 40px the lettering fell under ~11px
+       and greyed out on a mono copier. 64px puts the wordmark itself at a legible size while the
+       header block beside it still fits on one A4 line. */
+    height: 64px; width: auto; display: block; margin-left: auto;
+}
 .bl-logo-text { font-size: 19pt; font-weight: 800; letter-spacing: -0.02em; }
 .bl-site { font-size: 7pt; margin-top: 2px; }
 .bl-pageno { font-size: 7.6pt; margin-top: 8px; }
@@ -261,7 +267,7 @@ table.bl-totals tr.grand td { font-weight: 700; }
 
     .bl-head { flex-direction: column-reverse; gap: 10px; }
     .bl-brand { text-align: left; width: 100%; }
-    .bl-logo { margin-left: 0; height: 46px; }
+    .bl-logo { margin-left: 0; height: 68px; }
     .bl-pageno { margin-top: 4px; }
     .bl-co-grid { grid-template-columns: minmax(0,1fr); font-size: 8.6pt; }
     .bl-co-addr, .bl-site { font-size: 8.6pt; }
