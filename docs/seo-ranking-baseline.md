@@ -10,25 +10,103 @@ canonical, index/noindex rule, title sweep, redirect or schema change, unless a 
 
 ---
 
-## 0. How to read the numbers (the one thing that matters)
+## 0. How to read the numbers — FOUR distinct fields, never conflated
 
-A Search Console **query position is an average over every protein.tn URL that appeared for that
-query.** It is not the position of the page we want to rank. On this site the two disagree hard,
-because our own blog posts outrank our own category pages:
+There are three different "positions" for a single keyword, and mixing them is the easiest way to
+misread this whole experiment. `creatine tunisie` is the worked example:
 
-- `creatine tunisie` — query-average **9.1** (28 d). But that averages three blog posts at 18–27
-  **and** `/creatine`, and the owner page `/creatine` sits at **22.2** page-level. The 9.1 is a
-  mirage; the 22.2 is the number the architecture change is trying to move.
+| # | field | value | what it is |
+|---|---|--:|---|
+| 1 | **Query-average position** | **9.1** | GSC's blended number across *every* protein.tn URL that showed for the query. The headline, and the mirage. |
+| 2 | **Owner page — all-query average** | **22.2** | `/creatine`'s average position over *all* the queries it appears for. Its general health, not its standing on this term. |
+| 3 | **Owner page — for THIS exact query** | **59.6** | `/creatine`'s position *specifically for `creatine tunisie`*. **This is the cannibalisation number, and the one the architecture change is trying to move.** |
+| 4 | **Top-ranking protein.tn URL for this query** | `/blog/prix-de-la-creatine-en-tunisie` @27.6 | which of our own pages Google actually prefers for the term today. When it is a blog post, that is the cannibalisation, named. |
 
-So every cluster table below carries **two** positions:
+All three positions are real and all three are different: 9.1 ≠ 22.2 ≠ 59.6. Field **#3 is the
+truth for cannibalisation** and #1 is the one never to act on.
 
-| column | source | meaning |
-|---|---|---|
-| **Pos (query-avg)** | `Queries.csv` | GSC's blended number — the headline, and the misleading one |
-| **Pos (owner URL)** | `Pages.csv`, or a per-query Pages-breakdown measured this session | where the page we *want* to win actually sits |
+**Field #3 and #4 are now MEASURED, not derived** (§0b) — pulled 24/09/2026 from GSC: Performance →
+filter the exact query → **Pages** tab. The 22/09 CSV export cannot produce them (it has no
+query×page cross-tab), so before this pass the doc left them blank; they are filled now for the
+priority keywords and the procedure to refresh them is in §12.
 
-When the two are far apart, cannibalisation is the story and the owner-URL column is the truth.
-**Always re-check the owner-URL number, never act on the query average.**
+> The earlier version of this file used `/creatine`'s all-query average (22.2) in a column that read
+> like "owner for this query". That was the exact conflation this section now prevents: the real
+> owner-for-`creatine tunisie` is **59.6**, far worse than 22.2, which is *why* the page needs the
+> re-linking. The original T0 export values in the cluster tables (§4–§10) are unchanged; field #3 is
+> added alongside them, per the measurement-only rule.
+
+---
+
+## 0b. Field #3 measured — owner page position for the EXACT query (24/09/2026)
+
+**Source:** GSC → Performance → Search type Web → filter *Exact query* → **Pages** tab. Window: last
+28 days ending **21/09/2026** (GSC's freshest, ~2 days behind the 22/09 CSV export and still fully
+**pre-deploy**, so valid as T0). Columns: **#1** query-average · **#2** owner page all-query average
+(from the 22/09 `Pages.csv`, unchanged) · **#3** owner page for *this* query · **#4** the
+protein.tn URL Google actually ranks highest for the query. Impr/clk are the query totals in the
+window. `INSUFFICIENT DATA` = too few impressions in 28 d to read a stable position — measure at 3 m.
+
+### Creatine — owner `/creatine` (all-query avg **22.2**)
+
+| keyword | #1 q-avg | #3 **/creatine @ this query** | #4 top protein.tn URL @ pos | impr/clk | note |
+|---|--:|--:|---|--:|---|
+| creatine | 41.8 | not in top-10 (~85+) | /blog/creatine-roles-et-bienfaits @26.5 | 189/0 | informational head term, blog-owned |
+| **creatine tunisie** | 13.7 | **59.6** | /blog/prix-de-la-creatine-en-tunisie @27.6 | 175/8 | the canonical cannibalisation case |
+| creatine monohydrate | 26.3 | 88.1 | PDP raw-nutrition-…-monohydrate @4.1 | 131/0 | PDPs win; category page is deep |
+| creatine monohydrate tunisie | 31.1 | 38.1 | **/creatine @38.1** | 19/1 | owner is already the top earner here |
+| creatine prix tunisie | 19.2 | **not ranking** | /blog/prix-de-la-creatine-en-tunisie @19.2 | 6/3 | owner absent entirely; blog takes it |
+| optimum nutrition creatine tunisie | 10.7 | 14.0 | ar. blog @10.4 | 13/0 | low data |
+
+### Whey — owner `/whey-proteine` (all-query avg **24.7**), `/whey-isolate` (**51.1**)
+
+| keyword | #1 q-avg | #3 **owner @ this query** | #4 top protein.tn URL @ pos | impr/clk | note |
+|---|--:|--:|---|--:|---|
+| whey | 57.0 | 70.0 | /proteines @81.8 (www @2.0) | 14/0 | broad, low data |
+| whey tunisie | 15.8 | 63.4 | /blog/whey-proteine-pas-cher-tunisie @14.0 | 100/0 | FIVE of our URLs split it |
+| **whey protein tunisie** | 15.9 | **33.8** | /blog/whey-proteine-pas-cher-tunisie @13.9 | 322/13 | biggest single opportunity |
+| whey prix tunisie | 9.5 | 10.0 | /proteines @9.0 | 2/0 | INSUFFICIENT DATA (2 impr) |
+| whey isolate tunisie | 18.0 | 21.0 (`/whey-isolate`) | /proteines @9.0 | 6/0 | low data |
+| gold standard whey tunisie | 11.0 | 24.0 | /blog/gold-standard-whey-d-optimum… @6.4 | 49/0 | brand query; blog + /optimum-nutrition @9.8 own it |
+
+### Mass gainer — owner `/mass-gainers` (all-query avg **32.1**); siblings `/prise-de-masse` **58.4**, `/gainers-proteines` **46.5**
+
+| keyword | #1 q-avg | #3 **/mass-gainers @ this query** | #4 top protein.tn URL @ pos | impr/clk | the self-split (this query) |
+|---|--:|--:|---|--:|---|
+| mass gainer | 58.0 | 78.3 | /blog/mass-gainer-tout-savoir @32.0 | 57/0 | pdm 92.0 · g-p 80.6 |
+| **mass gainer tunisie** | 55.8 | **47.6** | PDP hard-mass-gainer-7kg @21.8 | 50/0 | **pdm 54.0 · g-p 56.2** (three-way) |
+| mass gainer prix tunisie | 63.3 | 63.3 | PDP hard-mass-gainer-7kg @15.3 | 20/0 | pdm 51.8 |
+| gainer tunisie | — | INSUFFICIENT DATA | — | 0/0 | no impressions in 28 d |
+| serious mass tunisie | 14.2 | 35.4 | **/ (homepage) @10.2** | 93/4 | brand query; homepage + /blog/mass-gainer-prix @4.7 earn it |
+
+### Pre-workout — owner `/pre-workout` (all-query avg **13.5**)
+
+| keyword | #1 q-avg | #3 **/pre-workout @ this query** | #4 top protein.tn URL @ pos | impr/clk | note |
+|---|--:|--:|---|--:|---|
+| pre workout | 7.0 | 55.2 (category) | PDP pre-workout-born-rage-eric-favre @5.3 | 393/0 | **CTR case: one PDP @5.3 holds 377 impr, 0 clicks** — snippet, not architecture |
+| pre workout tunisie | 40.0 | 24.0 | /pre-workout @24.0 | 8/0 | low data; /performance @38.7 also shows |
+
+### BCAA — owner `/bcaa` (all-query avg **12.7**)
+
+| keyword | #1 q-avg (3 m) | #3 **/bcaa @ this query** | #4 top protein.tn URL @ pos | impr/clk (28 d) | note |
+|---|--:|--:|---|--:|---|
+| bcaa | 50.2 | INSUFFICIENT DATA (28 d) | ⟨import 3 m⟩ | ~0 | cluster barely registers in 28 d |
+| bcaa tunisie | 19.6 | INSUFFICIENT DATA (28 d) | ⟨import 3 m⟩ | 0/0 | no 28-day impressions |
+| bcaa prix tunisie | 21.2 | INSUFFICIENT DATA (28 d) | ⟨import 3 m⟩ | ~0 | measure in the 3-month window |
+
+### Protein — owner `/` (homepage, all-query avg **8.26**), hub `/proteines` (**19.1**)
+
+| keyword | #1 q-avg | #3 **homepage @ this query** | #4 top protein.tn URL @ pos | impr/clk | note |
+|---|--:|--:|---|--:|---|
+| **protein tunisie** | 12.6 | **5.5** | **/ (homepage) @5.5** (127 clk) | 697/129 | homepage owns it — never contest |
+| proteine tunisie | 20.1 | 10.6 | / (homepage) @10.6 (17 clk) | 504/23 | homepage + blog @11.7; /proteines @35.3 |
+| proteines tunisie | INSUFFICIENT DATA | — | see note | 0/0 | exact **no-accent** = 0 impr; the traffic sits under the **accented** `protéines tunisie` — GSC exact filters are accent-sensitive |
+
+**What #3 exposes that #1 hid:** on the two head commercial terms the owner page is *far* worse than
+the query average said — `/creatine` is **59.6** for `creatine tunisie` (not 9.1), `/whey-proteine`
+is **33.8** for `whey protein tunisie` (not 15.9). The success test at +7/+14/+28 is whether **#3
+falls** while the protected blog posts in column #4 keep their clicks. On `mass gainer tunisie` the
+three-way self-split (47.6 / 54.0 / 56.2) should converge onto `/mass-gainers`.
 
 ---
 
@@ -37,8 +115,9 @@ When the two are far apart, cannibalisation is the story and the owner-URL colum
 | value | status at T0 |
 |---|---|
 | Pos (query-avg), impressions, clicks, CTR — **28 d & 3 m** | ✅ **real**, from `protein.tn/2026-09-22-28d/` and `2026-09-22-3m/` (exported 22/09/2026) |
-| Pos (owner URL), page-level | ✅ **real** where the owner URL appears in `Pages.csv`; `⟨import⟩` where a per-query Pages breakdown is needed |
-| Ranking URL per query | ✅ where measured live this session (cited); `⟨import⟩` otherwise — a standard CSV export does not cross-tab query × page |
+| #2 owner all-query average | ✅ **real**, from `Pages.csv` (22/09) |
+| #3 owner position **for the exact query** | ✅ **MEASURED 24/09** for every priority keyword (§0b) via GSC query-filter → Pages; `INSUFFICIENT DATA` where < a few impressions in 28 d |
+| #4 top-ranking protein.tn URL per query | ✅ **MEASURED 24/09** (§0b) — the query×page breakdown a standard CSV export cannot produce |
 | conversions / revenue | ⟨import⟩ **everywhere** — not exposed to this session; comes from the backend orders join or GA4, not GSC |
 | +7 / +14 / +28 columns | empty by design — fill from a fresh export on those dates |
 
@@ -262,8 +341,11 @@ should be read against:
    PY
    ```
    (accent- and case-insensitive match; the exact script is in this session's history).
-4. Owner-URL / ranking-URL positions: in GSC, filter by the query, open the **Pages** tab, read the
-   owner URL's row. Do **not** take these from `Queries.csv` — it has no page dimension.
+4. Field #3 / #4 (owner-for-this-query, top URL): in GSC, Performance → **Add filter → Query →
+   Exact query** → type the term → **Pages** tab → read the owner URL's row and the top row. A fast
+   path is the URL itself: `…&query=!<exact keyword>&breakdown=page` (the `!` prefix = exact). Do
+   **not** take these from `Queries.csv` — it has no page dimension. **GSC exact filters are
+   accent-sensitive:** `proteines tunisie` and `protéines tunisie` are different rows — check both.
 5. Live sanity spot-check with a Googlebot UA (no login needed):
    ```
    curl -s -A "Mozilla/5.0 (compatible; Googlebot/2.1)" https://protein.tn/creatine \
