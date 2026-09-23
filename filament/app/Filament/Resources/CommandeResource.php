@@ -215,6 +215,22 @@ class CommandeResource extends Resource
                     ->tooltip('Convertir')
                     ->color('success')
                     ->visible(fn (Commande $record): bool => ! $record->factures()->exists()),
+                // Mirrors FactureResource's aramex_label action: once the order's BL has been
+                // pushed to Aramex, staff need the bordereau without leaving the Commande list.
+                Actions\Action::make('aramex_label')
+                    ->iconButton()
+                    ->tooltip('Bordereau Aramex')
+                    ->icon('heroicon-o-document-text')
+                    ->color('warning')
+                    ->visible(fn (Commande $record): bool => (bool) $record->latestShipment?->aramex_label_url)
+                    ->modalContent(fn (Commande $record): View => view('filament.modals.aramex-label', [
+                        'url'  => route('factures.aramex-label', $record->latestShipment->id),
+                        'hawb' => $record->latestShipment->aramex_hawb,
+                    ]))
+                    ->modalHeading(fn (Commande $record): string => 'Bordereau Aramex — HAWB ' . $record->latestShipment?->aramex_hawb)
+                    ->modalWidth(Width::FourExtraLarge)
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel('Fermer'),
                 Actions\DeleteAction::make()
                     ->label('Supprimer')
                     ->modalHeading('Supprimer la commande')
