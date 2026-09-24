@@ -79,6 +79,14 @@ const KEEP_UPPER = new Set([
   'USA', 'UK', 'EU', 'BCAA', 'BCAAS', 'EAA', 'EAAS', 'ZMA', 'HMB', 'CLA', 'MSM', 'ISO', 'XT', 'EFX',
   'HGH', 'ATP', 'GABA', 'CBD', 'MCT', 'XL', 'XXL', 'DHA', 'EPA', 'DAA', 'HCL', 'HCA', 'Q10', 'MK7',
   'ON', 'NO2', 'ZMB6', 'TNT', 'GH', 'L', 'D', 'C', 'E', 'K', 'B', 'A', 'MR.X', 'V8', 'C4', 'X',
+  /*
+   * Brand initialisms, taken from the shop's own brand table (24/09/2026) and limited to the
+   * ones measured flattened inside SHOUTING catalogue names — 25 products. None is a word in
+   * French or English, so uppercasing them cannot catch an unrelated token. The costliest was
+   * GSN: /creatine/gsn-creatine-monohydrate-200g titled itself "Gsn – Creatine Monohydrate"
+   * while sitting at position 7.0 on 272 impressions with 0 clicks (GSC 28 d to 22/09/2026).
+   */
+  'GSN', 'HX', 'MND', 'JX', 'BPI', 'IHS',
 ]);
 /** French function words stay lowercase inside a title (never as the first word). */
 const FRENCH_SMALL = new Set(['de', 'du', 'des', 'la', 'le', 'les', 'et', 'en', 'à', 'a', 'au', 'aux', 'pour', 'avec', 'sans', 'sur', 'par', 'ou', 'un', 'une']);
@@ -88,6 +96,17 @@ const UNIT_WORDS = new Set(['kg', 'g', 'gr', 'mg', 'ml', 'l', 'caps', 'capsules'
 
 function caseToken(token: string, first: boolean): string {
   if (!token) return token;
+  /*
+   * Tokens are split on spaces, so they arrive with their punctuation still attached — "HMB,",
+   * "(EAA)", "BCAA." — and every lookup below is on the bare word. Live on 23/09/2026:
+   * "MuscleTech Clear Muscle, Liquid HMB, 84 Liquid Softgels" shipped its <title> as
+   * "Liquid Hmb," because `KEEP_UPPER.has('HMB,')` is false. Peel the punctuation, case the
+   * core, put the punctuation back. The recursion terminates: the core is strictly shorter.
+   */
+  const wrapped = token.match(/^([^\p{L}\p{N}]*)(.+?)([^\p{L}\p{N}]*)$/u);
+  if (wrapped && (wrapped[1] || wrapped[3])) {
+    return wrapped[1] + caseToken(wrapped[2], first) + wrapped[3];
+  }
   const upper = token.toUpperCase();
   const lower = token.toLowerCase();
   if (KEEP_UPPER.has(upper)) return upper;
@@ -100,12 +119,39 @@ function caseToken(token: string, first: boolean): string {
   return lower.charAt(0).toUpperCase() + lower.slice(1);
 }
 
+/*
+ * ── ONLY RE-CASE A NAME THAT IS ACTUALLY SHOUTING ────────────────────────────────────────────
+ * The humanizer above exists for the wholesaler style ("100% CREATINE MONOHYDRATE 300G - BIOTECH
+ * USA"). But it ran on EVERY name, and most of the catalogue is imported already correctly cased,
+ * so it was destroying capitals rather than repairing them. Measured 24/09/2026 over 7,389 live
+ * catalogue names: only 243 (3.3 %) are shouting, while 4,699 were being re-cased. Live examples:
+ *
+ *   "NOW Foods L-Theanine – 120 gélules végétales"  →  "Now Foods L-Theanine – 120 gélules Végétales"
+ *   "EVLution Nutrition Resveratrol"                →  "Evlution Nutrition Resveratrol"
+ *   "MuscleTech Clear Muscle"                       →  "Muscletech Clear Muscle"
+ *
+ * A brand rendered "Now Foods" or "Muscletech" in the SERP reads like a reseller who does not
+ * stock the real thing, and French takes no capital on "végétales". A name with intentional
+ * capitals is left exactly as the catalogue holds it; a SHOUTING one, or one typed entirely in
+ * lower case, still gets the full treatment.
+ */
+function needsRecasing(name: string): boolean {
+  const upper = name.match(/\p{Lu}/gu)?.length ?? 0;
+  const lower = name.match(/\p{Ll}/gu)?.length ?? 0;
+  if (!upper && !lower) return false;
+  return lower === 0 || upper > lower;
+}
+
 /** "2.27KG" → "2,27 kg", "300G" → "300 g", "60CAPS" → "60 caps": French units, a space, a comma. */
 function normalizeUnits(name: string): string {
   return name
     .replace(/(\d+)[.,](\d+)\s*(KG|G|GR|ML|L|MG)\b/gi, (m, a, b, u) => `${a},${b} ${u.toLowerCase().replace(/^gr$/, 'g')}`)
     .replace(/(\d+)\s*(KG|GR|ML|MG)\b/gi, (m, a, u) => `${a} ${u.toLowerCase().replace(/^gr$/, 'g')}`)
-    .replace(/(\d+)\s*G\b(?![A-Za-z])/g, '$1 g')
+    /* `i` + the lookbehind added 24/09/2026: the rule was uppercase-only, so the catalogue's
+       lowercase "GSN - CREATINE MONOHYDRATE | 200g" kept its glued unit into the <title> — live
+       at position 7.0 on 272 impressions and 0 clicks. The lookbehind keeps the space out of the
+       middle of a token that merely ends in digits ("B12g" is not "B12 g"). */
+    .replace(/(?<![A-Za-z])(\d+)\s*[Gg]\b(?![A-Za-z])/g, '$1 g')
     .replace(/(\d+)\s*(CAPS|CAPSULES|GELULES|GÉLULES|TABS|TABLETS|COMPRIMES|COMPRIMÉS|SERVINGS|SOFTGELS?|DOSES|SACHETS)\b/gi,
       (m, a, u) => `${a} ${u.toLowerCase()}`);
 }
@@ -191,6 +237,9 @@ export function humanizeProductName(rawName: string, brand?: string | null): str
     name = name.replace(new RegExp(`\\s*[-–—|:]\\s*${b}\\s*$`, 'i'), '').replace(new RegExp(`\\s+${b}\\s*$`, 'i'), '');
   }
   name = name.replace(/\s*[-–—|:]+\s*$/, '').replace(/\s*[|]\s*/g, ' – ').replace(/\s+-\s+/g, ' – ').trim();
+  // Units, mojibake, the brand tail and the separators above are casing-independent repairs and
+  // apply to every name. The token caser only runs where the catalogue carries no intent to keep.
+  if (!needsRecasing(repairMojibake(rawName))) return name.replace(/\s{2,}/g, ' ').trim();
   return name.split(' ').map((t, i) => caseToken(t, i === 0)).join(' ').replace(/\s{2,}/g, ' ').trim();
 }
 

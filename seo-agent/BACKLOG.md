@@ -6,6 +6,17 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 24/09/2026:** live audit 68 URLs, **0 P0** (exit 0); `/intra-workout` still the
+owner's dead-listing gate at P2, and **`/barres-proteinees` is `index, follow` again** — stock
+returned and the gate reversed itself with no deploy, exactly as designed. Yesterday's
+`seo-copy-apply` **did apply**: all four watchlist PDPs now serve FAQPage and audit them `ok`.
+`parity-check.mjs` 0 editorial bot-only words on all five money pages. Signals came from the
+owner's real GSC export (`protein.tn/2026-09-22-28d/`, 28 d to 22/09) for the first time in four
+runs — `KEYWORDS.md` now carries 43 observed rows instead of 13/09 guesses. Shipped a
+builder-level CTR fix to `productMetaDescription.ts`: the name humanizer was re-casing **every**
+catalogue name when only 3.3 % are the SHOUTING wholesaler names it was written for
+(`log/2026-09-24.md`).
+
 **State on 23/09/2026:** live audit 68 URLs, **0 real P0**. The two `noindex` listings the audit
 printed (`/barres-proteinees`, `/intra-workout`) are the owner's dead-listing gate (`9c9dc83`)
 firing as specified — censused all 13 watchlist categories, every money category is `index,
@@ -208,6 +219,25 @@ record the page-level position first — never act on a query average.
 
 ## P1 — the ranking levers (in-stock products first)
 
+- [ ] **4,344 of 7,389 product titles exceed 65 characters** (measured 24/09 over the live
+  catalogue, mean 72.3). Google truncates them, so the brand and "Prix Tunisie" — the two things
+  a Tunisian buyer scans for — fall off the end. `humanProductTitle` already drops the brand tail
+  to fit, but the NAME alone is over budget on the imported catalogue. Needs a shortening rule
+  that keeps the head noun + format and sheds the marketing tail ("Premium Women's Fat Burner
+  with Raspberry Ketones – Premium Women's Fat Burner with Raspberry Ketones – 60 gélules"
+  literally repeats itself). Measure the CTR of a sample before/after; do NOT touch the watchlist
+  PDPs before the 05/10 freeze lifts.
+- [ ] **Decide who owns the generic `pre workout`** — 393 impressions, **0 clicks**, query-average
+  position 7.0 (GSC 28 d to 22/09), the biggest zero-click row on the site. The impressions match
+  `/pre-workout/pre-workout-born-rage-original-eric-favre` (385 impr, 1 click, pos 5.4) almost
+  exactly, so a generic browse term is being answered by one niche PDP. This is Saturday's
+  cannibalisation theme, not a title rewrite — `/pre-workout` is inside the 05/10 freeze. Read the
+  Pages breakdown for the query first (`gsc.mjs --query=`, or the owner's Chrome with
+  `hl=fr&gl=tn&pws=0`); the PDP outranking the category may be the correct outcome to keep.
+- [ ] **`/sante-vitalite` is page-one with 1 click on 405 impressions** (pos 8.4). Its title and
+  description are already to standard, so the loss is elsewhere — check what the query set
+  actually is before rewriting anything.
+
 - [ ] **Commercial-first category landing pages — `/creatine` first** (owner analysis 21/09:
   House Nutrition / NutriBeast win "créatine tunisie" with a plain shop page; ours buries the
   grid under the guide). In `frontend/src/app/(shop)/category/[slug]/page.tsx` (+ the category
@@ -222,8 +252,12 @@ record the page-level position first — never act on a query average.
   to `/marques/<brand>` or the filtered listing), and make every in-stock product page link back
   to its category with the exact head-term anchor. Internal links are the cheapest authority.
 
-- [~] **Product FAQ + guide on the watchlist products that have none** (audit-live P1 on 21/09):
-  Ostrovit creatine, ISO 100 Dymatize, Nitro-Tech Whey Gold, C4 Original — **all four written
+- [x] **Product FAQ + guide on the watchlist products that have none** — CONFIRMED LIVE 24/09:
+  all four PDPs now serve `FAQPage` and audit `ok` (no "no FAQPage" P1 left on any of them), so
+  the 23/09 `seo-copy-apply` VPS run did apply. Original entry below for the record.
+- [ ] **Extend the FAQ + guide pass to the rest of the in-stock catalogue** — the four above are
+  done; the audit still finds **39 of 68 sampled PDPs with no FAQPage** (24/09), almost all of it
+  the imported long-tail. How the four were written (21/09 record): Ostrovit creatine, ISO 100 Dymatize, Nitro-Tech Whey Gold, C4 Original — **all four written
   23/09** in `filament/resources/seo/products/2026-09-23.json` (guide 221–269 w + 6 FAQ pairs
   each) and `seo-copy-apply` queued. Marked `[~]` not `[x]` until the VPS run is confirmed: the
   copy lands in the DB after the merge, so **verify the FAQPage is live tomorrow** before closing.
@@ -261,6 +295,20 @@ record the page-level position first — never act on a query average.
   metadata source; keep "Protéine Tunisie" first.
 
 ## P2 — technical & tooling
+
+- [ ] **Lock today's casing contract with a check script** (Friday tool slot): a read-only
+  `seo-agent/tools/title-case-check.mjs` that pulls catalogue names from
+  `productsBySubCategoryId/<slug>`, runs `humanizeProductName`, and fails on (a) a brand
+  initialism flattened to Titlecase, (b) `µ` rendered as Greek `Μ`, (c) a glued unit (`200g`),
+  (d) an already-cased name whose capitals changed. Today's fix was validated by a one-off
+  before/after diff over 7,389 names; without a script the next edit to `caseToken` can silently
+  undo it. Do NOT wire it into `prebuild` — a live-API dependency there would break deploys.
+- [ ] **`BOUTEILLE D'EAU 2.2 LITRES` → "Bouteille D'eau 2.2 Litres"** (2 products). Three small
+  wrongs: French elision should be `d'eau`, the decimal should be a comma (`2,2`), and `litres`
+  is a unit word that should stay lowercase. Deliberately NOT fixed on 24/09: a `d'` rule that
+  lowercases the article but leaves the caser to capitalise the noun yields `d'Eau`, which is no
+  better, and "litres"/"gommes" only need the UNIT_WORDS list extended. Worth doing together,
+  with the same 7,389-name before/after diff as evidence.
 
 - [ ] `(needs: owner)` **Gated listings stay in `sitemaps/listings.xml` while serving noindex**
   (found 23/09): `/barres-proteinees` and `/intra-workout` are both `<loc>` entries and both

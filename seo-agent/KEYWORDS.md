@@ -15,29 +15,41 @@ FAQ schema, real stock and price on every page.
 
 Legend — page: the URL that SHOULD rank · pos: last observed (date) · note: what to do.
 
+**`(22/09 GSC)` rows come from the owner's own Search Console export** in
+`protein.tn/2026-09-22-28d/` (28 days to 22/09/2026), refreshed 24/09. `impr` is summed and `pos`
+is impression-weighted across accent variants, so "creatine tunisie" and "créatine tunisie" are
+one row. **These are QUERY-AVERAGE positions, not page positions** — GSC averages every
+protein.tn URL shown for the query, and on this site the two disagree hard (the owner's baseline
+in `docs/seo-ranking-baseline.md` measures `creatine tunisie` at 9.1 query-average while
+`/creatine` itself sits at 22.2). Read the Pages breakdown before acting on any row.
+
 ## Head terms (category pages)
 
 | query | page | impr/28d | pos (date) | note |
 | --- | --- | --- | --- | --- |
-| proteine tunisie | /proteines | 153 | 23.9 (13/09) | homepage + blog outrank the catalogue page; strengthen /proteines intro + internal links from blog posts |
-| protein tunisie | / | 420 | ~5 (13/09) | brand-ish query, homepage holds it; keep |
-| whey protein tunisie | /whey-proteine | 92 | 18.5 (13/09) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks. SERP look 22/09 (US-geo): the **homepage**, not `/whey-proteine`, is our result in the set — decide which should win the head term |
-| whey protein 1kg prix tunisie | /whey-proteine | 33 | 9.8 (21/09) | 0 clicks: title/description work (price angle) |
-| whey gold standard prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 22 | 6.2 (21/09) | 0 clicks; find which URL ranks (exact-page filter) |
-| creatine tunisie | /creatine | 50 | 16.0 (13/09) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning. SERP look 22/09 (US-geo): gainlabnutrition.com ranks ahead of us; `/creatine`, our blog price post, and legacy `/product-category/creatines/` all appear — one head term, three of our URLs |
-| creatine monohydrate | /creatine | 70 | 21.9 (13/09) | global phrase; local intent weak — secondary |
-| prix creatine tunisie | /creatine | ? | ? | check |
-| mass gainer tunisie | /mass-gainers | ? | ? | check |
-| serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 92 | 14.2 (13/09) | split across 8 URLs; canonical target = PDP; tighten blog links |
+| proteine tunisie | /proteines | 683 | 18.5 (22/09 GSC) | homepage + blog outrank the catalogue page; strengthen /proteines intro + internal links from blog posts |
+| protein tunisie | / | 687 | 12.7 (22/09 GSC) | brand-ish query, homepage holds it; keep |
+| whey protein tunisie | /whey-proteine | 346 | 15.7 (22/09 GSC) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks. SERP look 22/09 (US-geo): the **homepage**, not `/whey-proteine`, is our result in the set — decide which should win the head term |
+| whey protein 1kg prix tunisie | /whey-proteine | 115 | 9.8 (22/09 GSC) | 0 clicks: title/description work (price angle) |
+| whey gold standard prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 84 | 8.4 (22/09 GSC) | 0 clicks; find which URL ranks (exact-page filter) |
+| creatine tunisie | /creatine | 172 | 13.6 (22/09 GSC) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning. SERP look 22/09 (US-geo): gainlabnutrition.com ranks ahead of us; `/creatine`, our blog price post, and legacy `/product-category/creatines/` all appear — one head term, three of our URLs |
+| creatine monohydrate | /creatine | 137 | 28.0 (22/09 GSC) | global phrase; local intent weak — secondary |
+| prix creatine tunisie | /creatine | 5 | 10.4 (22/09 GSC) | check |
+| mass gainer tunisie | /mass-gainers | 55 | 56.1 (22/09 GSC) | check |
+| serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 89 | 14.4 (22/09 GSC) | split across 8 URLs; canonical target = PDP; tighten blog links |
 | prise de masse tunisie | /prise-de-masse | ? | ? | check |
-| pre workout tunisie | /pre-workout | 155 | 6.8 (13/09) | ranks on the Born Rage PDP, not the category — decide which should win |
+| pre workout tunisie | /pre-workout | 7 | 41.4 (22/09 GSC) | ranks on the Born Rage PDP, not the category — decide which should win |
+| pre workout | /pre-workout | 393 | 7.0 (22/09 GSC) | **page-one and 0 clicks in 28 days** — the biggest zero-click row on the site. Impressions match `/pre-workout/pre-workout-born-rage-original-eric-favre` (385 impr, 1 clk, pos 5.4) almost exactly, so the generic term is answered by one niche PDP, not the category. Cannibalisation decision (Saturday), NOT a title rewrite: `/pre-workout` is inside the 05/10 freeze |
+| optimum nutrition | /optimum-nutrition | 518 | 5.2 (22/09 GSC) | brand query, position 5 and 1.35 % CTR (7 clicks). The brand page itself sits at 13.5 on 1,614 impr, so the URL Google shows for the exact term is NOT the brand page — read the Pages breakdown before acting |
+| protein powder whey | /whey-proteine | 170 | 9.8 (22/09 GSC) | page-one, 0 clicks; English-language phrasing our titles never use |
+| impact whey protein | /whey-proteine | 153 | 9.4 (22/09 GSC) | page-one, 1 click; our blog post ranks, the catalogue does not |
 | bruleur de graisse tunisie | /bruleurs-de-graisse | ? | ? | check |
 | bcaa tunisie | /bcaa | ? | ? | check |
-| omega 3 tunisie | /omega-3 | 46 | 10.5 (21/09) | retarget + real `bestProductSlugs` (empty block fixed) shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look 22/09 (US-geo, no TN pos): pharmacies (parapharmacie/tunisiepara), wildkard, nutribeast own the set; still showing our old `/category/omega-3` title |
-| protein bar chocolate | /barres-proteinees | 52 | 9.8 (20/09) | **bars category page shipped 22/09** (177→~1,800 words, FAQPage, price anchor `dès 36 DT`, `sur commande`). SERP look 22/09 (US-geo): we are absent; protein-shop-tunisia, housenutrition, nutribeast, stock-x, geantdrive hold it. Re-check TN pos after deploy + reindex |
-| collagene tunisie | /collagene ? | ? | ? | check the category exists + copy |
-| vitamines tunisie | /vitamines | ? | ? | 566 words only — thin |
-| complement alimentaire tunisie | / or /proteines | ? | ? | check |
+| omega 3 tunisie | /omega-3 | 62 | 18.1 (22/09 GSC) | retarget + real `bestProductSlugs` (empty block fixed) shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look 22/09 (US-geo, no TN pos): pharmacies (parapharmacie/tunisiepara), wildkard, nutribeast own the set; still showing our old `/category/omega-3` title |
+| protein bar chocolate | /barres-proteinees | 145 | 10.3 (22/09 GSC) | **bars category page shipped 22/09** (177→~1,800 words, FAQPage, price anchor `dès 36 DT`, `sur commande`). SERP look 22/09 (US-geo): we are absent; protein-shop-tunisia, housenutrition, nutribeast, stock-x, geantdrive hold it. Re-check TN pos after deploy + reindex |
+| collagene tunisie | /collagene ? | 5 | 51.6 (22/09 GSC) | check the category exists + copy |
+| vitamines tunisie | /vitamines | 16 | 35.4 (22/09 GSC) | 566 words only — thin |
+| complement alimentaire tunisie | / or /proteines | 61 | 8.2 (22/09 GSC) | check |
 
 **Note 22/09/2026 (run 2), no position observed — a template change, recorded so the next
 re-check knows what moved.** Every row above whose `page` is a category page gained editorial text
@@ -55,10 +67,10 @@ credit or blame this change for a delta.
 | --- | --- | --- | --- |
 | creatine ostrovit | /creatine/creatine-monohydrate-300g-ostrovit | site: indexed (21/09) | **FAQ + guide queued 23/09** (6 pairs, 269 w). SERP look 23/09 (US-geo, no TN pos): housenutrition holds 300 g AND 500 g, plus nutribeast, gympro, body-shop, ubuy; our result still shows the legacy `/shop/` URL (1 clean 301 hop). Still `Sur commande` |
 | creatine biotech | /creatine/100-creatine-monohydrate-300g-biotech-usa | ? | title humanized 21/09 |
-| iso 100 dymatize | /whey-isolate/iso-100-dymatize-2-3kg | blog 3rd (19/09) | **FAQ + guide queued 23/09** (6 pairs, 235 w). SERP look 23/09 (US-geo): housenutrition, dodo-nutrition, strong-nutrition (400 TND), para-plus, stock-x, body-shop; our PDP and our blog post both present. Still `Sur commande`. **Fiche carries a stale price** (body text says 480 DT, page sells 419 DT) — fix in the DB copy |
-| gold standard whey | /whey-proteine/100-whey-gold-standard-2-27kg | ? | check |
-| serious mass | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | ? | see head terms |
-| levro legendary mass | /mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone | ? | check |
+| iso 100 dymatize | /whey-isolate/iso-100-dymatize-2-3kg | 27 | 9.6 (22/09 GSC) |
+| gold standard whey | /whey-proteine/100-whey-gold-standard-2-27kg | 5 | 25.6 (22/09 GSC) |
+| serious mass | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 68 | 34.7 (22/09 GSC) |
+| levro legendary mass | /mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone | 23 | 16.1 (22/09 GSC) |
 | nitro tech whey gold | /whey-proteine/nitro-tech-whey-gold-2-3kg | ? | **FAQ + guide queued 23/09** (6 pairs, 221 w, qualitative only — the fiche publishes no nutritional figure). SERP look 23/09 (US-geo): gust.tn, protein-shop-tunisia (270 DT), strong-nutrition, nutribeast, body-shop, sf-nutrition, jumia; ours at 259 DT via the legacy `/shop/` URL. Still `Sur commande` |
 | big whey big ramy | /whey-proteine/big-whey-2kg-big-ramy-labs | ? | check |
 | c4 pre workout | /pre-workout/c4-original-pre-workout-cellucor | ? | **FAQ + guide queued 23/09** (6 pairs, 228 w, from the label transcribed 20/09: 6,5 g portion / 150 mg caféine / 1 600 mg bêta-alanine / 1 000 mg créatine nitrate). **EN STOCK** — the only one of the four. SERP look 23/09 (US-geo): housenutrition (282 g), nutribeast (195 g), strong-nutrition, gympro — and **our ranking URL is the category `/pre-workout`, not this PDP**: decide the winner on Thursday's CTR pass. Title 64 chars |
@@ -79,14 +91,14 @@ and do not read a position drop on these rows as a content failure.
 
 | query | page | evidence | note |
 | --- | --- | --- | --- |
-| creatine prix tunisie | /creatine | 5 hits (23/09) | "prix" is the dominant Tunisian modifier on every head term |
+| creatine prix tunisie | /creatine | 7 | 16.9 (22/09 GSC) |
 | prix creatine monohydrate tunisie | /creatine | 5 hits (23/09) | use in the /creatine FAQ + comparison table |
-| creatine monohydrate prix tunisie | /creatine | 3 hits (23/09) | covered by the new Ostrovit PDP guide |
-| serious mass gainer tunisie | /mass-gainers | 4 hits (23/09) | check against the existing "serious mass tunisie" row |
+| creatine monohydrate prix tunisie | /creatine | 24 | 37.2 (22/09 GSC) |
+| serious mass gainer tunisie | /mass-gainers | 22 | 44.2 (22/09 GSC) |
 | whey isolate 1kg prix | /whey-isolate | 3 hits (23/09) | **no 1 kg isolate SKU in stock** — purchasing before copy |
-| mass gainer prix tunisie | /mass-gainers | 2 hits (23/09) | new commercial row |
+| mass gainer prix tunisie | /mass-gainers | 20 | 63.3 (22/09 GSC) |
 | acheter creatine monohydrate | /creatine | 2 hits (23/09) | transactional; covered by the PDP guide |
-| meilleur creatine monohydrate | /creatine | 2 hits (23/09) | comparison intent — the /creatine comparison table (BACKLOG P1) is the answer |
+| meilleur creatine monohydrate | /creatine | 6 | 10.0 (22/09 GSC) |
 
 ## Discovered 22/09/2026 (Google autocomplete fr/tn, deep run — evidence = hits / best rank, NOT a position)
 
@@ -96,28 +108,28 @@ breakdown first".
 
 | query | page | evidence | priority |
 | --- | --- | --- | --- |
-| whey protein tunisie prix | /whey-proteine | 6 hits, best 2; cluster with "whey protein prix tunisie" (4/1), "prix whey protein tunisie" (3/1) | P1 |
+| whey protein tunisie prix | /whey-proteine | 7 | 11.1 (22/09 GSC) |
 | whey tunisie prix | /whey-proteine | 6 hits, best 1; plus "prix whey tunisie" (2/1), "whey prix tunisie" (1/9) | P1 |
-| whey tunisie | /whey-proteine | 4 hits, best 1; HN + GainLab lead the look; our /category/whey-proteine surfaced with title "Proteine Tunisie" in the non-Google index — confirm with GSC Pages | P1 |
-| whey isolate tunisie | /whey-isolate | 6 hits, best 1; 5 in stock (Real Isolate 1.8 kg, Iso Sensation 93, William Bonac) | P1 |
-| whey isolate tunisie prix | /whey-isolate | 6 hits, best 2; plus "whey isolate prix tunisie" (3/1), "prix whey isolate tunisie" (3/1) | P1 |
-| proteine tunisie prix | /proteines | 5 hits, best 1; plus "proteine prix tunisie" (2/1), "prix proteine tunisie" (2/1) | P1 |
+| whey tunisie | /whey-proteine | 107 | 15.8 (22/09 GSC) |
+| whey isolate tunisie | /whey-isolate | 7 | 17.4 (22/09 GSC) |
+| whey isolate tunisie prix | /whey-isolate | 3 | 9.7 (22/09 GSC) |
+| proteine tunisie prix | /proteines | 13 | 10.0 (22/09 GSC) |
 | mass gainer tunisie prix | /mass-gainers | 5 hits, best 2; plus "mass gainer prix tunisie" (3/1), "prix mass gainer tunisie" (2/1); 7 in stock | P1 |
 | pre workout prix tunisie | /pre-workout | 4 hits, best 1; plus "pre workout tunisie prix" (2/2); decide category vs Born Rage PDP first | P1 |
 | bcaa prix tunisie | /bcaa | 3 hits, best 1; plus "bcaa tunisie prix" (3/2); only Xtend + Real Pharm 8:1:1 in stock | P1 |
-| omega 3 prix tunisie | /omega-3 | 3 hits, best 1; plus "omega 3 tunisie prix" (3/2), "prix omega 3 tunisie" (1/1); lands with #223 | P1 |
-| meilleur oméga 3 tunisie | /omega-3 | 3 hits, best 1; accented form; add an H2 "Quel est le meilleur oméga 3 en Tunisie ?" | P1 |
-| collagène marin tunisie | /collagene/collagen-marine-300g-real-pharm | 4 hits, best 2; in stock; plus "collagène marin tunisie prix" (2/8) | P1 |
+| omega 3 prix tunisie | /omega-3 | 27 | 23.5 (22/09 GSC) |
+| meilleur oméga 3 tunisie | /omega-3 | 3 | 20.7 (22/09 GSC) |
+| collagène marin tunisie | /collagene/collagen-marine-300g-real-pharm | 11 | 57.1 (22/09 GSC) |
 | multivitamines tunisie | /vitamines | 2 hits, best 3; title already says Multivitamines; page is 566 words — rebuild with the 10 in-stock SKUs | P1 |
-| glutamine tunisie | /glutamine | 4 hits, best 1; 1 in stock (Red Rex, Big Ramy) — stock is the blocker (owner) | P1 |
+| glutamine tunisie | /glutamine | 10 | 20.4 (22/09 GSC) |
 | glutamine tunisie prix | /glutamine | 4 hits, best 2; plus "glutamine prix tunisie" (2/1) | P1 |
-| whey protein 2kg prix tunisie | /whey-proteine | 3 hits, best 1; 2 kg is the in-stock format (Big Whey, Pure Whey 2.27, Gold Standard 2.27) | P1 |
-| mass gainer 7kg prix tunisie | /mass-gainers/mass-gainer-zero-7kg-eric-favre | 2 hits, best 1; 3 × 7 kg in stock (Eric Favre Zero, Big Monster HX, Instant Mass Scenit) | P1 |
-| c4 pre workout tunisie | /pre-workout/c4-original-pre-workout-cellucor | 2 hits, best 4; in stock; PDP has no FAQ, title 64 chars | P1 |
+| whey protein 2kg prix tunisie | /whey-proteine | 5 | 3.8 (22/09 GSC) |
+| mass gainer 7kg prix tunisie | /mass-gainers/mass-gainer-zero-7kg-eric-favre | 7 | 6.1 (22/09 GSC) |
+| c4 pre workout tunisie | /pre-workout/c4-original-pre-workout-cellucor | 8 | 5.6 (22/09 GSC) |
 | bcaa xtend tunisie | /bcaa/xtend-bcaa-420g | 2 hits, best 3; in stock | P1 |
 | creatine tunisie optimum nutrition | /creatine/micronised-creatine-optimum-nutrition-317g | 4 hits, best 5; in stock (qty 1000); was noindex until 21/09 — re-check 05/10 | P1 |
 | whey protein tunisie promotion | /whey-proteine (promo block), /offres secondary | 4 hits, best 5; only promo query with 4 hits | P1 |
-| omega 3 tunis | /omega-3 | 3 hits, best 3 | P2 |
+| omega 3 tunis | /omega-3 | 4 | 6.0 (22/09 GSC) |
 | sobitas tunisie | / | 3 hits, best 1; GSC "sobitas" 432 clicks at ~1.1 — monitor only | P2 |
 | sobitas proteine tunisie | / | 3 hits, best 2; plus "proteine tunisie sobitas" (3/5) | P2 |
 | protéine tunisie sobitas whey & matériel musculation sousse | /proteine-sousse | 2 hits, best 3; the GBP listing name; LocalBusiness.name already exact (3205bd02) | P2 |
@@ -127,19 +139,19 @@ breakdown first".
 | creatine tunisie 1kg | /creatine | 4 hits, best 4; NO 1 kg creatine in stock — stock gap (owner) before any copy | P2 |
 | créatine tunisie 500g | /creatine/creatine-monohydrate-ostrovit-500gr | 3 hits, best 6; 3 × 500 g in stock (Ostrovit, Quamtrax, Real Pharm) | P2 |
 | creatine tunisie 300g | /creatine/100-creatine-monohydrate-300g-biotech-usa | 2 hits, best 10; 3 × 300 g in stock (BioTech, Kevin Levrone, Real Pharm) | P2 |
-| creatine monohydrate tunisie | /creatine | 2 hits, best 2; plus "meilleur creatine monohydrate tunisie" (2/2); the /creatine-monohydrate-tunisie guide must link here, not compete | P2 |
+| creatine monohydrate tunisie | /creatine | 15 | 36.7 (22/09 GSC) |
 | creatine biotech tunisie | /creatine/100-creatine-monohydrate-300g-biotech-usa | 1 hit, best 2; in stock; HN #1 on "creatine biotech" with 5.0(24) | P2 |
 | creatine kevin levrone tunisie | /creatine/gold-creatine-kevin-levrone-300-g | 1 hit, best 3; in stock | P2 |
-| creatine quamtrax tunisie | /creatine/creatine-monohydrate-500g-quamtrax | 1 hit, best 5; in stock | P2 |
+| creatine quamtrax tunisie | /creatine/creatine-monohydrate-500g-quamtrax | 7 | 9.9 (22/09 GSC) |
 | meilleur creatine tunisie | /creatine | 1 hit, best 1 (tn); plus "vente creatine tunisie" (1/1) | P2 |
-| whey protein 500g prix tunisie | /whey-proteine | 2 hits, best 1; no 500 g whey in stock — stock gap (owner) | P2 |
-| whey protein optimum nutrition tunisie | /optimum-nutrition | 1 hit, best 2; brand page live, ranked 5.4-6.9 through the noindex window | P2 |
+| whey protein 500g prix tunisie | /whey-proteine | 14 | 10.8 (22/09 GSC) |
+| whey protein optimum nutrition tunisie | /optimum-nutrition | 12 | 4.8 (22/09 GSC) |
 | meilleur whey tunisie | /whey-proteine | 2 hits, best 1 (tn); plus "vente whey tunisie" (2/1) | P2 |
 | prix proteine whey tunisie | /whey-proteine | 2 hits, best 5; plus "protéine whey prix tunisie" (1/5) | P2 |
 | whey protein vanille tunisie | /whey-proteine | 1 hit, best 1; only flavour query with geo | P2 |
 | whey isolate protein tunisie | /whey-isolate | 2 hits, best 3; plus "iso whey tunisie prix" (1/5), "proteine isolate tunisie" (1/4) | P2 |
 | weight gainer tunisie | /mass-gainers | 3 hits, best 5; synonym; plus "weight gainer prix tunisie" (2/8) | P2 |
-| mass gainer 3kg prix tunisie | /mass-gainers | 2 hits, best 1; nearest stock = Instant Real Mass 2.72 kg | P2 |
+| mass gainer 3kg prix tunisie | /mass-gainers | 8 | 6.6 (22/09 GSC) |
 | mass gainer 5kg prix tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 1 hit, best 2; Serious Mass 5.45 + Thunder Gainer 5.4 in stock | P2 |
 | mass gainer 6kg prix tunisie | /mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone | from the 22/09 run (row truncated in the dossier); in stock | P2 |
 
