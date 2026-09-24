@@ -33,7 +33,7 @@ class Commande extends Model
         // the customer's cash; remitted means the shop does. Commission is EARNED on the first and
         // PAYABLE only after the second. Collapsing them pays affiliates from the shop's own float.
         'affilie_id', 'affilie_code_id', 'affilie_commission_processed_at', 'cod_remitted_at',
-        'archived_at',
+        'archived_at', 'whatsapp_confirmation_sent_at',
     ];
 
     protected $casts = [
@@ -52,6 +52,7 @@ class Commande extends Model
         'affilie_commission_processed_at' => 'datetime',
         'cod_remitted_at' => 'datetime',
         'archived_at' => 'datetime',
+        'whatsapp_confirmation_sent_at' => 'datetime',
     ];
 
     protected static function booted(): void

@@ -297,6 +297,34 @@ class CommandeResource extends Resource
                             ->success()
                             ->send();
                     }),
+                // WhatsApp order-confirmation. Shown only once WhatsApp is configured (token +
+                // number id). A human clicks it per order — the message goes to the customer, so it
+                // is not fired automatically here; auto-send is the WHATSAPP_AUTOSEND env switch.
+                Actions\Action::make('whatsappConfirmation')
+                    ->label('WhatsApp')
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->color('success')
+                    ->visible(fn (): bool => app(\App\Services\WhatsAppService::class)->enabled())
+                    ->requiresConfirmation()
+                    ->modalHeading('Confirmation WhatsApp')
+                    ->modalDescription(fn (Commande $record): string => $record->whatsapp_confirmation_sent_at
+                        ? 'Une confirmation a déjà été envoyée le ' . $record->whatsapp_confirmation_sent_at->format('d/m/Y H:i') . '. Renvoyer un message ?'
+                        : 'Envoyer au client un message WhatsApp lui demandant de confirmer la commande #' . $record->numero . ' ?')
+                    ->modalSubmitActionLabel('Envoyer')
+                    ->action(function (Commande $record): void {
+                        if (! ($record->livraison_phone ?: $record->phone)) {
+                            Notification::make()->title('Pas de numéro de téléphone')->warning()->send();
+                            return;
+                        }
+
+                        \App\Jobs\SendWhatsAppConfirmationJob::dispatch($record->id, force: true);
+
+                        Notification::make()
+                            ->title('Message WhatsApp mis en file d\'attente')
+                            ->body('Le client recevra la demande de confirmation sous peu.')
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->bulkActions([
                 // Mark a batch of orders delivered.

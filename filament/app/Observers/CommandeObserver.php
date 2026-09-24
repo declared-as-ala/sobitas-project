@@ -36,6 +36,10 @@ class CommandeObserver
      */
     public function created(Commande $commande): void
     {
+        // WhatsApp order-confirmation to the customer — opt-in and isolated so it can never break
+        // order creation. See maybeSendWhatsAppConfirmation below.
+        $this->maybeSendWhatsAppConfirmation($commande);
+
         try {
             $recipients = User::whereIn('role_id', config('affilies.admin_role_ids', [1, 3]))->get();
             if ($recipients->isEmpty()) {
@@ -376,5 +380,36 @@ class CommandeObserver
 
         // saveQuietly so this write does not re-fire observer events.
         $commande->forceFill(['review_request_sent_at' => now()])->saveQuietly();
+    }
+
+    /**
+     * Auto-send the WhatsApp confirmation the moment an order is created — opt-in and defensive.
+     *
+     * OFF by default (`WHATSAPP_AUTOSEND`): sending a message to a customer is an outward action,
+     * so it stays a manual button until the owner has tested the template and switched it on.
+     * Affiliate orders are skipped: they arrive already sold and paid-on-delivery, so there is no
+     * customer to ask for confirmation (the same reason the admin notification above words them
+     * differently). Everything is wrapped so a WhatsApp hiccup can never fail the order.
+     */
+    private function maybeSendWhatsAppConfirmation(Commande $commande): void
+    {
+        try {
+            if (! filter_var(config('services.whatsapp.autosend'), FILTER_VALIDATE_BOOL)) {
+                return;
+            }
+            if (! empty($commande->affilie_id)) {
+                return;
+            }
+            if (! app(\App\Services\WhatsAppService::class)->enabled()) {
+                return;
+            }
+
+            \App\Jobs\SendWhatsAppConfirmationJob::dispatch($commande->id);
+        } catch (\Throwable $e) {
+            Log::channel('daily')->warning('WhatsApp autosend dispatch failed', [
+                'commande_id' => $commande->id ?? null,
+                'error'       => $e->getMessage(),
+            ]);
+        }
     }
 }

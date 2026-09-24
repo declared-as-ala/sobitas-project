@@ -45,6 +45,38 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | WhatsApp (Meta Cloud API)
+    |--------------------------------------------------------------------------
+    | Sends the customer an order-confirmation message on WhatsApp. It stays
+    | INERT until these env vars are set, so nothing is sent by accident:
+    |
+    |   WHATSAPP_TOKEN            Permanent access token (Meta Business → System user)
+    |   WHATSAPP_PHONE_NUMBER_ID  The sender number's id (Meta → WhatsApp → API setup)
+    |   WHATSAPP_TEMPLATE         Approved template name for the proactive message.
+    |                             REQUIRED for business-initiated sends: Meta only
+    |                             allows free-form text inside a 24h customer-service
+    |                             window, so a confirmation you send first must be a
+    |                             template. Leave blank only to test plain text against
+    |                             a number that just messaged you.
+    |   WHATSAPP_TEMPLATE_LANG    Template language (default fr).
+    |   WHATSAPP_AUTOSEND         'true' to message the customer automatically the
+    |                             moment an order is created. Default false — a human
+    |                             clicks the WhatsApp button per order until the owner
+    |                             has tested the template and wants it automatic.
+    |
+    | The token is a real secret: it lives in the VPS .env, never in git.
+    */
+    'whatsapp' => [
+        'token'           => env('WHATSAPP_TOKEN'),
+        'phone_number_id' => env('WHATSAPP_PHONE_NUMBER_ID'),
+        'template'        => env('WHATSAPP_TEMPLATE'),
+        'template_lang'   => env('WHATSAPP_TEMPLATE_LANG', 'fr'),
+        'api_version'     => env('WHATSAPP_API_VERSION', 'v21.0'),
+        'autosend'        => env('WHATSAPP_AUTOSEND', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sign in with Google
     |--------------------------------------------------------------------------
     | ONE variable, and it is the same string the storefront uses as
