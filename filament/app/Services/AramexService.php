@@ -713,4 +713,90 @@ class AramexService
             return null;
         }
     }
+
+    /**
+     * Reprint the label for an EXISTING shipment, by HAWB, and return the PDF bytes.
+     *
+     * ── WHY THIS EXISTS ──────────────────────────────────────────────────────────────────────
+     * `aramex_label_url` is the URL Aramex handed back when the shipment was CREATED, and those
+     * label URLs EXPIRE. Once expired the stored link 404s / times out and the modal shows
+     * "lien expiré ou délai dépassé" with nothing to print — which is exactly the failure staff
+     * hit. Aramex's `PrintLabel` operation regenerates the label for a shipment that already
+     * exists, so a fresh, valid label is produced on every open. It creates NO shipment and sends
+     * NO SMS — it is the reprint of an existing HAWB, the label equivalent of a tracking read.
+     *
+     * Returns the PDF bytes directly when Aramex embeds them (`LabelFileContents`), otherwise
+     * fetches the fresh `LabelURL` it returns. Null on any failure, with the reason logged.
+     */
+    public function printLabelPdf(string $hawb): ?string
+    {
+        $hawb = trim($hawb);
+        if ($hawb === '') {
+            return null;
+        }
+
+        $payload = [
+            'ClientInfo' => $this->clientInfo(),
+            'LabelInfo'  => [
+                'ReportID'   => config('aramex.label_report_id'),
+                'ReportType' => config('aramex.label_report_type'),
+            ],
+            'ShipmentNumber' => $hawb,
+            'Transaction' => [
+                'Reference1' => $hawb,
+                'Reference2' => '',
+                'Reference3' => '',
+                'Reference4' => '',
+                'Reference5' => '',
+            ],
+        ];
+
+        try {
+            $response = Http::timeout(30)
+                ->withHeaders(['Content-Type' => 'application/json', 'Accept' => 'application/json'])
+                ->post(
+                    $this->baseUrl() . '/ShippingAPI.V2/Shipping/Service_1_0.svc/json/PrintLabel',
+                    $payload
+                );
+
+            if (! $response->successful()) {
+                Log::channel('daily')->warning('Aramex PrintLabel HTTP error', ['hawb' => $hawb, 'status' => $response->status()]);
+                return null;
+            }
+
+            $body = $response->json();
+
+            if (! empty($body['HasErrors'])) {
+                $msgs = collect($body['Notifications'] ?? [])->pluck('Message')->filter()->implode(' | ');
+                Log::channel('daily')->warning('Aramex PrintLabel error', ['hawb' => $hawb, 'error' => $msgs ?: 'HasErrors']);
+                return null;
+            }
+
+            $label = $body['ShipmentLabel'] ?? [];
+
+            // Prefer embedded contents — no second network hop, so nothing else can expire.
+            $contents = $label['LabelFileContents'] ?? null;
+            if (is_string($contents) && $contents !== '') {
+                if (str_starts_with($contents, '%PDF')) {
+                    return $contents;
+                }
+                $decoded = base64_decode($contents, true);
+                if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
+                    return $decoded;
+                }
+            }
+
+            // Otherwise fetch the freshly-generated URL (valid now, unlike the stored one).
+            $freshUrl = $label['LabelURL'] ?? null;
+            if (is_string($freshUrl) && $freshUrl !== '') {
+                return $this->fetchLabelPdf($freshUrl);
+            }
+
+            Log::channel('daily')->warning('Aramex PrintLabel returned no label', ['hawb' => $hawb]);
+            return null;
+        } catch (\Throwable $e) {
+            Log::channel('daily')->error('Aramex PrintLabel exception', ['hawb' => $hawb, 'error' => $e->getMessage()]);
+            return null;
+        }
+    }
 }

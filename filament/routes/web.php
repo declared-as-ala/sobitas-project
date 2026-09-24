@@ -124,24 +124,37 @@ Route::middleware(['auth', 'back.office', 'no.cache.print'])->group(function () 
         // branded interstitial regardless of body content, so a real failure (expired label URL,
         // Aramex timeout) rendered as a blank "Bad gateway" page inside the modal iframe instead of
         // the reason. Returning 200 with a clear message keeps the explanation visible to staff.
-        $url = $facture->aramex_label_url;
-        if (! $url) {
+        // A shipment is identified by its HAWB, and the stored label URL EXPIRES. So reprint from
+        // the HAWB first (PrintLabel — regenerates a fresh label for the existing shipment, creates
+        // nothing, sends nothing); only fall back to the stored URL if there is no HAWB. This is
+        // what fixes "lien expiré": the label is regenerated on every open instead of relying on a
+        // link that was valid only when the shipment was created.
+        $service = app(\App\Services\AramexService::class);
+        $hawb    = $facture->aramex_hawb;
+        $url     = $facture->aramex_label_url;
+
+        if (! $hawb && ! $url) {
             return response()->view('filament.modals.aramex-label-unavailable', [
-                'message' => 'Aucune étiquette n\'a été renvoyée par Aramex pour cette expédition. Réessayez l\'envoi ou contactez le support Aramex.',
-                'hawb'    => $facture->aramex_hawb,
+                'message' => 'Aucune expédition Aramex pour cette facture. Envoyez-la d\'abord vers Aramex.',
+                'hawb'    => $hawb,
             ]);
         }
 
-        $pdf = app(\App\Services\AramexService::class)->fetchLabelPdf($url);
+        $pdf = $hawb ? $service->printLabelPdf($hawb) : null;
+        if (! $pdf && $url) {
+            $pdf = $service->fetchLabelPdf($url);
+        }
+
         if (! $pdf) {
-            \Illuminate\Support\Facades\Log::channel('daily')->warning('Aramex label fetch failed', [
+            \Illuminate\Support\Facades\Log::channel('daily')->warning('Aramex label unavailable', [
                 'facture_id' => $facture->id,
-                'label_url'  => $url,
+                'hawb'       => $hawb,
+                'had_url'    => (bool) $url,
             ]);
 
             return response()->view('filament.modals.aramex-label-unavailable', [
-                'message' => 'Impossible de récupérer l\'étiquette depuis Aramex (lien expiré ou délai dépassé). Réessayez dans quelques minutes.',
-                'hawb'    => $facture->aramex_hawb,
+                'message' => 'Impossible de générer l\'étiquette depuis Aramex (identifiants Aramex, expédition introuvable côté Aramex, ou service indisponible). Réessayez dans quelques minutes.',
+                'hawb'    => $hawb,
             ]);
         }
 
