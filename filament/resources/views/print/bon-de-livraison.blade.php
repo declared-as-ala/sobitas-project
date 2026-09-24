@@ -180,6 +180,11 @@ html, body { margin: 0; padding: 0; background: #f2f2f2; }
 body.doc-a4-print {
     font-family: Arial, 'Helvetica Neue', Helvetica, sans-serif;
     color: var(--ink);
+    /* Explicit LTR: this is a French document and every field is Latin, but a stored value that
+       begins with an Arabic character (a client name, a note) would otherwise flip the line's base
+       direction under the browser's bidi algorithm and make it read right-to-left. Pinning the
+       document direction keeps labels, colons and values in reading order whatever a field holds. */
+    direction: ltr;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
 }
@@ -207,7 +212,9 @@ body.doc-a4-print {
 .bl-co-grid { display: grid; grid-template-columns: max-content max-content; gap: 0 26px; font-size: 7.6pt; }
 .bl-co-grid .wide { grid-column: 1 / -1; }
 .bl-idline { display: flex; gap: 4px; }
-.bl-idline b { font-weight: 400; color: var(--label); flex: 0 0 auto; min-width: 30px; }
+/* Fixed label column so the colons line up down the whole identity block now that the labels are a
+   vertical list of uneven lengths ("Rc" next to "Matricule fiscal"). 26mm clears the longest. */
+.bl-idline b { font-weight: 400; color: var(--label); flex: 0 0 26mm; }
 .bl-idline span { font-weight: 400; word-break: break-all; }
 
 .bl-brand { flex: 0 0 auto; text-align: right; }
@@ -392,7 +399,7 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
 
                 SOBITAS is the name on the mark and on the stamp, so it is the name in the
                 heading. The legal entity is not dropped — it moves to the identity grid below,
-                beside the Rc and the TVA number, which is where a reader looks for it anyway.
+                beside the Rc and the matricule fiscal, which is where a reader looks for it anyway.
             --}}
             @php($blCoName = trim((string) ($coordonnee->abbreviation ?? '')))
             @php($blLegal  = trim((string) ($coordonnee->designation_fr ?? '')))
@@ -404,10 +411,16 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
                 @if($blLegal !== '' && mb_strtoupper($blLegal) !== mb_strtoupper($blCoName !== '' ? $blCoName : 'SOBITAS'))
                     <div class="bl-idline wide"><b>Raison sociale</b><span>: {{ $blLegal }}</span></div>
                 @endif
-                <div class="bl-idline"><b>Rc</b><span>: {{ $coordonnee->registre_commerce ?? '' }}</span></div>
-                <div class="bl-idline"><b>Tva</b><span>: {{ $coordonnee->matricule ?? '' }}</span></div>
-                <div class="bl-idline"><b>Tél</b><span>: {{ $coordonnee->phone_1 ?? '' }}{{ !empty($coordonnee?->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</span></div>
-                <div class="bl-idline"><b>Fax</b><span>: {{ $coordonnee->fax ?? '' }}</span></div>
+                <div class="bl-idline wide"><b>Rc</b><span>: {{ $coordonnee->registre_commerce ?? '' }}</span></div>
+                {{-- `matricule` is the MATRICULE FISCAL, not the VAT rate. It was labelled "Tva",
+                     which reads as a VAT number beside the real 19% TVA in the tax recap below —
+                     two different things wearing one label. The rate stays in the recap; this line
+                     names the identifier it actually holds. --}}
+                <div class="bl-idline wide"><b>Matricule fiscal</b><span>: {{ $coordonnee->matricule ?? '' }}</span></div>
+                {{-- No "Fax" line: SOBITAS has no fax, so the row printed "Fax :" with nothing after
+                     it — a blank field that only says the form was not filled in. Removed rather
+                     than left empty. --}}
+                <div class="bl-idline wide"><b>Tél</b><span>: {{ $coordonnee->phone_1 ?? '' }}{{ !empty($coordonnee?->phone_2) ? ' / '.$coordonnee->phone_2 : '' }}</span></div>
                 <div class="bl-idline wide"><b>Email</b><span>: {{ $coordonnee->email ?? '' }}</span></div>
                 <div class="bl-idline wide"><b>R.I.B</b><span>: {{ $coordonnee->rib ?? '' }}</span></div>
             </div>
@@ -484,13 +497,18 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
         <tbody>
             @foreach($rows as $row)
             <tr>
-                @if($showRef)<td class="c-left c-ref">{{ $row['ref'] }}</td>@endif
+                {{-- Product name stays LEFT; the five figure columns are CENTRED so the data sits
+                     under its centred header instead of shoving to the right edge — the mismatch
+                     (centred "Qte" over a right-hugged "1.000") is what read as the numbers running
+                     the wrong way. Amount TOTALS in the recap below stay right-aligned, as amounts
+                     should. --}}
+                @if($showRef)<td class="c-center c-ref">{{ $row['ref'] }}</td>@endif
                 <td class="c-left c-prod">{{ $row['produit'] }}</td>
-                <td class="c-right">{{ $row['qte'] }}</td>
-                <td class="c-right">{{ $fmt($row['pu']) }}</td>
-                <td class="c-right">{{ number_format($row['tva'], 3, '.', ' ') }}</td>
-                <td class="c-right">{{ $fmt($row['pu_ttc']) }}</td>
-                <td class="c-right">{{ $fmt($row['total']) }}</td>
+                <td class="c-center">{{ $row['qte'] }}</td>
+                <td class="c-center">{{ $fmt($row['pu']) }}</td>
+                <td class="c-center">{{ number_format($row['tva'], 3, '.', ' ') }}</td>
+                <td class="c-center">{{ $fmt($row['pu_ttc']) }}</td>
+                <td class="c-center">{{ $fmt($row['total']) }}</td>
             </tr>
             @endforeach
             @if(empty($rows))
