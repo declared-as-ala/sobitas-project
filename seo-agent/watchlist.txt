@@ -48,3 +48,14 @@
 /pre-workout/c4-original-pre-workout-cellucor
 /pre-workout/psychotic-pre-workout
 /bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps
+
+# CTR pass 24/09 — page-one commercial pages measured at near-zero CTR in the owner's GSC export
+# (28 d to 22/09). Added to verify the product-title casing fix landed and to watch the CTR.
+# Expected titles after the 24/09 frontend deploy:
+#   /creatine/gsn-creatine-monohydrate-200g  ->  "GSN – Creatine Monohydrate – 200 g – Prix Tunisie"
+#   now-foods-l-theanine...                  ->  "NOW Foods L-Theanine – 120 gélules végétales – …"
+/creatine/gsn-creatine-monohydrate-200g
+/sante-vitalite
+/gsn-great-sport-nutrition
+/pre-workout/pre-workout-born-rage-original-eric-favre
+/sommeil-stress/now-foods-l-theanine-120-gelules-vegetales
