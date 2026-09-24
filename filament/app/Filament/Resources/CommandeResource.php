@@ -187,6 +187,19 @@ class CommandeResource extends Resource
                 Tables\Filters\SelectFilter::make('etat')
                     ->label('État')
                     ->options(Commande::getStatusOptions()),
+                // Archived orders are hidden by default (blank state). This scope lives ONLY here,
+                // on the admin list — nothing else in the app filters on archived_at, so reports and
+                // the API still see every order. Switch the filter to see or include the archives.
+                Tables\Filters\TernaryFilter::make('archived')
+                    ->label('Archives')
+                    ->placeholder('Commandes actives')
+                    ->trueLabel('Archives uniquement')
+                    ->falseLabel('Toutes (actives + archivées)')
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereNotNull('archived_at'),
+                        false: fn (Builder $query): Builder => $query,
+                        blank: fn (Builder $query): Builder => $query->whereNull('archived_at'),
+                    ),
             ])
             ->actions([
                 Actions\EditAction::make(),
@@ -231,11 +244,37 @@ class CommandeResource extends Resource
                     ->modalWidth(Width::FourExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fermer'),
-                Actions\DeleteAction::make()
-                    ->label('Supprimer')
-                    ->modalHeading('Supprimer la commande')
-                    ->modalDescription(fn (Commande $record): string => 'La commande #' . $record->numero . ' sera définitivement supprimée. Cette action est irréversible.')
-                    ->visible(fn (Commande $record): bool => self::canDeleteCommande($record)),
+                // ── ARCHIVER, NOT SUPPRIMER ─────────────────────────────────────────────────────
+                // An order is never deleted: staff archive it, which drops it from the working list
+                // but keeps every row intact for the books, the API and the affiliate money gates.
+                // Reversible, so it has none of the delete guard's restrictions (a delivered order
+                // can be archived too); the record is only hidden, never lost.
+                Actions\Action::make('archiver')
+                    ->label('Archiver')
+                    ->icon('heroicon-o-archive-box-arrow-down')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Archiver la commande')
+                    ->modalDescription(fn (Commande $record): string => 'La commande #' . $record->numero . ' sera déplacée dans les archives. Vous pourrez la restaurer à tout moment.')
+                    ->modalSubmitActionLabel('Archiver')
+                    ->visible(fn (Commande $record): bool => $record->archived_at === null)
+                    ->action(function (Commande $record): void {
+                        $record->forceFill(['archived_at' => now()])->save();
+                        Notification::make()->title('Commande archivée')->success()->send();
+                    }),
+                Actions\Action::make('restaurer')
+                    ->label('Restaurer')
+                    ->icon('heroicon-o-archive-box-x-mark')
+                    ->color('success')
+                    ->requiresConfirmation()
+                    ->modalHeading('Restaurer la commande')
+                    ->modalDescription(fn (Commande $record): string => 'La commande #' . $record->numero . ' reviendra dans la liste active.')
+                    ->modalSubmitActionLabel('Restaurer')
+                    ->visible(fn (Commande $record): bool => $record->archived_at !== null)
+                    ->action(function (Commande $record): void {
+                        $record->forceFill(['archived_at' => null])->save();
+                        Notification::make()->title('Commande restaurée')->success()->send();
+                    }),
                 Actions\Action::make('sendSmsNotification')
                     ->label('SMS')
                     ->icon('heroicon-o-chat-bubble-left')
@@ -396,7 +435,27 @@ class CommandeResource extends Resource
                     })
                     ->deselectRecordsAfterCompletion(),
 
-                Actions\DeleteBulkAction::make(),
+                // No bulk delete: archiving replaces it here too. Selected orders are moved to the
+                // archives (reversible), never removed.
+                Actions\BulkAction::make('archiverBulk')
+                    ->label('Archiver')
+                    ->icon('heroicon-o-archive-box-arrow-down')
+                    ->color('gray')
+                    ->requiresConfirmation()
+                    ->modalHeading('Archiver les commandes sélectionnées')
+                    ->modalDescription('Elles seront déplacées dans les archives et pourront être restaurées à tout moment.')
+                    ->modalSubmitActionLabel('Archiver')
+                    ->action(function (\Illuminate\Support\Collection $records): void {
+                        $n = 0;
+                        foreach ($records as $record) {
+                            if ($record->archived_at === null) {
+                                $record->forceFill(['archived_at' => now()])->save();
+                                $n++;
+                            }
+                        }
+                        Notification::make()->title($n . ' commande(s) archivée(s)')->success()->send();
+                    })
+                    ->deselectRecordsAfterCompletion(),
             ]);
     }
 
