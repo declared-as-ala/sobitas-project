@@ -681,9 +681,34 @@ class AramexService
     public function fetchLabelPdf(string $labelUrl): ?string
     {
         try {
-            $response = Http::timeout(15)->get($labelUrl);
+            // Aramex label URLs redirect to a CDN, so follow redirects; 15s was occasionally too
+            // tight for the first fetch of a freshly-generated label.
+            $response = Http::timeout(25)->withOptions(['allow_redirects' => true])->get($labelUrl);
+            if (! $response->successful()) {
+                return null;
+            }
 
-            return $response->successful() ? $response->body() : null;
+            $body = $response->body();
+            if ($body === '' ) {
+                return null;
+            }
+
+            // Only ever serve an actual PDF. The old code returned the raw body of ANY 200, so an
+            // Aramex HTML error page or a session-expired login screen was streamed to the modal as
+            // `application/pdf` — a blank or broken preview with nothing to print. A real PDF always
+            // begins with "%PDF".
+            if (str_starts_with($body, '%PDF')) {
+                return $body;
+            }
+
+            // Aramex sometimes hands back the label base64-encoded rather than as raw bytes. Decode
+            // and re-check the signature before trusting it.
+            $decoded = base64_decode(trim($body), true);
+            if ($decoded !== false && str_starts_with($decoded, '%PDF')) {
+                return $decoded;
+            }
+
+            return null;
         } catch (\Throwable) {
             return null;
         }
