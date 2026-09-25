@@ -13,6 +13,11 @@
         </div>
         <div style="font-size:15px; font-weight:600; color:#111827; margin-bottom:8px;">Étiquette Aramex indisponible</div>
         <div style="font-size:13px; color:#6b7280; line-height:1.5;">{{ $message }}</div>
+        @if(!empty($reason ?? null))
+            <div style="margin-top:14px; padding:10px 12px; border-radius:10px; background:#fef2f2; border:1px solid #fecaca; text-align:left; font-size:12px; color:#991b1b; line-height:1.5;">
+                <span style="font-weight:600;">Raison Aramex :</span> {{ $reason }}
+            </div>
+        @endif
         @if($hawb)
             <div style="margin-top:16px; font-family:ui-monospace,monospace; font-size:12px; color:#9ca3af;">HAWB : {{ $hawb }}</div>
         @endif

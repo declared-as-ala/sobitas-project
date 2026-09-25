@@ -678,18 +678,20 @@ class AramexService
     /**
      * Fetch the label PDF bytes for a BL and return them for streaming.
      */
-    public function fetchLabelPdf(string $labelUrl): ?string
+    public function fetchLabelPdf(string $labelUrl, ?string &$reason = null): ?string
     {
         try {
             // Aramex label URLs redirect to a CDN, so follow redirects; 15s was occasionally too
             // tight for the first fetch of a freshly-generated label.
             $response = Http::timeout(25)->withOptions(['allow_redirects' => true])->get($labelUrl);
             if (! $response->successful()) {
+                $reason = 'Téléchargement de l\'étiquette : HTTP ' . $response->status();
                 return null;
             }
 
             $body = $response->body();
             if ($body === '' ) {
+                $reason = 'Téléchargement de l\'étiquette : réponse vide.';
                 return null;
             }
 
@@ -708,8 +710,15 @@ class AramexService
                 return $decoded;
             }
 
+            // Not a PDF. Name the content-type and the first bytes: an HTML login/error page here
+            // means the URL expired or needs a session, which is a different fix than a bad ReportID.
+            $ctype = $response->header('Content-Type') ?: 'inconnu';
+            $head  = trim(mb_substr(preg_replace('/\s+/', ' ', strip_tags($body)), 0, 80));
+            $reason = 'Téléchargement de l\'étiquette : réponse non-PDF (type ' . $ctype
+                . ($head !== '' ? ', début : "' . $head . '…"' : '') . ').';
             return null;
-        } catch (\Throwable) {
+        } catch (\Throwable $e) {
+            $reason = 'Téléchargement de l\'étiquette : exception ' . $e->getMessage();
             return null;
         }
     }
@@ -728,10 +737,11 @@ class AramexService
      * Returns the PDF bytes directly when Aramex embeds them (`LabelFileContents`), otherwise
      * fetches the fresh `LabelURL` it returns. Null on any failure, with the reason logged.
      */
-    public function printLabelPdf(string $hawb): ?string
+    public function printLabelPdf(string $hawb, ?string &$reason = null): ?string
     {
         $hawb = trim($hawb);
         if ($hawb === '') {
+            $reason = 'HAWB vide.';
             return null;
         }
 
@@ -760,6 +770,7 @@ class AramexService
                 );
 
             if (! $response->successful()) {
+                $reason = 'PrintLabel: HTTP ' . $response->status();
                 Log::channel('daily')->warning('Aramex PrintLabel HTTP error', ['hawb' => $hawb, 'status' => $response->status()]);
                 return null;
             }
@@ -768,6 +779,7 @@ class AramexService
 
             if (! empty($body['HasErrors'])) {
                 $msgs = collect($body['Notifications'] ?? [])->pluck('Message')->filter()->implode(' | ');
+                $reason = 'PrintLabel: ' . ($msgs ?: 'HasErrors (aucun message renvoyé)');
                 Log::channel('daily')->warning('Aramex PrintLabel error', ['hawb' => $hawb, 'error' => $msgs ?: 'HasErrors']);
                 return null;
             }
@@ -789,12 +801,22 @@ class AramexService
             // Otherwise fetch the freshly-generated URL (valid now, unlike the stored one).
             $freshUrl = $label['LabelURL'] ?? null;
             if (is_string($freshUrl) && $freshUrl !== '') {
-                return $this->fetchLabelPdf($freshUrl);
+                $fetched = $this->fetchLabelPdf($freshUrl, $fetchReason);
+                if (! $fetched) {
+                    $reason = 'PrintLabel a renvoyé une URL non téléchargeable (' . ($fetchReason ?: 'raison inconnue') . ').';
+                }
+                return $fetched;
             }
 
-            Log::channel('daily')->warning('Aramex PrintLabel returned no label', ['hawb' => $hawb]);
+            // A 200 with neither embedded bytes nor a URL: name what Aramex DID return, because the
+            // usual cause is a ReportID/ReportType the account does not recognise for PrintLabel.
+            $reason = 'PrintLabel n\'a renvoyé ni contenu ni URL (ReportID ' . config('aramex.label_report_id')
+                . '/' . config('aramex.label_report_type') . ' ?). Clés renvoyées : '
+                . (($k = implode(',', array_keys((array) $body))) !== '' ? $k : 'aucune');
+            Log::channel('daily')->warning('Aramex PrintLabel returned no label', ['hawb' => $hawb, 'body_keys' => array_keys((array) $body)]);
             return null;
         } catch (\Throwable $e) {
+            $reason = 'PrintLabel exception : ' . $e->getMessage();
             Log::channel('daily')->error('Aramex PrintLabel exception', ['hawb' => $hawb, 'error' => $e->getMessage()]);
             return null;
         }

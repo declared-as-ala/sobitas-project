@@ -140,21 +140,28 @@ Route::middleware(['auth', 'back.office', 'no.cache.print'])->group(function () 
             ]);
         }
 
-        $pdf = $hawb ? $service->printLabelPdf($hawb) : null;
+        $reason    = null;
+        $urlReason = null;
+        $pdf = $hawb ? $service->printLabelPdf($hawb, $reason) : null;
         if (! $pdf && $url) {
-            $pdf = $service->fetchLabelPdf($url);
+            $pdf = $service->fetchLabelPdf($url, $urlReason);
         }
+        // The primary path is PrintLabel; keep its reason, and fall back to the stored-URL reason
+        // only when PrintLabel gave none (e.g. there was no HAWB and we went straight to the URL).
+        $reason = $reason ?: $urlReason;
 
         if (! $pdf) {
             \Illuminate\Support\Facades\Log::channel('daily')->warning('Aramex label unavailable', [
                 'facture_id' => $facture->id,
                 'hawb'       => $hawb,
                 'had_url'    => (bool) $url,
+                'reason'     => $reason,
             ]);
 
             return response()->view('filament.modals.aramex-label-unavailable', [
-                'message' => 'Impossible de générer l\'étiquette depuis Aramex (identifiants Aramex, expédition introuvable côté Aramex, ou service indisponible). Réessayez dans quelques minutes.',
+                'message' => 'Impossible de générer l\'étiquette depuis Aramex. Détail ci-dessous — réessayez dans quelques minutes si c\'est un incident temporaire.',
                 'hawb'    => $hawb,
+                'reason'  => $reason,
             ]);
         }
 
