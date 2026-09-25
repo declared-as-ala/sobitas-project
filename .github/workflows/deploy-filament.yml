@@ -277,6 +277,26 @@ jobs:
             upsert_secret ADMIN_EMAILS bitoutawalid@gmail.com
             echo "✓ Gmail SMTP credentials installed"
 
+            # ── Aramex Shipping API credentials ──────────────────────────────────────────────
+            # OPTIONAL by design: written only when the GitHub secrets exist, so a deploy stays
+            # green before they are added. config/aramex.php reads these, and EVERY Aramex call —
+            # create shipment, the hourly tracking sweep, and the label reprint — depends on them.
+            # When they are blank Aramex rejects the call with "ClientInfo.UserName - UserName is
+            # empty | ClientInfo.Password - Password is empty", so nothing ships, nothing is
+            # tracked and no bordereau prints. The literals that used to be hardcoded are in git
+            # history, so rotate them with Aramex before setting these. ENTITY/COUNTRY/VERSION keep
+            # their config defaults (TUN/TN/1.0) and are intentionally NOT written here — writing an
+            # empty value would override the default with "".
+            if [ -n '${{ secrets.ARAMEX_USERNAME }}' ] && [ -n '${{ secrets.ARAMEX_PASSWORD }}' ]; then
+              upsert_secret ARAMEX_USERNAME '${{ secrets.ARAMEX_USERNAME }}'
+              upsert_secret ARAMEX_PASSWORD '${{ secrets.ARAMEX_PASSWORD }}'
+              if [ -n '${{ secrets.ARAMEX_ACCOUNT_NUMBER }}' ]; then upsert_secret ARAMEX_ACCOUNT_NUMBER '${{ secrets.ARAMEX_ACCOUNT_NUMBER }}'; fi
+              if [ -n '${{ secrets.ARAMEX_ACCOUNT_PIN }}' ]; then upsert_secret ARAMEX_ACCOUNT_PIN '${{ secrets.ARAMEX_ACCOUNT_PIN }}'; fi
+              echo "✓ Aramex API credentials installed"
+            else
+              echo "⚠️  ARAMEX_USERNAME/PASSWORD secrets not set — Aramex shipping, tracking and labels stay disabled until they are added in GitHub → Settings → Secrets → Actions. Deploy continues."
+            fi
+
             echo "🔐 Logging in to GHCR..."
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
@@ -489,6 +509,26 @@ jobs:
             upsert_secret FRONTEND_URL https://protein.tn
             upsert_secret ADMIN_EMAILS bitoutawalid@gmail.com
             echo "✓ Gmail SMTP credentials installed"
+
+            # ── Aramex Shipping API credentials ──────────────────────────────────────────────
+            # OPTIONAL by design: written only when the GitHub secrets exist, so a deploy stays
+            # green before they are added. config/aramex.php reads these, and EVERY Aramex call —
+            # create shipment, the hourly tracking sweep, and the label reprint — depends on them.
+            # When they are blank Aramex rejects the call with "ClientInfo.UserName - UserName is
+            # empty | ClientInfo.Password - Password is empty", so nothing ships, nothing is
+            # tracked and no bordereau prints. The literals that used to be hardcoded are in git
+            # history, so rotate them with Aramex before setting these. ENTITY/COUNTRY/VERSION keep
+            # their config defaults (TUN/TN/1.0) and are intentionally NOT written here — writing an
+            # empty value would override the default with "".
+            if [ -n '${{ secrets.ARAMEX_USERNAME }}' ] && [ -n '${{ secrets.ARAMEX_PASSWORD }}' ]; then
+              upsert_secret ARAMEX_USERNAME '${{ secrets.ARAMEX_USERNAME }}'
+              upsert_secret ARAMEX_PASSWORD '${{ secrets.ARAMEX_PASSWORD }}'
+              if [ -n '${{ secrets.ARAMEX_ACCOUNT_NUMBER }}' ]; then upsert_secret ARAMEX_ACCOUNT_NUMBER '${{ secrets.ARAMEX_ACCOUNT_NUMBER }}'; fi
+              if [ -n '${{ secrets.ARAMEX_ACCOUNT_PIN }}' ]; then upsert_secret ARAMEX_ACCOUNT_PIN '${{ secrets.ARAMEX_ACCOUNT_PIN }}'; fi
+              echo "✓ Aramex API credentials installed"
+            else
+              echo "⚠️  ARAMEX_USERNAME/PASSWORD secrets not set — Aramex shipping, tracking and labels stay disabled until they are added in GitHub → Settings → Secrets → Actions. Deploy continues."
+            fi
 
             echo "🔐 Logging in to GHCR..."
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin

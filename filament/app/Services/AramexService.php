@@ -401,6 +401,19 @@ class AramexService
             $body = $response->json();
 
             /*
+             * An auth/parameter error is NOT an empty history — but Aramex answers both with a 200,
+             * so without this check they were indistinguishable and a wrong/empty credential looked
+             * exactly like "this parcel has no scan yet". That is precisely how a whole account of
+             * empty ARAMEX_USERNAME/PASSWORD stayed invisible: the sweep saw no events, promoted
+             * nothing and reported success, hourly, forever. Surface HasErrors as an error so the
+             * sweep counts it, logs it, and `--codes` reports it instead of "no codes returned".
+             */
+            if (! empty($body['HasErrors'])) {
+                $msgs = collect($body['Notifications'] ?? [])->pluck('Message')->filter()->implode(' | ');
+                return ['events' => [], 'error' => $msgs ?: 'HasErrors'];
+            }
+
+            /*
              * `TrackingResults` is a list of {Key: waybill, Value: [updates]} pairs rather than a
              * map, and one request can carry several waybills. Only ours is wanted, but a single
              * -waybill request that returns one unkeyed result must still work, so an exact Key
