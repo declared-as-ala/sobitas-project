@@ -111,6 +111,16 @@ function caseToken(token: string, first: boolean): string {
   const lower = token.toLowerCase();
   if (KEEP_UPPER.has(upper)) return upper;
   if (UNIT_WORDS.has(lower)) return lower;
+  /*
+   * The micro sign "µ" (U+00B5) uppercases to GREEK CAPITAL MU "Μ", so the Titlecase branch at the
+   * bottom turns a standalone "µg" into "Μg". The 24/09 pass fixed the GLUED form ("100µG" goes
+   * down the digit branch below) but not the spaced one, and the 42-listing sample it was measured
+   * over did not contain it. `title-case-check.mjs` over all 11,367 catalogue names on 25/09/2026
+   * found "NATURELO Vitamin D3 – 62,5 µg" building as "… 62,5 Μg" — 2 products, both masked today
+   * by a CMS seo_title, so this repairs the builder, not a live <title>. A token that starts with
+   * the micro sign is a unit; it is never capitalised.
+   */
+  if (/^[\u00b5\u03bc]/.test(token)) return lower;
   if (/^[A-Z]\d+$/i.test(token)) return upper; // B6, D3, K2, C4
   if (/^[A-Z]{2,}\d+$/i.test(token)) return upper; // ISO100, NO2, C4
   if (/^\d/.test(token)) return lower.replace(/(\d)(kg|g|ml|l|mg)$/, (m, d, u) => d + u);

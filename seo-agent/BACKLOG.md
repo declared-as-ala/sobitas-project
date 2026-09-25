@@ -6,6 +6,19 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 25/09/2026:** live audit `--sample=40` 72 URLs **0 P0** (exit 0), `--sample=120`
+152 URLs exit 1 on a **transient**: `/sante-vitalite` served one render with no title, canonical,
+description or robots while its body rendered 1,012 words — `ok` 45 min earlier and 14/14 clean on
+immediate re-fetch. `audit-live.mjs` now re-fetches once before calling that shape a P0 and records
+a clean retry as P2. `parity-check.mjs` 0 editorial bot-only words. Sitemaps Δ 0 on every file
+(12,235). **Yesterday's frontend deploy verified live** — both predicted titles are exactly right.
+Built the Friday tool **`title-case-check.mjs`** (the 24/09 casing contract as an executable check
+against the real builder over the real catalogue); its first full-catalogue run over **all 11,367
+names** found a live defect — a standalone `µg` became Greek `Μg` — fixed in
+`productMetaDescription.ts`, 2 renderings change out of 11,367 and nothing else moves
+(`log/2026-09-25.md`). Google: **September 2026 spam update rolling since 24/09 — attribution
+mode.**
+
 **State on 24/09/2026:** live audit 68 URLs, **0 P0** (exit 0); `/intra-workout` still the
 owner's dead-listing gate at P2, and **`/barres-proteinees` is `index, follow` again** — stock
 returned and the gate reversed itself with no deploy, exactly as designed. Yesterday's
@@ -296,13 +309,39 @@ record the page-level position first — never act on a query average.
 
 ## P2 — technical & tooling
 
-- [ ] **Lock today's casing contract with a check script** (Friday tool slot): a read-only
-  `seo-agent/tools/title-case-check.mjs` that pulls catalogue names from
-  `productsBySubCategoryId/<slug>`, runs `humanizeProductName`, and fails on (a) a brand
-  initialism flattened to Titlecase, (b) `µ` rendered as Greek `Μ`, (c) a glued unit (`200g`),
-  (d) an already-cased name whose capitals changed. Today's fix was validated by a one-off
-  before/after diff over 7,389 names; without a script the next edit to `caseToken` can silently
-  undo it. Do NOT wire it into `prebuild` — a live-API dependency there would break deploys.
+- [x] **Lock the casing contract with a check script** — SHIPPED 25/09 as
+  `seo-agent/tools/title-case-check.mjs`. Imports the real builder through a `registerHooks`
+  resolve hook (no reimplementation), runs it over catalogue names from
+  `productsBySubCategoryId/<slug>` with each page's own brand, and asserts five rules: (a) pinned
+  initialism not Titlecased, (b) micro sign never Greek `Μ`, (c) no glued unit, (d) intentional
+  catalogue capitals survive, (e) 11 offline golden pairs so a change that DISABLES the humanizer
+  cannot pass a–d. `KEEP_UPPER` is a frozen copy, not an import — a check that reads its
+  expectations out of the thing it checks cannot catch a deletion. Findings and candidates are
+  separate columns. Not wired into `prebuild`. First full-catalogue run found 2 live µ defects.
+  `--offline` ~30 s, full catalogue ~12 min.
+- [ ] **`needsRecasing` has no branch for an all-lowercase name** (found 25/09 by
+  `title-case-check.mjs`). The comment above it says a name "typed entirely in lower case" still
+  gets the full treatment, but the test is `lower === 0` — which `upper > lower` already covers —
+  where it would need `upper === 0`. Measured over all 11,367 catalogue names: **1** such name
+  exists (`/materiel-de-musculation/banc-de-musculation-developpe-incline`, which reads correctly
+  as it is), so the disagreement is latent, not a live defect. `title-case-check.mjs` pins the
+  current behaviour in its golden pairs AND counts these names every run. Decide the branch the
+  day that count leaves 0 — not before, and not during a Google update.
+- [ ] **`KEEP_UPPER` candidates from the live brand table** (listed by `title-case-check.mjs`
+  every run, 25/09). Confirmed: **`OstroVit` → `Ostrovit`** (×1, the shop's own table spells the
+  interior capital). Ambiguous: **18 brands the table itself spells ALL CAPS** (ALLMAX, BIG,
+  BIOTECH, CHROME, DYMATIZE, FITNESS, KAL, KEVIN, …) that a shouting name Titlecases — Titlecase
+  may well be the correct rendering there and the catalogue cannot say. Decide each against the
+  brand's own site, then add to `KEEP_UPPER` **and** to the tool's frozen copy, in one pass with
+  a full before/after diff. Same product also shows a dangling separator:
+  `CREATINE MONOHYDRATE OSTROVIT- 500GR` → `Creatine Monohydrate Ostrovit- 500 g` (the brand-tail
+  strip misses a brand glued to a hyphen mid-string).
+- [ ] **`/sante-vitalite` served one headless render on 25/09** — 200, body 1,012 words and full
+  JSON-LD, but no title, canonical, description or robots. Not reproducible (14/14 clean
+  immediately after; `ok` 45 min earlier). `audit-live.mjs` now records that shape P2 after a
+  clean confirming re-fetch instead of exit-1. **If it recurs on two consecutive runs it is a
+  streaming-metadata P0** — the page is dynamic-rendered through the crawler rewrite, so the
+  suspect is metadata that never reached the stream, not the category JSON.
 - [ ] **`BOUTEILLE D'EAU 2.2 LITRES` → "Bouteille D'eau 2.2 Litres"** (2 products). Three small
   wrongs: French elision should be `d'eau`, the decimal should be a comma (`2,2`), and `litres`
   is a unit word that should stay lowercase. Deliberately NOT fixed on 24/09: a `d'` rule that

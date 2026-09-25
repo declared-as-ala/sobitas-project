@@ -65,7 +65,11 @@ line until then.
    Search Central rule changes to `data/rule-changes.md` — triage each new row the day it
    appears (max 3 BACKLOG items per run; anything that removes markup is `(needs: owner)`).
 3. **Live audit.** `node seo-agent/tools/audit-live.mjs --sample=40`. Exit 1 = P0 = today's job
-   before anything else; fix the builder, never the page. A P1 that repeats on two consecutive
+   before anything else; fix the builder, never the page. A 200 that rendered its body but carried
+   NONE of title/canonical/description/robots is re-fetched once before it counts (25/09: a single
+   headless render of `/sante-vitalite` produced three P0s that 14 consecutive fetches could not
+   reproduce); a clean retry records P2, and the same shape on two consecutive runs is a real
+   streaming-metadata P0. A P1 that repeats on two consecutive
    runs on the same page type (unparseable JSON-LD, missing FAQ on in-stock PDPs, description
    rule, `Offer.url ≠ canonical`) is promoted to P0. A **category** serving `noindex, follow`
    where the page rendered cards and not one is buyable is the owner's deliberate dead-listing
@@ -213,9 +217,11 @@ The P0 loop runs every day; the *theme* rotates unless a P0 or an unlanded branc
 - **Thu — CTR pass.** Page-one zero-click rows (credential) or the SERP-look rows: rewrite
   title/description of the ranking page — one intent word + price anchor + proof. Log
   before/after and re-check the row in 3 weeks (`KEYWORDS.md` note).
-- **Fri — technical sweep + one tool.** `audit-live.mjs --sample=120`; every schema/link P1
-  PATTERN fixed at builder level; `check:url-contract`; read `data/rule-changes.md`; then build
-  ONE of the missing tools (⚙) and run it once in the log before its rules apply.
+- **Fri — technical sweep + one tool.** `audit-live.mjs --sample=120`; `title-case-check.mjs
+  --listings=60` (the whole catalogue, ~12 min — exit 1 = the product-title casing contract
+  regressed, fix the BUILDER); every schema/link P1 PATTERN fixed at builder level;
+  `check:url-contract`; read `data/rule-changes.md`; then build ONE of the missing tools (⚙) and
+  run it once in the log before its rules apply.
 - **Sat — internal links & cannibalisation.** Split queries: pick the winner (category for head
   terms, PDP for product names), exact-anchor links category ↔ products ↔ related, blog anchors
   via `blogSeoConfig.ts` / the synonym map (never the DB), breadcrumb head-term anchor, brand
@@ -263,6 +269,16 @@ measure", never a P0; land each alone and run it once in the log before its rule
   they disagree, P0 on two consecutive runs), PDP link contract (parent-category link with the
   head-term anchor, brand link, ≥ 4 siblings), money category ≥ 3 brand hrefs, hrefs with
   `?search=|?sort=|?brand=`, uppercase segments, trailing slash, hrefs that HEAD to 404 or > 1 hop.
+- ~~**`title-case-check.mjs`**~~ — BUILT 25/09/2026, in the Friday sweep. Imports the REAL
+  builder (`registerHooks` resolve hook → `frontend/src/util/*.ts`) and runs it over catalogue
+  names from `productsBySubCategoryId/<slug>`. Five rules: pinned initialism not Titlecased, micro
+  sign never Greek `Μ`, no glued unit, intentional catalogue capitals survive, and 11 offline
+  golden pairs so a change that DISABLES the humanizer cannot pass the other four. Its
+  expectations are a FROZEN COPY of `KEEP_UPPER`, never an import — a check that reads its
+  expectations out of the thing it checks cannot catch a deletion; update the copy only when the
+  contract is deliberately changed, and say so in the log. Findings and candidates are separate
+  columns. `--offline` skips the network. Never wire it into `prebuild`. First full-catalogue run
+  (11,367 names) found 2 live `µ` → `Μ` defects.
 - ~~**`parity-check.mjs`**~~ — BUILT 22/09/2026 and in the daily checklist as step 3b. Googlebot
   vs Chrome, 6-word-shingle diff of the visible text; budgets BOT-ONLY words only. Its first run
   found 2,848 bot-only words across the five money categories (cause: the human intro clamp) and

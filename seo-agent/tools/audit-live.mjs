@@ -21,7 +21,9 @@
  *       word count < 250 on a product · price missing in offers
  *   P2  a CATEGORY serving `noindex, follow` where the page rendered cards and not one is buyable
  *       — the deliberate dead-listing gate (commit 9c9dc83), self-reversing on restock. Any other
- *       noindex, and any noindex with a single in-stock card under it, stays a P0.
+ *       noindex, and any noindex with a single in-stock card under it, stays a P0. ALSO: a 200
+ *       whose body rendered but whose head carried none of title/canonical/description/robots,
+ *       where a confirming re-fetch came back clean (see the comment in `probe`).
  * No dependencies. Regex parsing on purpose: the run needs answers, not a DOM.
  */
 import { readFileSync, existsSync } from 'node:fs';
@@ -115,12 +117,54 @@ async function probe(pathname) {
   }
   if (out.finalUrl !== pathname) out.problems.push(['P1', `redirected to ${out.finalUrl}`]);
 
-  const html = await res.text();
-  out.title = decode((html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').trim());
-  out.description = metaContent(html, (t) => /name\s*=\s*["']description["']/i.test(t));
-  out.robots = metaContent(html, (t) => /name\s*=\s*["']robots["']/i.test(t));
-  out.canonical = (html.match(/<link\b[^>]*rel\s*=\s*["']canonical["'][^>]*>/i) || [null])[0];
-  out.canonical = out.canonical ? attr(out.canonical, 'href') : null;
+  let html = await res.text();
+  const readMeta = (doc) => ({
+    title: decode((doc.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || '').trim()),
+    description: metaContent(doc, (t) => /name\s*=\s*["']description["']/i.test(t)),
+    robots: metaContent(doc, (t) => /name\s*=\s*["']robots["']/i.test(t)),
+    canonical: (() => {
+      const tag = (doc.match(/<link\b[^>]*rel\s*=\s*["']canonical["'][^>]*>/i) || [null])[0];
+      return tag ? attr(tag, 'href') : null;
+    })(),
+  });
+  let meta = readMeta(html);
+
+  /*
+   * ── A 200 WITH NO HEAD METADATA AT ALL IS CONFIRMED BEFORE IT IS BELIEVED ───────────────────
+   * On 25/09/2026 the --sample=120 sweep reported `/sante-vitalite` as three simultaneous P0s —
+   * no <title>, no canonical, no meta description, no robots — while the body rendered 1,012
+   * words and the full JSON-LD graph. The same URL had audited `ok` 45 minutes earlier in the
+   * --sample=40 run, and 14 consecutive Googlebot fetches immediately afterwards all carried
+   * title, canonical, robots and description. One render lost its whole head; nothing in the
+   * repository had changed.
+   *
+   * Missing ONE of the four is a real defect and stays a P0 on the first look. Missing ALL FOUR
+   * on a page that still streamed its body is the signature of metadata that never reached the
+   * stream, and that shape gets one confirming re-fetch: this checker's whole value is that
+   * exit 1 means "drop everything", so a single flaky render must not be able to spend a
+   * routine's entire morning. If the second render is healthy the page is measured from it and
+   * the anomaly is recorded P2 — visible, still counted, not a false alarm. If the second
+   * render is missing them too, it is a P0 exactly as before.
+   */
+  if (!meta.title && !meta.canonical && !meta.description && !meta.robots) {
+    try {
+      const again = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html' }, redirect: 'follow' });
+      if (again.status === 200) {
+        const doc = await again.text();
+        const retry = readMeta(doc);
+        if (retry.title && retry.canonical) {
+          html = doc;
+          meta = retry;
+          out.problems.push(['P2', 'transient: head metadata absent on 1 of 2 renders (body rendered) — re-fetch was clean']);
+        }
+      }
+    } catch { /* leave the first render's verdict alone; the rules below will call it a P0 */ }
+  }
+
+  out.title = meta.title;
+  out.description = meta.description;
+  out.robots = meta.robots;
+  out.canonical = meta.canonical;
   out.h1 = decode((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] || '').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim());
   out.hreflang = (html.match(/hreflang\s*=/gi) || []).length;
 
