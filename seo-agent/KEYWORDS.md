@@ -37,19 +37,19 @@ in `docs/seo-ranking-baseline.md` measures `creatine tunisie` at 9.1 query-avera
 | prix creatine tunisie | /creatine | 5 | 10.4 (22/09 GSC) | check |
 | mass gainer tunisie | /mass-gainers | 55 | 56.1 (22/09 GSC) | check |
 | serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 89 | 14.4 (22/09 GSC) | split across 8 URLs; canonical target = PDP; tighten blog links |
-| prise de masse tunisie | /prise-de-masse | ? | ? | check |
+| prise de masse tunisie | /prise-de-masse | ? | ? | SERP look 25/09 (US-geo, no TN pos): **housenutrition.tn/category/mass-gainer** leads, then nutribeast, maparatunisie, parafendri, parapharmacie. **Three of our URLs in one set** — `/prise-de-masse`, `/category/prise-de-masse`, `/categorie/prise-de-masse`; both legacy paths verified live 25/09, each 308s once to the canonical, which is 200 + `index, follow` + self-canonical. Index lag, nothing to fix |
 | pre workout tunisie | /pre-workout | 7 | 41.4 (22/09 GSC) | ranks on the Born Rage PDP, not the category — decide which should win |
 | pre workout | /pre-workout | 393 | 7.0 (22/09 GSC) | **page-one and 0 clicks in 28 days** — the biggest zero-click row on the site. Impressions match `/pre-workout/pre-workout-born-rage-original-eric-favre` (385 impr, 1 clk, pos 5.4) almost exactly, so the generic term is answered by one niche PDP, not the category. Cannibalisation decision (Saturday), NOT a title rewrite: `/pre-workout` is inside the 05/10 freeze |
 | optimum nutrition | /optimum-nutrition | 518 | 5.2 (22/09 GSC) | brand query, position 5 and 1.35 % CTR (7 clicks). The brand page itself sits at 13.5 on 1,614 impr, so the URL Google shows for the exact term is NOT the brand page — read the Pages breakdown before acting |
 | protein powder whey | /whey-proteine | 170 | 9.8 (22/09 GSC) | page-one, 0 clicks; English-language phrasing our titles never use |
 | impact whey protein | /whey-proteine | 153 | 9.4 (22/09 GSC) | page-one, 1 click; our blog post ranks, the catalogue does not |
-| bruleur de graisse tunisie | /bruleurs-de-graisse | ? | ? | check |
-| bcaa tunisie | /bcaa | ? | ? | check |
+| bruleur de graisse tunisie | /bruleurs-de-graisse | ? | ? | SERP look 25/09 (US-geo, no TN pos): **six of nine results are parapharmacies** (para-plus, paraexpert, maparatunisie, parashop, parapharm, pharma-shop); only nutribeast `/thermogeniques` is a sports shop. protein.tn absent. This is a pharmacy-intent query — the page needs the minceur/thermogénique vocabulary before it can compete, and that is a copy theme, not a title tweak |
+| bcaa tunisie | /bcaa | ? | ? | SERP look 25/09 (US-geo, no TN pos): nutribeast holds two BCAA URLs, plus protein-shop-tunisia, stock-x, tunisiepara, strong-nutrition. **Our result in the set is the legacy `/category/bcaa` with the old "\| SOBITAS" title**; verified live the same day: it 308s once to `/bcaa`, which is 200, self-canonical, title 56. Index lag, not a defect — do not "fix" it |
 | omega 3 tunisie | /omega-3 | 62 | 18.1 (22/09 GSC) | retarget + real `bestProductSlugs` (empty block fixed) shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look 22/09 (US-geo, no TN pos): pharmacies (parapharmacie/tunisiepara), wildkard, nutribeast own the set; still showing our old `/category/omega-3` title |
 | protein bar chocolate | /barres-proteinees | 145 | 10.3 (22/09 GSC) | **bars category page shipped 22/09** (177→~1,800 words, FAQPage, price anchor `dès 36 DT`, `sur commande`). SERP look 22/09 (US-geo): we are absent; protein-shop-tunisia, housenutrition, nutribeast, stock-x, geantdrive hold it. Re-check TN pos after deploy + reindex |
-| collagene tunisie | /collagene ? | 5 | 51.6 (22/09 GSC) | check the category exists + copy |
+| collagene tunisie | /collagene | 5 | 51.6 (22/09 GSC) | **category verified live 25/09 and in good shape**: 200, `index, follow`, title 62 ("Collagène Tunisie \| Marin, Peptides & Types 1-3 — Protein.tn"), description 155, H1 carries the term. It is simply not ranked yet. SERP look 25/09 (US-geo): paraexpert, parashop, maparatunisie, parapharm, protein-shop-tunisia, nutribeast, bioherbs — protein.tn absent. A future Tuesday category week, not a same-day fix |
 | vitamines tunisie | /vitamines | 16 | 35.4 (22/09 GSC) | 566 words only — thin |
-| complement alimentaire tunisie | / or /proteines | 61 | 8.2 (22/09 GSC) | check |
+| complement alimentaire tunisie | / or /proteines | 61 | 8.2 (22/09 GSC) | SERP look 25/09 (US-geo, no TN pos): maparatunisie, parafendri, stadium, paramust, gympro, nutribeast, viveznature — **protein.tn absent from a 9-result set** for the generic head term, while GSC has the query at 8.2 on 61 impressions. The two disagree because GSC averages every protein.tn URL shown in Tunisia; read the Pages breakdown before acting |
 
 **Note 22/09/2026 (run 2), no position observed — a template change, recorded so the next
 re-check knows what moved.** Every row above whose `page` is a category page gained editorial text
@@ -60,6 +60,16 @@ printed whole for Googlebot, so /creatine 369, /whey-proteine 635, /mass-gainers
 be attributed to it; what changed is that the page stopped being a parity risk and shoppers can now
 read the price, format and delivery paragraphs. Re-check these rows from 06/10 as usual, and do not
 credit or blame this change for a delta.
+
+**Note 25/09/2026 — where we appear at all, Google is still showing a LEGACY URL with a stale
+title.** Five rows were SERP-checked today (`bcaa tunisie`, `bruleur de graisse tunisie`, `prise de
+masse tunisie`, `collagene tunisie`, `complement alimentaire tunisie`) and the pattern is the same
+in every one that contains us: the ranking URL is `/category/<slug>` or `/categorie/<slug>` with a
+pre-rename title, and every one of those paths was verified live the same day to redirect in a
+**single** 308 hop to a 200, self-canonical page with the current title. That is re-crawl lag on a
+site whose best sellers were `noindex` from ~11/08 to 21/09 — the diagnosis already in
+`PLAYBOOK.md`. Do not re-point, re-title or re-canonical anything because of it, and especially
+not while the September 2026 spam update is rolling (started 24/09).
 
 ## Product-name SERPs (in-stock best sellers; House Nutrition style "Product – Brand" + price)
 

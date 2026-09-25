@@ -59,3 +59,19 @@
 /gsn-great-sport-nutrition
 /pre-workout/pre-workout-born-rage-original-eric-favre
 /sommeil-stress/now-foods-l-theanine-120-gelules-vegetales
+
+# VERIFIED 25/09 06:00Z: both expected titles are live, exactly as written above. The 24/09
+# frontend deploy shipped. These lines stay as the standing regression test for the casing
+# contract; `seo-agent/tools/title-case-check.mjs` now asserts the same contract offline.
+
+# /sante-vitalite (already listed above) served ONE headless render on 25/09 during
+# --sample=120: 200, 1,012 words of body and full JSON-LD, but no title, canonical, description
+# or robots. Not reproducible — ok 45 min earlier, 14/14 clean immediately after. audit-live.mjs
+# now re-fetches once and records that shape P2. TWO consecutive runs showing it = a
+# streaming-metadata P0 and that day's job.
+
+# Casing contract, µ repair 25/09 (builder-level; both currently masked by a CMS seo_title, so
+# watch the H1 and the JSON-LD name rather than the <title>). Expected after the deploy:
+#   both -> "Naturelo Vitamin D3 – 62,5 µg" / "… – 125 µg", micro sign, never Greek "Μ".
+/vitamines/naturelo-vitamin-d3-625-g
+/vitamines/naturelo-vitamin-d3-125-g
