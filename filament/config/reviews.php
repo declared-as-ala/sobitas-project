@@ -45,20 +45,26 @@ return [
     |--------------------------------------------------------------------------
     | The same request, by SMS
     |--------------------------------------------------------------------------
-    | OFF by default, and that default is a decision rather than caution.
+    | ON by default since 25/09/2026 — the owner turned it on explicitly, because
+    | this is a cash-on-delivery shop where customers give a phone and rarely an
+    | email, so SMS is the ONLY channel that reaches most of them (the measured due
+    | set was 3 delivered orders with 0 usable emails). It was off before, as a
+    | deliberate default rather than caution, and can be paused again without a
+    | deploy by setting REVIEW_REQUEST_SMS_ENABLED=false in the VPS .env.
+    |
+    | It COSTS money per send, on a WinSMS balance the owner tops up — which is why
+    | it was gated in the first place. It is bounded: at most `request_daily_limit`
+    | per day, each order texted at most once, windowed to deliveries 3–21 days old.
     |
     | Every customer of this shop gives a phone number — it is how orders are
     | confirmed — and far fewer of them read email than read a text. So an SMS
-    | review request will convert better than the email, and it also COSTS money
-    | per send, on a WinSMS balance the owner tops up.
+    | review request will convert better than the email.
     |
     | It is one segment per order, not two: the link uses the short `review_code`
     | (10 characters) rather than the 64-character order_token, which is the whole
-    | reason that column exists. Turn it on with:
+    | reason that column exists.
     |
-    |     REVIEW_REQUEST_SMS_ENABLED=true
-    |
-    | ONE SWITCH, TWO SENDERS — both honour this key and both are off without it:
+    | ONE SWITCH, TWO SENDERS — both honour this key:
     |
     |   - `reviews:send-due-requests` texts the customers it is already emailing,
     |     inside the same daily sweep, under the same cap;
@@ -71,7 +77,7 @@ return [
     | which is separate from the email marker precisely so an order can be emailed,
     | texted, or both, and asked at most once per channel.
     */
-    'request_sms_enabled' => (bool) env('REVIEW_REQUEST_SMS_ENABLED', false),
+    'request_sms_enabled' => (bool) env('REVIEW_REQUEST_SMS_ENABLED', true), // owner-enabled 25/09/2026
 
     /*
     |--------------------------------------------------------------------------
