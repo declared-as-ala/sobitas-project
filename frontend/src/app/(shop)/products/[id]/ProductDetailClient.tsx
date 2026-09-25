@@ -2286,6 +2286,41 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 </div>
               )}
 
+              {/*
+                ── THE COMPOSER OPENS RIGHT HERE, IN PLACE — NOT AT THE FOOT ──────────────────
+                Owner, 25/09/2026: *"when I click a star it disappears and jumps to the bottom —
+                bad UX. Make it like Facebook comments: the box where you write stays at the top
+                where you left it, and the comments go below."*
+
+                It used to render at the very END of the section (after the whole review list), so
+                pressing a star hid the star row up here and mounted the form a full list-height
+                away — reading exactly as "it vanished". Now the star row and the composer share
+                ONE slot: press a star, the row becomes the form in place, and the thread stays
+                below it. Only where it mounts changed; the form's own logic is untouched.
+              */}
+              {showReviewForm && (
+                <ReviewComposer
+                  productId={product.id}
+                  productName={product.designation_fr}
+                  initialStars={pendingStars}
+                  onClose={() => {
+                    setShowReviewForm(false);
+                    setPendingStars(0);
+                  }}
+                  onSubmitted={() => {
+                    setTimeout(async () => {
+                      try {
+                        const updated = await getProductDetails(productSlug || product.slug || String(product.id), true);
+                        setProduct(updated);
+                        setReviews(updated.reviews || []);
+                      } catch {
+                        router.refresh();
+                      }
+                    }, 600);
+                  }}
+                />
+              )}
+
               {reviewCount > 0 ? (
                 <>
                   {/*
@@ -2669,30 +2704,6 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <MessageSquare className="mt-0.5 h-4 w-4 shrink-0 text-ink-3" aria-hidden="true" />
                   <span>Aucun avis pour le moment. Les avis liés à une commande affichent la mention « Achat vérifié ».</span>
                 </p>
-              )}
-
-
-              {showReviewForm && (
-                <ReviewComposer
-                  productId={product.id}
-                  productName={product.designation_fr}
-                  initialStars={pendingStars}
-                  onClose={() => {
-                    setShowReviewForm(false);
-                    setPendingStars(0);
-                  }}
-                  onSubmitted={() => {
-                    setTimeout(async () => {
-                      try {
-                        const updated = await getProductDetails(productSlug || product.slug || String(product.id), true);
-                        setProduct(updated);
-                        setReviews(updated.reviews || []);
-                      } catch {
-                        router.refresh();
-                      }
-                    }, 600);
-                  }}
-                />
               )}
             </div>
           </div>
