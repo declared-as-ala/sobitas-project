@@ -56,6 +56,23 @@ Schedule::command('seo:audit-reviews')->weeklyOn(1, '05:00');
 // 10:00 local is deliberate: a review request that lands at 04:00 gets buried by morning mail.
 Schedule::command('reviews:send-due-requests')->dailyAt('10:00')->withoutOverlapping();
 
+/*
+ * ── THE SMS REVIEW SWEEP WAS BUILT AND NEVER SCHEDULED ──────────────────────────────────────
+ * `reviews:send-due-requests` (above) emails the delivered customers who have an email, and texts
+ * those same ones when SMS is on. But this is a cash-on-delivery shop: most customers give a phone
+ * and no email. The measured due set was 3 orders, 0 with a usable email — so the email sweep
+ * reaches none of them. `reviews:send-due-sms-requests` is the command that texts exactly those
+ * phone-only customers, and it existed with a full safety gate but had NO schedule entry, so it
+ * never ran. That is why "Aramex delivered → review request" produced nothing: the one sweep that
+ * could reach the customer was dormant.
+ *
+ * 10:30, after the email sweep at 10:00, so the two never race for the WinSMS balance. It still
+ * sends NOTHING until the owner sets REVIEW_REQUEST_SMS_ENABLED=true (config/reviews.php) — SMS
+ * costs money per send, and that switch is deliberately the owner's. Once on, each order is texted
+ * at most once (review_request_sms_sent_at), windowed to deliveries 3–21 days old.
+ */
+Schedule::command('reviews:send-due-sms-requests')->dailyAt('10:30')->withoutOverlapping();
+
 // One useful message per week, only to confirmed newsletter subscribers. The command owns a
 // week-key, so a scheduler restart or manual retry cannot create a duplicate campaign.
 Schedule::command('marketing:send-weekly-digest')
