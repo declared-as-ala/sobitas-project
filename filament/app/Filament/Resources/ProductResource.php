@@ -182,6 +182,17 @@ class ProductResource extends Resource
                                     ]),
                                     Forms\Components\RichEditor::make('description_fr')
                                         ->label('Description')
+                                        // TipTap cannot initialize with an undefined Livewire value. On the
+                                        // create page the legacy nullable column has no model value yet, so
+                                        // Filament 4.2 otherwise sends `undefined` to the browser and the
+                                        // editor body is never mounted. Keep the field HTML-backed, but always
+                                        // hydrate it with a string on both create and edit.
+                                        ->default('')
+                                        ->afterStateHydrated(function (Forms\Components\RichEditor $component, mixed $state): void {
+                                            if ($state === null) {
+                                                $component->state('');
+                                            }
+                                        })
                                         ->columnSpanFull(),
                                 ]),
                             Section::make('Médias')

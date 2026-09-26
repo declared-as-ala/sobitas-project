@@ -1448,7 +1448,22 @@
             enhanceSidebar();
         }
     });
-    observer.observe(document.body, { childList: true, subtree: true });
+
+    function observeSidebar() {
+        /*
+         * This view is rendered in HEAD_END, where document.body can still be null. Calling
+         * observe(null) throws and aborts this script on every cold admin-page load. Waiting for
+         * the body also keeps create/edit forms free of unrelated Alpine initialization errors.
+         */
+        if (!document.body) return;
+        observer.observe(document.body, { childList: true, subtree: true });
+    }
+
+    if (document.body) {
+        observeSidebar();
+    } else {
+        document.addEventListener('DOMContentLoaded', observeSidebar, { once: true });
+    }
 })();
 </script>
 

@@ -51,6 +51,9 @@ jobs:
           test -f filament/Dockerfile || (echo "❌ filament/Dockerfile not found" && exit 1)
           echo "✓ filament/Dockerfile found"
 
+      - name: Guard product form editor initialization
+        run: php filament/tests/admin-product-form-regression-check.php
+
       - name: Validate Nginx configuration
         run: |
           set -e
