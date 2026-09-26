@@ -11,12 +11,16 @@
 
 $root = dirname(__DIR__);
 $resourcePath = $root . '/app/Filament/Resources/ProductResource.php';
+$createPagePath = $root . '/app/Filament/Resources/ProductResource/Pages/CreateProduct.php';
+$editPagePath = $root . '/app/Filament/Resources/ProductResource/Pages/EditProduct.php';
 $adminStylesPath = $root . '/resources/views/filament/components/custom-admin-styles.blade.php';
 
 $resource = file_get_contents($resourcePath);
+$createPage = file_get_contents($createPagePath);
+$editPage = file_get_contents($editPagePath);
 $adminStyles = file_get_contents($adminStylesPath);
 
-if ($resource === false || $adminStyles === false) {
+if ($resource === false || $createPage === false || $editPage === false || $adminStyles === false) {
     fwrite(STDERR, "Unable to read the product form sources.\n");
     exit(1);
 }
@@ -33,6 +37,13 @@ $checks = [
     'nullable legacy descriptions are normalized' => str_contains($resource, 'afterStateHydrated')
         && str_contains($resource, 'if ($state === null)')
         && str_contains($resource, '$component->state(\'\');'),
+    'create page materializes the Livewire state key' => str_contains($createPage, 'public function mount(): void')
+        && str_contains($createPage, 'parent::mount();')
+        && str_contains($createPage, '$this->data[\'description_fr\'] = (string) ($this->data[\'description_fr\'] ?? \'\');'),
+    'edit page normalizes a legacy null value' => str_contains(
+        $editPage,
+        '$data[\'description_fr\'] = (string) ($data[\'description_fr\'] ?? \'\');',
+    ),
     'sidebar observer waits for the body' => str_contains(
         $adminStyles,
         "document.addEventListener('DOMContentLoaded', observeSidebar, { once: true });",

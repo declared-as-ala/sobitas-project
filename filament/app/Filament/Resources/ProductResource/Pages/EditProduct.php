@@ -52,6 +52,7 @@ class EditProduct extends EditRecord
     protected function mutateFormDataBeforeFill(array $data): array
     {
         $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
+        $data['description_fr'] = (string) ($data['description_fr'] ?? '');
         $data['faq'] = $data['faq'] ?? [];
 
         // Aligner l’affichage avec la qté (qté 0 ⇒ Rupture), comme le modèle au save.
