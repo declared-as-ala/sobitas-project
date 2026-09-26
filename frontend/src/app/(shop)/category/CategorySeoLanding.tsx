@@ -1,20 +1,15 @@
 import { categoryAnchor } from '@/util/categoryAnchor';
 import type { ReactNode } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import {
   BookOpen,
   ChevronDown,
   ChevronRight,
   CircleCheck,
-  ShieldCheck,
   Sparkles,
   Star,
-  Truck,
-  Wallet,
 } from 'lucide-react';
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
-import { htmlToText } from '@/util/sanitizeProductHtml';
 import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
 import { WheyComparisonTable, buildWheyRows } from '@/app/components/product/WheyComparisonTable';
 import type { Brand, Product } from '@/types';
@@ -53,15 +48,6 @@ interface CategorySeoLandingProps {
   section?: 'header' | 'below-fold' | 'top' | 'bottom' | 'all';
 }
 
-const CATEGORY_ART: Record<string, string> = {
-  proteines: '/media/category-art/proteines.png',
-  'sante-vitalite': '/media/category-art/sante-vitalite.png',
-  'perte-de-poids': '/media/category-art/perte-de-poids.png',
-  performance: '/media/category-art/performance.png',
-  equipement: '/media/category-art/equipement.png',
-  'prise-de-masse': '/media/category-art/prise-de-masse.png',
-};
-
 /**
  * Categories that mount the price-comparison table under their grid.
  *
@@ -79,12 +65,6 @@ const CATEGORY_ART: Record<string, string> = {
  */
 export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine']);
 
-const TRUST_FACTS = [
-  { icon: ShieldCheck, label: 'Produits authentiques' },
-  { icon: Truck, label: 'Livraison 24–72 h' },
-  { icon: Wallet, label: 'Paiement à la livraison' },
-];
-
 function renderContent(value: string): ReactNode {
   if (value.includes('<')) return <div dangerouslySetInnerHTML={{ __html: value }} />;
 
@@ -97,7 +77,6 @@ function renderContent(value: string): ReactNode {
 export function CategorySeoLanding({
   title,
   slug,
-  banners,
   intro,
   longBottomHtml,
   howToChooseTitle,
@@ -117,9 +96,6 @@ export function CategorySeoLanding({
   const showHeader = section === 'header' || section === 'top' || section === 'all';
   const showDetails = section === 'below-fold' || section === 'top' || section === 'all';
   const showLinks = section === 'below-fold' || section === 'bottom' || section === 'all';
-  const localArt = slug ? CATEGORY_ART[slug] : undefined;
-  const desktopArt = localArt || banners?.desktop?.trim() || banners?.mobile?.trim();
-  const mobileArt = localArt || banners?.mobile?.trim() || banners?.desktop?.trim();
   /*
     ── THE COMPARISON GATE, AND WHY IT ALSO REQUIRES `brands` ────────────────────────────────────
     `products`/`brands` are optional here because this component is mounted by
@@ -166,64 +142,22 @@ export function CategorySeoLanding({
       ) : null}
 
       {showHeader ? (
-        <header className="overflow-hidden rounded-2xl border border-hairline bg-elevated shadow-sm">
-          {/*
-            ── THE 232px FLOOR BELONGS TO THE ART, NOT TO THE CARD ──────────────────────────────
-            `lg:min-h-[232px]` was unconditional while the panel it was sizing is conditional. Six
-            categories have approved artwork (CATEGORY_ART) and the floor keeps the text column
-            from sitting shorter than the image beside it — that is a real job, on those six.
+        /*
+          ── TRANSACTIONAL CATEGORY: H1, THEN PRODUCTS ──────────────────────────────────────────
+          The previous card repeated a kicker, a long introduction and three trust claims before
+          the first product. On /whey-proteine that occupied roughly 280px on desktop and pushed
+          every commercial result below a block that belongs in the buying guide.
 
-            On every other category, including /creatine, `desktopArt` is undefined, the right-hand
-            cell is never rendered, and the only thing 232px buys is 232px of empty card pushed
-            between the H1 and the first product on every desktop viewport. That is the "big
-            header" complaint, literally: a reservation for something that does not exist.
-
-            Conditioned on `desktopArt` — the exact expression that decides whether the panel
-            renders — so the six art categories are byte-identical and the rest collapse to the
-            height of their own content.
-          */}
-          <div className={`grid grid-cols-1 lg:grid-cols-5${desktopArt ? ' lg:min-h-[232px]' : ''}`}>
-            <div className="flex min-w-0 flex-col justify-center px-4 py-5 sm:p-6 lg:col-span-3 lg:px-8 lg:py-6">
-              <p className="mb-2.5 flex items-center gap-2 font-display text-[10px] font-semibold uppercase tracking-[0.18em] text-brand sm:text-[11px]">
-                <span className="h-px w-5 bg-brand" aria-hidden="true" />
-                Sélection Protein.tn
-              </p>
-              <h1 className="max-w-[21ch] text-balance font-display font-compressed text-[2rem] font-extrabold uppercase leading-[0.94] tracking-[-0.025em] text-ink-1 sm:text-[2.55rem] lg:text-[3rem]">
-                {title}
-              </h1>
-              {hasIntro ? (
-                <p className="mt-3 line-clamp-2 max-w-[68ch] text-[13.5px] leading-relaxed text-ink-2 sm:line-clamp-3 sm:text-[14.5px]">
-                  {htmlToText(intro!, 520)}
-                </p>
-              ) : null}
-
-              <ul className="mt-4 grid grid-cols-2 gap-x-3 gap-y-1.5 border-t border-rule pt-3 sm:grid-cols-3">
-                {TRUST_FACTS.map(({ icon: Icon, label }) => (
-                  <li key={label} className="flex min-h-8 items-center gap-2 text-[11.5px] font-semibold leading-tight text-ink-2 sm:text-[12px]">
-                    <Icon className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                    {label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            {desktopArt ? (
-              <div className="relative min-h-[155px] overflow-hidden bg-ink-1 sm:min-h-[205px] lg:col-span-2 lg:min-h-[232px]">
-                <picture className="contents">
-                  {mobileArt ? <source media="(max-width: 767px)" srcSet={mobileArt} /> : null}
-                  <Image
-                    src={desktopArt}
-                    alt={`Sélection ${title}`}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 767px) 100vw, 38vw"
-                    priority={Boolean(localArt)}
-                    quality={75}
-                  />
-                </picture>
-              </div>
-            ) : null}
-          </div>
+          Keep the visible H1 — it is the page's accessible and semantic title — but remove the
+          promotional container completely. The introduction is still rendered in full by the
+          below-fold instance after the product grid, so no useful content is deleted and the
+          human/crawler versions keep the same information hierarchy: category name, products,
+          comparison and guide.
+        */
+        <header>
+          <h1 className="text-balance font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.025em] text-ink-1 sm:text-[2.25rem] lg:text-[2.5rem]">
+            {title}
+          </h1>
         </header>
       ) : null}
 
@@ -265,11 +199,10 @@ export function CategorySeoLanding({
         <section aria-labelledby="category-guide-title" className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-6 lg:p-8">
           {/*
             ── THE INTRO RENDERS IN FULL, TO EVERYONE ────────────────────────────────────────
-            The header above prints `htmlToText(intro, 520)` behind a 2–3 line clamp, and the
-            guide column below showed the intro ONLY when no buying guide existed. 49 of the 50
-            category content files carry both, so on every one of them the rest of the intro
-            reached nobody — except Googlebot, which is served `CrawlerCategoryView` and prints
-            `introHtml` whole.
+            The old header printed a shortened copy of the introduction, and the guide column
+            below showed the full intro ONLY when no buying guide existed. 49 of the 50 category
+            content files carry both, so on every one of them the rest of the intro reached nobody
+            — except Googlebot, which is served `CrawlerCategoryView` and prints `introHtml` whole.
 
             Measured 22/09/2026 (Googlebot UA vs Chrome UA, 6-word-shingle diff of the visible
             text): /mass-gainers 1,016 bot-only words, /pre-workout 725, /whey-proteine 692,

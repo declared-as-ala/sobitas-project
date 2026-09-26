@@ -232,47 +232,39 @@ export function CrawlerCategoryView({
         <h1 className="text-2xl font-bold">{heading}</h1>
       </header>
 
-      {/* Editorial intro (expanded, no clamp) */}
-      {introHtml && (
-        <section aria-label="Présentation" className="my-4">
-          <div
-            className="prose prose-sm max-w-none"
-            dangerouslySetInnerHTML={{ __html: introHtml }}
-          />
-        </section>
-      )}
-
       {/* Complete product link list — the crawlable internal-link graph the client grid
           hides behind hydration.
-          ORDER MATTERS: this block sits directly under the intro, ahead of the buying guide and
-          the FAQ, because the human page shows its grid after ~190 words while this view used to
-          bury the list under ~2,850 (measured 22/09/2026 on /creatine, /whey-proteine,
-          /mass-gainers). A listing whose first 90% is prose reads as an article, and an article
-          loses transactional queries to the blog posts that really are articles. */}
-      <section aria-label="Produits" className="my-6">
+          ORDER MATTERS: this block now sits immediately under the H1, matching the human page.
+          The editorial introduction remains complete below the products beside the buying guide;
+          it no longer delays the direct product links and packshots on a transactional query. */}
+      <section aria-label="Produits" className="my-4">
         <h2 className="text-lg font-semibold">{gridHeading}</h2>
         {productLinks.length > 0 ? (
-          <ul className="mt-2 list-disc pl-5">
+          <ul className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
             {productLinks.map((p, i) => (
-              <li key={`${p.url}-${i}`} className="mt-2">
-                {p.cover && (
-                  // Plain <img>, as in CrawlerProductView: next/image would add JS and a loader
-                  // round-trip to a route whose only visitor is a crawler.
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={p.cover}
-                    alt={p.alt}
-                    width={300}
-                    height={300}
-                    loading="lazy"
-                    className="h-auto w-24 rounded border"
-                  />
-                )}
-                <a className="text-red-700 underline" href={p.url}>
-                  {p.name}
-                </a>{' '}
-                — {p.price}
-                {p.oldPrice && <> (au lieu de {p.oldPrice})</>} · {p.stockLabel}
+              <li key={`${p.url}-${i}`} className="rounded border p-3">
+                <a className="block text-red-700 underline" href={p.url}>
+                  {p.cover && (
+                    // Plain <img>, as in CrawlerProductView: next/image would add JS and a loader
+                    // round-trip to a route whose only visitor is a crawler. The first row is eager
+                    // so Google receives the leading category packshots without a lazy-load gate.
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={p.cover}
+                      alt={p.alt}
+                      width={300}
+                      height={300}
+                      loading={i < 4 ? 'eager' : 'lazy'}
+                      decoding="async"
+                      className="mx-auto h-auto w-32 rounded"
+                    />
+                  )}
+                  <span className="mt-2 block font-semibold">{p.name}</span>
+                </a>
+                <p className="mt-1 text-sm">
+                  {p.price}
+                  {p.oldPrice && <> (au lieu de {p.oldPrice})</>} · {p.stockLabel}
+                </p>
               </li>
             ))}
           </ul>
@@ -369,7 +361,7 @@ export function CrawlerCategoryView({
         </section>
       )}
 
-      {/* "Comment choisir…" guide.
+      {/* Full editorial introduction + "Comment choisir…" guide, after products in both renders.
           Previously omitted, and with it most of the page. Measured before this change, the
           human /creatine rendered 1,605 words while the crawler view handed Googlebot 173 — the
           editorial guide, the buying advice and every FAQ were dropped, so Google judged the
@@ -377,13 +369,23 @@ export function CrawlerCategoryView({
           "créatine tunisie", that was the single biggest thing holding it back. It is also a
           content-parity break: dynamic rendering is only defensible while both views say the
           same thing. */}
-      {howToChooseTitle && howToChooseBody && (
+      {(introHtml || (howToChooseTitle && howToChooseBody)) && (
         <section aria-label="Guide d'achat" className="my-6">
-          <h2 className="text-lg font-semibold">{howToChooseTitle}</h2>
-          <div
-            className="prose prose-sm mt-2 max-w-none"
-            dangerouslySetInnerHTML={{ __html: howToChooseBody }}
-          />
+          {introHtml && (
+            <div
+              className="prose prose-sm max-w-none"
+              dangerouslySetInnerHTML={{ __html: introHtml }}
+            />
+          )}
+          <h2 className={`${introHtml ? 'mt-6 ' : ''}text-lg font-semibold`}>
+            {howToChooseTitle || `Bien choisir ${title.toLocaleLowerCase('fr')}`}
+          </h2>
+          {howToChooseBody && (
+            <div
+              className="prose prose-sm mt-2 max-w-none"
+              dangerouslySetInnerHTML={{ __html: howToChooseBody }}
+            />
+          )}
         </section>
       )}
 

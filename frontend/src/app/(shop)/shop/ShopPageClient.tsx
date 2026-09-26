@@ -60,7 +60,7 @@ interface ShopPageClientProps {
   initialBrand?: number;
   /** Overrides last breadcrumb label on category/subcategory shop views when set in admin (SEO). */
   categoryBreadcrumbLabel?: string;
-  /** Optional SEO landing block (H1, intro, how-to, FAQs). Rendered after breadcrumb. */
+  /** Optional compact category H1. Long SEO content is rendered below the product grid. */
   categorySeoLanding?: React.ReactNode;
   /** Optional SEO block for bottom of page (Catégories associées + Produits phares). Rendered after product grid. */
   categorySeoLandingBottom?: React.ReactNode;
@@ -1497,8 +1497,8 @@ function ShopContent({
           );
         })()}
 
-        {/* Category SEO Section */}
-        {categorySeoLanding && <div className="mb-5 sm:mb-6">{categorySeoLanding}</div>}
+        {/* Compact category H1 — the catalogue starts immediately after it. */}
+        {categorySeoLanding && <div className="mb-3 sm:mb-4">{categorySeoLanding}</div>}
 
         {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
         {topCategorySubcategories.length > 0 && (
@@ -1580,7 +1580,7 @@ function ShopContent({
           under it with 8px between them — two blocks of type doing one job. On the baseline they
           read as one sentence: what this page is, and how much of it there is.
         */}
-        <div className="mb-5 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-6">
+        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-5">
           <div className="min-w-0">
             {!categorySeoLanding && !isSubcategory && (
               // Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
