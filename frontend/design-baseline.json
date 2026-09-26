@@ -210,14 +210,6 @@
     "DS005": 2,
     "DS006": 1
   },
-  "src/app/components/InstallAppBanner.tsx": {
-    "DS001": 14,
-    "DS002": 32,
-    "DS003": 14,
-    "DS004": 6,
-    "DS005": 1,
-    "DS011": 39
-  },
   "src/app/components/LanguageSwitcher.tsx": {
     "DS001": 6,
     "DS002": 6,

@@ -63,7 +63,7 @@ export function ScrollToTop() {
       className={cn(
         /* `transition-[opacity,transform]`, not `transition-all`: `all` also tweens the ring
            colour and the shadow on a element that is animating in and out on every scroll. */
-        'fixed right-4 sm:right-6 bottom-[calc(0.75rem+var(--tabbar-h))] max-md:[body[data-install-banner]_&]:bottom-[calc(4.75rem+var(--tabbar-h))] z-[45] transition-[opacity,transform] duration-200 motion-reduce:transition-none',
+        'fixed right-4 sm:right-6 bottom-[calc(0.75rem+var(--tabbar-h))] max-md:[body[data-install-banner]_&]:bottom-[calc(5.75rem+var(--tabbar-h))] z-[45] transition-[opacity,transform] duration-200 motion-reduce:transition-none',
         isVisible ? 'opacity-100 translate-y-0' : 'pointer-events-none opacity-0 translate-y-2'
       )}
       /* The `marginBottom: env(safe-area-inset-bottom)` that used to be here was the inset counted

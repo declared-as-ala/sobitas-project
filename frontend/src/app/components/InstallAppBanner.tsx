@@ -152,54 +152,58 @@ export function InstallAppBanner() {
       {/* ─── Fixed bottom banner ─── */}
       <div
         role="dialog"
-        aria-label="Installer l'application"
+        aria-labelledby="install-app-title"
+        aria-describedby="install-app-description"
         style={{
           transform: show ? 'translateY(0)' : 'translateY(110%)',
           transition: 'transform 0.45s cubic-bezier(0.32,0.72,0,1)',
-          // Safe-area now lives in --tabbar-h; --tabbar-raise clears the Boutique tile.
-          paddingBottom: 'calc(var(--tabbar-raise) + 0.625rem)',
+          // Float above both the tab bar and its raised Boutique tile instead of making the
+          // install prompt itself taller. This keeps the prompt compact and the two surfaces
+          // visually separate at every safe-area inset.
+          bottom: 'calc(var(--tabbar-h) + var(--tabbar-raise) + 0.5rem)',
         }}
-        // Was z-[9999], which buried the tab bar's raised centre tile behind a promo banner.
-        // The expanded sheet below keeps its own high z — that one is a real overlay.
-        className="fixed bottom-tabbar left-0 right-0 z-sticky-cta flex items-center gap-2.5 px-3 pt-2.5 bg-white dark:bg-gray-950 border-t border-gray-200 dark:border-gray-800 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
+        // The prompt is intentionally a small utility card, not a second navigation bar. A
+        // max-width prevents it stretching into a banner on landscape phones and small tablets.
+        className="fixed inset-x-3 z-sticky-cta mx-auto flex max-w-sm items-center gap-2 rounded-xl border border-hairline bg-elevated p-2 shadow-card md:hidden"
       >
         {/* App icon */}
-        <div className="relative h-11 w-11 shrink-0 rounded-xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow">
-          <Image src="/favicon-32x32.png" alt="Protéine Tunisie" fill className="object-cover" sizes="44px" />
+        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sunken">
+          <Image
+            src="/favicon-192x192.png"
+            alt=""
+            width={30}
+            height={30}
+            className="rounded-full"
+          />
         </div>
 
         {/* Labels */}
         <div className="flex-1 min-w-0 leading-tight">
-          <p className="truncate text-[13px] font-bold text-gray-900 dark:text-white">
-            Installer l&apos;application
+          <p id="install-app-title" className="truncate text-xs font-semibold text-ink-1">
+            Installer Protein.tn
           </p>
-          <p className="truncate text-xs leading-snug text-gray-500 dark:text-gray-400">
-            Accès rapide · protein.tn
+          <p id="install-app-description" className="truncate text-[11px] leading-snug text-ink-3">
+            Boutique en un clic
           </p>
         </div>
 
         {/* CTA */}
         <button
           onClick={handleInstall}
-          className="flex min-h-[44px] shrink-0 items-center gap-1.5 rounded-lg bg-red-600 px-3.5 text-sm font-display uppercase tracking-wide font-bold leading-snug text-white active:bg-red-800 hover:bg-red-700 transition-colors"
+          aria-label="Installer Protein.tn"
+          className="flex h-11 w-11 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-brand px-0 text-xs font-semibold text-on-brand transition-colors hover:bg-brand-hover min-[360px]:w-auto min-[360px]:px-3"
         >
           <Download className="h-4 w-4 shrink-0" />
-          Installer
+          <span className="hidden min-[360px]:inline">Installer</span>
         </button>
 
-        {/* Dismiss — 44, not 40.
-            `check-tap-targets` reported a 40×40 "Fermer" on EVERY route it walked at 320 and 390,
-            and it is this one: the banner is fixed to the bottom of every mobile page, so the one
-            control under the floor was also the most universally present control on the phone
-            site. Its two neighbours in this row were already at 44 (the icon is h-11, the CTA is
-            min-h-[44px]) — it was the odd one out in its own flex row, not a considered smaller
-            size. The 4px it takes back comes out of the truncating label column. */}
+        {/* The glyph stays visually quiet while its control keeps the 44px touch-target floor. */}
         <button
           onClick={dismiss}
           aria-label="Fermer"
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 hover:text-gray-600 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
         >
-          <X className="h-5 w-5" />
+          <X className="h-4 w-4" />
         </button>
       </div>
 
@@ -211,28 +215,27 @@ export function InstallAppBanner() {
         >
           <div className="absolute inset-0 bg-black/50" onClick={dismiss} />
 
-          <div className="relative bg-white dark:bg-gray-900 rounded-t-2xl px-5 pt-4 pb-safe-or-8 shadow-xl animate-slide-up pb-8">
+          <div className="relative mx-auto w-full max-w-md rounded-t-xl bg-elevated px-4 pb-safe-or-8 pt-3 shadow-card animate-slide-up">
             {/* Handle */}
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-gray-300 dark:bg-gray-600" />
+            <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-rule" />
 
             {/* Title row */}
-            <div className="mb-5 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="relative h-10 w-10 overflow-hidden rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
-                  <Image src="/favicon-32x32.png" alt="Protéine Tunisie" fill className="object-cover" />
+            <div className="mb-4 flex items-center justify-between">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sunken">
+                  <Image src="/favicon-192x192.png" alt="" width={28} height={28} className="rounded-full" />
                 </div>
-                <div>
-                  <p className="text-sm font-bold text-gray-900 dark:text-white">Protéine Tunisie</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">protein.tn</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-ink-1">Installer Protein.tn</p>
+                  <p className="truncate text-xs text-ink-3">Accès direct à la boutique</p>
                 </div>
               </div>
-              {/* Same control, same floor: `p-2` around an 18px glyph is a 36px box. */}
-              <button onClick={dismiss} aria-label="Fermer" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
-                <X className="h-5 w-5" />
+              <button onClick={dismiss} aria-label="Fermer" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-ink-3 transition-colors hover:bg-sunken hover:text-ink-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus">
+                <X className="h-4 w-4" />
               </button>
             </div>
 
-            <p className="mb-4 text-[15px] font-bold text-gray-900 dark:text-white">
+            <p className="mb-3 text-sm font-semibold text-ink-1">
               {ios ? 'Ajouter à l\'écran d\'accueil' : 'Installer depuis le navigateur'}
             </p>
 
@@ -240,25 +243,25 @@ export function InstallAppBanner() {
             <div className="space-y-3">
               {ios ? (
                 <>
-                  <Step icon={<Share className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<Share className="h-4 w-4" />}>
                     <span>Appuyez sur <strong>Partager</strong> <Share className="inline h-3.5 w-3.5 mx-0.5 align-middle" /> en bas de Safari</span>
                   </Step>
-                  <Step icon={<Plus className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<Plus className="h-4 w-4" />}>
                     <span>Choisissez <strong>« Sur l&apos;écran d&apos;accueil »</strong></span>
                   </Step>
-                  <Step icon={<Check className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<Check className="h-4 w-4" />}>
                     <span>Appuyez sur <strong>Ajouter</strong> — c&apos;est fait !</span>
                   </Step>
                 </>
               ) : (
                 <>
-                  <Step icon={<MoreVertical className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<MoreVertical className="h-4 w-4" />}>
                     <span>Ouvrez le menu du navigateur <MoreVertical className="inline h-3.5 w-3.5 mx-0.5 align-middle" /> en haut à droite</span>
                   </Step>
-                  <Step icon={<Plus className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<Plus className="h-4 w-4" />}>
                     <span>Appuyez sur <strong>« Ajouter à l&apos;écran d&apos;accueil »</strong></span>
                   </Step>
-                  <Step icon={<Check className="h-4 w-4 text-red-600 dark:text-red-400" />} bg="bg-red-50 dark:bg-red-900/30 border-red-100 dark:border-red-800">
+                  <Step icon={<Check className="h-4 w-4" />}>
                     <span>Appuyez sur <strong>Ajouter</strong> pour confirmer</span>
                   </Step>
                 </>
@@ -267,9 +270,9 @@ export function InstallAppBanner() {
 
             <button
               onClick={dismiss}
-              className="mt-6 w-full rounded-xl bg-gray-100 dark:bg-gray-800 py-3 text-sm font-bold text-gray-700 dark:text-gray-200 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+              className="mt-4 flex h-11 w-full items-center justify-center rounded-xl border border-hairline bg-sunken text-sm font-semibold text-ink-1 transition-colors hover:bg-canvas focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
             >
-              Compris !
+              Fermer
             </button>
           </div>
         </div>
@@ -288,19 +291,17 @@ export function InstallAppBanner() {
 
 function Step({
   icon,
-  bg,
   children,
 }: {
   icon: React.ReactNode;
-  bg: string;
   children: React.ReactNode;
 }) {
   return (
     <div className="flex items-start gap-3">
-      <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border ${bg}`}>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-brand/10 text-brand">
         {icon}
       </div>
-      <p className="pt-1 text-sm text-gray-800 dark:text-gray-100 leading-snug">{children}</p>
+      <p className="pt-1 text-sm leading-snug text-ink-2">{children}</p>
     </div>
   );
 }
