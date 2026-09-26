@@ -24,7 +24,8 @@ class CreateProduct extends CreateRecord
          * before rendering its contenteditable body. `afterFill()` is the supported CreateRecord
          * hook for defining state after every other default has been applied.
          */
-        $this->data['description_fr'] = (string) ($this->data['description_fr'] ?? '');
+        $description = $this->data['description_fr'] ?? null;
+        $this->data['description_fr'] = is_string($description) ? $description : '';
     }
 
     protected function getHeaderActions(): array

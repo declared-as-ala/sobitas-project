@@ -189,7 +189,7 @@ class ProductResource extends Resource
                                         // hydrate it with a string on both create and edit.
                                         ->default('')
                                         ->afterStateHydrated(function (Forms\Components\RichEditor $component, mixed $state): void {
-                                            if ($state === null) {
+                                            if (! is_string($state)) {
                                                 $component->state('');
                                             }
                                         })
