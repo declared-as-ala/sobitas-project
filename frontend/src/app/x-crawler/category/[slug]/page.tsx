@@ -46,7 +46,7 @@ import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeoForSlug, canonicalCategoryPath } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
-import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildProductSchema, buildWebPageSchema } from '@/util/structuredData';
+import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import { sanitizeProductHtml, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
@@ -600,6 +600,8 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const itemListSchema = productListItems.length > 0
       ? buildItemListSchema(productListItems, baseUrl, { name: title, pageUrl: collectionPath })
       : null;
+    // Product rich-result markup belongs on each linked PDP. The listing itself is represented by
+    // CollectionPage + ItemList, exactly like the human render of this URL.
     // FAQPage was emitted on the human page only, so the rich-result eligibility never reached
     // the crawler — Google saw zero FAQ markup on these pages. Safe to emit here because the same
     // Q&A is now rendered as visible text in CrawlerCategoryView; FAQ schema without matching
@@ -608,36 +610,12 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     // same line, because that is the only thing that makes emitting it legitimate at all.
     const faqs = isPaged ? [] : (merged.faqs ?? []);
     const faqSchema = faqs.length ? buildFAQPageSchemaFromQA(faqs) : null;
-    /*
-     * ── THE PRODUCT NODES WERE ON THE HUMAN PAGE ONLY ─────────────────────────────────────────
-     * app/(shop)/category/[slug] emits full Product markup for the first six products of the grid;
-     * this route emitted none. Measured on production 08/09/2026 (`?__crawler=1` forces this route
-     * past the CDN's URL-keyed cache):
-     *
-     *     /whey-proteine                 8 blobs + 6 Product   (browser)
-     *     /whey-proteine?__crawler=1     8 blobs, 0 Product    (Googlebot)
-     *     /creatine                      same, both
-     *
-     * So the one view Google reads carried the least. Same builder, same slice, same six products
-     * CrawlerCategoryView renders — each with its cover image, its price and its stock label since
-     * 22/09/2026. Until then this comment was false and the Offer prices marked up here appeared
-     * nowhere on the page, which is the structured-data rule ("mark up what the user sees") that
-     * merchant-listing eligibility turns on — Google's merchant listing guidance covers exactly
-     * this case, and the nodes' canonical URLs point at the PDPs
-     * rather than at this page, so they consolidate to the product rather than competing with it.
-     */
-    const productSchemas = products
-      .slice(0, 6)
-      .map((p) => buildProductSchema(p, baseUrl))
-      .filter(Boolean) as object[];
-
     return (
       <>
         {ldScript(breadcrumbSchema, 'bc')}
         {ldScript(collectionSchema, 'cp')}
         {itemListSchema && ldScript(itemListSchema, 'il')}
         {faqSchema && ldScript(faqSchema, 'faq')}
-        {productSchemas.map((schema, i) => ldScript(schema, `product-ld-${i}`))}
         <CrawlerCategoryView
           title={title}
           introHtml={isPaged ? null : introHtml}

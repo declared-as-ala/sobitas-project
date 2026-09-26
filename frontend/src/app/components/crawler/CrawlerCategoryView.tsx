@@ -113,9 +113,7 @@ export function CrawlerCategoryView({
         url: getProductLink(p),
         cover: p.cover ? getStorageUrl(p.cover) : '',
         alt: buildProductAlt(p),
-        // formatTnd, not the card's rounded price: this string has to equal the `offers.price`
-        // the route emits for the first six products, and Google only grants merchant-listing
-        // eligibility when the marked-up price is visible on the page.
+        // Keep the exact TND value visible beside every crawlable product link.
         price: formatTnd(price.finalPrice),
         oldPrice: price.hasPromo && price.oldPrice ? formatTnd(price.oldPrice) : null,
         stockLabel: getProductStockStatus(p).stockLabel,

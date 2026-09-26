@@ -1369,6 +1369,36 @@ function ShopContent({
     inStockCount,
   };
 
+  /*
+   * Keep the catalogue name and its result count in one compact semantic header. Previously the
+   * category H1 and this count lived in two separate flex rows; the empty left half of the second
+   * row created a full line of whitespace between the title and the product controls.
+   */
+  const listingCount = !showSkeleton ? (
+    <p className="shrink-0 text-[13px] tabular-nums text-ink-2 sm:pb-0.5">
+      {totalPages > 1 ? (
+        <>
+          <span className="font-semibold text-ink-1">
+            {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–
+            {Math.min(currentPage * PRODUCTS_PER_PAGE, resultCount)}
+          </span>{' '}
+          sur <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produits
+        </>
+      ) : (
+        <>
+          <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produit
+          {resultCount > 1 ? 's' : ''}
+        </>
+      )}
+    </p>
+  ) : null;
+
+  const semanticProductHeading = currentBrand
+    ? `Produits ${currentBrand.designation_fr}`
+    : initialCategory
+      ? `Produits ${categoryBreadcrumbLabel?.trim() || taxonomyLabel(initialCategory)}`
+      : 'Produits de la boutique';
+
   return (
     <div className="min-h-screen bg-canvas">
       {/* Own boundary, so reading search params defers only this null-rendering leaf (see above).
@@ -1491,14 +1521,20 @@ function ShopContent({
             .find(s => s.slug === initialCategory);
           const catName = subcat?.designation_fr || initialCategory?.replace(/-/g, ' ') || '';
           return (
-            <div className="mb-6 sm:mb-8">
+            <div className="mb-4 flex flex-col gap-1.5 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
               <PageHeader kicker="Catégorie" title={catName} />
+              {listingCount}
             </div>
           );
         })()}
 
-        {/* Compact category H1 — the catalogue starts immediately after it. */}
-        {categorySeoLanding && <div className="mb-3 sm:mb-4">{categorySeoLanding}</div>}
+        {/* One compact line: category context on the left, catalogue size on the right. */}
+        {categorySeoLanding && (
+          <div className="mb-3 flex flex-col gap-1.5 sm:mb-4 sm:flex-row sm:items-end sm:justify-between sm:gap-6">
+            <div className="min-w-0">{categorySeoLanding}</div>
+            {listingCount}
+          </div>
+        )}
 
         {/* Sous-catégories — real, crawlable SSR internal links (top category only) */}
         {topCategorySubcategories.length > 0 && (
@@ -1580,41 +1616,22 @@ function ShopContent({
           under it with 8px between them — two blocks of type doing one job. On the baseline they
           read as one sentence: what this page is, and how much of it there is.
         */}
-        <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-5">
-          <div className="min-w-0">
-            {!categorySeoLanding && !isSubcategory && (
-              // Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
-              // rewritten to that route, so the two are the same page to a searcher but were two
-              // different headings — divergent h1s on one URL are what turns dynamic rendering into
-              // cloaking.
+        {!categorySeoLanding && !isSubcategory && (
+          <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-6 lg:mb-5">
+            <div className="min-w-0">
+              {/* Must stay in sync with the crawler view's h1 (x-crawler/shop/page.tsx). Googlebot is
+                  rewritten to that route, so the two are the same page to a searcher but were two
+                  different headings — divergent h1s on one URL are what turns dynamic rendering into
+                  cloaking. */}
               <h1 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
                 {currentBrand
                   ? `Produits ${currentBrand.designation_fr}`
                   : 'Boutique — Protéines & Compléments Alimentaires en Tunisie'}
               </h1>
-            )}
+            </div>
+            {listingCount}
           </div>
-          {!showSkeleton && (
-            <p className="shrink-0 text-[13px] tabular-nums text-ink-2 sm:pb-1">
-              {/* resultCount, not filteredProducts.length — in server mode the latter is the size of
-                  the page, so this would read "24 produits" on an 11,263-product catalogue. */}
-              {totalPages > 1 ? (
-                <>
-                  <span className="font-semibold text-ink-1">
-                    {(currentPage - 1) * PRODUCTS_PER_PAGE + 1}–
-                    {Math.min(currentPage * PRODUCTS_PER_PAGE, resultCount)}
-                  </span>{' '}
-                  sur <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produits
-                </>
-              ) : (
-                <>
-                  <span className="font-semibold text-ink-1">{resultCount.toLocaleString('fr-FR')}</span> produit
-                  {resultCount > 1 ? 's' : ''}
-                </>
-              )}
-            </p>
-          )}
-        </div>
+        )}
 
         {/*
           ── THE TOOLBAR IS STICKY ─────────────────────────────────────────────────────────
@@ -1891,8 +1908,9 @@ function ShopContent({
             </aside>
           )}
 
-          {/* Products Grid */}
-          <div className="flex-1 min-w-0">
+          {/* Products Grid: a named section containing a real HTML list of product articles. */}
+          <section aria-labelledby="catalog-products-title" className="min-w-0 flex-1">
+            <h2 id="catalog-products-title" className="sr-only">{semanticProductHeading}</h2>
             {filterError ? (
               <div className="flex flex-col items-center justify-center rounded-2xl border border-hairline bg-elevated px-4 py-16">
                 <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-brand/10 text-brand">
@@ -1961,13 +1979,17 @@ function ShopContent({
                   the moment hydration swaps one for the other — CLS on the page with the most
                   cards on it.
                 */}
-                <ProductGrid className={`pt-grid-stagger min-w-0 w-full ${SHOP_GRID_COLS}`}>
+                <ProductGrid
+                  as="ul"
+                  role="list"
+                  className={`pt-grid-stagger min-w-0 w-full ${SHOP_GRID_COLS}`}
+                >
                   {paginatedProducts.map((product, idx) => (
-                    <ProductCard
-                      key={product.id}
-                      product={product}
-                      variant="compact"
-                      imageContext="packs"
+                    <li key={product.id} className="h-full min-w-0">
+                      <ProductCard
+                        product={product}
+                        variant="compact"
+                        imageContext="packs"
                       /* Three columns, so the card is 285px with the filter rail open and 389px
                          with it closed at 1280 — against the default declaration's 205px. Without
                          this the browser keeps fetching the 4-up file and paints it into a box
@@ -2020,8 +2042,9 @@ function ShopContent({
                          lazy meant the largest painted element was often one the browser had been
                          told not to hurry. Two on a phone (2-up), four from `lg`, and the cost of
                          being wrong is bounded: `priority` on four 300px images is ~40 KB. */
-                      priority={idx < 4}
-                    />
+                        priority={idx < 4}
+                      />
+                    </li>
                   ))}
                 </ProductGrid>
                 {totalPages > 1 && (
@@ -2050,7 +2073,7 @@ function ShopContent({
                 )}
               </div>
             )}
-          </div>
+          </section>
         </div>
       </main>
 

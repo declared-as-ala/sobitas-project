@@ -18,14 +18,13 @@ import {
   buildBreadcrumbListSchema,
   buildCollectionPageSchema,
   buildItemListSchema,
-  buildProductSchema,
   buildFAQPageSchemaFromQA,
   validateStructuredData,
 } from '@/util/structuredData';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeoForSlug, type CategorySeoFromApi, type MergedCategorySeo, canonicalCategoryPath } from '@/util/resolveCategorySeo';
-import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription, generateTunisiaH1 } from '@/util/tunisiaCategoryKeywords';
-import { getProductLink, getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
+import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisiaMetaDescription } from '@/util/tunisiaCategoryKeywords';
+import { getProductLink, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
 // ONE definition of availability for the whole app. The robots gate below reads the same helper
@@ -1108,9 +1107,12 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
          caps `itemListElement` at 30 — one page's worth plus headroom — so the payload stays the
          same size and the count now matches what is on screen. */
       const productList = currentPageProducts
-        // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
+        // Use the canonical product URL so each ItemList entry resolves to the product's own PDP.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
+      /* A category is a CollectionPage + ItemList, not six competing Product pages. Google Search
+         explicitly recommends Product rich-result markup on single-product pages rather than
+         category listings; every linked PDP already publishes its own complete Product node. */
       const itemListSchema = productList.length > 0 ? buildItemListSchema(productList, baseUrl, { name: pageTitle, pageUrl: collectionPath }) : null;
       const collectionPageSchema = buildCollectionPageSchema(pageTitle, collectionPath, baseUrl, {
         description: collectionDesc,
@@ -1118,11 +1120,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         withItemList: itemListSchema != null,
       });
       validateStructuredData(collectionPageSchema, 'CollectionPage');
-      const productSchemas = currentPageProducts
-        .slice(0, 6)
-        .map((p: any) => buildProductSchema(p, baseUrl))
-        .filter(Boolean) as object[];
-
       const title = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
       /*
        * Related-links fallback. A curated `relatedCategorySlugs` (CMS or content file) still wins —
@@ -1250,13 +1247,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
             />
           ))}
-          {productSchemas.map((schema, i) => (
-            <script
-              key={`product-schema-${canonicalSlug}-${i}`}
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
-            />
-          ))}
           <Suspense
             fallback={
               <>
@@ -1362,7 +1352,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const currentPageProductsCat = (productsData.products ?? []) as any[];
       // Same as the subcategory branch: no 20-item cut, the page shows 24 and the helper caps at 30.
       const productListCat = currentPageProductsCat
-        // Use the canonical product URL so ItemList entries match each Product schema's offers.url.
+        // Use the canonical product URL so each ItemList entry resolves to the product's own PDP.
         .map((p: any) => ({ name: p.designation_fr || p.slug, url: getProductLink(p) }))
         .filter((p: { name: string; url: string }) => p.url && p.url !== '/shop/');
       const itemListSchemaCat = productListCat.length > 0 ? buildItemListSchema(productListCat, baseUrl, { name: pageTitleCat, pageUrl: collectionPathCat }) : null;
@@ -1372,11 +1362,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         withItemList: itemListSchemaCat != null,
       });
       validateStructuredData(collectionPageSchemaCat, 'CollectionPage');
-      const productSchemasCat = currentPageProductsCat
-        .slice(0, 6)
-        .map((p: any) => buildProductSchema(p, baseUrl))
-        .filter(Boolean) as object[];
-
       const title = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
       // Unique intro fallback (thin-content): when there is no admin/content-file intro, synthesize a
       // distinct paragraph from this category's real product data (count, brands, price) + its own
@@ -1489,13 +1474,6 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               key={`extra-ld-cat-${canonicalSlug}-${i}`}
               type="application/ld+json"
               dangerouslySetInnerHTML={{ __html: JSON.stringify(obj) }}
-            />
-          ))}
-          {productSchemasCat.map((schema, i) => (
-            <script
-              key={`product-schema-cat-${canonicalSlug}-${i}`}
-              type="application/ld+json"
-              dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
             />
           ))}
           <Suspense

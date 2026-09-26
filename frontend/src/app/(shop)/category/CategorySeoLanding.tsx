@@ -155,7 +155,7 @@ export function CategorySeoLanding({
           comparison and guide.
         */
         <header>
-          <h1 className="text-balance font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.025em] text-ink-1 sm:text-[2.25rem] lg:text-[2.5rem]">
+          <h1 className="text-balance font-display font-compressed text-2xl font-extrabold uppercase leading-none tracking-[-0.02em] text-ink-1 sm:text-[1.75rem] lg:text-[2rem]">
             {title}
           </h1>
         </header>
