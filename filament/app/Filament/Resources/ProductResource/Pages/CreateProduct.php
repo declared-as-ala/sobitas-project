@@ -16,15 +16,13 @@ class CreateProduct extends CreateRecord
 
     protected static string $resource = ProductResource::class;
 
-    public function mount(): void
+    protected function afterFill(): void
     {
-        parent::mount();
-
         /*
          * Filament 4.2 does not materialize a RichEditor default when a create form has no model
          * value for that key. The Alpine component then receives `undefined` and TipTap aborts
-         * before rendering its contenteditable body. Define the Livewire key after the parent has
-         * filled every other default so the editor always boots without disturbing the form.
+         * before rendering its contenteditable body. `afterFill()` is the supported CreateRecord
+         * hook for defining state after every other default has been applied.
          */
         $this->data['description_fr'] = (string) ($this->data['description_fr'] ?? '');
     }

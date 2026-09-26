@@ -37,9 +37,9 @@ $checks = [
     'nullable legacy descriptions are normalized' => str_contains($resource, 'afterStateHydrated')
         && str_contains($resource, 'if ($state === null)')
         && str_contains($resource, '$component->state(\'\');'),
-    'create page materializes the Livewire state key' => str_contains($createPage, 'public function mount(): void')
-        && str_contains($createPage, 'parent::mount();')
+    'create page materializes the Livewire state key' => str_contains($createPage, 'protected function afterFill(): void')
         && str_contains($createPage, '$this->data[\'description_fr\'] = (string) ($this->data[\'description_fr\'] ?? \'\');'),
+    'create page does not override Filament mount' => ! str_contains($createPage, 'function mount('),
     'edit page normalizes a legacy null value' => str_contains(
         $editPage,
         '$data[\'description_fr\'] = (string) ($data[\'description_fr\'] ?? \'\');',
