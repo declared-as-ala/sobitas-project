@@ -337,6 +337,15 @@ services:
     container_name: sobitas-backend-v2-public-init
     restart: "no"
     logging: *default-logging
+    env_file:
+      - .env
+    environment:
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: ${MYSQL_DATABASE:-protein_db}
+      DB_USERNAME: ${MYSQL_USER:-laravel}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-secret}
     networks:
       - sobitas-net
     volumes:
@@ -352,6 +361,8 @@ services:
     command:
       - |
         set -e
+        echo "=== Publishing Filament assets from this image ==="
+        php artisan filament:assets
         echo "=== Syncing public assets to nginx volume (non-destructive) ==="
         cp -a /var/www/html/public/. /public/
         ln -sfn /var/www/html/storage/app/public /public/storage

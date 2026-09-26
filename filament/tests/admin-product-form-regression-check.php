@@ -4,9 +4,10 @@
  * Static regression guard for the product editor boot contract.
  *
  * This test deliberately has no Laravel/vendor dependency, so it can run before the Docker image
- * is built. The browser failure it protects against is client-side: Filament 4.2 passes an absent
- * create-state as `undefined` to TipTap, which then crashes before rendering a contenteditable
- * surface. The field must therefore always declare a string default and normalize legacy NULLs.
+ * is built. It protects both halves of the editor boot contract: the field must expose valid HTML
+ * state, and the shared nginx volume must receive the Filament assets published by the exact same
+ * Composer image. A stale/newer rich-editor bundle crashes before rendering its contenteditable
+ * surface even when the Livewire state is valid.
  */
 
 $root = dirname(__DIR__);
@@ -14,13 +15,17 @@ $resourcePath = $root . '/app/Filament/Resources/ProductResource.php';
 $createPagePath = $root . '/app/Filament/Resources/ProductResource/Pages/CreateProduct.php';
 $editPagePath = $root . '/app/Filament/Resources/ProductResource/Pages/EditProduct.php';
 $adminStylesPath = $root . '/resources/views/filament/components/custom-admin-styles.blade.php';
+$filamentConfigPath = $root . '/config/filament.php';
+$composePath = dirname($root) . '/docker-compose.yml';
 
 $resource = file_get_contents($resourcePath);
 $createPage = file_get_contents($createPagePath);
 $editPage = file_get_contents($editPagePath);
 $adminStyles = file_get_contents($adminStylesPath);
+$filamentConfig = file_get_contents($filamentConfigPath);
+$compose = file_get_contents($composePath);
 
-if ($resource === false || $createPage === false || $editPage === false || $adminStyles === false) {
+if ($resource === false || $createPage === false || $editPage === false || $adminStyles === false || $filamentConfig === false || $compose === false) {
     fwrite(STDERR, "Unable to read the product form sources.\n");
     exit(1);
 }
@@ -49,6 +54,14 @@ $checks = [
         $adminStyles,
         "document.addEventListener('DOMContentLoaded', observeSidebar, { once: true });",
     ),
+    'Filament assets use a cache-busting release path' => str_contains(
+        $filamentConfig,
+        "'assets_path' => env('FILAMENT_ASSETS_PATH', 'filament-assets-v4-2')",
+    ),
+    'nginx receives assets published by the deployed Filament version' => preg_match(
+        '/backend-v2-public-init:[\\s\\S]*?php artisan filament:assets[\\s\\S]*?cp -a \\/var\\/www\\/html\\/public\\/. \\/public\\//',
+        $compose,
+    ) === 1,
 ];
 
 $failed = false;

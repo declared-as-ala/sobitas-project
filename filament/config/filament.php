@@ -4,6 +4,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Published Asset Path
+    |--------------------------------------------------------------------------
+    |
+    | Keep Filament's generated assets in a release-specific directory. The
+    | admin nginx container serves a persistent public volume, so reusing the
+    | default /js/filament URL can leave browsers on an incompatible cached
+    | bundle after a package change. Bump this path with a Filament upgrade.
+    |
+    */
+
+    'assets_path' => env('FILAMENT_ASSETS_PATH', 'filament-assets-v4-2'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Broadcasting
     |--------------------------------------------------------------------------
     |
