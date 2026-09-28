@@ -132,6 +132,11 @@ on:
           # Additive and idempotent; the dry run prints the per-product plan and writes nothing.
           - seo-copy-dry-run
           - seo-copy-apply
+          # Reviewed REPLACEMENTS (resources/seo/product-edits/*.json): removes text copy-apply
+          # cannot — pasted AI notes, retired brand, stale prices. Each edit applies only while the
+          # field still hashes to the text it was computed from; anything edited since is skipped.
+          - seo-edits-dry-run
+          - seo-edits-apply
           # Publish the unpublished review backlog, deduped by (product, text_hash). Visibility
           # only: verified/commande_id are never written, so star ratings stay attested-only.
           - reviews-publish-backlog-dry-run
@@ -722,6 +727,14 @@ jobs:
               # Per-product plan for resources/seo/products/*.json. Writes nothing.
               ARGS="seo:products-apply-copy"
               WRITES=no
+              ;;
+            seo-edits-dry-run)
+              ARGS="seo:products-apply-edits"
+              WRITES=no
+              ;;
+            seo-edits-apply)
+              ARGS="seo:products-apply-edits --apply"
+              WRITES=yes
               ;;
             seo-copy-apply)
               # Applies the JSON entries through the model (observer revalidates + sitemap +
