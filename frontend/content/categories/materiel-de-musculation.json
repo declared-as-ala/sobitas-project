@@ -1,9 +1,9 @@
 {
   "h1": "Matériel de musculation en Tunisie : machines, bancs et barres",
   "metaTitle": "Matériel de Musculation Tunisie : Machines et Bancs | Protein.tn",
-  "metaDescription": "Matériel de musculation en Tunisie : machines guidées, bancs réglables, barres, disques et racks pour votre home gym. Livraison 24–72h partout en Tunisie.",
+  "metaDescription": "Matériel de musculation en Tunisie : machines guidées, bancs réglables, barres et racks pour votre home gym. Dès {prixMin} DT, {nbEnStock} en stock.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p>Le <strong>matériel de musculation</strong> réuni sur cette page, c'est l'équipement lourd : machines guidées, bancs réglables, barres, disques et racks de rangement, de quoi monter un vrai home gym en Tunisie. Chaque référence est affichée avec son prix en dinars et son stock réel, et vous payez à la réception.</p>\n\n<h2>Machines, bancs, barres : par quoi commencer ?</h2>\n<p>Un banc réglable, une barre olympique et un jeu de disques couvrent déjà la majorité des mouvements de base. Les machines guidées — presse à cuisses, poulie, station multifonction — viennent ensuite, quand la place et le budget suivent : elles encadrent le mouvement et rendent le travail lourd possible sans partenaire.</p>\n\n<h2>Le reste de l'équipement sportif</h2>\n<p>Les gants, ceintures, sangles et bandes de maintien ne sont pas sur cette page : ils sont regroupés sur <a href=\"/accessoires\">les accessoires de musculation</a>. Les tapis roulants, vélos, rameurs et elliptiques ont leur propre rayon, <a href=\"/cardio-fitness\">cardio et fitness</a>. Pour parcourir l'ensemble, remontez à <a href=\"/equipement\">l'équipement de sport</a>.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix du matériel de musculation en Tunisie :</strong> de {prixMin} à {prixMax} DT pour les {nbEnStock} références en stock, livrées en 24–72h avec paiement à la livraison.</p><p>Le <strong>matériel de musculation</strong> réuni sur cette page, c'est l'équipement lourd : machines guidées, bancs réglables, barres, disques et racks de rangement, de quoi monter un vrai home gym en Tunisie. Chaque référence est affichée avec son prix en dinars et son stock réel, et vous payez à la réception.</p>\n\n<h2>Machines, bancs, barres : par quoi commencer ?</h2>\n<p>Un banc réglable, une barre olympique et un jeu de disques couvrent déjà la majorité des mouvements de base. Les machines guidées — presse à cuisses, poulie, station multifonction — viennent ensuite, quand la place et le budget suivent : elles encadrent le mouvement et rendent le travail lourd possible sans partenaire.</p>\n\n<h2>Le reste de l'équipement sportif</h2>\n<p>Les gants, ceintures, sangles et bandes de maintien ne sont pas sur cette page : ils sont regroupés sur <a href=\"/accessoires\">les accessoires de musculation</a>. Les tapis roulants, vélos, rameurs et elliptiques ont leur propre rayon, <a href=\"/cardio-fitness\">cardio et fitness</a>. Pour parcourir l'ensemble, remontez à <a href=\"/equipement\">l'équipement de sport</a>.</p>",
   "howToChooseTitle": "Comment choisir son matériel de musculation ?",
   "howToChooseBody": "<ul><li><strong>Banc réglable</strong> : le premier achat vraiment utile — dossier inclinable pour le développé couché, incliné et les épaules.</li><li><strong>Barre et disques</strong> : barre olympique pour les charges lourdes, barre EZ pour les bras, disques en fonte ou caoutchoutés selon votre sol.</li><li><strong>Haltères</strong> : réglables quand la place manque, fixes avec un support quand vous montez une vraie salle.</li><li><strong>Machines guidées</strong> : presse à cuisses, poulie, station multifonction — mouvement encadré, utile pour s'entraîner seul.</li><li><strong>Rangement</strong> : un rack à disques ou à haltères protège le sol et prolonge la vie du matériel.</li><li><strong>Livraison</strong> : 24–72h partout en Tunisie, paiement à la réception.</li></ul>",
   "faqs": [
@@ -14,6 +14,22 @@
     {
       "question": "Quelle différence entre le matériel de musculation et les accessoires ?",
       "answer": "Le matériel regroupe les machines, bancs, barres, disques et racks. Les gants, ceintures, sangles et bandes de maintien sont des accessoires et se trouvent sur la page Accessoires."
+    },
+    {
+      "question": "Quel est le prix du matériel de musculation en Tunisie ?",
+      "answer": "Sur Protein.tn, le matériel de musculation en stock coûte de {prixMin} à {prixMax} DT ({nbEnStock} références en stock). Une barre ou un support se situe en bas de cette fourchette, un banc réglable au milieu, et les machines guidées professionnelles en haut. Le prix du jour et la disponibilité figurent sur chaque fiche produit."
+    },
+    {
+      "question": "Quel banc de musculation choisir ?",
+      "answer": "Pour la maison, un banc réglable (plat, incliné, décliné) couvre le plus d’exercices, du développé couché aux rowings. Vérifiez la charge maximale supportée, la stabilité du piètement et la largeur du dossier. Un banc plat ou un banc olympique avec supports convient mieux si vous travaillez surtout à la barre avec des charges lourdes."
+    },
+    {
+      "question": "Machine guidée ou poids libres : que choisir ?",
+      "answer": "Les poids libres (barre, haltères, banc) demandent peu de place et font travailler la stabilité, mais exigent une bonne technique. Les machines guidées sécurisent le mouvement et isolent un muscle, un atout pour débuter ou pour une salle ouverte au public. Un home gym commence souvent par un banc et des poids libres."
+    },
+    {
+      "question": "Quelle place prévoir pour un home gym ?",
+      "answer": "Une barre olympique mesure 2,20 m : prévoyez au moins 3 m de largeur pour la charger sans gêne, et environ 2 m de longueur pour un banc. Les machines guidées ont leur propre encombrement et demandent une hauteur sous plafond suffisante. Mesurez la pièce et comparez-la aux dimensions de la fiche avant de commander."
     }
   ],
   "relatedCategorySlugs": [

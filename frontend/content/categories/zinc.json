@@ -1,9 +1,9 @@
 {
   "h1": "Zinc en Tunisie : bisglycinate, picolinate et sulfate",
   "metaTitle": "Zinc Bisglycinate & Picolinate Tunisie — Protein.tn",
-  "metaDescription": "Zinc en Tunisie : zinc bisglycinate, picolinate et sulfate, en comprimés ou gélules, seul ou avec vitamine C. Stock à jour, livraison 24–72h.",
+  "metaDescription": "Zinc en Tunisie : bisglycinate, picolinate et sulfate, en comprimés ou gélules, seul ou avec vitamine C. Dès {prixMin} DT, {nbEnStock} en stock, livraison 24–72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>zinc</strong> est un minéral essentiel qui joue un rôle crucial dans plus de 300 réactions enzymatiques dans le corps. Il est indispensable pour le système immunitaire, la production de testostérone, la synthèse des protéines et la récupération musculaire. Sur <strong>Protein.tn</strong>, découvrez notre sélection de zinc en Tunisie : bisglycinate, picolinate, gluconate, en gélules et comprimés.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Pourquoi prendre du zinc en Tunisie ?</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Immunité renforcée</strong> : le zinc est essentiel pour la défense immunitaire, surtout en hiver</li>\n  <li><strong>Testostérone</strong> : une carence en zinc est liée à une baisse de testostérone</li>\n  <li><strong>Récupération musculaire</strong> : accélère la réparation des tissus après l'entraînement</li>\n  <li><strong>Synthèse protéique</strong> : essentiel pour la construction musculaire</li>\n  <li><strong>Santé de la peau</strong> : aide contre l'acné et les problèmes cutanés</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Zinc Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix du zinc en Tunisie</strong> : à partir de 25 DT pour 60-100 gélules (15-25 mg). Zinc bisglycinate entre 30 et 55 DT. Formats haute dose (50 mg) entre 35 et 65 DT. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison possible.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix du zinc en Tunisie :</strong> de {prixMin} à {prixMax} DT pour les {nbEnStock} références en stock, livrées en 24–72h avec paiement à la livraison.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>zinc</strong> est un minéral essentiel qui joue un rôle crucial dans plus de 300 réactions enzymatiques dans le corps. Il contribue au fonctionnement normal du système immunitaire, au maintien d'un taux normal de testostérone dans le sang et à la synthèse normale des protéines. Sur <strong>Protein.tn</strong>, découvrez notre sélection de zinc en Tunisie : bisglycinate, picolinate, gluconate, en gélules et comprimés.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Pourquoi prendre du zinc en Tunisie ?</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Immunité</strong> : le zinc contribue au fonctionnement normal du système immunitaire</li>\n  <li><strong>Testostérone</strong> : le zinc contribue au maintien d'un taux normal de testostérone dans le sang</li>\n  <li><strong>Stress oxydatif</strong> : le zinc contribue à protéger les cellules contre le stress oxydatif</li>\n  <li><strong>Synthèse protéique</strong> : le zinc contribue à la synthèse normale des protéines</li>\n  <li><strong>Peau, cheveux, ongles</strong> : le zinc contribue au maintien d'une peau, de cheveux et d'ongles normaux</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Zinc Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>prix du zinc en Tunisie</strong> : à partir de 25 DT pour 60-100 gélules (15-25 mg). Zinc bisglycinate entre 30 et 55 DT. Formats haute dose (50 mg) entre 35 et 65 DT. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie. Paiement à la livraison possible.</p>",
   "howToChooseTitle": "Comment choisir son zinc en Tunisie ?",
   "howToChooseBody": "<ul><li><strong>Zinc bisglycinate</strong> : meilleure absorption, idéal pour une supplémentation quotidienne.</li><li><strong>Zinc picolinate</strong> : excellente biodisponibilité, bien étudié.</li><li><strong>Zinc gluconate</strong> : bon rapport qualité-prix, le plus courant.</li><li><strong>Dosage</strong> : 15-30 mg par jour pour un adulte. Maximum 40 mg/jour.</li><li><strong>Avec nourriture</strong> : prenez le zinc avec un repas pour éviter les nausées.</li><li><strong>Association</strong> : zinc + magnésium + vitamine B6 = ZMA, idéal pour le sommeil.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie, paiement à la livraison.</li></ul>",
   "faqs": [
@@ -17,7 +17,7 @@
     },
     {
       "question": "Le zinc aide-t-il à la musculation ?",
-      "answer": "Oui — il augmente la testostérone naturelle, accélère la récupération et la synthèse protéique. Essentiel pour tout sportif."
+      "answer": "Oui — il contribue au maintien d'un taux normal de testostérone dans le sang et à la synthèse normale des protéines. Essentiel pour tout sportif."
     },
     {
       "question": "Quand prendre le zinc ?",
@@ -26,6 +26,18 @@
     {
       "question": "Quels sont les signes d'une carence en zinc ?",
       "answer": "Baisse d'immunité, chute de cheveux, peau terne, ongles fragiles, fatigue, baisse de libido, difficultés de récupération."
+    },
+    {
+      "question": "Quel est le prix du zinc en Tunisie ?",
+      "answer": "Sur Protein.tn, le zinc en stock coûte de {prixMin} à {prixMax} DT ({nbEnStock} références en stock). Les boîtes vont de 60 à plusieurs centaines de comprimés : comparez le coût par jour à la dose de l’étiquette, et la quantité de zinc élémentaire par comprimé plutôt que le poids du composé affiché en façade."
+    },
+    {
+      "question": "Quels sont les bienfaits du zinc ?",
+      "answer": "Dans l’UE, le zinc bénéficie de plusieurs allégations autorisées : il contribue au fonctionnement normal du système immunitaire, à la synthèse normale des protéines, au maintien de cheveux, d’ongles et d’une peau normaux, et au maintien d’une testostéronémie normale. Ces effets concernent la couverture des besoins, pas des doses élevées : respectez l’étiquette."
+    },
+    {
+      "question": "Comment prendre le zinc bisglycinate ?",
+      "answer": "Prenez la dose de l’étiquette, en général un comprimé par jour avec un grand verre d’eau, pendant ou après un repas si le zinc vous donne des nausées à jeun. Espacez-le de deux heures d’un complément de fer ou de calcium. L’EFSA fixe à 25 mg par jour l’apport maximal de zinc, alimentation comprise : ne cumulez pas plusieurs produits."
     }
   ],
   "relatedCategorySlugs": [

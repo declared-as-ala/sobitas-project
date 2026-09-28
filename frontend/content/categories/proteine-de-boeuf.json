@@ -1,15 +1,27 @@
 {
   "h1": "Protéine de bœuf en Tunisie : sans lactose ni gluten",
   "metaTitle": "Protéine de Bœuf Tunisie : Beef Protein | Protein.tn",
-  "metaDescription": "Protéine de bœuf en Tunisie : une source sans lactose ni gluten, riche en acides aminés essentiels. Formats et stock à jour, livraison 24–72h.",
+  "metaDescription": "Protéine de bœuf en Tunisie : une alternative à la whey issue du bœuf, riche en acides aminés essentiels. Dès {prixMin} DT, {nbEnStock} en stock, livraison 24–72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>protéine de bœuf</strong> est une excellente alternative à la whey pour ceux qui cherchent une source de protéines différente. Naturellement riche en acides aminés, sans lactose, sans gluten. Sur <strong>Protein.tn</strong>, retrouvez la protéine de bœuf en Tunisie.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix de la protéine de bœuf en Tunisie :</strong> à partir de {prixMin} DT ({nbEnStock} en stock), livraison en 24–72h avec paiement à la livraison.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">La <strong>protéine de bœuf</strong> est une excellente alternative à la whey pour ceux qui cherchent une source de protéines différente. Naturellement riche en acides aminés, sans lactose, sans gluten. Sur <strong>Protein.tn</strong>, retrouvez la protéine de bœuf en Tunisie.</p>",
   "howToChooseTitle": "Pourquoi choisir la protéine de bœuf ?",
   "howToChooseBody": "<ul><li><strong>Sans lactose</strong> : idéal pour les intolérants.</li><li><strong>Profil aminé</strong> : riche en acides aminés essentiels.</li><li><strong>Digestion</strong> : bien tolérée par la plupart des gens.</li><li><strong>Marques</strong> : BioTech USA, Real Pharm.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [
     {
       "question": "La protéine de bœuf est-elle aussi efficace que la whey ?",
       "answer": "Oui, elle offre un profil d'acides aminés comparable. Elle est particulièrement appréciée des intolérants au lactose."
+    },
+    {
+      "question": "Quel est le prix de la protéine de bœuf en Tunisie ?",
+      "answer": "Sur Protein.tn, la protéine de bœuf en stock coûte à partir de {prixMin} DT ({nbEnStock} en stock). Comparez les références au kilo et à la quantité de protéines par dose : certaines formules « beef » sont des gainers qui ajoutent des glucides. Le prix du jour et la composition complète figurent sur chaque fiche produit."
+    },
+    {
+      "question": "La protéine de bœuf en poudre est-elle halal ?",
+      "answer": "Une origine bovine ne suffit pas à le garantir : tout dépend de l’abattage et de la filière de fabrication. Cherchez une certification halal explicite, délivrée par un organisme identifié et imprimée sur l’emballage de la référence exacte. Sans cette mention, demandez la documentation au vendeur avant d’acheter, plutôt que de la supposer."
+    },
+    {
+      "question": "La protéine de bœuf convient-elle aux intolérants au lactose ?",
+      "answer": "Une protéine de bœuf isolée ne provient pas du lait et ne contient donc pas naturellement de lactose. Certaines formules ajoutent toutefois de la whey, du lait en poudre ou des arômes lactés, et d’autres sont fabriquées dans des ateliers qui traitent le lait. Lisez la liste d’ingrédients et les mentions d’allergènes de chaque référence."
     }
   ],
   "relatedCategorySlugs": [

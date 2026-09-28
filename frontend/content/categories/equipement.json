@@ -1,8 +1,34 @@
 {
   "h1": "Équipement de sport en Tunisie : trois rayons selon votre pratique",
   "metaTitle": "Équipement de sport en Tunisie : quel rayon choisir | Protein.tn",
-  "metaDescription": "Machines et bancs, appareils cardio ou petits accessoires : l’équipement de sport de Protein.tn en trois rayons, et lequel ouvrir selon votre pratique.",
-  "faqs": [],
+  "metaDescription": "Machines, bancs, cardio ou accessoires : l’équipement de sport de Protein.tn en trois rayons, selon votre pratique. Dès {prixMin} DT, {nbEnStock} en stock.",
+  "faqs": [
+    {
+      "question": "Quel est le prix de l’équipement de sport en Tunisie ?",
+      "answer": "Sur Protein.tn, l’équipement de sport en stock coûte de {prixMin} à {prixMax} DT ({nbEnStock} références en stock). L’écart est large parce que le rayon va du shaker et des gants aux bancs, aux machines guidées et aux tapis roulants professionnels. Le prix du jour et la disponibilité sont affichés sur chaque fiche produit."
+    },
+    {
+      "question": "Quel équipement de sport pour la maison ?",
+      "answer": "Pour débuter chez soi, un banc réglable, une paire d’haltères ou une barre avec des disques, et quelques accessoires (gants, sangles, ceinture) couvrent l’essentiel des exercices de musculation. Pour le cardio, un vélo ou un rameur prend moins de place qu’un tapis roulant. Mesurez la pièce et vérifiez l’encombrement de chaque appareil avant de commander."
+    },
+    {
+      "question": "Quel matériel pour ouvrir une salle de sport en Tunisie ?",
+      "answer": "Une salle se construit autour de bancs olympiques, de racks et de machines guidées par groupe musculaire (presse à cuisses, poulie, tirage), complétés par du cardio professionnel et un contrôle d’accès. Chaque référence du rayon affiche son prix en dinars ; pour un projet complet, contactez la boutique afin de préparer une liste adaptée à votre surface."
+    },
+    {
+      "question": "Quels accessoires de musculation choisir pour débuter ?",
+      "answer": "Commencez par ce qui protège et améliore la prise : des gants ou des sangles de tirage, des bandes de poignet, puis une ceinture lombaire pour les charges lourdes au squat et au soulevé de terre. Ajoutez un shaker et une gourde pour la séance. Ces accessoires coûtent peu, durent longtemps et servent en salle comme à la maison."
+    },
+    {
+      "question": "Tapis roulant ou vélo d’appartement : lequel choisir ?",
+      "answer": "Le tapis roulant convient à la marche et à la course, mais il est plus encombrant, plus cher et sollicite davantage les articulations. Le vélo, droit, allongé ou de spinning, est plus compact et plus doux pour les genoux. Choisissez selon votre pratique, la place disponible et le poids maximal d’utilisateur supporté par l’appareil."
+    },
+    {
+      "question": "Faut-il acheter son matériel de sport neuf ou d’occasion ?",
+      "answer": "Le neuf assure un état connu, des pièces complètes et, selon le vendeur, une garantie. L’occasion peut réduire le budget, à condition d’inspecter soi-même les soudures, les câbles, les poulies et la sellerie, et de vérifier que la machine est stable. Pour un usage intensif ou une salle ouverte au public, le neuf limite les risques."
+    }
+  ],
   "relatedCategorySlugs": [],
-  "bestProductSlugs": []
+  "bestProductSlugs": [],
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix de l’équipement de sport en Tunisie :</strong> de {prixMin} à {prixMax} DT pour les {nbEnStock} références en stock, livrées en 24–72h avec paiement à la livraison.</p>"
 }

@@ -1,11 +1,11 @@
 {
   "h1": "ZMA en Tunisie : le complexe du soir pour la récupération",
   "metaTitle": "ZMA en Tunisie : le complexe du soir | Protein.tn",
-  "metaDescription": "ZMA en Tunisie : le complexe à prendre le soir, en gélules ou en comprimés, pour la récupération et le sommeil. Stock à jour, livraison 24–72h.",
+  "metaDescription": "ZMA en Tunisie : zinc, magnésium et vitamine B6, le complexe à prendre le soir, en gélules ou comprimés. Dès {prixMin} DT, {nbEnStock} en stock, livraison 24–72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>ZMA</strong> (Zinc, Magnésium, Vitamine B6) est le complément nocturne par excellence pour les sportifs. Il améliore la qualité du sommeil, augmente naturellement la testostérone et accélère la récupération. Sur <strong>Protein.tn</strong>, découvrez notre ZMA en Tunisie : Optimum Nutrition, BioTech USA, Scitec.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix du ZMA en Tunisie :</strong> à partir de {prixMin} DT ({nbEnStock} en stock), livraison en 24–72h avec paiement à la livraison.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le <strong>ZMA</strong> (Zinc, Magnésium, Vitamine B6) est le complément nocturne par excellence pour les sportifs. Le zinc contribue au maintien d'un taux normal de testostérone dans le sang, le magnésium à la réduction de la fatigue et au fonctionnement normal des muscles, et la vitamine B6 au fonctionnement normal du système nerveux. Sur <strong>Protein.tn</strong>, découvrez notre ZMA en Tunisie : Optimum Nutrition, BioTech USA, Scitec.</p>",
   "howToChooseTitle": "Comment choisir son ZMA en Tunisie ?",
-  "howToChooseBody": "<ul><li><strong>Composition</strong> : zinc 30 mg + magnésium 450 mg + B6 10 mg par dose.</li><li><strong>Timing</strong> : 30 min avant le coucher, à jeun.</li><li><strong>Effets</strong> : sommeil profond, récupération, testostérone.</li><li><strong>Marques</strong> : Optimum Nutrition, BioTech USA — disponibles.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
+  "howToChooseBody": "<ul><li><strong>Composition</strong> : zinc 30 mg + magnésium 450 mg + B6 10 mg par dose.</li><li><strong>Timing</strong> : 30 min avant le coucher, à jeun.</li><li><strong>Rôles</strong> : taux normal de testostérone (zinc), réduction de la fatigue (magnésium, B6), fonctionnement normal des muscles (magnésium).</li><li><strong>Marques</strong> : Optimum Nutrition, BioTech USA — disponibles.</li><li><strong>Livraison</strong> : 24-72h partout en Tunisie.</li></ul>",
   "faqs": [
     {
       "question": "Où acheter du ZMA en Tunisie ?",
@@ -14,6 +14,22 @@
     {
       "question": "Quand prendre le ZMA ?",
       "answer": "30 minutes avant le coucher, à jeun (ne pas prendre avec du calcium ou des produits laitiers)."
+    },
+    {
+      "question": "Quel est le prix du ZMA en Tunisie ?",
+      "answer": "Sur Protein.tn, le ZMA en stock coûte à partir de {prixMin} DT ({nbEnStock} en stock). Pour comparer deux boîtes, rapportez le prix au nombre de jours couverts à la dose de l’étiquette, souvent deux à trois gélules le soir, et vérifiez les quantités de zinc, de magnésium et de vitamine B6 apportées par dose."
+    },
+    {
+      "question": "Quels sont les bienfaits du ZMA ?",
+      "answer": "Le ZMA n’a pas d’allégation propre : ses bienfaits autorisés sont ceux de ses nutriments. Le zinc contribue au maintien d’une testostéronémie normale et au fonctionnement normal du système immunitaire ; le magnésium et la vitamine B6 contribuent à réduire la fatigue. Sans carence, il n’augmente pas la testostérone au-delà de la normale."
+    },
+    {
+      "question": "Le ZMA convient-il aux femmes ?",
+      "answer": "Oui, le ZMA s’adresse aux adultes des deux sexes ; beaucoup de fabricants prévoient une dose réduite pour les femmes, souvent deux gélules au lieu de trois. Pendant la grossesse ou l’allaitement, demandez l’avis de votre médecin, car les compléments prescrits à cette période apportent souvent déjà du zinc ou du magnésium."
+    },
+    {
+      "question": "ZMA ou magnésium seul : que choisir ?",
+      "answer": "Le ZMA apporte zinc, magnésium et vitamine B6 en une prise ; un magnésium seul suffit si votre alimentation couvre déjà le zinc. Additionnez les doses si vous prenez aussi une multivitamine, où le zinc est fréquent : l’EFSA fixe à 25 mg par jour l’apport maximal de zinc, alimentation comprise."
     }
   ],
   "relatedCategorySlugs": [

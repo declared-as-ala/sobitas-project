@@ -1,9 +1,9 @@
 {
   "h1": "Antioxydants en Tunisie : coenzyme Q10, resvératrol et thé vert",
   "metaTitle": "Antioxydants Tunisie : CoQ10, resvératrol & thé vert | Protein.tn",
-  "metaDescription": "Antioxydants en Tunisie : coenzyme Q10, resvératrol, extraits de thé vert et de pépins de raisin. Stock à jour, livraison 24–72h partout en Tunisie.",
+  "metaDescription": "Antioxydants en Tunisie : curcumine, NAC, coenzyme Q10, resvératrol et thé vert, en gélules. Dès {prixMin} DT, {nbEnStock} en stock, livraison 24–72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
-  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Découvrez notre gamme complète d'<strong>antioxydants en Tunisie</strong> sur <strong>Protein.tn</strong>. Les antioxydants sont indispensables pour lutter contre le stress oxydatif, protéger les cellules contre les radicaux libres, améliorer la récupération musculaire et ralentir le vieillissement cellulaire. Nos compléments sont 100% authentiques et importés légalement.</p>",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-ink-2 leading-relaxed\"><strong>Prix des antioxydants en Tunisie :</strong> de {prixMin} à {prixMax} DT pour les {nbEnStock} références en stock, livrées en 24–72h avec paiement à la livraison.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Découvrez notre gamme complète d'<strong>antioxydants en Tunisie</strong> sur <strong>Protein.tn</strong>. Les antioxydants sont indispensables pour lutter contre le stress oxydatif, protéger les cellules contre les radicaux libres, améliorer la récupération musculaire et ralentir le vieillissement cellulaire. Nos compléments sont 100% authentiques et importés légalement.</p>",
   "howToChooseTitle": "Comment choisir ses antioxydants en Tunisie ?",
   "howToChooseBody": "<ul><li><strong>Pour la récupération sportive</strong> : Optez pour des associations de <strong>Vitamine C</strong> et <strong>Vitamine E</strong>, qui protègent les tissus musculaires après des séances intenses.</li><li><strong>Pour la vitalité générale</strong> : Choisissez le <strong>Sélénium</strong> ou le <strong>Zinc</strong>, des oligo-éléments essentiels pour le système immunitaire.</li><li><strong>Pour le soutien cardiovasculaire</strong> : La <strong>Coenzyme Q10 (CoQ10)</strong> est idéale pour soutenir l'énergie cellulaire cardiaque.</li><li><strong>Extraits de plantes</strong> : Le Thé Vert et le Resvératrol offrent une protection antioxydante naturelle et puissante.</li></ul>",
   "faqs": [
@@ -14,6 +14,22 @@
     {
       "question": "Quel est le meilleur moment pour prendre des antioxydants ?",
       "answer": "Il est généralement recommandé de prendre vos antioxydants le matin au cours du petit-déjeuner pour une meilleure absorption (surtout pour les vitamines liposolubles comme la vitamine E et la CoQ10)."
+    },
+    {
+      "question": "Quel est le prix des antioxydants en Tunisie ?",
+      "answer": "Sur Protein.tn, les antioxydants en stock coûtent de {prixMin} à {prixMax} DT selon l'actif et le format ({nbEnStock} références en stock). Pour comparer, divisez le prix du flacon par le nombre de doses journalières indiquées sur l'étiquette, puis vérifiez la quantité d'actif réellement apportée par dose. Le prix et le stock à jour sont affichés sur chaque fiche."
+    },
+    {
+      "question": "Quel est le meilleur antioxydant en complément alimentaire ?",
+      "answer": "Il n'existe pas de meilleur antioxydant universel. Dans l'Union européenne, l'allégation « contribue à protéger les cellules contre le stress oxydatif » n'est autorisée que pour certains nutriments : vitamines C et E, zinc, sélénium, cuivre, manganèse et riboflavine. Pour la curcumine, la NAC ou la coenzyme Q10, comparez la dose et la standardisation affichées."
+    },
+    {
+      "question": "C'est quoi un antioxydant ?",
+      "answer": "Un antioxydant est une substance qui limite l'oxydation, une réaction chimique qui produit des radicaux libres. L'alimentation en apporte beaucoup : fruits, légumes, thé, huile d'olive, épices. Les compléments concentrent un actif précis, par exemple la curcumine du curcuma ou la N-acétylcystéine (NAC), à prendre à la dose indiquée sur l'étiquette."
+    },
+    {
+      "question": "Pourquoi associer la curcumine au poivre noir ?",
+      "answer": "La curcumine seule est mal absorbée par l'intestin. La pipérine, extraite du poivre noir, est souvent ajoutée aux formules pour améliorer son absorption ; certaines marques utilisent plutôt des formes liposomales ou micellaires. Vérifiez la teneur en curcuminoïdes par dose, et demandez l'avis d'un médecin si vous prenez un anticoagulant ou un autre traitement au long cours."
     }
   ],
   "relatedCategorySlugs": [
