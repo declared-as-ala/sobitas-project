@@ -301,7 +301,10 @@ check('article-required-fields', 'BlogPosting', () =>
 
 check('author-is-organization', 'BlogPosting', () => {
   // THE bug this file was written for. "Protein.tn" is the company, not a person.
-  assert.equal(article.author['@type'], 'Organization', `author typed ${article.author['@type']} for the brand's own name`);
+  // A type SET is fine (the author node mirrors the layout's [Organization, OnlineStore] so the one
+  // @id is never declared with two different type sets) — what must never happen is Person.
+  const authorTypes = [].concat(article.author['@type']);
+  assert.ok(authorTypes.includes('Organization') && !authorTypes.includes('Person'), `author typed ${article.author['@type']} for the brand's own name`);
   assert.equal(article.author['@id'], `${base}/#organization`);
   return true;
 });

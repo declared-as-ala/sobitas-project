@@ -1245,6 +1245,8 @@ export function buildSiteNavigationSchema(baseUrl: string): object {
     itemListElement: links.map((l, index) => ({
       '@type': 'ListItem',
       position: index + 1,
+      name: l.name,
+      url: `${base}${l.path}`,
       item: { '@type': 'SiteNavigationElement', name: l.name, url: `${base}${l.path}` },
     })),
   };
@@ -1535,10 +1537,13 @@ export function buildArticleSchema(article: {
   const author = rawAuthor && !isSiteBrandName(rawAuthor)
     ? { '@type': 'Person', name: rawAuthor }
     : {
-        '@type': 'Organization',
+        // Same type set, name, url and logo as the layout's #organization node: one @id declared
+        // twice with different types reads as two contradicting entities (audit 28/09/2026).
+        '@type': ['Organization', 'OnlineStore'],
         name: SITE_BRAND_NAME,
         '@id': `${base}/#organization`,
         url: base,
+        logo: { '@type': 'ImageObject', url: `${base}/logo.png` },
       };
   return {
     '@context': 'https://schema.org',
@@ -1568,7 +1573,7 @@ export function buildArticleSchema(article: {
        said `${base}/icon.png` — the 512×512 app icon, which the LocalBusiness node uses as its
        `image`, not as its logo. One entity cannot have two logos; the graph now states the one
        the rest of the site already stated. */
-    publisher: { '@type': 'Organization', '@id': `${base}/#organization`, name: SITE_BRAND_NAME, logo: { '@type': 'ImageObject', url: `${base}/logo.png` } },
+    publisher: { '@type': ['Organization', 'OnlineStore'], '@id': `${base}/#organization`, name: SITE_BRAND_NAME, url: base, logo: { '@type': 'ImageObject', url: `${base}/logo.png` } },
     // Same reasoning as the listing pages: the article belongs to the WebSite node that is
     // already on the page, rather than to a second, anonymous one.
     isPartOf: { '@id': `${base}/#website` },
