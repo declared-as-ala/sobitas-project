@@ -6,6 +6,7 @@ import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { ApiError } from '@/services/http';
 import { buildCanonicalUrl } from '@/util/canonical';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
+import { productRobots } from '@/util/productIndexability';
 import { buildProductCanonicalUrl, buildProductUrlPath, getProductBreadcrumbs, getProductPrimarySubCategory } from '@/util/productUrl';
 import {
   buildProductJsonLd,
@@ -138,10 +139,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
         title: { absolute: title },
         description,
         keywords: productKeywords(product),
-        robots: {
-          index: (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined,
-          follow: (product.publier as any) === 1 || (product.publier as any) === true || product.publier === undefined,
-        },
+        robots: productRobots(product),
         alternates: {
           canonical: canonicalUrl,
           languages: {

@@ -47,6 +47,12 @@ export interface BlogSeoEntry {
   /** Optional search snippet aligned with the refreshed article. */
   metaDescription?: string;
   /**
+   * Optional trusted editorial body used to replace legacy CMS copy that targets the same
+   * transactional query as a shop category. Keep this informational, evergreen and link-free:
+   * the single commercial route is rendered separately by `openingLinkHtml`.
+   */
+  bodyOverrideHtml?: string;
+  /**
    * Contextual link paragraph APPENDED at the end of the article body; trusted editorial HTML.
    * No entry uses it since 23/09/2026 — the first anchor to a URL is the one that is weighed, so
    * a pillar link belongs in `openingLinkHtml`. Kept because blog/[slug]/page.tsx still renders
@@ -54,7 +60,11 @@ export interface BlogSeoEntry {
    * Never set both on one entry: that ships two links to the same URL out of one article.
    */
   bodyLinkHtml?: string;
-  /** Commercial pillar paragraph at the opening of the body, before product recommendations. */
+  /**
+   * Commercial pillar copy rendered as the article's single structured shop bridge, before the
+   * body and product recommendations. Kept as trusted HTML for backwards-compatible editorial
+   * storage; the renderer extracts its one href, anchor and surrounding context.
+   */
   openingLinkHtml?: string;
   /** ISO date for a substantive editorial refresh reflected in Article schema. */
   dateModified?: string;
@@ -70,6 +80,61 @@ export interface BlogSeoEntry {
 
 /** Slug (from URL) → SEO config. Use normalized slug (lowercase, no accents). */
 export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
+  'les-avantages-de-la-whey-proteine-pour-les-athletes-tunisiens-guide-complet': {
+    headline: 'Whey et sportifs : bénéfices, limites et critères de choix',
+    metaDescription:
+      'Comprendre le rôle de la whey chez le sportif, ses limites et les critères utiles pour comparer les formats sans confondre guide et catalogue.',
+    openingLinkHtml:
+      '<p>Pour passer du guide aux références disponibles, consultez <a href="/whey-proteine">le rayon whey et ses formats actuels</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'eaa-vs-bcaa-le-match-nul': {
+    headline: 'EAA ou BCAA : quelles différences selon votre objectif ?',
+    metaDescription:
+      'EAA et BCAA ne couvrent pas exactement le même besoin. Comparez leur composition, leur usage et les situations où un apport alimentaire suffit.',
+    openingLinkHtml:
+      '<p>Pour comparer les familles sans favoriser un produit avant l’autre, parcourez <a href="/acides-amines">le rayon complet des acides aminés</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'bcaa-ou-proteines-quel-complement-choisir-pour-vos-objectifs': {
+    headline: 'BCAA ou protéines : comprendre leurs rôles avant de choisir',
+    metaDescription:
+      'BCAA et protéines répondent à des usages différents. Comparez leur composition et leur place dans une alimentation adaptée à votre objectif.',
+    openingLinkHtml:
+      '<p>Si votre choix se porte sur cette famille, vérifiez <a href="/bcaa">les BCAA actuellement proposés</a> et leurs formats.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-de-musculation-maison-le-guide-ultime-pour-equiper-votre-espace-d-entrainement-a-domicile': {
+    headline: 'Matériel de musculation à la maison : organiser un espace utile',
+    metaDescription:
+      'Priorisez le matériel de musculation selon votre espace, vos exercices et votre progression, avant de comparer les équipements disponibles.',
+    openingLinkHtml:
+      '<p>Pour confronter ce guide au catalogue, voyez <a href="/materiel-de-musculation">les machines et équipements de musculation disponibles</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-salle-de-sport-decouvrez-les-meilleurs-equipements-et-leurs-prix-en-tunisie': {
+    headline: 'Matériel de salle de sport : définir ses besoins avant de comparer',
+    metaDescription:
+      'Bancs, machines, barres et charges : une méthode simple pour choisir du matériel adapté à la place disponible et au type d’entraînement.',
+    openingLinkHtml:
+      '<p>Quand vos besoins sont clairs, comparez <a href="/materiel-de-musculation">le matériel de musculation du catalogue</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
   'creatine-a-quoi-ca-sert-et-pourquoi-en-prendre': {
     headline: "Créatine : à quoi ça sert et pourquoi en prendre ?",
     openingLinkHtml: "<p>Pour comparer les produits, les formats et les prix actuels, vous pouvez <a href=\"/creatine\">voir nos créatines disponibles en Tunisie</a>.</p>",
@@ -111,8 +176,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
      * the only page on the site that can sell the product, sits at 54. That is the cleanest
      * commercial-intent inversion in the SemRush TN export of 08/09/2026.
      *
-     * So the pillar link opens the body — openingLinkHtml is PREPENDED to the article body in
-     * blog/[slug]/page.tsx, it is NOT the "Lire aussi" footer block — and its anchor is now the
+     * So the pillar link opens the article in its structured commerce bridge, before the body and
+     * product recommendations; it is NOT the "Lire aussi" footer block — and its anchor is now the
      * EXACT query rather than the paraphrase "créatine monohydrate en Tunisie" it carried before.
      * Google weighs the first anchor to a URL on a page; on this page that is this one.
      */
@@ -169,9 +234,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
   },
   'equipements-cardio-tunisie': {
+    headline: 'Équipement cardio : choisir selon l’espace et l’usage',
     metaDescription:
-      'Équipements cardio en Tunisie : tapis, vélos et rameurs comparés selon l’espace, l’objectif et l’usage réel, avec les critères à vérifier avant d’acheter.',
-    dateModified: '2026-09-08',
+      'Tapis, vélos et rameurs ne répondent pas aux mêmes contraintes. Comparez encombrement, usage et progression avant de choisir.',
+    openingLinkHtml:
+      '<p>Pour voir les références réellement proposées, consultez <a href="/cardio-fitness">les appareils cardio disponibles</a>.</p>',
+    dateModified: '2026-09-27',
     lang: 'fr',
     faqs: [],
     internalLinks: [
@@ -306,10 +374,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   'mass-gainer-prix-tunisie-guide-complet-pour-2025': {
     openingLinkHtml:
       '<p>Les gainers disponibles, leurs formats et leurs prix du jour sont sur notre page <a href="/mass-gainers">mass gainer prix Tunisie</a>.</p>',
-    headline: 'Mass gainer : guide d’achat 2026, calories, glucides et prix',
+    headline: 'Comparer un gainer : calories, glucides et coût par portion',
     metaDescription:
-      'Prix des mass gainers en Tunisie, formats, calories et marques : comparez les critères utiles pour choisir selon votre objectif et votre budget en 2026.',
-    dateModified: '2026-09-23',
+      'Une méthode pour comparer les gainers selon les calories, les glucides, la portion, le format et l’usage réel, sans confondre guide et catalogue.',
+    dateModified: '2026-09-27',
     lang: 'fr',
     faqs: [
       {
@@ -634,8 +702,8 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   /*
    * 22/09/2026 — TWO CHANGES, both structural.
    *
-   * 1. The body link became the opening link. openingLinkHtml is PREPENDED to the body and
-   *    bodyLinkHtml is APPENDED (blog/[slug]/page.tsx, lines 284-300), so an entry carrying
+   * 1. The body link became the opening link. openingLinkHtml renders in the commerce bridge and
+   *    bodyLinkHtml is appended to the prose, so an entry carrying
    *    both renders two links to the same URL out of one article. The first anchor is the one
    *    Google weighs, so only that one is kept.
    *
@@ -665,9 +733,28 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * and states no number, no brand and no format the catalogue has to keep in stock.
    */
   'prix-de-la-creatine-en-tunisie': {
+    headline: 'Comparer le prix d’une créatine : coût au gramme et format utile',
+    metaDescription:
+      'Une méthode durable pour comparer deux créatines : coût au gramme, poids net, disponibilité et quantité réellement utile, sans prix figé.',
+    bodyOverrideHtml: `
+      <p>Le prix affiché sur un pot ne permet pas, à lui seul, de savoir quelle créatine est la plus économique. Deux formats peuvent coûter presque la même chose tout en contenant des quantités très différentes. La comparaison utile commence donc par le poids net et se termine par le coût au gramme.</p>
+      <h2>Comparer sans se fier au prix affiché</h2>
+      <p>Pour obtenir un repère comparable, divisez le prix du pot par son poids net en grammes. Ce calcul neutralise l’effet du format et permet de rapprocher deux références sans favoriser automatiquement le plus gros contenant.</p>
+      <p>Le résultat doit ensuite être lu avec la disponibilité réelle. Un format momentanément indisponible, une variante qui ne correspond pas à votre usage ou un pot trop grand pour être consommé correctement n’est pas forcément le choix le plus pertinent.</p>
+      <h2>Les quatre vérifications utiles</h2>
+      <ol>
+        <li><strong>Le poids net :</strong> comparez la quantité de poudre, pas la taille visuelle du pot.</li>
+        <li><strong>Le coût au gramme :</strong> utilisez le même calcul pour chaque référence.</li>
+        <li><strong>La disponibilité :</strong> distinguez les produits en stock de ceux proposés sur commande.</li>
+        <li><strong>La traçabilité :</strong> contrôlez le scellé, le numéro de lot et la lisibilité de l’étiquette.</li>
+      </ol>
+      <h2>Le grand format n’est pas toujours le bon format</h2>
+      <p>Un contenant plus grand peut réduire le coût unitaire, mais seulement s’il répond à votre besoin et s’il est conservé dans de bonnes conditions. Pour un premier achat, un format plus mesuré peut être plus simple à tester. Pour un usage régulier, le coût au gramme devient souvent plus important.</p>
+      <p>Les tarifs et les stocks évoluent. Ce guide donne donc une méthode de comparaison durable, tandis que la sélection commerciale séparée affiche les informations à jour pour chaque produit.</p>
+    `,
     openingLinkHtml:
       '<p>Pour appliquer ces critères aux produits réellement en rayon, vous pouvez <a href="/creatine">comparer nos créatines et leurs prix du jour</a>.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Comment comparer le prix d'une créatine en Tunisie ?", answer: "Ne comparez pas le prix affiché mais le prix au gramme : divisez le prix du pot par son poids net en grammes. Deux pots vendus au même prix ne contiennent pas forcément la même quantité, et un format plus grand fait presque toujours baisser le coût au gramme. Les prix à jour de chaque référence sont affichés sur la page créatine de Protein.tn." },
       { question: "Le grand format est-il toujours le plus intéressant ?", answer: "Souvent, mais pas systématiquement : seul le prix au gramme le dit, et il faut aussi que le pot soit réellement disponible et que vous le terminiez avant sa date de péremption. Un grand format en rupture ou entamé trop longtemps ne fait économiser rien du tout. Le format et l'état du stock sont indiqués référence par référence sur la page créatine de Protein.tn." },
@@ -679,7 +766,7 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   /*
-   * 23/09/2026 — bodyLinkHtml → openingLinkHtml. The link was APPENDED to the body, i.e. after
+   * 23/09/2026 — bodyLinkHtml → openingLinkHtml. The link used to be appended to the body, after
    * an article that is entirely about where to buy; the first anchor on the page went to
    * whichever category the in-content linker happened to match first. Same correction, and for
    * the same reason, as the one recorded on prix-de-la-creatine-en-tunisie above: the first
@@ -691,8 +778,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * 23/09/2026), which is sixteen years. No answer here states a price.
    */
   'ou-acheter-de-la-creatine-en-tunisie': {
+    headline: 'Reconnaître une créatine authentique avant l’achat',
+    metaDescription:
+      'Sceau, numéro de lot, étiquette et traçabilité : les vérifications utiles avant d’acheter une créatine, quel que soit le vendeur.',
     openingLinkHtml: '<p>Avant de comparer les vendeurs, voici la <a href="/creatine">sélection de créatines disponibles chez Protein.tn</a>, avec leurs formats et leur disponibilité du jour.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Où acheter de la créatine fiable en Tunisie ?", answer: "Privilegiez les distributeurs officiels qui importent directement avec numéros de lot traçables. Protein.tn est une référence en Tunisie avec plus de 15 ans d'expérience, des produits 100 % originaux et une livraison dans tous les gouvernorats." },
       { question: "Comment éviter les contrefaçons de créatine en Tunisie ?", answer: "Achetez uniquement auprès de sites ou magasins agréés. Vérifiez la présence d'un sceau de sécurité, d'un numéro de lot et d'une date de péremption. Méfiez-vous des prix anormalement bas et des emballages sans mention d'importateur officiel." },
@@ -716,8 +806,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * this file may read the same.
    */
   'creatine-tunisie': {
+    headline: 'Créatine : bénéfices, dosage et précautions d’usage',
+    metaDescription:
+      'Comprendre le rôle de la créatine dans les efforts courts, les repères de prise courants et les précautions utiles avant de choisir un produit.',
     openingLinkHtml: '<p>Les formats, les marques et les prix du jour sont réunis sur notre page <a href="/creatine">toutes nos créatines, format par format</a>.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Quels sont les bienfaits prouvés de la créatine ?", answer: "La créatine augmente les réserves de phosphocréatine dans les muscles, ce qui améliore la production d'ATP lors des efforts courts et intenses. Résultat : plus de force, plus de répétitions, une meilleure récupération inter-séries et une volumisation cellulaire. Ces effets sont validés par des centaines d'études." },
       { question: "Quelle est la dose de créatine recommandée ?", answer: "3 à 5 g par jour en prise continue est la dose standard recommandée. La régularité prime sur le timing : peu importe si vous la prenez avant ou après l'entraînement, l'essentiel est de ne pas oublier les jours de repos." },
@@ -732,8 +825,11 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   // the body. 0 clicks / 95 impressions @57.94 (28 d), so there is nothing to protect here and
   // nothing to lose by moving it. Every creatine entry in this file now carries openingLinkHtml.
   'creatine-tunisie-tout-ce-que-vous-devez-savoir': {
+    headline: 'Créatine : comprendre son rôle, son dosage et ses limites',
+    metaDescription:
+      'Un guide pratique sur le fonctionnement de la créatine, son usage régulier, ses limites et les informations à vérifier sur une étiquette.',
     openingLinkHtml: '<p>Les produits évoqués dans ce guide sont réunis dans notre <a href="/creatine">catalogue de créatines en Tunisie</a>.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [],
     internalLinks: [],
   },
@@ -781,9 +877,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * prices removed on 22/09; no answer in this file states a price today.
    */
   'meilleure-creatine-2026-notre-guide-pour-bien-choisir': {
+    headline: 'Choisir une créatine : pureté, format et lecture de l’étiquette',
+    metaDescription:
+      'Apprenez à comparer une créatine selon sa composition, sa traçabilité, son format et les informations réellement utiles sur l’étiquette.',
     openingLinkHtml:
       '<p>Les critères ci-dessous s’appliquent aux produits en rayon : <a href="/creatine">voir les créatines disponibles</a> chez Protein.tn.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Quelle est la meilleure créatine en 2026 ?", answer: "La créatine monohydrate reste la référence en 2026 : la mieux documentée, la plus abordable et la plus efficace. La créatine micronisée est du monohydrate à particules plus fines, plus facile à dissoudre et souvent mieux tolérée. Les autres formes (HCL, tamponnée, chélatée) n'ont pas le même niveau de preuves." },
       { question: "Qu'est-ce que le label Creapure® change sur un pot de créatine ?", answer: "Creapure® est une marque de créatine monohydrate produite sur un site unique en Allemagne, avec des contrôles de pureté publiés. Le label atteste donc de la traçabilité et du procédé, pas d'une efficacité supérieure : la molécule reste la même. Vérifiez sur l'étiquette du produit qui vous intéresse s'il porte ce label, car toutes les créatines n'en disposent pas." },
@@ -826,9 +925,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * The five replacement brands were re-read the same day and all five are in stock.
    */
   'les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis': {
+    headline: 'Comparer les marques de créatine sans se fier au marketing',
+    metaDescription:
+      'Composition, numéro de lot, étiquette et traçabilité : une méthode pour comparer les marques de créatine sans dépendre des promesses publicitaires.',
     openingLinkHtml:
       '<p>Toutes les marques comparées ici sont listées avec leur prix du jour sur notre page <a href="/creatine">créatine en Tunisie</a>.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Quelle est la meilleure marque de créatine disponible en Tunisie ?", answer: "Il n'y a pas de marque supérieure en soi : la créatine monohydrate est la même molécule d'un fabricant à l'autre. Optimum Nutrition, Biotech USA, Ostrovit, Quamtrax et Kevin Levrone sont parmi les marques référencées sur Protein.tn ; départagez-les sur le format, la forme (poudre ou gélules), la lisibilité de l'étiquette et le prix au gramme." },
       { question: "Où comparer les marques de créatine en Tunisie ?", answer: "Protein.tn regroupe les marques référencées avec des descriptions détaillées, les prix en dinars et la disponibilité en temps réel." },
@@ -885,9 +987,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   },
 
   'meilleur-creatine-pour-prise-de-masse': {
+    headline: 'Créatine et prise de masse : ce qu’elle peut réellement apporter',
+    metaDescription:
+      'La créatine soutient surtout la performance répétée. Voyez comment elle s’intègre à une prise de masse fondée sur l’entraînement et l’alimentation.',
     openingLinkHtml:
       '<p>Pour choisir un produit, <a href="/creatine">nos créatines monohydrate en Tunisie</a> sont listées avec leurs formats et leurs prix.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "Quelle créatine prendre pour la prise de masse ?", answer: "La créatine monohydrate est la meilleure option pour la prise de masse : elle augmente la force pour des séances plus efficaces, favorise la volumisation musculaire et est abordable. Associez-la à une whey protein de qualité et un surplus calorique pour des résultats optimaux." },
       { question: "Créatine et whey protein : peut-on les combiner ?", answer: "Oui, c'est même recommandé. La créatine améliore la force pendant l'entraînement, la whey optimise la récupération et la synthèse protéique après. Prenez 3–5 g de créatine n'importe quand dans la journée et votre shaker de whey dans l'heure post-entraînement." },
@@ -997,9 +1102,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
    * les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis, which is still about brands.
    */
   'meilleures-marques-de-creatine-en-tunisie': {
+    headline: 'Marques de créatine : vérifier la traçabilité et la composition',
+    metaDescription:
+      'Les critères concrets pour évaluer une marque de créatine : composition, lot, scellé, étiquetage et cohérence des informations.',
     openingLinkHtml:
       '<p>Les produits évoqués ici sont regroupés dans <a href="/creatine">notre rayon créatine en Tunisie</a>, avec leurs formats et leurs prix.</p>',
-    dateModified: '2026-09-22',
+    dateModified: '2026-09-27',
     faqs: [
       { question: "La créatine fait-elle gonfler ou prendre du poids chez la femme ?", answer: "La créatine retient de l'eau à l'intérieur du muscle, pas sous la peau. La variation observée sur la balance les premières semaines vient de cette eau intramusculaire, et elle n'est pas de la masse grasse." },
       { question: "Quelle dose de créatine pour une femme ?", answer: "La dose usuelle est la même que chez l'homme : 3 à 5 g de créatine monohydrate par jour, tous les jours, entraînement ou non. La phase de charge n'est pas nécessaire." },
@@ -1124,11 +1232,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   // pillars only where the article's subject genuinely matches them.
 
   'ما هو أفضل كرياتين في تونس؟': {
+    headline: 'كيف تختار نوع الكرياتين؟ مقارنة الشكل والنقاوة والاستعمال',
     openingLinkHtml:
       '<p>الأنواع المتوفرة والأحجام والأسعار الحالية على صفحة <a href="/creatine">كرياتين في تونس</a>.</p>',
     metaDescription:
       'مقارنة أنواع الكرياتين المتوفرة في تونس: مونوهيدرات، HCL، ميكرونيزد وماغنا باور، ولماذا يبقى المونوهيدرات الخيار الأول مع جرعة 3 إلى 5 غرامات في اليوم.',
-    dateModified: '2026-09-08',
+    dateModified: '2026-09-27',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن أفضل كرياتين في تونس',
     linksHeading: 'قارن الكرياتين والبروتين قبل الشراء',
@@ -1187,11 +1296,12 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
   },
   'ما هو الكرياتين؟': {
+    headline: 'ما هو الكرياتين؟ كيف يعمل داخل العضلات',
     metaDescription:
       'الكرياتين مركّب ينتجه الجسم ويُخزَّن بنحو 95% في العضلات لإعادة تصنيع الطاقة ATP. تعرّف على دوره في القوة والاستشفاء وكيف تختار كرياتين موثوقًا في تونس.',
     openingLinkHtml:
       '<p>بعد فهم آلية عمله، يمكنك الاطلاع على <a href="/creatine">صفحة الكرياتين في المتجر</a> لمعرفة الأنواع والأحجام المتوفرة.</p>',
-    dateModified: '2026-09-23',
+    dateModified: '2026-09-27',
     lang: 'ar',
     faqHeading: 'أسئلة شائعة عن الكرياتين',
     linksHeading: 'اقرأ أيضًا قبل اختيار مكملك',
@@ -1866,6 +1976,297 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
     ],
   },
 };
+
+/**
+ * Effective bodies for legacy articles whose CMS copy still behaves like a category page.
+ *
+ * The URLs stay indexed because several already earn impressions or clicks. What changes is their
+ * job: each body answers one durable informational question, contains no fixed catalogue price,
+ * and leaves the single commercial route to `openingLinkHtml`. This also prevents a CMS rollback
+ * from restoring obsolete product links or promotional claims to the rendered page.
+ */
+Object.assign(BLOG_SEO_CONFIG, {
+  'omega-3-tunisie': {
+    headline: 'Oméga-3 : comprendre les rôles de l’EPA, du DHA et de l’ALA',
+    metaDescription:
+      'EPA, DHA et ALA ne suivent pas les mêmes voies dans l’organisme. Comprenez leurs sources, leur conversion et les informations utiles sur une étiquette.',
+    openingLinkHtml:
+      '<p>Pour passer des nutriments aux références concrètes, vous pouvez <a href="/omega-3">comparer les oméga 3 EPA/DHA du catalogue</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'omega-3-tunisie-bienfaits-sources-et-ou-les-acheter-au-meilleur-prix': {
+    headline: 'Oméga-3 : sources alimentaires et lecture d’une étiquette',
+    metaDescription:
+      'Poissons gras, graines, huiles et compléments : distinguez les sources d’oméga-3 et apprenez à lire la quantité d’EPA et de DHA par portion.',
+    openingLinkHtml:
+      '<p>Les quantités par portion et les formats sont indiqués sur <a href="/omega-3">les oméga 3 actuellement disponibles</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'la-creatine-fait-elle-gonfler-ou-prendre-du-poids-chez-la-femme': {
+    headline: 'Créatine chez la femme : eau intramusculaire ou prise de graisse ?',
+    metaDescription:
+      'Pourquoi la créatine peut faire varier la balance sans augmenter la masse grasse : eau intramusculaire, entraînement et repères de suivi chez la femme.',
+    openingLinkHtml:
+      '<p>Les formes évoquées dans ce guide sont regroupées avec leur étiquette sur <a href="/creatine">les créatines disponibles par forme</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'prix-proteine-tunisie-guide-complet-pour-trouver-les-meilleures-offres-en-2025': {
+    headline: 'Protéines en poudre : comparer le coût d’une portion utile',
+    metaDescription:
+      'Une méthode durable pour comparer deux poudres protéinées : coût par portion, concentration, nombre de doses, composition et tolérance.',
+    openingLinkHtml:
+      '<p>Pour appliquer la méthode aux produits en rayon, vous pouvez <a href="/proteines">comparer les protéines en poudre disponibles</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'creatine-tunisie-le-guide-complet-pour-choisir-le-meilleur-complement-et-optimiser-vos-resultats': {
+    headline: 'Créatine HCL ou monohydrate : quelles différences utiles ?',
+    metaDescription:
+      'Solubilité, quantité par portion, niveau de preuve et tolérance : comparez la créatine HCL et la monohydrate sans promesse marketing.',
+    openingLinkHtml:
+      '<p>Pour vérifier quelles formes sont réellement accessibles, reliez ce guide aux <a href="/creatine">créatines du catalogue</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-de-musculation-tunisie-guide-d-achat-et-les-meilleurs-produits-pour-un-entrainement-efficace': {
+    headline: 'Haltères, banc ou cardio : quel matériel selon votre séance ?',
+    metaDescription:
+      'Choisissez le matériel selon les mouvements, l’espace, la progression et la sécurité plutôt que selon une liste de produits ou un prix figé.',
+    openingLinkHtml:
+      '<p>Les formats et les charges actuellement proposés sont réunis avec <a href="/materiel-de-musculation">les bancs, charges et machines disponibles</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'creatine-tunisie-tout-savoir-sur-ce-complement-indispensable': {
+    headline: 'Créatine et ATP : pourquoi elle aide surtout les efforts courts',
+    metaDescription:
+      'Comprenez le rôle de la phosphocréatine et de l’ATP pendant un effort bref, et pourquoi l’effet dépend du type d’entraînement.',
+    openingLinkHtml:
+      '<p>Pour relier ce mécanisme à un produit précis, voyez <a href="/creatine">les créatines et leur statut de stock</a>.</p>',
+    dateModified: '2026-09-27',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+} satisfies Record<string, BlogSeoEntry>);
+
+const COMMERCIAL_SUPPORT_BODY_OVERRIDES: Record<string, string> = {
+  'omega-3-tunisie': `
+    <p>Les oméga-3 forment une famille d’acides gras. Les trois noms les plus fréquents — EPA, DHA et ALA — ne sont pas interchangeables : ils proviennent de sources différentes et ne sont pas utilisés de la même manière par l’organisme.</p>
+    <h2>EPA et DHA</h2>
+    <p>L’EPA et le DHA sont surtout associés aux poissons gras et aux huiles marines. Sur un complément, la quantité totale d’huile ne correspond pas forcément à la quantité d’EPA et de DHA. Ce sont donc ces deux lignes qu’il faut lire par portion.</p>
+    <h2>ALA</h2>
+    <p>L’ALA se trouve notamment dans certaines graines, noix et huiles végétales. L’organisme peut en convertir une partie en EPA puis en DHA, mais cette conversion reste limitée et variable. Une source végétale riche en ALA ne doit donc pas être présentée comme l’équivalent automatique d’une dose donnée d’EPA et de DHA.</p>
+    <h2>Les informations utiles</h2>
+    <p>Vérifiez la portion, la quantité d’EPA, la quantité de DHA, le nombre de capsules et les conditions de conservation. Si vous suivez un traitement ou présentez une condition médicale, demandez conseil à un professionnel de santé avant toute supplémentation.</p>
+  `,
+  'omega-3-tunisie-bienfaits-sources-et-ou-les-acheter-au-meilleur-prix': `
+    <p>Les oméga-3 peuvent venir de l’alimentation ou d’un complément. Le bon repère n’est pas la promesse placée sur la face avant, mais la source et la quantité détaillée par portion.</p>
+    <h2>Sources alimentaires</h2>
+    <p>Les poissons gras apportent directement de l’EPA et du DHA. Les noix, les graines de lin ou de chia et certaines huiles apportent surtout de l’ALA. Une alimentation variée reste le point de départ avant d’évaluer l’intérêt d’un complément.</p>
+    <h2>Lire un complément</h2>
+    <ol>
+      <li>Repérez la taille de la portion, qui peut comprendre plusieurs capsules.</li>
+      <li>Lisez séparément la quantité d’EPA et celle de DHA.</li>
+      <li>Contrôlez le nombre total de portions et les autres ingrédients.</li>
+      <li>Vérifiez le lot, la date et les consignes de conservation.</li>
+    </ol>
+    <h2>Comparer sur la même base</h2>
+    <p>Deux flacons de taille identique peuvent apporter des quantités très différentes par portion. Ramenez donc les étiquettes à une portion comparable et ne déduisez jamais la concentration à partir du seul nombre de capsules.</p>
+  `,
+  'la-creatine-fait-elle-gonfler-ou-prendre-du-poids-chez-la-femme': `
+    <p>Une variation de poids après le début d’une supplémentation ne signifie pas automatiquement une prise de graisse. La créatine favorise surtout une augmentation de l’eau à l’intérieur du muscle, alors que la masse grasse dépend d’un surplus énergétique prolongé.</p>
+    <h2>Eau intramusculaire et rétention sous-cutanée</h2>
+    <p>L’eau intramusculaire se situe dans les cellules du muscle. Elle ne correspond pas au même phénomène qu’une rétention diffuse sous la peau. La balance seule ne permet donc pas d’identifier la nature d’une variation.</p>
+    <h2>Suivre plusieurs repères</h2>
+    <p>Observez l’évolution sur plusieurs semaines avec des conditions de mesure cohérentes : poids au même moment, tour de taille, performances et confort digestif. Le cycle menstruel, l’hydratation et l’apport en sel peuvent aussi modifier temporairement la balance.</p>
+    <h2>Un choix individuel</h2>
+    <p>Le mécanisme de la créatine ne change pas selon le sexe, mais le contexte de santé compte. En cas de grossesse, d’allaitement, de maladie rénale connue ou de traitement régulier, demandez un avis médical avant utilisation.</p>
+  `,
+  'prix-proteine-tunisie-guide-complet-pour-trouver-les-meilleures-offres-en-2025': `
+    <p>Le prix d’un pot ne suffit pas à comparer deux protéines en poudre. La taille de la dose, la concentration en protéines et le nombre de portions peuvent transformer complètement le coût réel d’une utilisation.</p>
+    <h2>Calculer le coût par portion</h2>
+    <p>Divisez le prix du format par le nombre de portions indiqué, puis vérifiez que les portions comparées apportent une quantité proche de protéines. Une dose plus grande peut faire paraître un produit plus concentré alors qu’elle contient simplement davantage de poudre.</p>
+    <h2>Comparer la concentration</h2>
+    <p>Rapportez la quantité de protéines au poids de la portion. Lisez ensuite la liste des ingrédients, la source de protéines, les glucides et les lipides selon votre objectif et votre tolérance.</p>
+    <h2>Inclure l’usage réel</h2>
+    <p>Le goût, la digestibilité et la facilité de mélange déterminent si le produit sera réellement utilisé. Un grand format n’est économique que s’il convient. Les tarifs changent ; cette méthode reste valable quel que soit le catalogue du moment.</p>
+  `,
+  'creatine-tunisie-le-guide-complet-pour-choisir-le-meilleur-complement-et-optimiser-vos-resultats': `
+    <p>La créatine monohydrate et la créatine HCL sont deux formes différentes par leur liaison chimique et leur présentation. Les promesses commerciales ne doivent toutefois pas remplacer le niveau de preuve ni la lecture de la quantité réellement apportée.</p>
+    <h2>La monohydrate comme référence</h2>
+    <p>La monohydrate est la forme la plus étudiée. Elle sert de point de comparaison pour juger les autres formes, leur coût, leur tolérance et la simplicité de leur étiquette.</p>
+    <h2>Ce que la forme HCL peut changer</h2>
+    <p>La HCL est souvent présentée comme plus soluble et proposée avec des portions plus petites. Cela ne suffit pas à conclure qu’elle produit de meilleurs résultats : il faut comparer la quantité active, la tolérance individuelle et les preuves disponibles.</p>
+    <h2>Une décision pratique</h2>
+    <p>Choisissez une composition lisible, un lot traçable et un format que vous pouvez utiliser régulièrement. Si la monohydrate se mélange bien et est tolérée, une autre forme n’est pas automatiquement nécessaire.</p>
+  `,
+  'materiel-de-musculation-tunisie-guide-d-achat-et-les-meilleurs-produits-pour-un-entrainement-efficace': `
+    <p>Le meilleur matériel dépend de la séance à réaliser, de l’espace disponible et du niveau de pratique. Une liste universelle conduit souvent à acheter plusieurs objets qui couvrent le même mouvement.</p>
+    <h2>Pour les mouvements de base</h2>
+    <p>Des charges ajustables couvrent de nombreux exercices de poussée, de tirage et de jambes. Un banc ajoute des positions, mais il doit rester stable et adapté à la charge prévue.</p>
+    <h2>Pour le cardio</h2>
+    <p>Le choix dépend de l’impact articulaire, de la place, du bruit et de la fréquence d’utilisation. Mesurez l’espace nécessaire autour de l’appareil et vérifiez les contraintes électriques avant de décider.</p>
+    <h2>Pour progresser en sécurité</h2>
+    <p>Contrôlez la charge maximale, les systèmes de verrouillage, les points d’appui et la disponibilité des pièces d’usure. Commencez par l’équipement qui sert chaque semaine ; ajoutez le reste lorsque le programme le justifie.</p>
+  `,
+  'creatine-tunisie-tout-savoir-sur-ce-complement-indispensable': `
+    <p>Lors d’un effort bref et intense, le muscle a besoin d’énergie immédiatement disponible. L’ATP fournit cette énergie, mais ses réserves directes sont limitées. La phosphocréatine contribue à reformer rapidement de l’ATP pendant les premières secondes de l’effort.</p>
+    <h2>Le système phosphocréatine</h2>
+    <p>La créatine stockée dans le muscle peut être phosphorylée puis participer au transfert d’un phosphate vers l’ADP. Ce mécanisme aide surtout lorsque la demande énergétique augmente brutalement.</p>
+    <h2>Les efforts les plus concernés</h2>
+    <p>Les séries lourdes, les sprints et les accélérations répétées sollicitent davantage ce système que les efforts continus de longue durée. L’effet attendu dépend donc du type d’entraînement et de la régularité, pas seulement de la présence d’un complément.</p>
+    <h2>Ce que la créatine ne remplace pas</h2>
+    <p>Elle ne remplace ni un programme progressif, ni le sommeil, ni une alimentation adaptée. Elle peut soutenir la capacité à répéter un effort, mais les résultats restent liés au travail réalisé et au contexte individuel.</p>
+  `,
+  'mass-gainer-prix-tunisie': `
+    <p>Le prix affiché sur un gainer ne dit pas combien coûte réellement une portion utile. Le poids du sachet, la dose recommandée, la quantité de protéines et la part de glucides changent fortement d’une formule à l’autre. Une comparaison sérieuse commence donc par l’étiquette nutritionnelle, pas par la taille du paquet.</p>
+    <h2>Comparer le coût d’une portion</h2>
+    <p>Divisez le prix du format par le nombre de portions indiqué par le fabricant. Recommencez ensuite le calcul avec la quantité que vous comptez réellement utiliser : certaines doses de référence sont très grandes et ne correspondent pas à tous les besoins.</p>
+    <h2>Regarder ce que la portion apporte</h2>
+    <ul>
+      <li><strong>Protéines :</strong> elles servent à compléter l’apport quotidien.</li>
+      <li><strong>Glucides :</strong> ils augmentent facilement l’apport énergétique.</li>
+      <li><strong>Calories :</strong> elles doivent rester cohérentes avec l’objectif de prise de poids.</li>
+      <li><strong>Digestibilité :</strong> une formule mal tolérée ne devient pas intéressante parce que son format est grand.</li>
+    </ul>
+    <h2>Le bon format dépend de l’usage</h2>
+    <p>Pour un premier essai, un format mesuré limite le risque de rester avec un produit qui ne convient pas. Pour une utilisation régulière, le coût par portion et la stabilité de la composition deviennent plus importants. Les prix et la disponibilité évoluent ; la méthode de calcul, elle, reste valable.</p>
+  `,
+  'mass-gainer-prix-tunisie-guide-complet-pour-2025': `
+    <p>Deux gainers de même poids peuvent servir des objectifs très différents. L’un concentre surtout les glucides, l’autre apporte davantage de protéines par dose. Pour choisir rationnellement, il faut relier la composition au surplus calorique recherché.</p>
+    <h2>Partir de son besoin énergétique</h2>
+    <p>Un gainer complète une alimentation lorsque les repas ne suffisent pas à atteindre l’apport énergétique visé. Il ne remplace ni les repas ni un programme d’entraînement. Une dose trop grande peut simplement créer un surplus plus élevé que prévu.</p>
+    <h2>Lire trois lignes de l’étiquette</h2>
+    <ol>
+      <li>Le nombre de calories par portion réellement consommée.</li>
+      <li>La quantité de protéines et son origine.</li>
+      <li>La quantité de glucides, de sucres et la liste des ingrédients.</li>
+    </ol>
+    <h2>Comparer sur la même base</h2>
+    <p>Ramenez chaque référence à une portion identique ou à une quantité fixe de poudre. Cette méthode évite de favoriser artificiellement une formule dont la dose fabricant est deux fois plus grande. Tenez aussi compte du goût, de la tolérance digestive et de la fréquence prévue : le meilleur format est celui qui s’intègre durablement à votre alimentation.</p>
+  `,
+  'quelle-est-la-meilleure-creatine-monohydrate-en-tunisie': `
+    <p>La créatinine mesurée dans le sang est un déchet produit par le métabolisme musculaire. Comme elle sert aussi de marqueur indirect de la fonction rénale, une supplémentation en créatine peut compliquer l’interprétation d’un bilan sans signifier, à elle seule, qu’un rein est endommagé.</p>
+    <h2>Créatine et créatinine ne sont pas la même mesure</h2>
+    <p>La créatine participe au renouvellement rapide de l’énergie dans le muscle. Une partie est transformée en créatinine puis éliminée. Le niveau observé dépend aussi de la masse musculaire, de l’hydratation, de l’activité récente et d’autres facteurs cliniques.</p>
+    <h2>Que signaler avant une prise de sang</h2>
+    <p>Informez le professionnel de santé de toute supplémentation, de la dose habituelle et de la date de la dernière prise. Il pourra interpréter le résultat dans son contexte et, si nécessaire, utiliser d’autres examens plutôt qu’un chiffre isolé.</p>
+    <h2>Quand demander un avis médical</h2>
+    <p>Une maladie rénale connue, une grossesse, un allaitement ou un traitement régulier justifient un avis médical avant de commencer. Ce guide explique un mécanisme général et ne remplace pas une consultation ni l’interprétation personnalisée d’un bilan.</p>
+  `,
+  'creatine-prix-tunisie-guide-complet-des-meilleurs-produits-en-2025': `
+    <p>Comparer deux pots de créatine exige une unité commune. La contenance visuelle, la forme du pot et la dose mise en avant sur la face avant ne suffisent pas : le poids net et la quantité réellement consommée sont les repères utiles.</p>
+    <h2>Calculer un coût comparable</h2>
+    <p>Commencez par diviser le prix du pot par son poids net. Vous obtenez un coût par gramme qui permet de rapprocher des formats différents. Vous pouvez ensuite estimer le nombre de prises selon votre routine, sans supposer que la dose marketing convient à tout le monde.</p>
+    <h2>Ne pas confondre format et qualité</h2>
+    <p>Un grand format peut réduire le coût unitaire, mais il ne prouve ni une meilleure pureté ni une meilleure efficacité. La composition, le numéro de lot, le scellé et la clarté de l’étiquette restent des contrôles séparés.</p>
+    <h2>Intégrer la disponibilité</h2>
+    <p>Un calcul n’est utile que sur une référence réellement accessible. Vérifiez donc le statut du produit au moment de comparer. Cette méthode évite les listes de tarifs figées, rapidement obsolètes, et reste valable quand les stocks ou les formats changent.</p>
+  `,
+  'creatine-prix-tunisie-trouvez-la-meilleure-offre-pour-maximiser-vos-gains': `
+    <p>L’écart entre deux pots de créatine peut venir de facteurs très différents. Les isoler permet de savoir si le supplément de prix correspond à un avantage concret pour l’utilisateur ou seulement à un positionnement de marque.</p>
+    <h2>Le poids net et le conditionnement</h2>
+    <p>Le format influence directement le coût unitaire. Un emballage plus petit peut rester pertinent pour tester la tolérance ou pour une utilisation occasionnelle, tandis qu’un format plus grand convient mieux à une routine déjà établie.</p>
+    <h2>La forme et la facilité d’usage</h2>
+    <p>La micronisation réduit la taille des particules et peut améliorer la dissolution. Les gélules modifient surtout la praticité et le nombre d’unités à prendre. Ces différences concernent l’usage ; elles ne transforment pas la molécule de créatine monohydrate.</p>
+    <h2>La traçabilité et les contrôles</h2>
+    <p>Un étiquetage clair, un numéro de lot lisible, un scellé intact et des informations vérifiables sur le fabricant ont une valeur réelle. Comparez ces éléments séparément du marketing et ramenez toujours le format à une même unité avant de décider.</p>
+  `,
+  'creatine-tunisie-la-meilleure-qualite-a-prix-imbattable-livraison-rapide-and-gratuite-sur-protein-tn': `
+    <p>Les mentions présentes sur un pot de créatine ne décrivent pas toutes la même chose. Certaines concernent la forme physique de la poudre, d’autres la matière première ou la traçabilité. Les comprendre évite d’attribuer à un logo une promesse qu’il ne fait pas.</p>
+    <h2>Monohydrate et micronisée</h2>
+    <p>« Monohydrate » désigne la forme de créatine la plus étudiée. « Micronisée » indique que les particules ont été réduites pour faciliter la dispersion dans l’eau. Une poudre micronisée reste donc une créatine monohydrate ; la différence porte surtout sur le confort d’utilisation.</p>
+    <h2>Ce qu’un label peut attester</h2>
+    <p>Un label de matière première peut apporter des informations sur le site de production, le procédé ou les contrôles appliqués. Il ne dispense pas de vérifier le numéro de lot, la date, la liste des ingrédients et l’intégrité du scellé.</p>
+    <h2>La bonne vérification</h2>
+    <p>Lisez l’étiquette complète et recherchez des informations cohérentes entre le pot, le fabricant et le distributeur. Une allégation vague comme « qualité supérieure » est moins utile qu’une composition simple et une traçabilité clairement documentée.</p>
+  `,
+  'materiel-de-musculation-maison-le-guide-ultime-pour-equiper-votre-espace-d-entrainement-a-domicile': `
+    <p>Un espace d’entraînement réussi ne dépend pas du nombre d’appareils. Il dépend de la place disponible, des mouvements pratiqués et de la possibilité de ranger le matériel sans créer de danger. Un plan simple évite les achats encombrants ou redondants.</p>
+    <h2>Mesurer avant de choisir</h2>
+    <p>Notez la surface libre, la hauteur sous plafond et la zone nécessaire autour de chaque mouvement. Prévoyez aussi le passage, l’ouverture des portes et un rangement stable pour les charges.</p>
+    <h2>Commencer par les usages polyvalents</h2>
+    <ul>
+      <li>Un tapis adapté au sol et aux exercices prévus.</li>
+      <li>Des charges ajustables pour progresser sans multiplier les objets.</li>
+      <li>Un support stable lorsque les exercices deviennent lourds.</li>
+      <li>Des accessoires de mobilité uniquement s’ils répondent à une routine réelle.</li>
+    </ul>
+    <h2>Vérifier la sécurité</h2>
+    <p>Contrôlez la charge maximale, les points d’appui, le verrouillage et l’état des fixations. Un équipement compact n’est utile que s’il reste stable pendant tout le mouvement. La progression peut ensuite se faire par étapes, selon l’espace et l’entraînement réellement suivi.</p>
+  `,
+  'materiel-salle-de-sport-decouvrez-les-meilleurs-equipements-et-leurs-prix-en-tunisie': `
+    <p>Le coût d’un équipement de salle ne se limite pas à son prix d’acquisition. L’installation, l’espace occupé, l’entretien, les pièces d’usure et la fréquence d’utilisation déterminent son coût réel sur la durée.</p>
+    <h2>Comparer le coût total d’usage</h2>
+    <p>Pour chaque appareil, estimez le nombre d’utilisateurs, les heures d’utilisation, les besoins électriques et la maintenance prévue. Un modèle robuste peut être plus pertinent qu’une option moins chère si l’usage est intensif.</p>
+    <h2>Évaluer la fonction avant la gamme</h2>
+    <p>Deux machines qui entraînent le même mouvement peuvent faire double emploi. Construisez d’abord une liste de fonctions — poussée, tirage, jambes, cardio, mobilité — puis choisissez l’équipement qui couvre chaque besoin avec le moins de redondance.</p>
+    <h2>Prévoir la sécurité et l’entretien</h2>
+    <p>Vérifiez les charges maximales, les dégagements autour des machines, la disponibilité des pièces et la facilité de nettoyage. Un budget cohérent réserve une part à l’installation et au suivi, pas seulement au matériel visible.</p>
+  `,
+  'creatine-prix-en-tunisie-et-comment-choisir-le-meilleur-produit': `
+    <p>La créatine micronisée et la créatine monohydrate classique contiennent la même molécule. La micronisation agit sur la taille des particules ; elle peut améliorer la dispersion dans l’eau et le confort digestif, mais ne crée pas une forme plus puissante.</p>
+    <h2>Ce qui change dans le verre</h2>
+    <p>Des particules plus fines ont tendance à se mélanger plus facilement. Si une poudre classique se dissout correctement et est bien tolérée, la version micronisée n’apporte pas nécessairement un bénéfice supplémentaire.</p>
+    <h2>Ce qui ne change pas</h2>
+    <p>Le mécanisme d’action, la régularité de la prise et le rôle de la créatine dans les efforts courts restent identiques. La décision doit donc se faire sur la composition, la tolérance, le format et la clarté de l’étiquette.</p>
+    <h2>Comparer sans confondre confort et efficacité</h2>
+    <p>Ramenez les formats à une même quantité de poudre, puis demandez-vous si la différence de confort justifie l’écart observé. Cette lecture sépare un avantage d’usage réel d’une simple promesse marketing.</p>
+  `,
+  'les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis': `
+    <p>Comparer une marque de créatine ne consiste pas à classer des logos. La créatine monohydrate reste la même molécule ; ce sont surtout la traçabilité, la simplicité de la composition et la qualité des informations qui permettent de départager les références.</p>
+    <h2>Une composition lisible</h2>
+    <p>Une poudre non aromatisée peut avoir une liste d’ingrédients très courte. Les arômes, édulcorants ou autres ajouts doivent être clairement indiqués et correspondre au produit recherché.</p>
+    <h2>Une traçabilité vérifiable</h2>
+    <p>Contrôlez le fabricant, le numéro de lot, la date, le scellé et les coordonnées permettant d’identifier l’importateur ou le distributeur. Une certification n’est utile que si son rôle est expliqué et vérifiable.</p>
+    <h2>Des critères adaptés à l’usage</h2>
+    <p>Le format, la dissolution et le type de conditionnement peuvent compter davantage qu’une réputation générale. Comparez les étiquettes sur les mêmes critères et vérifiez la disponibilité actuelle séparément : elle change plus vite que les qualités intrinsèques du produit.</p>
+  `,
+  'proteines-tunisiennes-tout-ce-que-vous-devez-savoir': `
+    <p>Le mot « protéine » regroupe des produits très différents. Pour choisir une poudre utile, il faut d’abord comprendre sa source, son niveau de filtration et la quantité réellement apportée par portion. Le pays de vente ne change pas ces critères.</p>
+    <h2>Concentrée, isolate ou autre source</h2>
+    <p>Une whey concentrée conserve généralement davantage de lactose et d’autres composants du lait. Une isolate est filtrée plus finement. Les protéines végétales ou de bœuf répondent à d’autres préférences alimentaires et doivent être comparées sur leur profil complet.</p>
+    <h2>Lire la portion plutôt que la face avant</h2>
+    <p>Vérifiez la quantité de protéines, la taille de la dose, le nombre de portions et la liste des ingrédients. Une grande dose n’indique pas automatiquement une plus forte concentration : elle peut simplement contenir davantage de poudre.</p>
+    <h2>Choisir selon la tolérance et l’objectif</h2>
+    <p>La digestion, le goût, la facilité d’usage et l’apport quotidien total comptent autant que le type de produit. Une poudre sert à compléter l’alimentation ; elle ne remplace pas une répartition cohérente des protéines sur la journée.</p>
+  `,
+  'ou-acheter-de-la-creatine-en-tunisie': `
+    <p>La fiabilité d’une créatine se vérifie sur le produit et sur la chaîne de distribution. Un prix bas ou une promesse commerciale ne suffisent pas à établir l’authenticité d’un pot.</p>
+    <h2>Contrôler le pot avant ouverture</h2>
+    <ul>
+      <li>Le scellé doit être intact et adapté au conditionnement.</li>
+      <li>Le numéro de lot et la date doivent être lisibles.</li>
+      <li>Le fabricant et l’importateur doivent être identifiables.</li>
+      <li>La liste des ingrédients doit correspondre à la variante annoncée.</li>
+    </ul>
+    <h2>Vérifier la cohérence des informations</h2>
+    <p>Comparez le nom, le poids net et les visuels entre l’étiquette et la fiche. Une différence de design peut venir d’un changement d’emballage, mais une information essentielle absente mérite une vérification auprès du vendeur.</p>
+    <h2>Conserver les preuves de traçabilité</h2>
+    <p>Gardez la facture et une photo du lot si vous devez poser une question après réception. Pour un produit destiné à être consommé régulièrement, la traçabilité et un service joignable sont plus utiles qu’une promotion ponctuelle.</p>
+  `,
+};
+
+for (const [slug, bodyOverrideHtml] of Object.entries(COMMERCIAL_SUPPORT_BODY_OVERRIDES)) {
+  const entry = BLOG_SEO_CONFIG[slug];
+  if (entry) entry.bodyOverrideHtml = bodyOverrideHtml;
+}
 
 /** Normalize slug for lookup (decoded, Unicode-normalized, lowercase, trim). */
 export function getBlogSeoEntry(slug: string | undefined): BlogSeoEntry | null {

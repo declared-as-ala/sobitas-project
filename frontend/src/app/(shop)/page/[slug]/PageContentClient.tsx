@@ -44,10 +44,12 @@ export function PageContentClient({ page }: PageContentClientProps) {
    * invisible-but-indexed — the worst of both. Dropping it costs nothing on screen and stops
    * this editorial guide competing head-on with /proteines and /whey-proteine.
    *
-   * Anchored regex: only a LEADING h1 is removed, which is exactly the one the CSS hides.
+   * Remove the FIRST H1 wherever the CMS placed it. Some imported pages wrap their hero H1 in a
+   * section after a JSON-LD script, so an anchored regex left the commercial headline in place and
+   * made the guide compete with its category even though an override existed.
    */
   const rawBody = String(page.body ?? '');
-  const body = seo?.headingOverride ? rawBody.replace(/^\s*<h1\b[^>]*>[\s\S]*?<\/h1>/i, '') : rawBody;
+  const body = seo?.headingOverride ? rawBody.replace(/<h1\b[^>]*>[\s\S]*?<\/h1>/i, '') : rawBody;
   const hasContent = body || page.excerpt;
   const imageUrl = page.image ? getStorageUrl(page.image) : null;
   // Does the admin-authored body open with its own <h1>? If so this template must not add a

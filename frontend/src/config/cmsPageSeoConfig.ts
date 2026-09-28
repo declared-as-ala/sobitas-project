@@ -95,25 +95,13 @@ const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
    * So it answers the "créatine monohydrate tunisie" query in Google's index (28 d: 0 clicks /
    * 39 impressions / position 13.6) without ever handing that intent to /creatine (2 / 204 / 22).
    *
-   * NO `titleOverride` here, deliberately. The live <title> is already guide-framed ("Créatine
-   * Monohydrate en Tunisie : guide expert & prix 2026") and it is what earns those impressions;
-   * rewriting it would risk the only thing the page does well.
-   *
-   * ── WHAT `headingOverride` DOES AND DOES NOT DO ON THIS PAGE (verified 22/09/2026) ──────────
-   * It does NOT replace the H1 here, unlike on /proteine-tunisie. PageContentClient strips only a
-   * LEADING <h1> from the CMS body (anchored regex, PageContentClient.tsx:50). This body does not
-   * open with its heading — it opens with a <div> holding a JSON-LD <script>, then a
-   * <section class="wh-hero">, and the <h1> is nested inside. So the strip misses, `bodyHasOwnH1`
-   * stays true, and the override renders as the large aria-hidden <p> above the article while the
-   * body's own "Créatine Monohydrate Tunisie : Le Guide Expert 2026" remains the page's single H1.
-   * Measured with a Googlebot UA: /proteine-tunisie's H1 is its override; this page's H1 is still
-   * the body's. What the override still buys is the biggest VISIBLE line on the page, which used
-   * to repeat the bare commercial phrase (page.title) and now reads as a guide.
-   * Actually moving the H1 needs PageContentClient's strip to handle a non-leading body h1 — that
-   * file is out of this batch's scope; left for the owner. Do not claim this finding is closed.
+   * The page has impressions but no measured clicks, so it is retargeted cleanly rather than left
+   * with a title/H1 that duplicates /creatine's commercial promise. PageContentClient removes the
+   * first CMS-authored H1 wherever it sits in the body, then emits this guide-specific H1 once.
    */
   'creatine-monohydrate-tunisie': {
     navLabel: 'Guide : la créatine monohydrate',
+    titleOverride: 'Créatine monohydrate : comprendre les formes et les étiquettes | Protein.tn',
     headingOverride: 'Comment choisir sa créatine monohydrate ? Le guide',
     commercialIntro: 'Vous voulez acheter directement ?',
     commercialLinks: [

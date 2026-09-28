@@ -5,7 +5,7 @@ import { SafeImage } from '@/app/components/SafeImage';
 import { Button } from '@/app/components/ui/button';
 import { BlogRecommendedProducts } from '@/app/(shop)/blog/BlogRecommendedProducts';
 import { BlogCard } from '@/app/(shop)/blog/BlogCard';
-import { ArrowLeft, Calendar, ChevronRight, Clock, Share2, Sparkles, FolderOpen, Tag } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Calendar, ChevronRight, Clock, Share2, ShoppingBag, Sparkles, FolderOpen, Tag } from 'lucide-react';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import type { Article, BlogTagSummary } from '@/types';
 import { getStorageUrl } from '@/services/api';
@@ -25,8 +25,17 @@ interface ArticleDetailClientProps {
    * server component. Empty is a valid value and simply means no in-content link is added.
    */
   linkTargets?: LinkTarget[];
+  /** One server-rendered route from this informational article to its commercial owner. */
+  commerceBridge?: BlogCommerceBridgeData;
   /** Optional SEO block (FAQ + internal links) rendered between content and related articles */
   children?: React.ReactNode;
+}
+
+export interface BlogCommerceBridgeData {
+  href: string;
+  label: string;
+  context: string;
+  lang?: 'fr' | 'ar';
 }
 
 // Decode HTML entities properly (server-safe, no window/document)
@@ -180,7 +189,13 @@ function resolveArticleBodyDir(article: Article): 'ltr' | 'rtl' | undefined {
   return undefined;
 }
 
-export function ArticleDetailClient({ article, relatedArticles, linkTargets = [], children }: ArticleDetailClientProps) {
+export function ArticleDetailClient({
+  article,
+  relatedArticles,
+  linkTargets = [],
+  commerceBridge,
+  children,
+}: ArticleDetailClientProps) {
   const articleLanguage = resolveArticleLanguage(article);
   const arabic = isArabicArticle(articleLanguage);
   const displayType = arabic ? 'article-arabic-type' : 'font-display uppercase tracking-tight';
@@ -232,6 +247,12 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
   const articleTags = (article.tags ?? []).filter(
     (t): t is BlogTagSummary => typeof t === 'object' && t !== null && !!t.slug && !!t.name
   );
+  const relatedShopCategories = (article.related_shop_categories ?? []).filter(
+    (category) => `/${category.slug}` !== commerceBridge?.href
+  );
+  const commerceCategorySlug = commerceBridge?.href && commerceBridge.href !== '/'
+    ? commerceBridge.href.split('/').filter(Boolean).at(-1)
+    : undefined;
 
   useEffect(() => {
     setMounted(true);
@@ -398,6 +419,37 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
 
             {/* Article Content – first part, then "Achetez les produits de cet article" in the middle, then rest of content */}
             <div className="px-4 sm:px-6 lg:px-8 pb-6 sm:pb-8 lg:pb-12">
+              {commerceBridge && (
+                <aside
+                  className="mb-8 grid gap-4 rounded-xl border border-hairline bg-sunken p-4 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:p-5"
+                  aria-label={commerceBridge.lang === 'ar' ? 'الانتقال إلى المنتجات' : 'Passer du guide aux produits'}
+                  lang={commerceBridge.lang}
+                  dir={commerceBridge.lang === 'ar' ? 'rtl' : 'ltr'}
+                >
+                  <div className="flex min-w-0 items-start gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-elevated text-brand" aria-hidden="true">
+                      <ShoppingBag className="h-5 w-5" strokeWidth={1.75} />
+                    </span>
+                    <div className="min-w-0">
+                      <p className="font-display text-xs font-semibold uppercase tracking-[0.18em] text-brand">
+                        {commerceBridge.lang === 'ar' ? 'من الدليل إلى المنتجات' : 'Du guide aux produits'}
+                      </p>
+                      <p className="mt-1 text-sm leading-relaxed text-ink-2">
+                        {commerceBridge.context || (commerceBridge.lang === 'ar'
+                          ? 'قارن المنتجات والأحجام والأسعار المتوفرة حاليًا.'
+                          : 'Comparez les références, les formats et les prix disponibles.')}
+                      </p>
+                    </div>
+                  </div>
+                  <Link
+                    href={commerceBridge.href}
+                    className="group inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-on-brand transition-colors hover:bg-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:w-auto"
+                  >
+                    <span>{commerceBridge.label}</span>
+                    <ArrowRight className="h-4 w-4 shrink-0 transition-transform group-hover:translate-x-0.5 motion-reduce:transition-none" aria-hidden="true" />
+                  </Link>
+                </aside>
+              )}
               <div
                 ref={contentRef}
                 dir={resolveArticleBodyDir(article)}
@@ -412,7 +464,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                 )}
                 <BlogRecommendedProducts
                   article={article}
-                  categorySlug={article.category_slug}
+                  categorySlug={commerceCategorySlug || article.category_slug}
                   recommendedProductSlugs={article.recommended_product_slugs ?? []}
                   title="Achetez les produits de cet article"
                   variant="inline"
@@ -424,7 +476,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                   />
                 )}
               </div>
-              {article.related_shop_categories && article.related_shop_categories.length > 0 ? (
+              {relatedShopCategories.length > 0 ? (
                 <nav
                   className="mt-8 rounded-xl border border-hairline bg-sunken p-4 sm:p-6"
                   aria-label="Catégories boutique liées"
@@ -433,7 +485,7 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
                     Voir aussi sur la boutique
                   </h2>
                   <ul className="flex flex-wrap gap-2 sm:gap-3">
-                    {article.related_shop_categories.map((c) => (
+                    {relatedShopCategories.map((c) => (
                       <li key={c.slug}>
                         <Link
                           href={`/${encodeURIComponent(c.slug)}`}
@@ -490,24 +542,6 @@ export function ArticleDetailClient({ article, relatedArticles, linkTargets = []
               {children}
             </div>
           </article>
-
-          {/* Internal linking: creatine category CTA for creatine-related articles */}
-          {/\bcréatine\b|\bcreatine\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
-              <p className="text-sm font-semibold text-ink-1 mb-1">Prêt à passer à l'action ?</p>
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                <Link href="/creatine" className="text-brand font-medium hover:underline">créatine monohydrate en Tunisie</Link> : monohydrate, micronisée, Creapure®, capsules — livraison rapide et paiement à la livraison partout en Tunisie.
-              </p>
-            </div>
-          )}
-          {/* Internal linking: whey category for whey-related articles */}
-          {/\bwhey\b|\bprot[eé]ine\s+(lactos[eé]rum|lait)\b/i.test(`${article.designation_fr ?? ''} ${article.description_fr ?? ''}`) && (
-            <div className="mt-6 p-4 sm:p-5 rounded-xl border border-hairline bg-sunken">
-              <p className="text-sm text-gray-700 dark:text-gray-300 mb-2">
-                Comparez notre sélection de <Link href="/whey-proteine" className="text-brand font-medium hover:underline">whey protein en Tunisie</Link> : formats, marques, prix actuels et livraison.
-              </p>
-            </div>
-          )}
 
           {/* Related Articles */}
           {relatedArticles.length > 0 && (

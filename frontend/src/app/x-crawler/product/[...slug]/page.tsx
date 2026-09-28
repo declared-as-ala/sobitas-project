@@ -39,6 +39,7 @@ import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCategory, sameUrlSlug } from '@/util/productUrl';
 import { retiredSlugDestination } from '@/util/retiredSlug';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
+import { productRobots } from '@/util/productIndexability';
 import type { Product } from '@/types';
 
 export const revalidate = 300;
@@ -109,6 +110,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       description,
       // Canonical points at the REAL product URL, never /x-crawler/*.
       alternates: { canonical, languages: { 'fr-TN': canonical, 'x-default': canonical } },
+      // Mirror the human PDP: an unpublished product must not become indexable just because
+      // Googlebot reaches this separately rendered route. The SEO toggle is an additional gate.
       // The product's OWN robots directive, not a hardcoded yes.
       //
       // This route is the only one Googlebot ever sees for a product (middleware rewrites bot
@@ -121,10 +124,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       // wave that went badly ALL depend on this one value being real.
       //
       // Default true when the field is absent, so existing products behave exactly as before.
-      robots: {
-        index: product.seo?.robots?.index ?? true,
-        follow: product.seo?.robots?.follow ?? true,
-      },
+      robots: productRobots(product),
       // Product photo as og:image, identical to the human route. Without this the route emitted no
       // openGraph at all, so the root layout's site-wide banner (og-banner.jpg) was inherited —
       // and since middleware rewrites bots here, GOOGLE saw the generic banner on every product

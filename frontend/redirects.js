@@ -104,6 +104,13 @@ function buildRedirects() {
 
     // ── Legacy alias ──────────────────────────────────────────────────────
     p('/about', '/qui-sommes-nous'),
+    // GSC 28/09/2026: these three legacy shop URLs intermittently returned 500 under
+    // concurrent Googlebot requests while middleware waited on the product API. Their
+    // verified live destinations are stable 200s with self-canonicals; bypass the
+    // runtime lookup so old links always consolidate in one hop.
+    p('/shop/gold-l-carnitine-3000-500ml', '/l-carnitine/gold-l-carnitine-3000-500ml'),
+    p('/shop/pure-creatine-300-gr-0', '/creatine/pure-creatine-300-gr'),
+    p('/shop/prostar-100-whey-protein-907g', '/whey-proteine/prostar-100-whey-protein-907g'),
     /*
      * /xmlrpc.php USED TO 308 HERE TO "/". That is the anti-pattern this whole file warns about
      * further down: Google documents a redirect to an irrelevant page as a SOFT 404, so the hop

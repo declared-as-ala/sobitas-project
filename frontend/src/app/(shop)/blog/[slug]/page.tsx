@@ -12,10 +12,11 @@ import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildMetaDescription, htmlToText } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage, buildArticleTitle, localityHint, isArabicArticle } from '@/util/articleLanguage';
 import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structuredData';
+import { sanitizeArticleHtml } from '@/util/sanitizeArticleHtml';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
 import { getBlogSeoEntry } from '@/config/blogSeoConfig';
-import { ArticleDetailClient } from './ArticleDetailClient';
+import { ArticleDetailClient, type BlogCommerceBridgeData } from './ArticleDetailClient';
 
 interface ArticlePageProps {
   params: Promise<{ slug: string }>;
@@ -50,6 +51,31 @@ function buildArticleDescription(raw: string, title: string): string {
     title,
     maxLen: 500,
   });
+}
+
+/**
+ * Turn the legacy editorial opening paragraph into one structured commerce bridge.
+ *
+ * `openingLinkHtml` used to be prepended to the CMS body as raw prose. That gave the category its
+ * link, but it also left the page with three separate routes to the same shelf: the opening link,
+ * the automatic in-body linker and the generic CTA below the article. One deliberate bridge is
+ * clearer for readers and gives crawlers one unambiguous commercial destination.
+ */
+function buildCommerceBridge(openingLinkHtml?: string, lang?: 'fr' | 'ar'): BlogCommerceBridgeData | undefined {
+  const html = openingLinkHtml?.trim();
+  if (!html) return undefined;
+
+  const match = html.match(/<a\b[^>]*\bhref=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
+  if (!match) return undefined;
+
+  const href = match[1]?.trim();
+  const label = htmlToText(match[2] ?? '', 120);
+  if (!href?.startsWith('/') || !label) return undefined;
+
+  // The legacy paragraph wrapped the anchor in free-form prose. Removing the anchor often leaves
+  // broken fragments (for example, "vous pouvez ."), so the component supplies concise,
+  // translated supporting copy while this parser keeps the editorial destination and anchor.
+  return { href, label, context: '', lang };
 }
 
 /**
@@ -265,12 +291,19 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     }
 
     const seoOverlay = getBlogSeoEntry(slug);
+    const commerceBridge = buildCommerceBridge(seoOverlay?.openingLinkHtml, seoOverlay?.lang);
     const displayArticle = seoOverlay
       ? {
           ...article,
           designation_fr: seoOverlay.headline || article.designation_fr,
-          description_fr: seoOverlay.headline ? article.description_fr?.replace(/2025/g, '2026') : article.description_fr,
-          description: seoOverlay.headline ? article.description?.replace(/2025/g, '2026') : article.description,
+          description_fr: sanitizeArticleHtml(
+            seoOverlay.bodyOverrideHtml ||
+            (seoOverlay.headline ? article.description_fr?.replace(/2025/g, '2026') : article.description_fr)
+          ),
+          description: sanitizeArticleHtml(
+            seoOverlay.bodyOverrideHtml ||
+            (seoOverlay.headline ? article.description?.replace(/2025/g, '2026') : article.description)
+          ),
           updated_at: seoOverlay.dateModified || article.updated_at,
           schema: {
             ...article.schema,
@@ -279,15 +312,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
             date_modified: seoOverlay.dateModified || article.schema?.date_modified,
           },
         }
-      : article;
-
-    if (seoOverlay?.openingLinkHtml) {
-      if (displayArticle.description_fr) {
-        displayArticle.description_fr = seoOverlay.openingLinkHtml + displayArticle.description_fr;
-      } else {
-        displayArticle.description = seoOverlay.openingLinkHtml + (displayArticle.description || '');
-      }
-    }
+      : {
+          ...article,
+          description_fr: sanitizeArticleHtml(article.description_fr),
+          description: sanitizeArticleHtml(article.description),
+        };
 
     // Keep the explicit pillar link inside the prose delivered in the initial HTML, even when
     // taxonomy fetching fails. Preserve the CMS body and its French/fallback field selection.
@@ -346,6 +375,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       },
       { allowSlugs: LINKABLE_CATEGORY_SLUGS }
     );
+    // The bridge is already the first, strongest link to its commercial owner. Do not inject a
+    // second link to the same shelf later in the prose; that dilutes the article's one clear job.
+    const articleLinkTargets = commerceBridge
+      ? linkTargets.filter((target) => target.href !== commerceBridge.href)
+      : linkTargets;
 
     /*
      * Related by SUBJECT, with the newest posts as the fallback when an article shares no
@@ -378,8 +412,13 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       <>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }} />
-        <ArticleDetailClient article={displayArticle} relatedArticles={filteredRelated} linkTargets={linkTargets}>
-          <BlogSeoBlock slug={slug} />
+        <ArticleDetailClient
+          article={displayArticle}
+          relatedArticles={filteredRelated}
+          linkTargets={articleLinkTargets}
+          commerceBridge={commerceBridge}
+        >
+          <BlogSeoBlock slug={slug} excludeHref={commerceBridge?.href} />
         </ArticleDetailClient>
       </>
     );

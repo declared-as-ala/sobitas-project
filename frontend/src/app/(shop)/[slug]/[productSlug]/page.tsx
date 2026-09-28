@@ -17,6 +17,7 @@ import {
 import { buildVideoObjectSchema } from '@/util/officialVideo';
 import { buildProductCanonicalUrl, getProductBreadcrumbs, isReservedRouteSlug, getProductPrimarySubCategory, sameUrlSlug } from '@/util/productUrl';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
+import { productRobots } from '@/util/productIndexability';
 import type { Product } from '@/types';
 import { productDescription, productTitle } from '@/util/productMetaDescription';
 import { getComplementProducts } from '@/services/productComplements';
@@ -119,9 +120,6 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     // which may still point to legacy /shop/ paths causing sitemap/canonical mismatch (C3)
     const canonicalUrl = ensureProductionDomain(buildProductCanonicalUrl(product));
 
-    const publier = product.publier as number | boolean | undefined;
-    const isPublished = publier === 1 || publier === true || publier === undefined;
-
     return {
       title: { absolute: title },
       description,
@@ -133,10 +131,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       // noindex in Filament and still be advertised as indexable here — and this route must agree
       // with x-crawler/product, which bots are rewritten to, or the two views of the same product
       // disagree about whether it belongs in the index.
-      robots: {
-        index: isPublished && (product.seo?.robots?.index ?? true),
-        follow: isPublished && (product.seo?.robots?.follow ?? true),
-      },
+      robots: productRobots(product),
       alternates: {
         canonical: canonicalUrl,
         languages: {

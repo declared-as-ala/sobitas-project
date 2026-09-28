@@ -4,13 +4,15 @@ import { buildFAQPageSchemaFromQA } from '@/util/structuredData';
 
 interface BlogSeoBlockProps {
   slug: string;
+  /** Destination already promoted by the article's top commerce bridge. */
+  excludeHref?: string;
 }
 
 /**
  * Reusable SEO block for blog articles: FAQ section + internal links with keyword anchors.
  * Renders only when slug exists in blogSeoConfig. Outputs FAQPage schema when FAQs present.
  */
-export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
+export function BlogSeoBlock({ slug, excludeHref }: BlogSeoBlockProps) {
   const entry = getBlogSeoEntry(slug);
   if (!entry) return null;
 
@@ -23,7 +25,8 @@ export function BlogSeoBlock({ slug }: BlogSeoBlockProps) {
    * order of each entry is preserved.
    */
   const internalLinks = entry.internalLinks.filter(
-    (link, i, all) => all.findIndex((other) => other.href === link.href) === i
+    (link, i, all) =>
+      link.href !== excludeHref && all.findIndex((other) => other.href === link.href) === i
   );
   const hasFaqs = faqs.length > 0;
   const hasLinks = internalLinks.length > 0;

@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getBestSellers, getProductsByCategory, getProductDetails } from '@/services/api';
+import {
+  getBestSellers,
+  getProductsByCategory,
+  getProductsBySubCategory,
+  getProductDetails,
+} from '@/services/api';
 import type { Product } from '@/types';
 
 const CACHE_MAX_AGE = 300; // 5 minutes
@@ -32,7 +37,9 @@ export async function GET(request: NextRequest) {
       products = bySlug.filter((p): p is Product => p != null && p.id != null);
     }
 
-    // 2) Category match: e.g. whey article → whey category products
+    // 2) Category match: a commerce bridge can point to either a top-level category or a
+    // subcategory. Try both APIs before falling back so a /creatine article cannot silently show
+    // generic best sellers merely because creatine is modelled as a subcategory in the catalogue.
     if (products.length < MIN_PRODUCTS && categorySlug) {
       try {
         const { products: catProducts } = await getProductsByCategory(categorySlug);
@@ -42,12 +49,24 @@ export async function GET(request: NextRequest) {
           .slice(0, MAX_PRODUCTS - products.length);
         products = [...products, ...extra];
       } catch {
-        // ignore category fetch errors, keep current list
+        try {
+          const { products: subCategoryProducts } = await getProductsBySubCategory(categorySlug, {
+            perPage: MAX_PRODUCTS,
+          });
+          const existingIds = new Set(products.map((p) => p.id));
+          const extra = (subCategoryProducts ?? [])
+            .filter((p) => p?.id && !existingIds.has(p.id))
+            .slice(0, MAX_PRODUCTS - products.length);
+          products = [...products, ...extra];
+        } catch {
+          // Keep any manual products and only use best sellers when no relevant product exists.
+        }
       }
     }
 
-    // 3) Fallback: best sellers
-    if (products.length < MIN_PRODUCTS) {
+    // 3) Fallback: best sellers only when the article produced no relevant recommendation.
+    // A short, accurate rail converts better than four cards from unrelated categories.
+    if (products.length === 0) {
       try {
         const best = await getBestSellers();
         const existingIds = new Set(products.map((p) => p.id));

@@ -23,13 +23,12 @@
  * search for it. The blog link injector and `blogSeoConfig` read `owner` so an in-body mention of
  * "mass gainer" always points at the family owner and never at a sibling.
  *
- * WHAT IS AND IS NOT ENFORCED, because an earlier draft of this comment overstated it:
- * `scripts/check-commercial-intent-map.mjs` does NOT read this file. It asserts five hard-coded
- * gainer redirects and that three content files do not link to the redirecting /mass-gainer — the
- * narrow guard it was written as, before this map existed. So the rules below are a decision
- * record that humans and agents follow, not a build-time contract. Until a guard reads it, a
- * duplicate `owns` entry will not fail CI; `scripts/check-category-seo-content.ts` catches the
- * symptom instead, by failing on a duplicate title or H1 across the content files.
+ * WHAT IS ENFORCED:
+ * `scripts/check-commercial-intent-map.mjs` imports this map during every build. It fails when two
+ * clusters claim one normalized keyword, two clusters declare the same owner, a supporting blog
+ * does not link to its owner, a protected traffic winner is assigned a destructive action, or an
+ * editorial link points at a redirect source. The map is therefore an executable contract, not
+ * only a decision record.
  *
  * ── THE RULES THIS FILE ENCODES ──────────────────────────────────────────────────────────────────
  * 1. Exactly one `owner` per cluster. A keyword appears in exactly one cluster's `owns`.
@@ -112,9 +111,31 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owns: ['creatine tunisie', 'créatine tunisie', 'creatine monohydrate tunisie', 'créatine monohydrate tunisie', 'creatine prix tunisie', 'créatine prix tunisie'],
     secondary: ['creatine monohydrate', 'créatine micronisée', 'creapure tunisie', 'creatine 300g tunisie', 'creatine 500g tunisie', 'creatine 1kg tunisie', 'creatine optimum nutrition tunisie', 'acheter creatine tunisie'],
     supporting: [
+      '/blog/creatine-a-quoi-ca-sert-et-pourquoi-en-prendre',
+      '/blog/creatine-monohydrate-tunisie-guide-d-achat-bienfaits-et-meilleures-marques',
+      '/blog/prix-de-la-creatine-en-tunisie',
+      '/blog/ou-acheter-de-la-creatine-en-tunisie',
+      '/blog/creatine-tunisie',
+      '/blog/creatine-tunisie-tout-ce-que-vous-devez-savoir',
+      '/blog/creatine-tunisie-guide-complet-bienfaits-et-meilleures-marques-disponibles',
+      '/blog/creatine-tunisie-le-guide-complet-pour-choisir-le-meilleur-complement-et-optimiser-vos-resultats',
+      '/blog/creatine-tunisie-tout-savoir-sur-ce-complement-indispensable',
+      '/blog/la-creatine-fait-elle-gonfler-ou-prendre-du-poids-chez-la-femme',
+      '/blog/creatine-prix-en-tunisie-et-comment-choisir-le-meilleur-produit',
+      '/blog/meilleur-creatine-pour-prise-de-masse',
+      '/blog/ou-acheter-de-la-creatine-originale-en-tunisie-le-guide-complet',
       '/blog/quelle-est-la-meilleure-creatine-monohydrate-en-tunisie',
       '/blog/les-meilleures-marques-de-creatine-en-tunisie-comparatif-et-avis',
       '/blog/meilleure-creatine-2026-notre-guide-pour-bien-choisir',
+      '/blog/meilleures-marques-de-creatine-en-tunisie',
+      '/blog/creatine-prix-tunisie-guide-complet-des-meilleurs-produits-en-2025',
+      '/blog/creatine-prix-tunisie-trouvez-la-meilleure-offre-pour-maximiser-vos-gains',
+      '/blog/creatine-tunisie-la-meilleure-qualite-a-prix-imbattable-livraison-rapide-and-gratuite-sur-protein-tn',
+      '/blog/ما هي الأطعمة التي تحتوي على الكرياتين؟',
+      '/blog/ما هي فوائد وأضرار الكرياتين؟',
+      '/blog/ما هو أفضل كرياتين في تونس؟',
+      '/blog/كرياتين مونوهيدرات',
+      '/blog/ما هو الكرياتين؟',
     ],
     conflicts: [
       { url: '/creatine-monohydrate-tunisie', reason: 'CMS page, index,follow, title "Créatine Monohydrate en Tunisie : guide expert & prix 2026" — a near-duplicate of the category intent', action: 'retarget' },
@@ -128,7 +149,13 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/whey-proteine',
     owns: ['whey tunisie', 'whey protein tunisie', 'whey proteine tunisie', 'whey protéine tunisie', 'whey prix tunisie', 'whey protein prix tunisie'],
     secondary: ['whey concentrée', 'whey isolate tunisie', 'whey 2kg tunisie', 'whey protein 1kg prix tunisie', 'gold standard whey tunisie'],
-    supporting: ['/blog/whey-proteine-pas-cher-tunisie', '/blog/les-avantages-de-la-whey-proteine-pour-les-athletes-tunisiens-guide-complet'],
+    supporting: [
+      '/blog/whey-proteine-pas-cher-tunisie',
+      '/blog/les-avantages-de-la-whey-proteine-pour-les-athletes-tunisiens-guide-complet',
+      '/blog/proteines-tunisiennes-tout-ce-que-vous-devez-savoir',
+      '/blog/protein-the-essential-guide-to-its-benefits-sources-and-role-in-health',
+      '/blog/whey-protein-et-entrainement-strategies-pour-des-gains-musculaires-optimaux-protein-tn',
+    ],
     conflicts: [
       { url: '/blog/whey-protein-en-tunisie', reason: 'live title "PROTÉINE en Tunisie : Guide Achat 2026" fights the HOMEPAGE\'s head term, not just the category; it earns 4 clicks so retarget the title, keep the URL', action: 'leave-earns-clicks' },
       /*
@@ -187,7 +214,12 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/mass-gainers',
     owns: ['mass gainer tunisie', 'gainer tunisie', 'mass gainer prix tunisie', 'gainer prix tunisie'],
     secondary: ['gainer 5kg tunisie', 'gainer 7kg tunisie', 'serious mass tunisie', 'lean gainer tunisie', 'mass gainer musculation tunisie'],
-    supporting: ['/prise-de-masse', '/gainers-proteines', '/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025'],
+    supporting: [
+      '/prise-de-masse',
+      '/gainers-proteines',
+      '/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025',
+      '/blog/mass-gainer-prix-tunisie',
+    ],
     conflicts: [
       { url: '/prise-de-masse', reason: 'the parent GOAL hub. Keeps "prise de masse tunisie" (see the priseDeMasse cluster) and must not claim the gainer head terms; it links down to /mass-gainers', action: 'retarget' },
       { url: '/gainers-proteines', reason: '0 category clicks BUT its PDPs earn (thunder-gainer 12 clicks @5.1, premium-v-bulk 9 @6.5 over 3 m) — a 301 would orphan them; retarget to lean-gainer intent instead', action: 'retarget' },
@@ -221,7 +253,7 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/bcaa',
     owns: ['bcaa tunisie', 'bcaa prix tunisie'],
     secondary: ['bcaa 2:1:1', 'bcaa poudre tunisie'],
-    supporting: ['/blog/eaa-vs-bcaa-le-match-nul', '/blog/bcaa-ou-proteines-quel-complement-choisir-pour-vos-objectifs'],
+    supporting: ['/blog/bcaa-ou-proteines-quel-complement-choisir-pour-vos-objectifs'],
     conflicts: [
       { url: '/acides-amines', reason: 'parent hub for the amino family — must not render the same title/H1/intro as /bcaa (it did until 22/09/2026)', action: 'retarget' },
       { url: '/eaa', reason: 'distinct product type — owns "eaa tunisie", must not claim BCAA terms', action: 'retarget' },
@@ -241,6 +273,15 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     anchors: ['protéines en Tunisie', 'tout le catalogue protéines', 'nos protéines'],
   },
 
+  proteinPowder: {
+    owner: '/proteines',
+    owns: ['proteines en poudre tunisie', 'protéines en poudre tunisie', 'prix proteine tunisie', 'prix protéine tunisie', 'proteine musculation tunisie', 'protéine musculation tunisie'],
+    secondary: ['protein powder tunisie', 'poudre protéinée tunisie', 'complément protéiné tunisie'],
+    supporting: ['/blog/prix-proteine-tunisie-guide-complet-pour-trouver-les-meilleures-offres-en-2025'],
+    conflicts: [],
+    anchors: ['protéines en poudre en Tunisie', 'comparer les protéines du catalogue', 'notre rayon protéines'],
+  },
+
   /* ══ AMINO FAMILY ════════════════════════════════════════════════════════════════════════════
    * Added 22/09/2026. Live titles measured the same day:
    *   /acides-amines  "Acides Aminés Tunisie : EAA, BCAA, Glutamine"   4 clicks / 42 impr @10.67
@@ -254,7 +295,7 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/acides-amines',
     owns: ['acides amines tunisie', 'acides aminés tunisie', 'acide amine tunisie', 'acide aminé tunisie', 'acides amines musculation tunisie', 'acides aminés musculation tunisie'],
     secondary: ['quel acide aminé choisir', 'acides aminés en poudre', 'acides aminés gélules'],
-    supporting: ['/bcaa', '/eaa', '/glutamine', '/citrulline', '/l-arginine', '/beta-alanine'],
+    supporting: ['/bcaa', '/eaa', '/glutamine', '/citrulline', '/l-arginine', '/beta-alanine', '/blog/eaa-vs-bcaa-le-match-nul'],
     conflicts: [
       { url: '/acides-amines', reason: 'the hub\'s own title lists "EAA, BCAA, Glutamine" — three child head terms it must not claim. It describes the CHOICE between the families instead and links down', action: 'retarget' },
       { url: '/bcaa', reason: 'live title "BCAA Tunisie : Acides Aminés dès 70 DT" claims the hub term "acides aminés" AND carries an unverified price. It keeps "bcaa tunisie" only', action: 'retarget' },
@@ -267,7 +308,7 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/eaa',
     owns: ['eaa tunisie', 'acides amines essentiels tunisie', 'acides aminés essentiels tunisie', 'eaa prix tunisie'],
     secondary: ['eaa poudre tunisie', 'eaa ou bcaa', 'neuf acides aminés essentiels'],
-    supporting: ['/acides-amines', '/blog/eaa-vs-bcaa-le-match-nul'],
+    supporting: ['/acides-amines'],
     conflicts: [
       { url: '/bcaa', reason: 'BCAA are three of the nine essentials, so the two pages genuinely overlap — /eaa owns "essentiels", /bcaa owns the acronym, and neither claims the other in a title', action: 'retarget' },
     ],
@@ -372,7 +413,12 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/omega-3',
     owns: ['omega 3 tunisie', 'oméga 3 tunisie', 'omega-3 tunisie', 'huile de poisson tunisie', 'omega 3 prix tunisie'],
     secondary: ['epa dha', 'oméga 3 gélules', 'omega 3 musculation'],
-    supporting: ['/sante-vitalite', '/articulations'],
+    supporting: [
+      '/sante-vitalite',
+      '/articulations',
+      '/blog/omega-3-tunisie',
+      '/blog/omega-3-tunisie-bienfaits-sources-et-ou-les-acheter-au-meilleur-prix',
+    ],
     conflicts: [],
     anchors: ['oméga 3 en Tunisie', 'nos oméga 3', 'huile de poisson EPA/DHA'],
   },
@@ -412,7 +458,12 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     owner: '/materiel-de-musculation',
     owns: ['materiel de musculation tunisie', 'matériel de musculation tunisie', 'machine de musculation tunisie', 'banc de musculation tunisie', 'home gym tunisie', 'materiel musculation prix tunisie'],
     secondary: ['barre olympique tunisie', 'disques de musculation tunisie', 'rack musculation tunisie', 'presse à cuisses tunisie', 'station multifonction tunisie', 'haltères tunisie'],
-    supporting: ['/equipement', '/blog/materiel-de-musculation-maison-le-guide-ultime-pour-equiper-votre-espace-d-entrainement-a-domicile', '/blog/materiel-salle-de-sport-decouvrez-les-meilleurs-equipements-et-leurs-prix-en-tunisie'],
+    supporting: [
+      '/equipement',
+      '/blog/materiel-de-musculation-maison-le-guide-ultime-pour-equiper-votre-espace-d-entrainement-a-domicile',
+      '/blog/materiel-salle-de-sport-decouvrez-les-meilleurs-equipements-et-leurs-prix-en-tunisie',
+      '/blog/materiel-de-musculation-tunisie-guide-d-achat-et-les-meilleurs-produits-pour-un-entrainement-efficace',
+    ],
     conflicts: [
       { url: '/materiel-de-musculation', reason: 'its own H1 read "Matériel de Musculation Tunisie – Équipement Fitness", claiming the parent\'s term and /cardio-fitness\'s. Rewritten 22/09/2026 onto machines, bancs, barres et racks', action: 'retarget' },
       { url: '/accessoires', reason: 'gants, ceintures, sangles and bandes live THERE (every earning accessory PDP is /accessoires/*), so this page names them only to send the reader across', action: 'leave-earns-clicks' },
