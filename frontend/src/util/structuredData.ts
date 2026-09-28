@@ -288,7 +288,17 @@ function productSchemaDescription(product: Product): string {
  * the GS1 modulo-10 check is a barcode; everything else is left alone. `sku` is untouched.
  */
 function gtinFromCodeProduct(product: Product): string | null {
-  const code = String(product.code_product ?? '').trim();
+  return validGtin(product.code_product);
+}
+
+/**
+ * A GS1 barcode (8/12/13/14 digits, modulo-10 check digit valid), or null. Applied to the
+ * dedicated `gtin` column too, not only to the inferred one: the owner types GTINs into that field
+ * by hand (28/09/2026), and the in-stock audit found Amazon FNSKU labels ("X001V5QXY3") entered as
+ * barcodes on six WeightWorld products. Google flags an invalid GTIN on the listing; none is better.
+ */
+function validGtin(raw: unknown): string | null {
+  const code = String(raw ?? '').replace(/[\s-]/g, '');
   if (!/^(\d{8}|\d{12}|\d{13}|\d{14})$/.test(code)) return null;
 
   const digits = code.split('').map(Number);
@@ -713,13 +723,9 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     }));
   }
 
-  if (product.gtin?.trim()) {
-    schema.gtin = product.gtin.trim();
-  } else {
-    // Legacy rows keep the manufacturer barcode in code_product — see gtinFromCodeProduct.
-    const inferredGtin = gtinFromCodeProduct(product);
-    if (inferredGtin) schema.gtin = inferredGtin;
-  }
+  // The typed GTIN when it is a valid barcode, else the one proven in code_product — see validGtin.
+  const productGtin = validGtin(product.gtin) ?? gtinFromCodeProduct(product);
+  if (productGtin) schema.gtin = productGtin;
   if (product.mpn?.trim()) {
     schema.mpn = product.mpn.trim();
   }
@@ -902,11 +908,12 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     }));
   }
 
-  if (product.gtin?.trim()) {
-    sanitized.gtin = product.gtin.trim();
+  const typedGtin = validGtin(product.gtin);
+  if (typedGtin) {
+    sanitized.gtin = typedGtin;
     // A refreshed barcode must not coexist with the backend graph's stale typed barcode.
     for (const key of ['gtin8', 'gtin12', 'gtin13', 'gtin14']) {
-      if (sanitized[key] != null && String(sanitized[key]).padStart(14, '0') !== product.gtin.trim().padStart(14, '0')) {
+      if (sanitized[key] != null && String(sanitized[key]).padStart(14, '0') !== typedGtin.padStart(14, '0')) {
         delete sanitized[key];
       }
     }
