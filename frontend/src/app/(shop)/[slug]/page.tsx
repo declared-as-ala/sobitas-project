@@ -24,7 +24,8 @@ import { buildBreadcrumbListSchema, buildWebPageSchema } from '@/util/structured
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { brandDescriptionWithFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
@@ -124,7 +125,7 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
     brandProductCount = 1;
   }
   const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
-  const description = buildBrandMetaDescription(brand.designation_fr, categoryNames);
+  const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, slug, categoryNames);
 
   return {
     // absolute: buildBrandMetaTitle already returns a finished SERP title, brand suffix included
@@ -157,7 +158,7 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
     robots: { index: brandProductCount > 0, follow: true },
     // Shared with the crawler route, which emitted no openGraph at all and therefore fell back to
     // the site-wide banner — see buildBrandSocialMetadata.
-    ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames),
+    ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description),
   };
 }
 
@@ -232,6 +233,7 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
       products: Array.isArray(brandProductsList) ? brandProductsList : [],
       slug: cleanSlug,
       baseUrl,
+      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(brandProductsList)),
     });
 
     return (

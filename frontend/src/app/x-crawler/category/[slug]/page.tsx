@@ -55,7 +55,8 @@ import { CategoryBrandLinksFor } from '@/app/components/CategoryBrandLinks';
 import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
-import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { brandDescriptionWithFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
@@ -311,16 +312,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       }
       // Shared with the human /{slug} route: same URL must not have two different titles.
       const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
+      const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, categoryNames);
 
       return {
         title: { absolute: title },
-        description: buildBrandMetaDescription(brand.designation_fr, categoryNames),
+        description,
         alternates: { canonical },
         robots: { index: brandProductCount > 0, follow: true },
         // This route declared no openGraph at all, so every brand page handed crawlers and link
         // unfurlers the site-wide /og-banner.jpg while a browser got the reviewed hero image.
         // Shared with the human route now — see buildBrandSocialMetadata.
-        ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames),
+        ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames, description),
       };
     }
     const page = await findPageBySlug(cleanSlug);
@@ -679,7 +681,10 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
        build its own CollectionPage as `Produits ${title}` with no description, while the human
        route used the curated title and the brandSeoConfig description — so the copy written for
        search engines was the one thing the search engine never saw. See util/brandJsonLd.ts. */
-    const brandSchemas = buildBrandLandingSchemas({ brand, products, slug: cleanSlug, baseUrl });
+    const brandSchemas = buildBrandLandingSchemas({
+      brand, products, slug: cleanSlug, baseUrl,
+      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(products)),
+    });
 
     return (
       <>

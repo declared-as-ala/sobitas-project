@@ -42,19 +42,22 @@ export function buildBrandLandingSchemas({
   products,
   slug,
   baseUrl,
+  description: resolvedDescription,
 }: {
   brand: Brand;
   products: Product[];
   /** The slug this page is SERVED at — the one middleware resolved, not a re-derived one. */
   slug: string;
   baseUrl: string;
+  description?: string;
 }): object[] {
   const path = `/${slug}`;
   const brandSeo = getBrandSeoEntry(slug);
   const title = buildBrandMetaTitle(brand.designation_fr);
-  const description =
+  const description = resolvedDescription ?? (
     brandSeo?.metaDescription ||
-    `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`;
+    `Tous les produits ${brand.designation_fr} en Tunisie : qualité premium, produits authentiques, livraison rapide partout dans le pays.`
+  );
 
   /*
    * "Marques", not "Boutique" — and the same change is made in ShopPageClient so the visible trail

@@ -13,6 +13,7 @@
  * while both views say the SAME thing — divergence is what separates it from cloaking.
  */
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
+import { resolveCategoryMetaDescription } from '@/util/resolveCategorySeo';
 
 function configEntryFor(brandName: string) {
   return getBrandSeoEntry(brandName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''));
@@ -66,6 +67,14 @@ export function buildBrandMetaDescription(brandName: string, categoryNames?: str
   return `Découvrez tous les produits ${brandName} en Tunisie : qualité premium, produits 100% authentiques, livraison rapide.`;
 }
 
+export function resolveBrandMetaDescription(
+  brandName: string,
+  categoryNames: string[],
+  facts: { priceMin: number | null; inStockCount: number | null }
+): string {
+  return resolveCategoryMetaDescription(buildBrandMetaDescription(brandName, categoryNames), facts);
+}
+
 /** Trim, drop blanks, de-duplicate case-insensitively, preserve the caller's order. */
 function normaliseCategoryNames(names: string[] | undefined): string[] {
   if (!Array.isArray(names)) return [];
@@ -97,12 +106,12 @@ function normaliseCategoryNames(names: string[] | undefined): string[] {
  * admin brand logos are 404-prone (see FeaturedBrands.tsx) — so this states the reviewed one of
  * the two, with the width/height/alt the unfurlers want, from both routes.
  */
-export function buildBrandSocialMetadata(brandName: string, canonicalUrl: string, categoryNames?: string[]) {
+export function buildBrandSocialMetadata(brandName: string, canonicalUrl: string, categoryNames?: string[], resolvedDescription?: string) {
   const image = '/slides/home-hero-web.webp';
   // Same builders as the <title>/<meta description> on the same page — an og:title that disagrees
   // with the title is the fourth way this route pair could drift.
   const title = buildBrandMetaTitle(brandName, categoryNames);
-  const description = buildBrandMetaDescription(brandName, categoryNames);
+  const description = resolvedDescription ?? buildBrandMetaDescription(brandName, categoryNames);
   return {
     openGraph: {
       title,

@@ -197,7 +197,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   dymatize: {
     metaTitle: 'Dymatize Tunisie | ISO100, Whey & Mass Gainer — Protein.tn',
     metaDescription:
-      'Achetez Dymatize en Tunisie : ISO100 whey isolate, Elite Whey et Super Mass Gainer. Comparez les formats, prix et disponibilités, livraison 24–72h.',
+      'Achetez Dymatize en Tunisie : ISO100 whey isolate, Elite Whey et Super Mass Gainer. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'Dymatize Tunisie : ISO100, whey et mass gainer',
     introHtml:
       '<p>Retrouvez la gamme <strong>Dymatize en Tunisie</strong> : ISO100 hydrolysée, Elite 100% Whey, Super Mass Gainer et pré-workout. Comparez les formats, les saveurs, le prix affiché et la disponibilité avant de commander.</p>',
@@ -237,7 +237,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   muscletech: {
     metaTitle: 'MuscleTech Tunisie | Nitro-Tech & Cell-Tech — Protein.tn',
     metaDescription:
-      'MuscleTech en Tunisie : whey Nitro-Tech 1,81 kg, ISO Whey Clear, quatre créatines dont Cell-Tech, EAA+ et pré-workout EuphoriQ. Formats et prix affichés.',
+      'MuscleTech en Tunisie : whey Nitro-Tech 1,81 kg, ISO Whey Clear, quatre créatines dont Cell-Tech. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'MuscleTech Tunisie : Nitro-Tech, Cell-Tech et acides aminés',
     introHtml:
       '<p>La gamme <strong>MuscleTech vendue en Tunisie</strong> se répartit en quatre familles. Les protéines d’abord : <strong>Nitro-Tech</strong> en 1,81 kg (Milk Chocolate, Cookies &amp; Cream, Vanilla Cream, Strawberry), <strong>ISO Whey Clear</strong> en 503 g et <strong>100% Grass-Fed Whey</strong> en 816 g. Les créatines ensuite, quatre références : <strong>Cell-Tech</strong> 1,36 kg, <strong>Platinum Creatine</strong> en pot de 400 g et deux <strong>Creatine Chews</strong> à croquer. Puis les acides aminés, <strong>Amino Build</strong> et <strong>Platinum 100% EAA+</strong>, et le pré-workout <strong>EuphoriQ</strong>. S’y ajoutent Hydroxycut Hardcore Elite, Platinum MultiVitamin et Clear Muscle. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
@@ -288,7 +288,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   ostrovit: {
     metaTitle: 'OstroVit Tunisie | Créatine, Whey & Vitamines — Protein.tn',
     metaDescription:
-      'OstroVit en Tunisie : créatine monohydrate 300 g et 500 g, glutamine, EAA, 100% Whey Protein 2 kg, Delicious Gainer et vitamines. Formats et prix affichés.',
+      'OstroVit en Tunisie : créatine monohydrate 300 g et 500 g, glutamine, EAA, 100% Whey Protein 2 kg. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'OstroVit Tunisie : créatine, acides aminés et vitamines',
     introHtml:
       '<p>La gamme <strong>OstroVit en Tunisie</strong> repose surtout sur des poudres sans arôme et des gélules à dose simple. Côté poudres : <strong>Creatine Monohydrate</strong> en 300 g et 500 g, <strong>Glutamine</strong> 300 g, <strong>EAA</strong> 400 g, <strong>Citrulline Malate</strong> 210 g et <strong>Arginine</strong> 210 g. Côté calories : <strong>100% Whey Protein</strong> 2 kg, <strong>Carbo</strong> 1000 g et <strong>Delicious Gainer</strong> 4,5 kg. Le catalogue comprend enfin une série de vitamines et minéraux — Vitamin C, Vitamin D3 4000 UI, Vitamin Forte, Omega 3, ZMA Advanced, L-Carnitina 1250, Tribulus Terrestris, Collagen + Vitamin C et Ashwagandha.</p>',
@@ -340,7 +340,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'kevin-levrone': {
     metaTitle: 'Kevin Levrone Tunisie | Levro Mass, Gold Whey — Protein.tn',
     metaDescription:
-      'Kevin Levrone en Tunisie : Levro Legendary Mass 6,8 kg et 3 kg, Gold Whey, Gold ISO, Gold Creatine, Shaaboom Pump et L-Carnitine 3000. Formats et prix affichés.',
+      'Kevin Levrone en Tunisie : Levro Legendary Mass 6,8 kg et 3 kg, Gold Whey, Gold ISO et Gold Creatine. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'Kevin Levrone Tunisie : Levro Legendary Mass et série Gold',
     introHtml:
       '<p>La gamme <strong>Kevin Levrone en Tunisie</strong> s’organise autour de la prise de masse et de la série Gold. Le gainer <strong>Levro Legendary Mass</strong> est proposé en 6,8 kg et en 3 kg. Les protéines de la série Gold suivent avec <strong>Gold Whey</strong> 2 kg et <strong>Gold ISO</strong> 2 kg. Complètent le catalogue la <strong>Gold Creatine</strong> 300 g, la <strong>Gold L-Arginine</strong> en 120 gélules, deux L-carnitines liquides — <strong>Gold L-Carnitine 3000</strong> et <strong>Anabolic L-Carnitine 3000</strong>, toutes deux en flacon de 500 ml —, le pré-workout <strong>Shaaboom Pump</strong> 385 g et le <strong>Gold Power Core Multivitamin</strong> en 120 comprimés. Un Pack Prise de Masse Pro regroupe plusieurs de ces références en une seule commande.</p>',
@@ -392,9 +392,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'optimum-nutrition': {
     metaTitle: 'Optimum Nutrition Tunisie | Whey Gold Standard — Protein.tn',
     metaDescription:
-      // GSC 22/09: 518 impr at 5.2 but 1.35 % CTR — the old text listed the catalogue, not what can be
-      // bought today. These three are in stock (28/09); keep this line in step with stock.
-      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey 2,27 kg, Serious Mass 5,45 kg et Micronised Creatine en stock, paiement à la livraison.',
+      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey 2,27 kg, Serious Mass 5,45 kg et Micronised Creatine. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'Optimum Nutrition Tunisie : Gold Standard, Hydro Whey et Serious Mass',
     introHtml:
       '<p>La gamme <strong>Optimum Nutrition en Tunisie</strong> réunit les protéines <strong>Gold Standard 100% Whey</strong>, de 837 g à 4,5 kg selon le parfum (Double Rich Chocolate, Vanilla Ice Cream, Delicious Strawberry, Strawberry Banana, Rocky Road, Banana Cream, Chocolate Malt, Chocolate Mint, Cookies &amp; Cream, Extreme Milk Chocolate, French Vanilla Creme), et <strong>Platinum Hydro Whey</strong> en 820 g, 1,59 kg, 1,6 kg et 1,64 kg, le gainer <strong>Serious Mass</strong> en 2,7 kg et 5,45 kg, la <strong>Micronised Creatine</strong> en 300 g et 317 g, les acides aminés <strong>Instantized BCAA 5000</strong> 345 g et <strong>Superior Amino 2222</strong> en 320 comprimés, ainsi que les multivitamines <strong>Opti-Men</strong> et <strong>Opti-Women</strong>. HMB et ZMA complètent le catalogue, aux côtés de packs qui regroupent plusieurs de ces références.</p>',
@@ -446,7 +444,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'biotech-usa': {
     metaTitle: 'BioTech USA Tunisie | Pure Whey & Iso Whey Zero — Protein.tn',
     metaDescription:
-      'BioTech USA en Tunisie : 100% Pure Whey et Iso Whey Zero 2,27 kg, créatine 300 g, BCAA Zero, L-Arginine, Carbox et vitamines. Formats, prix et stock affichés.',
+      'BioTech USA en Tunisie : 100% Pure Whey et Iso Whey Zero 2,27 kg, créatine 300 g, BCAA Zero et vitamines. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'BioTech USA Tunisie : 100% Pure Whey, Iso Whey Zero et créatine',
     introHtml:
       '<p>La gamme <strong>BioTech USA en Tunisie</strong> couvre d’abord les protéines, avec <strong>100% Pure Whey</strong> en 2,27 kg et <strong>Iso Whey Zero</strong> en 2,27 kg. Viennent ensuite la <strong>100% Creatine Monohydrate</strong> 300 g, les <strong>BCAA Zero</strong> 360 g, la <strong>L-Arginine</strong> 300 g et les glucides <strong>Carbox</strong> 1 kg. Le catalogue comprend également une série de gélules et comprimés à usage quotidien : Multivitamin for Men, One-A-Day, Mega Omega 3, ZMA, Zinc Duo, Zinc + Chelate, Tribulus Maximus, Ashwagandha et L-Carnitine Chrome. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>',
@@ -550,7 +548,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'real-pharm': {
     metaTitle: 'Real Pharm Tunisie | Whey, Isolate, Créatine — Protein.tn',
     metaDescription:
-      'Real Pharm en Tunisie : Real Whey 100, Real Isolate 1,8 kg, Real Casein, Real Mass 6,8 kg, créatine 150 à 500 g, BCAA, EAA et pre-workout King Real 500 g.',
+      'Real Pharm en Tunisie : Real Whey 100, Real Isolate 1,8 kg, Real Casein et Real Mass 6,8 kg. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'Real Pharm Tunisie : Real Whey, Real Isolate et créatine',
     introHtml:
       '<p>La gamme <strong>Real Pharm en Tunisie</strong> est l’une des plus larges du catalogue et couvre quatre usages. Les protéines d’abord : <strong>Real Whey 100</strong> 2,250 kg (Chocolat), <strong>Real Isolate</strong> 1,8 kg (Vanille), <strong>Real Casein 100</strong> 700 g (Fraise) et <strong>Muscle On</strong> en 1 kg (Cookies) et 2,27 kg (Chocolat), une protéine multi-sources. Les calories ensuite : <strong>Real Mass</strong> 6,8 kg (Cookies) et <strong>Carbo One</strong> 1 kg (Watermelon), une poudre de glucides seule. Les poudres de performance : <strong>Creatine Monohydrate</strong> en 150 g, 300 g et 500 g, <strong>BCAA 8:1:1</strong> 400 g (Fraise), <strong>EAA</strong> 420 g (Ananas), <strong>Beta Alanine</strong> 300 g (Fruit Punch), <strong>Citrulline</strong> 200 g et <strong>CitruArgin</strong> 300 g (Fruit de la passion), plus deux pre-workouts, <strong>King Real</strong> 500 g (Watermelon) et <strong>Behemoth</strong> 500 g. Enfin les gélules et comprimés du quotidien : Collagen Marine 300 g, Vitamin D3 + K2, Vitamax Men, Zinc, ZMA, Biotyna, Tribulus, Ashwagandha et Omega 3-6-9.</p>',
@@ -738,7 +736,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'c4-cellucor': {
     metaTitle: 'C4 / Cellucor Tunisie | Pre-Workout, C4 Whey & Créatine',
     metaDescription:
-      'C4 / Cellucor en Tunisie : C4 Original et C4 Ripped Sport, C4 Whey Protein en six versions, COR-Performance Creatine en cinq arômes, Max Test et brûleurs.',
+      'C4 / Cellucor en Tunisie : C4 Original et C4 Ripped Sport, C4 Whey Protein en six versions. Dès {prixMin} DT, {nbEnStock} produits en stock.',
     h1: 'C4 / Cellucor Tunisie : pre-workout, whey et créatine',
     introHtml:
       '<p>La gamme <strong>C4 / Cellucor en Tunisie</strong> compte dix-sept références organisées en quatre familles. Les pre-workouts : <strong>C4 Original</strong> 246 g (Grape Popsicle) et <strong>C4 Ripped Sport</strong> en 213 g (Fruit Punch) et 210 g (Arctic Snow Cone). Les protéines : <strong>C4 Whey Protein</strong> en six versions — Vanilla Bean en 966 g et 2,28 kg, Hershey’s Milk Chocolate en 1,01 kg et 2,38 kg, Reese’s Peanut Butter &amp; Chocolate en 1,13 kg et 2,65 kg. La créatine : <strong>COR-Performance Creatine</strong> en cinq arômes, Jolly Rancher Green Apple 316 g, Jolly Rancher Cherry 321 g, Watermelon 315 g, Blue Raspberry 315 g et Fruit Punch 325 g. Enfin trois produits en gélules : <strong>Max Test</strong> 120 gélules, <strong>Super Shred</strong> et <strong>Super Thermo Stim-Free</strong> en 60 gélules chacun.</p>',
@@ -1774,7 +1772,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'eric-favre': {
     metaTitle: "Eric Favre Tunisie | Mass Gainer, Protein Vegan, Born Rage",
     metaDescription:
-      "Eric Favre : Mass Gainer Créatine 7 kg, Mass Gainer Zero 7 kg, Protein Vegan 1,5 kg, Iso Fusion 2 kg, pré-workout Born Rage et un pack prise de masse.",
+      "Eric Favre : Mass Gainer Créatine 7 kg, Mass Gainer Zero 7 kg, Protein Vegan 1,5 kg et Iso Fusion 2 kg. Dès {prixMin} DT, {nbEnStock} produits en stock.",
     h1: "Eric Favre Tunisie : gainers 7 kg, protéine végétale et pré-workout",
     introHtml:
       "<p>La gamme <strong>Eric Favre en Tunisie</strong> compte six références sur Protein.tn, et trois d’entre elles tournent autour de la prise de poids. Deux gainers en sac de 7 kg d’abord : <strong>Mass Gainer Créatine</strong>, référencé en arôme Cookies et rangé au rayon glucides, et <strong>Mass Gainer Zero</strong>, en Vanilla et Pistache. Puis le <strong>Pack Prise de Masse</strong>, qui réunit un Hard Mass Gainer 7 kg, une Gold Creatine et un Shaker Kong de 700 ml. Côté protéines, deux poudres qui n’ont pas la même source : <strong>Protein Vegan</strong> 1,5 kg en Vanilla, une protéine végétale présentée comme associant pois, riz et spiruline, et <strong>Iso Fusion</strong> 2 kg, une whey isolate listée en Cookies et Vanilla. Enfin, un pré-workout : <strong>Born Rage Original</strong>. Une seule de ces fiches publie aujourd’hui un tableau nutritionnel transcrit de l’étiquette, celle du Mass Gainer Créatine ; pour les cinq autres, c’est l’emballage qui fait foi. La grille ci-dessus indique le prix et la disponibilité de chaque référence.</p>",
@@ -1911,7 +1909,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'scenit-nutrition': {
     metaTitle: "Scenit Nutrition Tunisie | Tantor Whey, Instant Mass, EAA",
     metaDescription:
-      "Scenit Nutrition en Tunisie : Tantor Whey 908 g et 2,267 kg, gainers Instant Real Mass 2,72 kg et Instant Mass 7 kg, EAA Master Amino 390 g et collagène.",
+      "Scenit Nutrition en Tunisie : Tantor Whey 908 g et 2,267 kg, gainers Instant Real Mass 2,72 kg et Instant Mass 7 kg. Dès {prixMin} DT, {nbEnStock} produits en stock.",
     h1: "Scenit Nutrition Tunisie : whey Tantor, gainers Instant Mass et EAA",
     introHtml:
       "<p>La gamme <strong>Scenit Nutrition en Tunisie</strong> compte 14 références sur Protein.tn, réparties sur douze rayons : c’est l’une des plus dispersées du catalogue, et elle se lit mieux par usage. Les protéines : <strong>Tantor Whey Protein</strong> en 908 g (arôme Fraise) et en 2,267 kg. La prise de masse : deux gainers, <strong>Instant Real Mass</strong> 2,72 kg (arôme Chocolat), classé en mass gainers, et <strong>Instant Mass</strong> 7 kg, classé en gainers protéinés. Les acides aminés : <strong>EAA Master Amino</strong> 390 g (arôme Fruit Punch), <strong>Elite Arginine</strong> en 120 capsules, deux BCAA — <strong>BCAA Gluta</strong> 500 g et <strong>BCAA 12.000</strong> 457 g — et une <strong>Beta Alanine</strong> 300 g (arôme Fraise). S’y ajoutent <strong>Best Creatine</strong> 500 g, <strong>Best Collagen Premium</strong> 350 g, le multivitamines <strong>Multi Vita+</strong> en 120 capsules, un <strong>Omega 3</strong> et le <strong>T9 Testo Booster</strong> en 120 gélules. Chaque format est une fiche distincte : la grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
