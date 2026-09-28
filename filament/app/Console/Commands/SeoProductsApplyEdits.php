@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Article;
 use App\Models\Product;
 use App\Services\Seo\LegacyProductPage;
 use Illuminate\Console\Command;
@@ -33,6 +34,9 @@ class SeoProductsApplyEdits extends Command
     protected $description = 'Apply reviewed product-copy replacements (resources/seo/product-edits/*.json), guarded by a hash of the current text';
 
     private const FIELDS = ['description_fr', 'description_cover', 'questions'];
+
+    /** Blog articles take the same guarded replacement (`"model": "article"`), on their body fields. */
+    private const ARTICLE_FIELDS = ['description_fr', 'description'];
 
     public function handle(): int
     {
@@ -66,19 +70,24 @@ class SeoProductsApplyEdits extends Command
         $this->line(sprintf('%s — %d edit(s) from %s', $apply ? 'APPLY' : 'REPORT ONLY', count($entries), $dir));
         $this->line('');
 
-        $products = Product::query()->whereIn('slug', array_keys($entries))->get();
+        $productSlugs = array_keys(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') !== 'article'));
+        $articleSlugs = array_keys(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') === 'article'));
+        $products = Product::query()->whereIn('slug', $productSlugs)->get();
+        $articles = $articleSlugs === [] ? collect() : Article::query()->whereIn('slug', $articleSlugs)->get();
         $changed = $upToDate = $skipped = 0;
 
         foreach ($entries as $slug => $entry) {
             $field = (string) ($entry['field'] ?? '');
             $value = $entry['value'] ?? null;
             $oldSha = strtolower((string) ($entry['old_sha1'] ?? ''));
-            /** @var Product|null $product */
-            $product = $products->firstWhere('slug', $slug);
+            $isArticle = ($entry['model'] ?? 'product') === 'article';
+            $allowed = $isArticle ? self::ARTICLE_FIELDS : self::FIELDS;
+            /** @var Product|Article|null $product */
+            $product = $isArticle ? $articles->firstWhere('slug', $slug) : $products->firstWhere('slug', $slug);
 
-            if (! in_array($field, self::FIELDS, true) || ! is_string($value) || trim($value) === '' || $oldSha === '') {
+            if (! in_array($field, $allowed, true) || ! is_string($value) || trim($value) === '' || $oldSha === '') {
                 $skipped++;
-                $this->warn(sprintf('  INVALID   %s — needs field (%s), a non-empty value and old_sha1', $slug, implode('|', self::FIELDS)));
+                $this->warn(sprintf('  INVALID   %s — needs field (%s), a non-empty value and old_sha1', $slug, implode('|', $allowed)));
                 continue;
             }
             if (! $product) {
@@ -99,10 +108,13 @@ class SeoProductsApplyEdits extends Command
                 continue;
             }
 
-            $before = LegacyProductPage::bodyWords($product->description_fr, $product->description_cover, $product->nutrition_values, $product->faq);
+            $words = fn () => $isArticle
+                ? count(preg_split('/\s+/u', trim(strip_tags((string) $product->{$field})), -1, PREG_SPLIT_NO_EMPTY))
+                : LegacyProductPage::bodyWords($product->description_fr, $product->description_cover, $product->nutrition_values, $product->faq);
+            $before = $words();
             $product->{$field} = $value;
-            $after = LegacyProductPage::bodyWords($product->description_fr, $product->description_cover, $product->nutrition_values, $product->faq);
-            $summary = sprintf('%-56s %4d w -> %4d w  [%s]%s', $slug, $before, $after, $field,
+            $after = $words();
+            $summary = sprintf('%-56s %4d w -> %4d w  [%s%s]%s', $slug, $before, $after, $isArticle ? 'article.' : '', $field,
                 isset($entry['why']) && is_string($entry['why']) && $entry['why'] !== '' ? '  — '.$entry['why'] : '');
 
             if ($apply) {
