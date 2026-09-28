@@ -1,5 +1,6 @@
 'use client';
 
+import { startTransition } from 'react';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { usePathname } from 'next/navigation';
 import { Home, LayoutGrid, Heart, User, ShoppingCart, type LucideIcon } from 'lucide-react';
@@ -172,7 +173,9 @@ export function MobileTabBar() {
         <li>
           <button
             type="button"
-            onClick={() => setCartDrawerOpen(true)}
+            onClick={() => window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+              startTransition(() => setCartDrawerOpen(true));
+            }))}
             aria-label={cartCount > 0 ? `Panier — ${cartCount} articles` : 'Panier'}
             className="relative flex h-full w-full flex-col items-center justify-center gap-0.5 text-gray-500 transition-colors dark:text-gray-400"
           >

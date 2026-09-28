@@ -4,6 +4,12 @@
    (currently broken) shadcn variables. See the header comment in tokens.css. */
 @import '../styles/tokens.css';
 
+@property --removed-body-scroll-bar-size {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px;
+}
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

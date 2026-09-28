@@ -37,10 +37,10 @@ export function useScrollLock(locked: boolean) {
     if (!locked || typeof document === 'undefined') return;
 
     const html = document.documentElement;
-    /* innerWidth includes the scrollbar; clientWidth does not. The difference IS the scrollbar,
-       and it is 0 on every overlay-scrollbar platform (macOS, touch), where no compensation is
-       wanted and none is applied. */
-    const scrollbar = window.innerWidth - html.clientWidth;
+    /* Touch devices use overlay scrollbars, so avoid a layout read when opening the drawer. */
+    const scrollbar = window.matchMedia('(pointer: coarse)').matches
+      ? 0
+      : window.innerWidth - html.clientWidth;
     const prevOverflow = html.style.overflow;
     const prevPadding = html.style.paddingRight;
 

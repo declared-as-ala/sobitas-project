@@ -228,7 +228,7 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
-    if (!localeReady) return;
+    if (!MULTILOCALE_ENABLED || !localeReady) return;
     const dir = getLocaleDirection(locale);
     document.documentElement.lang = locale;
     document.documentElement.dir = dir;
