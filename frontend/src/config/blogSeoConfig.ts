@@ -1232,7 +1232,10 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
   // pillars only where the article's subject genuinely matches them.
 
   'ما هو أفضل كرياتين في تونس؟': {
-    headline: 'كيف تختار نوع الكرياتين؟ مقارنة الشكل والنقاوة والاستعمال',
+    // Keeps the query it ranks for. GSC 3 m to 19/09: 59 clicks / 1,787 impr at 5.4 — our best
+    // creatine asset in any language — and no Arabic category page competes for "أفضل كرياتين في
+    // تونس", so dropping those words (27/09) bought no cannibalisation relief. Informational angle kept.
+    headline: 'أفضل كرياتين في تونس: كيف تختار النوع حسب الشكل والنقاوة والاستعمال',
     openingLinkHtml:
       '<p>الأنواع المتوفرة والأحجام والأسعار الحالية على صفحة <a href="/creatine">كرياتين في تونس</a>.</p>',
     metaDescription:

@@ -392,7 +392,9 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
   'optimum-nutrition': {
     metaTitle: 'Optimum Nutrition Tunisie | Whey Gold Standard — Protein.tn',
     metaDescription:
-      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey de 837 g à 4,5 kg, Platinum Hydro Whey, Serious Mass, Micronised Creatine, BCAA 5000 et Opti-Men.',
+      // GSC 22/09: 518 impr at 5.2 but 1.35 % CTR — the old text listed the catalogue, not what can be
+      // bought today. These three are in stock (28/09); keep this line in step with stock.
+      'Optimum Nutrition en Tunisie : Gold Standard 100% Whey 2,27 kg, Serious Mass 5,45 kg et Micronised Creatine en stock, paiement à la livraison.',
     h1: 'Optimum Nutrition Tunisie : Gold Standard, Hydro Whey et Serious Mass',
     introHtml:
       '<p>La gamme <strong>Optimum Nutrition en Tunisie</strong> réunit les protéines <strong>Gold Standard 100% Whey</strong>, de 837 g à 4,5 kg selon le parfum (Double Rich Chocolate, Vanilla Ice Cream, Delicious Strawberry, Strawberry Banana, Rocky Road, Banana Cream, Chocolate Malt, Chocolate Mint, Cookies &amp; Cream, Extreme Milk Chocolate, French Vanilla Creme), et <strong>Platinum Hydro Whey</strong> en 820 g, 1,59 kg, 1,6 kg et 1,64 kg, le gainer <strong>Serious Mass</strong> en 2,7 kg et 5,45 kg, la <strong>Micronised Creatine</strong> en 300 g et 317 g, les acides aminés <strong>Instantized BCAA 5000</strong> 345 g et <strong>Superior Amino 2222</strong> en 320 comprimés, ainsi que les multivitamines <strong>Opti-Men</strong> et <strong>Opti-Women</strong>. HMB et ZMA complètent le catalogue, aux côtés de packs qui regroupent plusieurs de ces références.</p>',
