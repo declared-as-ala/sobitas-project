@@ -243,7 +243,8 @@ if (!process.argv.includes('--record-before')) {
     }
   }
   for (const s of make({ ...example, cover: 'data:image/png;base64,AAAA', seo: { image: example.cover } }, { image: 'https://' })) {
-    assert.deepEqual(s.image, [example.cover]); regressions++;
+    // Same-origin media since 28/09/2026: an admin-storage cover is published as protein.tn/media.
+    assert.deepEqual(s.image, ['https://protein.tn/media/produits/test.webp?m=1']); regressions++;
   }
   for (const s of make({ ...example, qte: 0, rupture: 1 }, { offers: {
     shippingDetails: { '@type': 'OfferShippingDetails', deliveryTime: 'tomorrow' },

@@ -663,7 +663,10 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     price: formatSchemaPrice(price),
     availability,
     itemCondition: productCondition(product),
-    seller: { '@type': 'Organization', name: SITE_BRAND_NAME },
+    // A reference, not a second declaration: the layout already defines #organization as
+    // [Organization, OnlineStore] with its logo. Re-declaring it here as a bare Organization gave Google
+    // one @id with two conflicting type sets and no logo (structured-data audit 28/09/2026).
+    seller: { '@id': `${PRODUCTION_ORIGIN}/#organization` },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
@@ -817,12 +820,10 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     price,
     availability,
     itemCondition: productCondition(product),
-    seller: {
-      '@type': 'Organization',
-      '@id': `${PRODUCTION_ORIGIN}/#organization`,
-      name: SITE_BRAND_NAME,
-      url: PRODUCTION_ORIGIN,
-    },
+    // A reference, not a second declaration: the layout already defines #organization as
+    // [Organization, OnlineStore] with its logo. Re-declaring it here as a bare Organization gave Google
+    // one @id with two conflicting type sets and no logo (structured-data audit 28/09/2026).
+    seller: { '@id': `${PRODUCTION_ORIGIN}/#organization` },
     hasMerchantReturnPolicy: DEFAULT_RETURN_POLICY,
   };
 
@@ -1240,11 +1241,11 @@ export function buildSiteNavigationSchema(baseUrl: string): object {
     '@context': 'https://schema.org',
     '@type': 'ItemList',
     name: 'Navigation principale — Protéine Tunisie',
+    // ItemList members are ListItems; the navigation element is the item each one points at.
     itemListElement: links.map((l, index) => ({
-      '@type': 'SiteNavigationElement',
+      '@type': 'ListItem',
       position: index + 1,
-      name: l.name,
-      url: `${base}${l.path}`,
+      item: { '@type': 'SiteNavigationElement', name: l.name, url: `${base}${l.path}` },
     })),
   };
 }

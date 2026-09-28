@@ -1,5 +1,6 @@
 import { taxonomyAncestors, taxonomyLabel, taxonomyNode } from '@/config/catalogTaxonomy';
 import type { Product, SubCategory } from '@/types';
+import { humanProductHeading } from '@/util/productMetaDescription';
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
 
@@ -286,7 +287,9 @@ export function getProductBreadcrumbs(product: Product): Array<{ name: string; u
   }
 
   breadcrumbs.push({
-    name: product.designation_fr || product.slug,
+    // The humanised name the H1 and <title> use, not the wholesaler string ("SERIOUS MASS  5,45 KG -
+    // OPTIMUM NUTRITION"): the last crumb names the page and must agree with its heading.
+    name: humanProductHeading(product) || product.slug,
     url: buildProductUrlPath(product),
   });
 
