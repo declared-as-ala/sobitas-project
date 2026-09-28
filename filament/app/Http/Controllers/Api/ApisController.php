@@ -2162,10 +2162,14 @@ class ApisController extends Controller
     public function redirections()
     {
         try {
+            // The cap was 500 with no ORDER BY: past 500 rows MySQL returned an arbitrary subset and
+            // the rest silently stopped redirecting. Renames now write rules automatically
+            // (ProductUrlHistory), so the table will grow — newest first, generous ceiling.
             return Redirection::query()
                 ->where('is_active', 1)
                 ->select('id', 'old_url', 'new_url', 'code')
-                ->limit(500)
+                ->orderByDesc('id')
+                ->limit(10000)
                 ->get();
         } catch (\Throwable $e) {
             Log::warning('redirections endpoint failed: '.$e->getMessage());

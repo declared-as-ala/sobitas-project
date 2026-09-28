@@ -52,6 +52,11 @@ class ProductSeoObserver
      */
     public function saved(Product $product): void
     {
+        // Before the `publier` gate on purpose: a renamed product must keep its old address pointing
+        // at the new one whether or not it happens to be published at this instant. See
+        // ProductUrlHistory for the rename that took a live, in-stock product out of Google.
+        app(\App\Services\Seo\ProductUrlHistory::class)->recordIfMoved($product);
+
         $relevant = $product->wasRecentlyCreated
             || $product->wasChanged([
                 'prix', 'promo', 'qte', 'rupture', 'force_out_of_stock', 'publier', 'slug',
