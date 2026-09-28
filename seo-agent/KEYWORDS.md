@@ -30,6 +30,10 @@ tunisie **~10** (/whey-proteine) · proteine tunisie **~13** (home) · absent fr
 tunisie, pre workout tunisie · absent from page 1: creatine prix tunisie, whey isolate tunisie, gold standard whey prix
 tunisie, omega 3 tunisie, bruleur de graisse tunisie, complement alimentaire musculation tunisie, nutrition sportive tunisie.
 Re-read these exact queries the same way before claiming a move.
+Evening re-check 28/09: /proteines **9** on "proteine tunisie" (home out of top 20), /whey-proteine **~13** on "whey protein
+tunisie". **Arabic** (`hl=ar`): افضل بروتين في تونس **1** (post 176, AI Overview cites it) · بروتين تونس **4** (176) ·
+واي بروتين تونس **8** (176) · كرياتين تونس **~10** (post 214) · سعر الكرياتين في تونس ~18 (French /creatine, translated) ·
+مكملات غذائية تونس and ماس جينر تونس absent from top 18. Aecor and Impact are the only competitors with /ar/ pages.
 
 ## Head terms (category pages)
 
