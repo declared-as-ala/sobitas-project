@@ -40,9 +40,9 @@ import { retiredSlugDestination } from '@/util/retiredSlug';
 import {
   generateMetadata as generateCategoryMetadata,
   loadListingPage,
-  loadCategoryStockFacts,
   listingOverflowTo,
 } from '@/app/(shop)/category/[slug]/page';
+import { loadCategoryStockFacts } from '@/util/loadCategoryStockFacts';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
 import { mergeCategorySeoForSlug, canonicalCategoryPath, resolveCategoryMetaDescription, resolveCategoryIntroHtml, resolveCategoryFaqs } from '@/util/resolveCategorySeo';

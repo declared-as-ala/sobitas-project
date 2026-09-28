@@ -85,7 +85,7 @@ export function resolveCategoryMetaDescription(
   description: string,
   facts: CategoryStockFacts
 ): string {
-  return description.split(/(?<=\.)\s+/)
+  return description.split(/(?<=[.؟!])\s+/u)
     .filter((sentence) => !unavailableFact(sentence, facts))
     .map((sentence) => replaceCategoryFacts(sentence, facts))
     // Final guard: an unrecognized placement of a supported token cannot leak into output.

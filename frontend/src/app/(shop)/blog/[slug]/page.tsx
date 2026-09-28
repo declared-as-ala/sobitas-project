@@ -16,6 +16,10 @@ import { sanitizeArticleHtml } from '@/util/sanitizeArticleHtml';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
 import { getBlogSeoEntry } from '@/config/blogSeoConfig';
+import { blogCommercialCategory } from '@/util/blogCommercialCategory';
+import { taxonomyDepth } from '@/config/catalogTaxonomy';
+import { loadCategoryStockFacts } from '@/util/loadCategoryStockFacts';
+import { resolveCategoryFaqs, resolveCategoryIntroHtml } from '@/util/resolveCategorySeo';
 import { withSeoHeadlines } from '@/util/blogCardTitles';
 import { BlogInStockProducts } from '@/app/components/blog/BlogInStockProducts';
 import { ArticleDetailClient, type BlogCommerceBridgeData } from './ArticleDetailClient';
@@ -295,7 +299,23 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
     }
 
     const seoOverlay = getBlogSeoEntry(slug);
-    const commerceBridge = buildCommerceBridge(seoOverlay?.openingLinkHtml, seoOverlay?.lang);
+    const categorySlug = blogCommercialCategory(slug);
+    const factToken = /\{(?:prixMin|prixMax|nbEnStock)\}/;
+    const hasFaqFactTokens = seoOverlay?.faqs.some((faq) => factToken.test(faq.answer)) ?? false;
+    const hasOpeningFactTokens = factToken.test(seoOverlay?.openingLinkHtml ?? '');
+    const categoryFacts = categorySlug && (hasFaqFactTokens || hasOpeningFactTokens)
+      ? await loadCategoryStockFacts(taxonomyDepth(categorySlug) === 0
+        ? { categories: [categorySlug], subcategories: [] }
+        : { subcategories: [categorySlug], categories: [] })
+      : null;
+    const safeFacts = categoryFacts ?? { priceMin: null, priceMax: null, inStockCount: null };
+    const resolvedFaqs = seoOverlay && hasFaqFactTokens
+      ? resolveCategoryFaqs(seoOverlay.faqs, safeFacts)
+      : seoOverlay?.faqs;
+    const openingLinkHtml = seoOverlay?.openingLinkHtml && hasOpeningFactTokens
+      ? resolveCategoryIntroHtml(seoOverlay.openingLinkHtml, safeFacts)
+      : seoOverlay?.openingLinkHtml;
+    const commerceBridge = buildCommerceBridge(openingLinkHtml, seoOverlay?.lang);
     const displayArticle = seoOverlay
       ? {
           ...article,
@@ -425,7 +445,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           commerceBridge={commerceBridge}
           inStockProducts={<BlogInStockProducts slug={slug} arabic={arabic} />}
         >
-          <BlogSeoBlock slug={slug} excludeHref={commerceBridge?.href} />
+          <BlogSeoBlock slug={slug} excludeHref={commerceBridge?.href} resolvedFaqs={resolvedFaqs} />
         </ArticleDetailClient>
       </>
     );

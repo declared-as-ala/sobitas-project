@@ -468,7 +468,7 @@ export function ArticleDetailClient({
                   article={article}
                   categorySlug={commerceCategorySlug || article.category_slug}
                   recommendedProductSlugs={article.recommended_product_slugs ?? []}
-                  title="Achetez les produits de cet article"
+                  title={arabic ? 'اشترِ منتجات هذا المقال' : 'Achetez les produits de cet article'}
                   variant="inline"
                 />
                 {contentAfter && (

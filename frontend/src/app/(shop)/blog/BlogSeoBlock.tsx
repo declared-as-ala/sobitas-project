@@ -4,6 +4,7 @@ import { buildFAQPageSchemaFromQA } from '@/util/structuredData';
 
 interface BlogSeoBlockProps {
   slug: string;
+  resolvedFaqs?: Array<{ question: string; answer: string }>;
   /** Destination already promoted by the article's top commerce bridge. */
   excludeHref?: string;
 }
@@ -12,11 +13,11 @@ interface BlogSeoBlockProps {
  * Reusable SEO block for blog articles: FAQ section + internal links with keyword anchors.
  * Renders only when slug exists in blogSeoConfig. Outputs FAQPage schema when FAQs present.
  */
-export function BlogSeoBlock({ slug, excludeHref }: BlogSeoBlockProps) {
+export function BlogSeoBlock({ slug, excludeHref, resolvedFaqs }: BlogSeoBlockProps) {
   const entry = getBlogSeoEntry(slug);
   if (!entry) return null;
 
-  const { faqs } = entry;
+  const faqs = resolvedFaqs ?? entry.faqs;
   /*
    * One chip per destination. Thirteen entries listed the same anchor+href two to four times, so
    * the block rendered "créatine monohydrate en Tunisie → /creatine" twice in a row: no extra

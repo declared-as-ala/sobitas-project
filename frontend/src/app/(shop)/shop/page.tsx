@@ -1,7 +1,8 @@
 import { Metadata } from 'next';
 import { permanentRedirect } from 'next/navigation';
 import { unstable_cache } from 'next/cache';
-import { getShopPage, getShopFacets, getCategories, getInStockCount } from '@/services/api';
+import { getShopPage, getShopFacets, getCategories } from '@/services/api';
+import { loadInStockCount } from '@/util/loadInStockCount';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildShopSchemas, shopCanonicalPath } from '@/util/shopJsonLd';
 import { loadForCache } from '@/util/loadForCache';
@@ -326,11 +327,6 @@ async function getShopData(query: ShopQuery) {
     revalidate: 3600,
     tags: ['categories'],
   });
-  const cachedInStockCount = unstable_cache(() => getInStockCount(), ['shop-in-stock-count'], {
-    revalidate: 300,
-    tags: ['shop', 'products'],
-  });
-
   const [productsResponse, facets, categories, inStockCount] = await Promise.all([
     loadForCache(
       cachedShopPage,
@@ -340,7 +336,7 @@ async function getShopData(query: ShopQuery) {
     cachedCategories().catch(() => [] as Awaited<ReturnType<typeof getCategories>>),
     // See getInStockCount: 133 of 11,263 products are shippable, and the availability checkbox is
     // unreadable without that number printed next to it.
-    cachedInStockCount(),
+    loadInStockCount(),
   ]);
 
   /*

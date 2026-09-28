@@ -8,6 +8,7 @@ import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
 import { buildWebPageSchema, buildItemListSchema } from '@/util/structuredData';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
+import { loadInStockCount } from '@/util/loadInStockCount';
 import { HomePageClient } from '@/app/components/HomePageClient';
 import type { AccueilData, Product } from '@/types';
 
@@ -22,12 +23,15 @@ const HOME_TITLE = 'Protéine Tunisie | Protein.tn, boutique à Sousse';
 export async function generateMetadata(): Promise<Metadata> {
   const canonical = buildCanonicalUrl('/');
   const title = HOME_TITLE;
-  // 139 chars. The previous one was 187 and Google cut it mid-sentence on the SERP that earns
-  // "protein tunisie" (125 clicks, position 5.5) — the homepage's best query, where the snippet is
-  // the whole CTR lever. Same head terms, same Sousse proof, nothing past the ~155-char fold.
-  // This const also feeds openGraph and twitter below, so one edit covers all three.
-  const description =
-    'Protéine Tunisie : whey, créatine, gainer, BCAA et compléments authentiques chez Protein.tn (Sousse). Livraison rapide partout en Tunisie.';
+  // Keep this under ~155 chars: a 187-char version was cut mid-sentence on the SERP that earns
+  // "protein tunisie" (the homepage's best query, #3 on 28/09/2026), where the snippet is the CTR lever.
+  // Since 28/09 it carries the live in-stock count and cash on delivery; without a count it drops
+  // the clause rather than printing 0. This const also feeds openGraph and twitter below.
+  const inStockCount = await loadInStockCount();
+  const stockClause = inStockCount !== null && inStockCount > 0
+    ? `, ${inStockCount} produits en stock chez`
+    : ' chez';
+  const description = `Protéine Tunisie : whey, créatine, gainer et BCAA authentiques${stockClause} Protein.tn (Sousse). Livraison 24–72h, paiement à la livraison.`;
 
   return {
     // absolute: the homepage title already reads as a full brand title; without this the root

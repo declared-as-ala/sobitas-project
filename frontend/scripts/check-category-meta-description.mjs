@@ -29,6 +29,13 @@ assert.equal(resolveCategoryIntroHtml('<p>Notre gamme.</p><div>Prix de {prixMin}
 const faqs = resolveCategoryFaqs([{ question: 'Quel prix ?', answer: 'De {prixMin} à {prixMax} DT. Livraison disponible.' }], categoryFacts);
 assert.equal(faqs[0].answer, 'De 59 à 250 DT. Livraison disponible.');
 assert.equal(resolveCategoryFaqs([{ question: 'Quel prix ?', answer: 'De {prixMin} à {prixMax} DT. Livraison disponible.' }], { ...categoryFacts, priceMax: null })[0].answer, 'Livraison disponible.');
+const arabicAnswer = 'كم السعر؟ يتراوح السعر بين {prixMin} و{prixMax} دينار مع {nbEnStock} منتجات متوفرة! قارن السعر حسب الغرام.';
+assert.equal(resolveCategoryFaqs([{ question: 'كم السعر؟', answer: arabicAnswer }], categoryFacts)[0].answer,
+  'كم السعر؟ يتراوح السعر بين 59 و250 دينار مع 12 منتجات متوفرة! قارن السعر حسب الغرام.');
+assert.equal(resolveCategoryFaqs([{ question: 'كم السعر؟', answer: arabicAnswer }], { ...categoryFacts, priceMax: null })[0].answer,
+  'كم السعر؟ قارن السعر حسب الغرام.');
+assert.equal(resolve('يتراوح السعر بين {prixMin} و{prixMax} دينار مع {nbEnStock} منتجات متوفرة الآن. قارن السعر حسب الغرام قبل الشراء.',
+  { ...categoryFacts, priceMax: null }), 'قارن السعر حسب الغرام قبل الشراء.');
 for (const value of [resolveCategoryIntroHtml(intro, { ...categoryFacts, priceMax: null }), ...resolveCategoryFaqs(faqs, categoryFacts).map((faq) => faq.answer)]) {
   assert.doesNotMatch(value, /\{(?:prixMin|prixMax|nbEnStock)\}/);
 }
@@ -62,4 +69,4 @@ for (const [slug, raw] of descriptions) {
   assert.equal(resolve(raw, { priceMin: 99, inStockCount: null }), raw.split('. Dès ')[0] + '.');
   console.log(`${slug}: ${resolved.length} characters`);
 }
-console.log('Category meta description and copy facts: 11 cases; curated brand descriptions: 10 cases passed');
+console.log('Category meta description and copy facts: French and Arabic cases; curated brand descriptions: 10 cases passed');
