@@ -6,7 +6,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { useCart } from '@/app/contexts/CartContext';
+import { useCartActions, useCartQty } from '@/app/contexts/CartContext';
 import { Button } from '@/app/components/ui/button';
 import { ProductInfoSection } from '@/app/components/product/ProductInfoSection';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
@@ -34,7 +34,7 @@ import { StarRating } from '@/app/components/product/StarRating';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { Minus, Plus, ShoppingCart, Star, Shield, Heart, Share2, ZoomIn, CheckCircle2, XCircle, AlertTriangle, Loader2, Zap, X, ChevronLeft, ChevronRight, Sparkles, TrendingUp, Flame, Truck, CreditCard, Mail, BadgeCheck, Phone, ArrowUpDown, ArrowLeft, ArrowUpRight, ShieldCheck, MessageSquare, Coins, Camera } from 'lucide-react';
 import { useQuickOrder } from '@/contexts/QuickOrderContext';
-import { useFavorites } from '@/contexts/FavoritesContext';
+import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import type { Product, Review } from '@/types';
 import { getStorageUrl, addReview, addGuestReview, getProductDetails } from '@/services/api';
@@ -94,16 +94,16 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const REVIEW_PAGE_SIZE = 12;
   // Same helper, same columns as CrawlerProductView — content parity is not optional here, because
   // middleware sends Googlebot to that view and a table only one of them can see is a discrepancy.
-  const comparisonRows = buildComparison(initialProduct, similarProducts);
+  const comparisonRows = useMemo(() => buildComparison(initialProduct, similarProducts), [initialProduct, similarProducts]);
   const officialVideoId = videoId(initialProduct.official_video);
   const router = useRouter();
   const params = useParams();
   const productSlug = (slugOverride ?? (params?.slug as string) ?? (params?.id as string)) ?? '';
-  const { addToCart, getCartQty } = useCart();
+  const { addToCart } = useCartActions();
   const { isAuthenticated, user } = useAuth();
   const [quantity, setQuantity] = useState(1);
   const [requestOpen, setRequestOpen] = useState(false);
-  const { isFavorite: isInFavorites, toggleFavorite } = useFavorites();
+  const { toggleFavorite } = useFavoritesActions();
   const reviewOpenedAt = useRef<number | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   /**
@@ -128,6 +128,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   // Use state to manage product data so we can update it after adding a review
   const [product, setProduct] = useState<Product>(initialProduct);
+  const isInFavorites = useIsFavorite(product.id);
   const favoriteProduct = {
     id: product.id,
     designation_fr: product.designation_fr,
@@ -157,7 +158,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const stockStatus = getProductStockStatus(product as any);
   const inStockSibling = findInStockSibling(product, similarProducts);
   const stockDisponible = getStockDisponible(product as any);
-  const inCartQty = getCartQty(product.id);
+  const inCartQty = useCartQty(product.id);
 
   if (process.env.NODE_ENV === 'development' && typeof window !== 'undefined') {
     console.debug('[ProductDetail] stock', {
@@ -352,6 +353,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       }),
     [descriptionHtml, product]
   );
+  const sanitizedDescriptionHtml = useMemo(() => sanitizeRichHtml(merged.body), [merged.body]);
+  const sanitizedSections = useMemo(() => merged.sections.map((section) => ({ ...section, html: sanitizeRichHtml(section.html) })), [merged.sections]);
+  const sanitizedSourceNutritionHtml = useMemo(() => sanitizeRichHtml(productSourceNutritionHtml(product) || merged.nutritionFallback || ''), [product, merged.nutritionFallback]);
+  const sanitizedNutritionHtml = useMemo(() => sanitizeRichHtml(product.nutrition_values || ''), [product.nutrition_values]);
+  const sanitizedQuestionsHtml = useMemo(() => sanitizeRichHtml(product.questions || ''), [product.questions]);
 
   /*
    * Is there actually anything behind the fold of the Description panel?
@@ -577,11 +583,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   };
 
   // Get meta description for display (strip HTML if needed)
-  const metaDescription = product.meta_description_fr 
+  const metaDescription = useMemo(() => product.meta_description_fr
     ? stripHtml(product.meta_description_fr)
     : product.description_cover 
     ? stripHtml(product.description_cover)
-    : null;
+    : null, [product.meta_description_fr, product.description_cover]);
 
   const quickOrderProduct: QuickOrderProduct = {
     id: product.id,
@@ -1350,14 +1356,14 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   type="button"
                   onClick={() => toggleFavorite(favoriteProduct)}
                   className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-hairline px-3 text-sm font-medium text-ink-2 transition-colors hover:border-brand hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus lg:border-transparent lg:px-2 lg:text-xs"
-                  aria-pressed={isInFavorites(product.id)}
+                  aria-pressed={isInFavorites}
                 >
                   <Heart
-                    className={cn('h-4 w-4 shrink-0', isInFavorites(product.id) && 'fill-brand text-brand')}
+                    className={cn('h-4 w-4 shrink-0', isInFavorites && 'fill-brand text-brand')}
                     aria-hidden="true"
                   />
                   <span className="truncate">
-                    {isInFavorites(product.id) ? 'Dans vos favoris' : 'Ajouter aux favoris'}
+                    {isInFavorites ? 'Dans vos favoris' : 'Ajouter aux favoris'}
                   </span>
                 </button>
                 <button
@@ -1610,7 +1616,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     // a named slot is its own section below (util/productDescriptionSections.ts).
                     // What is left is what "Description" should have meant all along — what the
                     // product is, what is in the pack, what it weighs.
-                    dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(merged.body) }}
+                    dangerouslySetInnerHTML={{ __html: sanitizedDescriptionHtml }}
                   />
                   {descriptionIsLong && (
                   <button
@@ -1695,8 +1701,8 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   Nothing renders for a product with neither, which is the permanent state of all
                   309 hand-made ones: no empty section, no bare heading.
                 */}
-                {merged.sections.map((section) => {
-                  const html = sanitizeRichHtml(section.html);
+                {sanitizedSections.map((section) => {
+                  const html = section.html;
                   if (!html) return null;
                   return (
                     <ProductInfoSection
@@ -1760,9 +1766,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                      * block happened to be last. On the screenshotted product that was the legal
                      * disclaimer.
                      */
-                    const sourceNutritionHtml = sanitizeRichHtml(
-                      productSourceNutritionHtml(product) || merged.nutritionFallback || ''
-                    );
+                    const sourceNutritionHtml = sanitizedSourceNutritionHtml;
                     return (
                       <div className="p-3 sm:p-5 lg:p-6 pt-4 sm:pt-6 border-t border-hairline">
                         <h2 className="font-display uppercase tracking-tight text-lg sm:text-xl font-bold mb-4 text-ink-1">
@@ -1831,7 +1835,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                           <div className="w-full min-w-0 overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
                             <div
                               className="nutrition-content pdp-prose min-w-[280px]"
-                              dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.nutrition_values || '') }}
+                              dangerouslySetInnerHTML={{ __html: sanitizedNutritionHtml }}
                             />
                           </div>
                         ) : null}
@@ -1993,7 +1997,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   ) : hasLegacyQuestionsHtml ? (
                     <div
                       className="pdp-prose"
-                      dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(product.questions || '') }}
+                      dangerouslySetInnerHTML={{ __html: sanitizedQuestionsHtml }}
                     />
                   ) : null}
                   </div>

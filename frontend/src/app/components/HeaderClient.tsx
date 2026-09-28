@@ -2,7 +2,7 @@
 
 import { categoryAnchor } from '@/util/categoryAnchor';
 import { canonicalCategoryPath } from '@/util/resolveCategorySeo';
-import { useState, useEffect, useRef, type ReactNode } from 'react';
+import { memo, useState, useEffect, useRef, type ReactNode } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
@@ -44,6 +44,9 @@ import { useSiteLogos } from '@/hooks/useSiteLogos';
 import type { SiteNavigationItem } from '@/types';
 import { LanguageSwitcher } from './LanguageSwitcher';
 import { useI18n } from '@/i18n/I18nProvider';
+
+const MemoSearchBar = memo(SearchBar);
+const MemoProductsDropdown = memo(ProductsDropdown);
 
 // CartDrawer no longer lives here — it moved to components/CartDrawerHost.tsx, mounted at the
 // layout level. Keeping it here meant this ~1,050-line component had to subscribe to the drawer's
@@ -640,7 +643,7 @@ export function HeaderClient() {
             </Link>
 
             <div className="flex items-center gap-1 flex-shrink-0">
-              <SearchBar variant="mobile" />
+              <MemoSearchBar variant="mobile" />
 
               {/* Burger — far right. 48px box, 26px glyph. */}
               <Button
@@ -696,7 +699,7 @@ export function HeaderClient() {
                   leftover space fell after the icons (default justify-start), stranding them mid-row.
                   The field itself stays capped at max-w-2xl and left-aligned inside the wrapper. */}
               <div className="flex flex-1 min-w-0 justify-start">
-                <SearchBar variant="desktop" className="w-full" />
+                <MemoSearchBar variant="desktop" className="w-full" />
               </div>
 
               <div className="flex flex-shrink-0 items-center gap-0.5">
@@ -766,7 +769,7 @@ export function HeaderClient() {
                   if (link.href === '/pack-builder') return null;
                   if (isProductsNavLink(link)) {
                     return (
-                      <ProductsDropdown
+                      <MemoProductsDropdown
                         key={`${link.href}-${link.label}`}
                         label={translateLegacy(link.label)}
                         href={link.href}
