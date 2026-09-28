@@ -257,6 +257,22 @@ function nameContainsBrand(name: string, brand: string): boolean {
   return new RegExp(brandRe(brand), 'i').test(name);
 }
 
+/**
+ * The product's heading — H1 and Product.name — in the same humanised form as its <title>:
+ * "Serious Mass 5,45 kg – Optimum Nutrition", not the wholesaler string "SERIOUS MASS  5,45 KG -
+ * OPTIMUM NUTRITION" (double space included) that both still carried on 28/09/2026 while the
+ * <title> above them had been humanised. The shopper H1 is uppercased by CSS, so the screen does
+ * not change; the text Google reads does. The brand stays when the name does not already carry it.
+ */
+export function humanProductHeading(product: Pick<Product, 'designation_fr' | 'slug' | 'brand'>): string {
+  const raw = product.designation_fr ?? product.slug ?? 'Produit';
+  const brandRaw = product.brand?.designation_fr?.trim() || '';
+  const name = humanizeProductName(raw, brandRaw);
+  if (!name) return raw;
+  const brand = brandRaw ? humanizeProductName(brandRaw) : '';
+  return brand && !nameContainsBrand(name, brand) ? `${name} – ${brand}` : name;
+}
+
 /** "{Human name} – Prix Tunisie | {Brand}", trimmed to a SERP-safe length. */
 export function humanProductTitle(product: Product): string {
   const raw = product.designation_fr ?? product.slug ?? 'Produit';

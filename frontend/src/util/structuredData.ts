@@ -15,6 +15,7 @@ import { generateProductFallbackDescription } from '@/util/productDescriptionFal
 import { productSourceGallery } from '@/util/productSourceFacts';
 import { cleanSourceText } from '@/util/sourceBoilerplate';
 import type { Product, FAQ, Review } from '@/types';
+import { humanProductHeading } from '@/util/productMetaDescription';
 
 const RICH_RESULTS_TEST = 'https://search.google.com/test/rich-results';
 const PRODUCTION_ORIGIN = 'https://protein.tn';
@@ -674,7 +675,7 @@ export function buildProductJsonLd(product: Product, canonicalUrl: string): obje
     '@id': `${canonicalUrl}#product`,
     url: canonicalUrl,
     mainEntityOfPage: canonicalUrl,
-    name: cleanSchemaName(product.designation_fr),
+    name: cleanSchemaName(humanProductHeading(product)),
     // Never empty (GSC "Missing field description") — see factualProductDescription.
     description: description || factualProductDescription(product),
     // Missing photography is a data defect. A site banner is not a photograph of this product.
@@ -837,7 +838,7 @@ export function sanitizeBackendProductJsonLd(product: Product, raw: unknown, can
     '@context': 'https://schema.org',
     '@type': 'Product',
     '@id': `${canonical}#product`,
-    name: cleanSchemaName(product.designation_fr, cleanSchemaName(source.name)),
+    name: cleanSchemaName(product.designation_fr ? humanProductHeading(product) : '', cleanSchemaName(source.name)),
     url: canonical,
     mainEntityOfPage: canonical,
     sku,

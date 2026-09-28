@@ -63,6 +63,7 @@ import {
 } from '@/util/cartStock';
 import { cn } from '@/app/components/ui/utils';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
+import { humanProductHeading } from '@/util/productMetaDescription';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -936,7 +937,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             {/* 2. ONE h1. The old mobile tree rendered the name as a <p> specifically to avoid a
                    second h1 in the document; with one tree that workaround is unnecessary. */}
             <h1 className="font-display text-[1.75rem] font-bold uppercase leading-[0.98] tracking-tight text-ink-1 sm:text-[2rem] xl:text-[2.25rem]">
-              {product.designation_fr}
+              {humanProductHeading(product)}
             </h1>
 
             {/*

@@ -45,6 +45,7 @@ import {
   productSourceSections,
 } from '@/util/productSourceFacts';
 import type { Product } from '@/types';
+import { humanProductHeading } from '@/util/productMetaDescription';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
   const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
@@ -171,7 +172,7 @@ export function CrawlerProductView({
 
       <article>
         <header>
-          <h1 className="text-2xl font-bold">{product.designation_fr}</h1>
+          <h1 className="text-2xl font-bold">{humanProductHeading(product)}</h1>
           {brandName && (
             <p className="mt-1 text-sm">
               Marque : <a className="text-brand underline" href={`/${brandNameToSlug(brandName)}`}>{brandName}</a>
