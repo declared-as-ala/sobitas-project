@@ -313,7 +313,10 @@ function hasEditorialGuide(slug: string, ctx: SitemapBuildContext): boolean {
  */
 function toSitemapImage(path?: string | null): string | undefined {
   if (!path || typeof path !== 'string') return undefined;
-  const raw = /^https?:\/\//i.test(path) ? path : getStorageUrl(path);
+  // Absolute URLs go through getStorageUrl too: it maps them onto https://protein.tn/media (see
+  // toSiteMedia). Passing them through raw left 4,433 imported-product images declared on
+  // iHerb's CDN in the image sitemap (28/09/2026) while every page already used protein.tn/media.
+  const raw = getStorageUrl(path);
   if (!raw || /\s/.test(raw) || !/^https?:\/\//i.test(raw)) return undefined;
   return raw;
 }
