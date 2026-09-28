@@ -6,6 +6,21 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 28/09/2026:** live audit `--sample=40` 75 URLs **0 P0** (exit 0);
+`parity-check.mjs` 0 editorial bot-only words on all five money pages; sitemaps 12,246, Δ +11
+(+0.09 %, all in products-2 — new SKUs). `/sante-vitalite` served the headless-render shape for
+the **second consecutive run**, which promoted it to a P0 — and the cause turned out to be global:
+**Next.js 15 streams metadata to Googlebot** (it is not on Next's `html-bots` blocking list), so on
+`/proteines`, `/prise-de-masse`, `/blog` and `/sante-vitalite` the `<title>`, canonical,
+description and robots tags are emitted at the END of the body — byte 268,738 of 272,966 on
+`/proteines` — while Bingbot gets them in `<head>` on every fetch of the same URL. Fixed globally
+with `htmlLimitedBots` in `frontend/next.config.js` (see the P0 item below);
+**verify live tomorrow.** Monday's keyword run: the Tunisian long tail is format+prix and most of
+those formats have **no buyable SKU** — that is now the binding constraint, see `KEYWORDS.md`
+"Discovered 28/09/2026". Two runs (26/09, 27/09) produced no branch at all, and the landing pad has
+five stale refs jamming every scheduled land run `(needs: owner)`. Google: **September 2026 spam
+update still rolling — attribution mode.**
+
 **State on 25/09/2026:** live audit `--sample=40` 72 URLs **0 P0** (exit 0), `--sample=120`
 152 URLs exit 1 on a **transient**: `/sante-vitalite` served one render with no title, canonical,
 description or robots while its body rendered 1,012 words — `ok` 45 min earlier and 14/14 clean on
@@ -197,6 +212,34 @@ record the page-level position first — never act on a query average.
 
 ## P0 — land what is already written but never reached main
 
+- [x] **Googlebot was served pages whose `<head>` had no title, canonical, description or robots**
+  — SHIPPED 28/09 in `frontend/next.config.js` as `htmlLimitedBots: new
+  RegExp(`${nextHtmlLimitedBots}|Googlebot`, 'i')`. Next 15.2+ streams metadata for every UA that is
+  not on `next/dist/shared/lib/router/utils/html-bots.js`, and the main Googlebot is deliberately
+  off that list, so `generateMetadata` output lands at the end of the body instead of in the head
+  whenever it resolves after the shell flushes. Measured as Googlebot vs Bingbot on the same URLs,
+  28/09: `/proteines` title at byte 268,738/272,966 vs 4,504; `/prise-de-masse` 288,904/293,075 vs
+  4,502; `/blog` 636,169/904,637 vs 3,827; `/sante-vitalite` **absent entirely** on one fetch
+  (259,255 bytes, body rendered) — the same shape `audit-live.mjs` recorded on 25/09 and 28/09.
+  Next's default list is read at config load and **extended**, never replaced (guarded `require`,
+  frozen fallback copy); every bot that had blocking metadata keeps it, humans are untouched.
+  Verified pre-ship through Next's own `loadConfig('phase-production-build')` and
+  `shouldServeStreamingMetadata` (Googlebot → blocking, Chrome/GPTBot → streamed, standalone
+  RegExp→string and JSON round-trip both survive). **Live verification is only possible after the
+  deploy: re-measure the four URLs tomorrow** — `<title>` must be at offset < 12,000 as Googlebot.
+- [ ] **The landing pad jams every scheduled land run** `(needs: owner)` — `claude/seo-daily-2026-09-22`,
+  `-23`, `-24`, `-25` and `claude/seo-smoke-20260921-2258` on koussay183/sobitas-seo-work all point
+  at `470de00`, the pad's own `main`, which has no `.github/`. The land workflow picks the newest
+  unlanded pad branch, sees ten workflow files deleted, and hands off — 9 times since 25/09 19:18Z,
+  issue #224. None of the four carries routine work (23, 24, 25 all landed from real branches), so
+  the refs are safe to delete; the exact command is in `log/2026-09-28.md` "For the owner". A
+  branch dated later than 21/09 sorts ahead of it, so this does not block a normal day — it wastes
+  a scheduled run every 20 minutes and buries a real hand-off if one ever happens.
+- [ ] **Two runs produced nothing: 26/09 and 27/09** — no `seo(daily)` commit, no `log/2026-09-26.md`
+  or `-27.md`, no pad branch, no open PR. Nothing to re-derive; recorded so the gap is not read
+  later as "the routine had nothing to do". If it recurs, the schedule's run history is the place
+  to look `(needs: owner)`.
+
 - [x] ~~**Salvage PR #222 / #223 — the three repo-side items**~~ — shipped 22/09 on
   `claude/seo-daily-2026-09-22`, cherry-picked BY FILE and re-verified live first:
   1. `frontend/content/categories/barres-proteinees.json` (new) — landed corrected: title 61 → 58
@@ -231,6 +274,29 @@ record the page-level position first — never act on a query average.
   a file.
 
 ## P1 — the ranking levers (in-stock products first)
+
+- [ ] **A dead SKU answers `lipo 6 black`** (measured 28/09): the URL in the SERP set is the legacy
+  `/shop/lipo-6-black-60-caps`, one 301 to `/bruleurs-de-graisse/lipo-6-black-60-caps` — **139 DT,
+  `BackOrder`, self-canonical** — while `…-ultra-concentrate-60caps` (**119 DT, `InStock`**) is a
+  separate, buyable SKU. Saturday: exact-anchor internal links from the dead SKU's page and from
+  `/bruleurs-de-graisse` to the buyable one, and the category's `bestProductSlugs`. Restock or a
+  Redirections row is `(needs: owner)` — do not noindex either page (standing decision).
+- [ ] **The formats Tunisians search have no buyable SKU** `(needs: owner)` — from `suggest.mjs --deep`
+  28/09 cross-checked against `/api/productsBySubCategoryId`: gold standard 4,5 kg (qte 0), 908 g
+  (qte 0), 1 kg and 2 kg (absent), creatine 1 kg (nine SKUs, all qte 0), creatine 100 g (qte 0),
+  serious mass 2,7 kg (qte 0). Their in-stock siblings (gold standard 2,27 kg qte 63; serious mass
+  5,45 kg qte 34; creatine 500 g ×3) are the only ones worth writing format copy for, and the rows
+  are flagged that way in `KEYWORDS.md`. 13 of 168 whey SKUs and 12 of 225 creatine SKUs are
+  buyable at all.
+- [ ] **`mass gainer prix tunisie` is answered by the blog, not the category** (SERP look 28/09):
+  our URL in the set is `/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025`, with
+  gainlabnutrition's `/collections/mass-gainer-tunisie` leading. Same shape as the `pre workout`
+  and `serious mass tunisie` rows: Saturday's cannibalisation work (exact-anchor link from the
+  blog post to `/mass-gainers` via `blogSeoConfig.ts`), never a title rewrite during the update.
+- [ ] **`/vitamines` is Tuesday's category target** — 683 words (the thinnest money-ish listing),
+  `vitamines tunisie` 35.4 on 16 impressions and `multivitamines tunisie` in the map, ~10 in-stock
+  SKUs, and it is **outside** the 05/10 freeze, so its title and H1 can be worked on legitimately.
+  Converge it to the page standard in `frontend/content/categories/vitamines.json`.
 
 - [ ] **4,344 of 7,389 product titles exceed 65 characters** (measured 24/09 over the live
   catalogue, mean 72.3). Google truncates them, so the brand and "Prix Tunisie" — the two things

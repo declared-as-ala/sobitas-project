@@ -14,6 +14,61 @@ const STORAGE_BACKEND_URL = process.env.STORAGE_BACKEND_URL || 'https://admin.pr
 const parentLockfile = path.join(__dirname, '..', 'package-lock.json');
 const monoRepoRoot = fs.existsSync(parentLockfile) ? path.join(__dirname, '..') : undefined;
 
+/*
+ * ── GOOGLEBOT MUST BE SERVED ITS METADATA IN <head>, NOT 250 kB LATER ────────────────────────
+ *
+ * Next.js 15.2+ STREAMS metadata: `generateMetadata` no longer blocks the shell, so when it
+ * resolves after the document shell has flushed, React emits <title>, <link rel=canonical>,
+ * <meta name=description> and <meta name=robots> at the END of the body and hoists them into the
+ * head on the client. The one user agent that gets this treatment is the one that matters:
+ * next/dist/shared/lib/router/utils/html-bots.js lists the bots that get a BLOCKING render, and
+ * the main Googlebot is deliberately NOT on it ("only the main Googlebot search crawler executes
+ * JavaScript"). Everything else — Bingbot, applebot, facebookexternalhit, Twitterbot, every
+ * `*-Google` crawler — is.
+ *
+ * Measured live on protein.tn, 28/09/2026, same URL, two user agents, byte offset of <title>:
+ *
+ *     /proteines        Googlebot  268,738 of 272,966   |  Bingbot  4,504 (in <head>)
+ *     /prise-de-masse   Googlebot  288,904 of 293,075   |  Bingbot  4,502 (in <head>)
+ *     /blog             Googlebot  636,169 of 904,637   |  Bingbot  3,827 (in <head>)
+ *     /sante-vitalite   Googlebot  259,338 of 263,443   |  Bingbot  4,507 (in <head>)
+ *
+ * 4 of 36 watchlist URLs, and the four are the protein head term, the prise-de-masse head term
+ * and the blog hub. The remaining 32 land in <head> only because their metadata happens to
+ * resolve before the shell flushes — a race, not a contract.
+ *
+ * AND THE RACE HAS BEEN LOST IN PRODUCTION. `seo-agent/tools/audit-live.mjs` recorded
+ * /sante-vitalite serving Googlebot a complete 200 with 1,012 words of body and NO title, NO
+ * canonical, NO description and NO robots on 25/09 and again on 28/09 — and one such fetch was
+ * captured again by hand on 28/09 (259,255 bytes, zero <title>). When the late chunk does not
+ * make it, the page Google receives has no title to build a snippet from, no canonical to
+ * consolidate the legacy /category/<slug> duplicates onto, and no robots directive at all. On a
+ * site whose central problem is indexation that is the worst possible thing to leave to chance.
+ *
+ * `htmlLimitedBots` is the supported knob (a RegExp; loadConfig converts it to its `.source` for
+ * the standalone server, so this survives `output: 'standalone'`). It OVERRIDES Next's list
+ * rather than extending it, so the default is read from Next itself and only `Googlebot` is
+ * added — dropping a bot from that list would silently move it onto streamed metadata. The
+ * frozen copy is the fallback for the day that internal path moves in an upgrade; if it is ever
+ * used, Next's own list may have grown in the meantime, so re-check it then.
+ *
+ * Plain `Googlebot` (not Next's `Googlebot(?!-)`) so Googlebot-Image, Googlebot-News and
+ * Googlebot-Video — which are on neither of Next's two lists today — are covered too.
+ *
+ * The cost is that a Googlebot request waits for `generateMetadata` before the shell flushes,
+ * which is exactly what every request did before 15.2. Human traffic is untouched.
+ */
+const NEXT_HTML_LIMITED_BOTS_FROZEN_COPY =
+  '[\\w-]+-Google|Google-[\\w-]+|Chrome-Lighthouse|Slurp|DuckDuckBot|baiduspider|yandex|sogou|bitlybot|tumblr|vkShare|quora link preview|redditbot|ia_archiver|Bingbot|BingPreview|applebot|facebookexternalhit|facebookcatalog|Twitterbot|LinkedInBot|Slackbot|Discordbot|WhatsApp|SkypeUriPreview|Yeti|googleweblight';
+const nextHtmlLimitedBots = (() => {
+  try {
+    const { HTML_LIMITED_BOT_UA_RE } = require('next/dist/shared/lib/router/utils/html-bots');
+    return HTML_LIMITED_BOT_UA_RE.source || NEXT_HTML_LIMITED_BOTS_FROZEN_COPY;
+  } catch {
+    return NEXT_HTML_LIMITED_BOTS_FROZEN_COPY;
+  }
+})();
+
 const nextConfig = {
   /**
    * Build output directory, overridable so a production build can run WITHOUT destroying a dev
@@ -65,6 +120,8 @@ const nextConfig = {
   },
   compress: true,
   poweredByHeader: false,
+  // See the note above NEXT_HTML_LIMITED_BOTS_FROZEN_COPY: blocking metadata for Googlebot.
+  htmlLimitedBots: new RegExp(`${nextHtmlLimitedBots}|Googlebot`, 'i'),
   compiler: {
     removeConsole: process.env.NODE_ENV === 'production' ? { exclude: ['error', 'warn'] } : false,
   },

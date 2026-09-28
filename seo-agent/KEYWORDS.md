@@ -35,7 +35,7 @@ in `docs/seo-ranking-baseline.md` measures `creatine tunisie` at 9.1 query-avera
 | creatine tunisie | /creatine | 172 | 13.6 (22/09 GSC) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning. SERP look 22/09 (US-geo): gainlabnutrition.com ranks ahead of us; `/creatine`, our blog price post, and legacy `/product-category/creatines/` all appear — one head term, three of our URLs |
 | creatine monohydrate | /creatine | 137 | 28.0 (22/09 GSC) | global phrase; local intent weak — secondary |
 | prix creatine tunisie | /creatine | 5 | 10.4 (22/09 GSC) | check |
-| mass gainer tunisie | /mass-gainers | 55 | 56.1 (22/09 GSC) | check |
+| mass gainer tunisie | /mass-gainers | 55 | 56.1 (22/09 GSC) | SERP look 28/09 (US-geo, no TN pos) on `mass gainer prix tunisie`: **gainlabnutrition.com/collections/mass-gainer-tunisie** leads, then impactnutrition, protein-shop-tunisia, nutribeast (two URLs), gympro. **Our result in the set is the blog post** `/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025`, not the category — one query, two of our URLs, and the informational one is winning it. Saturday (cannibalisation), not a title rewrite |
 | serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 89 | 14.4 (22/09 GSC) | split across 8 URLs; canonical target = PDP; tighten blog links |
 | prise de masse tunisie | /prise-de-masse | ? | ? | SERP look 25/09 (US-geo, no TN pos): **housenutrition.tn/category/mass-gainer** leads, then nutribeast, maparatunisie, parafendri, parapharmacie. **Three of our URLs in one set** — `/prise-de-masse`, `/category/prise-de-masse`, `/categorie/prise-de-masse`; both legacy paths verified live 25/09, each 308s once to the canonical, which is 200 + `index, follow` + self-canonical. Index lag, nothing to fix |
 | pre workout tunisie | /pre-workout | 7 | 41.4 (22/09 GSC) | ranks on the Born Rage PDP, not the category — decide which should win |
@@ -84,8 +84,8 @@ not while the September 2026 spam update is rolling (started 24/09).
 | nitro tech whey gold | /whey-proteine/nitro-tech-whey-gold-2-3kg | ? | **FAQ + guide queued 23/09** (6 pairs, 221 w, qualitative only — the fiche publishes no nutritional figure). SERP look 23/09 (US-geo): gust.tn, protein-shop-tunisia (270 DT), strong-nutrition, nutribeast, body-shop, sf-nutrition, jumia; ours at 259 DT via the legacy `/shop/` URL. Still `Sur commande` |
 | big whey big ramy | /whey-proteine/big-whey-2kg-big-ramy-labs | ? | check |
 | c4 pre workout | /pre-workout/c4-original-pre-workout-cellucor | ? | **FAQ + guide queued 23/09** (6 pairs, 228 w, from the label transcribed 20/09: 6,5 g portion / 150 mg caféine / 1 600 mg bêta-alanine / 1 000 mg créatine nitrate). **EN STOCK** — the only one of the four. SERP look 23/09 (US-geo): housenutrition (282 g), nutribeast (195 g), strong-nutrition, gympro — and **our ranking URL is the category `/pre-workout`, not this PDP**: decide the winner on Thursday's CTR pass. Title 64 chars |
-| psychotic pre workout | /pre-workout/psychotic-pre-workout | ? | check |
-| lipo 6 black | /bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps | ? | 3 Lipo-6 SKUs — pick the canonical winner |
+| psychotic pre workout | /pre-workout/psychotic-pre-workout | ? | SERP look 28/09 (US-geo, no TN pos): housenutrition, strong-nutrition (two URLs), nutribeast, body-shop. **Two of our URLs in the set** — `/pre-workout` and the legacy **`/shop/psychotic-pre-workout`** with the raw "PSYCHOTIC PRE-WORKOUT" title; verified live the same day, one 301 to the canonical PDP, 200. Index lag, not a defect |
+| lipo 6 black | /bruleurs-de-graisse/lipo-6-black-ultra-concentrate-60caps | ? | **The URL Google shows is the dead SKU** (SERP look + live checks 28/09): `/shop/lipo-6-black-60-caps` → one 301 → `/bruleurs-de-graisse/lipo-6-black-60-caps`, **139 DT, `BackOrder`**, self-canonical. The target in this row — `…-ultra-concentrate-60caps`, **119 DT, `InStock`** — is a different SKU. Set holders: wildkard, para-plus (×2), housenutrition, protein-shop-tunisia, gympro, nutribeast. Saturday: exact-anchor links from the dead SKU and the category to the buyable one; restock/retire is `(needs: owner)` |
 | born rage | /pre-workout/… (find slug) | 5.3 (15/09) | the page-1 "pre workout" result |
 
 
@@ -96,6 +96,36 @@ and the bars rayon is **0 of 88 in stock** (measured live 23/09). The same appli
 `/intra-workout` (0 of 12+). Neither page can rank until stock arrives, and both reverse
 themselves automatically the day it does — so do **not** rewrite either page for ranking reasons,
 and do not read a position drop on these rows as a content failure.
+
+## Discovered 28/09/2026 (Google autocomplete fr/tn, `suggest.mjs --deep`: 12 seeds, 516 requests, 3,647 suggestions)
+
+Hits are autocomplete frequency, **not** positions. Only the Tunisian-geo queries are listed — the
+same run returned the identical patterns for maroc/algérie/france/canada/sénégal, which are noise
+for us. The pattern of the whole run is **format + prix**, and the `stock` column is why most of
+these are a purchasing decision before they are a content one (measured 28/09 from
+`/api/productsBySubCategoryId/<slug>`, `qte` per SKU).
+
+| query | page | hits | stock (28/09) | note |
+| --- | --- | --- | --- | --- |
+| whey gold standard 2.27 kg prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 5 | **in stock** (qte 63) | the one gold-standard format we can sell; the PDP already carries the format in its title. Highest-value new row |
+| optimum nutrition gold standard whey prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 5 | in stock | brand + product + prix; same target as above |
+| whey gold standard 4.5 kg prix tunisie | /whey-proteine | 5 | **none buyable** (4,5 kg qte 0) | `(needs: owner)` restock before any copy |
+| whey gold standard 5 kg prix tunisie | /whey-proteine | 5 | **none buyable** (no 5 kg SKU) | the format does not exist in the catalogue; do not invent a page for it |
+| whey gold standard 1kg / 2kg prix tunisie | /whey-proteine | 4 each | **none buyable** | no 1 kg or 2 kg gold standard in stock |
+| whey gold standard 900g prix tunisie | /whey-proteine | 4 | **none buyable** (908 g qte 0) | `(needs: owner)` restock |
+| créatine prix tunisie 1kg | /creatine | 4 | **none buyable** (nine 1 kg SKUs, all qte 0) | re-confirms the 22/09 gap, still true six days later |
+| creatine prix tunisie 100g | /creatine | 4 | **none buyable** (one 100 g SKU, qte 0) | — |
+| creatine prix tunisie gsn | /creatine/gsn-creatine-monohydrate-200g | 4 | PDP is `BackOrder` | the GSN 200 g is the cheapest creatine we list (59 DT) and it is the page the 24/09 CTR pass already fixed the title on |
+| creatine monohydrate 500g prix tunisie | /creatine/creatine-monohydrate-ostrovit-500gr | 3 | 3 × 500 g in stock (22/09) | the format with both demand AND stock — use it in the /creatine comparison table and FAQ |
+| creatine monohydrate 1kg prix tunisie | /creatine | 3 | none buyable | — |
+| serious mass 2.7 kg tunisie prix | /mass-gainers | 4 | **none buyable** (qte 0) | only the 5,45 kg is in stock (qte 34) |
+| serious mass 5kg prix tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 4 | in stock (qte 34) | "5kg" is how the 5,45 kg is searched for — worth carrying in the PDP copy |
+| serious mass prix tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 3 | in stock | — |
+| proteine tunisie mass | /proteines | 4 | — | maps to the prise-de-masse rayon from the protein head term; an internal-link row, not a page |
+
+**The one-line conclusion for the week:** 13 of 168 whey SKUs and 12 of 225 creatine SKUs are
+buyable, and the formats Tunisians actually type are mostly in the other group. Copy cannot fix
+that; the rows above are marked so no future run spends a morning writing for an unbuyable format.
 
 ## Discovered 23/09/2026 (Google autocomplete fr/tn — hits = autocomplete frequency, NOT a position)
 
