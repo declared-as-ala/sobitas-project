@@ -46,6 +46,7 @@ import {
 } from '@/util/productSourceFacts';
 import type { Product } from '@/types';
 import { humanProductHeading } from '@/util/productMetaDescription';
+import { findInStockSibling } from '@/util/inStockSibling';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
   const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
@@ -71,6 +72,7 @@ export function CrawlerProductView({
   const breadcrumbs = getProductBreadcrumbs(product);
   const { finalPrice, oldPrice, hasPromo } = getPriceDisplay(product);
   const stockStatus = getProductStockStatus(product);
+  const inStockSibling = findInStockSibling(product, similarProducts);
   const inStock = !stockStatus.isUnknown && !stockStatus.isOutOfStock;
   const brandName = product.brand?.designation_fr;
   const cover = product.cover ? getStorageUrl(product.cover) : '';
@@ -209,6 +211,15 @@ export function CrawlerProductView({
             <strong>{stockStatus.isUnknown ? 'Disponibilité à confirmer' : stockStatus.stockLabel}</strong>
             {inStock ? ' · Livraison 24-72h partout en Tunisie.' : ''}
           </p>
+          {inStockSibling && (
+            <p className="mt-2 text-sm text-ink-2 lg:-order-1 lg:basis-full">
+              Disponible immédiatement :{' '}
+              <a href={getProductLink(inStockSibling)} className="inline-flex min-h-11 items-center font-semibold text-brand underline focus-visible:ring-2 focus-visible:ring-focus">
+                {humanProductHeading(inStockSibling)}
+              </a>{' '}
+              — {getPriceDisplay(inStockSibling).finalPrice} DT
+            </p>
+          )}
           <p className="mt-1 text-sm text-ink-2">
             Livraison gratuite dès 300 DT · Paiement à la livraison · Retour sous 7 jours.
           </p>

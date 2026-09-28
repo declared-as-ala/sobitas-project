@@ -64,6 +64,10 @@ import {
 import { cn } from '@/app/components/ui/utils';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { humanProductHeading } from '@/util/productMetaDescription';
+import { findInStockSibling } from '@/util/inStockSibling';
+import { getProductLink } from '@/util/productUrl';
+import { getPriceDisplay } from '@/util/productPrice';
+import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 
 export type BreadcrumbItem = { name: string; url: string };
 
@@ -151,6 +155,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
   // Single source of truth for stock (matches API: rupture true/1 = out of stock, qte <= 0 = out of stock)
   const stockStatus = getProductStockStatus(product as any);
+  const inStockSibling = findInStockSibling(product, similarProducts);
   const stockDisponible = getStockDisponible(product as any);
   const inCartQty = getCartQty(product.id);
 
@@ -1140,6 +1145,15 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   </p>
                 );
               })()}
+              {inStockSibling && (
+                <p className="mt-2 text-sm text-ink-2 lg:-order-1 lg:basis-full">
+                  Disponible immédiatement :{' '}
+                  <LinkWithLoading href={getProductLink(inStockSibling)} className="inline-flex min-h-11 items-center font-semibold text-brand underline focus-visible:ring-2 focus-visible:ring-focus">
+                    {humanProductHeading(inStockSibling)}
+                  </LinkWithLoading>{' '}
+                  — {getPriceDisplay(inStockSibling).finalPrice} DT
+                </p>
+              )}
 
               {/* Arômes */}
               {product.aromes && product.aromes.length > 0 && (
