@@ -1476,6 +1476,674 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: 'brands', name: 'Comparer MR.X V-Shape Supps aux autres marques', url: '/brands' },
     ],
   },
+  /*
+   * ── 28/09/2026: 14 BRANDS WITH IN-STOCK PRODUCTS AND NO CURATED PAGE ─────────────────────
+   * Measured the same day: 56–284 words of prose and no FAQ on these brand pages (JX Fitness: 30
+   * products in stock). Written from /api/productsByBrandId and our own fiches under the rules in
+   * this file's header; per-portion figures only where a label is transcribed on our fiche.
+   * Deliberately NOT curated: action-labs (only in-stock item is MK-677), invictus (its one product
+   * is an Insane Labz item filed under the wrong brand), scitec-nutrition (its main product, Best ZMA,
+   * is named Scenit Nutrition) — fix the brand assignment first.
+   */
+  'jx-fitness': {
+    metaTitle: "JX Fitness Tunisie | Presse cuisse, hack squat & cardio",
+    metaDescription:
+      "JX Fitness en Tunisie : presse cuisse, hack squat, machines sélectives, bancs réglables, barre olympique 2,20 m, tapis roulant, spin bike et vélo elliptique.",
+    h1: "JX Fitness Tunisie : machines de musculation, bancs et cardio",
+    introHtml:
+      "<p>La marque <strong>JX Fitness</strong> réunit 56 références sur Protein.tn, dont 51 classées en <strong>matériel de musculation</strong> et 5 en <strong>cardio &amp; fitness</strong>. Les machines guidées forment le cœur de la gamme, rangées par zone travaillée. Pour les jambes : la <strong>presse cuisse</strong>, deux <strong>hack squats</strong>, la machine d’extension des jambes, la machine à mollets assis/debout et la poussée de hanche. Pour le haut du corps : la machine de traction latérale sélective, la station de traction et de trempage sélective, des machines à biceps, l’appareil de musculation des épaules, une poulie et l’abdominal machine. Viennent ensuite les <strong>bancs</strong> (utilitaire, multi-réglable, abdominal, latéral, épaule olympique, pupitre à biceps), les charges libres et le rangement (barre olympique 2,20 m, barre zigzag, supports de disques et d’haltères, accessoires de rack) et le <strong>cardio</strong> : tapis roulant, spin bike, vélo elliptique, vélo semi-allongé, plus un ring de boxe. Le catalogue liste aussi une smith machine, une leg press, un multi-gym 8 stations, des rameurs et même une barrière de tourniquet à contrôle d’accès pour l’entrée d’une salle. Sur chaque fiche, regardez d’abord deux choses : le mode de charge (pile de poids intégrée ou disques) et les dimensions, quand elles sont publiées.</p>",
+    howToChooseTitle: "Quel équipement JX Fitness choisir ?",
+    howToChooseBody:
+      "<p>Partez de la zone à travailler, puis vérifiez la place. Pour les <strong>jambes</strong>, la presse cuisse (1453 × 1310 × 1440 mm, charge maximale de 150 kg selon sa fiche) fait pousser un plateau, tandis que le hack squat garde le dos calé contre un dossier sur une trajectoire proche du squat : les deux se complètent. L’extension des jambes isole les quadriceps ; la machine à mollets travaille assis ou debout.</p><p>Le deuxième critère est le <strong>mode de charge</strong>. Une machine <strong>sélective</strong> embarque sa pile de poids : la machine de curl biceps sélective annonce 60 kg réglables au sélecteur, et la station de traction et de trempage s’en sert pour assister tractions et dips. Une machine <strong>à chargement par plaques</strong>, comme la machine de flexion des biceps, se charge avec des disques achetés à part.</p><p>Côté <strong>encombrement</strong>, les écarts sont nets. Le banc multi-réglable (1380 × 540 × 500 mm, 47 kg, 7 positions : plat, incliné de 15 à 90° et décliné à -15°) se replie. La Hack Squat Machine Trainer occupe 2065 × 1526 × 1571 mm pour 235 kg net, et l’appareil de musculation des épaules pèse 232 kg : vérifiez l’accès et le sol avant de commander. La barre olympique de 2,20 m (30 kg, disques à alésage de 51 mm, 250 kg maximum) demande un dégagement plus large qu’elle.</p><p>En <strong>cardio</strong>, le tapis roulant va de la marche à la course, le vélo elliptique mobilise le haut et le bas du corps sans choc au sol, le spin bike se prête aux séances intenses et le vélo semi-allongé se pratique assis, dos calé contre un dossier. Leurs dimensions ne figurent pas sur nos fiches : demandez-les à l’équipe.</p>",
+    faqs: [
+      {
+        question: "Quels équipements JX Fitness sont proposés sur Protein.tn ?",
+        answer:
+          "56 références : 51 en matériel de musculation — machines guidées pour les jambes, le dos, les bras, les épaules et les abdominaux, bancs, barre olympique 2,20 m, barre zigzag et supports de rangement — et 5 en cardio & fitness : tapis roulant, spin bike, vélo elliptique, vélo semi-allongé et ring de boxe. La grille de cette page indique la disponibilité de chaque référence.",
+      },
+      {
+        question: "Machine sélective ou à chargement par plaques : quelle différence ?",
+        answer:
+          "Une machine sélective intègre sa pile de poids : la charge se règle au sélecteur entre deux séries, sans manipuler de disques. La machine de curl biceps sélective annonce ainsi une pile de 60 kg. Une machine à chargement par plaques, comme la machine de flexion des biceps, se charge avec des disques achetés à part : vérifiez leur compatibilité avec les supports avant de commander.",
+      },
+      {
+        question: "Quel banc JX Fitness choisir ?",
+        answer:
+          "Le banc utilitaire est un banc plat fixe, pour le développé à plat, les curls et les extensions triceps. Le banc multi-réglable offre 7 positions, du décliné à -15° jusqu’à 90°, se replie et pèse 47 kg. Le banc d’épaule olympique a un angle fixe annoncé entre 75 et 90° et des supports pour barre olympique : il est dédié à la presse militaire. Le banc abdominal réglable et le banc latéral servent au travail des abdominaux et des obliques.",
+      },
+      {
+        question: "Quel appareil cardio JX Fitness choisir ?",
+        answer:
+          "Le tapis roulant, à vitesses réglables et surface amortie, couvre la marche, le jogging et la course. Le vélo elliptique fait travailler le haut et le bas du corps sans choc au sol. Le spin bike, à résistance réglable, se prête aux séances intenses. Le vélo semi-allongé se pratique assis avec un dossier, et sa console affiche le temps, la vitesse, la distance et les calories. En cas de problème de santé, demandez d’abord l’avis d’un professionnel.",
+      },
+      {
+        question: "Les dimensions des machines JX Fitness sont-elles publiées ?",
+        answer:
+          "Pour une partie d’entre elles, oui : presse cuisse 1453 × 1310 × 1440 mm, Hack Squat Machine Trainer 2065 × 1526 × 1571 mm, machine de curl biceps sélective 935 × 1372 × 1527 mm, banc multi-réglable 1380 × 540 × 500 mm, support d’haltères 2345 × 585 × 738 mm. Pour les autres, dont les appareils cardio, les mesures ne figurent pas sur la fiche : demandez-les à l’équipe Protein.tn avant de réserver l’emplacement.",
+      },
+      {
+        question: "Comment commander un équipement JX Fitness ?",
+        answer:
+          "Choisissez la référence, ajoutez-la au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie et accepte le paiement à la livraison. Pour une machine volumineuse, l’équipe organise avec vous le transport et la mise en place ; le délai et les frais dépendent de la destination et vous sont indiqués au moment de la commande.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "materiel-de-musculation", name: "Voir tout le matériel de musculation", url: "/materiel-de-musculation" },
+      { slug: "cardio-fitness", name: "Le rayon cardio et fitness", url: "/cardio-fitness" },
+      { slug: "equipement", name: "Équipement : voir tout le rayon", url: "/equipement" },
+      { slug: "brands", name: "Comparer JX Fitness aux autres marques", url: "/brands" },
+    ],
+  },
+  'kong-sport-nutrition': {
+    metaTitle: "Kong Sport Nutrition Tunisie | Gants, straps & shaker",
+    metaDescription:
+      "Kong Sport Nutrition en Tunisie : gants de musculation et de fitness, lifting straps, bandes de poignet et de genou, ceinture, shaker 450 ml, bouteille 2,2 L.",
+    h1: "Kong Sport Nutrition Tunisie : accessoires d’entraînement et shakers",
+    introHtml:
+      "<p>Malgré son nom, <strong>Kong Sport Nutrition</strong> ne référence aucun complément alimentaire sur Protein.tn : ses 13 références sont toutes classées en <strong>accessoires</strong>, et elles se répartissent en trois usages. La <strong>prise</strong> d’abord : des <strong>lifting straps</strong> à fermeture velcro, des <strong>bandes de tirage</strong> à enrouler autour du poignet et de la barre, des <strong>gants de musculation</strong> et un <strong>gant de fitness</strong> à bande de maintien ajustable. Le <strong>maintien</strong> ensuite : des <strong>bandes de poignet</strong>, une <strong>bande genoux</strong> élastique que l’on serre soi-même et une <strong>ceinture dos de musculation</strong> à boucle ajustable. L’<strong>hydratation</strong> enfin : le <strong>Protein Shaker 450 ml Sport Life</strong>, le Shaker Kong 700 ml et deux bouteilles d’eau, de 2,2 L et de 1,8 L. Le catalogue liste aussi une Dip Belt pour lester dips et tractions, et des sangles abdominales Gut Blaster Ab Slings. Aucune de ces fiches ne publie de grille de tailles : pour les gants et la ceinture, c’est la question à poser avant de commander. La grille ci-dessus affiche la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel accessoire Kong Sport Nutrition choisir ?",
+    howToChooseBody:
+      "<p>Partez de ce qui vous limite pendant la séance, pas de l’accessoire. Si la <strong>prise lâche</strong> avant le dos sur un soulevé de terre, un rowing ou des tractions, ce sont les <strong>lifting straps</strong> ou les <strong>bandes de tirage</strong> : les premières se ferment au poignet par velcro et s’ouvrent d’un geste entre deux séries, les secondes s’enroulent autour du poignet puis de la barre. Si c’est la <strong>paume</strong> qui frotte, les <strong>gants</strong> protègent la peau et améliorent l’adhérence ; le gant de fitness se règle par une bande autour du poignet.</p><p>Pour le <strong>maintien</strong>, chaque produit vise une articulation. Les <strong>bandes de poignet</strong> servent quand le poignet se casse vers l’arrière au développé couché ou aux dips ; nos fiches rappellent qu’elles ne remplacent pas des sangles, qui aident la prise. La <strong>bande genoux</strong> s’enroule en partant de sous la rotule et se réserve aux séries lourdes de squat, de presse ou de fentes. La <strong>ceinture</strong> se porte sur les séries exigeantes de squat et de soulevé de terre, puis se desserre entre les séries. Aucun de ces accessoires ne corrige une technique approximative, et en cas de douleur, l’avis d’un professionnel de santé passe avant.</p><p>Côté <strong>shaker</strong>, les 450 ml du Sport Life sont une contenance totale, pas un volume de liquide : pour un gainer qui demande beaucoup d’eau, notre fiche conseille de préparer la portion en deux fois. La bouteille de 2,2 L, à goulot large, couvre une longue séance sans remplissage.</p>",
+    faqs: [
+      {
+        question: "Kong Sport Nutrition vend-il des compléments alimentaires sur Protein.tn ?",
+        answer:
+          "Non. Les 13 références de la marque sur Protein.tn sont des accessoires : gants, sangles, bandes de maintien, ceinture, shakers et bouteilles d’eau. Pour les protéines, la créatine ou les acides aminés, ce sont les pages des autres marques qu’il faut consulter.",
+      },
+      {
+        question: "Lifting straps ou bandes de tirage : que choisir ?",
+        answer:
+          "Les deux sécurisent la prise sur les tirages lourds — soulevé de terre, rowing, tractions — quand les avant-bras fatiguent avant le dos. Les lifting straps se ferment au poignet par velcro, ce qui les rend rapides à mettre et à retirer entre les séries ; les bandes de tirage s’enroulent autour du poignet puis de la barre. Gardez l’échauffement et les séries légères à mains nues pour continuer à travailler la poigne.",
+      },
+      {
+        question: "Bandes de poignet ou sangles : quelle différence ?",
+        answer:
+          "Elles ne rendent pas le même service. Les bandes de poignet stabilisent l’articulation quand elle porte la charge, au développé couché ou aux dips. Les sangles aident la prise sur les tirages lourds, quand l’avant-bras lâche avant le dos. Les deux se complètent dans un même sac de sport.",
+      },
+      {
+        question: "Quelle taille choisir pour les gants et la ceinture ?",
+        answer:
+          "Les fiches ne publient pas de grille de tailles. Un gant doit épouser la paume sans former de plis ; pour la ceinture, mesurez votre tour de taille à l’endroit où vous la porterez. Dans les deux cas, demandez la correspondance à l’équipe Protein.tn avant de commander.",
+      },
+      {
+        question: "Le shaker 450 ml convient-il pour un gainer ?",
+        answer:
+          "Les 450 ml correspondent à la contenance totale du shaker. Si le volume de liquide conseillé sur l’étiquette de votre gainer en approche ou le dépasse, préparez la portion en deux fois. Pour une whey, une créatine ou des BCAA, la dose de poudre est plus petite et la contenance convient.",
+      },
+      {
+        question: "Comment commander Kong Sport Nutrition en Tunisie ?",
+        answer:
+          "Choisissez l’accessoire, ajoutez-le au panier avec le reste de votre commande puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "accessoires", name: "Gants, sangles et shakers", url: "/accessoires" },
+      { slug: "equipement", name: "Le rayon équipement sportif", url: "/equipement" },
+      { slug: "brands", name: "Comparer Kong Sport Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  'nutrex-research': {
+    metaTitle: "Nutrex Research Tunisie | Lipo 6 Black, Lipo 6 Intense",
+    metaDescription:
+      "Nutrex Research en Tunisie : Lipo 6 Black Ultra Concentrate 60 capsules, Lipo 6 Intense, CLA 1000, L-Carnitine 3000 465 ml, EAA+ Hydration 390 g et créatine.",
+    h1: "Nutrex Research Tunisie : la gamme Lipo 6, acides aminés et créatine",
+    introHtml:
+      "<p>Le catalogue <strong>Nutrex Research</strong> compte 40 références, et près d’un tiers d’entre elles porte le nom <strong>Lipo 6</strong> : 13 produits classés en brûleurs de graisse, dont <strong>Lipo 6 Black Ultra Concentrate</strong> en 60 capsules et en 60 Liqui-Caps, <strong>Lipo 6 Intense Ultra Concentrate</strong>, Lipo 6 Black en 120 Liqui-Caps, Lipo 6 Hers, Lipo-6 Hardcore, Lipo 6 Nighttime et Lipo-6 Diuretic, plus un gel Lipo-6 Defining de 120 ml et une ceinture Lipo 6 Waist Trimmer. Autour de cette famille : le <strong>CLA 1000</strong> en 90 et 180 capsules molles et la <strong>L-Carnitine 3000</strong> en flacon de 465 ml, en trois arômes. La partie performance réunit <strong>EAA+ Hydration</strong> 390 g en six arômes, <strong>BCAA 6000 Recovery</strong>, la <strong>Creatine Monohydrate</strong> en 390 g aromatisée et en 300 g sans arôme, la <strong>Creatine For Women</strong>, le pré-workout <strong>Outrage</strong>, L-Arginine 1000, HMB 1000 et Tribulus 1400. Restent les protéines : <strong>100% Whey Protein</strong> en 913 g, 923 g et 2265 g, <strong>100% Premium Whey Protein</strong> 2272 g et l’isolat <strong>IsoFit</strong> 1050 g. La grille ci-dessus affiche la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit Nutrex Research choisir ?",
+    howToChooseBody:
+      "<p>Dans la famille <strong>Lipo 6</strong>, nos deux fiches les plus détaillées permettent de comparer la composition, pas les doses. <strong>Lipo 6 Black Ultra Concentrate</strong> (60 capsules) cite de la caféine anhydre, de la N-acétyl L-tyrosine, du guarana, des extraits de citrus aurantium et de capsicum, et de la BioPerine. <strong>Lipo 6 Intense Ultra Concentrate</strong> associe caféine, théobromine, N-acétyl-L-tyrosine et Paradoxine®, et y ajoute de la Rauwolfia vomitoria et de la yohimbine HCl, que sa fiche signale comme pouvant avoir des effets indésirables cardiovasculaires. Les deux fiches les destinent à des adultes déjà habitués aux brûleurs à base de stimulants. Posologie indiquée : une capsule le matin et une l’après-midi, aucune prise dans les six heures avant le coucher, sans cumuler café, boissons énergisantes ou pré-workout. Un avis médical s’impose en cas de tension, de problème cardiaque ou de traitement en cours, et nos fiches le rappellent : ces produits ne garantissent pas une perte de graisse, qui dépend d’abord de l’alimentation et de l’activité physique.</p><p>Hors Lipo 6, le choix est plus classique. La <strong>Creatine Monohydrate</strong> se prend aromatisée en 390 g (Strawberry Watermelon, Fruit Punch) ou sans arôme en 300 g, selon que vous la buvez seule ou dans un shake. <strong>EAA+ Hydration</strong> apporte les neuf acides aminés essentiels, quand <strong>BCAA 6000 Recovery</strong> n’en apporte que trois. <strong>IsoFit</strong> est l’isolat de la marque, face aux 100% Whey Protein. Aucune fiche Nutrex Research ne publie de tableau de valeurs transcrit par notre équipe : l’étiquette du produit reçu fait foi.</p>",
+    faqs: [
+      {
+        question: "Quels produits Nutrex Research sont référencés sur Protein.tn ?",
+        answer:
+          "40 références : 13 brûleurs de graisse de la gamme Lipo 6 (Black Ultra Concentrate, Intense Ultra Concentrate, Black, Hers, Hardcore, Nighttime, Diuretic, un gel et une ceinture), le CLA 1000, la L-Carnitine 3000 465 ml, les EAA+ Hydration 390 g, les BCAA 6000 Recovery, la Creatine Monohydrate, la Creatine For Women, le pré-workout Outrage, L-Arginine 1000, HMB 1000, Tribulus 1400, les 100% Whey Protein et 100% Premium Whey Protein, et l’isolat IsoFit. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Lipo 6 Black Ultra Concentrate ou Lipo 6 Intense : quelle différence ?",
+        answer:
+          "Leur composition. Notre fiche Lipo 6 Black Ultra Concentrate cite caféine anhydre, N-acétyl L-tyrosine, guarana, citrus aurantium, capsicum et BioPerine. Lipo 6 Intense Ultra Concentrate cite caféine, théobromine, N-acétyl-L-tyrosine, Paradoxine®, Rauwolfia vomitoria et yohimbine HCl. Les quantités exactes figurent sur l’étiquette du flacon. Les deux s’adressent à des adultes déjà habitués aux brûleurs à base de stimulants.",
+      },
+      {
+        question: "Comment prendre un Lipo 6 ?",
+        answer:
+          "Nos fiches indiquent une capsule le matin et une l’après-midi, sans dépasser deux capsules sur 24 heures pour Lipo 6 Intense, et aucune prise dans les six heures qui précèdent le coucher. Limitez les autres sources de caféine : café, boissons énergisantes, pré-workout. En cas de palpitations ou de vertiges, arrêtez la prise et consultez. L’étiquette de votre flacon reste la référence.",
+      },
+      {
+        question: "Nutrex Research propose-t-il de la créatine et des acides aminés ?",
+        answer:
+          "Oui. La Creatine Monohydrate est référencée en 390 g, en Strawberry Watermelon et Fruit Punch, et en 300 g sans arôme ; la Creatine For Women existe en Pink Lemonade et Peach Mango. Côté acides aminés : EAA+ Hydration 390 g en six arômes, BCAA 6000 Recovery en Fruit Punch et Green Apple, L-Arginine 1000 et HMB 1000 en 120 gélules.",
+      },
+      {
+        question: "Comment commander Nutrex Research en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "bruleurs-de-graisse", name: "Comparer les brûleurs de graisse", url: "/bruleurs-de-graisse" },
+      { slug: "l-carnitine", name: "L-carnitine : le rayon", url: "/l-carnitine" },
+      { slug: "cla", name: "Le rayon CLA", url: "/cla" },
+      { slug: "eaa", name: "Acides aminés essentiels (EAA)", url: "/eaa" },
+      { slug: "creatine", name: "Voir les créatines des autres marques", url: "/creatine" },
+      { slug: "brands", name: "Comparer Nutrex Research aux autres marques", url: "/brands" },
+    ],
+  },
+  'redcon1': {
+    metaTitle: "Redcon1 Tunisie | Total War, C-Burn & Isotope",
+    metaDescription:
+      "Redcon1 en Tunisie : pré-workout Total War en 465 g et en dix arômes de 441 à 453 g, C-Burn, Double Tap, créatine 300 g, MRE Lite 945 g et Isotope 2,2 kg.",
+    h1: "Redcon1 Tunisie : le pré-workout Total War et ses déclinaisons",
+    introHtml:
+      "<p>La gamme <strong>Redcon1</strong> sur Protein.tn compte 16 références, et 11 d’entre elles sont le même produit : le pré-workout <strong>Total War</strong>. Il est proposé en pot de <strong>465 g</strong> et en dix déclinaisons aromatisées de 441 g à 453 g — Strawberry Kiwi, Blue Raspberry, Green Apple, Orange Crush, Sour Gummy Bear, Rainbow Candy, Blue Lemonade, Strawberry Mango, Tiger’s Blood Cherry &amp; Coconut et Vice City Strawberry Pina Colada. Les cinq autres références couvrent chacune un autre usage : deux brûleurs de graisse en gélules, <strong>C-Burn</strong> (90 gélules) et <strong>Double Tap</strong> (120 gélules), une <strong>Creatine Monohydrate</strong> sans arôme de 300 g, <strong>MRE Lite</strong>, une protéine multi-sources de 945 g en Peanut Butter Cookie, et <strong>Isotope 100% Whey Isolate</strong> en 2,2 kg arôme Chocolat. Sur cette page, la question porte donc surtout sur le format et l’arôme de Total War, puis sur ce qui peut l’accompagner. La grille ci-dessus affiche la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit Redcon1 choisir ?",
+    howToChooseBody:
+      "<p><strong>Total War</strong> est un pré-workout, et notre fiche du pot de 465 g en décrit la formule : citrulline malate, bêta-alanine, caféine, taurine et sulfate d’agmatine. Elle précise aussi ce qu’il ne contient pas — ni créatine, ni whey — : il ne remplace donc ni l’une ni l’autre. La fiche conseille de mélanger une portion dans 120 à 180 ml d’eau environ 30 minutes avant la séance, et de commencer par une demi-portion si vous êtes sensible à la caféine. Sa teneur en caféine est le premier critère : faites le compte du café, des boissons énergisantes et des autres compléments de la journée, et évitez-le trop près du coucher. La bêta-alanine peut provoquer chez certaines personnes des picotements passagers, appelés paresthésie.</p><p>Entre le pot de 465 g et les versions de 441 à 453 g, la différence tient à l’arôme et à la contenance ; les fiches des versions aromatisées ne transcrivent pas encore leur étiquette, qui reste la référence pour la formule et le nombre de portions. <strong>C-Burn</strong> et <strong>Double Tap</strong> relèvent d’un autre rayon, les brûleurs de graisse : lisez leur étiquette avant de les associer à Total War le même jour. La <strong>Creatine Monohydrate</strong> 300 g sans arôme se prend à part, puisque Total War n’en contient pas. Pour les protéines, <strong>Isotope</strong> est classé en whey isolate et <strong>MRE Lite</strong> en protéines multi-sources.</p>",
+    faqs: [
+      {
+        question: "Quels produits Redcon1 sont référencés sur Protein.tn ?",
+        answer:
+          "16 références : le pré-workout Total War en 465 g et en dix arômes de 441 g à 453 g, les brûleurs de graisse C-Burn (90 gélules) et Double Tap (120 gélules), la Creatine Monohydrate sans arôme 300 g, la protéine multi-sources MRE Lite 945 g et Isotope 100% Whey Isolate 2,2 kg. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Total War 465 g ou une version aromatisée ?",
+        answer:
+          "Le pot de 465 g est la référence dont notre fiche détaille la formule. Les dix autres, de 441 g à 453 g, se distinguent par leur arôme, de Blue Raspberry à Tiger’s Blood Cherry & Coconut. Leur étiquette n’est pas encore transcrite sur nos fiches : le nombre de portions et la composition exacte figurent sur le pot reçu, et peuvent varier selon l’arôme et la version de la formule.",
+      },
+      {
+        question: "Total War contient-il de la créatine ou des protéines ?",
+        answer:
+          "Non. D’après notre fiche, Total War est un pré-workout construit autour de la citrulline malate, de la bêta-alanine, de la caféine, de la taurine et du sulfate d’agmatine ; il ne contient ni créatine ni whey. Si vous prenez de la créatine, la Creatine Monohydrate 300 g sans arôme de la marque se prend séparément.",
+      },
+      {
+        question: "Pourquoi Total War peut-il provoquer des picotements ?",
+        answer:
+          "La bêta-alanine de la formule peut provoquer chez certaines personnes une sensation passagère de picotement ou de fourmillement, appelée paresthésie. Son intensité varie d’une personne à l’autre. Commencer par une demi-portion permet aussi d’évaluer votre tolérance à la caféine.",
+      },
+      {
+        question: "Comment commander Redcon1 en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "pre-workout", name: "Pré-workout : les autres formules", url: "/pre-workout" },
+      { slug: "bruleurs-de-graisse", name: "Brûleurs de graisse en gélules", url: "/bruleurs-de-graisse" },
+      { slug: "creatine", name: "Créatines à prendre à part", url: "/creatine" },
+      { slug: "whey-isolate", name: "Whey isolate : autres marques", url: "/whey-isolate" },
+      { slug: "proteines-multi-sources", name: "Le rayon protéines multi-sources", url: "/proteines-multi-sources" },
+      { slug: "brands", name: "Comparer Redcon1 aux autres marques", url: "/brands" },
+    ],
+  },
+  'hx-nutrition': {
+    metaTitle: "HX Nutrition Tunisie | Big Monster 7 kg, whey & isolate",
+    metaDescription:
+      "HX Nutrition en Tunisie : gainers Big Monster et Massive Gainer 7 kg, Real Whey, Zero Isolate et Iso Whey 2 kg, créatine 500 g, ZMA 60 capsules et Vita X.",
+    h1: "HX Nutrition Tunisie : gainers 7 kg, whey et isolats 2 kg",
+    introHtml:
+      "<p>La gamme <strong>HX Nutrition</strong> compte neuf références, organisées autour de la prise de masse et des protéines. Deux gainers en sac de <strong>7 kg</strong> d’abord : <strong>Big Monster</strong>, référencé en arôme Fraise, et <strong>Massive Gainer</strong>. Trois protéines en <strong>2 kg</strong> ensuite : <strong>Real Whey</strong> (arôme Biscuit), classée en whey protéine, puis <strong>Zero Isolate</strong> (Biscuit) et <strong>Iso Whey</strong> (Cookies), toutes deux classées en whey isolate. Le reste du catalogue complète l’entraînement et le quotidien : <strong>Creatine Monohydrate</strong> en 500 g, <strong>ZMA</strong> en 60 capsules, les multivitamines <strong>Vita X</strong> en 90 comprimés et <strong>TXT10</strong>, classé au rayon plantes et boosters. Les formats sont peu nombreux — 7 kg pour les gainers, 2 kg pour les protéines — si bien que le choix porte sur la formule et non sur la contenance. Aucune de ces fiches ne publie de tableau de valeurs transcrit par notre équipe : calories, protéines et créatine par portion se lisent sur l’étiquette du sac ou du pot. La grille ci-dessus affiche la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit HX Nutrition choisir ?",
+    howToChooseBody:
+      "<p>La première question est celle du blocage. Si vous n’arrivez pas à manger assez pour prendre du poids, un gainer de 7 kg répond à ce besoin. <strong>Big Monster</strong> associe glucides, protéines et créatine selon sa fiche, et la quantité de créatine par portion est imprimée sur le sac : si vous prenez déjà une créatine à part, comptez celle du gainer. Sa fiche conseille de commencer par une demi-portion pour tester la tolérance digestive, puis de répartir l’apport en plusieurs shakers dans la journée. <strong>Massive Gainer</strong>, également en 7 kg, décrit un mélange de protéines de lactosérum, de caséine et d’isolat de soja, un point à vérifier en cas d’allergie.</p><p>Si vous mangez assez mais manquez de protéines, un gainer apporte des calories dont vous n’avez pas besoin : regardez plutôt les pots de 2 kg. <strong>Real Whey</strong> est la whey polyvalente de la marque ; <strong>Zero Isolate</strong> et <strong>Iso Whey</strong> sont classées en whey isolate, plus filtrée, et se distinguent surtout par leur arôme, Biscuit ou Cookies. La <strong>Creatine Monohydrate</strong> 500 g se prend indépendamment des protéines. <strong>ZMA</strong> en 60 capsules et <strong>Vita X</strong> en 90 comprimés relèvent d’un usage quotidien et ne remplacent aucun des produits ci-dessus. Pour <strong>TXT10</strong>, la fiche ne détaille pas la composition : l’étiquette est la seule référence. Dans tous les cas, les valeurs par portion sont celles du sac ou du pot reçu.</p>",
+    faqs: [
+      {
+        question: "Quels produits HX Nutrition sont référencés sur Protein.tn ?",
+        answer:
+          "Neuf références : les gainers Big Monster et Massive Gainer en 7 kg, Real Whey, Zero Isolate et Iso Whey en 2 kg, la Creatine Monohydrate 500 g, le ZMA 60 capsules, les multivitamines Vita X 90 comprimés et TXT10. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Big Monster ou Massive Gainer ?",
+        answer:
+          "Les deux sont des gainers en sac de 7 kg, destinés à augmenter l’apport calorique quand l’alimentation ne suffit pas. Big Monster, référencé en arôme Fraise, associe glucides, protéines et créatine. La fiche de Massive Gainer décrit un mélange de protéines de lactosérum, de caséine et d’isolat de soja. Comparez les étiquettes pour les calories et les protéines par portion.",
+      },
+      {
+        question: "Big Monster contient-il de la créatine ?",
+        answer:
+          "Oui, sa formule associe glucides, protéines et créatine. La quantité de créatine par portion n’est pas transcrite sur notre fiche : elle figure sur l’étiquette du sac. Si vous prenez déjà une créatine seule, tenez-en compte dans votre total de la journée.",
+      },
+      {
+        question: "Real Whey, Zero Isolate ou Iso Whey ?",
+        answer:
+          "Les trois sont proposées en 2 kg. Real Whey, en arôme Biscuit, est classée en whey protéine : c’est la poudre polyvalente. Zero Isolate (Biscuit) et Iso Whey (Cookies) sont classées en whey isolate, une protéine plus filtrée que l’on choisit généralement pour une teneur plus basse en glucides ou en lactose. Les valeurs exactes figurent sur l’étiquette du pot.",
+      },
+      {
+        question: "Comment commander HX Nutrition en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "mass-gainers", name: "Autres mass gainers du catalogue", url: "/mass-gainers" },
+      { slug: "whey-isolate", name: "Whey isolate : le rayon complet", url: "/whey-isolate" },
+      { slug: "whey-proteine", name: "Whey protéine : autres marques", url: "/whey-proteine" },
+      { slug: "creatine", name: "Créatine monohydrate : autres marques", url: "/creatine" },
+      { slug: "zma", name: "ZMA : comparer les formules", url: "/zma" },
+      { slug: "brands", name: "Comparer HX Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  'mnd-fitness': {
+    metaTitle: "MND Fitness Tunisie | Bancs, machines guidées et cardio",
+    metaDescription:
+      "MND Fitness sur Protein.tn : Flat Bench, bancs réglables et olympique, machines de tirage à pile de poids, rack à haltères F72, tapis roulant, rameur et vélo.",
+    h1: "MND Fitness Tunisie : bancs, machines de tirage et appareils cardio",
+    introHtml:
+      "<p>La marque <strong>MND Fitness en Tunisie</strong>, c’est uniquement du matériel : 14 références sur Protein.tn, dont 11 au rayon <strong>matériel de musculation</strong> et 3 au rayon <strong>cardio &amp; fitness</strong>. Cinq bancs d’abord, qui se distinguent par leurs réglages : le <strong>Flat Bench</strong>, un banc plat fixe ; trois bancs multi-positions, le <strong>Banc réglable</strong>, le <strong>Multi Réglable Bench</strong> et le <strong>Multi Degree Olympic Bench</strong> ; et un <strong>banc de développé incliné</strong>. Viennent ensuite les machines guidées : <strong>Traction longue machine</strong> et <strong>Pulldown machine</strong>, deux postes de tirage à pile de poids intégrée, la <strong>Chest presse inclinée machine</strong>, la <strong>Multi-Functional Smith Machine</strong> et le <strong>Seated Preacher Curl</strong> pour les biceps, auxquels s’ajoute le <strong>Layers Dumbbell Rack</strong>, un rack à haltères sur 3 niveaux. Côté cardio : un <strong>tapis roulant professionnel</strong>, un <strong>rameur professionnel</strong> et un <strong>vélo à résistance magnétique</strong>. Certaines fiches publient dimensions et poids, d’autres non : c’est le premier point à vérifier avant de réserver un emplacement. La grille ci-dessus affiche la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel équipement MND Fitness choisir ?",
+    howToChooseBody:
+      "<p><strong>Pour les pectoraux et le travail aux haltères</strong>, tout part du banc. Le <strong>Flat Bench</strong> ne s’incline pas, et c’est son intérêt : aucun mécanisme de réglage sous le dos quand la charge monte. Sa fiche annonce 1280 × 736 × 380 mm, 40 kg, une capacité de plus de 200 kg et une poignée avec roues pour le ranger. Si vous voulez aussi l’incliné et le décliné, un banc multi-positions évite d’empiler les postes : le <strong>Multi Degree Olympic Bench</strong> (1121 × 749 × 757 mm, 58 kg net selon sa fiche) se règle sans outils complexes, et le <strong>Banc réglable</strong> ajoute la position assise pour les épaules. Pour les bancs multi-positions, nos fiches ne publient pas de charge maximale certifiée : demandez-la avant l’achat si vous travaillez lourd.</p><p><strong>Pour le dos</strong>, les deux postes de tirage n’ont ni le même encombrement ni la même pile. La <strong>Traction longue machine</strong> mesure 1610 × 1280 × 2145 mm pour une pile réglable de 20 à 120 kg ; la <strong>Pulldown machine</strong>, un tirage vertical avec rouleaux de maintien des cuisses, annonce une pile d’environ 10 à 100 kg et plus. Dans les deux cas, comparez la hauteur de la machine à celle de votre plafond. Le <strong>Layers Dumbbell Rack</strong> (modèle F72, 1420 × 700 × 1010 mm, 71 kg) range jusqu’à 15 paires d’haltères.</p><p><strong>Pour le cardio</strong>, le choix dépend du geste : le <strong>tapis roulant</strong> pour la marche et la course, le <strong>rameur</strong> qui sollicite bras, dos, jambes et abdominaux dans un seul mouvement, le <strong>vélo à résistance magnétique</strong> pour un pédalage discret et sans impact. Leurs fiches ne publient ni dimensions ni poids maximal de l’utilisateur : demandez-les à l’équipe avant de commander.</p>",
+    faqs: [
+      {
+        question: "Quels équipements MND Fitness sont vendus sur Protein.tn ?",
+        answer:
+          "Quatorze références. En musculation : Flat Bench, Banc réglable, Multi Réglable Bench, Multi Degree Olympic Bench, banc de développé incliné, Traction longue machine, Pulldown machine, Chest presse inclinée machine, Multi-Functional Smith Machine, Seated Preacher Curl et Layers Dumbbell Rack. En cardio : tapis roulant professionnel, rameur professionnel et vélo à résistance magnétique. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Banc plat ou banc réglable MND Fitness : lequel choisir ?",
+        answer:
+          "Le Flat Bench est un banc plat fixe : seuls ses repose-pieds se règlent, et cette assise sans mécanisme convient au développé couché lourd, au rowing et au travail aux haltères. Si vous voulez aussi travailler en incliné et en décliné, le Banc réglable, le Multi Réglable Bench et le Multi Degree Olympic Bench passent d’une position à l’autre ; le Banc réglable propose en plus une position assise.",
+      },
+      {
+        question: "Quelle différence entre la Traction longue machine et la Pulldown machine ?",
+        answer:
+          "Ce sont deux postes de tirage pour le dos avec une pile de poids intégrée, donc sans disques à acheter. La Pulldown machine est un tirage vertical : rouleaux qui bloquent les cuisses, barre multi-prises (large, neutre ou étroite) et pile d’environ 10 à 100 kg et plus. La Traction longue machine associe siège réglable, appui poitrine et barre longue en prise large ou neutre, avec une pile de 20 à 120 kg et un encombrement annoncé de 1610 × 1280 × 2145 mm.",
+      },
+      {
+        question: "Quelles dimensions prévoir pour le matériel MND Fitness ?",
+        answer:
+          "Nos fiches en publient cinq : Flat Bench 1280 × 736 × 380 mm (40 kg), Multi Degree Olympic Bench 1121 × 749 × 757 mm (58 kg net), Seated Preacher Curl 924 × 934 × 900 mm (49 kg), Layers Dumbbell Rack F72 1420 × 700 × 1010 mm (71 kg) et Traction longue machine 1610 × 1280 × 2145 mm. Pour les autres références, les dimensions ne figurent pas sur la fiche : demandez-les à l’équipe Protein.tn avant de commander.",
+      },
+      {
+        question: "Tapis roulant, rameur ou vélo MND Fitness ?",
+        answer:
+          "Le tapis roulant sert à la marche, au jogging et à la course, avec des vitesses réglables et une surface amortie. Le rameur fait travailler bras, dos, jambes et abdominaux dans un seul geste, avec une résistance modulable. Le vélo à résistance magnétique offre un pédalage discret et sans impact, adapté à une chambre ou un salon. Le tapis et le vélo affichent vitesse, distance, temps et calories estimées.",
+      },
+      {
+        question: "Comment commander MND Fitness en Tunisie ?",
+        answer:
+          "Choisissez l’équipement disponible, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles. Pour une machine encombrante, vérifiez avant la commande l’accès à la pièce où elle sera installée.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "materiel-de-musculation", name: "Bancs et machines de musculation", url: "/materiel-de-musculation" },
+      { slug: "cardio-fitness", name: "Tapis roulants, rameurs et vélos", url: "/cardio-fitness" },
+      { slug: "equipement", name: "Tout le rayon équipement", url: "/equipement" },
+      { slug: "brands", name: "Comparer MND Fitness aux autres marques", url: "/brands" },
+    ],
+  },
+  'eric-favre': {
+    metaTitle: "Eric Favre Tunisie | Mass Gainer, Protein Vegan, Born Rage",
+    metaDescription:
+      "Eric Favre : Mass Gainer Créatine 7 kg, Mass Gainer Zero 7 kg, Protein Vegan 1,5 kg, Iso Fusion 2 kg, pré-workout Born Rage et un pack prise de masse.",
+    h1: "Eric Favre Tunisie : gainers 7 kg, protéine végétale et pré-workout",
+    introHtml:
+      "<p>La gamme <strong>Eric Favre en Tunisie</strong> compte six références sur Protein.tn, et trois d’entre elles tournent autour de la prise de poids. Deux gainers en sac de 7 kg d’abord : <strong>Mass Gainer Créatine</strong>, référencé en arôme Cookies et rangé au rayon glucides, et <strong>Mass Gainer Zero</strong>, en Vanilla et Pistache. Puis le <strong>Pack Prise de Masse</strong>, qui réunit un Hard Mass Gainer 7 kg, une Gold Creatine et un Shaker Kong de 700 ml. Côté protéines, deux poudres qui n’ont pas la même source : <strong>Protein Vegan</strong> 1,5 kg en Vanilla, une protéine végétale présentée comme associant pois, riz et spiruline, et <strong>Iso Fusion</strong> 2 kg, une whey isolate listée en Cookies et Vanilla. Enfin, un pré-workout : <strong>Born Rage Original</strong>. Une seule de ces fiches publie aujourd’hui un tableau nutritionnel transcrit de l’étiquette, celle du Mass Gainer Créatine ; pour les cinq autres, c’est l’emballage qui fait foi. La grille ci-dessus indique le prix et la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit Eric Favre choisir ?",
+    howToChooseBody:
+      "<p>La première question est calorique. <strong>Mass Gainer Créatine</strong> 7 kg est la référence la mieux documentée : en arôme Cookie, l’étiquette transcrite sur notre fiche déclare une portion de 140 g apportant 549 kcal, 98 g de glucides dont 64 g de sucres, 31 g de protéines, 3,8 g de lipides et 2,5 g de créatine, pour 50 portions par sac. C’est un produit fait pour augmenter l’apport calorique, pas seulement pour compléter les protéines ; si vous prenez déjà une créatine à part, comptez ces 2,5 g dans votre total. <strong>Mass Gainer Zero</strong> 7 kg vise le même objectif, en Vanilla ou Pistache, mais sa fiche ne publie pas de tableau : les valeurs sont celles du sac. Le <strong>Pack Prise de Masse</strong> ajoute une créatine et un shaker à un gainer que sa fiche dit déjà enrichi en créatine, sans en donner la quantité : lisez les deux étiquettes avant de cumuler.</p><p>Si votre alimentation couvre déjà les calories, le choix se fait entre les deux protéines. <strong>Protein Vegan</strong> 1,5 kg est l’option sans protéines laitières, présentée comme tri-source et annoncée sans lactose ni gluten ; <strong>Iso Fusion</strong> 2 kg est une whey isolate, donc issue du lait. Aucune des deux n’a de tableau transcrit sur notre fiche : l’étiquette du pot est la référence pour les grammes par dose. <strong>Born Rage Original</strong>, enfin, est un pré-workout à prendre 20 à 30 minutes avant la séance, les jours d’entraînement ; sa composition n’est pas reprise sur la fiche, vérifiez donc la caféine et les stimulants sur l’étiquette avant la première prise.</p>",
+    faqs: [
+      {
+        question: "Quels produits Eric Favre sont vendus sur Protein.tn ?",
+        answer:
+          "Six références : les gainers Mass Gainer Créatine 7 kg (Cookies) et Mass Gainer Zero 7 kg (Vanilla, Pistache), le Pack Prise de Masse, la protéine végétale Protein Vegan 1,5 kg (Vanilla), la whey isolate Iso Fusion 2 kg (Cookies, Vanilla) et le pré-workout Born Rage Original. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Que contient une portion de Mass Gainer Créatine 7 kg ?",
+        answer:
+          "Sur le sac de 7 kg en arôme Cookie, l’étiquette transcrite sur notre fiche déclare une portion de 140 g apportant 549 kcal, 98 g de glucides dont 64 g de sucres, 31 g de protéines, 3,8 g de lipides dont 2,2 g d’acides gras saturés, 0,3 g de sel et 2,5 g de créatine, soit 50 portions par sac. Le produit contient du lait et peut contenir des traces de gluten, œufs, sésame, fruits à coque, céleri et sulfites.",
+      },
+      {
+        question: "Quelle différence entre Mass Gainer Créatine et Mass Gainer Zero ?",
+        answer:
+          "Les deux sont des gainers en sac de 7 kg. Mass Gainer Créatine, référencé en arôme Cookies, contient 2,5 g de créatine par portion de 140 g selon son étiquette et publie son tableau complet sur notre fiche. Mass Gainer Zero est proposé en Vanilla et Pistache ; sa fiche décrit un mélange de glucides et de protéines laitières mais ne publie pas encore de tableau : l’étiquette du sac fait foi.",
+      },
+      {
+        question: "Protein Vegan ou Iso Fusion : laquelle choisir ?",
+        answer:
+          "Elles ne partent pas de la même source. Protein Vegan 1,5 kg est une protéine végétale, présentée comme associant pois, riz et spiruline et annoncée sans lactose ni gluten. Iso Fusion 2 kg est une whey isolate, issue du lait. Si vous évitez les produits laitiers, la première est la seule des deux à regarder ; les valeurs par dose figurent sur l’étiquette de chaque pot.",
+      },
+      {
+        question: "Que contient le Pack Prise de Masse ?",
+        answer:
+          "Trois produits : un Hard Mass Gainer 7 kg, une Gold Creatine (créatine monohydrate micronisée) et un Shaker Kong de 700 ml avec grille anti-grumeaux. Selon la fiche, la matrice protéique du gainer associe lactosérum, caséine et œuf : il contient donc du lait et de l’œuf. Le gainer étant déjà enrichi en créatine, additionnez les deux étiquettes avant de prendre la Gold Creatine en plus.",
+      },
+      {
+        question: "Comment commander Eric Favre en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "mass-gainers", name: "Mass gainers : comparer les marques", url: "/mass-gainers" },
+      { slug: "glucides", name: "Le rayon glucides", url: "/glucides" },
+      { slug: "proteines-vegetales", name: "Protéines végétales : voir le rayon", url: "/proteines-vegetales" },
+      { slug: "pre-workout", name: "Autres pré-workouts du catalogue", url: "/pre-workout" },
+      { slug: "brands", name: "Comparer Eric Favre aux autres marques", url: "/brands" },
+    ],
+  },
+  'zumub': {
+    metaTitle: "Zumub Tunisie | Zinc 100 comprimés et Omega 3 90 caps",
+    metaDescription:
+      "Zumub sur Protein.tn : Zinc en boîte de 100 comprimés, à 17,5 mg de zinc (citrate) par comprimé selon l’étiquette, et Omega 3 en boîte de 90 capsules.",
+    h1: "Zumub Tunisie : zinc en comprimés et oméga 3 en capsules",
+    introHtml:
+      "<p>La sélection <strong>Zumub</strong> de Protein.tn tient en deux références, toutes deux rangées dans le rayon santé et vitalité et toutes deux à prise quotidienne. Le <strong>Zinc</strong> est vendu en boîte de <strong>100 comprimés</strong> et classé au rayon zinc. C’est la référence la mieux documentée, puisque l’étiquette du fabricant est transcrite sur notre fiche : une portion d’un comprimé par jour, de préférence au cours d’un repas, et 100 portions par boîte. L’<strong>Omega 3</strong> est proposé en boîte de <strong>90 capsules</strong> et classé au rayon oméga 3 ; sa fiche met en avant l’EPA et le DHA, mais n’en publie pas encore les quantités. La marque ne propose chez nous ni protéine, ni créatine, ni produit d’entraînement : cette page sert donc surtout à situer ces deux compléments du quotidien, puis à les comparer avec les références d’autres marques dans les rayons zinc et oméga 3. La grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quel complément Zumub choisir ?",
+    howToChooseBody:
+      "<p>Les deux références ne répondent pas au même besoin, et ne s’opposent donc pas. Le <strong>Zinc 100 comprimés</strong> apporte, selon l’étiquette transcrite sur notre fiche, 17,5 mg de zinc sous forme de citrate par comprimé, soit 175 % des apports de référence pour un adulte, à raison d’un comprimé par jour. Ce chiffre compte si vous prenez déjà un multivitaminé ou un ZMA : additionnez le zinc des deux étiquettes avant de cumuler, et ne dépassez pas la dose journalière recommandée. L’étiquette signale des traces possibles de fruits à coque, gluten, lait, poisson, crustacés et soja, et le produit est déconseillé aux femmes enceintes ou allaitantes sauf avis d’un professionnel de santé.</p><p>L’<strong>Omega 3 90 caps</strong> relève d’une autre logique : ce sont des acides gras, pas un minéral. Sa fiche ne publie ni la quantité d’EPA et de DHA par capsule, ni le nombre de capsules par jour : c’est l’étiquette de la boîte qui fait foi. C’est aussi elle qui permet de comparer avec les autres oméga 3 du rayon, en ramenant l’EPA et le DHA à la dose journalière plutôt qu’à la capsule. La durée couverte par une boîte de 90 dépend de ce nombre de capsules par jour. En cas de traitement en cours, demandez l’avis d’un professionnel de santé avant de commencer.</p>",
+    faqs: [
+      {
+        question: "Quels produits Zumub sont vendus sur Protein.tn ?",
+        answer:
+          "Deux références : le Zinc en boîte de 100 comprimés, au rayon zinc, et l’Omega 3 en boîte de 90 capsules, au rayon oméga 3. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Combien de zinc contient un comprimé Zumub ?",
+        answer:
+          "Selon l’étiquette transcrite sur notre fiche, un comprimé apporte 17,5 mg de zinc sous forme de citrate, soit 175 % des apports de référence pour un adulte. La dose indiquée est d’un comprimé par jour, de préférence au cours d’un repas ; la boîte contient 100 portions.",
+      },
+      {
+        question: "Le zinc Zumub se cumule-t-il avec un multivitaminé ?",
+        answer:
+          "Vérifiez d’abord si votre multivitaminé ou votre ZMA contient déjà du zinc : un seul comprimé Zumub couvre 175 % des apports de référence. Additionnez les deux étiquettes et ne dépassez pas la dose journalière recommandée.",
+      },
+      {
+        question: "Combien d’EPA et de DHA dans l’Omega 3 Zumub ?",
+        answer:
+          "Notre fiche met en avant l’EPA et le DHA sans en publier les quantités. Le tableau nutritionnel imprimé sur la boîte donne l’apport par capsule et par dose journalière : c’est lui qui fait foi, et c’est sur cette base qu’il faut le comparer à d’autres oméga 3.",
+      },
+      {
+        question: "Comment commander Zumub en Tunisie ?",
+        answer:
+          "Choisissez la référence disponible, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "zinc", name: "Comparer les compléments de zinc", url: "/zinc" },
+      { slug: "omega-3", name: "Oméga 3 : comparer les marques", url: "/omega-3" },
+      { slug: "vitamines", name: "Vitamines et minéraux : tout le rayon", url: "/vitamines" },
+      { slug: "brands", name: "Comparer Zumub aux autres marques", url: "/brands" },
+    ],
+  },
+  'quamtrax': {
+    metaTitle: "Quamtrax Tunisie | Creatine Monohydrate & Pure Creatine",
+    metaDescription:
+      "Quamtrax sur Protein.tn : Creatine Monohydrate en pot de 500 g et Pure Creatine en 300 g, deux créatines monohydrate présentées sans additifs sur leurs fiches.",
+    h1: "Quamtrax Tunisie : créatine monohydrate en 500 g et 300 g",
+    introHtml:
+      "<p>La marque <strong>Quamtrax</strong> est présente sur Protein.tn avec deux références, toutes deux au rayon créatine. <strong>Creatine Monohydrate</strong> en pot de <strong>500 g</strong> est présentée sur sa fiche comme une créatine 100 % monohydrate, sans additifs ni conservateurs. <strong>Pure Creatine</strong> en <strong>300 g</strong> est décrite, elle aussi, comme une créatine monohydrate pure, sans additifs. Aucune protéine, aucun gainer, aucun pré-workout : la page se résume à un seul ingrédient en deux contenances, sans arôme mentionné sur l’une ou l’autre fiche. Aucune des deux ne publie encore de tableau transcrit de l’étiquette — ni la portion, ni le nombre de doses par pot — et c’est donc l’étiquette Quamtrax qui fait foi pour la dose journalière. La grille ci-dessus affiche le prix et la disponibilité de chacune des deux références ; pour comparer avec d’autres marques de créatine, en poudre neutre ou aromatisée, en pot plus petit ou plus grand, le rayon créatine reste le bon point de départ.</p>",
+    howToChooseTitle: "Quelle créatine Quamtrax choisir ?",
+    howToChooseBody:
+      "<p>Les deux références contiennent le même ingrédient selon leurs fiches : de la créatine monohydrate, présentée sans additifs. Le choix entre <strong>500 g</strong> et <strong>300 g</strong> n’est donc pas une question de formule mais de durée : à dose journalière égale, le grand pot couvre simplement une période plus longue. Pour connaître cette durée, divisez le poids net par la portion indiquée sur l’étiquette ; nos fiches ne transcrivent pas encore cette portion, et nous n’avançons aucun chiffre à sa place. Comparez ensuite le prix affiché des deux pots sur cette page.</p><p>Côté usage, la fiche du pot de 500 g renvoie au mode d’emploi de l’étiquette et rappelle de ne pas dépasser la dose journalière ; la prendre chaque jour au même moment aide surtout à ne pas l’oublier. La créatine se prend indépendamment des protéines : si vous utilisez déjà un gainer ou un pré-workout qui en contient, additionnez les quantités des deux étiquettes. En cas de grossesse, de problème de santé ou de prise de médicaments, demandez l’avis d’un professionnel de santé avant de commencer.</p>",
+    faqs: [
+      {
+        question: "Quels produits Quamtrax sont vendus sur Protein.tn ?",
+        answer:
+          "Deux créatines : Creatine Monohydrate en pot de 500 g et Pure Creatine en 300 g, toutes deux au rayon créatine. La grille de cette page indique la disponibilité de chacune.",
+      },
+      {
+        question: "Que contient la créatine Quamtrax ?",
+        answer:
+          "Selon sa fiche, la Creatine Monohydrate 500 g est une créatine 100 % monohydrate, présentée sans additifs ni conservateurs. La Pure Creatine 300 g est décrite comme une créatine monohydrate pure, sans additifs. La liste d’ingrédients exacte est imprimée sur l’étiquette de chaque pot.",
+      },
+      {
+        question: "Pot de 500 g ou de 300 g : quelle différence ?",
+        answer:
+          "Sur le plan de la composition annoncée, aucune : les deux fiches décrivent une créatine monohydrate sans additifs. À dose journalière égale, le pot de 500 g couvre une période plus longue. Comparez le prix affiché des deux formats sur cette page pour décider.",
+      },
+      {
+        question: "Quelle dose de créatine Quamtrax prendre chaque jour ?",
+        answer:
+          "La portion n’est pas transcrite sur notre fiche : suivez la dose journalière indiquée sur l’étiquette Quamtrax et ne la dépassez pas. Pour savoir combien de temps dure le pot, divisez son poids net par cette portion.",
+      },
+      {
+        question: "Comment commander Quamtrax en Tunisie ?",
+        answer:
+          "Choisissez le format disponible, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "creatine", name: "Autres créatines monohydrate du catalogue", url: "/creatine" },
+      { slug: "performance", name: "Compléments performance : tout le rayon", url: "/performance" },
+      { slug: "brands", name: "Comparer Quamtrax aux autres marques", url: "/brands" },
+    ],
+  },
+  'scenit-nutrition': {
+    metaTitle: "Scenit Nutrition Tunisie | Tantor Whey, Instant Mass, EAA",
+    metaDescription:
+      "Scenit Nutrition en Tunisie : Tantor Whey 908 g et 2,267 kg, gainers Instant Real Mass 2,72 kg et Instant Mass 7 kg, EAA Master Amino 390 g et collagène.",
+    h1: "Scenit Nutrition Tunisie : whey Tantor, gainers Instant Mass et EAA",
+    introHtml:
+      "<p>La gamme <strong>Scenit Nutrition en Tunisie</strong> compte 14 références sur Protein.tn, réparties sur douze rayons : c’est l’une des plus dispersées du catalogue, et elle se lit mieux par usage. Les protéines : <strong>Tantor Whey Protein</strong> en 908 g (arôme Fraise) et en 2,267 kg. La prise de masse : deux gainers, <strong>Instant Real Mass</strong> 2,72 kg (arôme Chocolat), classé en mass gainers, et <strong>Instant Mass</strong> 7 kg, classé en gainers protéinés. Les acides aminés : <strong>EAA Master Amino</strong> 390 g (arôme Fruit Punch), <strong>Elite Arginine</strong> en 120 capsules, deux BCAA — <strong>BCAA Gluta</strong> 500 g et <strong>BCAA 12.000</strong> 457 g — et une <strong>Beta Alanine</strong> 300 g (arôme Fraise). S’y ajoutent <strong>Best Creatine</strong> 500 g, <strong>Best Collagen Premium</strong> 350 g, le multivitamines <strong>Multi Vita+</strong> en 120 capsules, un <strong>Omega 3</strong> et le <strong>T9 Testo Booster</strong> en 120 gélules. Chaque format est une fiche distincte : la grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quel produit Scenit Nutrition choisir ?",
+    howToChooseBody:
+      "<p>Aucune des 14 fiches Scenit Nutrition de notre catalogue ne publie de tableau de valeurs transcrit. Aucun chiffre par portion n’est donc avancé ici : pour la dose, les protéines et les calories, l’étiquette du pot reçu est la seule référence. Le choix se fait par besoin.</p><ul><li><strong>Il vous manque des protéines, pas des calories</strong> : <strong>Tantor Whey Protein</strong>, une protéine de lactosérum, donc issue du lait. Le 908 g et le 2,267 kg portent le même nom ; à dose égale, seule la durée couverte change, et la décision est budgétaire.</li><li><strong>Vous n’arrivez pas à manger assez</strong> : un gainer. <strong>Instant Real Mass</strong> 2,72 kg se prête à un premier essai, <strong>Instant Mass</strong> 7 kg couvre une longue période. Nos fiches décrivent les deux comme enrichis en créatine : tenez-en compte avant d’y ajouter <strong>Best Creatine</strong> 500 g. Celle du 7 kg mentionne aussi des protéines d’œuf et de la gelée royale, à vérifier en cas d’allergie.</li><li><strong>Autour de la séance</strong> : <strong>EAA Master Amino</strong> 390 g réunit les neuf acides aminés essentiels, quand les BCAA n’en contiennent que trois. Ni l’un ni l’autre ne remplace une whey, et la fiche des EAA ne mentionne pas de caféine : ce n’est pas un pré-workout.</li><li><strong>Au quotidien</strong> : <strong>Multi Vita+</strong>, <strong>Best Collagen Premium</strong> et <strong>Omega 3</strong> relèvent d’un usage régulier, sans lien avec l’objectif de la séance. Le <strong>T9 Testo Booster</strong> associe notamment acide D-aspartique, tribulus, maca et ginseng ; sa fiche précise qu’il n’est destiné ni aux femmes ni aux enfants.</li></ul>",
+    faqs: [
+      {
+        question: "Quels produits Scenit Nutrition sont vendus sur Protein.tn ?",
+        answer:
+          "Quatorze références : Tantor Whey Protein en 908 g et 2,267 kg, les gainers Instant Real Mass 2,72 kg et Instant Mass 7 kg, EAA Master Amino 390 g, Elite Arginine 120 capsules, BCAA Gluta 500 g, BCAA 12.000 457 g, Beta Alanine 300 g, Best Creatine 500 g, Best Collagen Premium 350 g, Multi Vita+ 120 capsules, Omega 3 et T9 Testo Booster 120 gélules. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre Instant Real Mass et Instant Mass ?",
+        answer:
+          "Ce sont deux gainers, rangés dans deux rayons différents du site : Instant Real Mass 2,72 kg, référencé en arôme Chocolat, est classé en mass gainers ; Instant Mass 7 kg est classé en gainers protéinés. Nos fiches décrivent l’un et l’autre comme enrichis en créatine, et celle du 7 kg mentionne en plus des protéines d’œuf et de la gelée royale. Aucune des deux ne publie de tableau de valeurs transcrit : comparez les étiquettes des sacs pour les calories et les protéines par portion.",
+      },
+      {
+        question: "Tantor Whey Protein : 908 g ou 2,267 kg ?",
+        answer:
+          "Les deux formats portent le même nom de produit et sont classés en whey protéine ; le 908 g est référencé en arôme Fraise. À dose journalière égale, le 2,267 kg couvre simplement une période plus longue. Comparez le prix affiché des deux formats sur cette page : la décision est budgétaire. Il s’agit d’une protéine de lactosérum, donc issue du lait.",
+      },
+      {
+        question: "Combien de protéines dans une dose de Tantor Whey Protein ?",
+        answer:
+          "Notre fiche ne publie pas encore de tableau de valeurs transcrit pour cette référence, et nous n’avançons donc aucun chiffre ici. La taille de la dose et sa teneur en protéines figurent sur l’étiquette du pot que vous recevez, et elles peuvent varier d’un arôme à l’autre.",
+      },
+      {
+        question: "EAA Master Amino ou BCAA Scenit : que choisir ?",
+        answer:
+          "Les EAA réunissent les neuf acides aminés essentiels, les BCAA trois d’entre eux seulement : leucine, isoleucine et valine. EAA Master Amino est proposé en 390 g, arôme Fruit Punch ; côté BCAA, la marque est référencée avec BCAA Gluta 500 g, qui associe BCAA et glutamine, et BCAA 12.000 457 g. Tous se boivent autour de l’entraînement et complètent un apport protéique déjà couvert ; aucun ne remplace une whey.",
+      },
+      {
+        question: "Comment commander Scenit Nutrition en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "whey-proteine", name: "Whey protéines, autres formats et arômes", url: "/whey-proteine" },
+      { slug: "mass-gainers", name: "Mass gainers d’autres marques", url: "/mass-gainers" },
+      { slug: "gainers-proteines", name: "Gainers protéinés d’autres marques", url: "/gainers-proteines" },
+      { slug: "eaa", name: "Le rayon EAA et ses formats", url: "/eaa" },
+      { slug: "collagene", name: "Collagène et bien-être", url: "/collagene" },
+      { slug: "brands", name: "Comparer Scenit Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  'muscle-care': {
+    metaTitle: "Muscle Care Tunisie | Pro Vitamin, NAC & Magnésium",
+    metaDescription:
+      "Muscle Care en Tunisie : Pro Vitamin (vitamines et minéraux), NAC à la N-acétyl-cystéine et Magnesium + Calcium + Vitamin B6, trois boîtes de 90 comprimés.",
+    h1: "Muscle Care Tunisie : multivitamines, NAC et magnésium-calcium",
+    introHtml:
+      "<p>La gamme <strong>Muscle Care en Tunisie</strong> tient en trois références, toutes en boîte de 90 comprimés et toutes tournées vers le quotidien plutôt que vers la séance : ni protéine, ni créatine, ni pré-workout. <strong>Pro Vitamin</strong> est un complexe de vitamines et de minéraux, classé en vitamines ; c’est la seule des trois dont l’étiquette est transcrite sur notre fiche. <strong>NAC</strong> apporte de la N-acétyl-cystéine, une forme dérivée de la cystéine, et se range en antioxydants. <strong>Magnesium + Calcium + Vitamin B6</strong> associe les trois nutriments de son nom et se trouve au rayon magnésium. Comme les trois boîtes contiennent le même nombre de comprimés, le choix ne porte pas sur le format mais sur la composition — et, si vous en combinez plusieurs, sur ce qu’elles apportent en double. La grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quel complément Muscle Care choisir ?",
+    howToChooseBody:
+      "<p><strong>Pro Vitamin</strong> est la base la plus large. Sur la boîte de 90 comprimés, l’étiquette transcrite sur notre fiche déclare une portion de 2 comprimés, soit 45 portions par boîte, apportant notamment 80 mg de vitamine C, 10 µg de vitamine D, 2,5 µg de vitamine B12, 240 mg de calcium, 140 mg de magnésium, 14 mg de fer, 10 mg de zinc, 150 µg d’iode et 55 µg de sélénium, aux côtés des vitamines A, E et du groupe B. La présence d’iode est à signaler à votre médecin si vous suivez un traitement pour la thyroïde.</p><p>C’est ce tableau qui doit guider une association. <strong>Magnesium + Calcium + Vitamin B6</strong> apporte des minéraux que Pro Vitamin contient déjà : si vous prenez les deux, additionnez les étiquettes avant de fixer la dose. Notre fiche ne transcrit pas les teneurs par comprimé de ce produit, ni celles de la <strong>NAC</strong> : l’étiquette de la boîte est la référence pour ces deux-là. La NAC répond à une autre logique — c’est une source de cystéine, que l’organisme utilise pour fabriquer le glutathion — et elle ne se compare ni à une créatine ni à un pré-workout. En cas de grossesse, d’allaitement ou de traitement en cours, demandez l’avis d’un professionnel de santé avant de commencer.</p>",
+    faqs: [
+      {
+        question: "Quels produits Muscle Care sont vendus sur Protein.tn ?",
+        answer:
+          "Trois références, toutes en boîte de 90 comprimés : Pro Vitamin, un complexe de vitamines et minéraux ; NAC, à base de N-acétyl-cystéine ; et Magnesium + Calcium + Vitamin B6. La marque n’est référencée ni en protéines, ni en créatine, ni en pré-workout. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Que contient une portion de Pro Vitamin ?",
+        answer:
+          "L’étiquette transcrite sur notre fiche indique une portion de 2 comprimés, soit 45 portions par boîte de 90. Elle apporte notamment 800 µg de vitamine A, 10 µg de vitamine D, 12 mg de vitamine E, 80 mg de vitamine C, 2,5 µg de vitamine B12, 240 mg de calcium, 140 mg de magnésium, 14 mg de fer, 10 mg de zinc, 150 µg d’iode et 55 µg de sélénium. En cas de différence, l’étiquette de votre boîte fait foi.",
+      },
+      {
+        question: "Peut-on prendre Pro Vitamin avec Magnesium + Calcium + Vitamin B6 ?",
+        answer:
+          "Oui, mais en additionnant les apports. D’après l’étiquette transcrite sur notre fiche, la portion de 2 comprimés de Pro Vitamin contient déjà 140 mg de magnésium, 240 mg de calcium et 1,4 mg de vitamine B6. Les teneurs du second produit ne sont pas transcrites : lisez sa boîte avant de décider, et demandez conseil à un professionnel de santé en cas de doute.",
+      },
+      {
+        question: "À quoi correspond la NAC Muscle Care ?",
+        answer:
+          "C’est de la N-acétyl-cystéine en boîte de 90 comprimés, classée en antioxydants sur Protein.tn. La NAC n’est pas du glutathion : elle fournit de la cystéine, que l’organisme peut utiliser pour le fabriquer. Notre fiche ne transcrit pas la teneur par comprimé ; la dose journalière, et donc la durée d’une boîte, se lisent sur l’étiquette.",
+      },
+      {
+        question: "Comment commander Muscle Care en Tunisie ?",
+        answer:
+          "Choisissez la ou les références disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "vitamines", name: "Multivitamines et minéraux du quotidien", url: "/vitamines" },
+      { slug: "magnesium", name: "Magnésium seul ou associé", url: "/magnesium" },
+      { slug: "antioxydants", name: "NAC et autres antioxydants", url: "/antioxydants" },
+      { slug: "brands", name: "Comparer Muscle Care aux autres marques", url: "/brands" },
+    ],
+  },
+  'applied-nutrition': {
+    metaTitle: "Applied Nutrition Tunisie | Amino Fuel EAA & Fat Burner",
+    metaDescription:
+      "Applied Nutrition sur Protein.tn : Amino Fuel EAA 390 g, Green Tea Fat Burner 90 capsules molles, Triple Fat Burner 30 capsules et Weekend Colon Flush.",
+    h1: "Applied Nutrition Tunisie : Amino Fuel EAA et brûleurs au thé vert",
+    introHtml:
+      "<p>La gamme <strong>Applied Nutrition</strong> vendue en Tunisie par Protein.tn réunit quatre références qui ne répondent pas au même besoin. Une seule relève de l’entraînement : <strong>Amino Fuel EAA</strong>, une poudre d’acides aminés essentiels en pot de 390 g, classée en acides aminés. Les trois autres sont des capsules et des comprimés : <strong>Green Tea Fat Burner</strong> en 90 capsules molles et <strong>Maximum Strength Green Tea Triple Fat Burner</strong> en 30 capsules molles, tous deux classés en brûleurs de graisse, puis <strong>Weekend Colon Flush</strong> en 16 comprimés, classé en digestion et transit. La marque n’est référencée ni en whey, ni en créatine, ni en gainer : si vous cherchez une protéine, c’est dans un autre rayon qu’il faut regarder. Les deux brûleurs contiennent de la caféine selon leurs fiches, ce qui compte si vous prenez déjà du café ou un pré-workout. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit Applied Nutrition choisir ?",
+    howToChooseBody:
+      "<p>Chaque référence occupe un rayon différent : le choix se fait donc d’abord par besoin. <strong>Amino Fuel EAA</strong> 390 g se boit autour de la séance ; les EAA réunissent les neuf acides aminés essentiels, là où des BCAA n’en apportent que trois. Il complète un apport protéique déjà couvert par l’alimentation ou par une whey, il ne le remplace pas. Notre fiche publie un tableau de valeurs, mais il ne contient à ce jour qu’une ligne « Acides aminés » sans quantité : la dose et le nombre de portions sont à lire sur l’étiquette du pot.</p><p>Les deux brûleurs se distinguent par leur formule et leur contenance. D’après nos fiches, <strong>Green Tea Fat Burner</strong> (90 capsules molles) associe un extrait de thé vert concentré à de la caféine, tandis que <strong>Maximum Strength Green Tea Triple Fat Burner</strong> (30 capsules molles) combine trois extraits de thé — vert, blanc et noir — avec de la caféine également. Leurs fiches les présentent en complément d’un régime hypocalorique et d’une activité physique, pas à leur place ; elles déconseillent la prise du soir si la caféine gêne le sommeil et indiquent la présence de soja dans les ingrédients. <strong>Weekend Colon Flush</strong> (16 comprimés) est une formule de plantes classée en digestion et transit, dont le mode d’emploi s’étale sur trois jours : suivez strictement l’étiquette. Aucune valeur par portion n’est reprise ici pour ces trois références. En cas de traitement, de grossesse ou de problème de santé, demandez l’avis d’un professionnel avant de commencer.</p>",
+    faqs: [
+      {
+        question: "Quels produits Applied Nutrition sont vendus sur Protein.tn ?",
+        answer:
+          "Quatre références : Amino Fuel EAA en pot de 390 g, Green Tea Fat Burner en 90 capsules molles, Maximum Strength Green Tea Triple Fat Burner en 30 capsules molles et Weekend Colon Flush en 16 comprimés. La marque n’est référencée ni en protéines, ni en créatine, ni en gainer. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Amino Fuel EAA remplace-t-il une whey ?",
+        answer:
+          "Non. Les EAA apportent les neuf acides aminés essentiels et se boivent autour de l’entraînement ; une whey sert à compléter les protéines de la journée. Les deux peuvent s’utiliser ensemble, chacun à son moment. Notre fiche ne mentionne pas de caféine pour Amino Fuel EAA : ce n’est pas un pré-workout.",
+      },
+      {
+        question: "Combien de portions contient le pot d’Amino Fuel EAA 390 g ?",
+        answer:
+          "Notre fiche ne le précise pas encore : son tableau de valeurs ne comporte qu’une ligne « Acides aminés » sans quantité. Le nombre de portions et la dose par prise sont imprimés sur l’emballage Applied Nutrition, qui fait foi.",
+      },
+      {
+        question: "Quelle différence entre Green Tea Fat Burner et Green Tea Triple Fat Burner ?",
+        answer:
+          "Green Tea Fat Burner, en 90 capsules molles, repose sur un extrait de thé vert associé à de la caféine. Maximum Strength Green Tea Triple Fat Burner, en 30 capsules molles, combine trois extraits de thé — vert, blanc et noir — avec de la caféine, et sa fiche précise qu’il n’est pas destiné aux moins de 18 ans. Les deux se prennent pendant les repas selon leur mode d’emploi, en complément d’une alimentation adaptée et d’une activité physique.",
+      },
+      {
+        question: "Ces brûleurs de graisse contiennent-ils de la caféine ?",
+        answer:
+          "Oui, d’après leurs fiches. Leur mode d’emploi recommande de ne pas les prendre le soir si la caféine vous empêche de dormir, et de limiter les autres sources de caféine pendant leur utilisation — café, thé, pré-workout. Lisez l’étiquette pour la teneur exacte avant la première prise.",
+      },
+      {
+        question: "Comment commander Applied Nutrition en Tunisie ?",
+        answer:
+          "Choisissez la ou les références disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "acides-amines", name: "Acides aminés : EAA, BCAA et glutamine", url: "/acides-amines" },
+      { slug: "bruleurs-de-graisse", name: "Brûleurs de graisse : comparer les formules", url: "/bruleurs-de-graisse" },
+      { slug: "perte-de-poids", name: "Le rayon perte de poids", url: "/perte-de-poids" },
+      { slug: "brands", name: "Comparer Applied Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  'musclepharm': {
+    metaTitle: "MusclePharm Tunisie | Combat Whey, Assault & Wreckage",
+    metaDescription:
+      "MusclePharm en Tunisie : Combat 100% Whey 2,24 et 2,27 kg, Combat Protein 1,84 et 1,9 kg, Clear-ISO, pré-workouts Assault 344 g et Wreckage 440 g.",
+    h1: "MusclePharm Tunisie : protéines Combat, Clear-ISO et pré-workouts",
+    introHtml:
+      "<p>Dix-sept références portent le nom <strong>MusclePharm</strong> sur Protein.tn, et elles se répartissent en quatre blocs. Les protéines d’abord, en trois gammes distinctes : <strong>Combat 100% Whey</strong> en Strawberry 2,24 kg, Chocolate Milk 2,27 kg et Vanilla Ice Cream 2,24 kg, classée en whey protéine ; <strong>Combat Protein</strong> en Chocolate Milk 1,9 kg, Vanilla Ice Cream 1,84 kg et Horchata 1,84 kg ; et <strong>Pro Series Clear-ISO</strong> en Sour Peach Rings et Cherry Slush, 1,14 lb chacun — ces deux dernières gammes étant classées en protéines multi-sources. Les pré-workouts ensuite : <strong>Assault</strong> en 344 g (Blue Raspberry, Watermelon) et <strong>Pro Series Wreckage</strong> en 440 g (Sour Berry, Sour Peach Rings, Cherry Slush). Puis <strong>Select L-Carnitine 3000</strong> en flacon de 480 ml (Blue Raspberry) et la barre <strong>Combat Ready Protein Bar</strong> de 54 g (Chocolate Peanut Butter Cup). Enfin deux compléments du quotidien, <strong>Essentials Multi-V+</strong> en 90 comprimés et <strong>Essentials Fish Oil</strong> en 60 capsules molles. Chaque arôme est une fiche à part : la grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quel produit MusclePharm choisir ?",
+    howToChooseBody:
+      "<p>Sur la partie protéines, les trois gammes ne sont pas interchangeables. D’après nos fiches, <strong>Combat 100% Whey</strong> associe isolat et concentré de lactosérum : c’est la whey polyvalente de la marque. <strong>Combat Protein</strong> est un mélange de cinq protéines — hydrolysat, isolat et concentré de lactosérum, albumine d’œuf et concentré de protéines de lait —, d’où son classement en protéines multi-sources ; la présence d’œuf compte en cas d’allergie. <strong>Pro Series Clear-ISO</strong> est décrite comme un isolat de lactosérum à préparer en boisson, et son nom annonce une boisson claire plutôt qu’un shake lacté : le choix se joue sur la texture et sur des arômes fruités. Aucune de ces fiches ne publie de tableau de valeurs transcrit : les teneurs par portion sont à lire sur l’étiquette du pot, et elles changent d’un arôme à l’autre.</p><p>Côté séance, <strong>Assault</strong> (344 g) et <strong>Pro Series Wreckage</strong> (440 g) sont deux pré-workouts ; nos fiches ne reprennent aucun chiffre de composition pour eux et renvoient à l’emballage d’origine, où figurent les ingrédients et la teneur en stimulants. Ils se prennent avant l’entraînement et ne se cumulent pas avec d’autres sources de caféine sans avoir lu cette étiquette. <strong>Select L-Carnitine 3000</strong> est un format liquide de 480 ml, <strong>Combat Ready Protein Bar</strong> une barre de 54 g à emporter, et les deux <strong>Essentials</strong> — multivitamines et huile de poisson — relèvent de l’usage quotidien, sans lien avec l’objectif de la séance.</p>",
+    faqs: [
+      {
+        question: "Quels produits MusclePharm sont référencés sur Protein.tn ?",
+        answer:
+          "Dix-sept références portent le nom MusclePharm : Combat 100% Whey en trois arômes (2,24 et 2,27 kg), Combat Protein en trois arômes (1,84 et 1,9 kg), Pro Series Clear-ISO en deux arômes (1,14 lb), les pré-workouts Assault 344 g en deux arômes et Pro Series Wreckage 440 g en trois arômes, Select L-Carnitine 3000 en 480 ml, la Combat Ready Protein Bar de 54 g, Essentials Multi-V+ en 90 comprimés et Essentials Fish Oil en 60 capsules molles. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre Combat 100% Whey et Combat Protein ?",
+        answer:
+          "D’après nos fiches, Combat 100% Whey associe isolat et concentré de lactosérum et se trouve en whey protéine. Combat Protein mélange cinq protéines — hydrolysat, isolat et concentré de lactosérum, albumine d’œuf et concentré de protéines de lait — et se trouve en protéines multi-sources ; elle contient donc de l’œuf, ce qui compte en cas d’allergie. Les formats diffèrent aussi : 2,24 et 2,27 kg pour la première, 1,84 et 1,9 kg pour la seconde.",
+      },
+      {
+        question: "Qu’est-ce que Pro Series Clear-ISO ?",
+        answer:
+          "Une protéine à préparer en boisson (« Drink Mix »), décrite sur sa fiche comme un isolat de protéines de lactosérum et référencée en Sour Peach Rings et Cherry Slush, en 1,14 lb chacun. Son nom annonce une boisson claire plutôt qu’un shake lacté. Sur Protein.tn, elle est classée en protéines multi-sources.",
+      },
+      {
+        question: "Assault ou Wreckage : quel pré-workout MusclePharm ?",
+        answer:
+          "Assault est référencé en 344 g (Blue Raspberry, Watermelon), Pro Series Wreckage en 440 g (Sour Berry, Sour Peach Rings, Cherry Slush). Nos fiches ne reprennent aucun chiffre de composition pour ces deux produits et renvoient à l’emballage d’origine. Comparez-y la liste des ingrédients et la teneur en stimulants, et évitez de les cumuler avec d’autres sources de caféine dans la journée.",
+      },
+      {
+        question: "Combien de protéines dans une dose de Combat 100% Whey ?",
+        answer:
+          "Aucune fiche MusclePharm de notre catalogue ne publie de tableau de valeurs transcrit : nous ne citons donc aucun chiffre par portion ici. Les valeurs déclarées figurent sur l’étiquette du pot que vous recevez, et elles varient selon l’arôme et le format.",
+      },
+      {
+        question: "Comment commander MusclePharm en Tunisie ?",
+        answer:
+          "Choisissez le produit, le format et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "whey-proteine", name: "Voir d’autres whey protéines", url: "/whey-proteine" },
+      { slug: "proteines-multi-sources", name: "Mélanges de protéines multi-sources", url: "/proteines-multi-sources" },
+      { slug: "pre-workout", name: "Pré-workouts : comparer les formules", url: "/pre-workout" },
+      { slug: "barres-proteinees", name: "Barres protéinées à emporter", url: "/barres-proteinees" },
+      { slug: "brands", name: "Comparer MusclePharm aux autres marques", url: "/brands" },
+    ],
+  },
+  'scivation': {
+    metaTitle: "Scivation Tunisie | Xtend BCAA 420 g — Protein.tn",
+    metaDescription:
+      "Scivation sur Protein.tn : Xtend BCAA en pot de 420 g, arôme fruit de la passion, une poudre de BCAA au ratio 2:1:1 à boire pendant l’entraînement.",
+    h1: "Scivation Tunisie : Xtend BCAA 420 g, une boisson de séance",
+    introHtml:
+      "<p>La page <strong>Scivation</strong> ne compte qu’une seule référence sur Protein.tn : <strong>Xtend BCAA</strong>, en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA. Il n’y a donc pas de gamme à départager ici — ni protéine, ni créatine, ni pré-workout de la marque au catalogue —, et cette page sert surtout à situer ce produit par rapport aux autres acides aminés du site. Notre fiche décrit Xtend comme une poudre de BCAA au ratio 2:1:1, c’est-à-dire deux parts de leucine pour une part d’isoleucine et une de valine, pensée comme une boisson à siroter pendant l’entraînement plutôt qu’à avaler en une fois. C’est ce qui le distingue d’une whey ou d’un gainer : il n’a pas vocation à couvrir les protéines de la journée. La grille ci-dessus affiche le prix et la disponibilité actuels de la référence ; les autres BCAA du catalogue se trouvent dans les rayons liés en bas de page.</p>",
+    howToChooseTitle: "Xtend BCAA, EAA ou whey : que choisir ?",
+    howToChooseBody:
+      "<p>Avec une seule référence, la vraie question n’est pas « quel produit Scivation » mais « des BCAA répondent-ils à mon besoin ». Les <strong>BCAA</strong> regroupent trois acides aminés essentiels seulement — leucine, isoleucine et valine —, là où une <strong>whey</strong> ou des <strong>EAA</strong> apportent l’ensemble des acides aminés essentiels. <strong>Xtend BCAA</strong> se place donc en complément d’un apport protéique déjà couvert par l’alimentation ou par une whey, pas à sa place.</p><ul><li><strong>Vous manquez de protéines dans la journée</strong> : une whey est le choix cohérent ; Xtend ne la remplace pas.</li><li><strong>Vous cherchez une boisson de séance</strong> : c’est l’usage décrit sur notre fiche — une dose mélangée à de l’eau, bue par petites gorgées du début à la fin de l’entraînement.</li><li><strong>Vous hésitez avec des EAA</strong> : ils se boivent au même moment mais couvrent tous les acides aminés essentiels, pas seulement les trois ramifiés.</li></ul><p>Notre fiche ne publie pas de tableau de valeurs transcrit pour Xtend BCAA 420 g. La dose, la teneur en BCAA par portion, les édulcorants et les allergènes sont donc à lire sur l’étiquette du pot, qui fait foi ; les chiffres de gamme parfois cités pour Xtend varient selon les versions et les marchés, et nous n’en reprenons aucun ici.</p>",
+    faqs: [
+      {
+        question: "Quels produits Scivation sont vendus sur Protein.tn ?",
+        answer:
+          "Une seule référence : Xtend BCAA en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA. La marque n’est présente dans aucun autre rayon du site. La grille de produits de cette page affiche son état réel.",
+      },
+      {
+        question: "Que signifie le ratio 2:1:1 de Xtend BCAA ?",
+        answer:
+          "Il décrit la proportion des trois acides aminés ramifiés dans la poudre : deux parts de leucine pour une part d’isoleucine et une part de valine. C’est le ratio que notre fiche indique pour Xtend BCAA 420 g. D’autres BCAA du catalogue utilisent des ratios différents, que le rayon BCAA permet de comparer.",
+      },
+      {
+        question: "Combien de BCAA dans une portion de Xtend ?",
+        answer:
+          "Notre fiche ne publie pas de tableau de valeurs transcrit pour ce pot, et nous n’avançons donc aucun chiffre ici. La taille de la dose et sa teneur en BCAA figurent sur l’étiquette du pot que vous recevez, qui fait foi.",
+      },
+      {
+        question: "Xtend BCAA remplace-t-il une whey ?",
+        answer:
+          "Non. Les BCAA ne regroupent que la leucine, l’isoleucine et la valine, alors qu’une whey ou des EAA apportent l’ensemble des acides aminés essentiels. Xtend sert de boisson de séance et complète un apport protéique déjà couvert ; il ne le constitue pas.",
+      },
+      {
+        question: "Comment commander Scivation en Tunisie ?",
+        answer:
+          "Ajoutez la référence au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "bcaa", name: "BCAA : comparer les ratios", url: "/bcaa" },
+      { slug: "acides-amines", name: "Tous les acides aminés", url: "/acides-amines" },
+      { slug: "performance", name: "Le rayon performance", url: "/performance" },
+      { slug: "brands", name: "Comparer Scivation aux autres marques", url: "/brands" },
+    ],
+  },
 });
 
 export function getBrandSeoEntry(slug: string | undefined): BrandSeoEntry | null {
