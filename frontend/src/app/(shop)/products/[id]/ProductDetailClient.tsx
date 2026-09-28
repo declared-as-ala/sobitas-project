@@ -2255,7 +2255,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   {/* gap-0.5, not gap-1: five 48px targets plus the 44px camera come to exactly
                       300px of the 300px this card offers at 390. Exactly-fits is one font metric
                       away from overflowing. */}
-                  <div className="mt-1 flex items-center gap-0.5" onMouseLeave={() => setHoverStars(0)}>
+                  <div className="mt-1 flex flex-wrap items-center gap-0.5" onMouseLeave={() => setHoverStars(0)}>
                     {[1, 2, 3, 4, 5].map((value) => (
                       <button
                         key={value}
