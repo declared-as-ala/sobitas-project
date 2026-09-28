@@ -40,6 +40,7 @@ import { retiredSlugDestination } from '@/util/retiredSlug';
 import {
   generateMetadata as generateCategoryMetadata,
   loadListingPage,
+  listingOverflowTo,
 } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
@@ -400,6 +401,9 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
         ? { subcategories: [cleanSlug], categories: [] }
         : { categories: [cleanSlug], subcategories: [] }
     );
+    // Same 308 as the shopper render for ?page past the last real page — see listingOverflowTo.
+    const overflow = listingOverflowTo(listingQuery, cleanSlug, serverPagination);
+    if (overflow) permanentRedirect(overflow);
     const products: Product[] = (productsData.products ?? []) as Product[];
     /*
      * ── THE BRAND LOOKUP THE COMPARISON TABLE NEEDS, OFF A PAYLOAD ALREADY IN HAND ────────────

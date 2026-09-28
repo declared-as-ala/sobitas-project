@@ -6,6 +6,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Calendar, ArrowLeft, Clock, ChevronRight, Home, ArrowRight } from 'lucide-react';
 import { getCmsPageSeoEntry } from '@/config/cmsPageSeoConfig';
+import { stripHeadOnlyTags } from '@/util/stripHeadOnlyTags';
 import type { Page } from '@/types';
 
 interface PageContentClientProps {
@@ -48,7 +49,8 @@ export function PageContentClient({ page }: PageContentClientProps) {
    * section after a JSON-LD script, so an anchored regex left the commercial headline in place and
    * made the guide compete with its category even though an override existed.
    */
-  const rawBody = String(page.body ?? '');
+  // Pasted head blocks (a hidden second meta description / og:title) never render — see the util.
+  const rawBody = stripHeadOnlyTags(String(page.body ?? ''));
   const body = seo?.headingOverride ? rawBody.replace(/<h1\b[^>]*>[\s\S]*?<\/h1>/i, '') : rawBody;
   const hasContent = body || page.excerpt;
   const imageUrl = page.image ? getStorageUrl(page.image) : null;

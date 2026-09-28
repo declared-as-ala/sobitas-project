@@ -122,8 +122,33 @@ export async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery
       // Clamp: ?page=99999 must not render an empty grid and claim to be page 99999.
       currentPage: Math.min(Math.max(1, res.pagination?.current_page ?? query.page), totalPages),
       perPage: SHOP_PER_PAGE,
+      /*
+       * The last real page when the requested one is past it, else null. The clamp above fixed
+       * the pager's NUMBER but not the grid: the products are still the API's answer for page
+       * 99999, so /creatine?page=99999 answered 200, `index`, with zero products (measured
+       * 28/09/2026) while /shop?page=99999 308s to its last page. Only when the API returned real
+       * pagination — an outage (no pagination) must never collapse a series onto page 1.
+       */
+      overflowTo: res.pagination && query.page > totalPages ? totalPages : null,
     },
   };
+}
+
+/**
+ * The 308 target for an out-of-range ?page=N on /{slug} — the same URL, facets kept, on its last
+ * real page — or null when the page is in range. Both the shopper and the crawler render call it,
+ * so the two agents get the same status for the same URL, as /shop already does.
+ */
+export function listingOverflowTo(
+  query: ShopQuery,
+  slug: string,
+  pagination: { overflowTo: number | null }
+): string | null {
+  if (!pagination.overflowTo) return null;
+  return buildShopUrl(
+    { ...query, categories: [], subcategories: [], page: pagination.overflowTo },
+    `/${encodeURIComponent(slug)}`
+  );
 }
 
 export type PageProps = {
@@ -1016,6 +1041,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         }),
         listingSupportPromise,
       ]);
+      const subOverflow = listingOverflowTo(listingQuery, canonicalSlug, serverPagination);
+      if (subOverflow) permanentRedirect(subOverflow);
       const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       /*
@@ -1308,6 +1335,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         }),
         listingSupportPromise,
       ]);
+      const catOverflow = listingOverflowTo(listingQuery, canonicalSlug, serverPagination);
+      if (catOverflow) permanentRedirect(catOverflow);
       const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       // Same rule as the subcategory branch: the landing copy and the FAQPage schema are page-1

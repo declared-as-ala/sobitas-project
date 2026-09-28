@@ -1,3 +1,5 @@
+import { stripHeadOnlyTags } from './stripHeadOnlyTags';
+
 /**
  * Remove legacy commerce links and duplicate page headings from CMS article bodies.
  *
@@ -10,7 +12,8 @@
 export function sanitizeArticleHtml(html: string | undefined): string {
   if (!html) return '';
 
-  return html
+  // A pasted head block (second meta description / og tags) must not render — see the util.
+  return stripHeadOnlyTags(html)
     .replace(/<h1\b([^>]*)>/gi, '<h2$1>')
     .replace(/<\/h1>/gi, '</h2>')
     .replace(
