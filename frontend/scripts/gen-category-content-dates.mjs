@@ -26,19 +26,16 @@
  * and in the Docker builder with the COPY time — so an mtime fallback would tell Google that all ~50
  * category guides were rewritten on every single deploy. Google discounts a lastmod it can show is
  * unreliable, sitewide, which would spend the signal rather than merely waste it. There is therefore
- * NO mtime fallback here, and there must never be one: when git cannot answer, this script writes
- * nothing and the sitemap keeps the DB date it has always used.
+ * NO mtime fallback here, and there must never be one: when git cannot answer, this script leaves
+ * the generated file untouched. If that file is absent, the sitemap keeps the DB row's date.
  *
  * ── THE THREE ENVIRONMENTS IT RUNS IN ──────────────────────────────────────────────────────────
- *   1. A developer's clone (full history)  → regenerates the file; the diff is committed.
- *   2. The GitHub runner                   → actions/checkout is depth 1 today, i.e. SHALLOW, so
- *                                            this leaves the committed file alone. Give the checkout
- *                                            step `fetch-depth: 0` and it starts self-updating.
+ *   1. A developer's clone (full history)  → regenerates the file.
+ *   2. The GitHub runner (full history)     → regenerates before Docker builds its context.
  *   3. The Docker builder                  → `.dockerignore` excludes `.git`, so git is unusable;
  *                                            the file copied in from the context is kept as is.
- * In (2) and (3) "leave it alone" is the whole safety property: the generated file is COMMITTED, so
- * a missing or shallow history degrades to slightly stale dates, never to wrong ones and never to a
- * missing module (which would fail `tsc --noEmit`).
+ * In (3) "leave it alone" is the whole safety property: the generated file is committed, so
+ * absent history keeps the runner's fresh dates. A missing or shallow history never fabricates dates.
  *
  * Wired into `prebuild` in package.json. It must never fail a build — a sitemap hint is not worth a
  * deploy — so every failure path warns and exits 0.
@@ -82,8 +79,8 @@ function render(dates) {
  * of the commit that last changed that file, ISO-8601. Read by src/util/sitemapSources.ts so a
  * category's <lastmod> reflects the editorial text Google actually reads, not just the DB row.
  *
- * It is committed on purpose: the CI checkout is shallow and the Docker builder has no \`.git\`, so
- * this is the copy that ships. See the docblock in scripts/gen-category-content-dates.mjs.
+ * It is committed as a fallback: the Docker builder has no \`.git\`, so it keeps the runner's
+ * refreshed copy. See the docblock in scripts/gen-category-content-dates.mjs.
  */
 export const CATEGORY_CONTENT_DATES: Record<string, string> = {
 ${body}
@@ -99,14 +96,7 @@ try {
   }
 
   if (!historyIsUsable()) {
-    if (existsSync(OUT_FILE)) {
-      // The expected path in CI and in the Docker builder. The committed file is the answer.
-      console.log('[gen-category-content-dates] no usable git history (shallow or absent) — keeping the committed dates');
-      process.exit(0);
-    }
-    mkdirSync(dirname(OUT_FILE), { recursive: true });
-    writeFileSync(OUT_FILE, render({}), 'utf8');
-    console.warn('[gen-category-content-dates] no usable git history AND no committed file — wrote an empty map; category <lastmod> falls back to the DB row');
+    console.warn('[gen-category-content-dates] no usable git history (shallow or absent) — leaving the generated file untouched');
     process.exit(0);
   }
 

@@ -36,6 +36,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Verify Dockerfile exists
         run: |
@@ -83,6 +85,9 @@ jobs:
         env:
           NEXT_PUBLIC_API_URL: https://protein.tn/api-proxy
           NEXT_PUBLIC_STORAGE_URL: https://admin.protein.tn/storage
+
+      - name: Refresh category content dates
+        run: node frontend/scripts/gen-category-content-dates.mjs
 
       - name: Log in to GHCR
         id: ghcr_login

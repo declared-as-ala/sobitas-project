@@ -79,6 +79,7 @@ import { CartDrawerHost } from "@/app/components/CartDrawerHost";
 import { MobileTabBar } from "@/app/components/MobileTabBar";
 import { ReferralCapture } from "@/app/components/ReferralCapture";
 import { WebVitalsReporter } from "@/app/components/WebVitalsReporter";
+import { AnalyticsPageView } from "@/app/components/AnalyticsPageView";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getMessages } from "next-intl/server";
 import { getLocaleDirection, LOCALE_HREFLANG, isLocale, DEFAULT_LOCALE, type Locale } from "@/i18n";
@@ -365,6 +366,9 @@ export default async function RootLayout({
           {`if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }`}
         </Script>
         <WebVitalsReporter />
+        <Suspense fallback={null}>
+          <AnalyticsPageView />
+        </Suspense>
         <NextIntlClientProvider locale={locale} messages={messages}>
         <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
           <Providers navigation={navigation} navCategories={navCategories} cmsPages={footer.cmsPages} coordinates={footer.coordinates}>

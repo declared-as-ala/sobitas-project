@@ -6,8 +6,8 @@
  * of the commit that last changed that file, ISO-8601. Read by src/util/sitemapSources.ts so a
  * category's <lastmod> reflects the editorial text Google actually reads, not just the DB row.
  *
- * It is committed on purpose: the CI checkout is shallow and the Docker builder has no `.git`, so
- * this is the copy that ships. See the docblock in scripts/gen-category-content-dates.mjs.
+ * It is committed as a fallback: the Docker builder has no `.git`, so it keeps the runner's
+ * refreshed copy. See the docblock in scripts/gen-category-content-dates.mjs.
  */
 export const CATEGORY_CONTENT_DATES: Record<string, string> = {
   "acides-amines": "2026-09-23T09:16:00.000Z",
