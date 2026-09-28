@@ -27,7 +27,7 @@ import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisi
 import { getProductLink, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
-import { resolveCategoryMetaDescription } from '@/util/resolveCategorySeo';
+import { resolveCategoryMetaDescription, resolveCategoryIntroHtml, resolveCategoryFaqs } from '@/util/resolveCategorySeo';
 // ONE definition of availability for the whole app. The robots gate below reads the same helper
 // the product card, the PDP, the cart and the JSON-LD availability read — see the note there.
 import { isInStock, type ProductLike } from '@/util/cartStock';
@@ -136,8 +136,8 @@ export async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery
   };
 }
 
-/** Category-wide availability and cheapest buyable price, independent of the visitor's filters. */
-async function loadCategoryStockFacts(scope: Partial<ShopQuery>) {
+/** Category-wide availability and buyable non-pack price bounds, independent of visitor filters. */
+export async function loadCategoryStockFacts(scope: Partial<ShopQuery>) {
   const scoped = { ...EMPTY_SHOP_QUERY, ...scope, inStock: true };
   const scopeKey = scope.subcategories?.[0]
     ? `subcategory:${scope.subcategories[0]}`
@@ -146,7 +146,7 @@ async function loadCategoryStockFacts(scope: Partial<ShopQuery>) {
     const countPage = await getShopPage(scoped, 1);
     if (!countPage.pagination) throw new Error(`Missing in-stock pagination for ${scopeKey}`);
     const inStockCount = countPage.pagination.total;
-    if (inStockCount === 0) return { inStockCount: 0, priceMin: null };
+    if (inStockCount === 0) return { inStockCount: 0, priceMin: null, priceMax: null };
 
     // Effective promo price can be lower than the first product sorted by base `prix`.
     // Walk the small in-stock subset so "dès" is a true minimum, not a page-one guess.
@@ -157,13 +157,17 @@ async function loadCategoryStockFacts(scope: Partial<ShopQuery>) {
         throw new Error(`Incomplete in-stock prices for ${scopeKey}`);
       }
       for (const product of result.products) {
-        if (isInStock(product)) {
+        if (isInStock(product) && Number(product.pack) !== 1 && !/^pack-/i.test(product.slug ?? '')) {
           const price = getEffectivePrice(product);
           if (Number.isFinite(price) && price > 0) prices.push(price);
         }
       }
     }
-    return { inStockCount, priceMin: prices.length ? Math.round(Math.min(...prices)) : null };
+    return {
+      inStockCount,
+      priceMin: prices.length ? Math.round(Math.min(...prices)) : null,
+      priceMax: prices.length ? Math.round(Math.max(...prices)) : null,
+    };
   }, ['category-stock-facts', scopeKey], { revalidate: 600, tags: ['shop', 'products'] });
 
   return cached().catch((error) => {
@@ -536,10 +540,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
           // again on its way into the attribute and reached Google as a literal "&amp;amp;".
           (htmlToText(merged.intro, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
-    const descriptionWithFacts = resolveCategoryMetaDescription(rawDescription, {
+    const metadataFacts = {
       priceMin: stockFacts?.priceMin ?? null,
+      priceMax: stockFacts?.priceMax ?? null,
       inStockCount: stockFacts?.inStockCount ?? null,
-    });
+    };
+    const descriptionWithFacts = resolveCategoryMetaDescription(rawDescription, metadataFacts);
     // Facts only where a reviewed description asks for them ({prixMin}/{nbEnStock}); a description
     // without placeholders is served exactly as written, so no curated length budget is overrun.
     const description = descriptionWithFacts;
@@ -736,9 +742,9 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
     const ogTitleMeta = (merged.ogTitle ?? '').trim() || metaTitle;
-    const ogDescMeta = (merged.ogDescription ?? '').trim() || descTrimmed;
+    const ogDescMeta = resolveCategoryMetaDescription((merged.ogDescription ?? '').trim(), metadataFacts) || descTrimmed;
     const twitterTitleMeta = (merged.twitterTitle ?? '').trim() || ogTitleMeta;
-    const twitterDescMeta = (merged.twitterDescription ?? '').trim() || ogDescMeta;
+    const twitterDescMeta = resolveCategoryMetaDescription((merged.twitterDescription ?? '').trim(), metadataFacts) || ogDescMeta;
     const twitterImgRaw = toSiteMedia((merged.twitterImage ?? '').trim()) || ogImageRaw;
     const twitterImg = twitterImgRaw && /^https?:\/\//i.test(twitterImgRaw) && !/\s/.test(twitterImgRaw) ? twitterImgRaw : undefined;
     const kw = metaKeywordsList(merged);
@@ -1155,12 +1161,15 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         { name: subCrumbName, url: `/${canonicalSlug}` },
       ];
       const pageTitle = merged.h1?.trim() || sub.sous_category?.designation_fr || canonicalSlug;
-      const collectionDesc =
-        (merged.metaDescription ||
-          merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
-          '')
-          .slice(0, 500)
-          .trim() || undefined;
+      const subFacts = {
+        priceMin: scopedStockFacts?.priceMin ?? null,
+        priceMax: scopedStockFacts?.priceMax ?? null,
+        inStockCount: scopedStockFacts?.inStockCount ?? null,
+      };
+      const collectionDesc = resolveCategoryMetaDescription(
+        merged.metaDescription || merged.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '',
+        subFacts
+      ).slice(0, 500).trim() || undefined;
       const collectionPath = buildShopUrl(
         { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
         `/${canonicalSlug}`
@@ -1226,11 +1235,13 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             topBrands: introDataSub.topBrands,
             priceMin: introDataSub.priceMin,
           });
+      const resolvedIntroSub = resolveCategoryIntroHtml(introForLandingSub, subFacts);
+      const resolvedFaqsSub = resolveCategoryFaqs(merged.faqs ?? [], subFacts);
       const bestProducts = resolveBestProducts(
         merged.bestProductSlugs?.length ? merged.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
-      const faqPageSchema = !isPaged && merged.faqs?.length ? buildFAQPageSchemaFromQA(merged.faqs) : null;
+      const faqPageSchema = !isPaged && resolvedFaqsSub.length ? buildFAQPageSchemaFromQA(resolvedFaqsSub) : null;
       if (faqPageSchema) validateStructuredData(faqPageSchema, 'FAQPage');
       // Page N keeps the header card — it carries the H1, and passing null here would make
       // ShopPageClient fall back to its own generic subcategory heading — but not the intro.
@@ -1239,11 +1250,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           title={title}
           slug={canonicalSlug}
           banners={merged.banners}
-          intro={isPaged ? null : introForLandingSub}
+          intro={isPaged ? null : resolvedIntroSub}
           longBottomHtml={null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
-          faqs={merged.faqs ?? []}
+          faqs={resolvedFaqsSub}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
           withFaqSchema={false}
@@ -1253,8 +1264,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const hasHowTo = Boolean(merged.howToChooseTitle?.trim() && merged.howToChooseBody?.trim());
       const hasLongBottom = Boolean((merged.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelow =
-        (introForLandingSub ?? '').trim().length > 0 ||
-        (merged.faqs?.length ?? 0) > 0 ||
+        resolvedIntroSub.trim().length > 0 ||
+        resolvedFaqsSub.length > 0 ||
         hasHowTo ||
         hasLongBottom ||
         relatedCategories.length > 0 ||
@@ -1294,11 +1305,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           */
           products={productsData.products}
           brands={await comparisonBrands(canonicalSlug)}
-          intro={introForLandingSub}
+          intro={resolvedIntroSub}
           longBottomHtml={merged.longBottomHtml?.trim() ? merged.longBottomHtml : null}
           howToChooseTitle={merged.howToChooseTitle?.trim() ? merged.howToChooseTitle : null}
           howToChooseBody={merged.howToChooseBody?.trim() ? merged.howToChooseBody : null}
-          faqs={merged.faqs ?? []}
+          faqs={resolvedFaqsSub}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
           withFaqSchema={false}
@@ -1412,12 +1423,15 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         { name: catCrumbName, url: `/${canonicalSlug}` },
       ];
       const pageTitleCat = mergedCat.h1?.trim() || cat.category?.designation_fr || canonicalSlug;
-      const collectionDescCat =
-        (mergedCat.metaDescription ||
-          mergedCat.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() ||
-          '')
-          .slice(0, 500)
-          .trim() || undefined;
+      const catFacts = {
+        priceMin: scopedStockFacts?.priceMin ?? null,
+        priceMax: scopedStockFacts?.priceMax ?? null,
+        inStockCount: scopedStockFacts?.inStockCount ?? null,
+      };
+      const collectionDescCat = resolveCategoryMetaDescription(
+        mergedCat.metaDescription || mergedCat.intro?.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() || '',
+        catFacts
+      ).slice(0, 500).trim() || undefined;
       const collectionPathCat = buildShopUrl(
         { ...EMPTY_SHOP_QUERY, page: serverPagination.currentPage },
         `/${canonicalSlug}`
@@ -1456,6 +1470,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
             priceMin: introDataCat.priceMin,
             subcategoryNames: subcategoryNamesCat,
           });
+      const resolvedIntroCat = resolveCategoryIntroHtml(introForLandingCat, catFacts);
+      const resolvedFaqsCat = resolveCategoryFaqs(mergedCat.faqs ?? [], catFacts);
       /*
        * Same rule as the subcategory branch: curated wins, then the declared siblings, then the
        * old behaviour for a slug the tree does not declare.
@@ -1478,7 +1494,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
         mergedCat.bestProductSlugs?.length ? mergedCat.bestProductSlugs : (productsData.products as any[]).slice(0, 6).map((p: any) => p.slug).filter(Boolean),
         productsData.products as any[]
       );
-      const faqPageSchemaCat = !isPaged && mergedCat.faqs?.length ? buildFAQPageSchemaFromQA(mergedCat.faqs) : null;
+      const faqPageSchemaCat = !isPaged && resolvedFaqsCat.length ? buildFAQPageSchemaFromQA(resolvedFaqsCat) : null;
       if (faqPageSchemaCat) validateStructuredData(faqPageSchemaCat, 'FAQPage');
       // The header card stays on page N so the category keeps its own H1: passing null here would
       // hand ShopPageClient's fallback heading ("Boutique — Protéines & Compléments…") to every
@@ -1488,11 +1504,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           title={title}
           slug={canonicalSlug}
           banners={mergedCat.banners}
-          intro={isPaged ? null : introForLandingCat}
+          intro={isPaged ? null : resolvedIntroCat}
           longBottomHtml={null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
-          faqs={mergedCat.faqs ?? []}
+          faqs={resolvedFaqsCat}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
           withFaqSchema={false}
@@ -1502,8 +1518,8 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       const hasHowToCat = Boolean(mergedCat.howToChooseTitle?.trim() && mergedCat.howToChooseBody?.trim());
       const hasLongBottomCat = Boolean((mergedCat.longBottomHtml ?? '').trim().length > 0);
       const hasSeoContentBelowCat =
-        (introForLandingCat ?? '').trim().length > 0 ||
-        (mergedCat.faqs?.length ?? 0) > 0 ||
+        resolvedIntroCat.trim().length > 0 ||
+        resolvedFaqsCat.length > 0 ||
         hasHowToCat ||
         hasLongBottomCat ||
         relatedCategories.length > 0 ||
@@ -1528,11 +1544,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           */
           products={productsData.products}
           brands={await comparisonBrands(canonicalSlug)}
-          intro={introForLandingCat}
+          intro={resolvedIntroCat}
           longBottomHtml={mergedCat.longBottomHtml?.trim() ? mergedCat.longBottomHtml : null}
           howToChooseTitle={mergedCat.howToChooseTitle?.trim() ? mergedCat.howToChooseTitle : null}
           howToChooseBody={mergedCat.howToChooseBody?.trim() ? mergedCat.howToChooseBody : null}
-          faqs={mergedCat.faqs ?? []}
+          faqs={resolvedFaqsCat}
           relatedCategories={relatedCategories}
           bestProducts={bestProducts}
           withFaqSchema={false}

@@ -40,11 +40,12 @@ import { retiredSlugDestination } from '@/util/retiredSlug';
 import {
   generateMetadata as generateCategoryMetadata,
   loadListingPage,
+  loadCategoryStockFacts,
   listingOverflowTo,
 } from '@/app/(shop)/category/[slug]/page';
 import { PageContentClient } from '@/app/(shop)/page/[slug]/PageContentClient';
 import { getCategorySeoContent } from '@/util/categorySeoContent';
-import { mergeCategorySeoForSlug, canonicalCategoryPath } from '@/util/resolveCategorySeo';
+import { mergeCategorySeoForSlug, canonicalCategoryPath, resolveCategoryMetaDescription, resolveCategoryIntroHtml, resolveCategoryFaqs } from '@/util/resolveCategorySeo';
 import { buildCanonicalUrl, getBaseUrl, resolveCanonicalUrl } from '@/util/canonical';
 import { isReservedRouteSlug, getProductLink } from '@/util/productUrl';
 import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchemaFromQA, buildItemListSchema, buildWebPageSchema } from '@/util/structuredData';
@@ -394,7 +395,16 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     const seoJson = await getCategorySeoContent(cleanSlug);
     const merged = mergeCategorySeoForSlug(cleanSlug, seoJson, (data as { seo?: unknown }).seo as never);
     const title = merged.h1?.trim() || entity?.designation_fr || cleanSlug;
-    const introHtml = merged.intro?.trim() ? sanitizeProductHtml(merged.intro) : null;
+    const scopedStockFacts = await loadCategoryStockFacts(isSub
+      ? { subcategories: [cleanSlug], categories: [] }
+      : { categories: [cleanSlug], subcategories: [] });
+    const categoryFacts = {
+      priceMin: scopedStockFacts?.priceMin ?? null,
+      priceMax: scopedStockFacts?.priceMax ?? null,
+      inStockCount: scopedStockFacts?.inStockCount ?? null,
+    };
+    const introHtml = merged.intro?.trim()
+      ? sanitizeProductHtml(resolveCategoryIntroHtml(merged.intro, categoryFacts)) : null;
     // The taxonomy endpoint always embeds page 1. Use the same cached listing loader as the human
     // category route so Googlebot receives the requested ?page=N, not twelve page-1 products at
     // every paginated URL.
@@ -602,7 +612,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     );
     const breadcrumbSchema = buildBreadcrumbListSchema(breadcrumbs, baseUrl, { pageUrl: collectionPath });
     const collectionSchema = buildCollectionPageSchema(title, collectionPath, baseUrl, {
-      description: merged.metaDescription?.trim() || undefined,
+      description: resolveCategoryMetaDescription(merged.metaDescription?.trim() || '', categoryFacts) || undefined,
       withBreadcrumb: true,
       withItemList: productListItems.length > 0,
     });
@@ -617,7 +627,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     // on-page content is a structured-data violation, not a shortcut.
     // Empty on page 2+ — see the isPaged note above. The schema follows the visible text on the
     // same line, because that is the only thing that makes emitting it legitimate at all.
-    const faqs = isPaged ? [] : (merged.faqs ?? []);
+    const faqs = isPaged ? [] : resolveCategoryFaqs(merged.faqs ?? [], categoryFacts);
     const faqSchema = faqs.length ? buildFAQPageSchemaFromQA(faqs) : null;
     return (
       <>

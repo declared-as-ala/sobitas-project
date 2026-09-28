@@ -64,19 +64,48 @@ export type MergedCategorySeo = CategorySeoContent & {
   relatedCategorySlugs: string[];
 };
 
+export type CategoryStockFacts = { priceMin: number | null; priceMax?: number | null; inStockCount: number | null };
+
+const CATEGORY_FACT_TOKEN = /\{(?:prixMin|prixMax|nbEnStock)\}/;
+
+function unavailableFact(sentence: string, facts: CategoryStockFacts): boolean {
+  return (sentence.includes('{prixMin}') && (!facts.priceMin || facts.priceMin <= 0 || facts.inStockCount === 0))
+    || (sentence.includes('{prixMax}') && (!facts.priceMax || facts.priceMax <= 0 || facts.priceMax === facts.priceMin || facts.inStockCount === 0))
+    || (sentence.includes('{nbEnStock}') && (!facts.inStockCount || facts.inStockCount < 0));
+}
+
+function replaceCategoryFacts(value: string, facts: CategoryStockFacts): string {
+  return value.replaceAll('{prixMin}', String(facts.priceMin))
+    .replaceAll('{prixMax}', String(facts.priceMax))
+    .replaceAll('{nbEnStock}', String(facts.inStockCount));
+}
+
 /** Resolve CMS fact tokens; drop an entire sentence when its fact cannot be established. */
 export function resolveCategoryMetaDescription(
   description: string,
-  facts: { priceMin: number | null; inStockCount: number | null }
+  facts: CategoryStockFacts
 ): string {
-  return description.split(/(?<=\.)\s+/).filter((sentence) => {
-    if (sentence.includes('{prixMin}') && (!facts.priceMin || facts.priceMin <= 0 || facts.inStockCount === 0)) return false;
-    if (sentence.includes('{nbEnStock}') && (!facts.inStockCount || facts.inStockCount < 0)) return false;
-    return true;
-  }).map((sentence) => sentence
-    .replaceAll('{prixMin}', String(facts.priceMin))
-    .replaceAll('{nbEnStock}', String(facts.inStockCount))
-  ).join(' ').trim();
+  return description.split(/(?<=\.)\s+/)
+    .filter((sentence) => !unavailableFact(sentence, facts))
+    .map((sentence) => replaceCategoryFacts(sentence, facts))
+    // Final guard: an unrecognized placement of a supported token cannot leak into output.
+    .filter((sentence) => !CATEGORY_FACT_TOKEN.test(sentence))
+    .join(' ').trim();
+}
+
+/** Drop a whole intro paragraph when its price sentence cannot be stated safely. */
+export function resolveCategoryIntroHtml(intro: string, facts: CategoryStockFacts): string {
+  const paragraphs = intro.replace(/<p\b[^>]*>[\s\S]*?<\/p>/gi, (paragraph) =>
+    unavailableFact(paragraph, facts) ? '' : replaceCategoryFacts(paragraph, facts));
+  // Resolve any stray tokens outside paragraphs in text nodes, leaving markup intact.
+  return paragraphs.replace(/(<[^>]*>)|([^<>]+)/g, (part, tag: string | undefined, text: string | undefined) =>
+    tag ?? (CATEGORY_FACT_TOKEN.test(text ?? '') ? resolveCategoryMetaDescription(text ?? '', facts) : part));
+}
+
+export function resolveCategoryFaqs(
+  faqs: Array<{ question: string; answer: string }>, facts: CategoryStockFacts
+): Array<{ question: string; answer: string }> {
+  return faqs.map((faq) => ({ ...faq, answer: resolveCategoryMetaDescription(faq.answer, facts) }));
 }
 
 function cleanString(value: unknown): string {
@@ -581,7 +610,7 @@ export function mergeCategorySeoForSlug(
     longBottomHtml,
     h1,
     // Phase 15: these commercial pillars keep their reviewed opening, even if CMS copy is longer.
-    intro: ['proteines', 'whey-proteine', 'creatine'].includes(slug) ? json.intro?.trim() || merged.intro : merged.intro,
+    intro: ['proteines', 'whey-proteine', 'creatine', 'whey-isolate', 'omega-3'].includes(slug) ? json.intro?.trim() || merged.intro : merged.intro,
     metaTitle,
     metaDescription,
     // Social previews must say the same thing as the SERP; keeping the stale API OG/Twitter text
