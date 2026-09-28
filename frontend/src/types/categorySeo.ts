@@ -39,6 +39,12 @@ export interface CategorySeoContent {
   metaDescription?: string;
   /** Optional: absolute URL for og:image (category hero or best-seller). */
   ogImage?: string;
+  /**
+   * Optional: render the CMS "long bottom" block beside this file's copy. Off by default — a
+   * content file is the page's reviewed copy, and the CMS block duplicated it (see
+   * mergeCategorySeoForSlug). Set true only for a CMS block that says something this file does not.
+   */
+  keepCmsLongBottom?: boolean;
 }
 
 export const CATEGORY_SEO_CONTENT_DEFAULTS: Partial<CategorySeoContent> = {

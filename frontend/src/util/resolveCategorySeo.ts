@@ -209,13 +209,59 @@ function faqKey(q: string): string {
  *
  * CMS entries lead, so the owner's wording is what a reader sees first and what wins a collision.
  */
+/**
+ * The words that carry a question's meaning — accents, case, punctuation, function words and the
+ * locality/brand tokens every question on this site shares stripped away.
+ */
+const FAQ_FILLER = new Set([
+  'quel', 'quelle', 'quels', 'quelles', 'la', 'le', 'les', 'l', 'de', 'des', 'du', 'd', 'un', 'une',
+  'en', 'et', 'a', 'au', 'aux', 'pour', 'sa', 'son', 'ses', 'ma', 'mon', 'mes', 'est', 'elle', 'il',
+  'on', 'faut', 'peut', 'ce', 'que', 'qu', 'qui', 'dans', 'sur', 'avec', 'ou', 'par', 'je', 'vous',
+  'votre', 'vos', 'tunisie', 'protein', 'tn', 'fait', 'elles', 'ils', 'se', 's',
+]);
+function faqTokens(question: string | undefined): Set<string> {
+  const folded = String(question ?? '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/\p{M}/gu, '')
+    .replace(/[^a-z0-9]+/g, ' ');
+  return new Set(folded.split(' ').filter((w) => w.length > 1 && !FAQ_FILLER.has(w)));
+}
+
+/**
+ * Two questions asking the same thing in different words. Measured on /proteines 28/09/2026: the
+ * CMS "Quand prendre la protéine whey ?" and the reviewed "Quand prendre sa protéine ?" both
+ * rendered — and both went into the FAQPage schema — because only exact wording was de-duplicated.
+ * Near-duplicate = one question's meaningful words contain the other's (at least three of them),
+ * or the two share at least 60% of their words.
+ */
+function isNearDuplicateQuestion(a: Set<string>, b: Set<string>): boolean {
+  if (a.size === 0 || b.size === 0) return false;
+  let shared = 0;
+  for (const w of a) if (b.has(w)) shared++;
+  const smaller = Math.min(a.size, b.size);
+  if (shared === smaller && smaller >= 3) return true;
+  return shared / (a.size + b.size - shared) >= 0.6;
+}
+
 function mergeFaqs(
   apiFaqs: Array<{ question: string; answer: string }>,
   jsonFaqs: Array<{ question: string; answer: string }>
 ): Array<{ question: string; answer: string }> {
   const out: Array<{ question: string; answer: string }> = [];
   const seen = new Set<string>();
-  for (const f of [...apiFaqs, ...jsonFaqs]) {
+  // The reviewed wording wins a near-duplicate: a CMS question is dropped when a repo question
+  // already asks it. The owner's own CMS questions that ask something new still render.
+  const reviewed = jsonFaqs.map((f) => faqTokens(f?.question));
+  for (const f of apiFaqs) {
+    const key = faqKey(f?.question);
+    if (!key || seen.has(key)) continue;
+    const tokens = faqTokens(f?.question);
+    if (reviewed.some((r) => isNearDuplicateQuestion(tokens, r))) continue;
+    seen.add(key);
+    out.push(f);
+  }
+  for (const f of jsonFaqs) {
     const key = faqKey(f?.question);
     if (!key || seen.has(key)) continue;
     seen.add(key);
@@ -496,8 +542,28 @@ export function mergeCategorySeoForSlug(
   const metaTitle = stripOptional(json.metaTitle?.trim() || merged.metaTitle);
   const metaDescription = stripOptional(json.metaDescription?.trim() || merged.metaDescription);
 
+  /*
+   * ── A CONTENT FILE IS THE PAGE'S COPY; THE CMS "LONG BOTTOM" STOPS RENDERING BESIDE IT ────────
+   * Measured 28/09/2026 on the 57 content files: 29 categories also carried a CMS long-bottom
+   * block, all from one template — "Créatine en Tunisie — Guide Complet", "Livraison … Tunisie",
+   * Title-Case headings — and 27 of them walked through the same subjects as the reviewed guide
+   * above it (/creatine: monohydrate, micronisée and Creapure® explained three times on one page;
+   * /proteines: a second family-by-family guide headed "Protéines Tunisie — Guide Complet", the
+   * homepage's head term). On the hubs it named the CHILDREN's head terms as headings —
+   * "Créatine — Le Complément Force N°1" on /performance, "Mass Gainers Haute Calorie" on
+   * /prise-de-masse, "Fat Burners Thermogéniques" on /perte-de-poids — the exact claim
+   * commercialSeoMap says a hub must not make. /creatine's also printed "à partir de 99 DT", a
+   * fixed price the reviewed copy deliberately does not state.
+   *
+   * isSubstantivelyDuplicateHtml above could not catch it: paraphrase is not duplication by its
+   * measure. The rule is therefore one of ownership, not similarity. `keepCmsLongBottom: true` in
+   * the file keeps a block that genuinely adds something.
+   */
+  const longBottomHtml = json.keepCmsLongBottom ? merged.longBottomHtml : '';
+
   return {
     ...merged,
+    longBottomHtml,
     h1,
     // Phase 15: these commercial pillars keep their reviewed opening, even if CMS copy is longer.
     intro: ['proteines', 'whey-proteine', 'creatine'].includes(slug) ? json.intro?.trim() || merged.intro : merged.intro,
