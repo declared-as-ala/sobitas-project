@@ -129,6 +129,13 @@ const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
 const RESLUGGED_PRODUCT_SLUGS = new Map<string, string>([
   ['king-real-preworkout-500gr-real-pharm', '/pre-workout/king-real-preworkout-500gr-real-pharm-tunisie'],
   ['citruargin-300-g', '/citrulline/citruargin-300-g-real-pharm'],
+  // The in-stock Serious Mass 5,45 kg under its WordPress-era slugs. Measured 28/09/2026 with a
+  // Googlebot UA, all three fell back to the CATEGORY — /gainers/serious-mass-5-45kg 308,
+  // /shop/serious-mass-5-45-kg 301, /category/serious-mass-5-45-kg 301, each → /mass-gainers —
+  // while Google ranks our out-of-stock 2,7 kg for "serious mass tunisie" and not this product.
+  // Same product, same size: a rename, not a different item.
+  ['serious-mass-5-45-kg', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'],
+  ['serious-mass-5-45kg', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'],
 ]);
 
 /**
