@@ -477,6 +477,13 @@ export function productTitle(product: Product): string {
       'Serious Mass 2,7 kg – Prix Tunisie | Optimum Nutrition',
     'serious-mass-5-45-kg-optimum-nutrition':
       'Serious Mass 5,45 kg – Prix Tunisie | Optimum Nutrition',
+    // Keyword research 28/09/2026 (GSC 3 m): "straps tunisie" 206 + "straps prix tunisie" 123 impr at
+    // ~7.5 with ~0 % CTR, answered by two shouting PDPs that competed for the same word. Each now owns
+    // its own term. "arginine prix tunisie" 49 + "l-arginine prix tunisie" 34 hit a title without
+    // "L-Arginine" (and with the Spanish "Capsulas"). All three in stock.
+    'lifting-straps': 'Straps de musculation (lifting straps) – Prix Tunisie',
+    'bandes-de-tirage': 'Bandes de tirage musculation – Prix Tunisie',
+    'elite-arginine-120-capsulas': 'Elite L-Arginine 120 gélules – Prix Tunisie | Scenit',
   };
   const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
   if (opportunityTitle) return opportunityTitle;
