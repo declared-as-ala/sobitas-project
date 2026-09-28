@@ -749,13 +749,16 @@ export const getInStockBrandCounts = async (): Promise<Record<number, number>> =
 export const getCategoryHighlights = async (
   categorySlug: string,
   limit = 4,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  // The money rayons (/creatine, /whey-proteine, /mass-gainers…) are SUB-categories in the API:
+  // `categories=creatine` answers 0 products while `subcategories=creatine` answers 12 (28/09/2026).
+  scope: 'categories' | 'subcategories' = 'categories'
 ): Promise<Product[]> => {
   if (!categorySlug) return [];
   try {
     const response = await api.get('/all_products', {
       params: {
-        categories: categorySlug,
+        [scope]: categorySlug,
         per_page: limit,
         page: 1,
         light: 1,

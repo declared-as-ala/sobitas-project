@@ -20,7 +20,10 @@ export async function BlogInStockProducts({ slug, arabic }: Props) {
 
   const getCachedProducts = unstable_cache(
     async () => {
-      const list = await getCategoryHighlights(categorySlug, 6);
+      // A money page is a sub-category in the API (creatine, whey-proteine…) or a top-level one
+      // (proteines); try the rayon scope first, then the category scope.
+      const bySub = await getCategoryHighlights(categorySlug, 6, undefined, 'subcategories');
+      const list = bySub.length ? bySub : await getCategoryHighlights(categorySlug, 6, undefined, 'categories');
       // Never cache an empty answer: a transient API failure also comes back as [], and storing it
       // would hide the block on every article of this category for ten minutes.
       if (list.length === 0) throw new Error(`no in-stock highlights for ${categorySlug}`);
