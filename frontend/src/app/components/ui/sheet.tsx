@@ -2,12 +2,25 @@
 
 import * as React from "react";
 import * as SheetPrimitive from "@radix-ui/react-dialog";
+import { FocusScope } from "@radix-ui/react-focus-scope";
 import { XIcon } from "lucide-react";
+import { useScrollLock } from "@/util/useScrollLock";
 
 import { cn } from "./utils";
 
-function Sheet({ ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
-  return <SheetPrimitive.Root data-slot="sheet" {...props} />;
+const SheetState = React.createContext({ open: false, close: () => {} });
+
+function Sheet({ open, defaultOpen, onOpenChange, ...props }: React.ComponentProps<typeof SheetPrimitive.Root>) {
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false);
+  const isOpen = open ?? internalOpen;
+  useScrollLock(isOpen);
+  const changeOpen = (next: boolean) => {
+    if (open === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  return <SheetState.Provider value={{ open: isOpen, close: () => changeOpen(false) }}>
+    <SheetPrimitive.Root data-slot="sheet" {...props} modal={false} open={isOpen} onOpenChange={changeOpen} />
+  </SheetState.Provider>;
 }
 
 function SheetTrigger({
@@ -31,12 +44,15 @@ function SheetPortal({
 function SheetOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof SheetPrimitive.Overlay>) {
+}: React.ComponentProps<"div">) {
+  const { open, close } = React.useContext(SheetState);
   return (
-    <SheetPrimitive.Overlay
+    <div
       data-slot="sheet-overlay"
+      data-state={open ? "open" : "closed"}
+      onClick={close}
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60 backdrop-blur-[2px]",
+        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/60",
         className,
       )}
       {...props}
@@ -49,17 +65,36 @@ function SheetContent({
   children,
   side = "right",
   showCloseButton = true,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+  onPointerDownOutside,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof SheetPrimitive.Content> & {
   side?: "top" | "right" | "bottom" | "left";
   /** When false, no default X is rendered (use your own header close button to avoid duplicate). */
   showCloseButton?: boolean;
 }) {
+  const previousFocus = React.useRef<HTMLElement | null>(null);
   return (
     <SheetPortal>
       <SheetOverlay />
+      <FocusScope asChild trapped loop>
       <SheetPrimitive.Content
         data-slot="sheet-content"
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          previousFocus.current = document.activeElement as HTMLElement | null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          event.preventDefault();
+          const target = previousFocus.current;
+          requestAnimationFrame(() => { if (target?.isConnected) target.focus(); });
+        }}
+        onPointerDownOutside={(event) => { onPointerDownOutside?.(event); event.preventDefault(); }}
+        onInteractOutside={(event) => { onInteractOutside?.(event); event.preventDefault(); }}
         className={cn(
           "bg-white dark:bg-gray-900 data-[state=open]:animate-in data-[state=closed]:animate-out fixed z-[51] flex flex-col gap-4 shadow-[0_-4px_24px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_24px_rgba(0,0,0,0.4)] transition ease-in-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
           side === "right" &&
@@ -85,6 +120,7 @@ function SheetContent({
           </SheetPrimitive.Close>
         )}
       </SheetPrimitive.Content>
+      </FocusScope>
     </SheetPortal>
   );
 }

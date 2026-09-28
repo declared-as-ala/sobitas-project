@@ -2,13 +2,39 @@
 
 import * as React from "react";
 import { Drawer as DrawerPrimitive } from "vaul";
+import { FocusScope } from "@radix-ui/react-focus-scope";
+import { useScrollLock } from "@/util/useScrollLock";
 
 import { cn } from "./utils";
 
+const DrawerState = React.createContext({ open: false, close: () => {} });
+
 function Drawer({
-  ...props
+  open, defaultOpen, onOpenChange, ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Root>) {
-  return <DrawerPrimitive.Root data-slot="drawer" {...props} />;
+  const [internalOpen, setInternalOpen] = React.useState(defaultOpen ?? false);
+  const isOpen = open ?? internalOpen;
+  // CartDrawer already locks the root. Defer one frame so its existing lock can take effect;
+  // standalone drawers still acquire the shared lock themselves.
+  const [needsLock, setNeedsLock] = React.useState(false);
+  React.useEffect(() => {
+    if (!isOpen) {
+      setNeedsLock(false);
+      return;
+    }
+    const frame = requestAnimationFrame(() => {
+      setNeedsLock(document.documentElement.style.overflow !== "hidden");
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [isOpen]);
+  useScrollLock(isOpen && needsLock);
+  const changeOpen = (next: boolean) => {
+    if (open === undefined) setInternalOpen(next);
+    onOpenChange?.(next);
+  };
+  return <DrawerState.Provider value={{ open: isOpen, close: () => changeOpen(false) }}>
+    <DrawerPrimitive.Root data-slot="drawer" {...props} modal={false} noBodyStyles autoFocus open={isOpen} onOpenChange={changeOpen} />
+  </DrawerState.Provider>;
 }
 
 function DrawerTrigger({
@@ -32,10 +58,13 @@ function DrawerClose({
 function DrawerOverlay({
   className,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Overlay>) {
+}: React.ComponentProps<"div">) {
+  const { open, close } = React.useContext(DrawerState);
   return (
-    <DrawerPrimitive.Overlay
+    <div
       data-slot="drawer-overlay"
+      data-state={open ? "open" : "closed"}
+      onClick={close}
       className={cn(
         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
         className,
@@ -48,13 +77,32 @@ function DrawerOverlay({
 function DrawerContent({
   className,
   children,
+  onOpenAutoFocus,
+  onCloseAutoFocus,
+  onPointerDownOutside,
+  onInteractOutside,
   ...props
 }: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+  const previousFocus = React.useRef<HTMLElement | null>(null);
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
+      <FocusScope asChild trapped loop>
       <DrawerPrimitive.Content
         data-slot="drawer-content"
+        aria-modal="true"
+        onOpenAutoFocus={(event) => {
+          previousFocus.current = document.activeElement as HTMLElement | null;
+          onOpenAutoFocus?.(event);
+        }}
+        onCloseAutoFocus={(event) => {
+          onCloseAutoFocus?.(event);
+          event.preventDefault();
+          const target = previousFocus.current;
+          requestAnimationFrame(() => { if (target?.isConnected) target.focus(); });
+        }}
+        onPointerDownOutside={(event) => { onPointerDownOutside?.(event); event.preventDefault(); }}
+        onInteractOutside={(event) => { onInteractOutside?.(event); event.preventDefault(); }}
         className={cn(
           "group/drawer-content bg-background fixed z-50 flex h-auto flex-col",
           "data-[vaul-drawer-direction=top]:inset-x-0 data-[vaul-drawer-direction=top]:top-0 data-[vaul-drawer-direction=top]:mb-24 data-[vaul-drawer-direction=top]:max-h-[80vh] data-[vaul-drawer-direction=top]:rounded-b-lg data-[vaul-drawer-direction=top]:border-b",
@@ -68,6 +116,7 @@ function DrawerContent({
         <div className="bg-muted mx-auto mt-4 hidden h-2 w-[100px] shrink-0 rounded-full group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
         {children}
       </DrawerPrimitive.Content>
+      </FocusScope>
     </DrawerPortal>
   );
 }
