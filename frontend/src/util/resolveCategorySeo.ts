@@ -231,7 +231,11 @@ function textLength(html: string | undefined | null): number {
 function richerIntro(apiIntro: string, jsonIntro: string): string {
   if (!apiIntro) return jsonIntro;
   if (!jsonIntro) return apiIntro;
-  return textLength(jsonIntro) > textLength(apiIntro) ? jsonIntro : apiIntro;
+  if (textLength(jsonIntro) > textLength(apiIntro)) return jsonIntro;
+  const firstParagraph = jsonIntro.match(/<p\b[^>]*>[\s\S]*?<\/p>/i)?.[0];
+  return firstParagraph && CATEGORY_FACT_TOKEN.test(firstParagraph)
+    ? `${firstParagraph}\n${apiIntro}`
+    : apiIntro;
 }
 
 /** Compare questions ignoring case, accents, punctuation and spacing. */

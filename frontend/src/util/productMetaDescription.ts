@@ -235,19 +235,44 @@ function dedupeSeam(human: string, rest: string): string {
   return rest;
 }
 
-/** A brand regex tolerant of the catalogue's "BIOTECHUSA" / "BIOTECH USA" spelling drift. */
+/** Match a catalogue brand even when its record lists alternate names. */
 function brandRe(brand: string): string {
-  return brand.trim().split(/\s+/).map(escapeRe).join('\\s*');
+  return brand.trim().split(/\s*\/\s*|\s{2,}/).filter(Boolean)
+    .map((part) => part.trim().split(/\s+/).map(escapeRe).join('\\s*'))
+    .join('|');
+}
+
+function nameSeparator(name: string, brand: string): string {
+  const brandAtStart = brand ? new RegExp(`^(?:${brandRe(brand)})(?:\\b|$)`, 'i') : null;
+  const brandAtEnd = brand ? new RegExp(`(?:^|\\s)(?:${brandRe(brand)})$`, 'i') : null;
+  return name.replace(/\s+-\s+/g, (separator, offset: number) => {
+    const before = name.slice(0, offset);
+    const after = name.slice(offset + separator.length);
+    const left = before.match(/\S+$/)?.[0] ?? '';
+    const right = after.match(/^\S+/)?.[0] ?? '';
+    if ((/^[a-z]$/i.test(left) && !/^[gl]$/i.test(left))
+      || (/^[a-z]$/i.test(right) && !/^[gl]$/i.test(right))) return '-';
+    if (/^\d+(?:[,.]\d+)?\s*(?:kg|g|mg|ml|caps|capsules?|gélules?|comprimés?|tablets?|servings|doses)\b/i.test(after)
+      || (brandAtStart && brandAtEnd && (brandAtEnd.test(before) || brandAtStart.test(after)))) return ' – ';
+    return separator;
+  });
 }
 
 /** The product name the way a person would write it in a search box. Brand stripped from the tail. */
 export function humanizeProductName(rawName: string, brand?: string | null): string {
   let name = normalizeUnits(repairMojibake(rawName).replace(/\s+/g, ' ').trim());
   if (brand?.trim()) {
-    const b = brandRe(brand);
+    const b = `(?:${brandRe(brand)})`;
     name = name.replace(new RegExp(`\\s*[-–—|:]\\s*${b}\\s*$`, 'i'), '').replace(new RegExp(`\\s+${b}\\s*$`, 'i'), '');
   }
-  name = name.replace(/\s*[-–—|:]+\s*$/, '').replace(/\s*[|]\s*/g, ' – ').replace(/\s+-\s+/g, ' – ').trim();
+  name = name.replace(/\s*[-–—|:]+\s*$/, '').replace(/\s*[|]\s*/g, ' – ');
+  name = nameSeparator(name, brand ?? '').trim();
+  // When an imported name has both a brand and a format segment, repeated separators turn
+  // the product into a dash chain before the price suffix is even added. Keep the words in order.
+  const startsWithBrand = brand?.trim() && new RegExp(`^(?:${brandRe(brand)})(?:\\b|$)`, 'i').test(name);
+  if (/\s+-\s+/.test(rawName) && (name.match(/ – /g) ?? []).length >= 2 && !startsWithBrand) {
+    name = name.replace(/ – /g, ' ');
+  }
   // Units, mojibake, the brand tail and the separators above are casing-independent repairs and
   // apply to every name. The token caser only runs where the catalogue carries no intent to keep.
   if (!needsRecasing(repairMojibake(rawName))) return name.replace(/\s{2,}/g, ' ').trim();
@@ -255,7 +280,7 @@ export function humanizeProductName(rawName: string, brand?: string | null): str
 }
 
 function nameContainsBrand(name: string, brand: string): boolean {
-  return new RegExp(brandRe(brand), 'i').test(name);
+  return new RegExp(`(?:^|[^\\p{L}\\p{N}])(?:${brandRe(brand)})(?=$|[^\\p{L}\\p{N}])`, 'iu').test(name);
 }
 
 /**
@@ -271,7 +296,7 @@ export function humanProductHeading(product: Pick<Product, 'designation_fr' | 's
   const name = humanizeProductName(raw, brandRaw);
   if (!name) return raw;
   const brand = brandRaw ? humanizeProductName(brandRaw) : '';
-  return brand && !nameContainsBrand(name, brand) ? `${name} – ${brand}` : name;
+  return brand && !nameContainsBrand(name, brandRaw) ? `${name} – ${brand}` : name;
 }
 
 /** "{Human name} – Prix Tunisie | {Brand}", trimmed to a SERP-safe length. */
@@ -281,9 +306,19 @@ export function humanProductTitle(product: Product): string {
   const name = humanizeProductName(raw, brandRaw);
   const brand = brandRaw ? humanizeProductName(brandRaw) : '';
   const base = `${name} – Prix Tunisie`;
-  const tail = brand && !nameContainsBrand(name, brand) ? brand : 'Protein.tn';
+  const tail = brand && !nameContainsBrand(name, brandRaw) ? brand : 'Protein.tn';
+  if (tail === 'Protein.tn' && brandRaw) return base;
   const full = `${base} | ${tail}`;
-  return full.length <= 65 ? full : base;
+  if (full.length <= 65) return full;
+  if (tail === 'Protein.tn') return base;
+  const budget = 65 - ` – Prix Tunisie | ${brand}`.length;
+  const format = name.match(/(?:\s*[–|-]\s*)?\d+(?:[,.]\d+)?\s*(?:kg|g|mg|ml|caps|capsules?|gélules?|comprimés?|tablets?|servings|doses)\b$/i)?.[0] ?? '';
+  const prefixBudget = budget - format.length;
+  const prefix = name.slice(0, prefixBudget + 1).replace(/\s+\S*$/, '').trimEnd()
+    .replace(/(?:\s+[+&]|\s+(?:de|du|des|en|à|et|pour))$/i, '')
+    .replace(/[\s–—|:-]+$/u, '');
+  const shortName = format && prefix ? `${prefix} ${format.trim().replace(/^[–|-]\s*/, '– ')}` : prefix;
+  return shortName ? `${shortName} – Prix Tunisie | ${brand}` : base;
 }
 
 const TITLE_SUFFIX_WORDS = new Set(['prix', 'tunisie', 'livraison', 'rapide', 'proteine', 'protein', 'tn', 'et', 'and', 'en', 'ligne', 'pas', 'cher', 'meilleur', 'achat', 'acheter', 'boutique']);
@@ -484,6 +519,43 @@ export function productTitle(product: Product): string {
     'lifting-straps': 'Straps de musculation (lifting straps) – Prix Tunisie',
     'bandes-de-tirage': 'Bandes de tirage musculation – Prix Tunisie',
     'elite-arginine-120-capsulas': 'Elite L-Arginine 120 gélules – Prix Tunisie | Scenit',
+    // The builder's shortening dropped 'incliné' — the one word that says which bench this is.
+    'banc-de-musculation-developpe-incline': 'Banc développé incliné MND Fitness – Prix Tunisie',
+    // Named SFD Nutrition but filed under Real Pharm (fixed by migration 2026_09_29_000100); the title
+    // must not carry the wrong maker meanwhile.
+    'vitamin-complex-sport-120-tablets-sfd-nutrition': 'Vitamin Complex Sport+ SFD 120 comprimés – Prix Tunisie',
+    // Reviewed 29/09/2026: in-stock PDPs whose title still needs product-specific wording.
+    'magnesium-bisglycinate-vitamine-b6-1422mg-weightworld':
+      'Magnésium Bisglycinate WeightWorld 180 caps – Prix Tunisie',
+    't-9-testo-booster-120-caps': 'T9 Testo Booster 120 gélules – Prix Tunisie | Scenit',
+    'one-a-day-biotech-usa': 'One-A-Day 100 comprimés – Prix Tunisie | Biotech USA',
+    'protein-shaker-450ml-sport-life': 'Shaker protéine Sport Life 450 ml – Prix Tunisie',
+    'vegan-vitamin-d3-k2-365-tablets-weightworld':
+      'Vitamine D3 + K2 WeightWorld 365 comprimés – Prix Tunisie',
+    'gold-creatine-kevin-levrone-300-g': 'Gold Creatine 300 g – Prix Tunisie | Kevin Levrone',
+    'whey-testo-mr-x-1-8-kg-v-shapes': 'Whey Testo MR.X 1,8 kg – Prix Tunisie | V-Shape Supps',
+    'micronised-creatine-optimum-nutrition-317g':
+      'Micronised Creatine 317 g – Prix Tunisie | Optimum Nutrition',
+    'lipo-6-black-ultra-concentrate-60caps':
+      'Lipo 6 Black Ultra Concentrate Nutrex 60 caps – Prix Tunisie',
+    'multivitamines-et-mineraux-400-tablets-weightword':
+      'Multivitamines WeightWorld 400 comprimés – Prix Tunisie',
+    'creatine-monohydrate-ostrovit-500gr': 'Créatine Monohydrate OstroVit 500 g – Prix Tunisie',
+    'creatine-real-pharm-300g': 'Créatine Monohydrate Real Pharm 300 g – Prix Tunisie',
+    'whey-iso-regime-2kg-william-bonac':
+      'Whey Iso Regime 2 kg – Prix Tunisie | William Bonac',
+    'pump-extreme-pre-workout-challenger-nutrition-30-servings':
+      'Pump Extreme Pre-Workout Challenger 30 doses – Prix Tunisie',
+    'ashwagandha-ksm-66-en-comprimes-180-1500-mg':
+      'Ashwagandha KSM-66 WeightWorld 180 comprimés – Prix Tunisie',
+    'carbo-plus-1kg-universal': 'Carbo Plus 1 kg – Prix Tunisie | Universal Nutrition',
+    'hydro-whey-1-59-kg': 'Hydro Whey 1,59 kg – Prix Tunisie | Optimum Nutrition',
+    'zumub-omega-3-90-caps': 'Zumub Oméga 3 90 capsules – Prix Tunisie',
+    'tantor-whey-protein-2267-g-scenit-nutrition':
+      'Tantor Whey Protein 2,27 kg – Prix Tunisie | Scenit',
+    'vitamin-c-110-tabs-ostrovit':
+      'Vitamine C 1000 mg OstroVit 110 comprimés – Prix Tunisie',
+    'zumub-zinc-100-comprimes': 'Zumub Zinc 100 comprimés – Prix Tunisie',
   };
   const opportunityTitle = product.slug ? searchOpportunityTitles[product.slug] : undefined;
   if (opportunityTitle) return opportunityTitle;
