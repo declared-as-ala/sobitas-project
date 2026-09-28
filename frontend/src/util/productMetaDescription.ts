@@ -1,6 +1,7 @@
 import type { Product } from '@/types';
 import { buildMetaDescription, htmlToText } from './sanitizeProductHtml';
 import { formatTnd, getPriceDisplay } from './productPrice';
+import { DELIVERY } from '@/util/company';
 
 function normalize(text: string): string {
   return text.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -439,7 +440,7 @@ export function productDescription(product: Product, rawProductName: string): st
   }
   // Preserve the pre-existing non-template fallback behavior.
   const plain = buildMetaDescription(product.description_fr, { title: productName, maxLen: 90 });
-  if (plain) return `${plain} Prix Tunisie. Livraison 24-72h. Protéine Tunisie.`;
+  if (plain) return `${plain} Prix Tunisie. Livraison ${DELIVERY.windowLabel}. Protéine Tunisie.`;
   return `Acheter ${productName} en Tunisie – Meilleur prix, livraison rapide, produits authentiques. Sousse, Tunis, toute la Tunisie. Protéine Tunisie.`;
 }
 

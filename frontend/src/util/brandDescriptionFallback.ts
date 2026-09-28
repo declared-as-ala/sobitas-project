@@ -1,3 +1,5 @@
+import { DELIVERY } from '@/util/company';
+
 /**
  * Unique French description fallback for brand landing pages.
  *
@@ -55,7 +57,7 @@ export function generateBrandDescriptionFallback({
 
   // Sentence 3 — trust close (brand-consistent, no fabricated stats).
   const s3 =
-    'Produits 100% authentiques et importés officiellement, avec livraison 24-72h partout en Tunisie et paiement à la livraison.';
+    `Produits 100% authentiques et importés officiellement, avec livraison ${DELIVERY.windowLabel} partout en Tunisie et paiement à la livraison.`;
 
   return [s1, s2, s3].filter(Boolean).join(' ');
 }

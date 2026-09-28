@@ -1,6 +1,7 @@
 import type { Product } from '@/types';
 import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
+import { DELIVERY } from '@/util/company';
 
 /**
  * SEO fallback content for products that have no `description_fr` / `description_cover`.
@@ -64,7 +65,7 @@ export function generateProductFallbackDescription(product: Product): string {
 
   // 4) Delivery / trust block (shared, but appended after unique content above).
   sentences.push(
-    `Livraison rapide 24-72h à Sousse, Tunis et partout en Tunisie. Paiement à la livraison disponible. Pour tout conseil sur ${name}, notre équipe est à votre écoute.`
+    `Livraison rapide ${DELIVERY.windowLabel} à Sousse, Tunis et partout en Tunisie. Paiement à la livraison disponible. Pour tout conseil sur ${name}, notre équipe est à votre écoute.`
   );
 
   return `<p>${sentences.join(' ')}</p>`;

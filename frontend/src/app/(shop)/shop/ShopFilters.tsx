@@ -59,6 +59,8 @@ export interface ShopFiltersProps {
   setInStockOnly: (value: boolean) => void;
   /** From the facets endpoint — how many of the catalogue are actually available. */
   inStockCount?: number | null;
+  /** Only show a price range when its bounds describe this listing's scope. */
+  showPriceRange?: boolean;
   isCreatineCategory: boolean;
   selectedTypes: string[];
   toggleType: (type: string) => void;
@@ -213,6 +215,7 @@ export function ShopFilters({
   inStockOnly,
   setInStockOnly,
   inStockCount,
+  showPriceRange = true,
   isCreatineCategory,
   selectedTypes,
   toggleType,
@@ -551,7 +554,7 @@ export function ShopFilters({
       )}
 
       {/* ── PRIX ──────────────────────────────────────────────────────────────────────────── */}
-      <Group label="Prix" defaultOpen sticky={isMobile}>
+      {showPriceRange && <Group label="Prix" defaultOpen sticky={isMobile}>
         <div className="space-y-3 px-1.5 pt-2">
           <div className="flex items-baseline justify-between text-[13px]">
             <span className="font-semibold tabular-nums text-ink-1">
@@ -581,7 +584,7 @@ export function ShopFilters({
             <span>{priceBounds.max} DT</span>
           </div>
         </div>
-      </Group>
+      </Group>}
     </div>
     </>
   );

@@ -1,3 +1,5 @@
+import { DELIVERY } from '@/util/company';
+
 /**
  * Unique French intro fallback for category / subcategory landing pages.
  *
@@ -73,7 +75,7 @@ export function generateCategoryIntroFallback({
 
   // Sentence 3 — trust close (brand-consistent, no fabricated stats).
   const s3 =
-    'Livraison 24-72h partout en Tunisie, produits 100% authentiques et paiement à la livraison.';
+    `Livraison ${DELIVERY.windowLabel} partout en Tunisie, produits 100% authentiques et paiement à la livraison.`;
 
   return [s1, s2, s3].filter(Boolean).join(' ');
 }

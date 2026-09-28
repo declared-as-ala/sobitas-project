@@ -25,6 +25,7 @@
 import { getStorageUrl, toSiteMedia } from '@/services/api';
 import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
+import { IN_STOCK_DELIVERY_LINE } from '@/util/company';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
 import { getProductBreadcrumbs, getProductLink, getProductPrimarySubCategory } from '@/util/productUrl';
 import { brandNameToSlug } from '@/util/brandSlug';
@@ -209,7 +210,6 @@ export function CrawlerProductView({
           <p className="mt-1">
             Disponibilité :{' '}
             <strong>{stockStatus.isUnknown ? 'Disponibilité à confirmer' : stockStatus.stockLabel}</strong>
-            {inStock ? ' · Livraison 24-72h partout en Tunisie.' : ''}
           </p>
           {inStockSibling && (
             <p className="mt-2 text-sm text-ink-2 lg:-order-1 lg:basis-full">
@@ -220,9 +220,7 @@ export function CrawlerProductView({
               — {getPriceDisplay(inStockSibling).finalPrice} DT
             </p>
           )}
-          <p className="mt-1 text-sm text-ink-2">
-            Livraison gratuite dès 300 DT · Paiement à la livraison · Retour sous 7 jours.
-          </p>
+          {inStock && <p className="mt-1 text-sm text-ink-2">{IN_STOCK_DELIVERY_LINE}</p>}
         </section>
 
         {/* Flavours / variants */}

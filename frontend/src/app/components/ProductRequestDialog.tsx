@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useId, useRef, useState } from 'react';
-import { CONTACT_PHONE } from '@/util/company';
+import { CONTACT_PHONE, DELIVERY } from '@/util/company';
 import { ArrowLeft, ArrowRight, Check, Clock3, Columns2, Equal, LayoutGrid, Loader2, PackageCheck, PackageSearch, Phone, Target, TrendingDown, TrendingUp, Truck, X } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetClose } from '@/app/components/ui/sheet';
@@ -111,7 +111,7 @@ export function ProductRequestDialog({ open, onOpenChange, product, productName,
     : 'Rien d’équivalent en stock';
   const subtitle = step !== 'alternatives' ? 'Nous vous confirmons le prix et le délai avant toute commande.'
     : loading ? 'Nous regardons ce que nous avons en rayon pour ce produit.'
-    : hasRows ? `${rows.length} équivalent${rows.length > 1 ? 's' : ''} que nous avons en stock, livré${rows.length > 1 ? 's' : ''} en 24-72 h.`
+    : hasRows ? `${rows.length} équivalent${rows.length > 1 ? 's' : ''} que nous avons en stock, livré${rows.length > 1 ? 's' : ''} en ${DELIVERY.windowLabel}.`
     : loadError ? 'Nous n’avons pas pu consulter le stock. Voici les autres voies.'
     : 'Voici ce que nous pouvons faire pour ce produit.';
 
@@ -331,7 +331,7 @@ function RequestAlternativeCard({ row, requested, closest, onChoose }: {
   const fields = [
     { label: 'Format', requested: requested.format, alternative: row.format },
     { label: 'Prix affiché', requested: displayPrice(requested.price), alternative: displayPrice(row.price) },
-    { label: 'Disponibilité', requested: 'Sur commande · date non confirmée', alternative: row.inStock ? 'En stock · livré en 24-72 h' : 'Disponibilité à confirmer' },
+    { label: 'Disponibilité', requested: 'Sur commande · date non confirmée', alternative: row.inStock ? `En stock · livré en ${DELIVERY.windowLabel}` : 'Disponibilité à confirmer' },
     { label: 'Marque', requested: requested.brand, alternative: row.brand },
     { label: 'Catégorie', requested: requested.category, alternative: row.category },
     ...(nutrients.length ? [

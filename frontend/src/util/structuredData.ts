@@ -5,7 +5,7 @@
  */
 
 import { getStorageUrl, toSiteMedia } from '@/services/api';
-import { CONTACT_PHONE, GOOGLE_PROFILE, LEGAL_IDENTITY, OPENING_HOURS, SOCIAL_PROFILES } from '@/util/company';
+import { CONTACT_PHONE, DELIVERY, GOOGLE_PROFILE, LEGAL_IDENTITY, OPENING_HOURS, SOCIAL_PROFILES } from '@/util/company';
 import { AR_BRAND_SUFFIX, resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
 import { decodeHtmlEntities } from '@/util/htmlEntities';
@@ -162,12 +162,12 @@ function buildShippingDetails(product: Product, price: number): Record<string, u
 
   return {
     '@type': 'OfferShippingDetails',
-    shippingRate: { '@type': 'MonetaryAmount', value: price >= 300 ? 0 : 10, currency: 'TND' },
+    shippingRate: { '@type': 'MonetaryAmount', value: price >= DELIVERY.freeFromDt ? 0 : DELIVERY.feeDt, currency: 'TND' },
     shippingDestination: SHIPPING_DESTINATION,
     deliveryTime: {
       '@type': 'ShippingDeliveryTime',
       handlingTime: { '@type': 'QuantitativeValue', minValue: 0, maxValue: 1, unitCode: 'DAY' },
-      transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 3, unitCode: 'DAY' },
+      transitTime: { '@type': 'QuantitativeValue', minValue: 1, maxValue: 2, unitCode: 'DAY' },
     },
   };
 }

@@ -99,7 +99,11 @@ for (const file of contentFiles) {
 
   const h1 = parsed.h1?.trim() ?? '';
   const metaTitle = parsed.metaTitle?.trim() ?? '';
-  const metaDescription = parsed.metaDescription?.trim() ?? '';
+  // Measured as RENDERED: {prixMin}/{nbEnStock} are resolved at request time (resolveCategoryMetaDescription),
+  // so the budget applies to the worst case — a three-digit price and a three-digit count.
+  const metaDescription = (parsed.metaDescription?.trim() ?? '')
+    .replaceAll('{prixMin}', '999')
+    .replaceAll('{nbEnStock}', '999');
   const ogImage = parsed.ogImage?.trim() ?? '';
 
   assert(!PICTOGRAPH.test(metaTitle), `${file}: metaTitle contains a pictograph — write the separator out.`);

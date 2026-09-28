@@ -14,7 +14,7 @@ import { ProtinaMark } from '@/app/components/loyalty/Protina';
 import { REVIEW_POINTS_AWARD, pointsToDt } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { buildProductUrl, buildProductUrlPath } from '@/util/productUrl';
-import { CONTACT_PHONE } from '@/util/company';
+import { CONTACT_PHONE, IN_STOCK_DELIVERY_LINE } from '@/util/company';
 import { ProductRequestDialog } from '@/app/components/ProductRequestDialog';
 import { ReviewThread } from '@/app/components/reviews/ReviewThread';
 import { MemberLink } from '@/app/components/reviews/MemberLink';
@@ -1385,10 +1385,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 the shop's stated terms, authenticity is its own guarantee (stated as its own, not
                 as a third-party verification), and the number is the number.
               */}
-              <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-hairline pt-4 sm:grid-cols-4 lg:border-rule-strong">
+              {!stockStatus.isUnknown && !stockStatus.isOutOfStock && (
+                <p className="mt-4 border-t border-hairline pt-4 text-xs text-ink-2 lg:border-rule-strong">{IN_STOCK_DELIVERY_LINE}</p>
+              )}
+              <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-4 border-t border-hairline pt-4 sm:grid-cols-2 lg:border-rule-strong">
                 {[
-                  { Icon: Truck, label: 'Livraison', sub: '24–72h' },
-                  { Icon: CreditCard, label: 'Paiement', sub: 'À la livraison' },
                   { Icon: Shield, label: 'Authenticité', sub: '100% garantie' },
                   { Icon: Phone, label: 'Conseil', sub: CONTACT_PHONE.national, href: `tel:${CONTACT_PHONE.e164}` },
                 ].map(({ Icon, label, sub, href }) => {

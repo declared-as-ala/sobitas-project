@@ -72,6 +72,17 @@ export const CONTACT_PHONE_FIXE = {
   e164: '+21673200169',
 } as const;
 
+/** Storefront delivery terms. Keep visible promises, cart maths and Product schema in sync. */
+export const DELIVERY = {
+  windowLabel: '24–72h',
+  feeDt: 10,
+  freeFromDt: 300,
+  cashOnDelivery: true,
+} as const;
+
+/** Identical in-stock promise in the shopper and crawler buy boxes. */
+export const IN_STOCK_DELIVERY_LINE = `Livraison ${DELIVERY.windowLabel} · ${DELIVERY.feeDt} DT, offerte dès ${DELIVERY.freeFromDt} DT${DELIVERY.cashOnDelivery ? ' · Paiement à la livraison' : ''}`;
+
 /**
  * The shop's Google Business Profile.
  *

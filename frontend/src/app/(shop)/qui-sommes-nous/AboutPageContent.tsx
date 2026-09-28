@@ -21,7 +21,7 @@ import { MapPanel } from '@/app/components/MapPanel';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { splitCmsBody } from '@/util/cmsSections';
 import { ABOUT_BODY_FR, ABOUT_BODY_SOURCE, ABOUT_TITLE } from '@/content/aboutBody';
-import { CONTACT_PHONE, CONTACT_PHONE_FIXE, GOOGLE_PROFILE, LEGAL_IDENTITY } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, DELIVERY, GOOGLE_PROFILE, LEGAL_IDENTITY } from '@/util/company';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
 import type { Coordinate, Page } from '@/types';
 
@@ -76,8 +76,8 @@ const COMMITMENTS = [
   },
   {
     icon: Truck,
-    title: 'Expédition sous 24–72 h',
-    body: 'Vers les 24 gouvernorats, et gratuitement à partir de 300 DT. Un numéro de suivi vous est transmis dès l’expédition.',
+    title: `Livraison ${DELIVERY.windowLabel}`,
+    body: `Vers les 24 gouvernorats, et gratuitement à partir de ${DELIVERY.freeFromDt} DT. Un numéro de suivi vous est transmis dès l’expédition.`,
   },
   {
     icon: Headset,
@@ -90,7 +90,7 @@ const COMMITMENTS = [
 const FIGURES = [
   { value: String(LEGAL_IDENTITY.foundedYear), label: 'Année de création', sub: 'Sousse, Tunisie' },
   { value: '24', label: 'Gouvernorats livrés', sub: 'Toute la Tunisie' },
-  { value: '24–72 h', label: 'Délai d’expédition', sub: 'Gratuite dès 300 DT' },
+  { value: DELIVERY.windowLabel, label: 'Délai de livraison', sub: `Gratuite dès ${DELIVERY.freeFromDt} DT` },
   {
     value: GOOGLE_PROFILE.ratingValue.toLocaleString('fr-FR', { minimumFractionDigits: 1 }),
     label: 'Note Google',
@@ -446,7 +446,7 @@ export default function AboutPageContent({
             scale="2"
             kicker="Notre boutique"
             title="Où nous trouver"
-            subtitle="Un magasin physique à Sousse, ouvert six jours sur sept — et une équipe au téléphone."
+            subtitle="Un magasin physique à Sousse, ouvert sept jours sur sept — et une équipe au téléphone."
           />
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] lg:gap-10">
             <div className="min-w-0 rounded-2xl border border-hairline bg-elevated p-5 sm:p-6">

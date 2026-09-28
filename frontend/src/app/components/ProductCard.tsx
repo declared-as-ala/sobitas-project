@@ -11,6 +11,7 @@ import { useFavoritesActions, useIsFavorite } from '@/contexts/FavoritesContext'
 import { getStorageUrl } from '@/services/api';
 import { notify as toast } from '@/lib/notify';
 import { getPriceDisplay } from '@/util/productPrice';
+import { DELIVERY } from '@/util/company';
 import { getStockDisponible, getProductStockStatus } from '@/util/cartStock';
 import { getProductImagePresentation } from '@/util/productImagePresentation';
 import { buildProductUrlPath } from '@/util/productUrl';
@@ -623,7 +624,7 @@ export const ProductCard = memo(function ProductCard({
 
           11px at every width, so the step disappears rather than inverting. Measured against the
           space it has: this meta row is 222px wide on a 390px phone (390 − 32 gutter − 124
-          thumbnail − 12 gap) and "En stock · 24–48h" sets at ~108px. It was never tight. */}
+          thumbnail − 12 gap) and the stock/delivery row sets at ~108px. It was never tight. */}
         <div className="flex flex-nowrap items-center gap-x-2 overflow-hidden text-[11px] font-medium text-ink-3 sm:gap-x-3">
           {!stock.isUnknown && (
             <span className="inline-flex min-w-0 items-center gap-1">
@@ -636,14 +637,14 @@ export const ProductCard = memo(function ProductCard({
               <span className="truncate">{stock.stockLabel}</span>
             </span>
           )}
-          {/* NOT on a back-order card. "24-48h" beside "Sur commande" is a delivery promise for
+          {/* NOT on a back-order card. A delivery window beside "Sur commande" is a promise for
               something nobody has in a warehouse, and it contradicts the product page, which drops
               shippingDetails from its schema for exactly these items (see buildShippingDetails).
               A shipping estimate is a claim; it is only allowed where the stock is real. */}
-          {!stock.isBackOrder && (
+          {!stock.isUnknown && !stock.isOutOfStock && (
             <span className="inline-flex shrink-0 items-center gap-1">
               <Truck className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              24–48h
+              {DELIVERY.windowLabel}
             </span>
           )}
         </div>

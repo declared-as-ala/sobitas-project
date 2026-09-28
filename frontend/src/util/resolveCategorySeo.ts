@@ -64,6 +64,21 @@ export type MergedCategorySeo = CategorySeoContent & {
   relatedCategorySlugs: string[];
 };
 
+/** Resolve CMS fact tokens; drop an entire sentence when its fact cannot be established. */
+export function resolveCategoryMetaDescription(
+  description: string,
+  facts: { priceMin: number | null; inStockCount: number | null }
+): string {
+  return description.split(/(?<=\.)\s+/).filter((sentence) => {
+    if (sentence.includes('{prixMin}') && (!facts.priceMin || facts.priceMin <= 0 || facts.inStockCount === 0)) return false;
+    if (sentence.includes('{nbEnStock}') && (!facts.inStockCount || facts.inStockCount < 0)) return false;
+    return true;
+  }).map((sentence) => sentence
+    .replaceAll('{prixMin}', String(facts.priceMin))
+    .replaceAll('{nbEnStock}', String(facts.inStockCount))
+  ).join(' ').trim();
+}
+
 function cleanString(value: unknown): string {
   return typeof value === 'string' ? value.trim() : '';
 }

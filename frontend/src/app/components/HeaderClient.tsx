@@ -7,7 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 import { buildWhatsAppHref, WHATSAPP_ARIA_LABEL, WHATSAPP_GREEN, WHATSAPP_ICON_PATH } from '@/util/whatsapp';
-import { CONTACT_PHONE, CONTACT_PHONE_FIXE } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, DELIVERY } from '@/util/company';
 import {
   ShoppingCart,
   User,
@@ -53,7 +53,7 @@ import { useI18n } from '@/i18n/I18nProvider';
 const PHONE = CONTACT_PHONE.display;
 const PHONE_FIXE = CONTACT_PHONE_FIXE.display;
 const MAPS_URL = 'https://maps.app.goo.gl/w2ytnYAKSZDmjznh6';
-const DELIVERY_MSG = 'Livraison gratuite à partir de 300 DT';
+const DELIVERY_MSG = `Livraison gratuite à partir de ${DELIVERY.freeFromDt} DT`;
 
 type HeaderNavLink = {
   href: string;
@@ -1397,7 +1397,7 @@ export function HeaderClient() {
               <div className="flex items-center justify-between gap-2 text-[11px] leading-none text-ink-2">
                 <span className="flex items-center gap-1.5">
                   <Truck className="h-3.5 w-3.5 shrink-0 text-ok" aria-hidden />
-                  Livraison 24–48h
+                  Livraison {DELIVERY.windowLabel}
                 </span>
                 <span className="flex items-center gap-1.5">
                   <Shield className="h-3.5 w-3.5 shrink-0 text-ink-3" aria-hidden />

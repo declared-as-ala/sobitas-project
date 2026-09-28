@@ -91,7 +91,7 @@ const CHANNELS = [
     label: 'En boutique',
     value: 'Rue Ribat, Sousse',
     href: '#contact-boutique',
-    hint: 'Ouvert six jours sur sept',
+    hint: 'Ouvert sept jours sur sept',
     external: false,
   },
 ] as const;

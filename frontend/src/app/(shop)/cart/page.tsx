@@ -12,9 +12,10 @@ import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
+import { DELIVERY } from '@/util/company';
 import { notify as toast } from '@/lib/notify';
 
-const FREE_SHIPPING_THRESHOLD = 300;
+const FREE_SHIPPING_THRESHOLD = DELIVERY.freeFromDt;
 
 /** Layout-matching placeholder shown until the cart rehydrates from localStorage (no flash of empty). */
 function CartSkeleton() {
@@ -104,7 +105,7 @@ export default function CartPage() {
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
-  const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : 10;
+  const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : DELIVERY.feeDt;
   const finalTotal = totalPrice + shippingCost;
   const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - totalPrice);
   const freeShippingProgress = Math.min(100, (totalPrice / FREE_SHIPPING_THRESHOLD) * 100);
@@ -310,7 +311,7 @@ export default function CartPage() {
                     <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                          Livraison gratuite à 300 DT
+                           Livraison gratuite à {DELIVERY.freeFromDt} DT
                         </span>
                         <span className="text-xs sm:text-sm font-display font-bold tabular-nums text-red-600 dark:text-red-400">
                           {remainingForFreeShipping.toFixed(2)} DT restants
@@ -389,7 +390,9 @@ export default function CartPage() {
                 <div>
                   <p className="text-sm font-semibold text-gray-900 dark:text-white">Livraison</p>
                   <p className="text-xs text-gray-600 dark:text-gray-400">
-                    {shippingCost === 0 ? 'Gratuite en 2-3 jours' : 'Standard 3-5 jours'}
+                     {shippingCost === 0
+                       ? `Livraison ${DELIVERY.windowLabel} · offerte`
+                       : `Livraison ${DELIVERY.windowLabel} · ${DELIVERY.feeDt} DT (offerte dès ${DELIVERY.freeFromDt} DT)`}
                   </p>
                 </div>
               </div>

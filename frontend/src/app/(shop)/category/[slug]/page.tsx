@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getCategories, getInStockCount, getShopFacets, toSiteMedia } from '@/services/api';
+import { getCategories, getShopFacets, toSiteMedia } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
 // no canonical — the exact shell measured under crawl load).
@@ -27,6 +27,7 @@ import { getTunisiaKeywordsForCategory, generateTunisiaMetaTitle, generateTunisi
 import { getProductLink, urlSlug } from '@/util/productUrl';
 import { generateCategoryIntroFallback } from '@/util/categoryIntroFallback';
 import { getEffectivePrice } from '@/util/productPrice';
+import { resolveCategoryMetaDescription } from '@/util/resolveCategorySeo';
 // ONE definition of availability for the whole app. The robots gate below reads the same helper
 // the product card, the PDP, the cart and the JSON-LD availability read — see the note there.
 import { isInStock, type ProductLike } from '@/util/cartStock';
@@ -133,6 +134,42 @@ export async function loadListingPage(query: ShopQuery, scope: Partial<ShopQuery
       overflowTo: res.pagination && query.page > totalPages ? totalPages : null,
     },
   };
+}
+
+/** Category-wide availability and cheapest buyable price, independent of the visitor's filters. */
+async function loadCategoryStockFacts(scope: Partial<ShopQuery>) {
+  const scoped = { ...EMPTY_SHOP_QUERY, ...scope, inStock: true };
+  const scopeKey = scope.subcategories?.[0]
+    ? `subcategory:${scope.subcategories[0]}`
+    : `category:${scope.categories?.[0] ?? 'shop'}`;
+  const cached = unstable_cache(async () => {
+    const countPage = await getShopPage(scoped, 1);
+    if (!countPage.pagination) throw new Error(`Missing in-stock pagination for ${scopeKey}`);
+    const inStockCount = countPage.pagination.total;
+    if (inStockCount === 0) return { inStockCount: 0, priceMin: null };
+
+    // Effective promo price can be lower than the first product sorted by base `prix`.
+    // Walk the small in-stock subset so "dès" is a true minimum, not a page-one guess.
+    const prices: number[] = [];
+    for (let page = 1; page <= Math.ceil(inStockCount / 100); page += 1) {
+      const result = await getShopPage({ ...scoped, page }, 100);
+      if (!result.pagination || result.pagination.total !== inStockCount) {
+        throw new Error(`Incomplete in-stock prices for ${scopeKey}`);
+      }
+      for (const product of result.products) {
+        if (isInStock(product)) {
+          const price = getEffectivePrice(product);
+          if (Number.isFinite(price) && price > 0) prices.push(price);
+        }
+      }
+    }
+    return { inStockCount, priceMin: prices.length ? Math.round(Math.min(...prices)) : null };
+  }, ['category-stock-facts', scopeKey], { revalidate: 600, tags: ['shop', 'products'] });
+
+  return cached().catch((error) => {
+    console.error('[category] scoped stock facts unavailable:', error);
+    return null;
+  });
 }
 
 /**
@@ -309,18 +346,12 @@ async function loadCategoryListingSupport() {
     revalidate: 3600,
     tags: ['categories'],
   });
-  const cachedInStockCount = unstable_cache(() => getInStockCount(), ['shop-in-stock-count'], {
-    revalidate: 300,
-    tags: ['shop', 'products'],
-  });
-
-  const [facets, categories, inStockCount] = await Promise.all([
+  const [facets, categories] = await Promise.all([
     cachedFacets(),
     cachedCategories().catch((error) => {
       console.error('Error fetching categories:', error);
       return [] as Awaited<ReturnType<typeof getCategories>>;
     }),
-    cachedInStockCount(),
   ]);
 
   // The filter UI reads only these fields. Keeping media/SEO/admin timestamps out of the RSC
@@ -340,7 +371,7 @@ async function loadCategoryListingSupport() {
   // second copy of those lists; keep only the authoritative ranges and count maps.
   const facetsForClient = { ...facets, brands: [], subcategories: [] };
 
-  return { categories, categoriesForClient, facets: facetsForClient, inStockCount };
+  return { categories, categoriesForClient, facets: facetsForClient };
 }
 
 function toMetaTitle(seoH1: string | undefined, fallbackName: string | undefined, slug?: string): string {
@@ -381,6 +412,10 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const apiSeo = (data as any).seo as CategorySeoFromApi | undefined;
     const seoJson = await getCategorySeoContent(canonicalSlug);
     const merged = mergeCategorySeoForSlug(canonicalSlug, seoJson, apiSeo);
+    const listingScope: Partial<ShopQuery> = type === 'subcategory'
+      ? { subcategories: [canonicalSlug], categories: [] }
+      : { categories: [canonicalSlug], subcategories: [] };
+    const stockFacts = await loadCategoryStockFacts(listingScope);
     /*
      * ── THE EMPTY-SUBCATEGORY COUNT CANNOT COME FROM THIS PAYLOAD ─────────────────────────────
      * It used to: `(data as any).pagination?.total ?? (data as any).products?.length`. The guard
@@ -493,7 +528,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     // Tunisia-specific generator — both of which say something a buyer can act on.
     const CMS_DESCRIPTION_MIN_LEN = 70;
     const cmsDescription = merged.metaDescription?.trim() ?? '';
-    const description =
+    const rawDescription =
       cmsDescription.length >= CMS_DESCRIPTION_MIN_LEN && cmsDescription.length <= 500
         ? cmsDescription
         : // htmlToText, not a hand-rolled tag strip: the intro is CMS HTML, so "&amp;" has to be
@@ -501,6 +536,13 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
           // again on its way into the attribute and reached Google as a literal "&amp;amp;".
           (htmlToText(merged.intro, 160) ||
             generateTunisiaMetaDescription(apiTitle || canonicalSlug, tunisiaKeywords));
+    const descriptionWithFacts = resolveCategoryMetaDescription(rawDescription, {
+      priceMin: stockFacts?.priceMin ?? null,
+      inStockCount: stockFacts?.inStockCount ?? null,
+    });
+    // Facts only where a reviewed description asks for them ({prixMin}/{nbEnStock}); a description
+    // without placeholders is served exactly as written, so no curated length budget is overrun.
+    const description = descriptionWithFacts;
     // merged.canonicalUrl is sous_categories.canonical_url / categs.canonical_url — free text.
     // forceProteinDomain only normalised the HOST, so it accepted '/musculation' verbatim even
     // though the admin redirect table 301s /musculation straight back to this page. The guard
@@ -536,10 +578,6 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
      * paginated listing on the site would canonicalise to page 1 for the length of the incident —
      * a far more expensive mistake than the one being fixed.
      */
-    const listingScope: Partial<ShopQuery> =
-      type === 'subcategory'
-        ? { subcategories: [canonicalSlug], categories: [] }
-        : { categories: [canonicalSlug], subcategories: [] };
     let overflowedTo: number | null = null;
     /*
      * ── A LISTING WHERE NOTHING ON THE PAGE CAN BE BOUGHT IS noindex, follow ──────────────────
@@ -1039,7 +1077,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
        * taxonomy, the brands and the SEO copy below — but it has no notion of ?page=N, which is
        * why /probiotiques showed the same twelve products at every page number.
        */
-      const [{ productsData, serverPagination }, listingSupport] = await Promise.all([
+      const [{ productsData, serverPagination }, listingSupport, scopedStockFacts] = await Promise.all([
         loadListingPage(listingQuery, {
           subcategories: [canonicalSlug],
           // A subcategory page must never also carry the /shop category filter: the two would
@@ -1047,10 +1085,11 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           categories: [],
         }),
         listingSupportPromise,
+        loadCategoryStockFacts({ subcategories: [canonicalSlug], categories: [] }),
       ]);
       const subOverflow = listingOverflowTo(listingQuery, canonicalSlug, serverPagination);
       if (subOverflow) permanentRedirect(subOverflow);
-      const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
+      const { categories, categoriesForClient, facets } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       /*
        * ── THE LANDING COPY BELONGS TO PAGE 1 ONLY ────────────────────────────────────────────
@@ -1295,7 +1334,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categories={categoriesForClient as never}
               brands={productsData.brands ?? []}
               facets={facets}
-              inStockCount={inStockCount}
+              inStockCount={scopedStockFacts?.inStockCount ?? null}
               initialCategory={canonicalSlug}
               isSubcategory
               serverQuery={serverQuery}
@@ -1336,16 +1375,17 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
       };
       // Same reasoning as the subcategory branch: /sante-vitalite holds 8,849 products and showed
       // twelve of them, with ?page=2 answering 200 and rendering a duplicate of page 1.
-      const [{ productsData, serverPagination }, listingSupport] = await Promise.all([
+      const [{ productsData, serverPagination }, listingSupport, scopedStockFacts] = await Promise.all([
         loadListingPage(listingQuery, {
           categories: [canonicalSlug],
           subcategories: [],
         }),
         listingSupportPromise,
+        loadCategoryStockFacts({ categories: [canonicalSlug], subcategories: [] }),
       ]);
       const catOverflow = listingOverflowTo(listingQuery, canonicalSlug, serverPagination);
       if (catOverflow) permanentRedirect(catOverflow);
-      const { categories, categoriesForClient, facets, inStockCount } = listingSupport;
+      const { categories, categoriesForClient, facets } = listingSupport;
       const serverQuery: ShopQuery = { ...listingQuery, page: serverPagination.currentPage };
       // Same rule as the subcategory branch: the landing copy and the FAQPage schema are page-1
       // furniture. Read the note there for why indexable pagination requires this.
@@ -1527,7 +1567,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categories={categoriesForClient as never}
               brands={productsData.brands ?? []}
               facets={facets}
-              inStockCount={inStockCount}
+              inStockCount={scopedStockFacts?.inStockCount ?? null}
               initialCategory={canonicalSlug}
               serverQuery={serverQuery}
               serverPagination={serverPagination}

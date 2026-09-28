@@ -31,8 +31,9 @@ import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, valid
 import styles from './checkout.module.css';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
+import { DELIVERY } from '@/util/company';
 
-const FREE_SHIPPING_THRESHOLD = 300;
+const FREE_SHIPPING_THRESHOLD = DELIVERY.freeFromDt;
 
 // Points economy — imported, not redeclared. These two numbers were previously written out here
 // AND in FidelitySection AND in two reassurance strings; util/loyaltyPoints.ts is now the one place
@@ -193,7 +194,7 @@ export default function CheckoutPage() {
   // Memoize price calculations to avoid recalculating on every render
   const totalPrice = useMemo(() => getTotalPrice(), [items, getTotalPrice]);
   const shippingCost = useMemo(() => 
-    totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : 10, 
+    totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : DELIVERY.feeDt,
     [totalPrice]
   );
   // Coupon discount in DT (HT). appliedCoupon.totals already reflects it; we reuse it for the points cap.

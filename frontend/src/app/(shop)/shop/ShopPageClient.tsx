@@ -1367,6 +1367,7 @@ function ShopContent({
     sortBy,
     setSortBy: handleSortChange,
     inStockCount,
+    showPriceRange: !isServerMode || serverBasePath === '/shop',
   };
 
   /*

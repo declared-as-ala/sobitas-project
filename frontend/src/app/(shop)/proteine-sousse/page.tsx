@@ -2,6 +2,7 @@ import { Metadata } from 'next';
 import Link from 'next/link';
 import { MapPin, Truck, ShieldCheck, CreditCard, Clock, Phone, ArrowRight } from 'lucide-react';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
+import { DELIVERY } from '@/util/company';
 import {
   buildBreadcrumbListSchema,
   buildWebPageSchema,
@@ -157,7 +158,7 @@ export default function ProteineSoussePage() {
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {[
               { icon: ShieldCheck, title: '100% authentique', text: 'Produits officiels des grandes marques.' },
-              { icon: Truck, title: 'Livraison 24–72h', text: 'À Sousse, Tunis et toute la Tunisie.' },
+              { icon: Truck, title: `Livraison ${DELIVERY.windowLabel}`, text: 'À Sousse, Tunis et toute la Tunisie.' },
               { icon: CreditCard, title: 'Paiement à la livraison', text: 'Payez à la réception, en toute confiance.' },
               { icon: Clock, title: 'Conseil expert', text: 'Une équipe basée à Sousse pour vous guider.' },
             ].map(({ icon: Icon, title, text }) => (

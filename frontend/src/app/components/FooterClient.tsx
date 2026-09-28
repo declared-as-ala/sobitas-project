@@ -8,7 +8,7 @@ import { ArrowUp, ArrowUpRight, ChevronDown, Facebook, Instagram, Linkedin, Load
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { subscribeNewsletter } from '@/services/api';
-import { CONTACT_PHONE, CONTACT_PHONE_FIXE, LEGAL_IDENTITY, SOCIAL_PROFILES } from '@/util/company';
+import { CONTACT_PHONE, CONTACT_PHONE_FIXE, DELIVERY, LEGAL_IDENTITY, SOCIAL_PROFILES } from '@/util/company';
 import { getCmsPageNavLabel } from '@/config/cmsPageSeoConfig';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { cn } from '@/app/components/ui/utils';
@@ -330,7 +330,7 @@ export function FooterClient({ pages: pagesProp }: FooterClientProps) {
           </LinkWithLoading>
           <p className="mt-3 max-w-sm text-sm leading-relaxed text-ink-2">
             Compléments alimentaires authentiques, sélectionnés et livrés partout en Tunisie.
-            Paiement à la livraison, expédition sous 24–72h.
+            Paiement à la livraison, livraison {DELIVERY.windowLabel}.
           </p>
           <div className="mt-4 flex flex-wrap gap-2">
             {SOCIALS.map(({ href, label, icon }) => (

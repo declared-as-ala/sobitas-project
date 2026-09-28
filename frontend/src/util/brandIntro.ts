@@ -1,4 +1,5 @@
 import { getProductPrimarySubCategory } from '@/util/productUrl';
+import { DELIVERY } from '@/util/company';
 import type { Product } from '@/types';
 
 /**
@@ -61,7 +62,7 @@ export function buildBrandIntroHtml(brandName: string, products: Product[]): str
   }
 
   sentences.push(
-    'Produits 100% authentiques, livraison 24-72h partout en Tunisie et paiement à la livraison.',
+    `Produits 100% authentiques, livraison ${DELIVERY.windowLabel} partout en Tunisie et paiement à la livraison.`,
   );
 
   return `<p>${sentences.join(' ')}</p>`;
