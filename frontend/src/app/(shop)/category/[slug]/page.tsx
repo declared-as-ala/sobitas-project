@@ -782,7 +782,12 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        * /x-crawler/category/[slug] — the route middleware rewrites Googlebot to. One edit, no
        * drift between what a shopper and a crawler are told.
        */
-      robots: !indexable || (nothingBuyableHere && !protectedByDemand)
+      // A reviewed guide exempts the shelf from the "nothing in stock" noindex, exactly as it already
+      // exempts it from the zero-products one: its products are orderable on request (BackOrder) and
+      // the guide is the page's value. Measured 28/09/2026: /post-workout and /intra-workout carried
+      // ~500-word guides and 9–12 request-only products, yet served noindex. Kept in step with the
+      // sitemap's nav gate (util/sitemapSources.ts), which now submits guided listings too.
+      robots: !indexable || (nothingBuyableHere && !protectedByDemand && !hasEditorialGuide)
         ? { index: false, follow: true }
         : { index: true, follow: true },
       openGraph: {

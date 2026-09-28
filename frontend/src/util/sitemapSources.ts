@@ -915,7 +915,9 @@ const taxonomySource: SitemapSource = {
          * /hmb, /mineraux, /articulations, /cla) — those are `nav: true`, the category route has
          * been fixed to stop noindexing them, and they stay submitted. The rest are withheld here.
          */
-        if (taxonomyNode(slug) && !inGlobalNav(slug)) {
+        // Guided listings are indexable even when nothing is in stock (category route, 28/09/2026),
+        // so they are submitted too; the nav flag still decides only what the menu shows.
+        if (taxonomyNode(slug) && !inGlobalNav(slug) && !guided) {
           withheldNotInNav.push(slug);
           continue;
         }
@@ -996,6 +998,8 @@ const categoryGuidesSource: SitemapSource = {
        * /intra-workout were in listings.xml while both pages served `noindex, follow` — the
        * "Submitted URL marked noindex" contradiction the taxonomy source exists to prevent.
        */
+      // Since the guided exemption (28/09/2026, later the same day) the taxonomy source submits a
+      // guided `nav: false` listing itself; skipping it here now only prevents a duplicate entry.
       if (taxonomyNode(slug) && !inGlobalNav(slug)) continue;
       entries.push({
         url: `${ctx.baseUrl}/${encodeURIComponent(slug)}`,
