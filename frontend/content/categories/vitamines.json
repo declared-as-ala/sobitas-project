@@ -1,6 +1,6 @@
 {
-  "h1": "Vitamines et multivitamines en Tunisie",
-  "metaTitle": "Vitamines en Tunisie : D3, C, B et multivitamines — Protein.tn",
+  "h1": "Vitamines et multivitamines sport en Tunisie",
+  "metaTitle": "Vitamines & multivitamines sport en Tunisie | Protein.tn",
   "metaDescription": "Vitamines en Tunisie : D3, C, complexe B et multivitamines, en comprimés ou gélules. Dès {prixMin} DT, {nbEnStock} en stock, livraison 24–72h.",
   "ogImage": "https://protein.tn/og-banner.jpg",
   "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les <strong>vitamines</strong> sont essentielles au bon fonctionnement de l'organisme. En Tunisie, les carences en vitamine D, vitamines B et vitamine C sont fréquentes. Sur <strong>Protein.tn</strong>, retrouvez notre sélection de vitamines : multivitamines, vitamine D3, vitamine C, complexe B. Optimal pour la santé, l'immunité et l'énergie.</p>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Vitamines essentielles pour les sportifs</h2>\n<ul class=\"list-disc list-inside mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 space-y-1\">\n  <li><strong>Vitamine D3</strong> : soleil tunisien insuffisant 6 mois/an. Essentielle pour l'immunité et la testostérone</li>\n  <li><strong>Vitamine C</strong> : antioxydant, immunité, récupération</li>\n  <li><strong>Complexe B</strong> : énergie, métabolisme, système nerveux</li>\n  <li><strong>Multivitamines</strong> : couverture complète pour la santé quotidienne</li>\n</ul>\n\n<h2 class=\"text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mt-6 mb-2\">Vitamines Tunisie : Prix et Livraison</h2>\n<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Multivitamines dès 40 DT, vitamine D3 dès 25 DT, vitamine C dès 20 DT. <strong>Protein.tn</strong> livre 24–72h partout en Tunisie.</p>",
@@ -14,14 +14,36 @@
     {
       "question": "Faut-il prendre de la vitamine D en Tunisie ?",
       "answer": "Oui — même en Tunisie, les études montrent que 70% des adultes ont une carence en vitamine D, surtout en hiver."
+    },
+    {
+      "question": "Quelle multivitamine choisir pour la musculation ?",
+      "answer": "Pour un sportif, choisissez une multivitamine qui couvre les vitamines du groupe B, la vitamine D, le zinc et le magnésium à des doses proches des apports de référence, en une à trois prises par jour. Les formules en packs (Animal Pak) visent les gros volumes d'entraînement, les formules en comprimés (Opti-Men, Multi Vita+) un usage quotidien plus simple. Comparez le coût par jour de cure."
+    },
+    {
+      "question": "Animal Pak ou Opti-Men : lequel prendre ?",
+      "answer": "Animal Pak se présente en sachets journaliers qui regroupent vitamines, minéraux et autres nutriments : il vise les sportifs qui s'entraînent beaucoup et acceptent plusieurs comprimés par prise. Opti-Men d'Optimum Nutrition se prend en comprimés, avec un dosage plus simple à suivre au quotidien. Le choix dépend donc surtout du format que vous suivrez sans oubli et du coût par jour."
+    },
+    {
+      "question": "Quand prendre une multivitamine ?",
+      "answer": "Prenez-la pendant un repas, de préférence le matin ou le midi : les vitamines A, D, E et K se dissolvent dans les graisses et s'absorbent mieux avec un aliment, et certaines vitamines du groupe B peuvent gêner le sommeil si elles sont prises tard. Respectez la dose de l'étiquette et évitez de cumuler deux produits qui contiennent les mêmes vitamines."
+    },
+    {
+      "question": "Une multivitamine remplace-t-elle une alimentation équilibrée ?",
+      "answer": "Non. Un complément alimentaire ne remplace pas une alimentation variée et équilibrée ni un mode de vie sain : il complète les apports quand l'alimentation ne suffit pas, par exemple en période d'entraînement intense ou de restriction calorique. En cas de traitement, de grossesse ou de maladie, demandez l'avis d'un médecin ou d'un pharmacien avant d'en prendre."
     }
   ],
   "relatedCategorySlugs": [
+    "zma",
     "sante-vitalite",
     "mineraux",
     "omega-3",
     "antioxydants",
     "collagene"
   ],
-  "bestProductSlugs": []
+  "bestProductSlugs": [
+    "animal-pak-30-packs",
+    "opti-men-90tabs",
+    "vitamin-complex-sport-120-tablets-sfd-nutrition",
+    "multi-vita-120-caps-scenit-nutrition"
+  ]
 }
