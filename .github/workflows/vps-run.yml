@@ -137,6 +137,12 @@ on:
           # field still hashes to the text it was computed from; anything edited since is skipped.
           - seo-edits-dry-run
           - seo-edits-apply
+          # INCIDENT 28/09/2026: seo:products-apply-copy loaded products with a partial select and
+          # saved them; Product::saving() did qte = (int) null = 0 and flagged rupture on all 159
+          # in-stock products. This copies qte/rupture back from the backup taken at 14:03, right
+          # before that run, for products now at 0 that had stock then and were saved since 14:00.
+          - stock-restore-20260928-dry-run
+          - stock-restore-20260928-apply
           # Publish the unpublished review backlog, deduped by (product, text_hash). Visibility
           # only: verified/commande_id are never written, so star ratings stay attested-only.
           - reviews-publish-backlog-dry-run
@@ -732,6 +738,16 @@ jobs:
               ARGS="seo:products-apply-edits"
               WRITES=no
               ;;
+            stock-restore-20260928-dry-run)
+              ARGS="dry"
+              MODE=stockrestore
+              WRITES=no
+              ;;
+            stock-restore-20260928-apply)
+              ARGS="apply"
+              MODE=stockrestore
+              WRITES=yes
+              ;;
             seo-edits-apply)
               ARGS="seo:products-apply-edits --apply"
               WRITES=yes
@@ -1220,6 +1236,46 @@ jobs:
                 echo "[ok] rehearsal complete; production was not changed"
               fi
               echo "[ok] disposable database will now be dropped"
+            elif [ "$MODE" = "stockrestore" ]; then
+              echo ""
+              echo "> restore products.qte / products.rupture from the 14:03 pre-apply backup ($ARGS)"
+              echo ""
+              SOURCE_BACKUP="/var/sobitas/backups/db-pre-command-20260928-140306.sql.gz"
+              if [ ! -s "$SOURCE_BACKUP" ]; then
+                echo "[X] $SOURCE_BACKUP not found"
+                ls -1t /var/sobitas/backups | head -10
+                exit 1
+              fi
+              PROD_DB=$(docker exec sobitas-mysql sh -c 'printf %s "$MYSQL_DATABASE"')
+              if ! printf '%s' "$PROD_DB" | grep -Eq '^[A-Za-z0-9_]+$'; then
+                echo "[X] production database name is unsafe or empty"
+                exit 1
+              fi
+              RECOVERY_DB="sobitas_stockrestore_$$"
+              mysql_query() {
+                docker exec sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" -N -B -e "$1"' sh "$1"
+              }
+              trap 'mysql_query "DROP DATABASE IF EXISTS \`$RECOVERY_DB\`;" >/dev/null 2>&1 || true' EXIT
+              echo "[..] loading $(basename "$SOURCE_BACKUP") into a disposable database"
+              if ! gzip -cd "$SOURCE_BACKUP" 2>/dev/null \
+                | sed "s/\`$PROD_DB\`/\`$RECOVERY_DB\`/g" \
+                | docker exec -i sobitas-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' >/dev/null 2>&1; then
+                echo "[X] disposable database import failed"
+                exit 1
+              fi
+              WHERE="p.qte = 0 AND b.qte > 0 AND p.updated_at >= '2026-09-28 14:00:00'"
+              echo "backup in-stock products (qte>0, rupture=0): $(mysql_query "SELECT COUNT(*) FROM \`$RECOVERY_DB\`.products WHERE qte > 0 AND rupture = 0;")"
+              echo "live in-stock products now:                  $(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.products WHERE qte > 0 AND rupture = 0;")"
+              echo "rows to restore:                             $(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.products p JOIN \`$RECOVERY_DB\`.products b ON b.id = p.id WHERE $WHERE;")"
+              echo "sample:"
+              mysql_query "SELECT p.id, p.slug, p.qte, p.rupture, '->', b.qte, b.rupture FROM \`$PROD_DB\`.products p JOIN \`$RECOVERY_DB\`.products b ON b.id = p.id WHERE $WHERE ORDER BY p.id LIMIT 15;"
+              if [ "$ARGS" = "apply" ]; then
+                CHANGED=$(mysql_query "UPDATE \`$PROD_DB\`.products p JOIN \`$RECOVERY_DB\`.products b ON b.id = p.id SET p.qte = b.qte, p.rupture = b.rupture WHERE $WHERE; SELECT ROW_COUNT();")
+                echo "[ok] restored rows: $CHANGED"
+                echo "live in-stock products after: $(mysql_query "SELECT COUNT(*) FROM \`$PROD_DB\`.products WHERE qte > 0 AND rupture = 0;")"
+              else
+                echo "[dry-run] nothing written"
+              fi
             elif [ "$MODE" = "restoreuploads" ]; then
               echo ""
               echo "> restore committed uploads into /var/sobitas/uploads (no-clobber): $ARGS"
