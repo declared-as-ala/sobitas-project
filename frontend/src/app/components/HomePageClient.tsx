@@ -57,6 +57,9 @@ const PRIORITY_SHOP_CATEGORY_LINKS = [
   { href: '/omega-3', label: 'Oméga 3 Tunisie' },
   { href: '/vitamines', label: 'Vitamines Tunisie' },
   { href: '/zma', label: 'ZMA Tunisie' },
+  // Keyword research 28/09/2026: both earn money-query impressions and had no homepage anchor.
+  { href: '/bruleurs-de-graisse', label: 'Brûleur de graisse Tunisie' },
+  { href: '/collagene', label: 'Collagène Tunisie' },
 ] as const;
 
 function transformProduct(product: Product) {
@@ -469,7 +472,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
                 </span>
                 {/* h2, not h1 — the page's single h1 is the visually-hidden one at the top. */}
                 <h2 className="max-w-[24ch] font-display font-compressed text-[1.75rem] font-extrabold uppercase leading-[0.96] tracking-[-0.02em] text-ink-1 sm:text-[2rem] lg:text-[2.5rem]">
-                  Protein.tn : votre boutique de nutrition sportive à Sousse
+                  Nutrition sportive et compléments alimentaires en Tunisie
                 </h2>
               </div>
 
