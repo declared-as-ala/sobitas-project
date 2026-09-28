@@ -22,7 +22,7 @@
  * add prices/text/keywords here that a user cannot see on the real page.
  */
 
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, toSiteMedia } from '@/services/api';
 import { formatTnd, getPriceDisplay } from '@/util/productPrice';
 import { getProductStockStatus } from '@/util/cartStock';
 import { sanitizeRichHtml } from '@/util/sanitizeRichHtml';
@@ -382,7 +382,7 @@ export function CrawlerProductView({
                 <li key={url}>
                   {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img
-                    src={url}
+                    src={toSiteMedia(url)}
                     width={300}
                     height={300}
                     loading="lazy"

@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, toSiteMedia } from '@/services/api';
 import type { Product } from '@/types';
 
 /** Absolute HTTPS image URL for OG/Twitter when the API already exposes one. */
 export function productImageForMetadata(product: Product): string | undefined {
   const direct = product.seo?.image?.trim() || product.schema?.image?.trim();
   if (direct && /^https?:\/\//i.test(direct) && !/\s/.test(direct)) {
-    return direct;
+    // Same-origin like every rendered image — see toSiteMedia.
+    return toSiteMedia(direct);
   }
   const path = product.cover?.trim();
   if (!path) return undefined;

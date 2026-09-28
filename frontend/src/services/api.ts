@@ -160,6 +160,41 @@ api.interceptors.response.use(
 // Helper to get storage URL - uses NEXT_PUBLIC_STORAGE_URL (same default as next.config.js for hydration)
 // Rewrites localhost URLs from backend so images load from deployed backend
 // For blog images, adds cache busting parameter based on updated_at or created_at
+/**
+ * Serve every image from the storefront's own origin: https://protein.tn/media/…
+ *
+ * Images were referenced where they physically live — admin.protein.tn/storage for uploads and,
+ * for the ~11,000 imported products, iHerb's own CDN (cloudinary.images-iherb.com). The second is
+ * the one that mattered (measured 28/09/2026): every imported product's <img>, og:image and
+ * Product.image pointed at iHerb, so Google Images credits the picture to iHerb, and the day iHerb
+ * blocks hotlinking every imported product page loses its image at once. next.config.js rewrites
+ * /media/* back to each origin (Cloudflare caches the result), so the pixels are unchanged and the
+ * URL is ours. NEXT_PUBLIC_SAME_ORIGIN_MEDIA=0 turns it off without a code change.
+ */
+const MEDIA_ORIGIN = (process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn').replace(/\/$/, '');
+const MEDIA_HOSTS: Record<string, string> = {
+  'admin.protein.tn': '',
+  'cloudinary.images-iherb.com': 'iherb',
+  's3.images-iherb.com': 'iherb-s3',
+};
+
+export function toSiteMedia(url: string): string {
+  if (!url || process.env.NEXT_PUBLIC_SAME_ORIGIN_MEDIA === '0') return url;
+  try {
+    const u = new URL(url);
+    const prefix = MEDIA_HOSTS[u.hostname];
+    if (prefix === undefined) return url;
+    if (prefix === '') {
+      // Only the public uploads folder; anything else on the admin host is not an image route.
+      if (!u.pathname.startsWith('/storage/')) return url;
+      return `${MEDIA_ORIGIN}/media/${u.pathname.slice('/storage/'.length)}${u.search}`;
+    }
+    return `${MEDIA_ORIGIN}/media/${prefix}${u.pathname}${u.search}`;
+  } catch {
+    return url;
+  }
+}
+
 export const getStorageUrl = (path?: string, cacheBust?: string | number): string => {
   if (!path) return '';
   const base = STORAGE_URL.replace(/\/$/, '');
@@ -194,8 +229,8 @@ export const getStorageUrl = (path?: string, cacheBust?: string | number): strin
       finalUrl = `${finalUrl}${separator}v=${timestamp}`;
     }
   }
-  
-  return finalUrl;
+
+  return toSiteMedia(finalUrl);
 };
 
 /** True if the URL is from our storage (storage-proxy or admin backend). Use to set unoptimized on next/image. */

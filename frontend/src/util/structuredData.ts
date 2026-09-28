@@ -4,7 +4,7 @@
  * In development, use validateStructuredData(schema, type) to log errors and Rich Results Test checklist.
  */
 
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, toSiteMedia } from '@/services/api';
 import { CONTACT_PHONE, GOOGLE_PROFILE, LEGAL_IDENTITY, OPENING_HOURS, SOCIAL_PROFILES } from '@/util/company';
 import { AR_BRAND_SUFFIX, resolveArticleLanguage } from '@/util/articleLanguage';
 import { brandNameToSlug } from '@/util/brandSlug';
@@ -430,7 +430,8 @@ function normalizeJsonLdImages(input: unknown): string[] {
       if (/^https?:\/\//i.test(trimmed)) {
         // Validate before normalization: a malformed absolute URL must not become the homepage.
         if (!isValidImageUrl(trimmed)) return null;
-        return new URL(trimmed).toString();
+        // Same-origin media, as every rendered <img> — see toSiteMedia.
+        return toSiteMedia(new URL(trimmed).toString());
       }
       if (/^[a-z][a-z\d+.-]*:/i.test(trimmed)) return null;
       if (looksLikeImagePath(trimmed)) {

@@ -327,6 +327,11 @@ const nextConfig = {
         headers: [{ key: 'Cache-Control', value: 'public, max-age=2592000, stale-while-revalidate=86400' }],
       },
       {
+        // Same TTL the backend's nginx gives /storage: an upload can be replaced at its path.
+        source: '/media/:path*',
+        headers: [{ key: 'Cache-Control', value: 'public, max-age=604800, stale-while-revalidate=86400' }],
+      },
+      {
         source: '/api-proxy/accueil',
         headers: [{ key: 'Cache-Control', value: 'public, s-maxage=300, stale-while-revalidate=600' }],
       },
@@ -337,6 +342,16 @@ const nextConfig = {
     return [
       { source: '/api-proxy/:path*', destination: `${API_BACKEND_URL}/:path*` },
       { source: '/storage-proxy/:path*', destination: `${STORAGE_BACKEND_URL}/:path*` },
+      /*
+       * Same-origin images (services/api.ts toSiteMedia). Most specific first: the two iHerb CDNs
+       * the imported catalogue references, then every upload under the backend's /storage.
+       * Filenames are case-sensitive — middleware's matcher excludes `media/` so its URL case
+       * fold never touches them (it did exactly that to /storage-proxy, 301ing every mixed-case
+       * upload to a lowercase path that does not exist).
+       */
+      { source: '/media/iherb/:path*', destination: 'https://cloudinary.images-iherb.com/:path*' },
+      { source: '/media/iherb-s3/:path*', destination: 'https://s3.images-iherb.com/:path*' },
+      { source: '/media/:path*', destination: `${STORAGE_BACKEND_URL}/:path*` },
     ];
   },
   async redirects() {

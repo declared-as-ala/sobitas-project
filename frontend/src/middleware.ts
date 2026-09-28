@@ -1371,7 +1371,9 @@ export const config = {
     // `sitemaps/` covers the child sitemaps behind the /sitemap.xml index (/sitemaps/products-0.xml
     // and friends). They are machine paths like sitemap.xml itself, and without this every crawler
     // fetch of one paid for an admin-redirect lookup that can never match.
-    '/((?!api/|api-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|sitemaps/|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
+    // `media/` and `storage-proxy/` are image rewrites (next.config.js) whose filenames are
+    // case-sensitive: the URL case fold below 301'd every mixed-case upload to a path that 404s.
+    '/((?!api/|api-proxy/|media/|storage-proxy/|_next/static|_next/image|favicon.ico|sitemap.xml|sitemaps/|robots.txt|sw.js|manifest.json|site.webmanifest).*)',
     // Exact historical content-hashed assets from the Search Console export. Current static
     // assets remain excluded by the broad matcher above; only these immutable missing hashes run
     // through middleware so they can answer 410 instead of being retried as ordinary 404s.
