@@ -178,18 +178,29 @@ const MEDIA_HOSTS: Record<string, string> = {
   's3.images-iherb.com': 'iherb-s3',
 };
 
+/*
+ * Cache-key generation for /media. 28/09/2026: before the route was live, a local dev server's
+ * image optimizer fetched production /media/… URLs; production's middleware then answered with
+ * its lowercase case-fold 301, and Cloudflare cached that 301 for ~11 h on those exact keys (the
+ * homepage best-sellers). Every /media URL carries `m=<generation>`, so a poisoned or stale edge
+ * entry is escaped by bumping this number — no Cloudflare purge needed. Origins ignore the param.
+ */
+const MEDIA_CACHE_GENERATION = '1';
+
 export function toSiteMedia(url: string): string {
   if (!url || process.env.NEXT_PUBLIC_SAME_ORIGIN_MEDIA === '0') return url;
   try {
     const u = new URL(url);
     const prefix = MEDIA_HOSTS[u.hostname];
     if (prefix === undefined) return url;
-    if (prefix === '') {
+    if (prefix === '' && !u.pathname.startsWith('/storage/')) {
       // Only the public uploads folder; anything else on the admin host is not an image route.
-      if (!u.pathname.startsWith('/storage/')) return url;
-      return `${MEDIA_ORIGIN}/media/${u.pathname.slice('/storage/'.length)}${u.search}`;
+      return url;
     }
-    return `${MEDIA_ORIGIN}/media/${prefix}${u.pathname}${u.search}`;
+    const path = prefix === '' ? u.pathname.slice('/storage/'.length) : `${prefix}${u.pathname}`;
+    const params = new URLSearchParams(u.search);
+    params.set('m', MEDIA_CACHE_GENERATION);
+    return `${MEDIA_ORIGIN}/media/${path}?${params.toString()}`;
   } catch {
     return url;
   }
