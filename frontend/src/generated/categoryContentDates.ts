@@ -51,7 +51,7 @@ export const CATEGORY_CONTENT_DATES: Record<string, string> = {
   "pre-workout": "2026-09-23T09:16:00.000Z",
   "prise-de-masse": "2026-09-23T09:16:00.000Z",
   "proteine-de-boeuf": "2026-09-22T19:40:47.000Z",
-  "proteines": "2026-09-28T11:43:50.000Z",
+  "proteines": "2026-09-28T11:44:53.000Z",
   "proteines-completes": "2026-09-22T16:11:22.000Z",
   "proteines-en-poudre": "2026-09-22T16:11:22.000Z",
   "proteines-vegetales": "2026-09-22T19:40:47.000Z",
