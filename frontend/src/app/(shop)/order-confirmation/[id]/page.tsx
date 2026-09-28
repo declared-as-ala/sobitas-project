@@ -84,11 +84,10 @@ export default function OrderConfirmationPage() {
    *   event, which GA4 also de-duplicates on `transaction_id`.
    *
    * ── WHY dataLayer AND NOT `window.gtag` ────────────────────────────────────────────────
-   * layout.tsx loads BOTH gtag.js and its init snippet with `strategy="lazyOnload"`, so at the
-   * moment this order resolves `window.gtag` may genuinely not exist yet and the event would be
-   * dropped silently. Pushing onto `dataLayer` is exactly what the official snippet's `gtag()` does,
-   * and gtag.js drains anything already queued when it finally loads. The non-arrow function is
-   * deliberate: `arguments` is the shape Google's own snippet pushes.
+   * layout.tsx defines `window.gtag` immediately, but loads gtag.js on interaction or idle.
+   * Pushing onto `dataLayer` is exactly what that stub does, and gtag.js drains anything already
+   * queued when it finally loads. The non-arrow function is deliberate: `arguments` is the
+   * shape Google's own snippet pushes.
    *
    * ── THE MONEY FIELDS ───────────────────────────────────────────────────────────────────
    * `value` is `prix_ttc`, which line 381 already treats as the grand total the customer pays

@@ -1502,7 +1502,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
             layout is pixel-identical to what it was — verified by the page guard, which measures
             the gallery, the price size and the band order at 1280 and 1440.
           */}
-          <div className="mt-8 min-w-0 lg:col-span-6 lg:col-start-1 lg:row-start-2 lg:mt-2">
+          <div className="pt-defer pt-defer-pdp-details mt-8 min-w-0 lg:col-span-6 lg:col-start-1 lg:row-start-2 lg:mt-2">
           {(() => {
             const hasNutritionContent = product.nutrition_values != null &&
               String(product.nutrition_values).trim() !== '' &&
@@ -2146,7 +2146,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           `id` moved from the inner div to the <section> so the anchor and the landmark are the
           same element - two ids for one destination is how they drift apart.
         */}
-        <section id="reviews" className="relative mx-auto w-full scroll-mt-24 overflow-hidden rounded-3xl border border-hairline bg-elevated shadow-card lg:scroll-mt-36" aria-label="Avis clients">
+        <section id="reviews" className="pt-defer pt-defer-pdp-reviews relative mx-auto w-full scroll-mt-24 overflow-hidden rounded-3xl border border-hairline bg-elevated shadow-card lg:scroll-mt-36" aria-label="Avis clients">
             <div className="min-w-0 p-4 sm:p-6 lg:p-8">
             <div className="space-y-3 sm:space-y-4 lg:space-y-6">
               {/*
@@ -2742,7 +2742,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
           the category pages this site is trying to rank.
         */}
         {similarProducts.length > 0 && (
-          <div className="min-w-0">
+          <div className="pt-defer pt-defer-pdp-related min-w-0">
             <SectionHeader
               kicker="Vous aimerez aussi"
               title="Produits similaires"

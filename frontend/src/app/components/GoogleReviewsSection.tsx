@@ -1,9 +1,10 @@
-import { ArrowUpRight, PenLine, Star } from 'lucide-react';
+import { ArrowUpRight, PenLine } from 'lucide-react';
 import { GOOGLE_BUSINESS_REVIEWS } from '@/content/googleBusinessReviews';
 import { GOOGLE_PROFILE } from '@/util/company';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { ReviewMarquee } from '@/app/components/ReviewMarquee';
+import { StarRating } from '@/app/components/product/StarRating';
 
 type GoogleReviewsSectionProps = {
   surface?: 'base' | 'sunken';
@@ -82,11 +83,7 @@ export function GoogleReviewsSection({
                   rendering in inherited ink rather than gold. That is DESIGN_SYSTEM's named trap:
                   an undefined colour fails silently and the element takes its band's text colour.
                   `StarRating.tsx` is canonical and uses amber-400; matched here. */}
-              <div className="mt-1 flex items-center gap-1 text-amber-400" aria-label={`${rating} étoiles sur 5`}>
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <Star key={index} className="h-4 w-4 fill-current" strokeWidth={1.5} aria-hidden="true" />
-                ))}
-              </div>
+              <StarRating rating={5} size="md" className="mt-1" ariaLabel={`${rating} étoiles sur 5`} strokeWidth={1.5} gapPx={4} />
             </div>
           </div>
 
@@ -176,11 +173,7 @@ function ReviewCard({ review, copy = false }: { review: GoogleReview; copy?: boo
               own rating stars gold. Green is this site's trust colour, but on a card claiming to
               quote Google it reads as "not actually Google". Matches `StarRating.tsx` and the
               header rating above. Reverting is this one token. */}
-          <div className="flex items-center gap-0.5 text-amber-400" aria-label="5 étoiles sur 5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <Star key={index} className="h-3.5 w-3.5 fill-current" strokeWidth={1.5} aria-hidden="true" />
-            ))}
-          </div>
+          <StarRating rating={5} size="sm" ariaLabel="5 étoiles sur 5" strokeWidth={1.5} />
           <GoogleMark className="h-4 w-4 shrink-0" />
         </div>
         <blockquote lang={review.language} dir="auto" className="mt-2 flex-1 text-sm leading-snug text-ink-1">

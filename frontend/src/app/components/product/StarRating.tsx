@@ -15,51 +15,58 @@
  * detail. The half star is drawn by clipping a filled row over the empty one, so the geometry is
  * exact at any value rather than snapped to a bucket.
  */
-import { Star } from 'lucide-react';
+import { useId } from 'react';
 import { cn } from '@/app/components/ui/utils';
 
 const SIZES = {
-  sm: 'h-3.5 w-3.5',
-  md: 'h-4 w-4',
-  lg: 'h-5 w-5',
+  sm: 14,
+  md: 16,
+  lg: 20,
 } as const;
+
+const STAR_POINTS = '12 2 15.09 8.26 22 9.27 17 14.14 18.18 21 12 17.77 5.82 21 7 14.14 2 9.27 8.91 8.26 12 2';
 
 export function StarRating({
   rating,
   size = 'md',
   className = '',
+  ariaLabel,
+  strokeWidth = 2,
+  gapPx = 2,
 }: {
   rating: number;
   size?: keyof typeof SIZES;
   className?: string;
+  ariaLabel?: string;
+  strokeWidth?: number;
+  gapPx?: number;
 }) {
   const clamped = Math.max(0, Math.min(5, rating || 0));
   const glyph = SIZES[size];
+  const gap = gapPx * 24 / glyph;
+  const width = 120 + 4 * gap;
+  const clipId = useId();
 
   return (
     <span
       className={cn('relative inline-flex shrink-0 items-center', className)}
       role="img"
-      aria-label={`Note : ${clamped.toFixed(1)} sur 5`}
+      aria-label={ariaLabel ?? `Note : ${clamped.toFixed(1)} sur 5`}
     >
-      <span className="flex items-center gap-0.5" aria-hidden="true">
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Star key={i} className={cn(glyph, 'fill-current text-hairline')} />
-        ))}
-      </span>
-      {/*
-        The filled row, clipped to the exact fraction. `overflow-hidden` on a percentage width is
-        what makes 4.4 render as 4.4 rather than as 4 or 5 — see the note above.
-      */}
-      <span
-        className="pointer-events-none absolute inset-y-0 left-0 flex items-center gap-0.5 overflow-hidden"
-        style={{ width: `${(clamped / 5) * 100}%` }}
-        aria-hidden="true"
-      >
-        {[0, 1, 2, 3, 4].map((i) => (
-          <Star key={i} className={cn(glyph, 'shrink-0 fill-current text-amber-400')} />
-        ))}
-      </span>
+      <svg width={5 * glyph + 4 * gapPx} height={glyph} viewBox={`0 0 ${width} 24`} aria-hidden="true">
+        <defs><clipPath id={clipId}><rect width={(clamped / 5) * width} height="24" /></clipPath></defs>
+        <g className="fill-current text-hairline" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <polygon key={i} points={STAR_POINTS} transform={`translate(${i * (24 + gap)} 0)`} />
+          ))}
+        </g>
+        {/* Clip the filled row to the exact fraction, including the gaps between stars. */}
+        <g className="fill-current text-amber-400" stroke="currentColor" strokeWidth={strokeWidth} strokeLinejoin="round" clipPath={`url(#${clipId})`}>
+          {[0, 1, 2, 3, 4].map((i) => (
+            <polygon key={i} points={STAR_POINTS} transform={`translate(${i * (24 + gap)} 0)`} />
+          ))}
+        </g>
+      </svg>
     </span>
   );
 }

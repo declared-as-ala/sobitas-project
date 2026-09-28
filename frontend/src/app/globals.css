@@ -466,6 +466,10 @@ html[dir="rtl"] [data-slot="dialog-content"] > button[class*="right-4"] {
     content-visibility: auto;
     contain-intrinsic-size: auto 600px;
   }
+  .pt-defer-category-seo { contain-intrinsic-size: auto 900px; }
+  .pt-defer-pdp-details { contain-intrinsic-size: auto 800px; }
+  .pt-defer-pdp-reviews { contain-intrinsic-size: auto 500px; }
+  .pt-defer-pdp-related { contain-intrinsic-size: auto 380px; }
 }
 
 /* Respect user's motion preferences */

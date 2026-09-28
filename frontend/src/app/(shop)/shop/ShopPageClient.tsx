@@ -2068,7 +2068,7 @@ function ShopContent({
                   </div>
                 )}
                 {categorySeoLandingBottom && (
-                  <div className="mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
+                  <div className="pt-defer pt-defer-category-seo mt-12 sm:mt-16 pt-8 sm:pt-12 border-t border-gray-200 dark:border-gray-800">
                     {categorySeoLandingBottom}
                   </div>
                 )}

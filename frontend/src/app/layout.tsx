@@ -311,9 +311,41 @@ export default async function RootLayout({
         {/* Preconnect to image/storage origin and Google Fonts CDN */}
         <link rel="preconnect" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} crossOrigin="anonymous" />
         <link rel="dns-prefetch" href={process.env.NEXT_PUBLIC_API_URL?.replace(/\/api\/?$/, '') || 'https://admin.protein.tn'} />
-        {/* Preconnect GTM/GA so the lazyOnload scripts resolve faster when they fire */}
+        {/* Resolve GTM/GA promptly once the tag is requested. */}
         <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
         <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          window.gtag = function(){ window.dataLayer.push(arguments); };
+          gtag('js', new Date());
+          gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });
+          (function(){
+            var started = false;
+            var idleId;
+            function start(){
+              if (started) return;
+              started = true;
+              window.removeEventListener('pointerdown', start);
+              window.removeEventListener('keydown', start);
+              window.removeEventListener('scroll', start);
+              if (idleId !== undefined && window.cancelIdleCallback) window.cancelIdleCallback(idleId);
+              var script = document.createElement('script');
+              script.async = true;
+              script.src = 'https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D';
+              document.head.appendChild(script);
+            }
+            window.addEventListener('pointerdown', start, { passive: true });
+            window.addEventListener('keydown', start, { passive: true });
+            window.addEventListener('scroll', start, { passive: true });
+            function scheduleIdle(){
+              if (started) return;
+              if (window.requestIdleCallback) idleId = window.requestIdleCallback(start, { timeout: 4000 });
+              else setTimeout(start, 4000);
+            }
+            if (document.readyState === 'complete') scheduleIdle();
+            else window.addEventListener('load', scheduleIdle, { once: true });
+          })();
+        ` }} />
         {/* (Removed a self-origin `preconnect` to baseUrl: the document is already on that origin,
             so it only opened a second, unused CORS socket that same-origin subresources can't
             reuse — pure overhead on the critical path.) */}
@@ -328,14 +360,9 @@ export default async function RootLayout({
             on every single page load — wasted bandwidth that hurt Core Web Vitals for no gain. */}
       </head>
       <body className={cn("min-h-screen font-sans antialiased")}>
-        {/* Google tag (gtag.js) — deferred with afterInteractive to avoid blocking FCP */}
         {/* Register service worker for PWA install support */}
         <Script id="register-sw" strategy="lazyOnload">
           {`if ('serviceWorker' in navigator) { navigator.serviceWorker.register('/sw.js').catch(() => {}); }`}
-        </Script>
-        <Script src="https://www.googletagmanager.com/gtag/js?id=G-0J0J27JZ7D" strategy="lazyOnload" />
-        <Script id="gtag-init" strategy="lazyOnload">
-          {`window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-0J0J27JZ7D', { send_page_view: false });`}
         </Script>
         <WebVitalsReporter />
         <NextIntlClientProvider locale={locale} messages={messages}>
