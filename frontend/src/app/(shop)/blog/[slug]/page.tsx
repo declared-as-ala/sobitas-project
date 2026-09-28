@@ -300,14 +300,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       ? {
           ...article,
           designation_fr: seoOverlay.headline || article.designation_fr,
-          description_fr: sanitizeArticleHtml(
-            seoOverlay.bodyOverrideHtml ||
-            (seoOverlay.headline ? article.description_fr?.replace(/2025/g, '2026') : article.description_fr)
-          ),
-          description: sanitizeArticleHtml(
-            seoOverlay.bodyOverrideHtml ||
-            (seoOverlay.headline ? article.description?.replace(/2025/g, '2026') : article.description)
-          ),
+          // No year rewriting: `.replace(/2025/g, '2026')` made 2025 price tables read as current. The
+          // bodies were refreshed in the DB on 28/09/2026 (resources/seo/product-edits/2026-09-28c-…),
+          // so what remains of '2025' is historical and must stay as written.
+          description_fr: sanitizeArticleHtml(seoOverlay.bodyOverrideHtml || article.description_fr),
+          description: sanitizeArticleHtml(seoOverlay.bodyOverrideHtml || article.description),
           updated_at: seoOverlay.dateModified || article.updated_at,
           schema: {
             ...article.schema,
