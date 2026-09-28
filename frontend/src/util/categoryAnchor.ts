@@ -26,7 +26,10 @@ export function categoryAnchor(slug: string, fallback: string): string {
   const labels: Record<string, string> = {
     // Protein family — unchanged, kept as authored.
     'whey-proteine': 'Whey protein en Tunisie',
-    proteines: 'Protéines en Tunisie',
+    // NOT "Protéines en Tunisie": commercialSeoMap gives that anchor to the HOMEPAGE (125 clicks @5.5
+    // on "protein tunisie"), and /proteines owns "protéines en poudre tunisie" / "prix protéine
+    // tunisie" with this exact anchor. The menu was sending the homepage's head term to the hub.
+    proteines: 'Protéines en poudre en Tunisie',
     creatine: 'Créatine monohydrate en Tunisie',
 
     // Amino family. The hub names the family; each child names only itself.

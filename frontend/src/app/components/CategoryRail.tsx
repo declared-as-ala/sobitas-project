@@ -421,7 +421,7 @@ export function CategoryRail({ categories = [] }: CategoryRailProps) {
       */}
       <nav aria-label="Protéine, whey, mass gainer et créatine en Tunisie" className="mt-3 flex flex-wrap gap-x-6 gap-y-1 px-4 sm:px-0">
         {[
-          { href: '/proteines', anchor: 'Protéine Tunisie' },
+          { href: '/proteines', anchor: 'Protéines en poudre' },
           { href: '/whey-proteine', anchor: 'Whey Protein Tunisie' },
           { href: '/mass-gainers', anchor: 'Mass Gainer en Tunisie' },
           { href: '/creatine', anchor: 'Créatine monohydrate en Tunisie' },
