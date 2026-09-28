@@ -101,11 +101,6 @@ const CONFIRMED_RETIRED_PRODUCT_SLUGS = new Set([
   'amino-eaa-ultra-speed-300-g',
   'creatine-monohydrate-powder-250g',
   'citrulline-synergy-240-g',
-  'ring-de-boxe',
-  // The same retired product was published with its legacy numeric id appended. GSC still crawls
-  // that exact address; the canonical slug above is already confirmed gone, so this variant must
-  // be terminal too instead of falling through to a repeatable route-level 404.
-  'ring-de-boxe-40',
 ]);
 
 /**
@@ -136,6 +131,58 @@ const RESLUGGED_PRODUCT_SLUGS = new Map<string, string>([
   // Same product, same size: a rename, not a different item.
   ['serious-mass-5-45-kg', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'],
   ['serious-mass-5-45kg', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'],
+  /*
+   * Legacy-URL sweep 28/09/2026: 3,972 of the addresses Google knows (GSC Pages exports + the June
+   * coverage drilldowns) crawled as Googlebot. Each slug below fell back to a CATEGORY (or 404)
+   * although the same product — same brand, line and size — is still published; each old slug
+   * answers 404 on product_details and each target answered 200, self-canonical, index,follow.
+   * Report: seo-agent/COMPETITORS.md (28/09) → scratchpad legacy-sweep.md.
+   */
+  ['gold-creatine-kevin-levrone-300g', '/creatine/gold-creatine-kevin-levrone-300-g'],
+  ['gold-creatine-300g', '/creatine/gold-creatine-kevin-levrone-300-g'],
+  ['anabolic-whey-80-proactive-2-25kg', '/whey-proteine/anabolic-whey-80-2-25kg-proactive'],
+  ['levro-legendary-mass-6-8kg', '/mass-gainers/levro-legendary-mass-6-8kg-kevin-levrone'],
+  ['real-mass-6-8-kg', '/mass-gainers/real-mass-6-8-kg-real-pharm'],
+  ['mass-gainer-zero-7kg', '/mass-gainers/mass-gainer-zero-7kg-eric-favre'],
+  ['serious-mass-2-7kg-optimum-nutrition', '/mass-gainers/serious-mass-2-7-kg'],
+  ['micronised-creatine-on-317g-optimum-nutrition', '/creatine/micronised-creatine-optimum-nutrition-317g'],
+  ['micronised-creatine-317g-tunisie-purete-99-meilleur-prix', '/creatine/micronised-creatine-optimum-nutrition-317g'],
+  ['micronized-creatine-powder-317g', '/creatine/micronised-creatine-optimum-nutrition-317g'],
+  ['100-creatine-monohydrate-300g', '/creatine/100-creatine-monohydrate-300g-biotech-usa'],
+  ['platinum-creatine-400-gr', '/creatine/platinum-creatine-400g-muscletech'],
+  ['best-zma-120-caps', '/zma/best-zma-120-caps-scenit-nutrition'],
+  ['big-ramy-labs-big-whey-2kg', '/whey-proteine/big-whey-2kg-big-ramy-labs'],
+  ['the-pump-extreme-pre-workout-challenger-nutrition-30-servings', '/pre-workout/pump-extreme-pre-workout-challenger-nutrition-30-servings'],
+  ['the-pump-extreme-pre-workout-challenger-nutrition', '/pre-workout/pump-extreme-pre-workout-challenger-nutrition-30-servings'],
+  ['king-pre-workout-500g-real-pharm', '/pre-workout/king-real-preworkout-500gr-real-pharm-tunisie'],
+  ['gold-l-carnitine-3000-500ml%ef%bf%bd', '/l-carnitine/gold-l-carnitine-3000-500ml'],
+  ['glutamine-300gr-yava-labs', '/glutamine/glutamine-300g-yava-labs'],
+  ['eaa-420-g-real-pharm', '/eaa/eaa-420g-real-pharm'],
+  ['eaa-420-g', '/eaa/eaa-420g-real-pharm'],
+  ['iso-100-2-3-kg-dymatize', '/whey-isolate/iso-100-dymatize-2-3kg'],
+  ['100-whey-gold-standard-4-5kg-optimum-nutrition', '/whey-proteine/100-whey-gold-standard-4-5kg'],
+  ['whey-gold-standard-4-5kg', '/whey-proteine/100-whey-gold-standard-4-5kg'],
+  ['whey-gold-standard-227-kg-optimum-nutrition', '/whey-proteine/100-whey-gold-standard-2-27kg'],
+  ['whey-gold-standard-2-27-', '/whey-proteine/100-whey-gold-standard-2-27kg'],
+  ['hydro-whey-1-59kg-optimum-nutrition', '/whey-hydrolysee/hydro-whey-1-59-kg'],
+  ['compact-whey-gold-protein-2kg', '/whey-proteine/compact-whey-gold-2kg-galvanize-chrome'],
+  ['compact-whey-gold-protein-', '/whey-proteine/compact-whey-gold-2kg-galvanize-chrome'],
+  ['isotope-whey-isolate-22-kg', '/whey-isolate/isotope-100-whey-isolate-2-2kg'],
+  ['all-in-isolate-2040kg-big-ramy', '/whey-isolate/all-in-isolate-204kg-big-ramy'],
+  ['arginine-210g-ostrovit', '/l-arginine/arginine-210-gr-ostrovit'],
+  ['opti-men-90-tabs-optimum-nutrition', '/vitamines/opti-men-90tabs'],
+  ['opti-men-150-tabs-optimum-nutrition', '/vitamines/opti-men-150tabs'],
+  ['vitamin-complex-sport-sfd', '/vitamines/vitamin-complex-sport-120-tablets-sfd-nutrition'],
+  ['vitamin-c-gymbeam', '/vitamines/vitamin-c-1000-mg-90-tabs-gymbeam'],
+  ['animal-pak-44-packs-universal-nutrition', '/vitamines/animal-pak-44-packs'],
+  ['gold-iso-2kg', '/whey-isolate/gold-iso-2-kg-kevin-levrone'],
+  // Olympic barbell: the old slug's token overlap on "barre" sent it to /barres-proteinees
+  // (protein BARS). The live barbell is the only destination that means the same thing.
+  ['barre-olympique', '/materiel-de-musculation/barre-olympique-220-m'],
+  // Was hard-coded 410 below, but the live JX Fitness ring (qte 100) is the same product line and
+  // the old URL earned 5 clicks / 158 impressions in 3 months; Google already paired the two in June.
+  ['ring-de-boxe', '/cardio-fitness/ring-de-boxe-professionnel'],
+  ['ring-de-boxe-40', '/cardio-fitness/ring-de-boxe-professionnel'],
 ]);
 
 /**

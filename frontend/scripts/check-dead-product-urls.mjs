@@ -97,7 +97,7 @@ const CASES = [
   // failed in a different layer: app/(shop)/[slug]/[productSlug] ended with
   // `permanentRedirect('/' + rootSlug)` — the same guess, one route up. Its own comment admitted
   // it "returns a clean hard 404 when it is not" a category. There is no clean 404 behind a 301.
-  { path: '/creatine/gold-creatine-300g', why: 'nested legacy path, product gone; stems to creatine' },
+  { path: '/creatine/gold-creatine-300g', why: 'nested legacy path; renamed — must 301 to /creatine/gold-creatine-kevin-levrone-300-g' },
   { path: '/musculation/presse-cuisse-35', why: 'nested legacy path, live product' },
 
   /* ── THE SHAPES ONLY GOOGLEBOT EVER FAILED ────────────────────────────────────────────────
@@ -180,7 +180,7 @@ const CASES = [
   // so this must 301 onto it and finish 200. It was a 410 until 22/09/2026.
   { path: '/pre-workout/king-real-preworkout-500gr-real-pharm', why: 'renamed product — must 301 to the live PDP, never 410' },
   { path: '/products/citruargin-300-g', why: 'renamed product — must 301 to /citrulline/citruargin-300-g-real-pharm' },
-  { path: '/cardio-fitness/ring-de-boxe', why: 'confirmed retired product from canonical-conflict export' },
+  { path: '/cardio-fitness/ring-de-boxe', why: 'renamed line — must 301 to /cardio-fitness/ring-de-boxe-professionnel (28/09/2026)' },
 
   /* ── CASE ─────────────────────────────────────────────────────────────────────────────────
    *

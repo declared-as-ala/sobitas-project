@@ -223,6 +223,13 @@ function buildRedirects() {
     p('/politique-de-retour', '/politique-de-remboursement'),
     p('/livraison', '/conditions-generale-de-ventes-protein'),
     p('/faq', '/faqs'),
+    // Legacy-URL sweep 28/09/2026: addresses with clicks or impressions that answered 404/410 while
+    // the same page is live under a corrected slug.
+    p('/bsn-supplements', '/bsn'),
+    p('/category/shakers-et-bouteilles-sportives', '/accessoires'),
+    p('/blog/les-meilleurs-complements-proteines-en-tunisie-for-2025-guide-complet', '/blog/les-meilleurs-complements-proteines-en-tunisie-pour-2025-guide-complet'),
+    p('/blog/quelle-est-la-meilleure-proteine-whey-au-monde', '/blog/meilleure-proteine-whey-2026'),
+    p('/blog/quelles-sont-les-meilleures-proteines-en-poudre', '/blog/quelles-sont-les-meilleures-proteines'),
     p('/confidentialite', '/politique-de-confidentialite'),
     p('/politique-confidentialite', '/politique-de-confidentialite'),
     /*
@@ -332,10 +339,10 @@ function buildRedirects() {
        accumulated by /mass-gainers in Search Console. */
     p('/mass-gainer', '/mass-gainers'),
     p('/mass-gainer-zero-7kg-eric-favre', '/mass-gainers/mass-gainer-zero-7kg-eric-favre'),
-    p('/micronised-creatine-317g-tunisie-purete-99-meilleur-prix', '/creatine'),
+    p('/micronised-creatine-317g-tunisie-purete-99-meilleur-prix', '/creatine/micronised-creatine-optimum-nutrition-317g'),
     p('/omega-3-fish-oil-240-softgel-weightworld', '/omega-3/omega-3-fish-oil-240-softgel-weightworld'),
-    p('/opti-men-150-tabs-optimum-nutrition', '/vitamines'),
-    p('/opti-men-90-tabs-optimum-nutrition', '/vitamines'),
+    p('/opti-men-150-tabs-optimum-nutrition', '/vitamines/opti-men-150tabs'),
+    p('/opti-men-90-tabs-optimum-nutrition', '/vitamines/opti-men-90tabs'),
     p('/opti-women-120-caps-optimum-nutrition', '/vitamines/opti-women-120caps'),
     p('/opti-women-60-caps-optimum-nutrition', '/vitamines/opti-women-60caps'),
     p('/pack-gain-musculaire-rapide', '/gainers-proteines/pack-gain-musculaire-rapide'),
