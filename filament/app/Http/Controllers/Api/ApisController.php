@@ -994,6 +994,32 @@ class ApisController extends Controller
          * reorder a grid a shopper has already learned.
          */
         $sort = str_replace('-', '_', strtolower(trim((string) $request->get('sort', ''))));
+        if (! in_array($sort, ['price_asc', 'price_desc'], true)) {
+            $relevance = config('listing_relevance');
+            $slug = count($subcategories) === 1
+                ? $subcategories[0]
+                : (count($subcategories) === 0 && count($categorySlugs) === 1 ? $categorySlugs[0] : null);
+
+            if ($slug !== null && isset($relevance[$slug])) {
+                $include = $relevance[$slug]['include'];
+                $exclude = $relevance[$slug]['exclude'];
+                $includeSql = implode(' OR ', array_fill(0, count($include), 'designation_fr LIKE ?'));
+                $excludeSql = implode(' OR ', array_fill(0, count($exclude), 'designation_fr LIKE ?'));
+                $includeBindings = array_map(static fn ($term) => '%' . $term . '%', $include);
+                $excludeBindings = array_map(static fn ($term) => '%' . $term . '%', $exclude);
+
+                $rankZero = '(' . $includeSql . ')';
+                if ($excludeSql !== '') {
+                    $rankZero .= ' AND NOT (' . $excludeSql . ')';
+                }
+
+                $query->orderByRaw(
+                    'CASE WHEN ' . $rankZero . ' THEN 0 WHEN (' . $includeSql . ') THEN 1 ELSE 2 END ASC',
+                    array_merge($includeBindings, $excludeBindings, $includeBindings)
+                );
+            }
+        }
+
         if ($sort === 'price_asc') {
             $query->orderBy('prix');
         } elseif ($sort === 'price_desc') {
