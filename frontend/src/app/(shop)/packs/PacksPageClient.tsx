@@ -20,8 +20,8 @@ export function PacksPageClient({ packs }: PacksPageClientProps) {
           <PageHeader
             align="center"
             kicker="Packs"
-            title="Nos Packs"
-            subtitle="Économisez avec nos packs spéciaux conçus pour répondre à vos objectifs spécifiques"
+            title="Packs nutrition sportive en Tunisie"
+            subtitle="Whey, créatine et gainer réunis à prix groupé selon votre objectif : prise de masse, sèche ou performance."
           />
         </div>
 
