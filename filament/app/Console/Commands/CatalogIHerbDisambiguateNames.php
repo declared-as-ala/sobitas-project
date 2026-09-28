@@ -190,49 +190,54 @@ class CatalogIHerbDisambiguateNames extends Command
      */
     private function retitleSharedTitles(bool $apply, SeoNotifier $notifier): void
     {
-        $shared = DB::table('products')
-            ->where('publier', 1)
-            ->whereNotNull('meta_title')->where('meta_title', '<>', '')
-            ->groupBy('meta_title')
-            ->havingRaw('COUNT(*) > 1')
-            ->pluck('meta_title');
+        // seo_title first: the storefront reads `seo.title || seo_title || meta_title`
+        // (frontend/src/util/productMetaDescription.ts), so a shared seo_title wins over any
+        // meta_title fix. The 22 titles the first apply kept were all in this column.
+        foreach (['seo_title', 'meta_title'] as $column) {
+            $shared = DB::table('products')
+                ->where('publier', 1)
+                ->whereNotNull($column)->where($column, '<>', '')
+                ->groupBy($column)
+                ->havingRaw('COUNT(*) > 1')
+                ->pluck($column);
 
-        $rows = [];
-        foreach ($shared as $title) {
-            $members = DB::table('products')->where('publier', 1)->where('meta_title', $title)
-                ->select('id', 'slug', 'designation_fr', 'meta_title')->orderBy('id')->get();
-            $names = array_unique(array_map(fn ($m) => $this->fold((string) $m->designation_fr), $members->all()));
-            if (count($names) < 2) {
-                continue; // identical names too: nothing to build distinct titles from
-            }
-            foreach ($members as $member) {
-                $new = ProductSeoDefaults::defaultTitle((string) $member->designation_fr);
-                if ($new !== $member->meta_title) {
-                    $rows[] = [$member, $new];
+            $rows = [];
+            foreach ($shared as $title) {
+                $members = DB::table('products')->where('publier', 1)->where($column, $title)
+                    ->select('id', 'slug', 'designation_fr', $column.' as title')->orderBy('id')->get();
+                $names = array_unique(array_map(fn ($m) => $this->fold((string) $m->designation_fr), $members->all()));
+                if (count($names) < 2) {
+                    continue; // identical names too: nothing to build distinct titles from
+                }
+                foreach ($members as $member) {
+                    $new = ProductSeoDefaults::defaultTitle((string) $member->designation_fr);
+                    if ($new !== $member->title) {
+                        $rows[] = [$member, $new];
+                    }
                 }
             }
-        }
 
-        $newTitles = array_count_values(array_map(static fn (array $r): string => $r[1], $rows));
-        $this->table(['id', 'slug', 'shared meta_title', 'new meta_title'], array_map(
-            static fn (array $r): array => [$r[0]->id, $r[0]->slug, $r[0]->meta_title, $r[1]], $rows
-        ));
-        $collide = array_filter($rows, static fn (array $r): bool => $newTitles[$r[1]] > 1);
-        $this->info(sprintf('%s: %d shared titles, %d products to retitle, %d skipped (new title still shared).',
-            $apply ? 'Applied' : 'Dry run', count($shared), count($rows) - count($collide), count($collide)));
+            $newTitles = array_count_values(array_map(static fn (array $r): string => $r[1], $rows));
+            $this->table(['id', 'slug', "shared {$column}", "new {$column}"], array_map(
+                static fn (array $r): array => [$r[0]->id, $r[0]->slug, $r[0]->title, $r[1]], $rows
+            ));
+            $collide = array_filter($rows, static fn (array $r): bool => $newTitles[$r[1]] > 1);
+            $this->info(sprintf('%s: %d shared %s values, %d products to retitle, %d skipped (new title still shared).',
+                $apply ? 'Applied' : 'Dry run', count($shared), $column, count($rows) - count($collide), count($collide)));
 
-        if (! $apply) {
-            return;
-        }
-        foreach ($rows as [$member, $new]) {
-            if ($newTitles[$new] > 1) {
+            if (! $apply) {
                 continue;
             }
-            $changed = DB::table('products')->where('id', $member->id)->where('publier', 1)
-                ->where('meta_title', $member->meta_title)
-                ->update(['meta_title' => $new, 'updated_at' => now()]);
-            if ($changed === 1) {
-                $notifier->productChangedNow(Product::findOrFail($member->id));
+            foreach ($rows as [$member, $new]) {
+                if ($newTitles[$new] > 1) {
+                    continue;
+                }
+                $changed = DB::table('products')->where('id', $member->id)->where('publier', 1)
+                    ->where($column, $member->title)
+                    ->update([$column => $new, 'updated_at' => now()]);
+                if ($changed === 1) {
+                    $notifier->productChangedNow(Product::findOrFail($member->id));
+                }
             }
         }
     }
