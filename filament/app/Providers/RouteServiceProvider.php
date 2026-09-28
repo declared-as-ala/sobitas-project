@@ -73,6 +73,26 @@ class RouteServiceProvider extends ServiceProvider
                 'write' => 60,
             ];
 
+            /*
+             * ── THE RENDERER GETS ITS OWN BUCKET ──────────────────────────────────────────
+             * 600/min was still not enough, measured 28/09/2026 in the frontend container log
+             * during an ordinary crawl: `[apiFetch] Unhandled ApiError { status: 429,
+             * message: 'Too Many Attempts.' }` followed by Server Components render errors. A
+             * crawl of 2,615 URLs at concurrency 8 got 66 sitemap URLs answering 500 and pages
+             * answering 200 with no <title> or canonical. Every server render reaches this API
+             * through the public /api-proxy, so with TrustProxies('*') they all resolve to the
+             * VPS's own IP — one bucket for Googlebot, every visitor's page view, and the
+             * renderer itself. Raising the number moves the cliff; it does not remove it.
+             *
+             * The renderer now proves itself with a header only it knows, and gets a separate
+             * ceiling that is a runaway guard, not a throttle. Everyone else is unchanged.
+             */
+            $rendererToken = (string) config('app.renderer_token', '');
+            $sent = (string) $request->header('X-Renderer-Token', '');
+            if ($rendererToken !== '' && $sent !== '' && hash_equals($rendererToken, $sent)) {
+                return Limit::perMinute((int) ($config['renderer'] ?? 20000))->by('api-renderer');
+            }
+
             $key = optional($request->user())->id ?: $request->ip();
 
             // isMethodCacheable() is GET + HEAD only.

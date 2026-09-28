@@ -1,5 +1,5 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
-import { apiFetch, ApiError } from '@/services/http';
+import { apiFetch, ApiError, rendererHeaders } from '@/services/http';
 // The sitemap's verified paginated crawl, reused by getAllBrands so the brand PAGES and the brand
 // URLs in the sitemap are built from the same rows. See getAllBrands for what the one-shot fetch
 // this replaced actually cost.
@@ -100,6 +100,8 @@ api.interceptors.request.use((config) => {
   if (typeof FormData !== 'undefined' && config.data instanceof FormData) {
     config.headers.setContentType('multipart/form-data');
   }
+  // Server renders only — see rendererHeaders() in services/http.ts.
+  for (const [k, v] of Object.entries(rendererHeaders())) config.headers.set(k, v);
   return config;
 });
 

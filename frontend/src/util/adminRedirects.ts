@@ -122,6 +122,11 @@ async function fetchRules(): Promise<Map<string, RedirectRule>> {
       if (code !== 410 && !to) continue;
       // Guard against self-redirect loops (old_url === new_url).
       if (to && normalizeRedirectKey(to) === key) continue;
+      // /api/redirections returns NEWEST FIRST, so the first row seen for a normalised path is the
+      // current rule. `set` unconditionally let an older row for the same path (a case or
+      // trailing-slash variant, or a rule superseded by an automatic product-rename 301) overwrite
+      // the newer one.
+      if (map.has(key)) continue;
       map.set(key, { to, code });
     }
   } catch {

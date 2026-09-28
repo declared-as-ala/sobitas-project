@@ -11,6 +11,19 @@ function getApiBase(): string {
 }
 const API_BASE = getApiBase();
 
+/**
+ * The renderer's own rate-limit bucket (filament RouteServiceProvider). Server-side only:
+ * RENDERER_API_TOKEN is not NEXT_PUBLIC_, so it is undefined in the browser bundle, and the
+ * `typeof window` guard keeps it off any client call even if that ever changed. Without it every
+ * server render shared the VPS's single per-IP bucket with Googlebot and all visitors, and a
+ * crawl emptied it — 429 → a 500 or a title-less 200 shell, measured 28/09/2026.
+ */
+export function rendererHeaders(): Record<string, string> {
+  if (typeof window !== 'undefined') return {};
+  const token = process.env.RENDERER_API_TOKEN;
+  return token ? { 'X-Renderer-Token': token } : {};
+}
+
 // The Laravel API rate-limits per IP and the ENTIRE SSR fleet shares ONE VPS IP, so under
 // crawl load the bucket empties and stays empty for the rest of the 60-second FIXED window.
 // Retrying after 400/900ms therefore almost never landed in a refilled window: the call
@@ -124,6 +137,7 @@ async function doFetch<T>(
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...rendererHeaders(),
       ...headers,
     },
     body: body != null ? JSON.stringify(body) : undefined,

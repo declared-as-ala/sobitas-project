@@ -207,7 +207,12 @@ return [
     'api_rate_limit' => [
         'read' => (int) env('API_RATE_LIMIT_READ', 600),
         'write' => (int) env('API_RATE_LIMIT_WRITE', 60),
+        // The storefront renderer's own bucket — see RouteServiceProvider::configureRateLimiting.
+        'renderer' => (int) env('API_RATE_LIMIT_RENDERER', 20000),
     ],
+
+    // Sent by the Next.js renderer on server-side API calls (X-Renderer-Token). Empty = feature off.
+    'renderer_token' => env('RENDERER_API_TOKEN'),
 
     /*
     |--------------------------------------------------------------------------

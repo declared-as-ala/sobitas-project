@@ -90,6 +90,11 @@ services:
     env_file:
       - .env
     environment:
+      # Identifies the storefront renderer's server-side API calls so they get their own
+      # rate-limit bucket (RouteServiceProvider). NOT a credential: it only lifts the read
+      # ceiling on public, cacheable data. Same value on the frontend service below; override
+      # both from .env if it ever needs rotating.
+      RENDERER_API_TOKEN: ${RENDERER_API_TOKEN:-00b7d8a228e74df896b099ad09209c960a21e63608ff2e2d}
       DB_CONNECTION: mysql
       DB_HOST: mysql
       DB_PORT: 3306
@@ -421,6 +426,9 @@ services:
     logging: *default-logging
     environment:
       NODE_ENV: production
+      # Sent on SERVER-SIDE API calls only (services/http.ts, services/api.ts). Must equal the
+      # backend-v2 value above. Not NEXT_PUBLIC_, so it never reaches the browser bundle.
+      RENDERER_API_TOKEN: ${RENDERER_API_TOKEN:-00b7d8a228e74df896b099ad09209c960a21e63608ff2e2d}
       # NEXT_PUBLIC_* are baked into the client bundle at build time by CI.
       # Setting them here only affects server-side process.env reads (Server Components).
       # Both must match the CI build-args in deploy-frontend.yml to prevent
