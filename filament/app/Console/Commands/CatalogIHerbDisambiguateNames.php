@@ -89,8 +89,17 @@ class CatalogIHerbDisambiguateNames extends Command
                 $plans[] = ['row' => $row, 'name' => $newName, 'qualifier' => $qualifier];
             }
             $newKeys = array_map(fn ($plan) => $this->fold($plan['name']), $plans);
-            if (count(array_unique($newKeys)) !== count($plans)) {
-                $reason = 'resulting names still collide';
+            // Members that still share a name are acceptable ONLY when they are the same product
+            // imported twice (identical source title) — no name can split those, and holding the
+            // rest of the group hostage to them left e.g. Vitacost CoQ10 60/100/200/400 mg unnamed.
+            $bySourceForName = [];
+            foreach ($plans as $i => $plan) {
+                $bySourceForName[$newKeys[$i]][] = $this->fold((string) $plan['row']->source_title);
+            }
+            foreach ($bySourceForName as $sources) {
+                if (count(array_unique($sources)) > 1) {
+                    $reason = 'resulting names still collide';
+                }
             }
             foreach ($newKeys as $key) {
                 if (isset($groups[$key]) && $key !== $this->fold($flat[0]->designation_fr)) {
@@ -279,6 +288,21 @@ class CatalogIHerbDisambiguateNames extends Command
             if ($unit !== null) {
                 $this->add($out, IHerbNormalizer::qualifierNumber((float) str_replace(',', '', $match[1])).' '.$unit);
             }
+        }
+        // Adjective-laden counts: "150 Rapid Release Softgels", "90 Fast Dissolve Tablets",
+        // "30 Enteric Coated Vegetarian Tablets", "60 Vegetarian Gummies". Up to three words may sit
+        // between the number and the base form; the label keeps only the base form.
+        preg_match_all('~(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d+)\s+(?:[A-Za-z-]+\s+){1,3}(soft\s*gels?|tablets?|capsules?|caps|gummies|lozenges)\b~iu', $source, $described, PREG_SET_ORDER);
+        foreach ($described as $match) {
+            $base = mb_strtolower(preg_replace('~\s+~', '', $match[2]) ?? $match[2]);
+            $unit = match (true) {
+                str_starts_with($base, 'softgel') => 'capsules molles',
+                str_starts_with($base, 'tablet') => 'comprimés',
+                str_starts_with($base, 'capsule'), $base === 'caps' => 'gélules',
+                $base === 'gummies' => 'gommes',
+                default => 'pastilles',
+            };
+            $this->add($out, IHerbNormalizer::qualifierNumber((float) str_replace(',', '', $match[1])).' '.$unit);
         }
         // Probiotic strength: "25 Billion CFU" is what tells two Jarro-Dophilus bottles apart.
         if (preg_match('~(\d+(?:\.\d+)?)\s*Billion\s*CFU~i', $source, $cfu) === 1) {
