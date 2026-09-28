@@ -42,7 +42,7 @@ class ProductSeoDefaults
         $changed = false;
 
         if (trim((string) $product->meta_title) === '' || self::isLegacyTitle($product, $withBrand)) {
-            $product->meta_title = self::buildTitle($name);
+            $product->meta_title = self::defaultTitle($name);
             $changed = true;
         }
 
@@ -72,7 +72,7 @@ class ProductSeoDefaults
      * dropped from the title when the name alone already fills the budget (it stays in the
      * description and in the H1 either way).
      */
-    private static function buildTitle(string $name): string
+    public static function defaultTitle(string $name): string
     {
         $short = $name . ' – Prix Tunisie | Protein.tn';
         if (mb_strlen($short) <= 65) {

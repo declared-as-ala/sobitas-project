@@ -563,6 +563,16 @@ class IHerbNormalizer
         return str_replace('.', ',', $formatted === '' ? '0' : $formatted);
     }
 
+    /** French quantity for a distinguishing strength; retain the pack builder's decimal rule. */
+    public static function qualifierNumber(float $value): string
+    {
+        $number = self::frenchNumber($value);
+        [$integer, $decimal] = array_pad(explode(',', $number, 2), 2, null);
+        $integer = preg_replace('/\B(?=(\d{3})+(?!\d))/', ' ', $integer) ?? $integer;
+
+        return $integer.($decimal === null ? '' : ','.$decimal);
+    }
+
     /** Collapse whitespace and strip trademark marks and dangling punctuation. */
     private function tidy(string $text): string
     {

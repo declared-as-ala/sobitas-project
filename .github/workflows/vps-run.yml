@@ -120,6 +120,8 @@ on:
           - seo-legacy-reindex-dry-run
           # Same gate, same flip, for the products catalog-reindex cannot reach (see the arm).
           - seo-legacy-reindex-apply
+          - names-disambiguate-dry-run
+          - names-disambiguate-apply
           # Additive product-FAQ seeding for the thin hand-built products the reindex report lists
           # BELOW THE GATE. Writes ONLY where the faq column is empty — a human FAQ is never
           # clobbered — and each save runs the same revalidate/sitemap/IndexNow machinery.
@@ -146,6 +148,11 @@ on:
           # Re-slices the sections out of HTML we already hold. No HTTP at all.
           - content-rederive-dry
           # WRITES: these need confirm=APPLY
+          # Copies the committed article/post uploads (filament/storage2/app/public/{articles,posts})
+          # into the live uploads mount, NO-CLOBBER: a file already on the server is never touched.
+          # 28/09/2026: 163 of 224 blog covers answered 410 (lost from /var/sobitas/uploads), and
+          # exactly those 163 are in the repo. Files only, no database write.
+          - restore-article-images
           # `reviews-rescore-apply` stores the scores so the Filament queue can be sorted by them,
           # and backfills `text_hash` — without which duplicate detection has nothing to compare a
           # new review against and silently finds nothing. It never changes `publier`.
@@ -326,6 +333,17 @@ jobs:
             backend-nginx-log)
               ARGS="backend-nginx-v2"
               MODE=logs
+              WRITES=no
+              ;;
+            restore-article-images)
+              # Writes files, not rows, so it skips the database backup — but it is still a write
+              # to production, so it takes the same APPLY gate.
+              if [ "$CONFIRM" != "APPLY" ]; then
+                echo "::error::'$TASK' writes files to the live uploads mount. Re-run it and type APPLY in the confirm box."
+                exit 1
+              fi
+              ARGS="articles posts"
+              MODE=restoreuploads
               WRITES=no
               ;;
             commerce-status)
@@ -664,6 +682,14 @@ jobs:
               ARGS="seo:products-legacy-reindex"
               WRITES=no
               ;;
+            names-disambiguate-dry-run)
+              ARGS="catalog:iherb:disambiguate-names"
+              WRITES=no
+              ;;
+            names-disambiguate-apply)
+              ARGS="catalog:iherb:disambiguate-names --apply"
+              WRITES=yes
+              ;;
             seo-legacy-reindex-apply)
               # catalog-reindex iterates the import STAGING table, so a product with no staging row
               # — the ~300 hand-built ones that predate the import — can never be reached by it.
@@ -767,7 +793,7 @@ jobs:
       - name: Checkout
         # Required only when a task needs committed files that are intentionally
         # absent from the production container image.
-        if: startsWith(inputs.task, 'research-') || inputs.task == 'commerce-flow-tests'
+        if: startsWith(inputs.task, 'research-') || inputs.task == 'commerce-flow-tests' || inputs.task == 'restore-article-images'
         uses: actions/checkout@v5
 
       # Ship research.json to the VPS - for the research tasks only.
@@ -807,6 +833,24 @@ jobs:
           source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php,filament/tests/Feature/OrderIdentityAndNotificationTest.php,filament/tests/Feature/VerifiedCustomerReviewsTest.php
           target: /root/sobitas-project/inbox/commerce-tests
           strip_components: 2
+          overwrite: true
+
+      # The committed uploads for restore-article-images. strip_components: 4 drops
+      # filament/storage2/app/public, so the inbox holds articles/… and posts/… exactly as the
+      # uploads mount lays them out. The remote copy is no-clobber; see MODE=restoreuploads.
+      - name: Ship article uploads to the VPS
+        if: inputs.task == 'restore-article-images'
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          password: ${{ secrets.VPS_PASSWORD }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT }}
+          timeout: 300s
+          source: filament/storage2/app/public/articles,filament/storage2/app/public/posts
+          target: /root/sobitas-project/inbox/restore-uploads
+          strip_components: 4
           overwrite: true
 
       - name: Run the task
@@ -1163,6 +1207,30 @@ jobs:
                 echo "[ok] rehearsal complete; production was not changed"
               fi
               echo "[ok] disposable database will now be dropped"
+            elif [ "$MODE" = "restoreuploads" ]; then
+              echo ""
+              echo "> restore committed uploads into /var/sobitas/uploads (no-clobber): $ARGS"
+              echo ""
+              SRC="$APP_DIR/inbox/restore-uploads"
+              DST="/var/sobitas/uploads"
+              if [ ! -d "$SRC" ] || [ ! -d "$DST" ]; then
+                echo "[X] missing $SRC or $DST — nothing copied"
+                ls -la "$APP_DIR/inbox" "$DST" 2>&1 | head -20
+                exit 1
+              fi
+              SHIPPED=$(cd "$SRC" && find . -type f | wc -l)
+              ABSENT=$(cd "$SRC" && find . -type f | while IFS= read -r f; do [ -e "$DST/$f" ] || echo "$f"; done | wc -l)
+              OWNER=$(stat -c '%u:%g' "$DST")
+              # -n: never overwrite a file the server already has. -r: keep the folder layout.
+              cp -rn "$SRC/." "$DST/"
+              for d in $ARGS; do
+                [ -d "$DST/$d" ] || continue
+                chown -R --from=0:0 "$OWNER" "$DST/$d" 2>/dev/null || true
+                chmod -R a+rX "$DST/$d"
+              done
+              STILL=$(cd "$SRC" && find . -type f | while IFS= read -r f; do [ -e "$DST/$f" ] || echo "$f"; done | wc -l)
+              echo "[ok] shipped=$SHIPPED absent-before=$ABSENT absent-after=$STILL owner=$OWNER"
+              rm -rf "$SRC"
             elif [ "$MODE" = "envkeys" ]; then
               echo ""
               echo "> configured mail-provider variable names (values are never printed)"
