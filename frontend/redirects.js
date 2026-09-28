@@ -42,7 +42,7 @@ function buildRedirects() {
     {
       source: '/boutique/proteine-gain-musculaire/syntha-6-isolate',
       has: [{ type: 'host', value: 'www.protein.tn' }],
-      destination: 'https://protein.tn/whey-isolate',
+      destination: 'https://protein.tn/whey-isolate/bsn-syntha-6-isolate-protein-powder-drink-mix-strawberry-milkshake-912-g',
       permanent: true,
     },
     {
@@ -225,7 +225,7 @@ function buildRedirects() {
     // ── Products / shop (generic) ─────────────────────────────────────────
     // These two old `/boutique/{taxonomy}/{product}` URLs otherwise strip `/boutique` first and
     // only then resolve the retired product. Collapse both to one verified, relevant target.
-    p('/boutique/proteine-gain-musculaire/syntha-6-isolate', '/whey-isolate'),
+    p('/boutique/proteine-gain-musculaire/syntha-6-isolate', '/whey-isolate/bsn-syntha-6-isolate-protein-powder-drink-mix-strawberry-milkshake-912-g'),
     p('/boutique/acides-amines-tunisie/bcaa-xplode-olimp', '/bcaa'),
     // IMPORTANT: Do NOT add catch-alls for `/product/:path*` or `/products/:path*`
     // here. next.config redirects run BEFORE middleware and the filesystem routes,
@@ -259,7 +259,7 @@ function buildRedirects() {
      */
 
     // ── Flat product slugs (old URLs without category prefix) ─────────────
-    p('/accessoires-rack-jx-fitness', '/musculation/accessoires-rack-jx-fitness'),
+    p('/accessoires-rack-jx-fitness', '/materiel-de-musculation/accessoires-rack-jx-fitness'),
     /*
      * `/acides-amines` IS A REAL RAYON NOW — the rule that used to send it to /bcaa is gone.
      *
@@ -281,11 +281,11 @@ function buildRedirects() {
      * whenever a rayon is added, because publication is now automatic and a shadowed rayon is
      * invisible rather than noisy.
      */
-    p('/banc-de-musculation-developpe-incline', '/materiel-de-musculation'),
-    p('/banc-reglable-mnd-fitness', '/materiel-de-musculation'),
-    p('/bcaa-gluta-500g-scenit-nutrition', '/bcaa'),
+    p('/banc-de-musculation-developpe-incline', '/materiel-de-musculation/banc-de-musculation-developpe-incline'),
+    p('/banc-reglable-mnd-fitness', '/materiel-de-musculation/banc-reglable-mnd-fitness'),
+    p('/bcaa-gluta-500g-scenit-nutrition', '/bcaa/bcaa-gluta-500g-scenit-nutrition'),
     p('/beef-mass-plus-27kg-big-ramy-labs', '/proteine-de-boeuf/beef-mass-plus-27kg-big-ramy-labs'),
-    p('/big-ramy-labs-beef-mass-gainer-4-9kg', '/big-ramy-labs'),
+    p('/big-ramy-labs-beef-mass-gainer-4-9kg', '/proteine-de-boeuf/big-ramy-labs-beef-mass-gainer-4-9kg'),
     // Retired support-band listing. The current equipment category is the closest surviving
     // equivalent; unlike /shop, it answers the same product intent and is not a soft-404 hub.
     p('/bandes-de-renfort', '/materiel-de-musculation'),
@@ -293,7 +293,7 @@ function buildRedirects() {
     p('/complements-alimentaires', '/proteines'),
     p('/creatine-300gr-challenger-nutrition', '/creatine/creatine-300gr-challenger-nutrition'),
     p('/deficit-calorique', '/perte-de-poids'),
-    p('/eaa-bcaa-390gr-challenger-nutrition', '/bcaa'),
+    p('/eaa-bcaa-390gr-challenger-nutrition', '/eaa/eaa-bcaa-390gr-challenger-nutrition'),
     p('/fat-burner', '/bruleurs-de-graisse'),
     p('/glutamine/', '/glutamine'),
     /* The SAME product is live and indexable at /creatine/gold-creatine-kevin-levrone-300-g
@@ -301,14 +301,14 @@ function buildRedirects() {
        isolate PDP was a bulk-mapping slip: Google reads a redirect to an unrelated page as a
        soft 404, so the hop was spent and the creatine intent earned nothing. */
     p('/gold-creatine-kevin-levrone-300-g', '/creatine/gold-creatine-kevin-levrone-300-g'),
-    p('/gold-l-carnitine-3000-500ml', '/bruleurs-de-graisse'),
+    p('/gold-l-carnitine-3000-500ml', '/l-carnitine/gold-l-carnitine-3000-500ml'),
     /* The brand exists and is served at /gold-s-gym (verified 200); the missing apostrophe in
        the old slug was sending it to the brand index instead. */
     p('/golds-gym', '/gold-s-gym'),
-    p('/hack-squat-jx-fitness', '/musculation/hack-squat-jx-fitness'),
-    p('/hydroxycut-hardcore-elite-100-caps-muscletech', '/bruleurs-de-graisse'),
+    p('/hack-squat-jx-fitness', '/materiel-de-musculation/hack-squat-jx-fitness'),
+    p('/hydroxycut-hardcore-elite-100-caps-muscletech', '/bruleurs-de-graisse/hydroxycut-hardcore-elite-100-caps-muscletech'),
     p('/isolat-de-whey', '/whey-isolate'),
-    p('/king-real-preworkout-500gr-real-pharm-tunisie', '/pre-workout'),
+    p('/king-real-preworkout-500gr-real-pharm-tunisie', '/pre-workout/king-real-preworkout-500gr-real-pharm-tunisie'),
     p('/les-complements-alimentaires', '/proteines'),
     p('/les-complements-alimentaires/', '/proteines'),
     p('/magnesium-bisglycinate-vitamine-b6-1422mg-weightworld', '/magnesium/magnesium-bisglycinate-vitamine-b6-1422mg-weightworld'),
@@ -318,7 +318,7 @@ function buildRedirects() {
     p('/mass-gainer', '/mass-gainers'),
     p('/mass-gainer-zero-7kg-eric-favre', '/mass-gainers/mass-gainer-zero-7kg-eric-favre'),
     p('/micronised-creatine-317g-tunisie-purete-99-meilleur-prix', '/creatine'),
-    p('/omega-3-fish-oil-240-softgel-weightworld', '/omega-3'),
+    p('/omega-3-fish-oil-240-softgel-weightworld', '/omega-3/omega-3-fish-oil-240-softgel-weightworld'),
     p('/opti-men-150-tabs-optimum-nutrition', '/vitamines'),
     p('/opti-men-90-tabs-optimum-nutrition', '/vitamines'),
     p('/opti-women-120-caps-optimum-nutrition', '/vitamines/opti-women-120caps'),
@@ -328,19 +328,19 @@ function buildRedirects() {
     p('/pack-ultimate-muscle', '/proteine-de-boeuf/pack-ultimate-muscle'),
     p('/pre-intra-post-workout', '/pre-workout'),
     p('/pre-intra-post-workout/', '/pre-workout'),
-    p('/premium-v-bulk-27kg-victor-martinez', '/gainers-proteines/premium-v-bulk-5-5kg-victor-martinez'),
-    p('/protein-vegan-1-5kg-eric-favre', '/proteines'),
+    p('/premium-v-bulk-27kg-victor-martinez', '/gainers-proteines/premium-v-bulk-27kg-victor-martinez'),
+    p('/protein-vegan-1-5kg-eric-favre', '/proteines-vegetales/protein-vegan-1-5kg-eric-favre'),
     p('/proteine', '/proteines'),
     p('/proteine-de-caseine', '/proteines'),
     p('/proteine-whey', '/whey-proteine'),
     p('/serious-mass-5-45-kg-optimum-nutrition', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'),
     p('/serious-mass-5-45kg', '/mass-gainers/serious-mass-5-45-kg-optimum-nutrition'),
-    p('/squat-rack-jx-fitness', '/musculation/squat-rack-jx-fitness'),
-    p('/support-pour-disques-de-musculation', '/musculation/support-pour-disques-de-musculation'),
-    p('/vegan-vitamin-d3-k2-240-tablets-weightworld', '/proteines-vegetales'),
-    p('/vitamin-c-1000-mg-90-tabs-gymbeam', '/vitamines'),
-    p('/zinc-bisglycinate-400-comprimes-weightworld', '/zinc'),
-    p('/zumub-omega-3-90-caps', '/omega-3'),
+    p('/squat-rack-jx-fitness', '/materiel-de-musculation/squat-rack-jx-fitness'),
+    p('/support-pour-disques-de-musculation', '/materiel-de-musculation/support-pour-disques-de-musculation'),
+    p('/vegan-vitamin-d3-k2-240-tablets-weightworld', '/vitamines/vegan-vitamin-d3-k2-365-tablets-weightworld'),
+    p('/vitamin-c-1000-mg-90-tabs-gymbeam', '/vitamines/vitamin-c-1000-mg-90-tabs-gymbeam'),
+    p('/zinc-bisglycinate-400-comprimes-weightworld', '/zinc/zinc-bisglycinate-400-comprimes-weightworld'),
+    p('/zumub-omega-3-90-caps', '/omega-3/zumub-omega-3-90-caps'),
     // Old blog slug with encoded accent (é = %C3%A9)
     p('/quand-prendre-de-la-cr%C3%A9atine-le-guide-complet-pour-optimiser-vos-resultats-2025', '/blog/creatine-guide-complet-pour-ameliorer-vos-performances-sportives'),
 
