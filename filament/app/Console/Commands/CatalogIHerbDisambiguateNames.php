@@ -104,6 +104,16 @@ class CatalogIHerbDisambiguateNames extends Command
             }
 
             $groupsReady++;
+            // A title two twins share verbatim is the duplicate this command exists to remove, not
+            // anyone's deliberate wording for one product: "Bluebonnet Nutrition Vitamin C | Protéine
+            // Tunisie" on both the 90- and the 180-capsule bottle. Treat it as generated.
+            $sharedTitles = [];
+            foreach (['seo_title', 'meta_title'] as $column) {
+                $sharedTitles[$column] = array_count_values(array_filter(
+                    array_map(static fn ($row) => trim((string) $row->$column), $flat),
+                    static fn (string $t): bool => $t !== ''
+                ));
+            }
             foreach ($plans as &$plan) {
                 $row = $plan['row'];
                 $changes = [];
@@ -111,7 +121,7 @@ class CatalogIHerbDisambiguateNames extends Command
                     $old = trim((string) $row->$column);
                     if ($plan['name'] === $row->designation_fr || $old === '') {
                         $changes[$column] = $row->$column;
-                    } elseif ($this->autoTitle($old, $row->designation_fr)) {
+                    } elseif ($this->autoTitle($old, $row->designation_fr) || ($sharedTitles[$column][$old] ?? 0) > 1) {
                         $changes[$column] = ProductSeoDefaults::defaultTitle($plan['name']);
                     } else {
                         $changes[$column] = $row->$column;
@@ -166,7 +176,65 @@ class CatalogIHerbDisambiguateNames extends Command
         $this->info(sprintf('%s: %d collision groups, %d ready, %d skipped; %d names to change, %d without qualifier; %d human titles kept.',
             $apply ? 'Applied' : 'Dry run', $groupsFound, $groupsReady, $groupsSkipped, $productsReady, $unresolved, $human));
 
+        $this->retitleSharedTitles($apply, $notifier);
+
         return self::SUCCESS;
+    }
+
+    /**
+     * Published products whose names now DIFFER but whose stored title is still one exact shared
+     * string. The first apply (28/09/2026) kept 22 such titles as "human" — each was the same
+     * generated fragment on both twins — so the H1s split and the <title>s did not. Any title held
+     * verbatim by products with different names is a duplicate-title defect whoever typed it; each
+     * member gets the default title built from its own name. Same dry-run/--apply contract.
+     */
+    private function retitleSharedTitles(bool $apply, SeoNotifier $notifier): void
+    {
+        $shared = DB::table('products')
+            ->where('publier', 1)
+            ->whereNotNull('meta_title')->where('meta_title', '<>', '')
+            ->groupBy('meta_title')
+            ->havingRaw('COUNT(*) > 1')
+            ->pluck('meta_title');
+
+        $rows = [];
+        foreach ($shared as $title) {
+            $members = DB::table('products')->where('publier', 1)->where('meta_title', $title)
+                ->select('id', 'slug', 'designation_fr', 'meta_title')->orderBy('id')->get();
+            $names = array_unique(array_map(fn ($m) => $this->fold((string) $m->designation_fr), $members->all()));
+            if (count($names) < 2) {
+                continue; // identical names too: nothing to build distinct titles from
+            }
+            foreach ($members as $member) {
+                $new = ProductSeoDefaults::defaultTitle((string) $member->designation_fr);
+                if ($new !== $member->meta_title) {
+                    $rows[] = [$member, $new];
+                }
+            }
+        }
+
+        $newTitles = array_count_values(array_map(static fn (array $r): string => $r[1], $rows));
+        $this->table(['id', 'slug', 'shared meta_title', 'new meta_title'], array_map(
+            static fn (array $r): array => [$r[0]->id, $r[0]->slug, $r[0]->meta_title, $r[1]], $rows
+        ));
+        $collide = array_filter($rows, static fn (array $r): bool => $newTitles[$r[1]] > 1);
+        $this->info(sprintf('%s: %d shared titles, %d products to retitle, %d skipped (new title still shared).',
+            $apply ? 'Applied' : 'Dry run', count($shared), count($rows) - count($collide), count($collide)));
+
+        if (! $apply) {
+            return;
+        }
+        foreach ($rows as [$member, $new]) {
+            if ($newTitles[$new] > 1) {
+                continue;
+            }
+            $changed = DB::table('products')->where('id', $member->id)->where('publier', 1)
+                ->where('meta_title', $member->meta_title)
+                ->update(['meta_title' => $new, 'updated_at' => now()]);
+            if ($changed === 1) {
+                $notifier->productChangedNow(Product::findOrFail($member->id));
+            }
+        }
     }
 
     /** @return list<array{key:string,label:string}> */
