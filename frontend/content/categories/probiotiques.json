@@ -1,0 +1,43 @@
+{
+  "h1": "Probiotiques : souches, UFC et formats à comparer",
+  "metaTitle": "Probiotiques en gélules, poudres et gommes | Protein.tn",
+  "metaDescription": "Probiotiques en gélules, poudres, gommes ou comprimés à croquer : lisez les souches, les UFC et la conservation avant de choisir. Références sur commande.",
+  "ogImage": "https://protein.tn/og-banner.jpg",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Un <strong>probiotique</strong> est un complément qui contient des micro-organismes vivants : des bactéries, le plus souvent des genres Lactobacillus et Bifidobacterium, ou une levure comme Saccharomyces boulardii. Leur quantité s’exprime en <strong>UFC</strong> (unités formant colonies), CFU sur les étiquettes en anglais, généralement en milliards par portion.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le rayon rassemble surtout des <strong>gélules</strong>, dont des gélules à libération retardée (« delayed release »), mais aussi des <strong>poudres</strong> à souche unique, des sachets, des <strong>gommes</strong>, des comprimés à croquer, des perles et quelques poudres de légumes verts enrichies en probiotiques. On y trouve des formules multi-souches, des formules associant un prébiotique comme l’inuline, des gammes pour femmes, parfois avec de la canneberge, et quelques formats pour enfants. Parmi les marques présentes : Renew Life, Garden of Life, Jarrow Formulas, NOW Foods, Swanson, Ancient Nutrition, Nature’s Way, Culturelle ou BioGaia.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Ce guide décrit ce que sont ces produits et comment lire leur étiquette ; il ne leur attribue aucun effet. Les références sont importées et proposées <strong>sur commande</strong> : la fiche de chaque produit indique sa disponibilité. En cas de maladie, de traitement, de système immunitaire affaibli, de grossesse, ou pour un nourrisson ou un enfant, demandez l’avis d’un professionnel de santé avant de choisir.</p>",
+  "howToChooseTitle": "Comment choisir un probiotique ?",
+  "howToChooseBody": "<p>Deux produits affichant le même nombre de milliards peuvent être très différents. Lisez l’étiquette dans cet ordre :</p><ul><li><strong>Les souches :</strong> une identification complète comporte le genre, l’espèce et un code de souche (lettres ou chiffres placés après le nom). Plusieurs espèces ont été renommées en 2020 — Lacticaseibacillus rhamnosus correspond à l’ancien Lactobacillus rhamnosus — : les deux noms peuvent désigner la même bactérie.</li><li><strong>Le nombre d’UFC :</strong> vérifiez s’il est garanti « at time of manufacture » (à la fabrication) ou « through expiration » (jusqu’à la date limite), et à combien de gélules il correspond. Le second cas renseigne sur ce que contient encore le produit en fin de durée de vie.</li><li><strong>La conservation :</strong> certaines formules se gardent au réfrigérateur (« refrigerate »), d’autres sont stables à température ambiante (« shelf stable »). Tenez compte de votre rangement, surtout en été.</li><li><strong>Le format :</strong> gélule classique ou à libération retardée, poudre à mélanger selon les indications, sachet, gomme ou comprimé à croquer. Les gommes contiennent généralement du sucre ou des édulcorants.</li><li><strong>Les autres ingrédients :</strong> prébiotiques (inuline, FOS), enzymes, canneberge, vitamines, mais aussi allergènes comme le lait ou le soja, et composition de la gélule si vous évitez la gélatine.</li></ul><p>Accumuler les milliards ou les souches n’est pas un critère en soi : choisissez une formule dont vous comprenez la composition et suivez la portion du fabricant. Pour un nourrisson, un enfant, une personne malade ou sous traitement, ou pendant la grossesse, l’avis d’un médecin ou d’un pharmacien passe avant le choix du produit.</p>",
+  "faqs": [
+    {
+      "question": "Que signifie UFC (ou CFU) sur un probiotique ?",
+      "answer": "UFC signifie unités formant colonies ; CFU est l’équivalent anglais. Ce chiffre indique la quantité de micro-organismes vivants par portion. Vérifiez s’il est garanti à la fabrication ou jusqu’à la date limite, et à quelle portion il se rapporte : une gélule ou plusieurs."
+    },
+    {
+      "question": "Pourquoi le nom complet de la souche est-il important ?",
+      "answer": "Deux produits de la même espèce peuvent contenir des souches différentes. Le code de souche, placé après le nom de l’espèce, permet d’identifier précisément le contenu de la formule et de comparer deux étiquettes. Une étiquette qui ne cite que le genre donne beaucoup moins d’informations."
+    },
+    {
+      "question": "Faut-il conserver un probiotique au réfrigérateur ?",
+      "answer": "Cela dépend de la formule : l’étiquette indique « refrigerate » lorsque le froid est nécessaire, ou « shelf stable » lorsque la température ambiante suffit. Dans tous les cas, évitez la chaleur et l’humidité, et refermez bien le flacon après chaque utilisation."
+    },
+    {
+      "question": "Saccharomyces boulardii est-il une bactérie ?",
+      "answer": "Non, c’est une levure. Elle figure dans plusieurs références du rayon, seule ou associée à des bactéries. Comme pour les autres probiotiques, lisez la quantité par portion et les conditions de conservation, et demandez conseil à un professionnel de santé si vous suivez un traitement."
+    },
+    {
+      "question": "Existe-t-il des probiotiques pour enfants ?",
+      "answer": "Le rayon compte quelques formats pensés pour les enfants, comme des perles, des bonbons gélifiés ou des poudres. Vérifiez la tranche d’âge indiquée par le fabricant, respectez la portion prévue et demandez l’avis du pédiatre avant d’en donner à un nourrisson ou à un jeune enfant."
+    },
+    {
+      "question": "Les produits de ce rayon sont-ils disponibles immédiatement ?",
+      "answer": "Les références de ce rayon sont importées et proposées sur commande. La fiche de chaque produit indique sa disponibilité au moment de votre visite : vérifiez-la avant de valider votre panier."
+    }
+  ],
+  "relatedCategorySlugs": [
+    "digestion",
+    "immunite",
+    "sante-vitalite",
+    "vitamines",
+    "enfants"
+  ],
+  "bestProductSlugs": []
+}

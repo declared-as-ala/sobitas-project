@@ -1,0 +1,43 @@
+{
+  "h1": "Compléments pour enfants : lire l’âge, la dose et le format",
+  "metaTitle": "Compléments pour enfants : âge, dose, format | Protein.tn",
+  "metaDescription": "Compléments pour enfants en gommes, comprimés à croquer, liquides ou poudres : vérifier l’âge, la dose et demander l’avis du pédiatre. Sur commande.",
+  "ogImage": "https://protein.tn/og-banner.jpg",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le rayon <strong>enfants</strong> est une petite sélection de références importées, proposées sur commande en Tunisie. On y trouve des formats pensés pour les plus jeunes : <strong>gommes</strong> (OLLY Kids, Lifeable, Phytoral, Nordic Naturals), <strong>comprimés à croquer</strong> (NaturesPlus Animal Parade, Source Naturals, NOW Foods), mini-comprimés de vitamines B (MegaFood Kids), <strong>liquides</strong> au compte-gouttes (JoySpring, Herb Pharm Kids), sirops, pastilles et <strong>poudres</strong> à diluer, comme une boisson multinutriments ou un mélange d’électrolytes.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le rayon réunit toutefois des produits de natures différentes : compléments alimentaires, préparations à base de plantes ou de fleurs, et quelques références qui ne sont pas destinées aux enfants — formules pour la grossesse ou l’après-accouchement, snacks protéinés, formule sportive pour adultes ou accessoire de soin. Lisez toujours la tranche d’âge indiquée par le fabricant, par exemple « Ages 2-12 » ou « 4+ years », avant de choisir.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Un enfant n’est pas un adulte en plus petit : les doses, les formats et même certains ingrédients diffèrent selon l’âge. Demandez l’avis du pédiatre ou du pharmacien avant tout complément, ne dépassez jamais la dose prévue pour l’âge de l’enfant et rangez gommes et comprimés à croquer hors de sa portée. La fiche de chaque produit indique sa disponibilité.</p>",
+  "howToChooseTitle": "Comment choisir un complément pour un enfant ?",
+  "howToChooseBody": "<p>Commencez par l’avis du pédiatre : il vous dira si un complément est utile et lequel. Ensuite, lisez l’étiquette avec ces repères.</p><ul><li><strong>L’âge indiqué.</strong> Choisissez une référence dont la tranche d’âge correspond à celle de l’enfant (« Ages 2-12 », « 4+ years », « Children’s »). Une formule pour adulte, pour la grossesse ou pour l’allaitement n’est pas une formule pour enfant.</li><li><strong>La dose selon l’âge.</strong> Beaucoup d’étiquettes prévoient une portion différente par tranche d’âge. Suivez-la exactement et ne la dépassez jamais, même si l’enfant réclame une gomme de plus.</li><li><strong>Le cumul.</strong> Additionnez ce qu’apportent tous les produits donnés à l’enfant (multivitamine, gommes, boisson enrichie) : une même vitamine peut figurer dans plusieurs d’entre eux.</li><li><strong>Le format.</strong> Liquides et poudres se dosent précisément avec l’accessoire fourni ; gommes et comprimés à croquer ne conviennent pas aux plus petits et se prennent sous surveillance. Respectez l’âge minimum indiqué.</li><li><strong>Les autres ingrédients.</strong> Sucres, édulcorants, colorants, gélatine, allergènes (lait, soja, fruits à coque) et présence éventuelle d’alcool dans les extraits liquides.</li><li><strong>La nature du produit.</strong> Si l’étiquette vise un symptôme ou une situation précise, demandez conseil au pharmacien ou au médecin avant usage : ce n’est pas un simple complément du quotidien.</li></ul><p>Rangez tous ces produits hors de portée : leur goût et leur forme de bonbon les rendent attirants. En cas de maladie, de traitement ou de doute, le pédiatre reste le bon interlocuteur.</p>",
+  "faqs": [
+    {
+      "question": "Faut-il demander l’avis d’un pédiatre avant de donner un complément ?",
+      "answer": "Oui. Le pédiatre peut dire si un complément est utile, lequel choisir et à quelle dose. C’est particulièrement important pour un nourrisson, pour un enfant malade ou sous traitement, ou si vous envisagez d’associer plusieurs produits."
+    },
+    {
+      "question": "Gommes, liquide ou comprimé à croquer : quel format choisir ?",
+      "answer": "Suivez d’abord l’âge minimum indiqué sur l’étiquette. Les liquides et les poudres se dosent précisément avec l’accessoire fourni ; les gommes et comprimés à croquer demandent que l’enfant sache bien mâcher. Dans tous les cas, restez présent pendant la prise."
+    },
+    {
+      "question": "Peut-on donner une formule adulte en réduisant la dose ?",
+      "answer": "Non. Une formule adulte n’est pas conçue pour un enfant : les quantités, les ingrédients et les avertissements diffèrent. Choisissez une référence dont l’étiquette mentionne explicitement la tranche d’âge de l’enfant, sur conseil du pédiatre."
+    },
+    {
+      "question": "Que faire si un enfant a avalé plusieurs gommes ?",
+      "answer": "Contactez sans attendre un médecin, un centre antipoison ou les urgences, avec l’emballage du produit. Pour l’éviter, rangez les compléments hors de portée et ne présentez jamais une gomme comme un bonbon."
+    },
+    {
+      "question": "Tous les produits du rayon sont-ils destinés aux enfants ?",
+      "answer": "Non. Quelques références présentes ici s’adressent aux adultes, par exemple des formules pour la grossesse ou l’après-accouchement, des snacks protéinés ou une formule sportive. Vérifiez toujours la tranche d’âge sur l’étiquette et sur la fiche produit."
+    },
+    {
+      "question": "Les produits de ce rayon sont-ils disponibles immédiatement ?",
+      "answer": "Les références de ce rayon sont importées et proposées sur commande. La fiche de chaque produit indique sa disponibilité au moment de votre visite : vérifiez-la avant de valider votre panier."
+    }
+  ],
+  "relatedCategorySlugs": [
+    "sante-vitalite",
+    "vitamines",
+    "probiotiques",
+    "omega-3",
+    "immunite"
+  ],
+  "bestProductSlugs": []
+}

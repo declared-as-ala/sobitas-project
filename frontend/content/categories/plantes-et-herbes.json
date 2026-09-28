@@ -1,0 +1,39 @@
+{
+  "h1": "Compléments à base de plantes : gélules, extraits liquides et poudres",
+  "metaTitle": "Plantes et herbes : gélules, extraits, poudres | Protein.tn",
+  "metaDescription": "Berbérine, chardon-marie, ginseng, ginkgo, moringa ou spiruline en gélules, teintures et poudres : comment lire l’étiquette. Références sur commande.",
+  "ogImage": "https://protein.tn/og-banner.jpg",
+  "intro": "<p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Le rayon <strong>plantes et herbes</strong> est le plus vaste de la gamme santé. Il réunit des plantes seules et des formules composées : berbérine, un composé extrait de plantes comme l’épine-vinette, spiruline et chlorelle, chardon-marie, ginseng américain ou Panax, palmier nain (« saw palmetto »), ail vieilli, ginkgo, moringa, aubépine, levure de riz rouge, fenugrec, astragale, pissenlit, ortie, bacopa ou nigelle, entre beaucoup d’autres.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les formats sont variés : une majorité de <strong>gélules</strong>, des <strong>extraits liquides</strong> et teintures au compte-gouttes (Herb Pharm, Gaia Herbs, WishGarden Herbs, Christopher’s Original Formulas), des <strong>poudres</strong>, des comprimés, quelques gommes, et même des racines ou tranches de ginseng. Solaray, NOW Foods, Swanson, Nutricost, Nature’s Way, Paradise Herbs, Oregon’s Wild Harvest, Kyolic ou Dragon Herbs font partie des marques présentes.</p><p class=\"mb-3 sm:mb-4 text-gray-700 dark:text-gray-300 leading-relaxed\">Les allégations de santé relatives aux plantes sont toujours en attente d’évaluation au niveau européen : ce guide ne leur prête donc aucun effet et se concentre sur la lecture des étiquettes. Les références sont importées et proposées <strong>sur commande</strong> pour la Tunisie ; chaque fiche indique sa disponibilité. Une plante reste un actif : en cas de grossesse, d’allaitement, de maladie, de traitement médicamenteux ou pour un enfant, demandez d’abord l’avis d’un médecin ou d’un pharmacien.</p>",
+  "howToChooseTitle": "Comment choisir un complément à base de plantes ?",
+  "howToChooseBody": "<p>Avec des centaines de références, la comparaison se fait sur l’étiquette, pas sur le nom de la plante.</p><ul><li><strong>Le nom botanique.</strong> Cherchez le nom latin (Silybum marianum pour le chardon-marie, Panax ginseng ou Panax quinquefolius pour les ginsengs) : un même nom courant peut désigner plusieurs espèces.</li><li><strong>La partie utilisée.</strong> Racine, feuille, graine, fruit ou écorce : deux produits de la même plante ne sont pas équivalents si la partie diffère.</li><li><strong>Poudre ou extrait.</strong> Une poudre est la plante séchée et broyée ; un extrait est concentré, avec un ratio (4:1, 10:1) ou une standardisation en pourcentage d’un composé, par exemple la silymarine pour le chardon-marie. Comparez à portion égale et sur la même base.</li><li><strong>Le solvant des extraits liquides.</strong> Les teintures contiennent souvent de l’alcool ; les versions « alcohol-free » utilisent de la glycérine. Vérifiez-le si vous évitez l’alcool.</li><li><strong>Les mélanges.</strong> Un « proprietary blend » donne le total sans détailler chaque plante et empêche de comparer les quantités.</li><li><strong>Les labels.</strong> Une mention biologique (USDA Organic, par exemple) décrit le mode de culture, pas la concentration.</li></ul><p>Certaines plantes demandent une vigilance particulière : la levure de riz rouge, la berbérine, le ginkgo, le millepertuis ou le kava ne doivent pas être associés à un traitement sans avis médical. Respectez la portion du fabricant, ne cumulez pas plusieurs produits contenant la même plante et demandez conseil à un professionnel de santé pendant la grossesse, l’allaitement ou avant d’en donner à un enfant.</p>",
+  "faqs": [
+    {
+      "question": "Quelle différence entre une poudre de plante et un extrait ?",
+      "answer": "La poudre correspond à la plante séchée et broyée. L’extrait est obtenu avec un solvant puis concentré : l’étiquette l’indique par un ratio (4:1 signifie quatre parts de plante pour une part d’extrait) ou par une standardisation en pourcentage d’un composé. À poids égal, ces deux formes ne sont pas comparables."
+    },
+    {
+      "question": "Que signifie « standardized » sur un flacon ?",
+      "answer": "Un extrait standardisé garantit une teneur minimale en un composé repère, exprimée en pourcentage : silymarine pour le chardon-marie ou ginsénosides pour le ginseng, par exemple. Cette mention facilite la comparaison entre lots et entre marques, mais ne constitue pas une promesse d’effet."
+    },
+    {
+      "question": "Les teintures de plantes contiennent-elles de l’alcool ?",
+      "answer": "Beaucoup d’extraits liquides utilisent l’alcool comme solvant. Les versions « alcohol-free » ou « glycerite » emploient de la glycérine végétale. Le solvant figure dans la liste des ingrédients, souvent en anglais : vérifiez-le avant de commander si vous évitez l’alcool."
+    },
+    {
+      "question": "Peut-on prendre des plantes avec un médicament ?",
+      "answer": "Pas sans avis médical. Plusieurs plantes du rayon, comme la levure de riz rouge, la berbérine, le ginkgo ou le millepertuis, peuvent interagir avec des traitements. Montrez l’étiquette à votre médecin ou pharmacien, en particulier pendant la grossesse ou l’allaitement."
+    },
+    {
+      "question": "Les produits de ce rayon sont-ils disponibles immédiatement ?",
+      "answer": "Les références de ce rayon sont importées et proposées sur commande. La fiche de chaque produit indique sa disponibilité au moment de votre visite : vérifiez-la avant de valider votre panier."
+    }
+  ],
+  "relatedCategorySlugs": [
+    "boosters-hormonaux",
+    "ashwagandha",
+    "tribulus",
+    "antioxydants",
+    "sante-vitalite"
+  ],
+  "bestProductSlugs": []
+}
