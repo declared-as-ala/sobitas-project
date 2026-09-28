@@ -215,6 +215,16 @@ function buildRedirects() {
     p('/cgv', '/conditions-generale-de-ventes-protein'),
     p('/cgu', '/conditions-generale-de-ventes-protein'),
     p('/conditions-generales-de-vente', '/conditions-generale-de-ventes-protein'),
+    p('/conditions-generales', '/conditions-generale-de-ventes-protein'),
+    // The policy addresses shoppers (and merchant-listing checks) guess first; all answered 404 on
+    // 28/09/2026. Each lands on the page that actually states the terms.
+    p('/retours', '/politique-de-remboursement'),
+    p('/retour', '/politique-de-remboursement'),
+    p('/politique-de-retour', '/politique-de-remboursement'),
+    p('/livraison', '/conditions-generale-de-ventes-protein'),
+    p('/faq', '/faqs'),
+    p('/confidentialite', '/politique-de-confidentialite'),
+    p('/politique-confidentialite', '/politique-de-confidentialite'),
     /*
      * The generic /page/:slug redirect now lives in middleware.ts. A static redirect cannot
      * distinguish `/page/undefined` (permanently invalid → 410) from a real legacy CMS slug, and
