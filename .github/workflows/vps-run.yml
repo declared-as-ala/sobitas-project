@@ -55,6 +55,10 @@ on:
           - queue-log
           - backend-log
           - scheduler-log
+          # The storefront renderer and the backend's nginx. The renderer is where an API 429/5xx
+          # surfaces as a broken page; nginx's access log is where the 429 itself is recorded.
+          - frontend-log
+          - backend-nginx-log
           - commerce-status
           - commerce-order-status
           - commerce-mail-smoke
@@ -311,6 +315,16 @@ jobs:
               ;;
             scheduler-log)
               ARGS="backend-v2-scheduler"
+              MODE=logs
+              WRITES=no
+              ;;
+            frontend-log)
+              ARGS="frontend"
+              MODE=logs
+              WRITES=no
+              ;;
+            backend-nginx-log)
+              ARGS="backend-nginx-v2"
               MODE=logs
               WRITES=no
               ;;
