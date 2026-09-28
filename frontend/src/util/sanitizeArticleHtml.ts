@@ -1,5 +1,3 @@
-import { stripHeadOnlyTags } from './stripHeadOnlyTags';
-
 /**
  * Remove legacy commerce links and duplicate page headings from CMS article bodies.
  *
@@ -12,8 +10,12 @@ import { stripHeadOnlyTags } from './stripHeadOnlyTags';
 export function sanitizeArticleHtml(html: string | undefined): string {
   if (!html) return '';
 
-  // A pasted head block (second meta description / og tags) must not render — see the util.
-  return stripHeadOnlyTags(html)
+  // A pasted head block (second meta description / og tags) must not render — see
+  // util/stripHeadOnlyTags.ts. Inlined, not imported: scripts/check-commercial-intent-map.mjs loads
+  // this file straight into Node, which cannot resolve an extensionless relative import.
+  return html
+    .replace(/<title\b[^>]*>[\s\S]*?<\/title>/gi, '')
+    .replace(/<(?:meta|link|base)\b[^>]*>/gi, '')
     .replace(/<h1\b([^>]*)>/gi, '<h2$1>')
     .replace(/<\/h1>/gi, '</h2>')
     .replace(

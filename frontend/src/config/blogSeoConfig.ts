@@ -1975,6 +1975,254 @@ export const BLOG_SEO_CONFIG: Record<string, BlogSeoEntry> = {
       { anchor: 'شراء الكرياتين من مصدر موثوق', href: '/creatine' },
     ],
   },
+
+  /*
+   * ── 28/09/2026: 24 ARTICLES WHOSE TITLE WAS A CATEGORY'S HEAD TERM ─────────────────────────────
+   * Found by reading every blog.xml post whose slug names a commercial family and whose live title
+   * still claimed the owner's query ("Créatine en Tunisie : …", "Matériel Musculation Tunisie |
+   * Protéine Tunisie", "Oméga-3 Prix : … au Meilleur Prix en Tunisie"). Each headline below is
+   * derived from the article's own sections — it promises nothing the body does not cover — and
+   * drops "Tunisie", "prix", "acheter" and "meilleur". URL, body, canonical and robots unchanged:
+   * a retarget, never a consolidation. The bridge sends each one's authority to its owner in
+   * commercialSeoMap, where the article is listed as `supporting`. No dateModified: the body did
+   * not change, so the Article schema must not claim a refresh.
+   */
+  'quel-est-le-prix-de-la-proteine-en-tunisie': {
+    headline: 'Protéine en poudre : ce qui fait varier son coût',
+    metaDescription:
+      'Type de protéine, concentration, origine et format : les critères qui expliquent l’écart de coût entre deux pots, et comment comparer au gramme de protéine.',
+    openingLinkHtml:
+      '<p>Pour mettre ces critères en pratique, <a href="/proteines">comparez les pots de protéine au rayon</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'tout-savoir-sur-les-complements-alimentaires-et-proteines-en-tunisie-protein-tn': {
+    headline: 'Whey, créatine, BCAA, brûleurs : les questions fréquentes',
+    metaDescription:
+      'Les réponses aux questions les plus posées sur la whey, la créatine, les BCAA et EAA, les brûleurs de graisse et la récupération.',
+    openingLinkHtml:
+      '<p>Pour voir ces familles côte à côte, <a href="/shop">parcourez l’ensemble des compléments</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'meilleur-site-pour-acheter-des-proteines-en-tunisie-pourquoi-protein-tn-est-n-1': {
+    headline: 'Protein.tn : authenticité, choix, livraison, service client',
+    metaDescription:
+      'Comment Protein.tn sélectionne ses produits, garantit leur authenticité, livre partout en Tunisie et accompagne ses clients avant et après la commande.',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'les-meilleurs-complements-alimentaires-pour-la-prise-de-masse-en-tunisie-2025': {
+    headline: 'Prise de masse : whey, gainer, créatine, BCAA et vitamines',
+    metaDescription:
+      'Whey, gainer, créatine, BCAA, multivitamines : le rôle de chaque complément dans une prise de masse et comment les doser selon votre programme.',
+    openingLinkHtml:
+      '<p>Pour réunir ces compléments selon votre objectif, voyez <a href="/prise-de-masse">les compléments pour la prise de masse</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'proteines-tunisie': {
+    headline: 'Protéines : types, bienfaits et usage chez le sportif',
+    metaDescription:
+      'Whey, gainers, protéines bio : les grandes familles de protéines, leurs bienfaits pour le muscle et la récupération, et leur place dans l’alimentation.',
+    openingLinkHtml:
+      '<p>Pour comparer ces familles, <a href="/proteines">choisissez parmi nos protéines en poudre</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-musculation-tunisie': {
+    headline: 'Débuter la musculation à domicile : haltères, banc, machines',
+    metaDescription:
+      'Haltères, banc, machines : par quoi commencer pour s’entraîner à la maison, selon votre espace, votre budget et vos objectifs.',
+    openingLinkHtml:
+      '<p>Pour passer à l’équipement, voyez <a href="/materiel-de-musculation">haltères, bancs et machines du catalogue</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'acheter-proteine-en-ligne-tunisie-guide-pour-les-meilleurs-prix-et-complements': {
+    headline: 'Commander des protéines en ligne : types, coût et sécurité',
+    metaDescription:
+      'Types de protéines, critères de coût, signes d’un produit authentique et précautions pour commander ses protéines en ligne en toute sécurité.',
+    openingLinkHtml:
+      '<p>Une fois votre type choisi, ouvrez <a href="/proteines">le rayon protéines en poudre</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'proteine-pour-prise-de-poids-tunisie-le-guide-ultime-pour-gagner-en-masse-musculaire': {
+    headline: 'Gainer et prise de poids : calories, protéines et critères',
+    metaDescription:
+      'Ce qu’apporte un gainer pour prendre du poids : équilibre calories et protéines, moments de prise et critères pour choisir une formule adaptée.',
+    openingLinkHtml:
+      '<p>Pour comparer les formules, voyez <a href="/mass-gainers">les gainers pour prendre du poids</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'les-meilleurs-complements-proteines-en-tunisie-pour-2025-guide-complet': {
+    headline: 'Whey, gainer ou végétale : quelle protéine choisir ?',
+    metaDescription:
+      'Whey, gainer, protéine végétale : à quoi sert chaque type, pour quel objectif, et les critères pour comparer deux formules entre elles.',
+    openingLinkHtml:
+      '<p>Pour comparer les formules, parcourez <a href="/proteines">toutes nos protéines en poudre</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'acheter-de-la-creatine-en-tunisie-conseils-pour-les-meilleurs-prix-et-offres': {
+    headline: 'Créatine : comparer les offres et éviter les erreurs d’achat',
+    metaDescription:
+      'Pureté, forme, dose par portion et coût au gramme : les repères pour comparer deux créatines et éviter les contrefaçons.',
+    openingLinkHtml:
+      '<p>Ces repères s’appliquent directement : <a href="/creatine">comparez les créatines du rayon</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'creatine-et-musculation-en-tunisie-temoignages-et-avis-d-athletes': {
+    headline: 'Créatine en musculation : témoignages et conseils d’usage',
+    metaDescription:
+      'Retours d’athlètes sur la créatine en musculation : effets ressentis, erreurs de débutant et conseils pour l’intégrer à l’entraînement.',
+    openingLinkHtml:
+      '<p>Pour choisir la vôtre, <a href="/creatine">voyez la gamme de créatine</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'comment-utiliser-la-creatine-en-tunisie-pour-maximiser-vos-performances': {
+    headline: 'Utiliser la créatine : phase de charge, entretien et timing',
+    metaDescription:
+      'Phase de charge ou dose fixe, quantité d’entretien, moment de prise et hydratation : comment utiliser la créatine au quotidien.',
+    openingLinkHtml:
+      '<p>Avant de commencer, voyez <a href="/creatine">les créatines monohydrate à comparer</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'guide-complet-sur-la-creatine-en-tunisie-tout-ce-que-vous-devez-savoir': {
+    headline: 'Créatine : types, mécanisme, dosage et effets secondaires',
+    metaDescription:
+      'Monohydrate, HCl, micronisée : les formes de créatine, leur action dans le muscle, le dosage recommandé et les effets secondaires possibles.',
+    openingLinkHtml:
+      '<p>Pour voir ces formes en pratique, parcourez <a href="/creatine">la gamme de créatine par format</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'omega-3-en-tunisie-bienfaits-sources-et-ou-les-acheter-protein-tn': {
+    headline: 'Oméga-3 : bienfaits, EPA/DHA et usage chez le sportif',
+    metaDescription:
+      'EPA, DHA, sources alimentaires et compléments : les bienfaits des oméga-3 pour le cœur, les articulations et la récupération du sportif.',
+    openingLinkHtml:
+      '<p>Pour comparer les teneurs en EPA/DHA, voyez <a href="/omega-3">les compléments d’oméga 3 du catalogue</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'creatine-en-tunisie-guide-complet-pour-booster-vos-performances-protein-tn': {
+    headline: 'Choisir et doser la créatine : formes, phases, précautions',
+    metaDescription:
+      'Comment choisir une forme de créatine, la doser en phase de charge ou d’entretien, et les précautions à connaître avant de commencer.',
+    openingLinkHtml:
+      '<p>Pour choisir votre forme, voyez <a href="/creatine">les formes de créatine en rayon</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'protein-tn-votre-destination-de-confiance-pour-la-nutrition-sportive-et-les-complements-alimentaires-en-tunisie': {
+    headline: 'Choisir ses compléments sur Protein.tn : gamme et conseils',
+    metaDescription:
+      'Gamme, authenticité, conseils et livraison : ce que Protein.tn propose aux sportifs pour choisir leurs compléments en confiance.',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-de-musculation-en-tunisie-ou-acheter-sur-tayara-et-pourquoi-choisir-protein-tn': {
+    headline: 'Matériel de musculation : Tayara ou vendeur spécialisé ?',
+    metaDescription:
+      'Occasion sur Tayara ou neuf chez un spécialiste : garantie, état, livraison et service après-vente, les points à vérifier avant de choisir.',
+    openingLinkHtml:
+      '<p>Pour comparer avec du matériel neuf, voyez <a href="/materiel-de-musculation">le matériel neuf du catalogue</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-de-salle-de-sport-professionnel-en-tunisie-equipez-votre-salle-de-sport-avec-les-meilleurs-produits': {
+    headline: 'Équiper une salle de sport pro : machines, charges et cardio',
+    metaDescription:
+      'Machines guidées, charges libres, cardio : comment dimensionner l’équipement d’une salle professionnelle selon la surface et le public.',
+    openingLinkHtml:
+      '<p>Pour la partie musculation, voyez <a href="/materiel-de-musculation">les machines pour salle professionnelle</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'materiel-de-musculation-en-tunisie-quel-prix-pour-equiper-votre-espace-d-entrainement': {
+    headline: 'Équiper son espace d’entraînement : budget par équipement',
+    metaDescription:
+      'Haltères, banc, rack, cardio : comment répartir un budget d’équipement selon vos priorités et l’espace dont vous disposez.',
+    openingLinkHtml:
+      '<p>Budget défini, <a href="/materiel-de-musculation">comparez les équipements de musculation</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'omega-3-prix-trouvez-les-meilleurs-omega-3-au-meilleur-prix-en-tunisie': {
+    headline: 'Oméga-3 : ce qui fait varier le coût d’un complément',
+    metaDescription:
+      'Concentration en EPA/DHA, forme, origine et nombre de capsules : les critères qui expliquent l’écart de coût entre deux oméga-3.',
+    openingLinkHtml:
+      '<p>Pour appliquer ces critères, voyez <a href="/omega-3">les oméga 3 à comparer au rayon</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'whey-protein-gold-standard-la-reference-ultime-pour-les-sportifs-en-tunisie': {
+    headline: 'Gold Standard 100% Whey : composition, bienfaits et dosage',
+    metaDescription:
+      'Composition, profil d’acides aminés, bienfaits et dosage de la Gold Standard 100% Whey d’Optimum Nutrition, et à qui elle convient.',
+    openingLinkHtml:
+      '<p>Pour la situer face aux autres formules, <a href="/whey-proteine">comparez la Gold Standard aux autres whey</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'les-meilleurs-bruleurs-de-graisse-disponibles-en-tunisie-comparatif-et-avis': {
+    headline: 'Brûleurs de graisse : caféine, thé vert ou L-carnitine ?',
+    metaDescription:
+      'Caféine, thé vert, L-carnitine, CLA : comment agissent les principaux brûleurs de graisse, pour qui ils conviennent et leurs limites.',
+    openingLinkHtml:
+      '<p>Pour comparer les formules, voyez <a href="/bruleurs-de-graisse">les brûleurs de graisse du catalogue</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'creatine-monohydrate-en-tunisie-avantages-effets-secondaires-dosages-protein-tn': {
+    headline: 'Créatine monohydrate : avantages, effets secondaires, dosage',
+    metaDescription:
+      'Ce que la créatine monohydrate apporte à la performance, ses effets secondaires possibles et le dosage conseillé au quotidien.',
+    openingLinkHtml:
+      '<p>Pour passer à la pratique, <a href="/creatine">choisissez votre créatine monohydrate</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
+  'quamtrax-creatine-en-tunisie-comment-distinguer-le-faux-du-vrai-protein-tn': {
+    headline: 'Créatine Quamtrax : distinguer l’original d’une contrefaçon',
+    metaDescription:
+      'Emballage, étiquette, numéro de lot, texture : les points de contrôle pour reconnaître une créatine Quamtrax authentique.',
+    openingLinkHtml:
+      '<p>Pour acheter en confiance, voyez <a href="/creatine">les créatines vendues sur Protein.tn</a>.</p>',
+    lang: 'fr',
+    faqs: [],
+    internalLinks: [],
+  },
 };
 
 /**
