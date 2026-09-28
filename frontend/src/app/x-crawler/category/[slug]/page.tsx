@@ -53,6 +53,7 @@ import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import { sanitizeProductHtml, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
 import { CategoryBrandLinksFor } from '@/app/components/CategoryBrandLinks';
+import { loadBrands } from '@/util/brandIndex';
 import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
@@ -419,11 +420,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
     if (overflow) permanentRedirect(overflow);
     const products: Product[] = (productsData.products ?? []) as Product[];
     /*
-     * ── THE BRAND LOOKUP THE COMPARISON TABLE NEEDS, OFF A PAYLOAD ALREADY IN HAND ────────────
-     * NO EXTRA REQUEST. `catResult` was awaited at the top of this branch to resolve the slug, and
-     * both taxonomy endpoints return `brands` beside `products` (productsBySubCategoryId and
-     * productsByCategoryId each build it from their own product set, so it covers every product
-     * this listing can show, not just page 1's).
+     * The comparison uses the same cached brand index as the shopper route and brand strip.
      *
      * It cannot come from `productsData`. `shopQueryToApiParams` sends `light=1` to
      * /api/all_products to drop the 566-row brand list — 56 KB against 12 KB of products — so
@@ -431,11 +428,9 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
      * the `brands.length > 0` clause of the gate below, leaving the table dark on both renders
      * while every line of wiring looked correct.
      *
-     * The human route reads the SAME field off the SAME endpoint (through its own request-scoped
-     * memo of it), so the two renders resolve identical brand names for identical rows — which is
-     * the property the gate is protecting.
+     * Both renders resolve identical brand names for identical rows.
      */
-    const listingBrands: Brand[] = ((data as { brands?: Brand[] }).brands ?? []) as Brand[];
+    const listingBrands: Brand[] = await loadBrands().catch(() => [] as Brand[]);
     /*
      * ── PAGE 2+ CARRIES THE PRODUCTS AND NOTHING ELSE ─────────────────────────────────────────
      *

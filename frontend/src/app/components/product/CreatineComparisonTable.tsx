@@ -119,7 +119,7 @@ function isPack(product: Product): boolean {
 export function buildCreatineRows(
   products: Product[],
   brands: Brand[] = [],
-  limit = 8
+  limit = 12
 ): CreatineRow[] {
   const list = Array.isArray(products) ? products : [];
   const brandName = new Map((Array.isArray(brands) ? brands : []).map((b) => [b.id, (b.designation_fr || '').trim()]));
@@ -159,7 +159,7 @@ export function buildCreatineRows(
 export function CreatineComparisonTable({
   products,
   brands = [],
-  limit = 8,
+  limit = 12,
 }: {
   /** The products the page already fetched. This component never fetches. */
   products: Product[];

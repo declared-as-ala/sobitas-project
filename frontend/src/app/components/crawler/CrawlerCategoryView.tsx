@@ -28,6 +28,8 @@ import { getProductStockStatus } from '@/util/cartStock';
 import { getProductLink } from '@/util/productUrl';
 import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
 import { WheyComparisonTable, buildWheyRows } from '@/app/components/product/WheyComparisonTable';
+import { ProductComparisonTable } from '@/app/components/product/ProductComparisonTable';
+import { buildGainerRows } from '@/util/gainerComparison';
 import type { Brand, Product } from '@/types';
 
 export type CrawlerListLink = { name: string; url: string };
@@ -41,7 +43,7 @@ export type CrawlerListLink = { name: string; url: string };
  * and a table that appears for Googlebot and not for a shopper is the parity break this whole
  * component is written to avoid.
  */
-const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine']);
+const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine', 'whey-isolate', 'mass-gainers']);
 
 /** The taxonomy slug this listing is, read off the breadcrumb trail's own last entry — which is
  *  this page. Neither call site passes a slug, and both build that last crumb as `/${cleanSlug}`. */
@@ -183,8 +185,10 @@ export function CrawlerCategoryView({
   const comparisonRowCount =
     comparisonKind === 'creatine'
       ? buildCreatineRows(products ?? [], brands).length
-      : comparisonKind === 'whey-proteine'
+      : comparisonKind === 'whey-proteine' || comparisonKind === 'whey-isolate'
         ? buildWheyRows(products ?? [], brands).length
+        : comparisonKind === 'mass-gainers'
+          ? buildGainerRows(products ?? [], brands).length
         : 0;
   const showComparison =
     comparisonKind !== null &&
@@ -338,8 +342,10 @@ export function CrawlerCategoryView({
         <section aria-label="Comparatif" className="my-6">
           <h2 className="text-lg font-semibold">{`${title} : comparer les prix`}</h2>
           <div className="mt-2">
-            {comparisonKind === 'whey-proteine' ? (
-              <WheyComparisonTable products={products} brands={brands} />
+            {comparisonKind === 'mass-gainers' ? (
+              <ProductComparisonTable gainerRows={buildGainerRows(products, brands)} />
+            ) : comparisonKind === 'whey-proteine' || comparisonKind === 'whey-isolate' ? (
+              <WheyComparisonTable products={products} brands={brands} variant={comparisonKind === 'whey-isolate' ? 'isolate' : 'whey'} />
             ) : (
               <CreatineComparisonTable products={products} brands={brands} />
             )}

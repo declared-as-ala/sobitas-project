@@ -10,9 +10,9 @@ import { getCategories, getShopFacets, toSiteMedia } from '@/services/api';
 // no canonical — the exact shell measured under crawl load).
 import {
   getCachedCategoryOrSubCategoryMetadata as fetchCategoryOrSubCategory,
-  getCachedAllBrands,
 } from '@/services/getCachedProductDetails';
 import type { Brand } from '@/types';
+import { loadBrands } from '@/util/brandIndex';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import {
   buildBreadcrumbListSchema,
@@ -880,21 +880,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
  * GET /api/productsBySubCategoryId/creatine?meta_only=1 -> keys {sous_category, seo, breadcrumb,
  * products, brands, sous_categories}, brands 0, products 0.
  *
- * The crawler route reads `data.brands` off the FULL payload (getCachedCategoryOrSubCategory, no
- * meta_only) and so had a populated list. Passing the empty one here therefore did not merely make
- * the table miss — it made it render for Googlebot and for nobody else, on the one page in this
- * cluster that has to rank. That is the cloaking shape the gate was written to prevent, so the gate
- * did its job and stayed shut; this is the missing input, not a loosened condition.
+ * Both routes now read the shared brand index so the table's brand names agree.
  *
  * ── WHY IT IS GATED ON THE SLUG ─────────────────────────────────────────────────────────────────
  * getAllBrands is a 566-row fetch. Calling it on all ~50 category renders to serve one table would
- * be a real cost for no gain, so it is awaited only when the slug actually mounts the table. It is
- * request-deduped by React `cache()`, so metadata and body share the one call.
+ * be a real cost for no gain, so it is awaited only when the slug actually mounts the table.
+ * The same cached index serves the brand strip and crawler comparison.
  */
 async function comparisonBrands(slug: string): Promise<Brand[]> {
   if (!COMPARISON_SLUGS.has(slug)) return [];
   try {
-    return await getCachedAllBrands();
+    return await loadBrands();
   } catch {
     // A brand-list outage must cost the table, never the page: the gate sees [] and stays shut.
     return [];
@@ -1532,8 +1528,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
           slug={canonicalSlug}
           /*
             The same two props as the subcategory branch, from the same two places: the page of
-            products `loadListingPage` already returned, and the brand list the taxonomy payload
-            already carried (`productsByCategoryId` returns `brands` beside `products`).
+            products `loadListingPage` already returned, and the shared cached brand index.
 
             /creatine resolves as a SUBcategory, so this branch is not what lights the table up
             today — `fetchCategoryOrSubCategory` tries productsBySubCategoryId first and it answers

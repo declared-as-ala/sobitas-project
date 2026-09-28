@@ -175,6 +175,7 @@ export function WheyComparisonTable({
   products,
   brands = [],
   limit = 8,
+  variant = 'whey',
 }: {
   /** The products the page already fetched. This component never fetches. */
   products: Product[];
@@ -182,6 +183,7 @@ export function WheyComparisonTable({
    *  without this the Marque column drops itself rather than printing twelve blanks. */
   brands?: Brand[];
   limit?: number;
+  variant?: 'whey' | 'isolate';
 }) {
   const rows = buildWheyRows(products, brands, limit);
 
@@ -219,7 +221,7 @@ export function WheyComparisonTable({
           would scroll sideways away from the table it names. The element still exists, carries the
           full sentence and is announced first by a screen reader; it is just not what is drawn. */}
       <p className="mb-3 text-sm leading-relaxed text-ink-2">
-        Les whey actuellement en stock, de la moins chère à la plus chère.
+        Les {variant === 'isolate' ? 'isolates' : 'whey'} actuellement en stock, de la moins chère à la plus chère.
       </p>
 
       {/* Below the table's floor width this is the horizontal viewport onto it. `tabIndex` + `role`
@@ -228,11 +230,11 @@ export function WheyComparisonTable({
         className="overflow-x-auto overscroll-x-contain rounded-2xl border border-hairline bg-elevated shadow-card focus-visible:ring-2 focus-visible:ring-focus"
         tabIndex={0}
         role="region"
-        aria-label="Tableau comparatif des whey protéines, défilement horizontal"
+        aria-label={`Tableau comparatif des ${variant === 'isolate' ? 'whey isolates' : 'whey protéines'}, défilement horizontal`}
       >
         <table className={`w-full ${tableWidth} border-collapse text-sm`}>
           <caption className="sr-only">
-            Whey protéines en stock sur Protein.tn, classées du prix le plus bas au prix le plus
+            {variant === 'isolate' ? 'Whey isolates' : 'Whey protéines'} en stock sur Protein.tn, classées du prix le plus bas au prix le plus
             élevé. Marque, format et parfums repris tels que la fiche les indique.
           </caption>
           <thead>
@@ -294,8 +296,8 @@ export function WheyComparisonTable({
       <p className="mt-3 text-xs leading-relaxed text-ink-3">
         Format et parfums repris tels que la fiche les indique, jamais déduits.
         {canShowUnknown && ` « ${UNKNOWN} » signifie que l’information ne figure pas sur la fiche.`}
-        {' '}Le type de whey — concentrée, isolate ou hydrolysée — n’est pas comparé ici : aucun de
-        ces noms de produit ne le précise, et il ne sera pas deviné. Aucun prix au kilo n’est affiché
+        {variant === 'whey' && ' Le type de whey — concentrée, isolate ou hydrolysée — n’est pas comparé ici : aucun de ces noms de produit ne le précise, et il ne sera pas deviné.'}
+        {' '}Aucun prix au kilo n’est affiché
         tant que la masse nette n’a pas été relevée sur l’emballage. Prix en dinars, susceptibles
         d’évoluer.
       </p>

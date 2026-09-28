@@ -6,6 +6,7 @@ import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { ComparisonProductImage } from './ComparisonProductImage';
 import { ComparisonNutrition } from './ComparisonNutrition';
 import styles from './ProductComparisonTable.module.css';
+import type { GainerRow } from '@/util/gainerComparison';
 
 /**
  * ── COMPARER AVEC DES PRODUITS SIMILAIRES ───────────────────────────────────────────────────
@@ -33,7 +34,8 @@ import styles from './ProductComparisonTable.module.css';
  * The tolerance pair moved in beside the price, and the "Voir le produit" action moved onto the
  * same line as the stock state instead of below it.
  */
-export function ProductComparisonTable({ rows }: { rows: ComparisonRow[] }) {
+export function ProductComparisonTable({ rows = [], gainerRows }: { rows?: ComparisonRow[]; gainerRows?: GainerRow[] }) {
+  if (gainerRows) return <GainerPriceTable rows={gainerRows} />;
   if (!rows.length) return null;
 
   const nutrients = visibleNutrients(rows.map((row) => row.facts));
@@ -138,6 +140,37 @@ export function ProductComparisonTable({ rows }: { rows: ComparisonRow[] }) {
         {canShowDash && ' Un tiret signifie que le fabricant ne communique pas cette valeur.'}
         {' '}Aucune mention ne garantit l’absence d’un allergène.
       </p>
+    </div>
+  );
+}
+
+function GainerPriceTable({ rows }: { rows: GainerRow[] }) {
+  if (rows.length < 2) return null;
+  return (
+    <div data-gainer-comparison>
+      <p className="mb-3 text-sm leading-relaxed text-ink-2">Les mass gainers actuellement en stock, classés par prix au kilo.</p>
+      <div className={`${styles.scroller} rounded-2xl border border-hairline bg-elevated shadow-card focus-visible:ring-2 focus-visible:ring-focus`} tabIndex={0} role="region" aria-label="Tableau comparatif des mass gainers, défilement horizontal">
+        <table className="min-w-[640px] w-full border-collapse text-sm">
+          <caption className="sr-only">Mass gainers en stock sur Protein.tn, classés par prix au kilo lorsque le poids est connu.</caption>
+          <thead><tr>
+            {['Produit', 'Marque', 'Format', 'Prix', 'Prix au kilo'].map((label, index) => (
+              <th key={label} scope="col" className={`bg-sunken px-4 py-3 text-left text-[11px] font-bold uppercase tracking-[0.1em] text-ink-3 whitespace-nowrap ${index === 0 ? 'sticky left-0 z-[2] min-w-[180px] border-r border-hairline' : ''}`}>{label}</th>
+            ))}
+          </tr></thead>
+          <tbody>{rows.map((row) => (
+            <tr key={row.id} className="border-t border-hairline align-top">
+              <th scope="row" className="sticky left-0 z-[1] min-w-[180px] border-r border-hairline bg-elevated px-4 py-3 text-left font-normal">
+                <a href={row.url} className="inline-flex min-h-11 items-center font-semibold leading-snug text-ink-1 hover:text-brand focus-visible:ring-2 focus-visible:ring-focus">{row.name}</a>
+              </th>
+              <td className="px-4 py-3 text-ink-2">{row.brand || 'Non renseigné'}</td>
+              <td className="whitespace-nowrap px-4 py-3 font-semibold text-ink-1">{row.format || 'Non renseigné'}</td>
+              <td className="px-4 py-3 text-right"><span className="whitespace-nowrap font-display text-lg font-bold text-brand">{formatTnd(row.price)}</span>{row.oldPrice != null && <span className="block whitespace-nowrap text-xs text-ink-3 line-through">{formatTnd(row.oldPrice)}</span>}</td>
+              <td className="whitespace-nowrap px-4 py-3 text-right font-semibold text-ink-1">{row.pricePerKilo != null ? `${formatTnd(row.pricePerKilo)}/kg` : ''}</td>
+            </tr>
+          ))}</tbody>
+        </table>
+      </div>
+      <p className="mt-3 text-xs leading-relaxed text-ink-3">Prix au kilo calculé uniquement à partir d’un poids unique et sans ambiguïté indiqué dans le nom du produit. Les formats incertains restent sans calcul. Prix en dinars, susceptibles d’évoluer.</p>
     </div>
   );
 }

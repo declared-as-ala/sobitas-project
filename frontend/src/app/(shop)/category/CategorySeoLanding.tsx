@@ -12,6 +12,8 @@ import {
 import { buildFAQPageSchemaFromQA, validateStructuredData } from '@/util/structuredData';
 import { CreatineComparisonTable, buildCreatineRows } from '@/app/components/product/CreatineComparisonTable';
 import { WheyComparisonTable, buildWheyRows } from '@/app/components/product/WheyComparisonTable';
+import { ProductComparisonTable } from '@/app/components/product/ProductComparisonTable';
+import { buildGainerRows } from '@/util/gainerComparison';
 import type { Brand, Product } from '@/types';
 
 export interface RelatedLink {
@@ -51,10 +53,7 @@ interface CategorySeoLandingProps {
 /**
  * Categories that mount the price-comparison table under their grid.
  *
- * A SET, NOT A FLAG. /creatine first (22/09/2026), /whey-proteine added 23/09/2026 with its own
- * table and its own measured columns. "The cheapest eight, cheapest first" is only a useful summary
- * where the products are near-substitutes, which is true of creatine tubs and whey tubs and false
- * of, say, /equipement — so this stays a list somebody opts a category into, never a default.
+ * A SET, NOT A FLAG. Only shelves with comparable products opt in; /equipement does not.
  * Adding a slug here is the whole cost of extending it, once somebody has looked at that
  * category's fill rates the way the table's docblock documents for this one.
  *
@@ -63,7 +62,7 @@ interface CategorySeoLandingProps {
  * and importing this module would pull next/image and the icon set into it for one string. The two
  * lists must be changed together — the whole point of the gate is that both renders switch at once.
  */
-export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine']);
+export const COMPARISON_SLUGS: ReadonlySet<string> = new Set(['creatine', 'whey-proteine', 'whey-isolate', 'mass-gainers']);
 
 function renderContent(value: string): ReactNode {
   if (value.includes('<')) return <div dangerouslySetInnerHTML={{ __html: value }} />;
@@ -117,9 +116,8 @@ export function CategorySeoLanding({
     same function the same question beats rendering and then discovering the answer.
   */
   /*
-    Which table a comparison slug mounts. Two categories, two builders, two column sets — the
-    creatine table ships Produit/Marque/Format/Forme/Prix and the whey table its own, because each
-    was chosen from that category's measured fill rates rather than from a shared guess. The gate
+    Which table a comparison slug mounts. Creatine, whey/isolate and gainer use their respective
+    row builders and columns. The gate
     still asks the same question once, before rendering: is this slug opted in, do we have brands,
     and does its builder actually return at least two comparable rows.
   */
@@ -127,8 +125,10 @@ export function CategorySeoLanding({
   const comparisonRowCount =
     comparisonKind === 'creatine'
       ? buildCreatineRows(products, brands).length
-      : comparisonKind === 'whey-proteine'
+      : comparisonKind === 'whey-proteine' || comparisonKind === 'whey-isolate'
         ? buildWheyRows(products, brands).length
+        : comparisonKind === 'mass-gainers'
+          ? buildGainerRows(products, brands).length
         : 0;
   const showComparison = showDetails && comparisonKind !== null && brands.length > 0 && comparisonRowCount >= 2;
   const faqSchema = withFaqSchema && hasFaqs && showDetails ? buildFAQPageSchemaFromQA(faqs) : null;
@@ -187,8 +187,10 @@ export function CategorySeoLanding({
                 one of them, and the table's own lead sentence says what the rows are. */}
             {`${title} : comparer les prix`}
           </h2>
-          {comparisonKind === 'whey-proteine' ? (
-            <WheyComparisonTable products={products} brands={brands} />
+          {comparisonKind === 'mass-gainers' ? (
+            <ProductComparisonTable gainerRows={buildGainerRows(products, brands)} />
+          ) : comparisonKind === 'whey-proteine' || comparisonKind === 'whey-isolate' ? (
+            <WheyComparisonTable products={products} brands={brands} variant={comparisonKind === 'whey-isolate' ? 'isolate' : 'whey'} />
           ) : (
             <CreatineComparisonTable products={products} brands={brands} />
           )}
