@@ -147,6 +147,15 @@ class Product extends Model
         });
 
         static::saving(function (Product $product): void {
+            // INCIDENT 28/09/2026: seo:products-apply-copy loaded products with a partial select
+            // (no qte) and saved them. `(int) null` is 0, so this hook wrote qte = 0 and rupture = 1
+            // on all 159 in-stock products at once — the whole shop showed "rupture de stock" until
+            // restored from the pre-apply backup. A stock figure that was never loaded is not a
+            // stock figure: an existing row saved without qte/rupture keeps both untouched.
+            if ($product->exists && ! array_key_exists('qte', $product->getAttributes())) {
+                return;
+            }
+
             $qte = (int) $product->qte;
             if ($qte < 0) {
                 $qte = 0;

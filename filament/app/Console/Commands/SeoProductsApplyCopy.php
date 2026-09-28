@@ -79,7 +79,9 @@ class SeoProductsApplyCopy extends Command
 
         $products = Product::query()
             ->whereIn('slug', array_keys($entries))
-            ->get(['id', 'slug', 'publier', 'description_fr', 'description_cover', 'nutrition_values', 'faq', 'meta_title', 'meta_description']);
+            // FULL rows, never a column list: saving() hooks derive stock from qte, and a partial
+            // select saved qte = 0 on every in-stock product on 28/09/2026 (see Product::booted).
+            ->get();
 
         $changed = 0;
         $unchanged = 0;
