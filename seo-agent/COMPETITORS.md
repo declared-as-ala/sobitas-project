@@ -9,6 +9,31 @@ Off-site, for the record (SemRush tn, 07/09): protein.tn 357 referring domains /
 nutribeast.tn 302; body-shop 300; protein-shop-tunisia 294; housenutrition.tn 96 / 1,147. The
 site leading the head terms has the FEWEST links. Authority is not what we are missing.
 
+## 28/09/2026 — first REAL Google Tunisia SERPs (local IP, google.com gl=tn hl=fr pws=0) + teardown
+
+Until today every position in this file came from a non-Google index. Read in the built-in browser:
+protein.tn is **#1 "proteine sousse" (home) · #3 "protein tunisie" (home) · #7 "bcaa tunisie" (/bcaa) ·
+~#10 "whey protein tunisie" (/whey-proteine) · #7 "serious mass tunisie" (the OUT-OF-STOCK 2,7 kg PDP)**, and
+absent from the top 20 on créatine tunisie, créatine prix tunisie, mass gainer tunisie, pre workout tunisie, and from
+page 1 on whey isolate, gold standard whey prix, oméga 3, brûleur de graisse, nutrition sportive. AI Overviews on
+most head terms (citing House, Nutribeast, Impact).
+
+**Why they rank (teardown of 16 competitor pages, both UAs, measured):**
+1. **Page 1 is buyable and on-topic.** House 100 % in stock, Gympro 99 %, Nutribeast 86–94 %; ours 44 %
+   (/mass-gainers), 8 % (whey), 3 % (/pre-workout), padded with off-topic imports (gummies/collagen on /creatine,
+   D-ribose on /prise-de-masse, a bergamot supplement on /pre-workout). Fixed in code 28/09 (efd7f71c: on-topic
+   first inside each stock group); the rest is inventory (owner).
+2. **Impact Nutrition's stars are REAL** (verified purchases, Tunisian-Arabic text, seller replies, 169 on creatine).
+   strong-nutrition's 5,0(30)/(61) come from a fake category-level Product; House's 5/24 is hard-coded.
+3. **Ruled out:** copy length and position (Nutribeast ~1,300 words first; Gympro #1 on whey with NO H1, no copy, no
+   schema), schema completeness, TTFB, titles, backlinks.
+4. **Price on "prix" queries:** Gold Standard 2,27 kg is 359–360 DT at 5 of 6 ranking sellers; ours 379. Ostrovit
+   500 g 149 vs 99/110. Our cheapest in-stock creatine 59 DT vs 36 DT entry points.
+5. **Our own URLs split the signal:** 24 indexable Gold Standard PDPs (16 back-order flavour imports at 587 DT);
+   Serious Mass 5,45 kg legacy slugs 301'd to the CATEGORY (fixed 5642d9b8); blog posts link 0 in-stock PDPs.
+6. **Brand links:** House/Nutribeast link a brand from every listing; our categories linked none.
+Raw captures: scratchpad of session 28/09 (`research/serp-2809.md`, `research/whey|mg|creatine/`).
+
 ## housenutrition.tn — the one to beat on "créatine tunisie" and "whey protéine tunisie"
 
 Platform: custom PHP app (Laravel-style), served from https://www.housenutrition.tn/public/;

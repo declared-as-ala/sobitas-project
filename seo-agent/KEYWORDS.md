@@ -23,6 +23,14 @@ protein.tn URL shown for the query, and on this site the two disagree hard (the 
 in `docs/seo-ranking-baseline.md` measures `creatine tunisie` at 9.1 query-average while
 `/creatine` itself sits at 22.2). Read the Pages breakdown before acting on any row.
 
+**Real Google Tunisia positions, 28/09/2026** (built-in browser on a Tunisian IP, `gl=tn&hl=fr&pws=0`, pages 1–2;
+full sets in COMPETITORS.md): proteine sousse **1** (home) + 8 (/proteine-sousse) · protein tunisie **3** (home) ·
+bcaa tunisie **7** (/bcaa) · serious mass tunisie **7** (/mass-gainers/serious-mass-2-7-kg, out of stock) · whey protein
+tunisie **~10** (/whey-proteine) · proteine tunisie **~13** (home) · absent from top 20: creatine tunisie, mass gainer
+tunisie, pre workout tunisie · absent from page 1: creatine prix tunisie, whey isolate tunisie, gold standard whey prix
+tunisie, omega 3 tunisie, bruleur de graisse tunisie, complement alimentaire musculation tunisie, nutrition sportive tunisie.
+Re-read these exact queries the same way before claiming a move.
+
 ## Head terms (category pages)
 
 | query | page | impr/28d | pos (date) | note |
