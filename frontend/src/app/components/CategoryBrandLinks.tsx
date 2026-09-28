@@ -1,4 +1,6 @@
 import Link from 'next/link';
+import { unstable_cache } from 'next/cache';
+import { getAllBrands } from '@/services/api';
 import { Section } from '@/app/components/layout/Section';
 import { SectionHeader } from '@/app/components/SectionHeader';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
@@ -47,6 +49,35 @@ export function resolveCategoryBrandLinks(
         ? `${row.name} Tunisie`
         : row.name,
     }));
+}
+
+/**
+ * The brand NAMES come from the full brand list, never from the listing response: the listing is
+ * fetched with `light=1`, which returns `brands: []` (measured 28/09/2026 — 0 rows vs 578 without
+ * it), so the shopper route rendered no strip at all while the crawler route, whose products
+ * happened to embed a brand object, rendered one link. One loader, both routes, same links.
+ * A failed load is never cached (an empty list would hide the strip for an hour).
+ */
+const loadBrands = unstable_cache(
+  async () => {
+    const rows = await getAllBrands();
+    if (rows.length === 0) throw new Error('empty brand list');
+    return rows.map(({ id, designation_fr }) => ({ id, designation_fr }) as Brand);
+  },
+  ['category-brand-links-brands'],
+  { revalidate: 3600, tags: ['brands'] }
+);
+
+/** Server component used by BOTH the shopper and the crawler category routes. */
+export async function CategoryBrandLinksFor({
+  products,
+  brandSlugs,
+}: {
+  products: Product[];
+  brandSlugs?: string[];
+}) {
+  const brands = await loadBrands().catch(() => [] as Brand[]);
+  return <CategoryBrandLinks links={resolveCategoryBrandLinks(products, brands, brandSlugs)} />;
 }
 
 export function CategoryBrandLinks({ links }: { links: BrandLink[] }) {
