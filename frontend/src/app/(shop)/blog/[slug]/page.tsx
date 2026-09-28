@@ -366,7 +366,11 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       // no-op (targetsFromTaxonomy only emits targets for categories that exist), so this is safe.
       'omega-3': ['oméga 3', 'omega 3', 'huile de poisson', 'أوميغا 3', 'اوميغا 3', 'زيت السمك'],
       'pre-workout': ['pre workout', 'pré-workout', 'preworkout', 'booster d’entraînement', 'ما قبل التمرين', 'بري وركاوت'],
-      'perte-de-poids': ['brûleur de graisse', 'bruleur de graisse', 'brûle-graisse', 'perte de poids', 'حرق الدهون', 'حارق الدهون', 'التخسيس'],
+      // A fat burner is a product on the /bruleurs-de-graisse shelf; "perte de poids" is the goal
+      // hub. The burner phrases sat on the hub, so an article naming a brûleur linked past the shelf
+      // that sells it (audit 28/09/2026).
+      'bruleurs-de-graisse': ['brûleur de graisse', 'brûle-graisse', 'fat burner', 'حارق الدهون', 'حرق الدهون'],
+      'perte-de-poids': ['perte de poids', 'التخسيس'],
       glutamine: ['glutamine', 'l-glutamine', 'جلوتامين', 'الجلوتامين'],
       caseine: ['caséine', 'caseine', 'protéine caséine', 'كازين', 'الكازين'],
       collagene: ['collagène', 'collagene', 'كولاجين', 'الكولاجين'],

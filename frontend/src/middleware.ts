@@ -486,7 +486,11 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
         ? ['', headLower, ...rest].join('/')
         : lowercasePreservingEscapes(pathname);
 
-    if (normalised !== pathname) {
+    /* An admin rule for this path wins over the fold: its keys are case-insensitive, so folding
+       first spent a hop only to reach it — /Old-Product 301 -> /old-product 301 -> /new/product.
+       The rules block below lowercases the destination itself, so skipping the fold costs nothing.
+       The lookup is the same in-process cache the rules block reads (no extra backend call). */
+    if (normalised !== pathname && !(await getAdminRedirect(pathname))) {
       return redirectPreservingQuery(request, normalised);
     }
   }

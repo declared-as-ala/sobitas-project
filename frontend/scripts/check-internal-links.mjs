@@ -104,6 +104,10 @@ check('named entity', countLinks(injectInternalLinks('<p>une prot&eacute;ine</p>
 check('numeric entity', countLinks(injectInternalLinks('<p>une prot&#233;ine</p>', TARGETS)), 1);
 check('plural', countLinks(injectInternalLinks('<p>les protéines</p>', TARGETS)), 1);
 check('uppercase', countLinks(injectInternalLinks('<p>PROTÉINE</p>', TARGETS)), 1);
+// "protéinés" is the adjective ("snacks protéinés"), not the category noun — audit 28/09/2026.
+check('adjective protéinés is not protéines', countLinks(injectInternalLinks('<p>des snacks protéinés</p>', TARGETS)), 0);
+check('adjective protéiné (entity) is not protéine', countLinks(injectInternalLinks('<p>un repas prot&eacute;in&eacute;</p>', TARGETS)), 0);
+check('unaccented noun still matches', countLinks(injectInternalLinks('<p>les proteines</p>', TARGETS)), 1);
 
 check(
   'does not match inside a longer word — créatinine is not créatine',

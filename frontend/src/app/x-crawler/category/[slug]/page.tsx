@@ -54,6 +54,7 @@ import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { getBrandCategoryNames } from '@/util/brandCategoryNames';
 import { buildBrandIntroHtml } from '@/util/brandIntro';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
@@ -284,9 +285,6 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const brand = await findBrandBySlug(cleanSlug);
     if (brand) {
       const canonical = buildCanonicalUrl(`/${encodeURIComponent(cleanSlug)}`);
-      // Shared with the human /{slug} route: same URL must not have two different titles.
-      const title = buildBrandMetaTitle(brand.designation_fr);
-
       /**
        * A brand with NO products is a heading, a breadcrumb and nothing to buy. Google reads that
        * as a soft 404, and asking it to index one is asking for a thin-content signal against the
@@ -299,24 +297,28 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
        * indexable again with no intervention. Cached fetch, so this costs no extra API call.
        */
       let brandProductCount = 0;
+      let categoryNames: string[] = [];
       try {
         const listing = await getCachedProductsByBrand(brand.id);
         brandProductCount = (listing?.products ?? []).length;
+        categoryNames = getBrandCategoryNames(listing?.products ?? []);
       } catch {
         // Never let a transient listing failure flip a healthy brand to noindex — assume it has
         // products and stay indexable. A wrong noindex is far more expensive than a wrong index.
         brandProductCount = 1;
       }
+      // Shared with the human /{slug} route: same URL must not have two different titles.
+      const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
 
       return {
         title: { absolute: title },
-        description: buildBrandMetaDescription(brand.designation_fr),
+        description: buildBrandMetaDescription(brand.designation_fr, categoryNames),
         alternates: { canonical },
         robots: { index: brandProductCount > 0, follow: true },
         // This route declared no openGraph at all, so every brand page handed crawlers and link
         // unfurlers the site-wide /og-banner.jpg while a browser got the reviewed hero image.
         // Shared with the human route now — see buildBrandSocialMetadata.
-        ...buildBrandSocialMetadata(brand.designation_fr, canonical),
+        ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames),
       };
     }
     const page = await findPageBySlug(cleanSlug);

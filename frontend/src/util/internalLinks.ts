@@ -132,12 +132,22 @@ const foldTerm = (s: string) =>
  */
 function compileTerm(term: string): string {
   const chars = [...term.toLowerCase()];
-  const parts = chars.map((ch) => {
+  const parts = chars.map((ch, i) => {
     // A space in a search term also matches a hyphen (and non-breaking hyphen): supplement terms
     // are written both ways in the corpus — "oméga 3" / "oméga-3", "pre workout" / "pre-workout",
     // "mass gainer" / "mass-gainer" — so a space-spelled term must catch the hyphenated mention too.
     // Additive: it only widens what a multi-word term matches, never narrows it.
     if (/\s/.test(ch)) return GAP;
+    /* A word-final unaccented "e" (optionally before a closing "s") stays unaccented. In French an
+       accent there makes a different word: "protéines" (the noun, the category) vs "protéinés"
+       (the adjective — "snacks protéinés", "aliments protéinés"), which the accent-folding below
+       linked to /proteines. Mid-word the folding stays: CMS prose writes "proteine" as often as
+       "protéine", and that is what the alternatives exist for. Short words are left alone: "pre"
+       in "pre workout" is written "pré" just as often and is not a different word. */
+    if (ch === 'e' && /^s?(?:\s|$)/.test(chars.slice(i + 1, i + 3).join(''))) {
+      const wordStart = chars.slice(0, i).join('').search(/\S+$/);
+      if (wordStart >= 0 && i - wordStart >= 4) return 'e';
+    }
     const base = BASE_OF[ch] ?? ch;
     const alts = CHAR_ALTERNATIVES[base];
     if (!alts) return escapeRegex(ch);

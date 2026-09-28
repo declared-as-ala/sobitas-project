@@ -25,6 +25,7 @@ import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandMetaDescription, buildBrandSocialMetadata } from '@/util/brandMeta';
+import { getBrandCategoryNames } from '@/util/brandCategoryNames';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
@@ -113,16 +114,17 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
   // so the <title>/description no longer mismatch the structured data on the same page.
   // Shared with the crawler route, which serves this same URL to bots — the two had drifted to
   // different titles ("-" vs "—", "Compléments Tunisie" vs "Compléments en Tunisie").
-  const title = buildBrandMetaTitle(brand.designation_fr);
-  const description = buildBrandMetaDescription(brand.designation_fr);
-
   let brandProductCount = 0;
+  let categoryNames: string[] = [];
   try {
     const listing = await getCachedProductsByBrand(brand.id);
     brandProductCount = (listing?.products ?? []).length;
+    categoryNames = getBrandCategoryNames(listing?.products ?? []);
   } catch {
     brandProductCount = 1;
   }
+  const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
+  const description = buildBrandMetaDescription(brand.designation_fr, categoryNames);
 
   return {
     // absolute: buildBrandMetaTitle already returns a finished SERP title, brand suffix included
@@ -155,7 +157,7 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
     robots: { index: brandProductCount > 0, follow: true },
     // Shared with the crawler route, which emitted no openGraph at all and therefore fell back to
     // the site-wide banner — see buildBrandSocialMetadata.
-    ...buildBrandSocialMetadata(brand.designation_fr, canonical),
+    ...buildBrandSocialMetadata(brand.designation_fr, canonical, categoryNames),
   };
 }
 
