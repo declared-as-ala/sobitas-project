@@ -75,3 +75,19 @@
 #   both -> "Naturelo Vitamin D3 – 62,5 µg" / "… – 125 µg", micro sign, never Greek "Μ".
 /vitamines/naturelo-vitamin-d3-625-g
 /vitamines/naturelo-vitamin-d3-125-g
+
+# STREAMING-METADATA FIX 28/09 (frontend/next.config.js `htmlLimitedBots` now includes Googlebot).
+# These four served Googlebot a document whose <title>/canonical/description/robots were emitted at
+# the END of the body (byte 268,738 of 272,966 on /proteines) while Bingbot got them in <head> on
+# every fetch. AFTER the deploy, as Googlebot, <title> must sit inside <head> (offset < 12,000) on
+# all four, and audit-live.mjs must stop reporting the /sante-vitalite `transient` P2. If it still
+# streams, the deploy did not carry the config and that is the day's job.
+/proteines
+/prise-de-masse
+/blog
+/sante-vitalite
+
+# Lipo-6 cannibalisation, measured 28/09: this SKU is the one Google shows for `lipo 6 black`
+# (via the legacy /shop/lipo-6-black-60-caps, one 301) and it is 139 DT `BackOrder`, while
+# `…-ultra-concentrate-60caps` is 119 DT `InStock`. Watching both until Saturday's link pass.
+/bruleurs-de-graisse/lipo-6-black-60-caps
