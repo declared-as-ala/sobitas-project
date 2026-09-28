@@ -4,7 +4,7 @@ import { unstable_cache } from 'next/cache';
 import { htmlToText, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { notFound, permanentRedirect, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
-import { getCategories, getInStockCount, getShopFacets } from '@/services/api';
+import { getCategories, getInStockCount, getShopFacets, toSiteMedia } from '@/services/api';
 // Request-scoped cache: generateMetadata and the page body below both need this category, and
 // two separate calls could fail independently (metadata 429 + body OK = 200, generic title,
 // no canonical — the exact shell measured under crawl load).
@@ -692,14 +692,15 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     const descTrimmed = metaQuery.page > 1
       ? `Page ${metaQuery.page} — ${truncateAtWord(description, 140)}`
       : truncateAtWord(description, 155);
-    const ogImageRaw = merged.ogImage || undefined;
+    // Same-origin like every rendered image (toSiteMedia): the CMS stores absolute admin URLs.
+    const ogImageRaw = merged.ogImage ? toSiteMedia(merged.ogImage) : undefined;
     const ogImage = ogImageRaw && /^https?:\/\//i.test(ogImageRaw) && !/\s/.test(ogImageRaw) ? ogImageRaw : undefined;
     const ogAlt = (apiSeo?.og?.image_alt as string | undefined)?.trim() || merged.h1 || apiTitle || 'Catégorie';
     const ogTitleMeta = (merged.ogTitle ?? '').trim() || metaTitle;
     const ogDescMeta = (merged.ogDescription ?? '').trim() || descTrimmed;
     const twitterTitleMeta = (merged.twitterTitle ?? '').trim() || ogTitleMeta;
     const twitterDescMeta = (merged.twitterDescription ?? '').trim() || ogDescMeta;
-    const twitterImgRaw = (merged.twitterImage ?? '').trim() || ogImageRaw;
+    const twitterImgRaw = toSiteMedia((merged.twitterImage ?? '').trim()) || ogImageRaw;
     const twitterImg = twitterImgRaw && /^https?:\/\//i.test(twitterImgRaw) && !/\s/.test(twitterImgRaw) ? twitterImgRaw : undefined;
     const kw = metaKeywordsList(merged);
     const fallbackKeywords = tunisiaKeywords ? [tunisiaKeywords.primary, ...tunisiaKeywords.variations] : [];

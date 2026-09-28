@@ -7,7 +7,7 @@ import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 // Request-scoped cache: generateMetadata + the page body used to issue TWO separate
 // article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
-import { getStorageUrl } from '@/services/api';
+import { getStorageUrl, toSiteMedia } from '@/services/api';
 import { resolveCanonicalUrl } from '@/util/canonical';
 import { buildMetaDescription, htmlToText } from '@/util/sanitizeProductHtml';
 import { resolveArticleLanguage, buildArticleTitle, localityHint, isArabicArticle } from '@/util/articleLanguage';
@@ -164,11 +164,13 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
   try {
     const article = await getArticleDetails(slug);
     const seoOverlay = getBlogSeoEntry(slug);
-    const imageUrl =
+    // Same-origin like every rendered image (toSiteMedia): the CMS stores absolute admin URLs.
+    const imageUrl = toSiteMedia(
       article.seo?.open_graph?.image ||
       article.seo?.twitter?.image ||
       article.seo?.image ||
-      (article.cover ? getStorageUrl(article.cover) : '');
+      (article.cover ? getStorageUrl(article.cover) : '')
+    );
     const description = stripHtml(article.description_fr || article.description || '');
     // The headline, resolved BEFORE the description because the description is built relative to
     // it — an article body opens with its own headline, so stripping tags leaves the title
@@ -214,7 +216,7 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       buildArticleDescription(raw || metaDescription, articleHeadline),
       articleLanguage
     );
-    const twitterImage = article.seo?.twitter?.image || imageUrl || '';
+    const twitterImage = toSiteMedia(article.seo?.twitter?.image || imageUrl || '');
     return {
       // absolute: `title` already carries the brand. Without this the template appends it AGAIN,
       // which is the defect on the French side and doubles the French one on the Arabic side.

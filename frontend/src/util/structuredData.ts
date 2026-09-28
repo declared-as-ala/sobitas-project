@@ -1493,7 +1493,7 @@ export function buildArticleSchema(article: {
   // paths, and fall back to the brand logo when the article has no cover.
   const rawSchemaImage = article.seo?.image || article.schema?.image || imageUrl || '';
   const schemaImage = rawSchemaImage
-    ? (rawSchemaImage.startsWith('http') ? rawSchemaImage : getStorageUrl(rawSchemaImage))
+    ? (rawSchemaImage.startsWith('http') ? toSiteMedia(rawSchemaImage) : getStorageUrl(rawSchemaImage))
     : `${base}/logo.png`;
   const published = article.schema?.date_published || article.created_at || undefined;
   const modified = article.schema?.date_modified || article.updated_at || article.created_at || undefined;
