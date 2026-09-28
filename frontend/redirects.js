@@ -210,6 +210,11 @@ function buildRedirects() {
     // canonical (without the historical `.tn` suffix) so this does not become a redirect chain.
     p('/page/conditions-generales', '/conditions-generale-de-ventes-protein'),
     p('/page/mentions-legales', '/mentions-legales'),
+    // Short legal aliases: /cgv was linked internally and answered 404 (link-graph crawl
+    // 28/09/2026), and shoppers type these. All land on the one real terms page.
+    p('/cgv', '/conditions-generale-de-ventes-protein'),
+    p('/cgu', '/conditions-generale-de-ventes-protein'),
+    p('/conditions-generales-de-vente', '/conditions-generale-de-ventes-protein'),
     /*
      * The generic /page/:slug redirect now lives in middleware.ts. A static redirect cannot
      * distinguish `/page/undefined` (permanently invalid → 410) from a real legacy CMS slug, and
