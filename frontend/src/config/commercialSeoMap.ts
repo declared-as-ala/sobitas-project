@@ -163,6 +163,11 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
       '/blog/protein-the-essential-guide-to-its-benefits-sources-and-role-in-health',
       '/blog/whey-protein-et-entrainement-strategies-pour-des-gains-musculaires-optimaux-protein-tn',
       '/blog/whey-protein-gold-standard-la-reference-ultime-pour-les-sportifs-en-tunisie',
+      // Arabic whey guides (28/09/2026, Google Tunisia hl=ar): 176 is #1 on "افضل بروتين في تونس" and #4 on
+      // "بروتين تونس" and is cited by the AI Overview; none of the three linked a product or the category.
+      '/blog/أفضل مكملات البروتين في تونس: كيف تختار المنتج المناسب لهدفك الرياضي؟',
+      '/blog/أفضل وقت لتناول البروتين: قبل التمرين أم بعده؟',
+      '/blog/كيف تختار بروتين مصل اللبن في تونس؟ الدليل الشامل من protein.tn',
     ],
     conflicts: [
       { url: '/blog/whey-protein-en-tunisie', reason: 'live title "PROTÉINE en Tunisie : Guide Achat 2026" fights the HOMEPAGE\'s head term, not just the category; it earns 4 clicks so retarget the title, keep the URL', action: 'leave-earns-clicks' },

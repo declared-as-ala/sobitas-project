@@ -12,7 +12,7 @@ const CURATED_ORDER = [
   'olimp-sport-nutrition', 'mr-x-v-shape-supps', 'jx-fitness',
   'kong-sport-nutrition', 'nutrex-research', 'redcon1', 'hx-nutrition',
   'mnd-fitness', 'eric-favre', 'zumub', 'quamtrax', 'scenit-nutrition',
-  'muscle-care', 'applied-nutrition', 'musclepharm', 'scivation',
+  'muscle-care', 'applied-nutrition', 'musclepharm', 'xtend',
 ] as const;
 
 type RailBrand = Pick<Brand, 'id' | 'logo' | 'designation_fr' | 'alt_cover'>;

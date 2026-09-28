@@ -21,7 +21,7 @@
     },
     {
       "question": "Quel prix pour des BCAA en Tunisie ?",
-      "answer": "Le prix dépend de la marque, du ratio et du nombre de doses réelles par pot : comparez toujours le prix par portion plutôt que le prix du pot. Les gélules reviennent plus cher au gramme mais restent pratiques en déplacement. Les tarifs à jour et le stock réel sont affichés sur chaque fiche produit de cette page."
+      "answer": "Sur Protein.tn, les BCAA en stock démarrent à {prixMin} DT ({nbEnStock} références en stock). Le prix dépend de la marque, du ratio et du nombre de doses réelles par pot : comparez toujours le prix par portion plutôt que le prix du pot. Les gélules reviennent plus cher au gramme mais restent pratiques en déplacement. Les tarifs à jour et le stock réel sont affichés sur chaque fiche produit de cette page."
     },
     {
       "question": "BCAA ou whey protein : que choisir en premier ?",
@@ -30,6 +30,14 @@
     {
       "question": "Les BCAA font-ils grossir ?",
       "answer": "Non. Les BCAA contiennent environ 4 kcal par gramme (comme toute protéine), donc une dose de 10 g apporte ~40 kcal — un impact calorique négligeable. Ils peuvent au contraire aider à préserver la masse musculaire pendant un régime hypocalorique. Ils ne provoquent pas de prise de poids en eux-mêmes."
+    },
+    {
+      "question": "Quels sont les effets secondaires possibles des BCAA ?",
+      "answer": "Aux doses courantes de 5 à 10 g par prise, les BCAA sont en général bien tolérés chez l'adulte en bonne santé ; à forte dose, des troubles digestifs sont possibles. Respectez la dose de l'étiquette et demandez l'avis d'un médecin en cas de maladie rénale ou hépatique, de grossesse ou d'allaitement."
+    },
+    {
+      "question": "Les BCAA peuvent-ils aider à maigrir ?",
+      "answer": "Pas directement : les BCAA ne brûlent pas de graisse. En période de déficit calorique, un apport suffisant en protéines aide à préserver la masse musculaire, et les BCAA peuvent compléter cet apport autour de l'entraînement ; la perte de poids, elle, dépend du bilan calorique de la journée."
     },
     {
       "question": "Peut-on prendre les BCAA pendant le Ramadan en Tunisie ?",

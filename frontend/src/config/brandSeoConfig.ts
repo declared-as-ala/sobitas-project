@@ -2100,21 +2100,24 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: "brands", name: "Comparer MusclePharm aux autres marques", url: "/brands" },
     ],
   },
-  'scivation': {
-    metaTitle: "Scivation Tunisie | Xtend BCAA 420 g — Protein.tn",
+  // Was 'scivation' until 28/09/2026: XTEND BCAA 420G (the only in-stock product of the line) moved from the
+  // Scivation brand to XTEND, the name people search ("bcaa xtend tunisie"; House Nutrition ranks /brand/xtend
+  // at #5 on "bcaa tunisie"). Scivation is XTEND's maker; the emptied Scivation page goes noindex on its own.
+  'xtend': {
+    metaTitle: "XTEND Tunisie | BCAA Xtend 420 g — Protein.tn",
     metaDescription:
-      "Scivation sur Protein.tn : Xtend BCAA en pot de 420 g, arôme fruit de la passion, une poudre de BCAA au ratio 2:1:1 à boire pendant l’entraînement.",
-    h1: "Scivation Tunisie : Xtend BCAA 420 g, une boisson de séance",
+      "XTEND (Scivation) sur Protein.tn : Xtend BCAA en pot de 420 g, arôme fruit de la passion, une poudre de BCAA au ratio 2:1:1 à boire pendant l’entraînement.",
+    h1: "XTEND Tunisie : Xtend BCAA 420 g, une boisson de séance",
     introHtml:
-      "<p>La page <strong>Scivation</strong> ne compte qu’une seule référence sur Protein.tn : <strong>Xtend BCAA</strong>, en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA. Il n’y a donc pas de gamme à départager ici — ni protéine, ni créatine, ni pré-workout de la marque au catalogue —, et cette page sert surtout à situer ce produit par rapport aux autres acides aminés du site. Notre fiche décrit Xtend comme une poudre de BCAA au ratio 2:1:1, c’est-à-dire deux parts de leucine pour une part d’isoleucine et une de valine, pensée comme une boisson à siroter pendant l’entraînement plutôt qu’à avaler en une fois. C’est ce qui le distingue d’une whey ou d’un gainer : il n’a pas vocation à couvrir les protéines de la journée. La grille ci-dessus affiche le prix et la disponibilité actuels de la référence ; les autres BCAA du catalogue se trouvent dans les rayons liés en bas de page.</p>",
+      "<p>La marque <strong>XTEND</strong>, conçue par Scivation, compte une référence en stock sur Protein.tn : <strong>Xtend BCAA</strong>, en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA. Il n’y a donc pas de gamme à départager ici — ni protéine, ni créatine, ni pré-workout de la marque au catalogue —, et cette page sert surtout à situer ce produit par rapport aux autres acides aminés du site. Notre fiche décrit Xtend comme une poudre de BCAA au ratio 2:1:1, c’est-à-dire deux parts de leucine pour une part d’isoleucine et une de valine, pensée comme une boisson à siroter pendant l’entraînement plutôt qu’à avaler en une fois. C’est ce qui le distingue d’une whey ou d’un gainer : il n’a pas vocation à couvrir les protéines de la journée. La grille ci-dessus affiche le prix et la disponibilité actuels de la référence ; les autres BCAA du catalogue se trouvent dans les rayons liés en bas de page.</p>",
     howToChooseTitle: "Xtend BCAA, EAA ou whey : que choisir ?",
     howToChooseBody:
-      "<p>Avec une seule référence, la vraie question n’est pas « quel produit Scivation » mais « des BCAA répondent-ils à mon besoin ». Les <strong>BCAA</strong> regroupent trois acides aminés essentiels seulement — leucine, isoleucine et valine —, là où une <strong>whey</strong> ou des <strong>EAA</strong> apportent l’ensemble des acides aminés essentiels. <strong>Xtend BCAA</strong> se place donc en complément d’un apport protéique déjà couvert par l’alimentation ou par une whey, pas à sa place.</p><ul><li><strong>Vous manquez de protéines dans la journée</strong> : une whey est le choix cohérent ; Xtend ne la remplace pas.</li><li><strong>Vous cherchez une boisson de séance</strong> : c’est l’usage décrit sur notre fiche — une dose mélangée à de l’eau, bue par petites gorgées du début à la fin de l’entraînement.</li><li><strong>Vous hésitez avec des EAA</strong> : ils se boivent au même moment mais couvrent tous les acides aminés essentiels, pas seulement les trois ramifiés.</li></ul><p>Notre fiche ne publie pas de tableau de valeurs transcrit pour Xtend BCAA 420 g. La dose, la teneur en BCAA par portion, les édulcorants et les allergènes sont donc à lire sur l’étiquette du pot, qui fait foi ; les chiffres de gamme parfois cités pour Xtend varient selon les versions et les marchés, et nous n’en reprenons aucun ici.</p>",
+      "<p>Avec une seule référence, la vraie question n’est pas « quel produit XTEND » mais « des BCAA répondent-ils à mon besoin ». Les <strong>BCAA</strong> regroupent trois acides aminés essentiels seulement — leucine, isoleucine et valine —, là où une <strong>whey</strong> ou des <strong>EAA</strong> apportent l’ensemble des acides aminés essentiels. <strong>Xtend BCAA</strong> se place donc en complément d’un apport protéique déjà couvert par l’alimentation ou par une whey, pas à sa place.</p><ul><li><strong>Vous manquez de protéines dans la journée</strong> : une whey est le choix cohérent ; Xtend ne la remplace pas.</li><li><strong>Vous cherchez une boisson de séance</strong> : c’est l’usage décrit sur notre fiche — une dose mélangée à de l’eau, bue par petites gorgées du début à la fin de l’entraînement.</li><li><strong>Vous hésitez avec des EAA</strong> : ils se boivent au même moment mais couvrent tous les acides aminés essentiels, pas seulement les trois ramifiés.</li></ul><p>Notre fiche ne publie pas de tableau de valeurs transcrit pour Xtend BCAA 420 g. La dose, la teneur en BCAA par portion, les édulcorants et les allergènes sont donc à lire sur l’étiquette du pot, qui fait foi ; les chiffres de gamme parfois cités pour Xtend varient selon les versions et les marchés, et nous n’en reprenons aucun ici.</p>",
     faqs: [
       {
-        question: "Quels produits Scivation sont vendus sur Protein.tn ?",
+        question: "Quels produits XTEND sont vendus sur Protein.tn ?",
         answer:
-          "Une seule référence : Xtend BCAA en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA. La marque n’est présente dans aucun autre rayon du site. La grille de produits de cette page affiche son état réel.",
+          "Xtend BCAA en pot de 420 g, référencé en arôme fruit de la passion et classé au rayon BCAA, est la référence en stock ; deux parfums de la gamme XTEND 7G sont disponibles sur commande. La grille de produits de cette page affiche son état réel.",
       },
       {
         question: "Que signifie le ratio 2:1:1 de Xtend BCAA ?",
@@ -2132,7 +2135,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
           "Non. Les BCAA ne regroupent que la leucine, l’isoleucine et la valine, alors qu’une whey ou des EAA apportent l’ensemble des acides aminés essentiels. Xtend sert de boisson de séance et complète un apport protéique déjà couvert ; il ne le constitue pas.",
       },
       {
-        question: "Comment commander Scivation en Tunisie ?",
+        question: "Comment commander XTEND en Tunisie ?",
         answer:
           "Ajoutez la référence au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
       },
@@ -2141,7 +2144,7 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: "bcaa", name: "BCAA : comparer les ratios", url: "/bcaa" },
       { slug: "acides-amines", name: "Tous les acides aminés", url: "/acides-amines" },
       { slug: "performance", name: "Le rayon performance", url: "/performance" },
-      { slug: "brands", name: "Comparer Scivation aux autres marques", url: "/brands" },
+      { slug: "brands", name: "Comparer XTEND aux autres marques", url: "/brands" },
     ],
   },
 });
