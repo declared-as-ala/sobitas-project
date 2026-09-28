@@ -489,6 +489,15 @@ record the page-level position first — never act on a query average.
 
 ## Monitor
 
+- **Checkpoint 12/10/2026 — blog repositioning of 27/09.** `/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025`
+  (23 clicks/28 d to 19/09) and `/blog/prix-de-la-creatine-en-tunisie` (14/393 at 8.8) were retitled off
+  "prix … Tunisie" so /mass-gainers and /creatine can own it. Read GSC Pages for `mass gainer prix tunisie`,
+  `creatine prix tunisie`: if the category has not gained AND the post lost clicks, restore the query words in
+  the post's `blogSeoConfig` headline. The Arabic best-creatine post was restored on 28/09 (no competing page).
+- **28/09 changes to re-measure from the 06/10 and 12/10 exports:** category page 1 on-topic ordering
+  (efd7f71c), brand strip on categories, price hooks in 12 category meta descriptions, blog in-stock product
+  block (61 articles), 25 refreshed blog bodies, 38 legacy slugs → products, Gold Standard variant canonicals,
+  INP fixes (ff335d8e, 3013747c) — GSC CWV mobile INP report should start moving ~28 days after.
 - `https://www.protein.tn/` still shows impressions in GSC although www → 308 → apex is correct.
   Stale on Google's side; no action.
 - 5xx bucket draining after the 11–14/09 downtime (199 → 39 → 36); "Validate fix" once ~0.
