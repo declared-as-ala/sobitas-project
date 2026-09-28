@@ -27,6 +27,7 @@ interface ArticleDetailClientProps {
   linkTargets?: LinkTarget[];
   /** One server-rendered route from this informational article to its commercial owner. */
   commerceBridge?: BlogCommerceBridgeData;
+  inStockProducts?: React.ReactNode;
   /** Optional SEO block (FAQ + internal links) rendered between content and related articles */
   children?: React.ReactNode;
 }
@@ -194,6 +195,7 @@ export function ArticleDetailClient({
   relatedArticles,
   linkTargets = [],
   commerceBridge,
+  inStockProducts,
   children,
 }: ArticleDetailClientProps) {
   const articleLanguage = resolveArticleLanguage(article);
@@ -476,6 +478,7 @@ export function ArticleDetailClient({
                   />
                 )}
               </div>
+              {inStockProducts}
               {relatedShopCategories.length > 0 ? (
                 <nav
                   className="mt-8 rounded-xl border border-hairline bg-sunken p-4 sm:p-6"

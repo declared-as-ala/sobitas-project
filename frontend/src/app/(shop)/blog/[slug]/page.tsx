@@ -17,6 +17,7 @@ import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
 import { getBlogSeoEntry } from '@/config/blogSeoConfig';
 import { withSeoHeadlines } from '@/util/blogCardTitles';
+import { BlogInStockProducts } from '@/app/components/blog/BlogInStockProducts';
 import { ArticleDetailClient, type BlogCommerceBridgeData } from './ArticleDetailClient';
 
 interface ArticlePageProps {
@@ -236,8 +237,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
         languages: { [articleLanguage.code]: canonicalUrl },
       },
       openGraph: {
-        title: article.seo?.open_graph?.title || title,
-        description: socialDescription(article.seo?.open_graph?.description),
+        title: seoOverlay?.headline ? title : article.seo?.open_graph?.title || title,
+        description: socialDescription(seoOverlay?.metaDescription || article.seo?.open_graph?.description),
         images: imageUrl ? [imageUrl] : ['/og-banner.jpg'],
         type: 'article',
         url: canonicalUrl,
@@ -245,8 +246,8 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
       },
       twitter: {
         card: (article.seo?.twitter?.card as 'summary' | 'summary_large_image') || article.twitter_card as 'summary' | 'summary_large_image' || 'summary_large_image',
-        title: article.seo?.twitter?.title || title,
-        description: socialDescription(article.seo?.twitter?.description),
+        title: seoOverlay?.headline ? title : article.seo?.twitter?.title || title,
+        description: socialDescription(seoOverlay?.metaDescription || article.seo?.twitter?.description),
         images: twitterImage ? [twitterImage] : ['/og-banner.jpg'],
       },
     };
@@ -425,6 +426,7 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
           relatedArticles={filteredRelated}
           linkTargets={articleLinkTargets}
           commerceBridge={commerceBridge}
+          inStockProducts={<BlogInStockProducts slug={slug} arabic={arabic} />}
         >
           <BlogSeoBlock slug={slug} excludeHref={commerceBridge?.href} />
         </ArticleDetailClient>
