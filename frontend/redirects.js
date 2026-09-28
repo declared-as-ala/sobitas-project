@@ -125,6 +125,11 @@ function buildRedirects() {
 
     // ── Blog ──────────────────────────────────────────────────────────────
     p('/blogs', '/blog'),
+    // Retired/renamed articles under the OLD prefix go straight to their final article. Without
+    // these, `/blogs/:slug*` below fired first and the article rule fired second: two permanent hops
+    // for one move (found by the 28/09/2026 audit). First match wins, so they must precede it.
+    p('/blogs/qu-est-ce-que-la-proteine-whey', '/blog/whey-protein-en-tunisie'),
+    p('/blogs/meilleure-creatine-2025-notre-guide-pour-bien-choisir', '/blog/meilleure-creatine-2026-notre-guide-pour-bien-choisir'),
     // Preserve the slug so each old /blogs/{slug} lands on its real article
     // /blog/{slug} instead of dumping everything on the blog index.
     p('/blogs/:slug*', '/blog/:slug*'),

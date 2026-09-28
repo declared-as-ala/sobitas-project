@@ -986,6 +986,14 @@ const categoryGuidesSource: SitemapSource = {
     const entries: SourceEntry[] = [];
     for (const slug of ctx.contentFileSlugs) {
       if (!ctx.liveCategorySlugs.has(slug)) continue;
+      /*
+       * Same withholding rule as the taxonomy source (`nav: false` → nothing buyable → the page
+       * serves noindex). Without it this source re-added what taxonomy had just withheld, because a
+       * `nav: false` slug can still own a guide file: measured 28/09/2026, /post-workout and
+       * /intra-workout were in listings.xml while both pages served `noindex, follow` — the
+       * "Submitted URL marked noindex" contradiction the taxonomy source exists to prevent.
+       */
+      if (taxonomyNode(slug) && !inGlobalNav(slug)) continue;
       entries.push({
         url: `${ctx.baseUrl}/${encodeURIComponent(slug)}`,
         // Dedupe is first-writer-wins, so taxonomy's entry normally wins and this date is unused.

@@ -413,3 +413,53 @@ export async function isBrandSlug(slug: string): Promise<boolean | null> {
   if (brandCache === null) return null;
   return brandCache.has(slug);
 }
+
+/* ── CMS pages (/api/pages), served at /{slug} ────────────────────────────────────────────────
+ * The third thing `(shop)/[slug]` resolves after categories and brands. Needed so a legacy
+ * `/page/{slug}` is only redirected to `/{slug}` when something is actually there: the unconditional
+ * redirect sent `/page/anything` to `/anything` and 404 (audit 28/09/2026). Same fail-open contract
+ * as the brand cache: `null` is "could not find out", never evidence of absence. */
+const PAGE_TTL_MS = 10 * 60 * 1000;
+let pageCache: Set<string> | null = null;
+let pageCacheAt = 0;
+let pageInflight: Promise<void> | null = null;
+
+async function refreshPages(): Promise<void> {
+  try {
+    const res = await fetch(`${apiBase()}/pages`, {
+      signal: AbortSignal.timeout(4000),
+      headers: { accept: 'application/json' },
+    });
+    if (!res.ok) return;
+    const body: unknown = await res.json();
+    const rows: unknown = Array.isArray(body)
+      ? body
+      : (body as { data?: unknown; pages?: unknown })?.data ?? (body as { pages?: unknown })?.pages;
+    if (!Array.isArray(rows)) return;
+    const next = new Set<string>();
+    for (const row of rows as Array<{ slug?: string }>) {
+      const s = String(row?.slug ?? '').trim().toLowerCase();
+      if (s) next.add(s);
+    }
+    if (next.size === 0) return; // an empty list is a backend problem, keep the previous cache
+    pageCache = next;
+    pageCacheAt = Date.now();
+  } catch {
+    // Fail open.
+  }
+}
+
+/** Is `slug` a published CMS page served at `/{slug}`? `null` = could not find out. */
+export async function isCmsPageSlug(slug: string): Promise<boolean | null> {
+  const fresh = pageCache !== null && Date.now() - pageCacheAt < PAGE_TTL_MS;
+  if (!fresh) {
+    if (!pageInflight) {
+      pageInflight = refreshPages().finally(() => {
+        pageInflight = null;
+      });
+    }
+    if (pageCache === null) await pageInflight;
+  }
+  if (pageCache === null) return null;
+  return pageCache.has(slug.toLowerCase());
+}

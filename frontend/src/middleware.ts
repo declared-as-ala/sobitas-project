@@ -4,7 +4,7 @@ import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
 import { getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
-import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug } from '@/util/taxonomySlugs';
+import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug, isCmsPageSlug } from '@/util/taxonomySlugs';
 import { resolveArticleSlug } from '@/util/blogSlugs';
 import { blogHref } from '@/util/blogSlug';
 import {
@@ -619,8 +619,22 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // from a real legacy CMS page at all — static redirects cannot return 410.
   const legacyCmsPage = pathname.match(/^\/page\/([^/]+)\/?$/);
   if (legacyCmsPage?.[1]) {
-    if (legacyCmsPage[1].toLowerCase() === 'undefined') return gone();
-    return redirectPreservingQuery(request, `/${legacyCmsPage[1]}`);
+    const slug = legacyCmsPage[1].toLowerCase();
+    if (slug === 'undefined') return gone();
+    /*
+     * Verify before redirecting. The unconditional `/page/foo -> /foo` sent every unknown slug on a
+     * permanent hop into a 404 (audit 28/09/2026). `/{slug}` is served by (shop)/[slug], which
+     * resolves a CMS page, a category or a brand — so one of the three must exist. Only a DEFINITE
+     * miss on all three is terminal; if any lookup could not be answered, keep the historic
+     * redirect rather than 410 a live page during a backend hiccup.
+     */
+    const [isPage, isCategory, isBrand] = await Promise.all([
+      isCmsPageSlug(slug),
+      isTaxonomySlug(slug),
+      isBrandSlug(slug),
+    ]);
+    if (isPage === false && isCategory === false && isBrand === false) return gone();
+    return redirectPreservingQuery(request, `/${lowercasePreservingEscapes(legacyCmsPage[1])}`);
   }
   if (pathname.startsWith('/page/')) return gone();
 
@@ -1031,9 +1045,20 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
     const brand = searchParams.get('brand');
 
     if (category) {
-      // Redirect /shop?category=slug to /slug. Guard: `category` is a raw query param, so
-      // a value like //evil.com or \evil.com would otherwise become an off-origin 301.
-      const newUrl = sameOriginOrHome(new URL(`/${category}`, request.url), request);
+      /*
+       * Redirect /shop?category=slug to /slug — but only when /slug exists. Unconditionally it sent
+       * `/shop?category=not-a-category` on a 301 into a 404 (audit 28/09/2026). A definite miss
+       * goes to /shop itself, minus the dead filter: the shop is the relevant page for a shop URL.
+       * If the lookups cannot be answered, keep the historic target rather than guess.
+       */
+      const [isCategory, isBrand] = await Promise.all([
+        isTaxonomySlug(category.trim().toLowerCase()),
+        isBrandSlug(category.trim().toLowerCase()),
+      ]);
+      const target = isCategory === false && isBrand === false ? '/shop' : `/${category}`;
+      // Guard: `category` is a raw query param, so a value like //evil.com or \evil.com would
+      // otherwise become an off-origin 301.
+      const newUrl = sameOriginOrHome(new URL(target, request.url), request);
       // Preserve other query params (like page)
       searchParams.forEach((value, key) => {
         if (key !== 'category') {
