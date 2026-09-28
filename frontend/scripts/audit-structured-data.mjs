@@ -255,8 +255,14 @@ function auditPage(html, pageUrl, finding) {
   for (const [index, organization] of nodes.filter((node) => ['Organization', 'OnlineStore', 'LocalBusiness'].some((type) => hasType(node, type))).entries()) {
     const label = `${typeNames(organization).filter((type) => ['Organization', 'OnlineStore', 'LocalBusiness'].includes(type)).join('+')}[${index + 1}]`;
     if (!nonempty(organization.name)) finding('ERROR', label, 'name', 'missing organization name');
-    if (!absoluteUrl(organization.url)) finding('ERROR', label, 'url', 'provide an absolute organization URL');
-    checkImage(organization.logo, label, 'logo');
+    // url + logo are Organization-structured-data requirements for an ENTITY (a node with an @id,
+    // i.e. the site's own organization). A bare credit such as a VideoObject's channel publisher
+    // ({ "@type": "Organization", "name": "Optimum Nutrition" }) is not one, and Google's video
+    // guidelines do not ask it for a logo.
+    if (organization['@id'] || hasType(organization, 'LocalBusiness')) {
+      if (!absoluteUrl(organization.url)) finding('ERROR', label, 'url', 'provide an absolute organization URL');
+      checkImage(organization.logo, label, 'logo');
+    }
     if (hasType(organization, 'LocalBusiness') && !nonempty(dereference(organization.address)?.addressCountry)) finding('ERROR', label, 'address.addressCountry', 'provide an address with country');
   }
 
