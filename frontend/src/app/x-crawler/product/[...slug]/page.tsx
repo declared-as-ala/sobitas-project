@@ -40,6 +40,7 @@ import { buildProductCanonicalUrl, getProductBreadcrumbs, getProductPrimarySubCa
 import { retiredSlugDestination } from '@/util/retiredSlug';
 import { buildShopProductSocialMetadata } from '@/util/productSeo';
 import { productRobots } from '@/util/productIndexability';
+import { variantCanonicalPath } from '@/config/productVariantCanonicals';
 import type { Product } from '@/types';
 
 export const revalidate = 300;
@@ -86,7 +87,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   try {
     const product = await getCachedProductDetails(slug);
     if (!product?.id) return { robots: { index: false, follow: true } };
-    const canonical = buildProductCanonicalUrl(product);
+    // Same override as the human route (productVariantCanonicals): a hand-checked flavour variant
+    // canonicalises to the page we stock; everything else is self-canonical.
+    const variantPath = variantCanonicalPath(product.slug);
+    const canonical = variantPath ? `https://protein.tn${variantPath}` : buildProductCanonicalUrl(product);
     // Same builder as the human route: the curated Search-Console titles must reach Google,
     // which is the only audience that ever renders this route. See productTitle's header.
     const title = productTitle(product);

@@ -21,6 +21,7 @@ import { productRobots } from '@/util/productIndexability';
 import type { Product } from '@/types';
 import { productDescription, productTitle } from '@/util/productMetaDescription';
 import { getComplementProducts } from '@/services/productComplements';
+import { variantCanonicalPath } from '@/config/productVariantCanonicals';
 
 const ProductDetailClient = nextDynamic(() => import('@/app/(shop)/products/[id]/ProductDetailClient').then((m) => ({ default: m.ProductDetailClient })), {
   loading: () => <ProductDetailSkeleton />,
@@ -117,8 +118,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const title = productTitle(product);
     const description = productDescription(product, product.designation_fr ?? product.slug ?? 'Produit');
     // Always compute canonical from subcategory — never trust API's seo.canonical_url
-    // which may still point to legacy /shop/ paths causing sitemap/canonical mismatch (C3)
-    const canonicalUrl = ensureProductionDomain(buildProductCanonicalUrl(product));
+    // which may still point to legacy /shop/ paths causing sitemap/canonical mismatch (C3).
+    // The one exception is a hand-checked flavour variant of a page we stock (productVariantCanonicals).
+    const variantPath = variantCanonicalPath(product.slug);
+    const canonicalUrl = ensureProductionDomain(
+      variantPath ? `https://protein.tn${variantPath}` : buildProductCanonicalUrl(product)
+    );
 
     return {
       title: { absolute: title },

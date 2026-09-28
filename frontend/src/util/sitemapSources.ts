@@ -10,6 +10,7 @@ import { CONTENT_SLUG_ALIASES, listCategorySeoSlugs } from '@/util/categorySeoCo
 import { enrichProductsWithSubcategory } from '@/util/enrichProductSubcategory';
 import { getProductPrimarySubCategory, urlSlug } from '@/util/productUrl';
 import { crawlPaginated, describeCrawl, type PaginatedCrawl } from '@/util/sitemapCrawl';
+import { variantCanonicalPath } from '@/config/productVariantCanonicals';
 
 /* ══════════════════════════════════════════════════════════════════════════════════════════════
  * THE SITEMAP SOURCE REGISTRY — the ONE place a page type is declared.
@@ -723,6 +724,13 @@ const productsSource: SitemapSource = {
       const flatColumn = (p as { seo_robots_index?: boolean | number | null }).seo_robots_index;
       const robotsIndex = seoObj ?? (flatColumn == null ? undefined : Boolean(flatColumn));
       if (robotsIndex === false) {
+        noindex++;
+        continue;
+      }
+
+      // A declared flavour variant canonicalises to another page (productVariantCanonicals): a
+      // sitemap lists canonical URLs only, so it is left out here.
+      if (variantCanonicalPath((p as { slug?: string }).slug)) {
         noindex++;
         continue;
       }
