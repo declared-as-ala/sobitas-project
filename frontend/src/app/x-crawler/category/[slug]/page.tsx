@@ -51,6 +51,7 @@ import { buildBreadcrumbListSchema, buildCollectionPageSchema, buildFAQPageSchem
 import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import { sanitizeProductHtml, truncateAtWord } from '@/util/sanitizeProductHtml';
 import { CrawlerCategoryView, type CrawlerListLink } from '@/app/components/crawler/CrawlerCategoryView';
+import { CategoryBrandLinks, resolveCategoryBrandLinks } from '@/app/components/CategoryBrandLinks';
 import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
@@ -634,6 +635,7 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
           brands={listingBrands}
           subCategories={subCats}
           relatedCategories={relatedCategories}
+          brandLinks={<CategoryBrandLinks links={resolveCategoryBrandLinks(products, listingBrands, seoJson?.brandSlugs)} />}
           pagination={{
             currentPage: serverPagination.currentPage,
             totalPages: serverPagination.totalPages,

@@ -31,6 +31,7 @@ import { getEffectivePrice } from '@/util/productPrice';
 // the product card, the PDP, the cart and the JSON-LD availability read — see the note there.
 import { isInStock, type ProductLike } from '@/util/cartStock';
 import { CategorySeoLanding, COMPARISON_SLUGS } from '@/app/(shop)/category/CategorySeoLanding';
+import { CategoryBrandLinks, resolveCategoryBrandLinks } from '@/app/components/CategoryBrandLinks';
 import { ShopPageClient } from '@/app/(shop)/shop/ShopPageClient';
 import { ProductsSkeleton } from '@/app/components/ProductsSkeleton';
 import { Suspense } from 'react';
@@ -1306,6 +1307,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
+          <CategoryBrandLinks links={resolveCategoryBrandLinks(productsData.products ?? [], (productsData.brands ?? []) as Brand[], seoJson?.brandSlugs)} />
           {/*
             A node the API resolves as a SUBcategory can still be a parent in the declared tree —
             /acides-amines holds seven children, /vitamines and /collagene four each. The block is
@@ -1535,6 +1537,7 @@ export default async function CategoryPage({ params, searchParams }: PageProps) 
               categorySeoLandingBottom={categorySeoLandingBottom}
             />
           </Suspense>
+          <CategoryBrandLinks links={resolveCategoryBrandLinks(productsData.products ?? [], (productsData.brands ?? []) as Brand[], seoJsonCat?.brandSlugs)} />
           {/*
             THE RAYON PAGE IS THE ONLY GLOBAL PATH TO 37 OF THE 56 TAXONOMY URLs. See the docblock
             on TaxonomyChildNav: the mega-menu holds one rayon's panel in the DOM at a time, so

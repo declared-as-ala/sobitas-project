@@ -134,6 +134,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
   /* Logos first, and only fall back to the raw list if the API stops sending them — as before. `slice` AFTER the filter, or the filter would run on twelve alphabetical names and
      return two. */
   const selectedBrands = useMemo(() => {
+    if (brandsProp?.length) return brands.slice(0, SELECTED_BRANDS);
     const withLogo = brands.filter((b) => Boolean(b.logo));
     const source = withLogo.length >= 8 ? withLogo : brands;
     // Featured first, in the order listed; everything else keeps the API's alphabetical order.
@@ -143,7 +144,7 @@ export function BrandsSection({ brands: brandsProp }: { brands?: Brand[] }) {
       return i === -1 ? FEATURED_BRAND_SLUGS.length : i;
     };
     return [...source].sort((a, b) => rank(a) - rank(b)).slice(0, SELECTED_BRANDS);
-  }, [brands]);
+  }, [brands, brandsProp]);
 
   if (isLoading) {
     return (

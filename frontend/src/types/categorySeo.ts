@@ -28,6 +28,8 @@ export interface CategorySeoContent {
    * Use slugs from API (category or subcategory).
    */
   relatedCategorySlugs: string[];
+  /** Optional curated brand links for this category, in display order. */
+  brandSlugs?: string[];
   /**
    * Best product slugs (3–6). Resolved to names/URLs at render time.
    * Products must belong to this category or subcategory.

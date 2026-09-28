@@ -67,6 +67,7 @@ export function CrawlerCategoryView({
   brands = [],
   subCategories = [],
   relatedCategories = [],
+  brandLinks = null,
   pagination = null,
   kind,
 }: {
@@ -87,6 +88,7 @@ export function CrawlerCategoryView({
   brands?: Brand[];
   subCategories?: CrawlerListLink[];
   relatedCategories?: CrawlerListLink[];
+  brandLinks?: React.ReactNode;
   /**
    * Crawlable pagination.
    *
@@ -326,6 +328,8 @@ export function CrawlerCategoryView({
           </ul>
         </nav>
       )}
+
+      {brandLinks}
 
       {/* Price comparison — directly after the product list and its pager, before the guide.
           Identical markup to the human render: CreatineComparisonTable is a pure server component

@@ -17,6 +17,7 @@ const HomeDeferredSections = dynamic(() => import('@/app/components/HomeDeferred
 import type { AccueilData, Brand, Product } from '@/types';
 import { getStorageUrl } from '@/services/api';
 import { getProductLink } from '@/util/productUrl';
+import { selectHomeRailBrands } from '@/util/homeBrandRail';
 import { getEffectivePrice, getPriceDisplay } from '@/util/productPrice';
 import type { HeroSlide } from '@/util/heroImage';
 import type { HeroBestSeller } from '@/app/components/HeroBestSellers';
@@ -439,7 +440,7 @@ export function HomePageClient({ accueil, heroSlides, brands }: HomePageClientPr
 
         {/* Below the fold - idle-loaded client islands */}
         <div className="pt-defer">
-          <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={brands} promoCount={discountBand.length} promoMaxDiscount={promoMaxDiscount} />
+          <HomeDeferredSections articles={safeAccueil.last_articles || []} brands={selectHomeRailBrands(brands ?? [])} promoCount={discountBand.length} promoMaxDiscount={promoMaxDiscount} />
         </div>
 
         {/* SEO text block – visible, crawlable content near bottom of homepage.
