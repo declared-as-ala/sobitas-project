@@ -1,6 +1,7 @@
 import { Metadata } from 'next';
 import { unstable_noStore as noStore } from 'next/cache';
 import { getAccueil, getCategories, getBestSellers, getNewProducts, getAllBrands, getStorageUrl } from '@/services/api';
+import { withSeoHeadlines } from '@/util/blogCardTitles';
 import { getServerSlides } from '@/services/siteChrome.server';
 import { buildHeroImageSet, type HeroSlide } from '@/util/heroImage';
 import { buildCanonicalUrl, getBaseUrl } from '@/util/canonical';
@@ -237,7 +238,13 @@ export default async function Home() {
           fetchPriority="high"
         />
       ))}
-      <HomePageClient accueil={accueil} heroSlides={heroSlides} brands={brands} />
+      {/* Blog band titles follow each article's SEO headline, resolved here on the server so the
+          config never ships to the browser — see util/blogCardTitles. */}
+      <HomePageClient
+        accueil={{ ...accueil, last_articles: withSeoHeadlines(accueil.last_articles) }}
+        heroSlides={heroSlides}
+        brands={brands}
+      />
     </>
   );
 }

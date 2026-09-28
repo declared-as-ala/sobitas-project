@@ -16,6 +16,7 @@ import { sanitizeArticleHtml } from '@/util/sanitizeArticleHtml';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
 import { getBlogSeoEntry } from '@/config/blogSeoConfig';
+import { withSeoHeadlines } from '@/util/blogCardTitles';
 import { ArticleDetailClient, type BlogCommerceBridgeData } from './ArticleDetailClient';
 
 interface ArticlePageProps {
@@ -386,7 +387,8 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
      * significant term with any other. Six rather than three: the rail is the only inbound link
      * most of these 224 articles have, and 184 of them are currently unindexed.
      */
-    const pool = articlePool.length > 0 ? articlePool : latestArticles;
+    // Related-rail titles follow each article's SEO headline — see util/blogCardTitles.
+    const pool = withSeoHeadlines(articlePool.length > 0 ? articlePool : latestArticles);
     const filteredRelated = pickRelatedArticles(
       { slug: displayArticle.slug ?? slug, designation_fr: displayArticle.designation_fr },
       pool,

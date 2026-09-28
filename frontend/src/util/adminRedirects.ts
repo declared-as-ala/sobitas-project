@@ -152,6 +152,11 @@ function refresh(): Promise<void> {
  * Return the admin redirect rule for a request path, or null. Cached in-process; fails open.
  */
 export async function getAdminRedirect(pathname: string): Promise<RedirectRule | null> {
+  const rule = (await currentRules()).get(normalizeRedirectKey(pathname));
+  return rule ?? null;
+}
+
+async function currentRules(): Promise<Map<string, RedirectRule>> {
   const now = Date.now();
   if (!cache) {
     // Cold cache: block until warm (bounded by the 1.5s fetch timeout).
@@ -160,6 +165,49 @@ export async function getAdminRedirect(pathname: string): Promise<RedirectRule |
     // Warm but stale: serve immediately, refresh in the background.
     void refresh();
   }
-  const rule = (cache ?? EMPTY).get(normalizeRedirectKey(pathname));
-  return rule ?? null;
+  return cache ?? EMPTY;
+}
+
+/*
+ * ── A RENAMED PRODUCT, FOUND BY ITS OLD SLUG ALONE ─────────────────────────────────────────────
+ * The rules are exact-path. A rename is recorded as `/{sub}/{old} -> /{sub}/{new}` (automatically,
+ * by filament's ProductUrlHistory), so that one address 301s correctly — and every other address
+ * that carries the old slug did not: `/shop/{old}`, `/product/{old}`, `/{other-sub}/{old}` all fell
+ * through to the "most relevant category" guess, a soft 404 for a product still on sale. Measured
+ * 28/09/2026: `/shop/whey-regime-ultra-…-william-bonac -> /whey-proteine` while the exact path
+ * 301'd to the product.
+ *
+ * So product→product rules are also indexed by the old slug. SAFETY: this must only be consulted
+ * once the slug is CONFIRMED not to be a live product (the product API answered 404). A later
+ * product may legitimately reuse an old slug, and consulting this first would redirect its live
+ * page away. Two rules moving the same old slug to different places are ambiguous and ignored.
+ */
+let renameIndexSource: Map<string, RedirectRule> | null = null;
+let renameIndex: Map<string, string> = new Map();
+
+function buildRenameIndex(rules: Map<string, RedirectRule>): Map<string, string> {
+  const bySlug = new Map<string, string | null>();
+  for (const [key, rule] of rules) {
+    if (!rule.to || (rule.code !== 301 && rule.code !== 302)) continue;
+    const from = key.split('/').filter(Boolean);
+    const to = rule.to.split(/[?#]/)[0].split('/').filter(Boolean);
+    if (from.length !== 2 || to.length !== 2 || rule.to.startsWith('http')) continue; // product → product only
+    const dest = `/${to.join('/')}`;
+    const prev = bySlug.get(from[1]);
+    bySlug.set(from[1], prev === undefined || prev === dest ? dest : null);
+  }
+  const out = new Map<string, string>();
+  for (const [slug, dest] of bySlug) if (dest) out.set(slug, dest);
+  return out;
+}
+
+/** The live address of a product renamed away from `slug`, or null. See the safety note above. */
+export async function renamedProductDestination(slug: string): Promise<string | null> {
+  const rules = await currentRules();
+  if (renameIndexSource !== rules) {
+    renameIndex = buildRenameIndex(rules);
+    renameIndexSource = rules;
+  }
+  const key = normalizeRedirectKey(`/${slug}`).slice(1);
+  return key ? renameIndex.get(key) ?? null : null;
 }

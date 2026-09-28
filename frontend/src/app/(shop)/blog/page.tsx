@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { withSeoHeadlines } from '@/util/blogCardTitles';
 import Link from 'next/link';
 import { Suspense } from 'react';
 import { ArrowUpRight, BookOpen, ChevronDown } from 'lucide-react';
@@ -122,7 +123,8 @@ export default async function BlogPage(props: { searchParams?: BlogSearchParams 
     getLatestSportsNutritionResearch(),
   ]);
   const baseUrl = getBaseUrl();
-  const list = Array.isArray(articles) ? articles : [];
+  // Card titles follow each article's SEO headline, not the old DB title — see util/blogCardTitles.
+  const list = withSeoHeadlines(Array.isArray(articles) ? articles : []);
   const indexArticles = list.map(toBlogIndexArticle);
   const searchParams = props.searchParams ? await props.searchParams : {};
   const initialPage = Math.max(

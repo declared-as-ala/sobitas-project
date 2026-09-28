@@ -58,6 +58,7 @@ import { getCachedProductDetails } from '@/services/getCachedProductDetails';
 import { getErrorStatus } from '@/util/errorStatus';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { isTaxonomySlug, bestCategoryForSlug } from '@/util/taxonomySlugs';
+import { renamedProductDestination } from '@/util/adminRedirects';
 
 /**
  * The canonical path for a live product, or null when the backend positively says it is not one.
@@ -120,6 +121,17 @@ export async function retiredSlugDestination(
     const viaBase = await productPathForSlug(stripped);
     if (viaBase) return viaBase;
   }
+
+  /*
+   * 2b. A product RENAMED away from this slug. Reached only after the product lookups above missed
+   *     (or the caller already had its own product miss), which is the condition the old-slug index
+   *     requires — see util/adminRedirects.ts. Before this, `/bcaa/creatine-monohydrate-300gr-hx-
+   *     nutrition` and every non-exact old address of a renamed product fell to step 4 and 308'd to
+   *     a category (audit 28/09/2026).
+   */
+  const renamed =
+    (await renamedProductDestination(clean)) ?? (stripped ? await renamedProductDestination(stripped) : null);
+  if (renamed) return renamed;
 
   const root = stripped ?? clean;
 

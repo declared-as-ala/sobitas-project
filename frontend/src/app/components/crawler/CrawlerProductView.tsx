@@ -34,6 +34,9 @@ import { visibleNutrients } from '@/util/productComparisonFacts';
 import { thumbnailUrl, videoId, videoTitle, watchUrl } from '@/util/officialVideo';
 import { buildProductAlt } from '@/util/productAlt';
 import { generateProductFallbackDescription } from '@/util/productDescriptionFallback';
+import { splitHighlights } from '@/util/productHighlights';
+import { mergeProductContent } from '@/util/productDescriptionSections';
+import { cleanSourceText } from '@/util/sourceBoilerplate';
 import {
   productSourceAttribution,
   productSourceFactRows,
@@ -46,6 +49,11 @@ import type { Product } from '@/types';
 function reviewRating(r: { stars?: number; note?: number }): number {
   const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
   return Math.max(0, Math.min(5, v));
+}
+
+function cleanCrawlerSourceHtml(html: string): string {
+  // Escaped source tags are text to the HTML sanitizer, so remove them before rendering.
+  return cleanSourceText(html).replace(/&(?:amp;)*lt;\/?[a-z][\w-]*\b[\s\S]*?&(?:amp;)*gt;/gi, '');
 }
 
 export function CrawlerProductView({
@@ -75,9 +83,17 @@ export function CrawlerProductView({
    * fixing a visible bug: the enrichment pipeline creates products, and the first one it creates
    * without a description would have fallen straight through it.
    */
-  const descriptionHtml = sanitizeRichHtml(
-    product.description_fr || product.description_cover || generateProductFallbackDescription(product)
-  );
+  const descriptionSource =
+    product.description_fr || product.description_cover || generateProductFallbackDescription(product);
+  const { highlights, rest: descriptionHtml } = splitHighlights(descriptionSource);
+  const merged = mergeProductContent({
+    descriptionHtml,
+    sourceSections: productSourceSections(product),
+    hasCanonicalNutrition:
+      productSourceNutritionHtml(product) !== null ||
+      (product.nutrition_values != null && String(product.nutrition_values).trim().length > 10),
+  });
+  const descriptionBodyHtml = sanitizeRichHtml(cleanCrawlerSourceHtml(merged.body));
   const nutritionHtml = sanitizeRichHtml(product.nutrition_values || '');
   const nutritionImages = (
     Array.isArray(product.nutrition_images) ? product.nutrition_images : []
@@ -113,16 +129,15 @@ export function CrawlerProductView({
    * The transcribed product page: the manufacturer's suggested use, ingredient list and warnings,
    * the Supplement Facts panel, the photo gallery, and one sentence about where the words came from.
    *
-   * The manufacturer's OVERVIEW is not here — promotion folded it into `description_fr`, so it
-   * arrives through `descriptionHtml` above and is rendered by the Description section, on this
-   * route and on the human one alike. Rendering it here as well would print the same paragraph
-   * twice on the only page Googlebot sees.
+   * The manufacturer's overview arrives through `description_fr` and is routed into `merged.body`.
+   * The named source blocks come from `merged.sections`, which picks one copy per heading.
    *
    * All four are empty for every one of the 309 hand-made products, so every block below is absent
    * from their markup exactly as it was before this content existed.
    */
-  const sourceSections = productSourceSections(product);
-  const sourceNutritionHtml = sanitizeRichHtml(productSourceNutritionHtml(product) || '');
+  const sourceNutritionHtml = sanitizeRichHtml(
+    cleanCrawlerSourceHtml(productSourceNutritionHtml(product) || merged.nutritionFallback || '')
+  );
   /*
    * gallery[0] IS the cover on every imported product, so the same file used to be emitted twice
    * on the only render Google reads — once as the hero and once as "photo 1/7" — with two
@@ -228,21 +243,32 @@ export function CrawlerProductView({
             <dl className="mt-2 grid grid-cols-[max-content_1fr] gap-x-4 gap-y-1 text-sm">
               {sourceFacts.map((row) => (
                 <div key={row.key} className="contents">
-                  <dt className="font-medium">{row.label}</dt>
-                  <dd>{row.value}</dd>
+                  <dt className="font-medium">{cleanSourceText(row.label)}</dt>
+                  <dd>{cleanSourceText(row.value)}</dd>
                 </div>
               ))}
             </dl>
           </section>
         )}
 
-        {/* Full description — expanded, no "read more" clamp */}
-        {descriptionHtml && (
+        {/* The shopper's extracted highlights and merged description, expanded inline. */}
+        {(descriptionBodyHtml || highlights.length > 0) && (
           <section aria-label="Description" className="my-6">
             <h2 className="text-lg font-semibold">Description</h2>
+            {highlights.length > 0 && (
+              <ul className="list-disc pl-5">
+                {highlights.map((highlight, i) => (
+                  <li key={i}>
+                    {highlight.lead && <strong>{cleanCrawlerSourceHtml(highlight.lead)}</strong>}
+                    {highlight.lead && highlight.text ? ' ' : ''}
+                    {cleanCrawlerSourceHtml(highlight.text)}
+                  </li>
+                ))}
+              </ul>
+            )}
             <div
               className="prose prose-sm mt-2 max-w-none"
-              dangerouslySetInnerHTML={{ __html: descriptionHtml }}
+              dangerouslySetInnerHTML={{ __html: descriptionBodyHtml }}
             />
           </section>
         )}
@@ -250,19 +276,17 @@ export function CrawlerProductView({
         {/*
           The transcribed prose blocks — suggested use, other ingredients, warnings.
 
-          Straight after the description because that is where they sit on the source page and where
-          the human route prints them: the description tab, under the description. Each block's
-          heading is ours (ImportedSourceContent::SECTION_HEADINGS) and each block's CONTENT is the
-          manufacturer's, transcribed verbatim and sanitised — never rewritten, never summarised.
+          Straight after the description, as on the human route. `merged.sections` selects the
+          transcribed source block over the matching description block, or falls back to the latter.
 
           The warnings block in particular is a safety text a customer acts on. It is rendered whole,
           in the same words, on both routes; it is not truncated and it is not moved below the fold,
           because there is no fold on this route and there must be no version of this page where it
           says less.
         */}
-        {sourceSections.length > 0 &&
-          sourceSections.map((section) => {
-            const html = sanitizeRichHtml(section.html);
+        {merged.sections.length > 0 &&
+          merged.sections.map((section) => {
+            const html = sanitizeRichHtml(cleanCrawlerSourceHtml(section.html));
             if (!html) return null;
             return (
               <section key={section.key} aria-label={section.heading} className="my-6">
@@ -383,7 +407,7 @@ export function CrawlerProductView({
           Null for every product with no transcribed content, which is all 309 legacy products.
         */}
         {sourceAttribution && (
-          <p className="my-6 text-xs text-ink-2">{sourceAttribution}</p>
+          <p className="my-6 text-xs text-ink-2">{cleanSourceText(sourceAttribution)}</p>
         )}
 
         {/* Reviews — all published, inline */}

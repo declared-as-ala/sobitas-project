@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 import { isCrawlerUA, CRAWLER_PREVIEW_PARAM } from '@/util/isCrawler';
 import { isReservedRouteSlug } from '@/util/productUrl';
-import { getAdminRedirect } from '@/util/adminRedirects';
+import { renamedProductDestination, getAdminRedirect } from '@/util/adminRedirects';
 import { brandSlugRedirectTarget } from '@/util/brandSlug';
 import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug, isCmsPageSlug } from '@/util/taxonomySlugs';
 import { resolveArticleSlug } from '@/util/blogSlugs';
@@ -185,7 +185,16 @@ async function lookupProduct(slug: string): Promise<string | null | false> {
       product?.sous_categorie?.slug ||
       product?.sousCategorie?.slug ||
       product?.sous_categorie_slug;
-    return subSlug ? `/${subSlug}/${slug}` : null;
+    /*
+     * The CANONICAL address, not an echo of the request. `/${subSlug}/${slug}` repeated the requested
+     * slug and the raw stored subcategory slug, so a stored `Intra-Workout` or a mixed-case legacy
+     * slug produced a redirect the case-fold block had to redirect AGAIN — measured 28/09/2026:
+     * /shop/nutrabio-intra-blast-… 301 -> /Intra-Workout/… 301 -> /intra-workout/… 200.
+     */
+    const productSlug = typeof product?.slug === 'string' && product.slug ? product.slug : slug;
+    return subSlug
+      ? `/${lowercasePreservingEscapes(subSlug)}/${lowercasePreservingEscapes(productSlug)}`
+      : null;
   } catch {
     return null;
   }
@@ -242,6 +251,11 @@ async function resolveShopSlug(slug: string): Promise<ShopResolution> {
  * that was the largest shape in a 1,060-page "Not found" bucket.
  */
 async function classifyNonProduct(slug: string): Promise<ShopResolution> {
+  // Callers reach here only after the product API answered 404 for this slug, which is the one
+  // condition under which the old-slug rename index may be consulted (see util/adminRedirects.ts).
+  const renamed = await renamedProductDestination(slug);
+  if (renamed) return { kind: 'redirect', to: renamed };
+
   const isCategory = await isTaxonomySlug(slug);
 
   // null = the taxonomy could not be read. Unknown is not evidence of absence, and acting on it
@@ -265,6 +279,10 @@ async function classifyNonProduct(slug: string): Promise<ShopResolution> {
  * says "not today".
  */
 async function goneOrCategory(request: NextRequest, slug: string): Promise<NextResponse> {
+  // Every caller has already had a product 404 for this slug. A renamed product beats any category.
+  const renamed = await renamedProductDestination(slug);
+  if (renamed) return redirectPreservingQuery(request, renamed);
+
   const best = await bestCategoryForSlug(slug);
   if (best) return redirectPreservingQuery(request, `/${best}`);
 
@@ -506,6 +524,10 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   // point. Exact equality only: `/api/revalidate` and friends are already excluded by the matcher.
   const shadowedBrand = pathname === '/api' ? brandSlugRedirectTarget('api') : null;
   if (shadowedBrand) {
+    // Only while the brand still exists. Measured 28/09/2026: /api 301 -> /marque-api -> 404 for
+    // both user agents — the override outlived the brand, and a permanent hop into a 404 is worse
+    // than a plain terminal status. Unknown (backend unreadable) keeps the redirect.
+    if ((await isBrandSlug('api')) === false) return gone();
     return redirectPreservingQuery(request, `/${shadowedBrand}`);
   }
 
