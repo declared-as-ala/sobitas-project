@@ -193,6 +193,24 @@ class CatalogIHerbDisambiguateNames extends Command
                 }
             }
         }
+        // Count forms the normalizer's UNITS map does not know. Local on purpose: widening that map
+        // would change the names of every future import, which is a separate decision. Found in the
+        // groups the first pass skipped (28/09/2026): "120 VegCaps", "90 Vegetable Capsules",
+        // "180 Chewable Wafers", "1,000 Vegetarian Tablets", "60 Easy To Swallow Capsules".
+        $extraUnits = self::EXTRA_COUNT_UNITS;
+        uksort($extraUnits, static fn (string $a, string $b): int => mb_strlen($b) <=> mb_strlen($a));
+        $alternation = implode('|', array_map(static fn (string $u): string => str_replace(' ', '\s+', preg_quote($u, '~')), array_keys($extraUnits)));
+        preg_match_all('~(?<![\d,.])(\d{1,3}(?:,\d{3})+|\d+)\s*('.$alternation.')\b~iu', $source, $extra, PREG_SET_ORDER);
+        foreach ($extra as $match) {
+            $unit = $extraUnits[mb_strtolower(preg_replace('~\s+~', ' ', $match[2]) ?? $match[2])] ?? null;
+            if ($unit !== null) {
+                $this->add($out, IHerbNormalizer::qualifierNumber((float) str_replace(',', '', $match[1])).' '.$unit);
+            }
+        }
+        // Probiotic strength: "25 Billion CFU" is what tells two Jarro-Dophilus bottles apart.
+        if (preg_match('~(\d+(?:\.\d+)?)\s*Billion\s*CFU~i', $source, $cfu) === 1) {
+            $this->add($out, IHerbNormalizer::qualifierNumber((float) $cfu[1]).' milliards UFC');
+        }
         $pack = $normalizer->packSize($source);
         if ($pack !== null) {
             $label = IHerbNormalizer::packLabel($pack['quantity'], $pack['unit']);
@@ -210,9 +228,45 @@ class CatalogIHerbDisambiguateNames extends Command
                 $this->add($out, $descriptor);
             }
         }
+        // LAST RESORT, lowest priority: the product-line segment itself. Twins that share every
+        // number differ by line — "Formula 101" / "Formula 103", "Men 50 & Wiser" / "Women 50 &
+        // Wiser", "Algae Omega-3" / "Supercritical Omega-3 Fish Oil". Those are the manufacturer's
+        // own names and stay as written. Quantity-only segments are left to the rules above, and a
+        // segment shared by every member or already in the name is never chosen (see handle()).
+        // Split on the list commas only: "1,000 Vegetarian Tablets" must stay one segment.
+        foreach (preg_split('~,(?!\d{3}(?!\d))~u', $source) ?: [] as $segment) {
+            $segment = trim(preg_replace('~\s+~u', ' ', preg_replace('~[®™]~u', '', $segment) ?? $segment) ?? $segment);
+            if ($segment === '' || mb_strlen($segment) > 60) {
+                continue;
+            }
+            if (preg_match('~^\(?[\d.,/\s]+(?:mg|mcg|µg|μg|iu|ui|g|kg|ml|l|oz|fl\s*oz|lbs?)\b~iu', $segment) === 1) {
+                continue;
+            }
+            if (preg_match('~^\d[\d,.]*\s~u', $segment) === 1
+                && preg_match('~(capsule|caps|tablet|tabs|softgel|soft gel|gumm|lozenge|packet|serving|wafer|chew)~i', $segment) === 1) {
+                continue;
+            }
+            $this->add($out, $segment);
+        }
 
         return $out;
     }
+
+    /** Count units missing from IHerbNormalizer::UNITS, as a French page prints them. */
+    private const EXTRA_COUNT_UNITS = [
+        'easy to swallow capsules' => 'gélules',
+        'vegetable capsules' => 'gélules végétales',
+        'vegetarian tablets' => 'comprimés végétariens',
+        'veggie tablets' => 'comprimés végétariens',
+        'vegan tablets' => 'comprimés véganes',
+        'vegcaps' => 'gélules végétales',
+        'chewable wafers' => 'pastilles à croquer',
+        'chewable tablets' => 'comprimés à croquer',
+        'chewables' => 'comprimés à croquer',
+        'to go packets' => 'sachets',
+        'wafers' => 'pastilles',
+        'chews' => 'bouchées',
+    ];
 
     /** @param list<array{key:string,label:string}> $out */
     private function add(array &$out, string $label): void
