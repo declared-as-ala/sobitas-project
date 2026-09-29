@@ -140,6 +140,66 @@ class ProtinasAudit extends Command
                 $claims, $dt($claims * \App\Services\PhoneVerificationService::BONUS_POINTS), $claimsNoOrder, $spent));
         }
 
+        // ── 5. Online orders whose TOTAL discount was large (points + coupon + pack stacked) ───
+        $this->line('');
+        $big = DB::table('commandes')->where('created_at', '>=', now()->subDays(90))
+            ->whereRaw('(COALESCE(remise,0) + COALESCE(discount_ht,0)) >= 20')
+            ->orderByDesc('created_at')->limit($top)
+            ->get(['id', 'numero', 'created_at', 'etat', 'user_id', 'prix_ht', 'prix_ttc', 'remise', 'discount_ht', 'coupon_code_snapshot']);
+        $this->info(sprintf('5) Online orders with ≥ 20 DT total discount, last 90 days: %d shown', $big->count()));
+        $this->table(['order', 'date', 'état', 'user', 'HT', 'TTC', 'remise (pack+pts)', 'coupon HT', 'coupon', 'points DT'],
+            $big->map(function ($c) use ($rate) {
+                $pts = (int) DB::table('user_point_transactions')->where('commande_id', $c->id)->where('type', 'redeem')->sum('points');
+
+                return [$c->numero ?? $c->id, substr((string) $c->created_at, 0, 10), $c->etat, $c->user_id ? '#'.$c->user_id : 'invité',
+                    $c->prix_ht, $c->prix_ttc, $c->remise, $c->discount_ht, $c->coupon_code_snapshot ? 'oui' : '', number_format(abs($pts) / $rate, 2)];
+            })->all());
+
+        // ── 6. The SHOP TILL card (clients.loyalty_points_balance) — a separate programme ───────
+        if (Schema::hasTable('loyalty_point_transactions') && Schema::hasColumn('clients', 'loyalty_points_balance')) {
+            $svc = \App\Services\LoyaltyService::class;
+            $storeRate = $svc::POINTS_PER_DT_VALUE;
+            $sdt = fn ($p) => number_format(((int) $p) / $storeRate, 2, ',', ' ').' DT';
+            $this->line('');
+            $this->info(sprintf('6) Shop-till card: earn %d pt/DT · %d pts = 1 DT (= %d%% back) · min %d pts · cap = whole ticket',
+                $svc::POINTS_PER_DT, $storeRate, (int) round(100 * $svc::POINTS_PER_DT / $storeRate), $svc::MIN_REDEEM_POINTS));
+            $types = DB::table('loyalty_point_transactions')
+                ->selectRaw('type, COUNT(*) n, COUNT(DISTINCT client_id) clients, SUM(points) pts')->groupBy('type')->get();
+            $this->table(['type', 'rows', 'clients', 'points', 'value'],
+                $types->map(fn ($r) => [$r->type, $r->n, $r->clients, $r->pts, $sdt($r->pts)])->all());
+            $owed = (int) DB::table('clients')->where('loyalty_points_balance', '>', 0)->sum('loyalty_points_balance');
+            $holders = DB::table('clients')->where('loyalty_points_balance', '>', 0)->count();
+            $this->line(sprintf('   outstanding: %d clients hold %d pts = %s', $holders, $owed, $sdt($owed)));
+            $sdrift = DB::table('clients as c')
+                ->leftJoinSub(DB::table('loyalty_point_transactions')->selectRaw('client_id, SUM(points) s')->groupBy('client_id'), 't', 't.client_id', '=', 'c.id')
+                ->whereRaw('COALESCE(c.loyalty_points_balance,0) <> GREATEST(COALESCE(t.s,0),0)')
+                ->selectRaw('COUNT(*) n, SUM(COALESCE(c.loyalty_points_balance,0) - GREATEST(COALESCE(t.s,0),0)) extra')->first();
+            $this->line(sprintf('   balance ≠ ledger (typed by hand or legacy import): %d clients, %+d pts = %s not backed by any transaction',
+                (int) ($sdrift->n ?? 0), (int) ($sdrift->extra ?? 0), $sdt((int) ($sdrift->extra ?? 0))));
+
+            $hasMoney = Schema::hasColumn('loyalty_point_transactions', 'monetary_value');
+            $red = DB::table('loyalty_point_transactions as t')
+                ->where('t.type', 'redeem')->where('t.created_at', '>=', now()->subDays($days))
+                ->orderByDesc(DB::raw('ABS(t.points)'))->limit($top)
+                ->get(['t.client_id', 't.ticket_id', 't.points', 't.created_at']);
+            $tCols = collect(['numero', 'prix_ht', 'prix_ttc', 'remise', 'loyalty_discount_dt', 'loyalty_old_balance_points'])
+                ->filter(fn ($c) => Schema::hasColumn('tickets', $c))->values()->all();
+            $this->info(sprintf('   till redemptions, last %d days (largest first)', $days));
+            $this->table(['client', 'date', 'ticket', 'points', 'DT', 'ticket TTC', '% of ticket', 'earned before', 'hand-typed before'],
+                $red->map(function ($r) use ($sdt, $storeRate, $tCols) {
+                    $t = $r->ticket_id && $tCols ? DB::table('tickets')->where('id', $r->ticket_id)->first($tCols) : null;
+                    $ttc = (float) ($t->prix_ttc ?? 0);
+                    $dtv = abs($r->points) / $storeRate;
+                    $earned = (int) DB::table('loyalty_point_transactions')->where('client_id', $r->client_id)
+                        ->where('type', 'earn')->where('created_at', '<', $r->created_at)->sum('points');
+                    $adj = (int) DB::table('loyalty_point_transactions')->where('client_id', $r->client_id)
+                        ->where('type', 'adjustment')->where('points', '>', 0)->where('created_at', '<', $r->created_at)->sum('points');
+
+                    return ['#'.$r->client_id, substr((string) $r->created_at, 0, 10), $t->numero ?? $r->ticket_id, abs($r->points),
+                        number_format($dtv, 2, ',', ' '), $ttc ?: '—', $ttc > 0 ? round($dtv / ($ttc + $dtv) * 100).'%' : '—', $earned, $adj];
+                })->all());
+        }
+
         $this->line('');
         $this->comment('Read-only: nothing was written.');
 
