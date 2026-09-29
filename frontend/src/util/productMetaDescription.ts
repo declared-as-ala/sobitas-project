@@ -299,26 +299,93 @@ export function humanProductHeading(product: Pick<Product, 'designation_fr' | 's
   return brand && !nameContainsBrand(name, brandRaw) ? `${name} – ${brand}` : name;
 }
 
-/** "{Human name} – Prix Tunisie | {Brand}", trimmed to a SERP-safe length. */
+/** The SERP budget for a product `<title>`. Google renders ~600 px; 65 characters is the width
+ * this catalogue's titles were shortened to since the builder was written. */
+const TITLE_MAX = 65;
+
+/** Below this, the shortened name stops saying which product it is, so the brand tail goes first. */
+const MIN_NAME_CHARS = 16;
+
+/** The format segment at the very end of a name: "300 g", "– 60 caps", "5 mg". */
+const FORMAT_TAIL = /(?:\s*[–|-]\s*)?\d+(?:[,.]\d+)?\s*(?:kg|g|mg|ml|caps|capsules?|gélules?|comprimés?|tablets?|servings|doses)\b$/i;
+
+/**
+ * Tidy the seam a truncation leaves behind. Three shapes, all seen in the 29/09 measurement:
+ * a dangling connector ("Buffered Vitamin C with"), a trailing separator or comma ("EarthSweet
+ * Chewables,") and an orphaned bare number where the unit was cut away ("Korean Ginseng – 100").
+ * The number is only dropped when a separator introduced it, so "Zumub Omega 3" keeps its 3.
+ */
+function trimTitleSeam(text: string): string {
+  let out = text.trim();
+  let previous = '';
+  while (out !== previous) {
+    previous = out;
+    out = out
+      .replace(/\s*[–—|,;:-]\s*\d+(?:[,.]\d+)?$/u, '')
+      .replace(/\s+(?:de|du|des|en|à|et|pour|avec|sans|plus|and|with|for|the|of)$/i, '')
+      .replace(/\s+[+&]$/, '')
+      .replace(/[\s–—|,;:-]+$/u, '')
+      .trim();
+  }
+  return out;
+}
+
+/**
+ * Shorten a humanised name so `name + suffix` fits TITLE_MAX, keeping the format segment
+ * ("300 g", "60 caps") that tells the shopper which variant this is — it is the last thing to
+ * drop, not the first, because the format is what Tunisians type ("creatine prix tunisie 500g").
+ * Words are removed whole, from the end, until the assembled title actually fits; the previous
+ * arithmetic estimated the budget once and overshot it by up to six characters.
+ */
+function fitTitleName(name: string, suffix: string): string {
+  if (`${name}${suffix}`.length <= TITLE_MAX) return name;
+  const budget = Math.max(TITLE_MAX - suffix.length, 0);
+  const formatMatch = name.match(FORMAT_TAIL)?.[0] ?? '';
+  const format = formatMatch.trim().replace(/^[–|-]\s*/, '');
+  const keep = format ? ` – ${format}` : '';
+  let head = trimTitleSeam(name.slice(0, name.length - formatMatch.length));
+  while (head && `${head}${keep}`.length > budget) {
+    const shorter = trimTitleSeam(head.replace(/\s+\S*$/, ''));
+    if (shorter === head) break;
+    head = shorter;
+  }
+  if (head && `${head}${keep}`.length <= budget) return `${head}${keep}`;
+  // The format no longer fits beside the name: the name is what identifies the product, so it wins.
+  if (head && head.length <= budget) return head;
+  // A single word longer than the whole budget — keep it rather than emit an empty title.
+  return trimTitleSeam(name.split(' ')[0]) || name;
+}
+
+/**
+ * "{Human name} – Prix Tunisie | {Brand}", trimmed to a SERP-safe length.
+ *
+ * The trim used to reach only ONE of the three tails this builds. A product whose name already
+ * carries its brand returned early, and a product with no brand at all returned after the length
+ * test, so both skipped the shortening below entirely — measured 29/09/2026 by running this
+ * builder over all 11,353 catalogue products, 3,240 of them (28.5 %) shipped a `<title>` past 65
+ * characters, the worst 169 ("Sambucus
+ * Black Elderberry Immune Complex Plus Vitamin C & Zinc, Natural Mixed Berry, 60 Chewable
+ * Tablets – …"). Google truncates those to ~60 characters, so the format and the price words at
+ * the end — the part that answers the query — never reached the SERP. The budget is now applied
+ * to every path by `fitTitleName`, which is the same computation the brand path already did:
+ * a title that already fits is returned byte-identical. Not one in-stock product and not one page
+ * under the 05/10 freeze changes: every title this shortens belongs to an out-of-stock imported
+ * product. `humanProductHeading` is deliberately NOT capped — an H1 has no SERP budget, and the
+ * title/H1 difference this leaves is the ordinary one, not the three-different-names defect.
+ */
 export function humanProductTitle(product: Product): string {
   const raw = product.designation_fr ?? product.slug ?? 'Produit';
   const brandRaw = product.brand?.designation_fr?.trim() || '';
   const name = humanizeProductName(raw, brandRaw);
   const brand = brandRaw ? humanizeProductName(brandRaw) : '';
-  const base = `${name} – Prix Tunisie`;
-  const tail = brand && !nameContainsBrand(name, brandRaw) ? brand : 'Protein.tn';
-  if (tail === 'Protein.tn' && brandRaw) return base;
-  const full = `${base} | ${tail}`;
-  if (full.length <= 65) return full;
-  if (tail === 'Protein.tn') return base;
-  const budget = 65 - ` – Prix Tunisie | ${brand}`.length;
-  const format = name.match(/(?:\s*[–|-]\s*)?\d+(?:[,.]\d+)?\s*(?:kg|g|mg|ml|caps|capsules?|gélules?|comprimés?|tablets?|servings|doses)\b$/i)?.[0] ?? '';
-  const prefixBudget = budget - format.length;
-  const prefix = name.slice(0, prefixBudget + 1).replace(/\s+\S*$/, '').trimEnd()
-    .replace(/(?:\s+[+&]|\s+(?:de|du|des|en|à|et|pour))$/i, '')
-    .replace(/[\s–—|:-]+$/u, '');
-  const shortName = format && prefix ? `${prefix} ${format.trim().replace(/^[–|-]\s*/, '– ')}` : prefix;
-  return shortName ? `${shortName} – Prix Tunisie | ${brand}` : base;
+  // Three tails, unchanged: the brand when the name does not already say it, the shop when there
+  // is no brand at all and it fits, nothing otherwise.
+  const brandTail = brand && !nameContainsBrand(name, brandRaw) ? ` | ${brand}` : '';
+  const shopTail = !brandRaw && `${name} – Prix Tunisie | Protein.tn`.length <= TITLE_MAX ? ' | Protein.tn' : '';
+  let suffix = ` – Prix Tunisie${brandTail || shopTail}`;
+  // A very long brand would leave no room for the product itself; the tail is the optional half.
+  if (TITLE_MAX - suffix.length < MIN_NAME_CHARS) suffix = ' – Prix Tunisie';
+  return `${fitTitleName(name, suffix)}${suffix}`;
 }
 
 const TITLE_SUFFIX_WORDS = new Set(['prix', 'tunisie', 'livraison', 'rapide', 'proteine', 'protein', 'tn', 'et', 'and', 'en', 'ligne', 'pas', 'cher', 'meilleur', 'achat', 'acheter', 'boutique']);

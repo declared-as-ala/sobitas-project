@@ -186,3 +186,21 @@ How we beat them
 | aecor.tn | /en/shop/category/protein-whey-748 | Odoo shop, English path |
 | nutridiet.tn | creatine PDP | single-product presence |
 | protein-shop-tunisia.tn, wildkard.tn, tunisianutrition.tn, nutrition-plus.tn, parashop.tn, jumia.com.tn, ubuy.tn | earlier SERP notes (KEYWORDS.md header) | re-check when a row is worked |
+
+## Observed 29/09/2026 — a price aggregator entered the `prix` sets
+
+US-geo WebSearch, so these are set memberships, **not** Tunisian positions.
+
+| site | what it is | where it showed |
+| --- | --- | --- |
+| **primini.tn** | **price aggregator / comparator — carries no stock.** Title pattern `PRODUCT Prix Tunisie : Dès N DT`, i.e. the exact price-anchor formula this routine converged our own category and PDP titles onto. It can quote every shop's lowest price because it holds none of them | **#1** on `glutamine tunisie prix` (plus a second URL in the same set) and **#1** on `impact whey protein tunisie prix`; present in 3 of the 5 sets looked at today |
+| housenutrition.tn | the incumbent to beat | **#1** on `omega 3 tunisie prix fish oil` with `/category/fish-oil` |
+| nutribeast.tn | the other incumbent | in **4 of 5** sets today — `/multi-vitamines` + `/vitamines-mineraux`, `/l-glutamine`, `/omega-3-et-acides-gras` (category **and** a PDP), `/collagene` |
+| impactnutrition.com.tn | **a Tunisian sports-nutrition BRAND with its own shop**, not just a retailer | owns `impact whey protein …` with 3 URLs; its resellers (wildkard, tunisiepara, maparatunisie, pharma-shop) take the rest. See the retired KEYWORDS row |
+| paraexpert.tn | parapharmacy running **editorial comparison pages** | `"Collagène marin Tunisie — Guide d'achat et comparatif 2026"` ranks on a commercial query |
+| parashop.tn, parapharm.tn, parapharmacie.tn, maparatunisie.tn, tunisiepara.com, pharma-shop.tn, algovita.tn, bioherbs.tn | parapharmacies | **8 of 9** holders on `collagène marin tunisie prix`, and the majority on `vitamines` and `omega 3`. Confirms 25/09: collagen, vitamins, omega-3 and fat burners are **pharmacy-intent** queries in this market, which is why our sports-angled pages are absent from them |
+
+**What this changes.** Our price anchor ("dès N DT") no longer differentiates us on a `prix` query —
+an aggregator does it better by construction. What primini cannot copy is what we actually hold:
+a real stock count, a delivery window, and the format that is in the warehouse today. Category and
+PDP copy should lead with those, not with the price alone.

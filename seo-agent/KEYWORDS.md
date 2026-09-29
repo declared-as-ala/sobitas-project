@@ -54,13 +54,13 @@ tunisie". **Arabic** (`hl=ar`): افضل بروتين في تونس **1** (post 
 | pre workout | /pre-workout | 393 | 7.0 (22/09 GSC) | **page-one and 0 clicks in 28 days** — the biggest zero-click row on the site. Impressions match `/pre-workout/pre-workout-born-rage-original-eric-favre` (385 impr, 1 clk, pos 5.4) almost exactly, so the generic term is answered by one niche PDP, not the category. Cannibalisation decision (Saturday), NOT a title rewrite: `/pre-workout` is inside the 05/10 freeze |
 | optimum nutrition | /optimum-nutrition | 518 | 5.2 (22/09 GSC) | brand query, position 5 and 1.35 % CTR (7 clicks). The brand page itself sits at 13.5 on 1,614 impr, so the URL Google shows for the exact term is NOT the brand page — read the Pages breakdown before acting |
 | protein powder whey | /whey-proteine | 170 | 9.8 (22/09 GSC) | page-one, 0 clicks; English-language phrasing our titles never use |
-| impact whey protein | /whey-proteine | 153 | 9.4 (22/09 GSC) | page-one, 1 click; our blog post ranks, the catalogue does not |
+| ~~impact whey protein~~ | — | 153 | 9.4 (22/09 GSC) | **RETIRED 29/09.** SERP look 29/09 (US-geo): primini.tn #1, then impactnutrition.com.tn ×3, wildkard, pharma-shop, tunisiepara ×2, maparatunisie. "Impact" is a **Tunisian brand** (impactnutrition.com.tn) and its own site plus its resellers own the term — we do not stock it. The 153 impressions are the brand's demand, not ours; no copy on `/whey-proteine` wins it. Do not re-add |
 | bruleur de graisse tunisie | /bruleurs-de-graisse | ? | ? | SERP look 25/09 (US-geo, no TN pos): **six of nine results are parapharmacies** (para-plus, paraexpert, maparatunisie, parashop, parapharm, pharma-shop); only nutribeast `/thermogeniques` is a sports shop. protein.tn absent. This is a pharmacy-intent query — the page needs the minceur/thermogénique vocabulary before it can compete, and that is a copy theme, not a title tweak |
 | bcaa tunisie | /bcaa | ? | ? | SERP look 25/09 (US-geo, no TN pos): nutribeast holds two BCAA URLs, plus protein-shop-tunisia, stock-x, tunisiepara, strong-nutrition. **Our result in the set is the legacy `/category/bcaa` with the old "\| SOBITAS" title**; verified live the same day: it 308s once to `/bcaa`, which is 200, self-canonical, title 56. Index lag, not a defect — do not "fix" it |
-| omega 3 tunisie | /omega-3 | 62 | 18.1 (22/09 GSC) | retarget + real `bestProductSlugs` (empty block fixed) shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look 22/09 (US-geo, no TN pos): pharmacies (parapharmacie/tunisiepara), wildkard, nutribeast own the set; still showing our old `/category/omega-3` title |
+| omega 3 tunisie | /omega-3 | 62 | 18.1 (22/09 GSC) | retarget + real `bestProductSlugs` shipped 22/09; dead SKU `/omega-3/omega-3` still `(needs: owner)` retire. SERP look **29/09** (US-geo, no TN pos): **housenutrition.tn/category/fish-oil #1**, protein-shop-tunisia ×3, nutribeast (PDP + category), parapharmacie, tunisiepara, bioherbs — protein.tn **absent**. NutriBeast ranks a PDP for the *same* WeightWorld 240-softgel product we carry and their title states the dose ("– 2000mg EPA DHA"); ours names neither. **3 buyable of 329** (29/09) |
 | protein bar chocolate | /barres-proteinees | 145 | 10.3 (22/09 GSC) | **bars category page shipped 22/09** (177→~1,800 words, FAQPage, price anchor `dès 36 DT`, `sur commande`). SERP look 22/09 (US-geo): we are absent; protein-shop-tunisia, housenutrition, nutribeast, stock-x, geantdrive hold it. Re-check TN pos after deploy + reindex |
-| collagene tunisie | /collagene | 5 | 51.6 (22/09 GSC) | **category verified live 25/09 and in good shape**: 200, `index, follow`, title 62 ("Collagène Tunisie \| Marin, Peptides & Types 1-3 — Protein.tn"), description 155, H1 carries the term. It is simply not ranked yet. SERP look 25/09 (US-geo): paraexpert, parashop, maparatunisie, parapharm, protein-shop-tunisia, nutribeast, bioherbs — protein.tn absent. A future Tuesday category week, not a same-day fix |
-| vitamines tunisie | /vitamines | 16 | 35.4 (22/09 GSC) | 566 words only — thin |
+| collagene tunisie | /collagene | 5 | 51.6 (22/09 GSC) | **category verified live 25/09 and in good shape**: 200, `index, follow`, title 62 ("Collagène Tunisie \| Marin, Peptides & Types 1-3 — Protein.tn"), description 155, H1 carries the term. It is simply not ranked yet. SERP look 25/09 (US-geo): paraexpert, parashop, maparatunisie, parapharm, protein-shop-tunisia, nutribeast, bioherbs — protein.tn absent. A future Tuesday category week, not a same-day fix SERP look **29/09** (US-geo) on `collagène marin tunisie prix`: parashop ×2, maparatunisie ×2, **paraexpert "Guide d'achat et comparatif 2026"**, algovita, nutribeast, parapharmacie, tunisiepara — protein.tn absent and **8 of 9 holders are parapharmacies**, confirming 25/09: this is a beauty query here, not a sports one. 2 buyable of 254 (29/09) |
+| vitamines tunisie | /vitamines | 16 | 35.4 (22/09 GSC) | Page rebuilt since: **1,855 bot words, 6 words above the grid, FAQPage, 10 buyable of 1,870** (measured 29/09). SERP look 29/09 (US-geo, no TN pos): parashop, parapharm, protein-shop-tunisia (category + 2 PDPs), nutribeast ×3, parapharmacie — protein.tn **absent**. Thinness is no longer the problem; stock is |
 | complement alimentaire tunisie | / or /proteines | 61 | 8.2 (22/09 GSC) | SERP look 25/09 (US-geo, no TN pos): maparatunisie, parafendri, stadium, paramust, gympro, nutribeast, viveznature — **protein.tn absent from a 9-result set** for the generic head term, while GSC has the query at 8.2 on 61 impressions. The two disagree because GSC averages every protein.tn URL shown in Tunisia; read the Pages breakdown before acting |
 
 **Note 22/09/2026 (run 2), no position observed — a template change, recorded so the next
@@ -82,6 +82,15 @@ pre-rename title, and every one of those paths was verified live the same day to
 site whose best sellers were `noindex` from ~11/08 to 21/09 — the diagnosis already in
 `PLAYBOOK.md`. Do not re-point, re-title or re-canonical anything because of it, and especially
 not while the September 2026 spam update is rolling (started 24/09).
+
+**Note 29/09/2026 — a price aggregator is taking the `prix` queries.** `primini.tn` appeared in
+**three of the five** sets looked at today and holds **#1** on two of them (`glutamine tunisie
+prix`, `impact whey protein tunisie prix`), with the title pattern `PRODUCT Prix Tunisie : Dès N
+DT`. That is the price-anchor formula this routine converged our own category titles onto — run by
+a comparator that carries no stock and can list every shop's price. Two consequences for this file:
+a `prix` row is now contested by an aggregator as well as by the shops in `COMPETITORS.md`, and our
+own price anchor has to carry something it cannot copy (real stock count, delivery window, the
+format actually in the warehouse). Re-check these rows from a Tunisian IP before acting.
 
 ## Product-name SERPs (in-stock best sellers; House Nutrition style "Product – Brand" + price)
 
@@ -173,7 +182,7 @@ breakdown first".
 | meilleur oméga 3 tunisie | /omega-3 | 3 | 20.7 (22/09 GSC) |
 | collagène marin tunisie | /collagene/collagen-marine-300g-real-pharm | 11 | 57.1 (22/09 GSC) |
 | multivitamines tunisie | /vitamines | 2 hits, best 3; title already says Multivitamines; page is 566 words — rebuild with the 10 in-stock SKUs | P1 |
-| glutamine tunisie | /glutamine | 10 | 20.4 (22/09 GSC) |
+| glutamine tunisie | /glutamine | 10 | 20.4 (22/09 GSC) SERP look 29/09 (US-geo, no TN pos): **primini.tn ×2**, parashop, pharma-shop, tunisiepara, protein-shop-tunisia, maparatunisie, nutribeast, parapharmacie — protein.tn absent. 2 buyable of 56 |
 | glutamine tunisie prix | /glutamine | 4 hits, best 2; plus "glutamine prix tunisie" (2/1) | P1 |
 | whey protein 2kg prix tunisie | /whey-proteine | 5 | 3.8 (22/09 GSC) |
 | mass gainer 7kg prix tunisie | /mass-gainers/mass-gainer-zero-7kg-eric-favre | 7 | 6.1 (22/09 GSC) |
