@@ -41,7 +41,7 @@
  *              like "2L"). Printed as context so the next casing pass has its worklist, never
  *              budgeted — a gate that is always red is a gate nobody reads.
  *
- * THE FOUR RULES (all on the builder's OUTPUT)
+ * THE FIVE RULES (all on the builder's OUTPUT)
  *   a  a token the contract pins uppercase (FROZEN_KEEP_UPPER), shouted in the catalogue name,
  *      must not come out Titlecased — "GSN" must never render "Gsn".
  *   b  the micro sign must survive: no Greek capital `Μ` (U+039C) the input did not have, and a
@@ -50,8 +50,16 @@
  *   d  a name the catalogue already cased intentionally (`needsRecasing` false: it is neither
  *      shouting nor all-lowercase) must keep its capitals. Unit words are exempt: lowercasing
  *      "500GR" to "500 g" is the repair, not a regression.
+ *   f  the assembled `<title>` must fit FROZEN_TITLE_MAX characters. The builder shortens a
+ *      name to a budget, but until 29/09/2026 it did so on only ONE of its three tails: a
+ *      product whose name already carried its brand returned early and a product with no brand
+ *      returned after the length test, so both skipped the trim. 3,240 of 11,353 titles (28 %)
+ *      shipped past 65 characters, the worst 169 — Google truncates those to ~60 and the format
+ *      and price words at the end never reach the SERP. Only the builder's own path is judged:
+ *      a title a person wrote in the CMS is out of this tool's scope (97 of them are long, and
+ *      that is a backend content question, not a builder regression).
  * Rule (e) is the negative control: ten frozen golden pairs, checked offline before the network
- * is touched, so a change that simply DISABLES the humanizer cannot pass the other four.
+ * is touched, so a change that simply DISABLES the humanizer cannot pass the other rules.
  *
  * EXIT CODES
  *   0  contract holds
@@ -70,7 +78,7 @@
  */
 
 import { registerHooks } from 'node:module';
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -148,9 +156,25 @@ function die(code, msg) {
  * extension, which Node's type stripping does not resolve on its own. A synchronous resolve hook
  * adds the `.ts` back for relative specifiers that exist on disk. Nothing is copied, nothing is
  * transpiled to a temp file: the file under test is the file that ships.
+ *
+ * It also resolves the `@/*` -> `frontend/src/*` alias from `frontend/tsconfig.json`. That is not
+ * cosmetic: on 28/09/2026 the builder gained `import { DELIVERY } from '@/util/company'`, Node
+ * could no longer load it, and this tool answered `could not measure` (exit 2) on every run —
+ * silently, because exit 2 is by design never a P0. A contract nobody can evaluate asserts
+ * nothing, so the alias is resolved here rather than left to the next import to break again.
  */
+const SRC = path.join(REPO, 'frontend', 'src');
 registerHooks({
   resolve(spec, ctx, next) {
+    if (spec.startsWith('@/')) {
+      const base = path.join(SRC, spec.slice(2));
+      for (const candidate of [base, `${base}.ts`, `${base}.tsx`, path.join(base, 'index.ts')]) {
+        if (existsSync(candidate) && statSync(candidate).isFile()) {
+          return next(pathToFileURL(candidate).href, ctx);
+        }
+      }
+      return next(pathToFileURL(`${base}.ts`).href, ctx);
+    }
     if (spec.startsWith('.') && !/\.[cm]?[jt]sx?$/.test(spec) && ctx.parentURL) {
       const u = new URL(spec, ctx.parentURL);
       if (existsSync(fileURLToPath(`${u.href}.ts`))) return next(`${spec}.ts`, ctx);
@@ -161,13 +185,15 @@ registerHooks({
 
 if (!existsSync(BUILDER)) die(2, `could not measure: ${path.relative(REPO, BUILDER)} not found`);
 let humanizeProductName;
+let humanProductTitle;
 try {
-  ({ humanizeProductName } = await import(pathToFileURL(BUILDER).href));
+  ({ humanizeProductName, humanProductTitle } = await import(pathToFileURL(BUILDER).href));
 } catch (err) {
   die(2, `could not measure: cannot load the builder (${err.message})\n` +
         'Node 22.18+ strips types by default; on an older 22.x re-run with --experimental-strip-types.');
 }
 if (typeof humanizeProductName !== 'function') die(2, 'could not measure: humanizeProductName is no longer exported');
+if (typeof humanProductTitle !== 'function') die(2, 'could not measure: humanProductTitle is no longer exported');
 
 /* ── RULE (e): THE NEGATIVE CONTROL ──────────────────────────────────────────────────────────
  * Verified against the live builder on 25/09/2026. Rows 1–2 and 5–7 are the wholesaler style the
@@ -323,9 +349,17 @@ if (!offline) {
   }
 }
 
-/* ── THE FOUR RULES ─────────────────────────────────────────────────────────────────────────── */
+/* ── THE FIVE RULES ─────────────────────────────────────────────────────────────────────────── */
 
-const fails = { keepUpper: [], microSign: [], gluedUnit: [], capitalsChanged: [] };
+/*
+ * A FROZEN COPY of the builder's TITLE_MAX, never an import of it — same reason as
+ * FROZEN_KEEP_UPPER: a check that reads its expectation out of the thing it checks cannot catch
+ * the expectation being raised or deleted. Change this only when the budget itself is
+ * deliberately changed, and say so in the run log.
+ */
+const FROZEN_TITLE_MAX = 65;
+
+const fails = { keepUpper: [], microSign: [], gluedUnit: [], capitalsChanged: [], titleTooLong: [] };
 const candidates = { brandFlattened: new Map(), gluedUncovered: new Map(), allLowercase: [] };
 /*
  * A brand the shop's table spells with an interior capital ("OstroVit", "BioTRUST", "EVLution")
@@ -405,6 +439,22 @@ for (const p of products.values()) {
       candidates.brandFlattened.get(key).n += 1;
     }
   }
+
+  /*
+   * (f) the assembled title must fit the budget. Built from the same {name, brand} this rule's
+   * neighbours use, so the string judged here is the string the PDP and the crawler view emit.
+   */
+  let title;
+  try {
+    title = humanProductTitle({ designation_fr: p.name, slug: p.slug, brand: p.brand ? { designation_fr: p.brand } : null });
+  } catch (err) {
+    title = null;
+    threw += 1;
+    if (threw <= 3) console.error(`humanProductTitle threw on ${p.slug}: ${err.message}`);
+  }
+  if (typeof title === 'string' && title.length > FROZEN_TITLE_MAX) {
+    fails.titleTooLong.push({ ...p, out: title, detail: `${title.length} chars (budget ${FROZEN_TITLE_MAX})` });
+  }
 }
 
 /* ── REPORT ─────────────────────────────────────────────────────────────────────────────────── */
@@ -419,9 +469,10 @@ const counts = {
   b_microSign: fails.microSign.length,
   c_gluedUnit: fails.gluedUnit.length,
   d_capitalsChanged: fails.capitalsChanged.length,
+  f_titleTooLong: fails.titleTooLong.length,
 };
 const failed = goldenFails.length + fails.keepUpper.length + fails.microSign.length +
-  fails.gluedUnit.length + fails.capitalsChanged.length;
+  fails.gluedUnit.length + fails.capitalsChanged.length + fails.titleTooLong.length;
 
 if (asJson) {
   console.log(JSON.stringify({
@@ -452,8 +503,9 @@ console.log(`| a | pinned initialism not Titlecased (GSN ≠ Gsn) | ${fails.keep
 console.log(`| b | micro sign survives, never Greek Μ | ${fails.microSign.length ? `**${fails.microSign.length} FAIL**` : 'ok'} |`);
 console.log(`| c | no glued unit (200g, 2.3KG, 60CAPS) | ${fails.gluedUnit.length ? `**${fails.gluedUnit.length} FAIL**` : 'ok'} |`);
 console.log(`| d | intentional catalogue capitals survive | ${fails.capitalsChanged.length ? `**${fails.capitalsChanged.length} FAIL**` : 'ok'} |`);
+console.log(`| f | title fits ${FROZEN_TITLE_MAX} chars on every tail | ${fails.titleTooLong.length ? `**${fails.titleTooLong.length} FAIL**` : 'ok'} |`);
 
-for (const [rule, rows] of [['a', fails.keepUpper], ['b', fails.microSign], ['c', fails.gluedUnit], ['d', fails.capitalsChanged]]) {
+for (const [rule, rows] of [['a', fails.keepUpper], ['b', fails.microSign], ['c', fails.gluedUnit], ['d', fails.capitalsChanged], ['f', fails.titleTooLong]]) {
   if (!rows.length) continue;
   console.log(`\n## FAIL (${rule}) — ${rows.length}\n`);
   for (const r of rows.slice(0, show)) {

@@ -91,3 +91,12 @@
 # (via the legacy /shop/lipo-6-black-60-caps, one 301) and it is 139 DT `BackOrder`, while
 # `…-ultra-concentrate-60caps` is 119 DT `InStock`. Watching both until Saturday's link pass.
 /bruleurs-de-graisse/lipo-6-black-60-caps
+
+# PRODUCT-TITLE LENGTH FIX 29/09 (`humanProductTitle` now applies its 65-char budget on every
+# tail). These two carried the longest builder-made titles in the 29/09 sample — 134 and 75 chars.
+# AFTER the deploy, as Googlebot, each <title> must be <= 65 characters AND still name the product
+# and its format. If they are unchanged, deploy-frontend.yml did not carry the build.
+# Neither is in stock, so neither is under the 05/10 freeze; they are here as the regression test
+# for the builder, not because they rank. Remove after two clean weeks.
+/antioxydants/california-gold-nutrition-longevity-boost-with-trans-resveratrol-olive-leaf-extract-grape-extract-blend-and-medium-chain-triglycerides-60-gelules-vegetales
+/probiotiques/metagenics-ultraflora-probiotic-multivitamin-30-gelules

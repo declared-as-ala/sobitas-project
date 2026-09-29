@@ -6,6 +6,25 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 29/09/2026:** live audit `--sample=40` 80 URLs **0 P0** (exit 0); the 28/09
+streaming-metadata P0 is **confirmed fixed on production** — `<title>` now sits at byte ~4,580
+inside `</head>` (~15,000) on `/proteines`, `/prise-de-masse`, `/blog` and `/sante-vitalite`, was
+268,738 of 272,966 on `/proteines` yesterday, and the `transient` P2 is gone. `parity-check.mjs`
+0 editorial bot-only words. Sitemaps 12,235, Δ −11 (−0.09 %); `pages` 5 → 6 is the new CMS page
+`/proteine-tunisie`, and **both CMS pages have been re-angled off the head terms** by the owner
+("Comment choisir sa protéine ? Guide Tunisie"), which closes the doorway half of the footer item
+below. Today's theme was the **product-title contract**: `humanProductTitle` applied its own ≤ 65
+budget to only ONE of its three tails, so **3,240 of 11,353 catalogue titles (28.5 %) shipped past
+65 characters, worst 169** — now 103 (0.9 %), all of them CMS-written, none from the builder. And
+`title-case-check.mjs` had gone **blind** (exit 2, "could not measure") since the builder gained an
+`@/util` import on 28/09; the alias is resolved again and a new **rule (f)** locks the length
+contract (proved able to fail: 283 FAILs against the old builder). Category pages were measured
+before being skipped: all 13 sit at **6 words above the grid** against a ≤ 100 budget, so the only
+category gap left is the comparison table on 8 of 13 — parked behind stock (2 of 108 BCAA, 2 of 56
+glutamine, 3 of 329 omega-3, 10 of 1,870 vitamins buyable). New competitor on `prix` queries:
+**primini.tn**, a price aggregator, #1 on two of five sets checked. Google: **September 2026 spam
+update still rolling — attribution mode.**
+
 **State on 28/09/2026:** live audit `--sample=40` 75 URLs **0 P0** (exit 0);
 `parity-check.mjs` 0 editorial bot-only words on all five money pages; sitemaps 12,246, Δ +11
 (+0.09 %, all in products-2 — new SKUs). `/sante-vitalite` served the headless-render shape for
@@ -80,7 +99,11 @@ record the page-level position first — never act on a query average.
 
 - [ ] `(needs: owner)` **http://www.protein.tn/* is a 2-hop chain: Cloudflare 301 to https://www, then Next.js 308 to the apex** — `live https://www.protein.tn/creatine`. Any external link or old citation using http://www.protein.tn/… costs two redirects before Google reaches the canonical page. Chains are followed but slow consolidation and keep the www URLs in the 'Page with redirect' bucket; http→https and www→apex are the… **Fix:** Owner/edge only, no code change. In Cloudflare → Rules → Redirect Rules add one Single Redirect: expression `(http.host eq "www.protein.tn")`, type Dynamic, target `concat("https://protein.tn", http.request.uri.path)`, status 301, "Preserve query string" ON. Confirm the www DNS record is proxied (it is — Cloudflare already answers hop 1). Verify with a Googlebot UA: `curl -sI -A Googlebot…
 
-### P1 (15)
+### P1 (18)
+
+- [ ] **103 product `<title>`s over 65 chars come from the CMS/DB, not the builder — several duplicate the product name inside their own title** — `filament/app/Services/Catalog/ImportedProductContent.php` (route measured 29/09: 97 of them on the `explicit` path). Worst live example 169 chars: "Sambucus Black Elderberry Immune Complex Plus Vitamin C & Zinc, Natural Mixed Berry, 60 Chewable Tablets – Sambucus Black Elderberry Immune Complex Plus Vitamin C & Zinc". The frontend deliberately does **not** override these (standing decision: a title a person wrote in the CMS wins), so the fix is backend. **Fix:** stop the importer emitting `seo_title` when it would just repeat `designation_fr`, and cap what it does emit at 65. Related to the existing P2 on `ImportedProductContent.php:1277-1282`.
+- [ ] **Comparison table missing on 8 of 13 category pages** — `/pre-workout`, `/bruleurs-de-graisse`, `/bcaa`, `/vitamines`, `/omega-3`, `/glutamine`, `/collagene`, `/prise-de-masse` (measured live 29/09 as Googlebot; present on `/creatine`, `/whey-proteine`, `/proteines`, `/mass-gainers`, `/whey-isolate`). Every one of these pages otherwise meets the standard — 6 words above the grid, FAQPage, grid first. **Blocked on stock, not on work:** buyable SKUs are 7/214 pre-workout, 4/97 brûleurs, 2/108 BCAA, 10/1,870 vitamines, 3/329 omega-3, 2/56 glutamine, 2/254 collagène (API, 29/09). A 2-row "comparison" is worse than none. Do `/pre-workout` first when stock allows.
+- [ ] **`exit 2` — "could not measure" — is invisible, and hid a dead gate for a day** — `seo-agent/tools/title-case-check.mjs` (and by design every ⚙ tool). It answered exit 2 from 28/09 (builder gained `@/util/company`) until fixed on 29/09, and because exit 2 is never a P0 nothing noticed. **Fix:** the Friday sweep should record each tool's exit code in the log and treat **two consecutive exit-2 runs of the same tool** as a finding. No code change needed — a PLAYBOOK line.
 
 - [ ] `(needs: owner)` **Product-level canonical override is exposed in Filament and emitted by the API but silently ignored by all three product routes —…** — `frontend/src/app/(shop)/[slug]/[productSlug]/page.tsx:118-120 and :287-288`. 323 self-canonical twins split product-level ranking signals and crawl budget within the site's largest indexable surface (11,367 sitemap PDPs), and the owner-facing field that is supposed to fix it is a no-op — the same 'CMS silently discards SEO' trap… **Fix:** Add one helper in C:/mla/frontend/src/util/productUrl.ts (or canonical.ts): `export async function resolveProductCanonicalUrl(product: Product): Promise<string>` that (a) takes `product.seo?.canonical_url`, (b) only forwards it to `resolveCanonicalUrl(override, buildProductUrlPath(product))` when its path matches the product shape `^/[^/]+/[^/]+/?$` on protein.tn/sobitas.tn (otherwise pass…
 - [ ] **Filament Redirections feed is capped at 500 rows — rules beyond that silently never fire** — `filament/app/Http/Controllers/Api/ApisController.php:2162-2175 (`->limit(500)`) and frontend/src/util/adminRedirects.ts:118-145 (single unpaginated…`. Once the owner passes 500 active rows (the Not-found export alone has 977 URLs and the recommended fixes above add more), the 501st+ rules are dropped with no error: a 410 or 301 the admin believes is live returns the old 404/soft behaviour, and which 500… **Fix:** Backend only, one line: in C:/mla/filament/app/Http/Controllers/Api/ApisController.php redirections(), replace `->limit(500)` with `->orderBy('id')` (drop the cap; 3 small columns per row, a few thousand rows is well under the frontend's 1.5s fetch timeout). If a cap must stay, use `->orderBy('id')->limit(5000)`. No change to adminRedirects.ts or middleware.ts — the single fetch already handles…
