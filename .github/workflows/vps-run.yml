@@ -71,6 +71,9 @@ on:
           - commerce-order-recovery-dry-run
           - commerce-flow-tests
           - notifications-status
+          # Protina points: where credited points came from, what is owed, every recent redemption
+          # with how that customer's balance was built. Read-only; identities masked to #user-id.
+          - protinas-audit
           - campaign-artwork-retire-dry-run
           # Affiliate pricing: fills products.prix_affilie = retail − 10% so the affiliate order
           # desk has a catalogue to sell. Dry-run previews the eligible count + a sample; writes
@@ -466,6 +469,10 @@ jobs:
               # Runs only the isolated commerce lifecycle regression suite. The test
               # defines its own in-memory SQLite schema and never touches production data.
               ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php tests/Feature/VerifiedCustomerReviewsTest.php"
+              WRITES=no
+              ;;
+            protinas-audit)
+              ARGS="protinas:audit --days=180 --top=20"
               WRITES=no
               ;;
             notifications-status)
