@@ -89,6 +89,8 @@ const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
     ],
   },
   /*
+   * RETIRED 30/09/2026 — /creatine-monohydrate-tunisie now 301s to /creatine (redirects.js), so
+   * its overlay is gone. Kept as the record of why it was a problem:
    * The same shape as /proteine-tunisie, one page later. /creatine-monohydrate-tunisie is a
    * ~1,200-word guide with no products, no FAQPage and no CollectionPage; its only route toward
    * the catalogue is a CMS-authored button pointing at the legacy /category/creatine, which 308s.
@@ -97,21 +99,8 @@ const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
    *
    * The page has impressions but no measured clicks, so it is retargeted cleanly rather than left
    * with a title/H1 that duplicates /creatine's commercial promise. PageContentClient removes the
-   * first CMS-authored H1 wherever it sits in the body, then emits this guide-specific H1 once.
+   * first CMS-authored H1 wherever it sits in the body, then emitted a guide-specific H1 once.
    */
-  'creatine-monohydrate-tunisie': {
-    navLabel: 'Guide : la créatine monohydrate',
-    titleOverride: 'Créatine monohydrate : comprendre les formes et les étiquettes | Protein.tn',
-    headingOverride: 'Comment choisir sa créatine monohydrate ? Le guide',
-    commercialIntro: 'Vous voulez acheter directement ?',
-    commercialLinks: [
-      {
-        anchor: 'créatine monohydrate en Tunisie',
-        href: '/creatine',
-        hint: 'Toute la catégorie créatine : marques, formats et prix du jour.',
-      },
-    ],
-  },
 };
 
 /** Normalises the several shapes a slug arrives in (leading slash, trailing slash, query). */

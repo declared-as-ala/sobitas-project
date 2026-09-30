@@ -145,7 +145,9 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
       '/blog/quamtrax-creatine-en-tunisie-comment-distinguer-le-faux-du-vrai-protein-tn',
     ],
     conflicts: [
-      { url: '/creatine-monohydrate-tunisie', reason: 'CMS page, index,follow, title "Créatine Monohydrate en Tunisie : guide expert & prix 2026" — a near-duplicate of the category intent', action: 'retarget' },
+      // 30/09/2026: the 28/09 retarget changed the title but not the URL or the « Prix … 2026 »
+      // section; with 2 clicks in 3 months there was nothing to protect, so it is folded in.
+      { url: '/creatine-monohydrate-tunisie', reason: 'Product-less CMS guide whose URL and price section duplicated the category intent — 301 to /creatine since 30/09/2026 (CMS row INACTIVE)', action: 'merge-301' },
       { url: '/blog/prix-de-la-creatine-en-tunisie', reason: 'holds the top slot for "creatine tunisie" with 6 clicks — retarget to price *comparison methodology*, keep the ranking, link down', action: 'leave-earns-clicks' },
       { url: '/blog/creatine-tunisie', reason: '2 clicks @18.5 — informational retarget only, never 301', action: 'leave-earns-clicks' },
     ],

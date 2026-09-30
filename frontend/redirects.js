@@ -186,6 +186,19 @@ function buildRedirects() {
     // honest destination: it is the same kind of page, and it exists.
     { source: '/page/:n(\\d+)', destination: '/shop', permanent: true },
     //
+    // ── 30/09/2026: THE CREATINE GUIDE CMS PAGE FOLDS INTO THE CATEGORY ─────────────────────
+    // /creatine-monohydrate-tunisie was a product-less CMS guide whose URL, and a « Prix … 2026 »
+    // section, still competed with /creatine for « créatine monohydrate tunisie » (3 m: 2 clicks /
+    // 107 impressions @13 against /creatine 9 / 730 @24). Retitling it (28/09) did not move the
+    // URL, so its signals — and the 698 impressions its legacy /page/ address had carried — now go
+    // to the one owner. Listed BEFORE `/page/:slug` so the old address takes one hop, not two.
+    // The CMS row is set INACTIVE by migration 2026_09_30_000100, which drops it from pages.xml.
+    p('/page/creatine-monohydrate-tunisie', '/creatine'),
+    p('/creatine-monohydrate-tunisie', '/creatine'),
+    // « Marques » is what a French-speaking shopper types for the brand directory; it answered 404.
+    p('/marques', '/brands'),
+    p('/marque', '/brands'),
+    //
     // ── THE LEGAL PAGES HAVE A REAL HOME, AND `/page/:slug` WAS NOT SENDING THEM TO IT ────
     // Checked live on 11/08/2026: /page/a-propos 308s to /a-propos, which is 404, and
     // /page/cookies 308s to /cookies, which is 404. A redirect into a 404 is worse than a plain
