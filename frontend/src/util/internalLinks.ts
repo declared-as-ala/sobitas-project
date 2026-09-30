@@ -212,6 +212,34 @@ function compileTargets(targets: LinkTarget[]): CompiledTarget[] {
 }
 
 /**
+ * A destination as it must be compared: site-relative, no origin, no query, no fragment, no
+ * trailing slash, case-folded. The CMS bodies write the same shelf four ways —
+ * `https://protein.tn/proteines`, `/proteines/`, `/Proteines` and `/proteines?ref=blog` all point
+ * at one page — and a raw string compare against the taxonomy's `/proteines` sees four misses.
+ */
+function normalizeLinkPath(href: string | undefined | null): string | null {
+  if (!href) return null;
+  let path = href.trim().replace(/^https?:\/\/(?:www\.)?protein\.tn/i, '');
+  // `/x` only. Another host (`https://example.com/proteines`) and a protocol-relative one
+  // (`//cdn.example.com/x`) are not this site and must suppress nothing.
+  if (!path.startsWith('/') || path.startsWith('//')) return null;
+  path = path.split('#')[0].split('?')[0];
+  if (path.length > 1) path = path.replace(/\/+$/, '');
+  return path.toLowerCase() || '/';
+}
+
+/** Every destination the incoming HTML already links, normalised for comparison. */
+function destinationsAlreadyLinked(html: string): Set<string> {
+  const linked = new Set<string>();
+  for (const tag of html.matchAll(/<a\b[^>]*>/gi)) {
+    const href = /href\s*=\s*(?:"([^"]*)"|'([^']*)')/i.exec(tag[0]);
+    const path = normalizeLinkPath(href?.[1] ?? href?.[2]);
+    if (path) linked.add(path);
+  }
+  return linked;
+}
+
+/**
  * Add at most `max` in-content links to `html`, one per target, at each target's first mention.
  *
  * Pure and idempotent-ish: running it twice adds nothing the second time, because the text it would
@@ -239,7 +267,38 @@ export function injectInternalLinks(
    */
   const tokens = html.split(/(<[^>]*>)/);
 
+  /*
+   * ── A DESTINATION THE BODY ALREADY LINKS IS ALREADY USED ──────────────────────────────────
+   * "ONE link per destination" in the header was enforced only against THIS function's own
+   * insertions. The bodies are CMS HTML and many of them already carry an author's own anchor to
+   * a shelf, which the tag walker below correctly refuses to link inside — and then links the
+   * same shelf again a paragraph later, from a different mention.
+   *
+   * Measured live on all 223 published articles, 30/09/2026 (Googlebot UA, links inside
+   * `<article>` only, injected ones identified by `class="article-inline-link"`):
+   *
+   *     31 articles ship an injected link to a destination the body already links   (37 links)
+   *     of those 37: /whey-proteine 13 · /proteines 11 · /whey-isolate 3 · /prise-de-masse 3 ·
+   *                  /creatine 2 · /vitamines 2 · /mass-gainers 2 · /proteines-vegetales 1
+   *     16 of the 31 are at the `max` cap, so the duplicate DISPLACES a first link
+   *
+   * The clearest illustration is `/blog/quelles-sont-les-meilleures-proteines`, whose body links
+   * /prise-de-masse twice already and left with three anchors to it — the anchor-text dilution
+   * the header warns about, arriving from the one direction it was not checking. The costliest is
+   * `/blog/whey-protein-en-tunisie`, the very article this file's header cites as the reason it
+   * exists: at the cap, and spending two of its six slots on /whey-isolate and /creatine, both
+   * already linked. The two destinations hit hardest across the corpus are the two the ranking
+   * objective is written against.
+   *
+   * Seeding `used` is the whole fix: `placed` only counts real insertions, so the slot a
+   * duplicate used to burn now goes to the next destination that has no link at all.
+   */
+  const alreadyLinked = destinationsAlreadyLinked(html);
   const used = new Set<string>();
+  for (const target of compiled) {
+    const path = normalizeLinkPath(target.href);
+    if (path && alreadyLinked.has(path)) used.add(target.href);
+  }
   let placed = 0;
   let skipDepth = 0;
 
