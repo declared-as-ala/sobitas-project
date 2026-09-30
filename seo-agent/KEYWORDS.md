@@ -39,18 +39,18 @@ tunisie". **Arabic** (`hl=ar`): افضل بروتين في تونس **1** (post 
 
 | query | page | impr/28d | pos (date) | note |
 | --- | --- | --- | --- | --- |
-| proteine tunisie | /proteines | 683 | 18.5 (22/09 GSC) | homepage + blog outrank the catalogue page; strengthen /proteines intro + internal links from blog posts |
+| proteine tunisie | /proteines | 683 | 18.5 (22/09 GSC) | homepage + blog outrank the catalogue page; strengthen /proteines intro + internal links from blog posts. SERP look **30/09** (US-geo, no TN pos): housenutrition `/category/whey`, maparatunisie, nutribeast `/whey`, protein-shop-tunisia, gympro, aecor, nutridiet. **Two of our URLs**: the homepage and the **legacy `/categorie/proteines`** (verified live 30/09: one 308 to `/proteines`, which is 200 + self-canonical) — `/proteines` itself is not the URL Google picked. Index lag on the legacy path, not a defect. 30/09: `/proteines` was the **2nd-worst victim** of the in-content-link defect (11 wasted injected links across the corpus) — fixed in `internalLinks.ts` this run |
 | protein tunisie | / | 687 | 12.7 (22/09 GSC) | brand-ish query, homepage holds it; keep |
-| whey protein tunisie | /whey-proteine | 346 | 15.7 (22/09 GSC) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks. SERP look 22/09 (US-geo): the **homepage**, not `/whey-proteine`, is our result in the set — decide which should win the head term |
+| whey protein tunisie | /whey-proteine | 346 | 15.7 (22/09 GSC) | every in-stock whey was noindex until 21/09 — re-check after 2 weeks. SERP look 22/09 (US-geo): the **homepage**, not `/whey-proteine`, is our result in the set — decide which should win the head term. SERP look **30/09** on `whey proteine tunisie prix` (US-geo, no TN pos): housenutrition #1, **gainlabnutrition `/collections/whey-tunisie`**, pharma-shop, nutribeast ×2, protein-shop-tunisia. **Three of our URLs in one set**: `/whey-proteine` (it IS in the set now), the blog post `whey-proteine-prix-en-tunisie-comparatif-et-meilleurs-offres` (served on the legacy `/blogs/` path, one 308), and the homepage. `/whey-proteine` was the **worst victim** of the in-content-link defect (13 wasted injected links) — fixed this run |
 | whey protein 1kg prix tunisie | /whey-proteine | 115 | 9.8 (22/09 GSC) | 0 clicks: title/description work (price angle) |
 | whey gold standard prix tunisie | /whey-proteine/100-whey-gold-standard-2-27kg | 84 | 8.4 (22/09 GSC) | 0 clicks; find which URL ranks (exact-page filter) |
 | creatine tunisie | /creatine | 172 | 13.6 (22/09 GSC) | blog cannibalises; /creatine has the guide — needs product links + FAQ tuning. SERP look 22/09 (US-geo): gainlabnutrition.com ranks ahead of us; `/creatine`, our blog price post, and legacy `/product-category/creatines/` all appear — one head term, three of our URLs |
-| creatine monohydrate | /creatine | 137 | 28.0 (22/09 GSC) | global phrase; local intent weak — secondary |
+| creatine monohydrate | /creatine | 137 | 28.0 (22/09 GSC) | global phrase; local intent weak — secondary. SERP look **30/09** on `creatine monohydrate tunisie prix` (US-geo, no TN pos): **gainlabnutrition `/collections/creatine-tunisie`**, strong-nutrition, housenutrition, nutribeast ×3, gohardnutrition, gympro. Our URL is the **legacy `/shop/creatine-monohydrate-300g-ultimate-nutrition`** (verified live 30/09: one 301 to `/creatine/…`, **99 DT `BackOrder`**) and **`/creatine` is absent**. Third confirmed instance of "a dead SKU answers the money query" — see BACKLOG P1 |
 | prix creatine tunisie | /creatine | 5 | 10.4 (22/09 GSC) | check |
 | mass gainer tunisie | /mass-gainers | 55 | 56.1 (22/09 GSC) | SERP look 28/09 (US-geo, no TN pos) on `mass gainer prix tunisie`: **gainlabnutrition.com/collections/mass-gainer-tunisie** leads, then impactnutrition, protein-shop-tunisia, nutribeast (two URLs), gympro. **Our result in the set is the blog post** `/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025`, not the category — one query, two of our URLs, and the informational one is winning it. Saturday (cannibalisation), not a title rewrite |
-| serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 89 | 14.4 (22/09 GSC) | split across 8 URLs; canonical target = PDP; tighten blog links |
+| serious mass tunisie | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | 89 | 14.4 (22/09 GSC) | split across 8 URLs; canonical target = PDP; tighten blog links. SERP look **30/09** (US-geo, no TN pos): ubuy, strong-nutrition, protein-shop-tunisia ×2, gympro, para-plus, sf-nutrition. Our URL in the set is **`/mass-gainers/serious-mass-2-7-kg` — 195 DT, `BackOrder`** (verified live 30/09); the buyable 5,45 kg (**379 DT, `InStock`**) is **absent**, while three competitors rank their own 5,45 kg. The unbuyable SKU holds our slot. The 2,7 kg page already links the 5,45 kg ("Disponible immédiatement" block, verified live) — so the gap is restock or a Redirections row, `(needs: owner)`, not copy |
 | prise de masse tunisie | /prise-de-masse | ? | ? | SERP look 25/09 (US-geo, no TN pos): **housenutrition.tn/category/mass-gainer** leads, then nutribeast, maparatunisie, parafendri, parapharmacie. **Three of our URLs in one set** — `/prise-de-masse`, `/category/prise-de-masse`, `/categorie/prise-de-masse`; both legacy paths verified live 25/09, each 308s once to the canonical, which is 200 + `index, follow` + self-canonical. Index lag, nothing to fix |
-| pre workout tunisie | /pre-workout | 7 | 41.4 (22/09 GSC) | ranks on the Born Rage PDP, not the category — decide which should win |
+| pre workout tunisie | /pre-workout | 7 | 41.4 (22/09 GSC) | ranks on the Born Rage PDP, not the category — decide which should win. SERP look **30/09** on `pre workout tunisie prix` (US-geo, no TN pos): housenutrition `/category/preworkout`, strong-nutrition, protein-shop-tunisia, nutribeast `/pre-workout`, gympro, body-shop, sf-nutrition, nutridiet. Our URL in this set is **`/pre-workout`, the category** — a change in SHAPE from the 22/09 row (which had the PDP answering it), recorded as a shape change, never a position. All 7 in-stock pre-workout PDPs verified 30/09: titles 47–62, FAQPage on every one, entries already in `resources/seo/products/2026-09-28.json` |
 | pre workout | /pre-workout | 393 | 7.0 (22/09 GSC) | **page-one and 0 clicks in 28 days** — the biggest zero-click row on the site. Impressions match `/pre-workout/pre-workout-born-rage-original-eric-favre` (385 impr, 1 clk, pos 5.4) almost exactly, so the generic term is answered by one niche PDP, not the category. Cannibalisation decision (Saturday), NOT a title rewrite: `/pre-workout` is inside the 05/10 freeze |
 | optimum nutrition | /optimum-nutrition | 518 | 5.2 (22/09 GSC) | brand query, position 5 and 1.35 % CTR (7 clicks). The brand page itself sits at 13.5 on 1,614 impr, so the URL Google shows for the exact term is NOT the brand page — read the Pages breakdown before acting |
 | protein powder whey | /whey-proteine | 170 | 9.8 (22/09 GSC) | page-one, 0 clicks; English-language phrasing our titles never use |
@@ -117,6 +117,27 @@ and the bars rayon is **0 of 88 in stock** (measured live 23/09). The same appli
 `/intra-workout` (0 of 12+). Neither page can rank until stock arrives, and both reverse
 themselves automatically the day it does — so do **not** rewrite either page for ranking reasons,
 and do not read a position drop on these rows as a content failure.
+
+## Discovered 30/09/2026 (Google autocomplete fr/tn, `suggest.mjs`: 12 head-term seeds + 5 in-stock pre-workout SKUs — 400 + 83 suggestions)
+
+Hits/rank are autocomplete frequency and position in the suggestion list, **not** search positions.
+Stock read the same morning from `/api/productsBySubCategoryId/<slug>`.
+
+| query | rank | page it should own | stock | note |
+| --- | --- | --- | --- | --- |
+| serious mass tunisie | 1 | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | **5,45 kg InStock 379 DT · 2,7 kg qte 0** | the family below is five rows and `suggest.mjs` maps none of them; the URL Google actually shows is the 2,7 kg (BackOrder) — see the head-term row |
+| serious mass prix tunisie | 1 | same | same | |
+| serious mass tunisie prix | 2 | same | same | |
+| serious mass 2.7 kg tunisie prix | 4 | /mass-gainers/serious-mass-2-7-kg | **qte 0** | real format demand with no buyable SKU — `(needs: owner)` restock, already in BACKLOG |
+| serious mass 5kg prix tunisie | 7 | /mass-gainers/serious-mass-5-45-kg-optimum-nutrition | InStock | the buyable format; the one worth format copy |
+| pre workout tunisie gsn | 3 | /gsn-great-sport-nutrition (brand page is 200) | **no GSN pre-workout in stock** | we own the brand page and cannot fill the query — `(needs: owner)` |
+| c4 pre workout tunisie | 4 | /pre-workout/c4-original-pre-workout-cellucor | InStock 149 DT | PDP already has a factual guide + 10 FAQ pairs (verified live 30/09) |
+| psychotic pre workout tunisie | 6 | /pre-workout/psychotic-pre-workout | InStock 139 DT | PDP already has 9 FAQ pairs; no label doses published on the fiche, so none written |
+| abe / redweiler / nutrend / ghost pre workout tunisie | 5 / 7 / 9 / 10 | — | **not stocked** | four brand demands we do not carry — `(needs: owner)`, not a copy job |
+| meilleur pre workout sans cafeine | 2 | /pre-workout FAQ | — | informational tail none of the 7 PDP FAQs answers yet; candidate for the category FAQ, not a PDP |
+| meilleur pre workout pump | 5 | /pre-workout FAQ | — | same |
+| protein tunisie sousse | 6 | /proteine-sousse | — | the page exists; `proteine sousse` is already **Held** at 1 |
+| proteine tunisie sobitas | 5 | / | — | our own company name; navigational, homepage holds it |
 
 ## Discovered 28/09/2026 (Google autocomplete fr/tn, `suggest.mjs --deep`: 12 seeds, 516 requests, 3,647 suggestions)
 
