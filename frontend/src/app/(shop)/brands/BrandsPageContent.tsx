@@ -80,10 +80,10 @@ const BRAND_NOTES: Readonly<Record<string, string>> = Object.freeze({
 
 /** The page's own questions and answers. Rendered visibly AND emitted as FAQPage — Google
  *  requires the two to match, which is why this list is the single source for both. */
-export const BRAND_FAQ: ReadonlyArray<{ q: string; a: string }> = Object.freeze([
+export function brandFaq(brandCount: number): ReadonlyArray<{ q: string; a: string }> { return [
   {
     q: 'Combien de marques sont disponibles sur Protein.tn ?',
-    a: "Le catalogue référence plus de 570 marques ayant au moins un produit publié, de la nutrition sportive (whey, créatine, pre-workout, gainers) aux compléments de santé (vitamines, minéraux, oméga 3, plantes). Chacune possède sa propre page, avec l'intégralité de ses produits et les prix en dinars.",
+    a: `Le répertoire présente ${brandCount} marques. Chaque marque possède sa propre page avec ses produits et les prix en dinars.`,
   },
   {
     q: 'Que signifie le point vert à côté d’une marque ?',
@@ -105,7 +105,7 @@ export const BRAND_FAQ: ReadonlyArray<{ q: string; a: string }> = Object.freeze(
     q: 'Comment se passe la livraison ?',
     a: 'Nous livrons les 24 gouvernorats de Tunisie, gratuitement à partir de 300 DT, avec paiement à la livraison. Un numéro de suivi vous est transmis dès l’expédition.',
   },
-]);
+]; }
 
 interface BrandsPageContentProps {
   entries: BrandEntry[];
@@ -320,7 +320,7 @@ export function BrandsPageContent({
           markup Google expects beside the FAQPage block, open or closed.
         */}
         <div className="grid gap-2 lg:grid-cols-2">
-          {BRAND_FAQ.map(({ q, a }) => (
+          {brandFaq(entries.length).map(({ q, a }) => (
             <details
               key={q}
               className="group rounded-2xl border border-hairline bg-elevated px-4 py-3 [&[open]]:border-brand/30"

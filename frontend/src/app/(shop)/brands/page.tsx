@@ -1,4 +1,5 @@
 import { Metadata } from 'next';
+import { cache } from 'react';
 import { Section } from '@/app/components/layout/Section';
 import { ShopBreadcrumbs } from '@/app/components/ShopBreadcrumbs';
 import { getAllBrands, getInStockBrandCounts, getShopFacets } from '@/services/api';
@@ -10,7 +11,7 @@ import {
   buildItemListSchema,
 } from '@/util/structuredData';
 import { buildBrandEntries } from './brandEntries';
-import { BRAND_FAQ, BrandsPageContent } from './BrandsPageContent';
+import { brandFaq, BrandsPageContent } from './BrandsPageContent';
 
 // ISR: the brand list changes rarely, so cache the server-rendered page. The three fetches below
 // therefore cost three queries an hour across all visitors, not three per visit.
@@ -26,12 +27,25 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || 'https://protein.tn';
  * three names can. The names still appear — after the count, where they are evidence rather
  * than the whole claim.
  */
-export const metadata: Metadata = {
-  title: { absolute: 'Toutes nos marques — 570+ marques de compléments | Protein.tn' },
-  description:
-    'Répertoire A–Z de plus de 570 marques de protéines et compléments alimentaires disponibles en Tunisie : Optimum Nutrition, BioTech USA, MuscleTech, Dymatize, Nutrex et bien d’autres. Prix en dinars, livraison dans les 24 gouvernorats.',
+const loadDirectory = cache(async () => {
+  const [brands, facets, stockCounts] = await Promise.all([
+    loadForCache(() => getAllBrands(), [] as Awaited<ReturnType<typeof getAllBrands>>),
+    getShopFacets().catch(() => null),
+    getInStockBrandCounts().catch(() => ({} as Record<number, number>)),
+  ]);
+  return { ...buildBrandEntries(brands, facets?.brand_counts ?? {}, stockCounts), facets };
+});
+
+export async function generateMetadata(): Promise<Metadata> {
+  const { entries } = await loadDirectory();
+  const count = entries.length;
+  const title = `Toutes nos marques — ${count} marques de compléments | Protein.tn`;
+  const description = `Répertoire A–Z de ${count} marques de compléments alimentaires disponibles en Tunisie. Consultez les produits et les prix en dinars.`;
+  return {
+  title: { absolute: title },
+  description,
   openGraph: {
-    title: 'Toutes nos marques — 570+ marques de compléments | Protein.tn',
+    title,
     description:
       'Répertoire A–Z des marques de protéines et compléments alimentaires en Tunisie. Optimum Nutrition, BioTech USA, MuscleTech et bien d’autres.',
     url: 'https://protein.tn/brands',
@@ -49,7 +63,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Toutes nos marques — 570+ marques de compléments | Protein.tn',
+    title,
     description:
       'Répertoire A–Z des marques de protéines et compléments alimentaires en Tunisie.',
     images: ['https://protein.tn/og-banner.jpg'],
@@ -57,7 +71,8 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://protein.tn/brands',
   },
-};
+  };
+}
 
 export default async function BrandsPage() {
   /*
@@ -69,17 +84,7 @@ export default async function BrandsPage() {
     and to an empty facet set, and buildBrandEntries degrades the UI accordingly rather than
     dropping every brand whose count it could not look up.
   */
-  const [initialBrands, facets, stockCounts] = await Promise.all([
-    loadForCache(() => getAllBrands(), [] as Awaited<ReturnType<typeof getAllBrands>>),
-    getShopFacets().catch(() => null),
-    getInStockBrandCounts().catch(() => ({} as Record<number, number>)),
-  ]);
-
-  const { entries, hasCounts, hasStockData } = buildBrandEntries(
-    initialBrands,
-    facets?.brand_counts ?? {},
-    stockCounts
-  );
+  const { entries, hasCounts, hasStockData, facets } = await loadDirectory();
 
   /*
     ── THE FEATURED TIER ────────────────────────────────────────────────────────────────────
@@ -141,7 +146,7 @@ export default async function BrandsPage() {
       : null;
   // The same array the page renders visibly, which is the condition Google puts on FAQPage.
   const faqSchema = buildFAQPageSchemaFromProductFaq(
-    BRAND_FAQ.map(({ q, a }) => ({ q, a }))
+    brandFaq(entries.length).map(({ q, a }) => ({ q, a }))
   );
 
   return (

@@ -1286,9 +1286,9 @@ export const getAllBrands = async (): Promise<Brand[]> => {
   const crawl = await crawlPaginated<Brand>({
     label: '/all_brands',
     perPage: 100,
-    // 128 brands over 100-row pages is 2 requests today. The ceiling is a guard against a
-    // pagination bug looping, not a budget: 20 pages is 2,000 brands.
-    maxRequests: 20,
+    // The backend may cap per_page below 100 (21 pages measured in September 2026).
+    // Keep this high enough to read the complete list that /brands and the sitemap share.
+    maxRequests: 100,
     concurrency: 2,
     fetchPage: (page, perPage) => getApiPage('/all_brands', page, perPage),
   });

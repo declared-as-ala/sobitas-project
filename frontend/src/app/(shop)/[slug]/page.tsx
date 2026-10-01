@@ -25,8 +25,10 @@ import { buildBrandLandingSchemas } from '@/util/brandJsonLd';
 import type { Brand, Page } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
-import { brandDescriptionWithFacts } from '@/util/brandStockFacts';
+import { brandDescriptionWithFacts, loadBrandStockFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
+import { buildGenericBrandTemplate } from '@/util/brandTemplate';
+import { GenericBrandDetails } from '@/app/(shop)/brand/GenericBrandDetails';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { BrandSeoHeader, BrandSeoDetails } from '@/app/(shop)/brand/BrandSeoLanding';
@@ -125,7 +127,7 @@ async function metadataForBrand(brand: Brand, slug: string): Promise<Metadata> {
     brandProductCount = 1;
   }
   const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
-  const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, slug, categoryNames);
+  const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, slug, categoryNames, brandProductCount);
 
   return {
     // absolute: buildBrandMetaTitle already returns a finished SERP title, brand suffix included
@@ -225,6 +227,11 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
     // schema-less; the ItemList also gives Google the product URLs for internal-link discovery.
     const baseUrl = getBaseUrl();
     const brandSeo = getBrandSeoEntry(cleanSlug);
+    const genericBrand = brandSeo ? null : buildGenericBrandTemplate(
+      brand.designation_fr,
+      result.products,
+      (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null }
+    );
     // Shared with x-crawler/category, which serves this same URL to bots — the two had drifted to
     // different CollectionPage names and only one of them carried the curated description.
     // See util/brandJsonLd.ts.
@@ -233,7 +240,8 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
       products: Array.isArray(brandProductsList) ? brandProductsList : [],
       slug: cleanSlug,
       baseUrl,
-      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(brandProductsList)),
+      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(result.products), result.products.length),
+      faqs: genericBrand?.faqs,
     });
 
     return (
@@ -266,8 +274,9 @@ export default async function RootSlugPage({ params, searchParams }: RootSlugPag
               : [...result.brands, brand]
           }
           initialBrand={brand.id}
+          genericBrand={genericBrand}
           categorySeoLanding={brandSeo ? <BrandSeoHeader entry={brandSeo} /> : undefined}
-          categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : undefined}
+          categorySeoLandingBottom={brandSeo ? <BrandSeoDetails entry={brandSeo} /> : genericBrand ? <GenericBrandDetails template={genericBrand} /> : undefined}
         />
       </>
     );

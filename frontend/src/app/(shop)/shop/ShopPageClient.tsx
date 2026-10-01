@@ -31,6 +31,7 @@ import { getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
 import { generateBrandDescriptionFallback } from '@/util/brandDescriptionFallback';
+import type { buildGenericBrandTemplate } from '@/util/brandTemplate';
 import {
   buildShopUrl,
   DEFAULT_SHOP_SORT,
@@ -58,6 +59,7 @@ interface ShopPageClientProps {
   isSubcategory?: boolean;
   parentCategory?: string;
   initialBrand?: number;
+  genericBrand?: ReturnType<typeof buildGenericBrandTemplate> | null;
   /** Overrides last breadcrumb label on category/subcategory shop views when set in admin (SEO). */
   categoryBreadcrumbLabel?: string;
   /** Optional compact category H1. Long SEO content is rendered below the product grid. */
@@ -143,6 +145,7 @@ function ShopContent({
   isSubcategory,
   parentCategory,
   initialBrand,
+  genericBrand,
   categoryBreadcrumbLabel,
   categorySeoLanding,
   categorySeoLandingBottom,
@@ -1395,7 +1398,7 @@ function ShopContent({
   ) : null;
 
   const semanticProductHeading = currentBrand
-    ? `Produits ${currentBrand.designation_fr}`
+    ? genericBrand?.heading ?? `Produits ${currentBrand.designation_fr}`
     : initialCategory
       ? `Produits ${categoryBreadcrumbLabel?.trim() || taxonomyLabel(initialCategory)}`
       : 'Produits de la boutique';
@@ -1588,7 +1591,9 @@ function ShopContent({
                 <h2 className="font-display uppercase tracking-tight text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2 leading-tight">
                   {currentBrand.designation_fr}
                 </h2>
-                {currentBrand.description_fr ? (
+                {genericBrand ? (
+                  genericBrand.introHtml && <div className="prose prose-sm dark:prose-invert max-w-none text-ink-2 prose-a:text-brand" dangerouslySetInnerHTML={{ __html: genericBrand.introHtml }} />
+                ) : currentBrand.description_fr ? (
                   <div className="space-y-2">
                     <div
                       className={`prose prose-sm dark:prose-invert max-w-none text-gray-600 dark:text-gray-300 ${!isDescriptionExpanded ? 'line-clamp-2' : ''}`}
@@ -1626,7 +1631,7 @@ function ShopContent({
                   cloaking. */}
               <h1 className="font-display font-compressed text-[1.875rem] font-extrabold uppercase leading-[0.94] tracking-[-0.02em] text-ink-1 lg:text-[2.5rem]">
                 {currentBrand
-                  ? `Produits ${currentBrand.designation_fr}`
+                  ? genericBrand?.heading ?? `Produits ${currentBrand.designation_fr}`
                   : 'Boutique — Protéines & Compléments Alimentaires en Tunisie'}
               </h1>
             </div>
@@ -2076,6 +2081,9 @@ function ShopContent({
             )}
           </section>
         </div>
+        {genericBrand && products.length === 0 && categorySeoLandingBottom && (
+          <div className="mt-8">{categorySeoLandingBottom}</div>
+        )}
       </main>
 
       {/*

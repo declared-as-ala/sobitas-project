@@ -2147,6 +2147,405 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: "brands", name: "Comparer XTEND aux autres marques", url: "/brands" },
     ],
   },
+  /* ── 30/09/2026: template brands with search demand ────────────────────────────────────────
+   * Written by agents from /api/productsByBrandId + /api/product_details, then fact-checked against
+   * the same API by a second agent; only entries that passed are here. Same rules as above. */
+  "abe": {
+    metaTitle: "ABE Tunisie | Pre-Workout, Non-Stim Pump & Shred-X",
+    metaDescription:
+      "ABE sur Protein.tn : Pre-Workout 390 g en neuf arômes, Non-Stim Pump 500 g, Shred-X en poudre ou 90 gélules et créatine micronisée 300 g.",
+    h1: "ABE Tunisie : pré-workouts, Shred-X et créatine micronisée",
+    introHtml:
+      "<p>La marque <strong>ABE</strong> compte 17 références sur Protein.tn, et douze d’entre elles sont des pré-workouts : c’est avant tout une gamme d’avant-séance. Les neuf pots de 390 g, listés sous les noms <strong>Pre-Workout</strong>, <strong>Preworkout</strong> ou <strong>Ultimate Pre-Workout</strong>, se distinguent par l’arôme : Baddy Berry, Blue Raspberry, Tropical Vibes, Sour Gummy Bear, Sour Apple, Red Hawaiian, Cherry Cola, Candy Ice Blast et Bubble Gum Crush. À côté, <strong>Non-Stim Pump Pre Workout</strong> se présente en pot de 500 g, en Tiger’s Blood, Sour Gummy Bear et Blue Raspberry. Le reste se répartit en deux familles : <strong>Creatine Monohydrate</strong> micronisée en 300 g, aromatisée Blue Raspberry ou sans arôme, et <strong>Shred-X, Extreme Thermogenic</strong>, classé au rayon brûleurs de graisse, en poudre de 300 g (Sour Gummy Bear, Lemon Iced Tea) ou en format de 90 gélules végétales. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "Quel produit ABE choisir ?",
+    howToChooseBody:
+      "<p>Chez ABE, la première question n’est pas l’arôme mais le rôle du produit. Les deux familles de pré-workout se prennent avant la séance, la créatine se prend tous les jours, séance ou non, et Shred-X relève d’un autre rayon, celui des brûleurs de graisse.</p><ul><li><strong>Pre-Workout, Preworkout et Ultimate Pre-Workout 390 g</strong> : neuf pots qui se départagent au goût ; leur nom ne porte pas la mention « non-stim ».</li><li><strong>Non-Stim Pump Pre Workout 500 g</strong> : la version dont le nom annonce une formule sans stimulants, orientée « pump », à regarder si vous limitez la caféine — l’étiquette confirme la composition.</li><li><strong>Creatine Monohydrate 300 g</strong> : même pot de 300 g dans les deux cas, seul l’arôme change. Choisissez la Micronized Powder Blue Raspberry si vous voulez un goût fruité, ou la Pure Micronized Powder sans arôme. Elle n’apporte pas de protéines.</li><li><strong>Shred-X, Extreme Thermogenic</strong> : poudre aromatisée de 300 g, ou 90 gélules végétales si vous préférez les gélules à une poudre.</li></ul><p>Nos fiches ne publient encore aucun tableau de valeurs pour ces 17 références : nous n’avançons donc ni dose ni teneur en caféine. ABE imprime la composition et les conseils d’utilisation sur l’emballage, qui fait foi ; lisez-le avant de combiner un pré-workout et Shred-X dans la même journée, et demandez conseil à votre médecin en cas de doute.</p>",
+    faqs: [
+      {
+        question: "Quels produits ABE sont vendus sur Protein.tn ?",
+        answer:
+          "Dix-sept références en trois rayons. En pré-workout : neuf pots de 390 g (Pre-Workout, Preworkout ou Ultimate Pre-Workout, un arôme par pot) et Non-Stim Pump Pre Workout 500 g en trois arômes. En créatine : Creatine Monohydrate micronisée 300 g, Blue Raspberry ou sans arôme. En brûleurs de graisse : Shred-X en poudre 300 g ou en 90 gélules végétales.",
+      },
+      {
+        question: "Quelle différence entre le Pre-Workout 390 g et Non-Stim Pump Pre Workout ?",
+        answer:
+          "Le format et la mention portée par le nom. Les pots de 390 g sont vendus comme Pre-Workout, Preworkout ou Ultimate Pre-Workout, sans mention « non-stim » ; Non-Stim Pump Pre Workout, en 500 g, annonce dans son nom une formule sans stimulants. Nos fiches ne transcrivent pas encore leur composition : la liste d’ingrédients imprimée sur le pot est la référence.",
+      },
+      {
+        question: "Combien de caféine contient le pré-workout ABE ?",
+        answer:
+          "Nous ne donnons aucun chiffre, car aucune fiche ABE ne publie encore de tableau de valeurs relevé sur l’étiquette. La teneur en caféine et en autres stimulants, la dose et les précautions figurent sur le pot que vous recevez. Évitez de cumuler un pré-workout avec d’autres sources de caféine dans la même journée, et lisez aussi l’étiquette de Shred-X si vous l’utilisez.",
+      },
+      {
+        question: "Shred-X ABE : poudre ou gélules ?",
+        answer:
+          "Shred-X, Extreme Thermogenic existe en poudre de 300 g, en Sour Gummy Bear ou Lemon Iced Tea, et en format de 90 gélules végétales : poudre aromatisée ou gélules, selon votre préférence. Sa composition n’est pas transcrite sur nos fiches ; ABE imprime les conseils d’utilisation sur l’emballage, qui fait foi. Demandez conseil à votre médecin en cas de traitement ou de sensibilité aux stimulants.",
+      },
+      {
+        question: "Comment commander ABE en Tunisie ?",
+        answer:
+          "Choisissez la référence, le format et l’arôme, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles de chaque produit ABE.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "pre-workout", name: "Pré-workouts avec ou sans stimulants", url: "/pre-workout" },
+      { slug: "creatine", name: "Le rayon créatine, toutes marques", url: "/creatine" },
+      { slug: "bruleurs-de-graisse", name: "Brûleurs de graisse en poudre ou en gélules", url: "/bruleurs-de-graisse" },
+      { slug: "brands", name: "Comparer ABE aux autres marques", url: "/brands" },
+    ],
+  },
+  "alani-nu": {
+    metaTitle: "Alani Nu Tunisie | Protein Bar, Whey Protein, Fat Burner",
+    metaDescription:
+      "Alani Nu sur Protein.tn : quatre Protein Bar de 48 à 52 g, Whey Protein Fruity Cereal 927 g et Self, Fat Burner en 60 gélules végétales.",
+    h1: "Alani Nu Tunisie : Protein Bar, Whey Protein et Self, Fat Burner",
+    introHtml:
+      "<p><strong>Alani Nu en Tunisie</strong>, ce sont six références sur Protein.tn, réparties sur trois rayons. Les barres en forment l’essentiel : quatre <strong>Protein Bar</strong> classées en barres et snacks protéinés — <strong>Caramel Crunch</strong> 48 g, <strong>Rocky Road</strong> 48 g, <strong>Peanut Butter &amp; Jelly</strong> 52 g et la version <strong>Munchies</strong> 50 g. Viennent ensuite une poudre, <strong>Whey Protein</strong> de 927 g, référencée en arôme <strong>Fruity Cereal</strong> et rangée au rayon whey protéine, puis <strong>Self, Fat Burner</strong>, en 60 gélules végétales, classé au rayon brûleurs de graisse. Chaque fiche correspond à une seule version et à un seul format : il n’y a pas de variante à départager sur un même produit. Les fiches Whey Protein Fruity Cereal, Protein Bar Rocky Road et Protein Bar Peanut Butter &amp; Jelly affichent un tableau « Valeurs nutritionnelles » ; celles de Caramel Crunch, de Munchies et de Self, Fat Burner n’en ont pas encore, et l’étiquette de l’emballage reçu reste la référence. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque produit.</p>",
+    howToChooseTitle: "Barre, whey ou gélules : quel produit Alani Nu choisir ?",
+    howToChooseBody:
+      "<p>Les six références Alani Nu ne répondent pas au même besoin, et leur format annonce déjà leur usage : une barre se mange telle quelle, une poudre se prépare au shaker, une gélule s’avale avec de l’eau.</p><ul><li><strong>Un en-cas à emporter</strong> : les quatre <strong>Protein Bar</strong> — Caramel Crunch 48 g, Rocky Road 48 g, Peanut Butter &amp; Jelly 52 g et Munchies 50 g — se départagent d’abord par leur version et leur poids. Les fiches Rocky Road et Peanut Butter &amp; Jelly affichent un tableau de valeurs pour une barre, utile pour les comparer ; pour Caramel Crunch et Munchies, lisez l’étiquette.</li><li><strong>Compléter les protéines de la journée</strong> : <strong>Whey Protein</strong> 927 g, arôme Fruity Cereal. Sa fiche affiche un tableau de valeurs par mesure et en liste les ingrédients — isolat et hydrolysat de protéines de lactosérum, un mélange d’enzymes, sucralose et acésulfame K —, avec la mention « contient : lait ». Elle indique une mesure dans 175 à 225 ml d’eau ou d’une autre boisson.</li><li><strong>Le rayon brûleurs de graisse</strong> : <strong>Self, Fat Burner</strong> en 60 gélules végétales. Nos fiches n’en publient pas la composition : lisez sur l’emballage la liste des ingrédients et une éventuelle teneur en caféine avant de le cumuler avec du café ou un pré-workout, et demandez conseil à votre médecin ou à votre pharmacien si vous suivez un traitement, êtes enceinte ou allaitez.</li></ul><p>Aucune valeur par portion n’est recopiée sur cette page : les tableaux des fiches servent de repère, et l’étiquette de l’emballage reçu fait foi.</p>",
+    faqs: [
+      {
+        question: "Quels produits Alani Nu sont référencés sur Protein.tn ?",
+        answer:
+          "Six références : quatre Protein Bar (Caramel Crunch 48 g, Rocky Road 48 g, Peanut Butter & Jelly 52 g et Munchies 50 g), la Whey Protein Fruity Cereal de 927 g, et Self, Fat Burner en 60 gélules végétales. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle Protein Bar Alani Nu choisir ?",
+        answer:
+          "Elles se distinguent par leur version et leur poids : Caramel Crunch et Rocky Road pèsent 48 g, Munchies 50 g et Peanut Butter & Jelly 52 g. Les fiches Rocky Road et Peanut Butter & Jelly affichent un tableau de valeurs nutritionnelles pour une barre ; celles de Caramel Crunch et Munchies pas encore. L’étiquette de la barre reçue fait foi.",
+      },
+      {
+        question: "Combien de protéines dans la Whey Protein Alani Nu ?",
+        answer:
+          "La teneur par mesure figure dans le tableau « Valeurs nutritionnelles » de la fiche Whey Protein Fruity Cereal 927 g ; nous ne la recopions pas ici, et l’étiquette de l’emballage reçu reste la référence. La fiche en liste aussi les ingrédients — isolat et hydrolysat de protéines de lactosérum, sucralose, acésulfame K — et précise qu’elle contient du lait.",
+      },
+      {
+        question: "Que contient Self, Fat Burner d’Alani Nu ?",
+        answer:
+          "Nos fiches ne publient pas la composition de cette référence de 60 gélules végétales. Lisez la liste des ingrédients et une éventuelle teneur en caféine sur l’étiquette avant de l’associer à d’autres sources de caféine. Demandez conseil à votre médecin ou à votre pharmacien si vous suivez un traitement, êtes enceinte ou allaitez.",
+      },
+      {
+        question: "Comment commander Alani Nu en Tunisie ?",
+        answer:
+          "Choisissez la référence, ajoutez-la au panier si la grille l’indique disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "barres-proteinees", name: "Barres protéinées : toutes les marques", url: "/barres-proteinees" },
+      { slug: "whey-proteine", name: "Trouver une autre whey protéine", url: "/whey-proteine" },
+      { slug: "bruleurs-de-graisse", name: "Brûleurs de graisse : autres marques", url: "/bruleurs-de-graisse" },
+      { slug: "brands", name: "Comparer Alani Nu aux autres marques", url: "/brands" },
+    ],
+  },
+  "boiron": {
+    metaTitle: "Boiron Tunisie | SleepCalm & Acidil On The Go — Protein.tn",
+    metaDescription:
+      "Boiron en Tunisie : SleepCalm en boîte de 60 comprimés Meltaway ou en 2 tubes de 80 granules, Acidil On The Go en 2 tubes. Homéopathie, conseil pharmacien.",
+    h1: "Boiron Tunisie : SleepCalm et Acidil, comprimés ou granules",
+    introHtml:
+      "<p><strong>Boiron</strong> est une marque d’homéopathie, et sa gamme sur Protein.tn tient en trois références réparties sous deux noms. <strong>SleepCalm</strong> existe en deux présentations : une boîte de <strong>60 comprimés Meltaway</strong>, sans arôme, à laisser fondre, et <strong>SleepCalm On The Go</strong>, deux tubes de poche de 80 granules chacun, soit 160 au total. <strong>Acidil On The Go</strong> reprend ce même format nomade à deux tubes de 80 granules. Les deux SleepCalm sont rangés au rayon Sommeil &amp; stress, Acidil dans la catégorie Santé &amp; vitalité. Les noms sont ceux de l’emballage d’origine, en anglais, et seule la fiche de SleepCalm On The Go reprend à ce jour la notice du fabricant : pour les deux autres, c’est l’étiquette de la boîte qui fait foi. Ce ne sont pas des compléments sportifs, et leur usage se discute avec votre pharmacien ou votre médecin. La grille ci-dessus affiche le prix et la disponibilité de chaque référence.</p>",
+    howToChooseTitle: "SleepCalm ou Acidil, comprimés ou granules : que choisir ?",
+    howToChooseBody:
+      "<p>Avec trois références, le choix se fait en deux temps : le nom d’abord, qui renvoie à un usage distinct indiqué par Boiron sur chaque emballage, puis la forme. Cette page ne dit pas lequel vous convient : indications, mode d’emploi et précautions figurent sur la notice, et votre pharmacien ou votre médecin reste la personne à consulter avant de commencer.</p><ul><li><strong>SleepCalm, 60 comprimés Meltaway</strong> : des comprimés sans arôme à laisser fondre, en boîte. Notre fiche ne reprend pas encore sa notice, et rien ne permet d’affirmer qu’il a exactement la même composition que la version en granules.</li><li><strong>SleepCalm On The Go</strong> : 160 granules en deux tubes de poche. Sa fiche, transcrite de la notice du fabricant, le présente comme un médicament homéopathique sans mélatonine, associant quatre souches diluées (Passiflora incarnata, Nux moschata, Hyoscyamus niger, Stramonium), avec lactose et saccharose comme excipients. Le mode d’emploi vise les adultes et les enfants à partir de 12 ans ; en dessous, la notice renvoie à un médecin.</li><li><strong>Acidil On The Go</strong> : le même format à deux tubes de 80 granules, pour un autre usage, précisé sur l’emballage d’origine. Sa notice n’est pas encore transcrite sur notre fiche.</li></ul><p>Entre boîte et tubes, la différence de forme est pratique : le tube se glisse dans une poche, la boîte de 60 comprimés se garde plutôt à la maison. En cas de grossesse, d’allaitement ou de traitement en cours, demandez conseil à votre pharmacien ou à votre médecin.</p>",
+    faqs: [
+      {
+        question: "Quels produits Boiron sont vendus sur Protein.tn ?",
+        answer:
+          "Trois références : SleepCalm en boîte de 60 comprimés Meltaway sans arôme, SleepCalm On The Go en deux tubes de 80 granules, et Acidil On The Go, lui aussi en deux tubes de 80 granules. Les deux SleepCalm sont au rayon Sommeil & stress, Acidil dans la catégorie Santé & vitalité. La grille de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre SleepCalm Meltaway et SleepCalm On The Go ?",
+        answer:
+          "La forme d’abord : 60 comprimés à laisser fondre dans une boîte, contre 160 granules répartis en deux tubes de poche. Quant à la composition, elle n’est transcrite sur nos fiches que pour la version On The Go ; celle des comprimés Meltaway est imprimée sur leur boîte, qui fait foi. Demandez conseil à votre pharmacien pour choisir entre les deux.",
+      },
+      {
+        question: "SleepCalm contient-il de la mélatonine ?",
+        answer:
+          "La notice de SleepCalm On The Go, transcrite sur notre fiche, le présente comme sans mélatonine : il associe quatre souches homéopathiques diluées, avec du lactose et du saccharose comme excipients. Pour la version en comprimés Meltaway, reportez-vous à l’étiquette de la boîte. En cas d’intolérance au lactose, lisez la liste des excipients avant l’achat.",
+      },
+      {
+        question: "Boiron convient-il aux enfants ou pendant la grossesse ?",
+        answer:
+          "La notice de SleepCalm On The Go prévoit un usage à partir de 12 ans et renvoie à un médecin en dessous de cet âge. Elle demande aussi l’avis d’un professionnel de santé en cas de grossesse ou d’allaitement, et de consulter un médecin si les troubles persistent plus de deux semaines. Pour les autres références, demandez conseil à votre pharmacien ou à votre médecin.",
+      },
+      {
+        question: "Comment commander Boiron en Tunisie ?",
+        answer:
+          "Ajoutez la référence au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "sommeil-stress", name: "Le rayon sommeil et stress", url: "/sommeil-stress" },
+      { slug: "sante-vitalite", name: "Santé et vitalité : toutes les catégories", url: "/sante-vitalite" },
+      { slug: "vitamines", name: "Vitamines et minéraux au quotidien", url: "/vitamines" },
+      { slug: "brands", name: "Comparer Boiron aux autres marques", url: "/brands" },
+    ],
+  },
+  "california-gold-nutrition": {
+    metaTitle: "California Gold Nutrition Tunisie | Collagène & Oméga 3",
+    metaDescription:
+      "California Gold Nutrition en Tunisie : CollagenUP 1 kg, Omega-3 Fish Oil, Premium Krill Oil, CoQ10, LactoBif, magnésium bisglycinate et Pure Creatine 1 kg.",
+    h1: "California Gold Nutrition Tunisie : collagène, oméga 3, CoQ10 et vitamines",
+    introHtml:
+      "<p><strong>California Gold Nutrition en Tunisie</strong>, c’est d’abord une marque de santé quotidienne : sur Protein.tn, plus de 180 références se répartissent sur plus de vingt rayons, et le sport n’en occupe qu’une petite partie. Les familles les plus fournies sont les <strong>antioxydants</strong> (une quinzaine de CoQ10 et d’ubiquinol, acide alpha-lipoïque, quercétine, astaxanthine, resvératrol), les <strong>vitamines</strong> (multivitamines Two-A-Day et SimplyOne, vitamine D3 liquide ou associée à la K2, complexes B, vitamine C en poudre), les plantes et extraits (spiruline, chardon-Marie, berbérine, gamme EuroHerbs), l’<strong>immunité</strong> (propolis, champignons Fungiology, colostrum) et les <strong>articulations</strong> (glucosamine, chondroïtine, MSM, curcuma). Viennent ensuite le <strong>collagène</strong> en poudre, les <strong>oméga 3</strong>, le magnésium, les probiotiques LactoBif, le sommeil et la digestion. Les gélules végétales, capsules molles et comprimés dominent ; les poudres couvrent le collagène, les boissons HydrationUP, la vitamine C, le magnésium, les champignons et les fibres prébiotiques. La ligne <strong>Sport</strong> tient en trois produits : Pure Creatine Monohydrate, Zinc Magnesium et Tribulus.</p>",
+    howToChooseTitle: "Quel produit California Gold Nutrition choisir ?",
+    howToChooseBody:
+      "<p>Le choix se fait d’abord par besoin, puis par forme : la marque décline souvent la même substance en plusieurs versions, que seule l’étiquette départage.</p><ul><li><strong>Collagène</strong> : <strong>CollagenUP</strong> 1 kg associe des peptides de collagène marin à de l’acide hyaluronique et à de la vitamine C ; Hydrolyzed Collagen Peptides types I et III (200 g ou 460 g) et Hydrolyzed Marine Collagen Peptides (200 g ou 500 g) sont proposés seuls, sans arôme.</li><li><strong>Oméga 3</strong> : Omega-3 Fish Oil est une huile de poisson en capsules de gélatine de poisson, par 30 ou 120 ; Premium Krill Oil with Superba2 (60 capsules molles) est une huile de krill : le choix porte sur la source.</li><li><strong>CoQ10</strong> : ubiquinone seule, avec BioPerine, avec PQQ ou en Phytosome, ou bien ubiquinol, sa forme réduite, de 30 à 360 unités par flacon.</li><li><strong>Magnésium</strong> : Magnesium Glycinate et Magnesium Bisglycinate Chelate Albion TRAACS en gélules végétales, ou Magnesium Powder Beverage en poudre, orange 380 g ou sans arôme 283 g.</li><li><strong>Créatine</strong> : Sport Pure Creatine Monohydrate en poudre sans arôme de 1 kg, qui se dose librement, ou en 240 gélules végétales, plus pratiques à emporter.</li></ul><p>Nos fiches ne publient pas de tableau de valeurs transcrit pour ces références : la dose et les allergènes sont à lire sur l’étiquette du produit reçu, qui fait foi. Pour la mélatonine, le 5-HTP, les extraits de plantes ou en cas de traitement en cours, demandez conseil à votre pharmacien ou médecin.</p>",
+    faqs: [
+      {
+        question: "Que vend California Gold Nutrition sur Protein.tn ?",
+        answer:
+          "Surtout des compléments de santé quotidienne : antioxydants dont la CoQ10, vitamines, plantes et extraits, immunité, articulations, collagène, oméga 3, magnésium, probiotiques LactoBif, sommeil et digestion. La partie entraînement est plus courte : Sport Pure Creatine Monohydrate, Sport Zinc Magnesium, Sport Tribulus, Instantized BCAA Powder 907 g et L-Glutamine AjiPure. La grille de cette page affiche l’état réel de chaque référence.",
+      },
+      {
+        question: "CollagenUP ou Hydrolyzed Collagen Peptides : quelle différence ?",
+        answer:
+          "CollagenUP, en 1 kg, associe des peptides de collagène marin à de l’acide hyaluronique et à de la vitamine C. Hydrolyzed Collagen Peptides types I et III (200 g ou 460 g) et Hydrolyzed Marine Collagen Peptides (200 g ou 500 g) sont des peptides seuls, sans arôme. Toutes ces références sont des poudres ; la dose et la préparation sont indiquées sur l’emballage.",
+      },
+      {
+        question: "Huile de poisson ou huile de krill chez California Gold Nutrition ?",
+        answer:
+          "Les deux existent. Omega-3 Fish Oil est une huile de poisson en capsules de gélatine de poisson, en flacon de 30 ou de 120. Premium Krill Oil with Superba2, en 60 capsules molles, est une huile de krill. Nous ne reprenons ici aucune teneur en EPA ou DHA : l’étiquette du flacon reçu est la référence.",
+      },
+      {
+        question: "California Gold Nutrition propose-t-il de la whey ?",
+        answer:
+          "Non : notre catalogue ne compte ni whey ni gainer de la marque. La gamme Sport compte Pure Creatine Monohydrate en 1 kg ou en 240 gélules végétales, Zinc Magnesium en 90 gélules et Tribulus en 60 comprimés, auxquels s’ajoutent Instantized BCAA Powder 907 g sans arôme et L-Glutamine AjiPure en 120 gélules. Pour une whey, passez par le rayon protéines.",
+      },
+      {
+        question: "Comment commander California Gold Nutrition en Tunisie ?",
+        answer:
+          "Choisissez la référence et le format, ajoutez-les au panier si le produit est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "collagene", name: "Peptides de collagène : comparer les poudres", url: "/collagene" },
+      { slug: "omega-3", name: "Huile de poisson et huile de krill", url: "/omega-3" },
+      { slug: "antioxydants", name: "CoQ10, ubiquinol et autres antioxydants", url: "/antioxydants" },
+      { slug: "brands", name: "Comparer California Gold Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  "floradix": {
+    metaTitle: "Floradix Tunisie | Iron + Herbs, Floravital, Magnesium",
+    metaDescription:
+      "Floradix en Tunisie : Iron + Herbs et Floravital en 250, 500 et 700 ml, Magnesium, Calcium Magnesium, Epresat multivitamines et Gallexier, en flacon.",
+    h1: "Floradix Tunisie : Iron + Herbs, Floravital et magnésium en flacon",
+    introHtml:
+      "<p>Sur Protein.tn, <strong>Floradix en Tunisie</strong> tient en une gamme courte et entièrement liquide : onze références, toutes vendues en flacon et mesurées en millilitres, réparties sur trois rayons de la catégorie santé et vitalité. Le cœur de la page est le fer, avec <strong>Iron + Herbs</strong> et <strong>Floravital Iron + Herbs</strong> : deux formules qui portent le même intitulé Iron + Herbs et les trois mêmes contenances, 250, 500 et 700 ml, classées au rayon plantes et herbes. Viennent ensuite deux produits au magnésium, <strong>Magnesium</strong> en 250 et 500 ml et <strong>Calcium Magnesium</strong> en 500 ml, puis <strong>Epresat, Liquid Multivitamin Formula</strong> en 500 ml au rayon vitamines, et <strong>Gallexier Herbal Bitters</strong>, une préparation aux plantes amères en 250 ml. Rien n’existe ici en gélules, en comprimés ou en poudre, et aucune référence ne se décline en arôme : on choisit d’abord le produit, puis la taille du flacon quand il y en a plusieurs. La grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quel flacon Floradix choisir ?",
+    howToChooseBody:
+      "<p>Les onze références Floradix de notre catalogue sont toutes liquides : c’est le produit recherché, pas le format, qui oriente le choix. Nos fiches ne transcrivent aucun tableau de composition pour ces flacons ; la dose, la teneur par prise et les ingrédients se lisent sur l’étiquette du flacon reçu, qui fait foi.</p><ul><li><strong>Iron + Herbs</strong> : Iron + Herbs ou Floravital Iron + Herbs, en 250, 500 ou 700 ml. Leur différence tient à la formule : comparez les ingrédients et les allergènes des deux étiquettes.</li><li><strong>Le magnésium</strong> : Magnesium (250 ou 500 ml) ou Calcium Magnesium (500 ml), qui ajoute le calcium dès son intitulé.</li><li><strong>Une formule multivitaminée</strong> : Epresat, Liquid Multivitamin Formula, 500 ml, est la seule référence Floradix du rayon vitamines.</li><li><strong>Gallexier Herbal Bitters</strong>, 250 ml, est une préparation aux plantes amères que nous décrivons sans lui prêter d’effet : demandez conseil à votre pharmacien ou à votre médecin avant de l’utiliser.</li><li><strong>La contenance</strong> : elle ne se choisit que sur trois produits. Iron + Herbs et Floravital Iron + Herbs existent en 250, 500 et 700 ml, Magnesium en 250 et 500 ml : le petit flacon pour découvrir, le grand pour poursuivre. Calcium Magnesium et Epresat n’existent qu’en 500 ml, Gallexier qu’en 250 ml.</li></ul><p>Avant de prendre un complément de fer ou de magnésium, demandez conseil à votre pharmacien ou à votre médecin, surtout en cas de grossesse, de traitement en cours ou pour un enfant.</p>",
+    faqs: [
+      {
+        question: "Quels produits Floradix sont vendus sur Protein.tn ?",
+        answer:
+          "Onze références, toutes en flacon : Iron + Herbs et Floravital Iron + Herbs en 250, 500 et 700 ml, Magnesium en 250 et 500 ml, Calcium Magnesium en 500 ml, Epresat, Liquid Multivitamin Formula en 500 ml et Gallexier Herbal Bitters en 250 ml. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre Iron + Herbs et Floravital Iron + Herbs ?",
+        answer:
+          "Les deux sont classés au rayon plantes et herbes et proposés dans les trois mêmes contenances, 250, 500 et 700 ml. Ce qui les distingue tient à la formule, que nos fiches ne transcrivent pas encore : comparez la liste d’ingrédients et les allergènes imprimés sur chaque étiquette, et demandez conseil à votre pharmacien si vous hésitez entre les deux.",
+      },
+      {
+        question: "Combien de fer ou de magnésium par prise ?",
+        answer:
+          "Nous n’avançons aucun chiffre ici : nos fiches ne publient pas de tableau de valeurs relevé sur l’étiquette pour ces flacons. La dose conseillée et la composition sont imprimées sur l’emballage de la référence reçue, qui fait foi. En cas de grossesse ou de traitement en cours, demandez conseil à votre pharmacien ou à votre médecin avant de commencer.",
+      },
+      {
+        question: "Qu’est-ce que Floradix Gallexier Herbal Bitters ?",
+        answer:
+          "Une préparation liquide Floradix en flacon de 250 ml, dont le nom anglais signifie « amers aux plantes », classée au rayon plantes et herbes. Notre fiche n’en transcrit pas la composition et nous ne lui attribuons aucun effet. Lisez la liste des plantes et le mode d’emploi sur l’étiquette, et demandez conseil à votre pharmacien ou à votre médecin avant de l’utiliser.",
+      },
+      {
+        question: "Comment commander Floradix en Tunisie ?",
+        answer:
+          "Choisissez la référence et la contenance disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "plantes-et-herbes", name: "Le rayon plantes et herbes", url: "/plantes-et-herbes" },
+      { slug: "magnesium", name: "Magnésium : comparer les formes", url: "/magnesium" },
+      { slug: "vitamines", name: "Le rayon vitamines et multivitamines", url: "/vitamines" },
+      { slug: "brands", name: "Comparer Floradix aux autres marques", url: "/brands" },
+    ],
+  },
+  "fond-bone-broth": {
+    metaTitle: "FOND Bone Broth Tunisie | Chicken Bone Broth en bocal",
+    metaDescription:
+      "FOND Bone Broth sur Protein.tn : Chicken Bone Broth en bocal, bouillon d’os de poulet citron et ail 414 ml ou curcuma et poivre noir 400 ml.",
+    h1: "FOND Bone Broth Tunisie : bouillon d’os de poulet citron ou curcuma",
+    introHtml:
+      "<p>La marque <strong>FOND Bone Broth</strong> compte deux références sur Protein.tn, et ce sont deux versions du même produit : un <strong>Chicken Bone Broth</strong>, bouillon d’os de poulet prêt à boire, vendu en bocal. La première, <strong>Lemon &amp; Garlic</strong> en 414 ml, est parfumée au citron, à l’ail, au radis rouge et à l’oignon, et classée au rayon plantes et herbes. La seconde, <strong>Turmeric &amp; Black Pepper</strong> en 400 ml, associe curcuma, poivre noir concassé et thym, et figure au rayon articulations. Les deux reposent sur la même base — eau, os de poulet et sel de mer — complétée de légumes et d’aromates, la plupart marqués biologiques sur la liste d’ingrédients ; le fabricant indique des os de poulets élevés en pâturage et sans antibiotiques. Ce n’est ni une poudre ni une gélule mais un aliment liquide, à garder au réfrigérateur une fois ouvert. La grille ci-dessus affiche le prix et la disponibilité actuels des deux bocaux.</p>",
+    howToChooseTitle: "Chicken Bone Broth citron-ail ou curcuma : lequel choisir ?",
+    howToChooseBody:
+      "<p>Les deux bocaux <strong>FOND Bone Broth</strong> partagent la même base de bouillon d’os de poulet et des contenances presque identiques, 414 ml contre 400 ml. Le choix se fait donc sur la recette et sur l’usage que vous en prévoyez, pas sur le format.</p><ul><li><strong>Pour cuisiner</strong> : le <strong>Lemon &amp; Garlic</strong> se boit tel quel, mais le fabricant le présente aussi pour cuire du riz ou du quinoa, ou comme base de soupes et de plats mijotés — partout où une recette demande du bouillon de poulet.</li><li><strong>Pour une tasse chaude</strong> : le <strong>Turmeric &amp; Black Pepper</strong> se réchauffe doucement dans une casserole et se sirote seul ; le fabricant suggère d’y ajouter du lait de coco, de l’ail, de l’origan, du curry ou du gingembre.</li><li><strong>Selon vos goûts</strong> : citron, ail, radis rouge et oignons verts d’un côté ; curcuma, poivre noir concassé et thym de l’autre.</li><li><strong>Si vous surveillez votre sel</strong> : le sel de mer figure à la fois dans le bouillon de base et parmi les ingrédients ajoutés des deux recettes ; lisez la teneur en sodium sur l’étiquette avant d’en faire une habitude quotidienne.</li></ul><p>Protéines, sodium, calories : chaque recette a ses propres valeurs, reprises sur sa fiche produit, et l’étiquette du bocal que vous recevez fait foi. Comparez-les avec soin, car les deux étiquettes ne comptent pas la portion de la même façon.</p>",
+    faqs: [
+      {
+        question: "Quels produits FOND Bone Broth sont vendus sur Protein.tn ?",
+        answer:
+          "Deux bouillons d’os de poulet en bocal : Chicken Bone Broth Lemon & Garlic en 414 ml, classé au rayon plantes et herbes, et Chicken Bone Broth Turmeric & Black Pepper en 400 ml, classé au rayon articulations. Ils partagent la même base d’eau, d’os de poulet et de sel de mer. La grille de cette page affiche l’état réel de chacun.",
+      },
+      {
+        question: "Le bouillon d’os FOND est-il un complément alimentaire ?",
+        answer:
+          "Il se présente comme un aliment : un bouillon d’os de poulet prêt à boire, vendu en bocal, avec un tableau de valeurs nutritionnelles sur l’étiquette. Son classement aux rayons Plantes & Herbes et Articulations sert à le retrouver dans le catalogue, pas à lui prêter un effet. Pour une question de santé, demandez conseil à votre médecin ou à votre pharmacien.",
+      },
+      {
+        question: "Combien de protéines dans un bocal FOND Bone Broth ?",
+        answer:
+          "Cela dépend de la recette et de la portion retenue : l’étiquette du Lemon & Garlic compte une tasse par portion, celle du Turmeric & Black Pepper le bocal entier. Nous ne reprenons donc pas de chiffre sur cette page. Les protéines, le sodium et les calories de chaque recette figurent sur sa fiche produit, et l’étiquette du bocal que vous recevez fait foi.",
+      },
+      {
+        question: "Comment conserver et réchauffer le bouillon FOND ?",
+        answer:
+          "Une fois ouvert, le bocal se garde au réfrigérateur et se consomme dans les 7 jours. Réchauffez le bouillon doucement dans une casserole : le fabricant déconseille de mettre le bocal au micro-ondes, où il peut provoquer des étincelles. Ne consommez pas le produit si l’opercule est rompu.",
+      },
+      {
+        question: "Comment commander FOND Bone Broth en Tunisie ?",
+        answer:
+          "Ajoutez le bocal choisi au panier s’il est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "plantes-et-herbes", name: "Plantes et herbes : tout le rayon", url: "/plantes-et-herbes" },
+      { slug: "articulations", name: "Le rayon articulations", url: "/articulations" },
+      { slug: "sante-vitalite", name: "Toute la catégorie santé et vitalité", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer FOND Bone Broth aux autres marques", url: "/brands" },
+    ],
+  },
+  "maryruth-s": {
+    metaTitle: "MaryRuth’s Tunisie | Multivitamines liquides & gommes",
+    metaDescription:
+      "MaryRuth’s en Tunisie : Liquid Morning Multivitamin, Liquid Nighttime Multimineral, liposomaux 225 ml, extraits de plantes 30 ml et gommes.",
+    h1: "MaryRuth’s Tunisie : multivitamines liquides, liposomaux et gommes",
+    introHtml:
+      "<p>Sur Protein.tn, <strong>MaryRuth’s en Tunisie</strong> compte 49 références, et elles se rangent moins par objectif que par format. Les grands flacons liquides d’abord : <strong>Liquid Morning Multivitamin</strong> en 450 ml (Raspberry, et deux versions + Hair Growth) ou en Essentials+ 946 ml, et <strong>Liquid Nighttime Multimineral</strong> en 450, 887 et 946 ml, décliné aussi en + Skin Renew. Viennent ensuite sept <strong>liposomaux</strong> de 225 ml — Lion’s Mane, Reishi, Cordyceps, Turkey Tail, Sea Moss, CoQ10 et Lysine —, puis neuf <strong>extraits liquides</strong> de 30 ml (Milk Thistle, Dandelion Root, Ginseng, Valerian Root, Maca Root, Turmeric…), presque tous marqués Alcohol Free. Le reste tient surtout en <strong>gommes</strong> : Creatine Gummies, Immunity, Spirulina, Biotin, Fiber, Sleep Gummies et Women’s Multivitamin. Le site les répartit notamment entre vitamines, minéraux, immunité, sommeil, plantes et antioxydants ; la grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Liquide, liposomal ou gommes : quel produit MaryRuth’s choisir ?",
+    howToChooseBody:
+      "<p>Chez MaryRuth’s, une même famille existe souvent sous plusieurs formes : partez du rayon, puis du format qui vous convient.</p><ul><li><strong>Vitamines ou minéraux en liquide</strong> : Liquid Morning Multivitamin pour les vitamines, Liquid Nighttime Multimineral pour les minéraux. Le flacon de 887 ou 946 ml contient environ le double du 450 ml.</li><li><strong>Un minéral isolé</strong> : Liquid Magnesium Blend 887 ml, Vegan Liquid Iron 450 ml ou Organic Iodine Liquid Drops 30 ml. Pour le fer et l’iode, demandez conseil à votre médecin ou à votre pharmacien.</li><li><strong>Liposomal ou extrait</strong> : certaines substances existent dans les deux formats, comme le Lion’s Mane (liposomal 225 ml ou Liquid Extract 30 ml) et le curcuma (Turmeric &amp; DHA Liposomal 450 ml, Organic Turmeric et Turmeric Gold en 30 ml).</li><li><strong>Gommes</strong>, pour qui préfère ne rien mesurer : Creatine Gummies, Immunity, Spirulina, Biotin, Fiber ou Women’s Multivitamin Gummies.</li><li><strong>Rayon Sommeil &amp; Stress</strong> : le site y classe deux Sleep Gummies de 60 gommes, Passion Fruit Jasmine Tea et une version Melatonin Free à la fraise (Strawberry), les Sleep Dissolving Strips (30 bandelettes), L-Theanine Liquid Drops 60 ml et Organic Valerian Root 30 ml.</li></ul><p>Nos fiches ne transcrivent aucun tableau de valeurs : aucun dosage n’est repris ici, l’étiquette de l’emballage reçu fait foi. Hair Growth, Skin Renew ou Immune &amp; Energy sont des noms de gamme. Pour les extraits de plantes et de champignons, demandez conseil à votre pharmacien ou à votre médecin, surtout en cas de grossesse ou de traitement.</p>",
+    faqs: [
+      {
+        question: "Quels produits MaryRuth’s sont vendus sur Protein.tn ?",
+        answer:
+          "Quarante-neuf références : multivitamines, multiminéraux et minéraux liquides de 450 à 946 ml, liposomaux de 225 et 450 ml, extraits et gouttes de 30 à 120 ml, une série de gommes, deux références en gélules (3-in-1 Daily Women’s Health, Ultra Digestive Food Enzymes) et des Sleep Dissolving Strips. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Liquid Morning Multivitamin ou Liquid Nighttime Multimineral ?",
+        answer:
+          "Le premier regroupe des vitamines, le second des minéraux ; Morning et Nighttime font partie du nom choisi par la marque. Morning existe en Raspberry 450 ml, en deux versions + Hair Growth 450 ml et en Essentials+ 946 ml ; Nighttime en Coconut Dream, Pineapple Dream et + Skin Renew Berry Dream, de 450 à 946 ml. Les conseils d’utilisation figurent sur l’étiquette.",
+      },
+      {
+        question: "Que signifie « liposomal » sur un produit MaryRuth’s ?",
+        answer:
+          "Le terme désigne une préparation liquide dans laquelle l’ingrédient est enveloppé dans de petites vésicules lipidiques, les liposomes. Chez MaryRuth’s, il s’applique à sept flacons de 225 ml — Lion’s Mane, Reishi, Cordyceps, Turkey Tail, Sea Moss, CoQ10, Lysine — et à deux de 450 ml, Turmeric & DHA et Women’s 40+ Multivitamin.",
+      },
+      {
+        question: "Quelle dose prendre avec les produits MaryRuth’s ?",
+        answer:
+          "Nous n’avançons aucune valeur ici : nos fiches ne publient pas de tableau de valeurs transcrit pour la marque. La composition et les conseils d’utilisation sont imprimés sur l’emballage de chaque produit et font foi. Pour Organic Kids Elderberry Liquid Drops, un traitement en cours ou une grossesse, demandez conseil à votre pharmacien ou à votre médecin.",
+      },
+      {
+        question: "Comment commander MaryRuth’s en Tunisie ?",
+        answer:
+          "Choisissez la référence et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "vitamines", name: "Multivitamines : toutes les marques", url: "/vitamines" },
+      { slug: "mineraux", name: "Minéraux : fer, iode et multiminéraux", url: "/mineraux" },
+      { slug: "immunite", name: "Le rayon immunité et digestion", url: "/immunite" },
+      { slug: "brands", name: "Comparer MaryRuth’s aux autres marques", url: "/brands" },
+    ],
+  },
+  "neurogum": {
+    metaTitle: "NeuroGum Tunisie | NeuroMints Sleep & Recharge, Mixed Berry",
+    metaDescription:
+      "NeuroGum en Tunisie : NeuroMints Sleep & Recharge, parfum Mixed Berry, 6 packs de 12 pastilles « Meltaway Mints » (72 au total), rayon Sommeil & Stress.",
+    h1: "NeuroGum Tunisie : NeuroMints Sleep & Recharge, 72 pastilles Mixed Berry",
+    introHtml:
+      "<p>Sur Protein.tn, la marque <strong>NeuroGum</strong> tient en une seule référence : <strong>NeuroMints Sleep &amp; Recharge</strong>, parfum Mixed Berry, en 6 packs de 12 pastilles, soit 72 au total. Son nom les présente comme des « Meltaway Mints », des pastilles fondantes : malgré le « Gum » de la marque, la référence n’est pas décrite comme un chewing-gum. Elle est classée au rayon <strong>Sommeil &amp; Stress</strong>, dans la catégorie Santé &amp; Vitalité. Ce rayon réunit plusieurs centaines de références en gélules, comprimés, gommes, liquides, pastilles, comprimés à croquer ou à dissolution rapide, bandelettes, sprays et patchs ; les pastilles et les comprimés à dissolution rapide y sont à eux seuls plusieurs dizaines. Il n’y a ni autre parfum, ni autre format, ni autre gamme NeuroGum à départager : la fiche produit reste la page de référence. Notre fiche ne transcrit pas encore l’étiquette : composition, dose, mode de prise et précautions sont ceux de l’emballage d’origine. La grille ci-dessus affiche le prix et la disponibilité actuels.</p>",
+    howToChooseTitle: "NeuroMints Sleep & Recharge : ce qu’il faut vérifier avant de choisir",
+    howToChooseBody:
+      "<p>Avec une seule référence NeuroGum au catalogue, il n’y a pas de gamme à départager : la question est de savoir si <strong>NeuroMints Sleep &amp; Recharge</strong> correspond à ce que vous cherchez. Le format ne suffit pas à trancher, puisque le rayon Sommeil &amp; Stress propose aussi plusieurs dizaines de pastilles, de comprimés à croquer ou à dissolution rapide et quelques bandelettes. Ce qui départage ces références, c’est ce qui est imprimé sur leur emballage.</p><ul><li><strong>La composition</strong> : notre fiche ne transcrit pas encore celle de NeuroMints, et nous ne citons ici aucun ingrédient ; lisez la liste de l’emballage et comparez-la à celle des autres références du rayon.</li><li><strong>Le mode de prise et la dose</strong> : le nom parle de pastilles « meltaway », mais la façon de les prendre et le nombre de pastilles par jour sont ceux indiqués sur l’emballage.</li><li><strong>La quantité</strong> : la référence réunit 6 packs de 12 pastilles, soit 72 ; rapportez ce total à la dose journalière de l’étiquette pour savoir combien de jours elle couvre.</li><li><strong>Le parfum</strong> : Mixed Berry est le seul proposé au catalogue pour cette référence.</li></ul><p>Un complément alimentaire ne remplace pas une alimentation variée et un mode de vie sain. En cas de traitement en cours, de grossesse, d’allaitement ou de doute, demandez conseil à votre pharmacien ou à votre médecin avant d’en prendre, et respectez la dose indiquée sur l’emballage.</p>",
+    faqs: [
+      {
+        question: "Quels produits NeuroGum sont vendus sur Protein.tn ?",
+        answer:
+          "Une seule référence : NeuroMints Sleep & Recharge, parfum Mixed Berry, en 6 packs de 12 pastilles, soit 72 pastilles. Elle est classée au rayon Sommeil & Stress. Aucun autre parfum, aucun autre format ni aucun autre produit NeuroGum ne figure au catalogue ; la grille de cette page affiche l’état réel de la référence.",
+      },
+      {
+        question: "Les NeuroMints sont-elles des chewing-gums ?",
+        answer:
+          "Le nom de la référence ne les présente pas ainsi : il parle de « Meltaway Mints », c’est-à-dire de pastilles fondantes, réparties en 6 packs de 12. Notre fiche ne détaille pas le mode de prise ; la façon de les consommer et le nombre de pastilles par jour sont ceux indiqués sur l’emballage, qui fait foi.",
+      },
+      {
+        question: "Que contiennent les NeuroMints Sleep & Recharge ?",
+        answer:
+          "Notre fiche produit ne transcrit pas encore l’étiquette : les valeurs n’y sont ajoutées qu’après lecture de l’emballage imprimé par NeuroGum. Nous ne citons donc ni ingrédient ni dosage ici. La composition, la dose journalière et les précautions d’emploi figurent sur l’emballage d’origine, qui fait foi.",
+      },
+      {
+        question: "Peut-on prendre NeuroMints avec un traitement ou pendant une grossesse ?",
+        answer:
+          "Nous ne pouvons pas répondre à la place d’un professionnel de santé, d’autant que la composition n’est pas encore transcrite sur notre fiche. En cas de traitement médicamenteux, de grossesse, d’allaitement, pour un enfant ou au moindre doute, demandez conseil à votre pharmacien ou à votre médecin, emballage en main, et ne dépassez pas la dose indiquée.",
+      },
+      {
+        question: "Comment commander NeuroGum en Tunisie ?",
+        answer:
+          "Ajoutez NeuroMints Sleep & Recharge au panier lorsque la grille l’indique disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "sommeil-stress", name: "Sommeil & stress : comparer les formats", url: "/sommeil-stress" },
+      { slug: "immunite", name: "Le thème Immunité & digestion", url: "/immunite" },
+      { slug: "sante-vitalite", name: "Tout le rayon Santé & vitalité", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer NeuroGum aux autres marques", url: "/brands" },
+    ],
+  },
+  "peach-perfect": {
+    metaTitle: "Peach Perfect Tunisie | Creatine, Inositol & Hormone Hero",
+    metaDescription:
+      "Peach Perfect sur Protein.tn : Creatine 272 g, 270 g ou 7,4 oz sans arôme, Inositol Multivitamin en poudre 135 g ou 136 g et Hormone Hero en 120 gélules.",
+    h1: "Peach Perfect Tunisie : Creatine, Inositol Multivitamin et Hormone Hero",
+    introHtml:
+      "<p>Sur Protein.tn, <strong>Peach Perfect</strong> compte six références réparties entre deux rayons qui ne se recoupent pas. Au rayon créatine, <strong>Peach Perfect Creatine</strong> existe en trois pots : Pink Lemonade 272 g, Strawberry Acai 270 g et une version sans arôme de 7,4 oz. Notre fiche la décrit comme une créatine monohydrate associée à du collagène hydrolysé et à des BCAA, à diluer dans de l’eau une fois par jour : c’est un mélange, pas une créatine seule. Au rayon vitamines, la marque propose deux formules pensées pour les femmes : <strong>Inositol Multivitamin</strong>, une poudre à boire en Pink Lemonade 135 g ou Strawberry Acai 136 g, et <strong>Hormone Hero, Women’s Daily Multivitamin</strong>, en 120 gélules. Toutes deux associent myo-inositol, D-chiro-inositol, magnésium, zinc et vitamine D3 ; la poudre y ajoute du DIM, les gélules des oméga-3. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque référence.</p>",
+    howToChooseTitle: "Quel produit Peach Perfect choisir ?",
+    howToChooseBody:
+      "<p>Les deux familles Peach Perfect ne répondent pas à la même question et ne se remplacent pas : la <strong>Creatine</strong> accompagne l’entraînement, tandis qu’<strong>Inositol Multivitamin</strong> et <strong>Hormone Hero</strong> sont des compléments du quotidien destinés aux femmes.</p><ul><li><strong>Creatine aromatisée ou sans arôme</strong> : Pink Lemonade 272 g et Strawberry Acai 270 g se diluent simplement dans de l’eau, avec arômes naturels et stévia ; le pot sans arôme de 7,4 oz ne liste aucun autre ingrédient sur notre fiche et se prend de la même façon, dans de l’eau, une fois par jour.</li><li><strong>Vous voulez uniquement de la créatine monohydrate</strong> : la Creatine Peach Perfect contient aussi du collagène hydrolysé et des BCAA ; une créatine vendue seule, au rayon créatine, sera plus directe.</li><li><strong>Poudre ou gélules</strong> : Inositol Multivitamin se dilue dans un verre d’eau (Pink Lemonade 135 g ou Strawberry Acai 136 g), Hormone Hero se présente en 120 gélules. Leurs compositions se recoupent sans être identiques : DIM dans la poudre, oméga-3 dans les gélules.</li><li><strong>Ne les cumulez pas sans vérifier</strong> : les deux formules apportent du zinc et de la vitamine D3, dont les quantités s’additionnent.</li></ul><p>Les valeurs par portion reprises sur nos fiches sont traduites automatiquement de la fiche du fabricant : en cas de différence, l’étiquette du produit reçu fait foi. En cas de grossesse, d’allaitement, de traitement ou de suivi médical, demandez conseil à votre médecin ou à votre pharmacien avant de commencer.</p>",
+    faqs: [
+      {
+        question: "Quels produits Peach Perfect sont vendus sur Protein.tn ?",
+        answer:
+          "Six références : Peach Perfect Creatine en Pink Lemonade 272 g, Strawberry Acai 270 g et sans arôme 7,4 oz ; Inositol Multivitamin en poudre, Pink Lemonade 135 g ou Strawberry Acai 136 g ; et Hormone Hero, Women’s Daily Multivitamin en 120 gélules. La grille de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "La Creatine Peach Perfect est-elle une créatine seule ?",
+        answer:
+          "Non. Notre fiche la décrit comme une créatine monohydrate associée à du collagène hydrolysé et à des BCAA, à prendre une fois par jour dans de l’eau. Les versions aromatisées ajoutent des arômes naturels et de la stévia, le pot sans arôme aucun autre ingrédient. Les quantités par mesure de nos fiches sont traduites de la fiche du fabricant : l’étiquette du pot reçu fait foi.",
+      },
+      {
+        question: "Inositol Multivitamin ou Hormone Hero : quelle différence ?",
+        answer:
+          "La forme d’abord : une poudre à diluer dans l’eau (135 g ou 136 g selon l’arôme) contre 120 gélules. Les deux associent myo-inositol, D-chiro-inositol, magnésium, zinc et vitamine D3 ; la poudre ajoute du DIM, les gélules des oméga-3. Les doses diffèrent d’une formule à l’autre : comparez les deux fiches avant de choisir, et ne cumulez pas les deux sans vérifier.",
+      },
+      {
+        question: "Ces compléments Peach Perfect conviennent-ils à toutes les femmes ?",
+        answer:
+          "Les avertissements d’Inositol Multivitamin demandent de consulter un médecin en cas de grossesse, d’allaitement, de prise de médicaments ou de problème de santé ; pour Hormone Hero aussi, demandez conseil à votre pharmacien ou à votre médecin. Nous n’attribuons aucun effet à l’inositol ni au DIM ; le zinc contribue au maintien d’une peau et de cheveux normaux, la vitamine D au fonctionnement normal du système immunitaire.",
+      },
+      {
+        question: "Comment commander Peach Perfect en Tunisie ?",
+        answer:
+          "Choisissez la référence et l’arôme disponibles, ajoutez-les au panier puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "creatine", name: "Comparer avec une créatine seule", url: "/creatine" },
+      { slug: "vitamines", name: "Autres multivitamines du rayon", url: "/vitamines" },
+      { slug: "sante-vitalite", name: "Tout le rayon santé et vitalité", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer Peach Perfect aux autres marques", url: "/brands" },
+    ],
+  },
 });
 
 export function getBrandSeoEntry(slug: string | undefined): BrandSeoEntry | null {

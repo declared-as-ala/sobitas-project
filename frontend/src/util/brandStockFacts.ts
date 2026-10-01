@@ -3,7 +3,7 @@ import { getShopPage } from '@/services/api';
 import { EMPTY_SHOP_QUERY } from '@/util/shopQuery';
 import { isInStock } from '@/util/cartStock';
 import { getEffectivePrice } from '@/util/productPrice';
-import { buildBrandMetaDescription, resolveBrandMetaDescription } from '@/util/brandMeta';
+import { buildBrandMetaDescription, buildGenericBrandMetaDescription, resolveBrandMetaDescription } from '@/util/brandMeta';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 
 /** Brand-wide count and cheapest buyable price, independent of visitor filters. */
@@ -13,7 +13,7 @@ export async function loadBrandStockFacts(brandId: number) {
     const countPage = await getShopPage(scoped, 1);
     if (!countPage.pagination) throw new Error(`Missing in-stock pagination for brand ${brandId}`);
     const filteredTotal = countPage.pagination.total;
-    if (filteredTotal === 0) return { inStockCount: 0, priceMin: null };
+    if (filteredTotal === 0) return { inStockCount: 0, priceMin: null, priceMax: null };
 
     // Promo prices may be lower than the first row sorted by base price.
     const prices: number[] = [];
@@ -31,7 +31,11 @@ export async function loadBrandStockFacts(brandId: number) {
         }
       }
     }
-    return { inStockCount, priceMin: prices.length ? Math.round(Math.min(...prices)) : null };
+    return {
+      inStockCount,
+      priceMin: prices.length ? Math.round(Math.min(...prices)) : null,
+      priceMax: prices.length ? Math.round(Math.max(...prices)) : null,
+    };
   }, ['brand-stock-facts', String(brandId)], { revalidate: 600, tags: ['shop', 'products'] });
 
   return cached().catch((error) => {
@@ -45,11 +49,14 @@ export async function brandDescriptionWithFacts(
   brandId: number,
   brandName: string,
   slug: string,
-  categoryNames: string[]
+  categoryNames: string[],
+  productCount?: number
 ): Promise<string> {
   const raw = buildBrandMetaDescription(brandName, categoryNames);
-  if (!getBrandSeoEntry(slug)?.metaDescription.includes('{')) return raw;
+  const configured = getBrandSeoEntry(slug);
+  if (configured && !configured.metaDescription.includes('{')) return raw;
   const facts = await loadBrandStockFacts(brandId);
+  if (!configured) return buildGenericBrandMetaDescription(brandName, categoryNames, productCount, facts);
   return resolveBrandMetaDescription(brandName, categoryNames, {
     priceMin: facts?.priceMin ?? null,
     inStockCount: facts?.inStockCount ?? null,

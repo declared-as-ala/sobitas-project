@@ -9,6 +9,7 @@ import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { buildBrandMetaTitle } from '@/util/brandMeta';
 import { getProductLink } from '@/util/productUrl';
 import type { Brand, Product } from '@/types';
+import type { BrandFaq } from '@/util/brandTemplate';
 
 /**
  * A brand landing page's structured data, in ONE place, because it is emitted from TWO routes —
@@ -43,6 +44,7 @@ export function buildBrandLandingSchemas({
   slug,
   baseUrl,
   description: resolvedDescription,
+  faqs,
 }: {
   brand: Brand;
   products: Product[];
@@ -50,6 +52,7 @@ export function buildBrandLandingSchemas({
   slug: string;
   baseUrl: string;
   description?: string;
+  faqs?: BrandFaq[];
 }): object[] {
   const path = `/${slug}`;
   const brandSeo = getBrandSeoEntry(slug);
@@ -117,7 +120,7 @@ export function buildBrandLandingSchemas({
 
   // FAQ only when the curated entry exists — and only because both views render those same Q&As
   // as visible text. FAQ markup without matching on-page content is a policy violation.
-  const faq = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : null;
+  const faq = brandSeo ? buildFAQPageSchemaFromQA(brandSeo.faqs) : faqs?.length ? buildFAQPageSchemaFromQA(faqs) : null;
 
   return [breadcrumb, collection, ...(itemList ? [itemList] : []), ...(faq ? [faq] : [])];
 }

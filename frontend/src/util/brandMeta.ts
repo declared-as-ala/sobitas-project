@@ -59,12 +59,49 @@ export function buildBrandMetaTitle(brandName: string, categoryNames?: string[])
 export function buildBrandMetaDescription(brandName: string, categoryNames?: string[]): string {
   const configured = configEntryFor(brandName);
   if (configured) return configured.metaDescription;
+  return buildGenericBrandMetaDescription(brandName, categoryNames ?? []);
+}
 
-  const cats = normaliseCategoryNames(categoryNames).slice(0, 4);
-  if (cats.length) {
-    return `${brandName} en Tunisie sur Protein.tn : ${cats.join(', ')}. Produits 100% authentiques, livraison rapide.`;
+/** Live generic SERP copy; keep whole clauses within the 155-character budget. */
+export function buildGenericBrandMetaDescription(
+  brandName: string,
+  categoryNames: string[],
+  productCount?: number,
+  facts?: { priceMin: number | null; priceMax: number | null; inStockCount: number | null } | null
+): string {
+  /* A SENTENCE, not a dotted list: a snippet that reads like an answer earns the click a list of
+     tokens does not. Built from whole clauses that are dropped — never cut mid-word — until it fits
+     155 characters: the delivery tail goes first, then families one by one, the price range last. Every
+     number is live and a clause disappears when its fact is unknown, 0, or min = max. */
+  const LIMIT = 155;
+  const name = brandName.length > 60 ? `${brandName.slice(0, 59).trimEnd()}…` : brandName;
+  const count = typeof productCount === 'number' && productCount > 0 ? productCount : null;
+  const stock = facts?.inStockCount && facts.inStockCount > 0 ? facts.inStockCount : null;
+  const range = stock && facts?.priceMin && facts.priceMax && facts.priceMax > facts.priceMin
+    ? `de ${facts.priceMin} à ${facts.priceMax} DT` : null;
+  const families = normaliseCategoryNames(categoryNames).slice(0, 3);
+  const build = (withFamilies: number, withRange: boolean, withTail: boolean) => {
+    let out = `${name} en Tunisie`;
+    if (count) {
+      out += ` : ${count} produit${count > 1 ? 's' : ''}`;
+      if (withFamilies) out += ` (${families.slice(0, withFamilies).join(', ')})`;
+      if (stock) out += `, dont ${stock} en stock${withRange && range ? ` ${range}` : ''}`;
+    } else if (withFamilies) {
+      out += ` : ${families.slice(0, withFamilies).join(', ')}`;
+    }
+    out += '.';
+    if (withTail) out += ' Livraison 24–72h partout en Tunisie, paiement à la livraison.';
+    return out;
+  };
+  for (const withRange of [true, false]) {
+    for (let f = families.length; f >= 0; f--) {
+      for (const tail of [true, false]) {
+        const candidate = build(f, withRange, tail);
+        if (candidate.length <= LIMIT) return candidate;
+      }
+    }
   }
-  return `Découvrez tous les produits ${brandName} en Tunisie : qualité premium, produits 100% authentiques, livraison rapide.`;
+  return build(0, false, false).slice(0, LIMIT);
 }
 
 export function resolveBrandMetaDescription(

@@ -58,9 +58,9 @@ import { categoryAnchor } from '@/util/categoryAnchor';
 import type { Brand, Category, Page, Product, SubCategory } from '@/types';
 import { brandNameToSlug as nameToSlug } from '@/util/brandSlug';
 import { buildBrandMetaTitle, buildBrandSocialMetadata } from '@/util/brandMeta';
-import { brandDescriptionWithFacts } from '@/util/brandStockFacts';
+import { brandDescriptionWithFacts, loadBrandStockFacts } from '@/util/brandStockFacts';
 import { getBrandCategoryNames } from '@/util/brandCategoryNames';
-import { buildBrandIntroHtml } from '@/util/brandIntro';
+import { buildGenericBrandTemplate } from '@/util/brandTemplate';
 import { getBrandSeoEntry } from '@/config/brandSeoConfig';
 import { getCmsPageTitleOverride } from '@/config/cmsPageSeoConfig';
 import { buildShopUrl, parseShopQuery, type RawSearchParams } from '@/util/shopQuery';
@@ -314,7 +314,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
       }
       // Shared with the human /{slug} route: same URL must not have two different titles.
       const title = buildBrandMetaTitle(brand.designation_fr, categoryNames);
-      const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, categoryNames);
+      const description = await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, categoryNames, brandProductCount);
 
       return {
         title: { absolute: title },
@@ -682,13 +682,19 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
       { name: title, url: `/${cleanSlug}` },
     ];
     const brandSeo = getBrandSeoEntry(cleanSlug);
+    const genericBrand = brandSeo ? null : buildGenericBrandTemplate(
+      title,
+      products,
+      (await loadBrandStockFacts(brand.id)) ?? { inStockCount: null, priceMin: null, priceMax: null }
+    );
     /* Shared with app/(shop)/[slug], which serves this same URL to humans. This route used to
        build its own CollectionPage as `Produits ${title}` with no description, while the human
        route used the curated title and the brandSeoConfig description — so the copy written for
        search engines was the one thing the search engine never saw. See util/brandJsonLd.ts. */
     const brandSchemas = buildBrandLandingSchemas({
       brand, products, slug: cleanSlug, baseUrl,
-      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(products)),
+      description: await brandDescriptionWithFacts(brand.id, brand.designation_fr, cleanSlug, getBrandCategoryNames(products), products.length),
+      faqs: genericBrand?.faqs,
     });
 
     return (
@@ -696,15 +702,15 @@ export default async function CrawlerCategoryPage({ params, searchParams }: Page
         {brandSchemas.map((schema, i) => ldScript(schema, `brand-ld-${i}`))}
         <CrawlerCategoryView
           title={title}
-          headingOverride={brandSeo?.h1}
+          headingOverride={brandSeo?.h1 ?? genericBrand?.heading}
           // Factual intro from the brand's own catalogue. These 55 pages were a median of 39
           // words for Googlebot — an H1, a breadcrumb and a bare product list — which is the thin,
           // near-identical "scaled content" pattern Google discounts, on exactly the brand+geo
           // queries ("dymatize tunisie") they exist to win.
-          introHtml={brandSeo?.introHtml ?? buildBrandIntroHtml(title, products)}
-          howToChooseTitle={brandSeo?.howToChooseTitle ?? null}
-          howToChooseBody={brandSeo?.howToChooseBody ?? null}
-          faqs={brandSeo?.faqs ?? []}
+          introHtml={brandSeo?.introHtml ?? genericBrand?.introHtml}
+          howToChooseTitle={brandSeo?.howToChooseTitle ?? genericBrand?.howToChooseTitle}
+          howToChooseBody={brandSeo?.howToChooseBody ?? genericBrand?.howToChooseBody}
+          faqs={brandSeo?.faqs ?? genericBrand?.faqs ?? []}
           breadcrumbs={breadcrumbs}
           products={products}
           relatedCategories={brandSeo?.relatedCategories.map((item) => ({ name: item.name, url: item.url })) ?? []}
