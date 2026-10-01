@@ -2546,6 +2546,314 @@ const BRAND_SEO_CONFIG: Readonly<Record<string, BrandSeoEntry>> = Object.freeze(
       { slug: "brands", name: "Comparer Peach Perfect aux autres marques", url: "/brands" },
     ],
   },
+  "bpi-sports": {
+    metaTitle: "BPI Sports Tunisie | ISO HD 2,2 kg et Whey Protein HD",
+    metaDescription:
+      "BPI Sports sur Protein.tn : ISO HD, une whey isolate en pot de 2,2 kg, et Whey Protein HD en pot de 1,9 kg, toutes deux en arôme Chocolat.",
+    h1: "BPI Sports Tunisie : ISO HD 2,2 kg et Whey Protein HD 1,9 kg",
+    introHtml:
+      "<p>La marque <strong>BPI Sports</strong> est représentée sur Protein.tn par deux protéines en poudre, toutes deux rangées au rayon Protéines et référencées en arôme Chocolat. <strong>ISO HD</strong>, en pot de 2,2 kg, est classée au rayon whey isolate : notre fiche la décrit comme une formule à base de whey isolate, à mélanger à l’eau au shaker. <strong>Whey Protein HD</strong>, en pot de 1,9 kg, est une whey rangée au rayon whey protéine. Chaque référence n’est proposée sur Protein.tn qu’en un seul format et un seul arôme : le choix se fait donc entre ces deux produits, et Protein.tn ne référence ni gainer, ni créatine, ni pré-workout de la marque. Nos fiches ne publient pas de tableau de valeurs transcrit pour ces deux pots ; la dose, la teneur en protéines par portion et la liste des ingrédients se lisent sur l’étiquette du produit reçu. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque référence.</p>",
+    howToChooseTitle: "ISO HD ou Whey Protein HD : laquelle choisir ?",
+    howToChooseBody:
+      "<p>Les deux références BPI Sports servent à compléter l’apport en protéines de la journée et se préparent toutes deux en mélangeant une dose à de l’eau. Ce qui les sépare : le rayon où chacune est classée et la taille du pot.</p><ul><li><strong>Vous surveillez de près glucides et lipides</strong> : ISO HD est classée au rayon whey isolate. Un isolat est une whey dont la filtration est plus poussée, ce qui réduit en général la part de lactose, de glucides et de matières grasses par rapport à une whey concentrée.</li><li><strong>Un isolat ne vous est pas indispensable</strong> : Whey Protein HD est classée au rayon whey protéine et se mélange à l’eau ou à une autre boisson. Notre fiche ne précise pas s’il s’agit d’un concentré, d’un isolat ou d’un mélange des deux ; l’étiquette du pot le dit.</li><li><strong>Vous comparez les formats</strong> : ISO HD se présente en pot de 2,2 kg, Whey Protein HD en pot de 1,9 kg ; le nombre de portions dépend de la dose imprimée sur chaque pot.</li><li><strong>Vous êtes sensible au lait ou au soja</strong> : notre fiche ISO HD signale du lait et du soja (lécithines) parmi les allergènes, et une whey reste un dérivé du lait dans les deux cas.</li></ul><p>Aucune valeur par portion n’est avancée ici : nos fiches ne publient pas de tableau de valeurs transcrit pour ces pots, et c’est l’étiquette du pot reçu qui fait foi.</p>",
+    faqs: [
+      {
+        question: "Quels produits BPI Sports sont vendus sur Protein.tn ?",
+        answer:
+          "Deux protéines en poudre : ISO HD en pot de 2,2 kg, classée au rayon whey isolate, et Whey Protein HD en pot de 1,9 kg, classée au rayon whey protéine. Les deux sont référencées en arôme Chocolat. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre ISO HD et Whey Protein HD ?",
+        answer:
+          "ISO HD est classée au rayon whey isolate : un isolat est une whey dont la filtration est plus poussée, avec en général moins de lactose, de glucides et de matières grasses qu’une whey concentrée. Whey Protein HD est rangée au rayon whey protéine ; notre fiche ne précise pas sa composition, que l’étiquette du pot indique. Les deux se mélangent à l’eau.",
+      },
+      {
+        question: "ISO HD contient-elle du lait ou du soja ?",
+        answer:
+          "Notre fiche ISO HD signale des allergènes liés au lait et au soja (lécithines) ; pour le lait, rien d’étonnant puisqu’une whey en est un dérivé. Whey Protein HD est elle aussi une whey. En cas d’allergie ou d’intolérance, lisez la liste des ingrédients et les mentions d’allergènes sur l’étiquette du pot reçu, qui fait foi.",
+      },
+      {
+        question: "Comment prendre une protéine BPI Sports ?",
+        answer:
+          "Notre fiche ISO HD indique une dose mélangée à de l’eau, prise après l’entraînement ou en collation entre les repas, selon votre besoin en protéines. Whey Protein HD se mélange de la même manière, à l’eau ou dans une autre boisson. Une whey complète l’alimentation ; elle ne remplace pas les repas.",
+      },
+      {
+        question: "Comment commander BPI Sports en Tunisie ?",
+        answer:
+          "Ajoutez la référence au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "whey-isolate", name: "Autres isolats de whey", url: "/whey-isolate" },
+      { slug: "whey-proteine", name: "D’autres whey à comparer", url: "/whey-proteine" },
+      { slug: "proteines", name: "Toutes les protéines en poudre", url: "/proteines" },
+      { slug: "brands", name: "Comparer BPI Sports aux autres marques", url: "/brands" },
+    ],
+  },
+  "bsn": {
+    metaTitle: "BSN Tunisie | Syntha-6 et Syntha-6 Isolate — Protein.tn",
+    metaDescription:
+      "BSN en Tunisie : Syntha-6 en 1,32 kg et 2,27 kg (trois arômes gourmands en 1,32 kg) et Syntha-6 Isolate en 912 g et 1,82 kg. Comparez formats et arômes.",
+    h1: "BSN Tunisie : Syntha-6 et Syntha-6 Isolate, formats et arômes",
+    introHtml:
+      "<p>La marque <strong>BSN</strong> est représentée sur Protein.tn par une seule gamme, <strong>Syntha-6</strong>, déclinée en quinze références réparties sur deux rayons. Au rayon protéines multi-sources, <strong>Syntha-6</strong> existe en 1,32 kg et en 2,27 kg sous l’intitulé Ultra Premium Protein Matrix : Chocolate Milkshake, Strawberry Milkshake et Cookies &amp; Cream en 1,32 kg, Chocolate Milkshake, Strawberry Milkshake et Vanilla Ice Cream en 2,27 kg. Trois arômes gourmands — Cinnamon Toaster Pastry, Blueberry Pancake et Fruity Cereal — y sont référencés en 1,32 kg sous l’intitulé Protein Powder Drink Mix. Au rayon whey isolate, <strong>Syntha-6 Isolate</strong> se décline en 912 g et en 1,82 kg, avec les trois mêmes arômes dans les deux formats : Chocolate Milkshake, Strawberry Milkshake et Vanilla Ice Cream. Chez nous, BSN se résume donc à de la protéine en poudre : ni créatine, ni gainer, ni pré-workout de la marque au catalogue. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque référence.</p>",
+    howToChooseTitle: "Syntha-6 ou Syntha-6 Isolate : quelle protéine BSN choisir ?",
+    howToChooseBody:
+      "<p>Chez BSN, le choix se fait en trois temps : la base de la poudre, le format, puis l’arôme. <strong>Syntha-6</strong> est classée chez nous au rayon protéines multi-sources, c’est-à-dire une matrice qui associe plusieurs protéines plutôt qu’une whey seule ; le descriptif du fabricant repris sur les fiches Ultra Premium y cite aussi des triglycérides à chaîne moyenne. <strong>Syntha-6 Isolate</strong> est, elle, classée au rayon whey isolate.</p><ul><li><strong>Vous voulez une protéine polyvalente</strong> : Syntha-6, que ce même descriptif présente comme utilisable à tout moment, de jour comme de nuit.</li><li><strong>Vous cherchez une référence du rayon whey isolate</strong> : Syntha-6 Isolate, en 912 g ou en 1,82 kg.</li><li><strong>Vous voulez lire l’étiquette avant de choisir</strong> : les six fiches Syntha-6 Ultra Premium reprennent le tableau de valeurs nutritionnelles et les ingrédients transcrits du fabricant ; les autres fiches BSN n’en publient pas.</li><li><strong>Vous cherchez un arôme précis</strong> : Cookies &amp; Cream et les trois arômes gourmands ne sont référencés chez nous qu’en 1,32 kg, et la Syntha-6 Vanilla Ice Cream qu’en 2,27 kg.</li></ul><p>Côté allergènes, les fiches Ultra Premium déclarent lait et soja en 1,32 kg ; œufs, lait, soja et blé sur Chocolate et Strawberry Milkshake 2,27 kg ; œufs, lait et soja sur Vanilla Ice Cream 2,27 kg, dont la ligne est ambiguë pour le blé. Dans tous les cas, l’étiquette du pot reçu fait foi : lisez-la avant la première prise en cas d’allergie.</p>",
+    faqs: [
+      {
+        question: "Quels produits BSN sont vendus sur Protein.tn ?",
+        answer:
+          "Quinze références Syntha-6 : Syntha-6 en 1,32 kg et 2,27 kg au rayon protéines multi-sources, dont trois arômes gourmands sous l’intitulé Protein Powder Drink Mix, et Syntha-6 Isolate en 912 g et 1,82 kg au rayon whey isolate. Le catalogue ne compte ni créatine, ni gainer, ni pré-workout de la marque. La grille affiche le prix et la disponibilité actuels de chaque référence.",
+      },
+      {
+        question: "Quelle différence entre Syntha-6 et Syntha-6 Isolate ?",
+        answer:
+          "Le rayon d’abord : Syntha-6 est classée en protéines multi-sources, un mélange de plusieurs protéines, alors que Syntha-6 Isolate est classée en whey isolate. Les formats ensuite : 1,32 kg et 2,27 kg pour Syntha-6, 912 g et 1,82 kg pour l’Isolate. Seules les fiches Syntha-6 Ultra Premium reprennent un tableau de valeurs transcrit ; pour l’Isolate, les teneurs se lisent sur l’étiquette du pot.",
+      },
+      {
+        question: "Où lire les valeurs nutritionnelles de Syntha-6 ?",
+        answer:
+          "Sur les six fiches Syntha-6 Ultra Premium, qui reprennent le tableau nutritionnel transcrit du fabricant. La taille de portion et la teneur en protéines y sont identiques ; les calories varient selon l’arôme, et plusieurs autres valeurs d’une fiche à l’autre. Les fiches Protein Powder Drink Mix et Syntha-6 Isolate n’ont pas de tableau transcrit. Dans tous les cas, l’étiquette du pot reçu fait foi.",
+      },
+      {
+        question: "Syntha-6 contient-elle des allergènes ?",
+        answer:
+          "Les fiches Ultra Premium en déclarent plusieurs : lait et soja en 1,32 kg ; œufs, lait, soja et blé sur Chocolate et Strawberry Milkshake 2,27 kg ; œufs, lait et soja sur Vanilla Ice Cream 2,27 kg, dont la ligne est ambiguë pour le blé. Les autres fiches BSN ne listent pas d’ingrédients : en cas d’allergie, lisez l’étiquette du pot avant la première prise.",
+      },
+      {
+        question: "Comment commander BSN en Tunisie ?",
+        answer:
+          "Choisissez la référence, le format et l’arôme, ajoutez-la au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles de chaque référence BSN.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "proteines-multi-sources", name: "Comparer les protéines multi-sources", url: "/proteines-multi-sources" },
+      { slug: "whey-isolate", name: "Autres whey isolate du catalogue", url: "/whey-isolate" },
+      { slug: "proteines", name: "Tout le rayon protéines", url: "/proteines" },
+      { slug: "brands", name: "Comparer BSN aux autres marques", url: "/brands" },
+    ],
+  },
+  "centrum": {
+    metaTitle: "Centrum Tunisie | Men, Women & Menopause Support",
+    metaDescription:
+      "Centrum en Tunisie : Men Multivitamin et Women Multivitamin en 65 comprimés, Menopause Support, Restful Sleep en 28 comprimés. Livraison 24–72h.",
+    h1: "Centrum Tunisie : Men, Women Multivitamin et Menopause Support",
+    introHtml:
+      "<p><strong>Centrum en Tunisie</strong> tient en trois références sur Protein.tn, toutes en comprimés, aucune en poudre, et toutes classées dans la catégorie Santé &amp; vitalité. Deux sont des multivitamines qui portent dans leur nom le public visé : <strong>Centrum Men Multivitamin</strong> et <strong>Centrum Women Multivitamin</strong>, chacune en 65 comprimés, au rayon Vitamines. Le troisième produit, <strong>Centrum Menopause Support, Restful Sleep</strong>, en 28 comprimés, porte un nom qui le destine aux femmes en période de ménopause ; il figure au rayon Sommeil &amp; stress. Aucune déclinaison d’arôme n’est proposée et chaque référence n’existe ici qu’en un seul conditionnement ; la gamme se lit donc par personne : homme, femme ou femme en ménopause. Nos fiches ne transcrivent pas encore la composition de ces trois références : la composition et les conseils d’utilisation imprimés sur l’emballage d’origine font foi. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque référence.</p>",
+    howToChooseTitle: "Centrum Men, Women ou Menopause Support : lequel choisir ?",
+    howToChooseBody:
+      "<p>Aucune référence Centrum n’est déclinée en plusieurs arômes et chacune n’est proposée ici qu’en un seul conditionnement : le choix se fait d’abord sur la personne qui la prendra, puis sur ce qu’elle prend déjà à côté.</p><ul><li><strong>Pour un homme</strong> : <strong>Centrum Men Multivitamin</strong>, en 65 comprimés, rangé au rayon Vitamines.</li><li><strong>Pour une femme</strong> : <strong>Centrum Women Multivitamin</strong>, également en 65 comprimés et au même rayon. Men et Women sont deux références distinctes, chacune sous son propre nom et avec sa propre étiquette : lisez celle de la version que vous choisissez.</li><li><strong>Pendant la ménopause</strong> : <strong>Centrum Menopause Support, Restful Sleep</strong>, en 28 comprimés, classé au rayon Sommeil &amp; stress. Son nom annonce un usage ciblé, et nous ne lui attribuons aucun effet. Lisez la composition et les conseils d’utilisation imprimés sur l’emballage, et demandez conseil à votre pharmacien ou à votre médecin, surtout si vous suivez un traitement.</li><li><strong>Si vous prenez déjà un autre complément de vitamines ou de minéraux</strong> : comparez les étiquettes avant de les associer, pour savoir ce que vous cumulez.</li></ul><p>Nos fiches ne publient pas de tableau de valeurs pour ces trois références : aucun dosage n’est cité ici, et la composition comme les conseils d’utilisation sont ceux imprimés sur l’emballage d’origine. Un complément alimentaire ne remplace pas une alimentation variée et équilibrée.</p>",
+    faqs: [
+      {
+        question: "Quels produits Centrum sont vendus sur Protein.tn ?",
+        answer:
+          "Trois références, toutes en comprimés : Centrum Men Multivitamin et Centrum Women Multivitamin, chacune en 65 comprimés au rayon Vitamines, puis Centrum Menopause Support, Restful Sleep en 28 comprimés au rayon Sommeil & stress. Aucune n’est proposée en poudre, ni en plusieurs arômes. La grille de produits de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre Centrum Men et Centrum Women ?",
+        answer:
+          "Ce sont deux références distinctes, vendues sous deux noms différents : Men pour les hommes, Women pour les femmes, toutes deux en 65 comprimés au rayon Vitamines. Nos fiches ne transcrivent pas encore leur composition : lisez l’étiquette de chacune, avec la composition et les conseils d’utilisation imprimés sur l’emballage d’origine. Choisissez la version qui correspond à la personne qui la prendra.",
+      },
+      {
+        question: "Que contient un comprimé Centrum ?",
+        answer:
+          "Nous n’avançons aucun chiffre ici : aucune des trois fiches Centrum ne publie de tableau de valeurs relevé sur l’emballage. La composition et les conseils d’utilisation imprimés sur l’emballage d’origine font foi, y compris pour le nombre de comprimés à prendre. Respectez la dose indiquée et tenez compte des autres compléments que vous prenez déjà.",
+      },
+      {
+        question: "À qui s’adresse Centrum Menopause Support, Restful Sleep ?",
+        answer:
+          "Son nom indique qu’il vise les femmes en période de ménopause, et Protein.tn le classe au rayon Sommeil & stress ; l’emballage contient 28 comprimés. Nous ne lui attribuons aucun effet. Lisez la composition et les conseils d’utilisation imprimés sur l’emballage, et demandez conseil à votre pharmacien ou à votre médecin, en particulier si vous suivez un traitement ou prenez d’autres compléments.",
+      },
+      {
+        question: "Comment commander Centrum en Tunisie ?",
+        answer:
+          "Ajoutez la référence choisie au panier si elle est disponible, puis renseignez votre adresse de livraison. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "vitamines", name: "Comparer les multivitamines homme et femme", url: "/vitamines" },
+      { slug: "sommeil-stress", name: "Compléments du rayon sommeil et stress", url: "/sommeil-stress" },
+      { slug: "sante-vitalite", name: "Santé et vitalité : tous les rayons", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer Centrum aux autres marques", url: "/brands" },
+    ],
+  },
+  "goli-nutrition": {
+    metaTitle: "Goli Nutrition Tunisie | Ashwagandha & Sleep Gummies",
+    metaDescription:
+      "Goli Nutrition en Tunisie : Ashwagandha Gummies, Dreamy Sleep et Sleep Gummies, Pre+Post+Probiotics et Women’s Complete Multi, en gommes à mâcher.",
+    h1: "Goli Nutrition Tunisie : ashwagandha, sommeil et probiotiques en gommes",
+    introHtml:
+      "<p>Sur Protein.tn, toute la gamme <strong>Goli Nutrition</strong> se prend en gomme à mâcher : les cinq références de cette page sont des gummies, vendus en pots de 60 gommes, à l’exception de <strong>Sleep Gummies</strong> en 50 gommes. Notre catalogue ne compte ni poudre, ni gélule, ni protéine de la marque ; la gamme est rangée par besoin, dans quatre rayons de la catégorie Santé &amp; vitalité. <strong>Ashwagandha Gummies</strong> est classé au rayon Ashwagandha et repose, d’après notre fiche, sur un extrait de racine KSM-66. Le rayon Sommeil &amp; stress réunit deux références, <strong>Dreamy Sleep Gummies</strong> et <strong>Sleep Gummies</strong>. <strong>Pre+Post+Probiotics Gummies</strong> associe prébiotiques, probiotiques et postbiotiques dans une même gomme, au rayon Probiotiques. Enfin, <strong>Women’s Complete Multi Gummies</strong> est une multivitamine pensée pour les femmes, classée au rayon Vitamines. Aucun arôme n’est à choisir : une seule version par référence. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque pot.</p>",
+    howToChooseTitle: "Quelles gommes Goli Nutrition choisir ?",
+    howToChooseBody:
+      "<p>Les cinq références sont des gommes à mâcher : le choix se fait donc par besoin, puis par composition. Aucune teneur par portion n’est avancée ici ; l’étiquette du pot reçu fait foi.</p><ul><li><strong>Ashwagandha Gummies</strong> (60 gommes) : un extrait de racine d’ashwagandha KSM-66. La fiche indique 2 gommes deux fois par jour, soit quinze jours par pot.</li><li><strong>Dreamy Sleep Gummies</strong> (60) ou <strong>Sleep Gummies</strong> (50) : deux références distinctes du même rayon. Les données relevées pour Dreamy Sleep citent de la mélatonine et des extraits de mélisse, de camomille et de passiflore ; la composition de Sleep Gummies n’est pas encore relevée sur notre fiche.</li><li><strong>Pre+Post+Probiotics Gummies</strong> (60 gommes) : fibres XOS, souche Bacillus subtilis DE111 et postbiotiques (Lactobacillus paracasei MCC1849 résistant à la chaleur), à raison de 3 gommes par jour selon la fiche.</li><li><strong>Women’s Complete Multi Gummies</strong> (60 gommes) : 13 vitamines et 5 minéraux, dont la biotine, qui contribue au maintien de cheveux et d’une peau normaux ; 2 gommes par jour, trente jours par pot.</li></ul><p>Ashwagandha, Dreamy Sleep et Women’s Complete Multi contiennent tous trois de la vitamine D2 : si vous en associez deux, additionnez les apports indiqués sur les étiquettes. Avant de prendre une plante ou de la mélatonine, en cas de traitement, de grossesse ou d’allaitement, demandez conseil à votre pharmacien ou à votre médecin.</p>",
+    faqs: [
+      {
+        question: "Quels produits Goli Nutrition sont vendus sur Protein.tn ?",
+        answer:
+          "Cinq références, toutes en gommes à mâcher : Ashwagandha Gummies, Dreamy Sleep Gummies, Pre+Post+Probiotics Gummies et Women’s Complete Multi Gummies en pots de 60 gommes, et Sleep Gummies en 50 gommes. Elles se répartissent entre les rayons Ashwagandha, Sommeil & stress, Probiotiques et Vitamines. La grille de cette page affiche l’état réel de chacune.",
+      },
+      {
+        question: "Quelle différence entre Dreamy Sleep Gummies et Sleep Gummies ?",
+        answer:
+          "Le format d’abord : 60 gommes pour Dreamy Sleep, 50 pour Sleep Gummies. Les données relevées pour Dreamy Sleep citent de la mélatonine et des extraits de mélisse, de camomille et de passiflore, alors que la composition de Sleep Gummies n’est pas encore relevée sur notre fiche. Comparez les deux étiquettes, et demandez conseil à votre pharmacien ou médecin en cas de traitement.",
+      },
+      {
+        question: "Que contiennent les Pre+Post+Probiotics Gummies ?",
+        answer:
+          "Trois éléments dans la même gomme, d’après les données relevées : des fibres prébiotiques (xylooligosaccharides, ou XOS), une souche probiotique, Bacillus subtilis DE111, et des postbiotiques (Lactobacillus paracasei MCC1849 résistant à la chaleur). La fiche indique 3 gommes une fois par jour, soit vingt jours pour un pot de 60. Les quantités par portion figurent sur l’étiquette.",
+      },
+      {
+        question: "Les gommes Goli Nutrition contiennent-elles de la gélatine ou du sucre ?",
+        answer:
+          "Les listes d’ingrédients relevées pour Ashwagandha, Pre+Post+Probiotics et Women’s Complete Multi utilisent de la pectine, pas de gélatine, et leurs deux premiers ingrédients sont le sirop de tapioca et le sucre de canne : ce sont des gommes sucrées. Pour Dreamy Sleep et Sleep Gummies, vérifiez la liste sur le pot. Rangez-les hors de portée des enfants.",
+      },
+      {
+        question: "Comment commander Goli Nutrition en Tunisie ?",
+        answer:
+          "Ajoutez la référence au panier si elle est disponible, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "sommeil-stress", name: "Sommeil & stress : autres formules", url: "/sommeil-stress" },
+      { slug: "ashwagandha", name: "Le rayon ashwagandha", url: "/ashwagandha" },
+      { slug: "probiotiques", name: "Le rayon probiotiques", url: "/probiotiques" },
+      { slug: "brands", name: "Comparer Goli Nutrition aux autres marques", url: "/brands" },
+    ],
+  },
+  "iberogast": {
+    metaTitle: "Iberogast Tunisie | Dual Action Digestive Relief",
+    metaDescription:
+      "Iberogast en Tunisie : Dual Action Digestive Relief, 20 ml ou 30 capsules molles, rayon Digestion & transit. Livraison 24–72h, paiement à la livraison.",
+    h1: "Iberogast Tunisie : Dual Action Digestive Relief en 20 ml ou en capsules",
+    introHtml:
+      "<p>Sur Protein.tn, la marque <strong>Iberogast</strong> tient en un seul nom de produit, <strong>Dual Action Digestive Relief</strong>, proposé en deux références : un <strong>format de 20 ml</strong> et un conditionnement de <strong>30 capsules molles</strong>. Les deux sont rangées au rayon Digestion &amp; transit, qui dépend du thème Immunité &amp; digestion dans la catégorie Santé &amp; vitalité. Ce n’est ni une protéine ni un produit d’entraînement, et aucun arôme n’est proposé pour l’une ou l’autre référence : le seul choix à faire porte sur le format. Iberogast imprime la composition et les conseils d’utilisation sur l’emballage d’origine ; nos fiches ne les reprennent pas encore, car les valeurs nutritionnelles n’y sont ajoutées qu’après lecture de l’étiquette imprimée par la marque. Avant une première prise, demandez conseil à votre pharmacien ou à votre médecin. La grille ci-dessus affiche le prix et la disponibilité actuels de chaque format.</p>",
+    howToChooseTitle: "Iberogast 20 ml ou 30 capsules molles : que choisir ?",
+    howToChooseBody:
+      "<p>Les deux références portent le même nom, <strong>Dual Action Digestive Relief</strong>, sont classées au même rayon et ne sont déclinées en aucun arôme : sur notre catalogue, seul le format les distingue. Voici ce que nos fiches permettent d’affirmer, et ce qu’elles ne permettent pas.</p><ul><li><strong>Format 20 ml</strong> : sa contenance est exprimée en millilitres, pas en nombre d’unités. Le nombre de prises qu’il représente dépend des conseils d’utilisation imprimés par Iberogast, que nos fiches ne transcrivent pas.</li><li><strong>30 capsules molles</strong> : la quantité est comptée en unités, ce qui donne un repère immédiat sur le contenu ; la dose par prise reste celle qu’indique Iberogast, à lire sur l’emballage.</li><li><strong>Aucune équivalence de dose</strong> : ni composition ni valeur nutritionnelle n’est publiée pour l’un ou l’autre format, et nous ne présentons donc pas 20 ml et 30 capsules comme interchangeables.</li></ul><p>Le choix tient d’abord à la forme que vous préférez, et le reste se lit sur la référence reçue. Pour une question sur l’une de ces deux références, l’équipe de Protein.tn, installée à Sousse, vous répond.</p>",
+    faqs: [
+      {
+        question: "Quels produits Iberogast sont vendus sur Protein.tn ?",
+        answer:
+          "Deux références vendues sous le même nom, Iberogast Dual Action Digestive Relief : un format de 20 ml et un conditionnement de 30 capsules molles, toutes deux au rayon Digestion & transit. Ce sont les deux seules présentations d’Iberogast au catalogue, sans déclinaison d’arôme ; la grille de cette page affiche le prix et la disponibilité actuels de chacune.",
+      },
+      {
+        question: "Le format 20 ml et les capsules ont-ils la même composition ?",
+        answer:
+          "Ils portent le même nom, mais nos fiches ne transcrivent la composition d’aucun des deux : les valeurs nutritionnelles n’y sont ajoutées qu’après lecture de l’étiquette imprimée par Iberogast, ce qui n’est pas encore fait. Nous n’avançons donc ni équivalence ni dosage ; la composition qui fait foi est celle imprimée sur l’emballage du format que vous recevez.",
+      },
+      {
+        question: "Iberogast est-il un complément pour sportifs ?",
+        answer:
+          "Non. Les deux références sont classées au rayon Digestion & transit, rattaché au thème Immunité & digestion de la catégorie Santé & vitalité, et non dans les rayons protéines ou performance. Nous ne leur attribuons aucun effet sur l’entraînement, la récupération ou la composition corporelle, et cette page ne les présente pas comme une aide à la pratique sportive.",
+      },
+      {
+        question: "Peut-on prendre Iberogast pendant la grossesse ou avec un traitement ?",
+        answer:
+          "Nos fiches ne tranchent pas cette question, et cette page non plus. En cas de grossesse, d’allaitement, pour un enfant ou si vous suivez un traitement, demandez conseil à votre pharmacien ou à votre médecin avant toute prise, en lui présentant la composition imprimée par Iberogast sur la référence que vous envisagez.",
+      },
+      {
+        question: "Comment commander Iberogast en Tunisie ?",
+        answer:
+          "Choisissez le format, 20 ml ou 30 capsules molles, ajoutez-le au panier s’il est disponible, puis renseignez votre adresse de livraison. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "digestion", name: "Tout le rayon Digestion & transit", url: "/digestion" },
+      { slug: "immunite", name: "Tout le thème Immunité & digestion", url: "/immunite" },
+      { slug: "sante-vitalite", name: "La catégorie Santé & vitalité au complet", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer Iberogast aux autres marques", url: "/brands" },
+    ],
+  },
+  "one-a-day": {
+    metaTitle: "One-A-Day Tunisie | Men’s Multi, Women’s Multi et 50+",
+    metaDescription:
+      "One-A-Day en Tunisie : Men’s Multi, Women’s Multi, formules 50+ et Proactive 65+ en comprimés, VitaCraves et Multi Gummy en gommes à mâcher.",
+    h1: "One-A-Day Tunisie : Men’s Multi, Women’s Multi et formules 50+",
+    introHtml:
+      "<p>Sur Protein.tn, <strong>One-A-Day</strong> est une marque consacrée uniquement aux <strong>multivitamines</strong> : ses 15 références sont toutes classées au rayon Vitamines, dans la catégorie Santé &amp; vitalité. La gamme se lit selon deux axes. D’abord le public : <strong>Men’s Multi</strong> (100 et 200 comprimés) et <strong>Women’s Multi</strong> (60 et 200 comprimés), leurs versions <strong>Men’s 50+ Multi</strong> (100 et 200 comprimés) et <strong>Women’s 50+ Multi</strong> (65 et 100 comprimés), <strong>Women’s Petites Complete Multivitamin</strong> en 160 comprimés, et <strong>Proactive 65+ For Men &amp; Women</strong> en 150 comprimés, qui s’adresse aux hommes comme aux femmes. Ensuite le format : cinq références se présentent en <strong>gommes à mâcher</strong> — <strong>Adult Multi Gummy</strong> (150 gommes), elle aussi sans distinction homme/femme, <strong>Men’s 50+ Multi Gummy</strong> et <strong>Women’s 50+ Multi Gummy</strong> (110 gommes), <strong>VitaCraves</strong> Men’s et Women’s (170 gommes). La grille ci-dessus affiche le prix et la disponibilité de chacune.</p>",
+    howToChooseTitle: "Quelle multivitamine One-A-Day choisir ?",
+    howToChooseBody:
+      "<p>Les quinze références One-A-Day se distinguent selon quatre critères, à vérifier sur l’emballage.</p><ul><li><strong>Le public</strong> : Men’s, Women’s ou mixte. Les compositions transcrites diffèrent : l’étiquette de Men’s Multi 200 comprimés précise qu’il ne contient pas de fer, alors que Women’s Petites Complete Multivitamin liste du fumarate ferreux.</li><li><strong>L’âge</strong> : parmi les formules ciblées par âge, les versions 50+ existent séparément pour hommes et pour femmes ; Proactive 65+ est la seule commune aux deux, en mini-comprimés et formulée sans vitamine K.</li><li><strong>Le format</strong> : selon les conseils d’utilisation repris sur les fiches de Men’s Multi 200, Men’s 50+ Multi 100 et Women’s 50+ Multi 100 (un par jour), de Petites et de Proactive 65+ (deux par jour), ces comprimés se prennent avec un repas et sont réservés aux adultes. Les gommes VitaCraves se mâchent à deux par jour dès 12 ans et contiennent sucre et blé. La gélatine figure dans les VitaCraves mais aussi dans quatre de ces cinq comprimés : si vous l’évitez, lisez l’étiquette.</li><li><strong>La durée</strong> : à deux comprimés par jour, 160 comprimés couvrent 80 jours ; à un comprimé par jour, un flacon de 100 couvre 100 jours.</li></ul><p>Une partie des fiches produits reprend l’étiquette transcrite du fabricant, d’autres pas encore. Cette page ne cite aucune teneur chiffrée : pour chaque référence, l’étiquette du flacon fait foi. Un complément ne remplace pas une alimentation variée. En cas de grossesse, d’allaitement ou de traitement, demandez conseil à votre médecin ou à votre pharmacien.</p>",
+    faqs: [
+      {
+        question: "Quelles références One-A-Day figurent au catalogue de Protein.tn ?",
+        answer:
+          "Quinze références, toutes au rayon Vitamines : Men’s Multi, Women’s Multi, Men’s 50+ Multi, Women’s 50+ Multi, Women’s Petites Complete Multivitamin et Proactive 65+ en comprimés, puis Adult Multi Gummy, Men’s 50+ et Women’s 50+ Multi Gummy et VitaCraves Men’s et Women’s en gommes à mâcher. La grille de cette page indique la disponibilité réelle de chacune.",
+      },
+      {
+        question: "Quelle différence entre One-A-Day Men’s Multi et Women’s Multi ?",
+        answer:
+          "Ce sont deux références distinctes : Men’s Multi en 100 et 200 comprimés, Women’s Multi en 60 et 200 comprimés. L’étiquette transcrite sur la fiche de Men’s Multi 200 comprimés indique un comprimé par jour avec un repas et aucun fer. Aucune des deux fiches de Women’s Multi ne reprend encore son étiquette : sa composition se lit sur le flacon, qui fait foi.",
+      },
+      {
+        question: "Comprimés ou gommes One-A-Day : que choisir ?",
+        answer:
+          "Les cinq comprimés dont nos fiches reprennent les conseils d’utilisation — Men’s Multi 200, Men’s 50+ Multi 100, Women’s 50+ Multi 100, Petites et Proactive 65+ — se prennent avec un repas et sont réservés aux adultes. Les VitaCraves se mâchent à deux par jour dès 12 ans et contiennent sucre et blé. La gélatine figure dans les VitaCraves et dans quatre de ces comprimés : lisez l’étiquette.",
+      },
+      {
+        question: "One-A-Day 50+ ou Proactive 65+ : quelle différence ?",
+        answer:
+          "Les versions 50+ existent séparément pour hommes et pour femmes, en comprimés comme en gommes. Parmi ces formules ciblées par âge, Proactive 65+ For Men & Women est la seule commune aux deux : des mini-comprimés, deux par jour avec un repas, formulés sans vitamine K. Si vous suivez un traitement, demandez conseil à votre médecin ou à votre pharmacien avant de choisir.",
+      },
+      {
+        question: "Comment commander One-A-Day en Tunisie ?",
+        answer:
+          "Ajoutez la formule et la contenance voulues au panier si elles sont disponibles, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "vitamines", name: "Multivitamines en comprimés et en gommes", url: "/vitamines" },
+      { slug: "mineraux", name: "Minéraux vendus seuls", url: "/mineraux" },
+      { slug: "sante-vitalite", name: "Le rayon santé et vitalité au complet", url: "/sante-vitalite" },
+      { slug: "brands", name: "Comparer One-A-Day aux autres marques", url: "/brands" },
+    ],
+  },
+  "perfect-sports": {
+    metaTitle: "PERFECT Sports Tunisie | Diesel, Vegan Diesel, Ultra Fuel",
+    metaDescription:
+      "PERFECT Sports sur Protein.tn : Diesel Whey Isolate en 908 g et 2,27 kg, Vegan Diesel 700 g, Ultra Fuel 1,82 kg, iPrep, BCAA Hyper Clear et Creatine.",
+    h1: "PERFECT Sports Tunisie : Diesel Whey Isolate, Vegan Diesel et Ultra Fuel",
+    introHtml:
+      "<p>Sur Protein.tn, <strong>PERFECT Sports</strong> compte 27 références, dont 18 pour une seule famille : <strong>Diesel, New Zealand Whey Isolate</strong>, classée au rayon whey isolate. Ces 18 références couvrent 13 arômes répartis entre un pot de 908 g et un grand pot de 2,27 kg, dont Mocha Cappuccino et deux saveurs bubble tea. Le reste de la gamme se range par usage : <strong>Vegan Diesel</strong> 700 g en trois arômes au rayon protéines végétales, <strong>Ultra Fuel, Grass-Fed Whey Protein</strong> 1,82 kg en Vanilla Ice Cream et Triple Chocolate au rayon whey protéine, puis trois produits d’entraînement : <strong>iPrep, Advanced Pre-Workout</strong> 300 g (Fruit Punch, Orange Gummy Bears), <strong>BCAA Hyper Clear</strong> 310 g (Peach Rings Candy) et <strong>Creatine</strong> 400 g sans arôme. Le choix se joue donc surtout entre trois protéines et, pour Diesel, entre deux tailles de pot ; la grille ci-dessus affiche le prix et la disponibilité actuels de chaque référence.</p>",
+    howToChooseTitle: "Diesel, Ultra Fuel ou Vegan Diesel : quelle protéine PERFECT Sports ?",
+    howToChooseBody:
+      "<p>Les trois protéines de la marque se distinguent d’abord par leur source. Certaines de nos fiches reprennent le tableau nutritionnel de l’étiquette, mais les valeurs changent d’un arôme et d’un produit à l’autre : nous ne citons donc aucun chiffre par portion ici, et l’étiquette du pot reçu fait foi.</p><ul><li><strong>Diesel, New Zealand Whey Isolate</strong> : une whey isolate. Les ingrédients repris sur plusieurs de nos fiches 2,27 kg mentionnent un isolat de lactosérum de Nouvelle-Zélande édulcoré à l’extrait de stévia. Le pot de 908 g permet d’essayer un arôme, le grand pot offre le plus d’arômes.</li><li><strong>Ultra Fuel, Grass-Fed Whey Protein</strong> 1,82 kg : une whey à base de concentré de protéines de lactosérum, édulcorée au sucralose d’après les ingrédients repris sur nos deux fiches.</li><li><strong>Vegan Diesel</strong> 700 g : d’après nos fiches Vanilla Ice Cream et Chocolate Ice Dream, un mélange de cinq protéines végétales sans ingrédient laitier. La seconde signale toutefois un établissement qui traite aussi des produits laitiers.</li><li><strong>Creatine, iPrep et BCAA Hyper Clear</strong> : ils accompagnent une protéine sans la remplacer. Les fiches Creatine et iPrep renvoient à l’emballage d’origine pour la composition et le mode d’emploi.</li></ul><p>Diesel et Ultra Fuel contiennent du lait. Vérifiez toujours les allergènes sur l’étiquette et, pour l’iPrep, lisez la composition avant la première prise.</p>",
+    faqs: [
+      {
+        question: "Quels produits PERFECT Sports sont vendus sur Protein.tn ?",
+        answer:
+          "Six familles, 27 références : Diesel, New Zealand Whey Isolate en 908 g et 2,27 kg, Vegan Diesel 700 g, Ultra Fuel, Grass-Fed Whey Protein 1,82 kg, iPrep, Advanced Pre-Workout 300 g, BCAA Hyper Clear 310 g et Creatine 400 g sans arôme. La grille de cette page affiche l’état réel de chaque référence.",
+      },
+      {
+        question: "Diesel 908 g ou 2,27 kg : qu’est-ce qui change ?",
+        answer:
+          "Outre la taille du pot, l’éventail d’arômes. French Vanilla, Banana, Cookies 'n Cream, Chocolate Peanut Butter et Triple Rich Chocolate ont deux références chacun ; Salted Caramel et Milk Chocolate ne sont listés qu’en 908 g ; Chocolate, Strawberry, Pineapple Mango, Mocha Cappuccino et les deux bubble tea qu’en 2,27 kg. Nos fiches 908 g ne reprennent aucun tableau nutritionnel.",
+      },
+      {
+        question: "Vegan Diesel contient-il du lait ?",
+        answer:
+          "Nos fiches Vanilla Ice Cream et Chocolate Ice Dream listent des protéines de fève, de pois, de riz complet germé, de graine de courge et de pomme de terre, sans ingrédient laitier ; leur lait de coco est végétal. La seconde signale toutefois un établissement qui traite aussi des produits laitiers (lactosérum), du sésame et du soja. En cas d’allergie au lait, lisez l’étiquette.",
+      },
+      {
+        question: "Combien de protéines dans une portion de Diesel ou d’Ultra Fuel ?",
+        answer:
+          "Certaines fiches reprennent le tableau de l’étiquette, mais les valeurs changent d’un arôme à l’autre et la mesure n’est pas la même pour Diesel et pour Ultra Fuel. Nous n’avançons donc aucun chiffre général ici : la taille de la mesure, la teneur en protéines et le nombre de portions imprimés sur le pot que vous recevez font foi.",
+      },
+      {
+        question: "Comment commander PERFECT Sports en Tunisie ?",
+        answer:
+          "Choisissez la référence, le format et l’arôme, ajoutez-les au panier s’ils sont disponibles, puis renseignez votre adresse. Protein.tn livre partout en Tunisie sous 24–72h selon la destination, avec paiement à la livraison. Le prix et la disponibilité affichés dans la grille de cette page sont les valeurs actuelles.",
+      },
+    ],
+    relatedCategories: [
+      { slug: "whey-isolate", name: "Comparer Diesel aux autres whey isolate", url: "/whey-isolate" },
+      { slug: "proteines-vegetales", name: "Protéines végétales : comparer les mélanges", url: "/proteines-vegetales" },
+      { slug: "whey-proteine", name: "Whey protéines : élargir la comparaison", url: "/whey-proteine" },
+      { slug: "brands", name: "Comparer PERFECT Sports aux autres marques", url: "/brands" },
+    ],
+  },
 });
 
 export function getBrandSeoEntry(slug: string | undefined): BrandSeoEntry | null {
