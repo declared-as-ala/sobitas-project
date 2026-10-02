@@ -2,3 +2,6 @@
 # The land workflow dispatches each allowed line as a vps-run.yml task, then empties this file.
 # Allowed: seo-copy-dry-run seo-copy-apply seo-legacy-reindex-dry-run seo-legacy-reindex-apply seo-legacy-copy-dry-run seo-legacy-copy-apply catalog-reindex seo-robots-audit seo-robots-fix catalog-status reviews-publish-backlog-dry-run
 # Consumed on 2026-09-23T09:55Z: seo-copy-apply 
+# 2026-10-02: nothing queued on purpose. Both of today's changes are frontend/tooling and ship
+# with deploy-frontend.yml; no resources/seo/products entry was added (30/09 verified both honest
+# candidate sets already have entries, and today's 128 no-FAQ P1s are the out-of-stock long tail).

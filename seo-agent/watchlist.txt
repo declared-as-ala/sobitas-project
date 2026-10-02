@@ -127,3 +127,25 @@
 /blog/proteine-whey-tunisie-guide-complet-2025
 /blog/whey-proteine-prix-en-tunisie-comparatif-et-meilleurs-offres
 /blog/quelles-sont-les-meilleures-proteines
+
+# ── 02/10/2026 verification: the injector must not duplicate a CURATED link block ──────────────
+# MEASURED 02/10 on all 223 published articles, after the 30/09 deploy had landed: CMS-body
+# duplicates 0 (the 30/09 fix holds perfectly), but 30 injected links in 25 articles duplicated a
+# curated block — 29 against the "Lire aussi" chips (blogSeoConfig.internalLinks) and 1 against the
+# "Voir aussi sur la boutique" nav (article.related_shop_categories). /whey-proteine 13,
+# /proteines 9. 14 of the 25 were at the 6-link cap, so the duplicate displaced a first link.
+# AFTER this deploy, as Googlebot, inside <article>, for each URL below: no destination may carry
+# BOTH an `article-inline-link` anchor and an anchor from either curated block. The four below are
+# at the cap, so each must show a sixth destination that is new rather than one link fewer.
+# If the site-wide count is still 30, the deploy did not carry the build and that is the day's job.
+/blog/meilleure-proteine-whey-2026
+/blog/whey-proteine-tunisie-guide-ultime-pour-choisir-la-meilleure-proteine
+/blog/proteine-whey-tunisie-tout-ce-que-vous-devez-savoir-avant-d-acheter
+/blog/serious-mass-le-gainer-ultime-pour-une-prise-de-masse-rapide
+
+# ── 02/10/2026: the Gold Standard pair — a dead SKU holds the money query's slot ───────────────
+# `whey gold standard prix tunisie` (84 impr at 8.4, 0 clicks, 22/09 GSC): the URL in the Tunisian
+# SERP set is the 908 g at 155 DT BackOrder, while the buyable 2,27 kg (379 DT, InStock) is absent.
+# Both verified live 02/10 from their own Offer.availability. Watch for the day the 908 g restocks
+# or the owner adds a Redirections row — and watch that the 2,27 kg stays InStock and self-canonical.
+/whey-proteine/whey-gold-standard-908g

@@ -6,6 +6,27 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 02/10/2026:** live audit `--sample=40` 82 URLs exit 1 on the **same transient as 30/09**
+(`/sante-vitalite` HTTP 500 on the first of its two watchlist rows, a clean 200 on the second, 12/12
+clean on immediate re-fetch and clean at bursts of 1/4/8) — so the **checker** was fixed, not the
+route: `audit-live.mjs` now gives a 429/5xx **one confirming re-fetch** (4xx still P0 on the first
+look, a re-confirmed 5xx still P0 and still exit 1, proved against a local fake origin), and the
+Friday `--sample=120` sweep then came back **exit 0** with the page recorded P2. `parity-check.mjs`
+**0** editorial bot-only words on all five money pages. `title-case-check.mjs --listings=60` **exit 0,
+contract holds on all six rules**. Sitemaps **12,234**, Δ **−1** vs 29/09, every product and listing
+file Δ 0; `pages` 6 → 5 is the owner's `4a046d4` retiring `/creatine-monohydrate-tunisie` (verified
+live: 308 → `/creatine`; `/marques` 308 → `/brands`). **There was no 01/10 run** — no branch, no log,
+no revert; nothing half-landed. Today's theme finished 30/09's: the 30/09 body-seeding fix **holds
+perfectly (7 → 0 CMS-body duplicates)**, and the residue it exposed is a different defect — the
+injector was duplicating the page's own **curated** link blocks, 30 links in 25 articles, **22 of
+them on `/whey-proteine` and `/proteines`**, 14 of the articles at the link cap. Fixed by subtracting
+all three curated sources (bridge + "Lire aussi" chips + "Voir aussi sur la boutique" nav) from the
+target list. **A dead SKU answers the money query — four for four** now: Gold Standard **908 g,
+155 DT `BackOrder`** holds the slot while our **2,27 kg, 379 DT `InStock`** is absent, and two
+competitors price that same 2,27 kg at **299 DT**. Operating lesson: **`WebSearch` in `standard` mode
+returns no Tunisian set for this market — SERP looks must use `extended`.** Google: **September 2026
+spam update still rolling — attribution mode (day 9).**
+
 **State on 29/09/2026:** live audit `--sample=40` 80 URLs **0 P0** (exit 0); the 28/09
 streaming-metadata P0 is **confirmed fixed on production** — `<title>` now sits at byte ~4,580
 inside `</head>` (~15,000) on `/proteines`, `/prise-de-masse`, `/blog` and `/sante-vitalite`, was
@@ -258,6 +279,11 @@ record the page-level position first — never act on a query average.
   the refs are safe to delete; the exact command is in `log/2026-09-28.md` "For the owner". A
   branch dated later than 21/09 sorts ahead of it, so this does not block a normal day — it wastes
   a scheduled run every 20 minutes and buries a real hand-off if one ever happens.
+  **Re-confirmed 02/10 — fifth consecutive day, and five more hand-offs since the 30/09 log**
+  (01/10 at 00:29Z, 11:21Z, 17:29Z and 21:59Z; 02/10 at 01:32Z), each writing a 25-line refusal into
+  `log/land/`. `claude/seo-daily-2026-09-22` still exists on **both** `origin` and the pad at
+  `470de00`, and six stale pad branches sit at the same SHA. The routine will not delete a ref on a
+  repo it is told only to push to, so this stays owner-only.
   **Re-confirmed 30/09 and getting worse: `claude/seo-daily-2026-09-22` now exists on `origin`
   TOO**, not only on the pad, both at `470de00`. Three more hand-offs since the 29/09 log (29/09
   16:54Z, 29/09 21:15Z, 30/09 00:33Z), each writing a 25-line refusal into `log/land/`. Still one
@@ -330,7 +356,7 @@ record the page-level position first — never act on a query average.
   a normaliser (origin / trailing slash / query / case). Five-case harness: 3 failures on the old
   code, 0 on the new, and both regression guards (clean body, external href) identical.
   **Verify on production tomorrow**: re-run the 223-article measurement and expect 0.
-- [ ] **A dead SKU answers the money query — now three confirmed instances, all `(needs: owner)`.**
+- [ ] **A dead SKU answers the money query — now FOUR confirmed instances, all `(needs: owner)`.**
   Same shape each time: the URL Google shows is unbuyable and the buyable sibling is absent from the
   set. (a) `lipo 6 black` → legacy `/shop/lipo-6-black-60-caps`, one 301, **139 DT `BackOrder`**,
   while `…-ultra-concentrate-60caps` is **119 DT `InStock`** (28/09). (b) `serious mass … tunisie
@@ -342,6 +368,14 @@ record the page-level position first — never act on a query average.
   copy change the routine can make. Do NOT noindex either side (standing decision). The repo half is
   already done on (b): the 2,7 kg page renders a "Disponible immédiatement" block linking the
   5,45 kg (verified live 30/09).
+  (d) **`whey gold standard prix tunisie`** (84 impr at 8.4, **0 clicks**, 22/09 GSC) → our URL in the
+  set is `/whey-proteine/whey-gold-standard-908g`, **155 DT `BackOrder`**, while
+  `/whey-proteine/100-whey-gold-standard-2-27kg` is **379 DT `InStock`** and absent from the set —
+  four competitors rank a 2,27 kg or 4,5 kg (02/10, both statuses verified live from the pages' own
+  `Offer.availability`). **Four for four on the money rows looked at since 28/09.** (d) also carries a
+  pricing fact that is not an SEO decision: the same Gold Standard 2,27 kg is **299 DT at nutribeast
+  and protein-shop-tunisia** against our **379 DT** — an 80 DT / 27 % gap on the buyable SKU behind a
+  page-one zero-click row. Flagged for the owner; prices are outside what the routine may touch.
 
 - [ ] **A dead SKU answers `lipo 6 black`** (measured 28/09): the URL in the SERP set is the legacy
   `/shop/lipo-6-black-60-caps`, one 301 to `/bruleurs-de-graisse/lipo-6-black-60-caps` — **139 DT,
@@ -449,6 +483,46 @@ record the page-level position first — never act on a query average.
   metadata source; keep "Protéine Tunisie" first.
 
 ## P2 — technical & tooling
+
+- [x] **The in-content injector spent link slots on shelves the page already linked — all three
+  sources now subtracted** (30/09 did the CMS body, 02/10 the two curated blocks). 02/10 measured all
+  223 published articles after the 30/09 deploy: body duplicates **0** (the fix holds), but **30**
+  injected links in **25** articles duplicated a curated block — 29 against the "Lire aussi" chips
+  (`blogSeoConfig.internalLinks` via `BlogSeoBlock`) and 1 against the "Voir aussi sur la boutique"
+  nav (`article.related_shop_categories`). `/whey-proteine` 13 · `/proteines` 9 · `/whey-isolate`,
+  `/vitamines`, `/mass-gainers`, `/creatine` 2 each; **14 of the 25 at the 6-link cap**, so there the
+  duplicate displaced a first link. Shipped: `excludeLinkedDestinations()` in `util/internalLinks.ts`
+  (reusing the 30/09 normaliser) + `resolveBlogSeoLinks()` in `config/blogSeoConfig.ts` as the single
+  source of the chip rule, read by both the route and `BlogSeoBlock`. The injector yields and the
+  curated anchor keeps the shelf, because the curated anchor is the better one every time
+  ("whey protéine en Tunisie" vs a bare "whey") and that is the direction the existing bridge
+  exclusion already took. **Verify on production once `deploy-frontend.yml` carries it:** 0
+  duplicates against all three sources, body duplicates still 0, and each of the 14 at-cap articles
+  showing a *new* sixth destination rather than one link fewer.
+
+- [x] **`audit-live.mjs` called the category route's intended transient-5xx a P0** — fixed 02/10
+  after it had spent two mornings (30/09 and 02/10) on `/sante-vitalite`. `category/[slug]/page.tsx`
+  rethrows an upstream 429/5xx/timeout deliberately so Next answers with an uncached 5xx and the
+  crawler retries; the checker already gave the analogous "head with no metadata" shape one
+  confirming re-fetch for exactly this reason and the rule was never extended to the status code. Now:
+  429/5xx → one re-fetch after 1.5 s, clean → measure from the good render and record **P2**,
+  non-200 → **P0** naming both statuses; **4xx gets no re-fetch**. Proved against a local fake origin
+  (`/flaky-500` exit 0 + P2, `/always-500` exit 1, `/gone-404` exit 1 unchanged, `/healthy` exit 0)
+  before being trusted, then on production: the 120-URL sweep exits 0 with `/sante-vitalite` P2.
+
+- [ ] **P3: `audit-live.mjs` `classify()` calls any ≥ 2-segment path a product**, so an ad-hoc probe
+  of `/brand/Optimum%20Nutrition/17` (three segments) reports `P0: no Product JSON-LD` on what is
+  really a 301 to a brand page. **Cannot affect the daily exit code** — the sample draws only from
+  `products-*.xml` and `watchlist.txt` holds no 3-segment non-product URL — so it is a nit, not a
+  defect. Found 02/10. Fix it on a day when nothing else touches the tool: a classifier change
+  changes what every future run measures.
+
+- [ ] **P2: an all-lowercase catalogue name has appeared** — `title-case-check.mjs` counts them and
+  its own note says to decide the `needsRecasing` branch "if this number leaves 0". It was **0 on
+  25/09** and is **1 on 02/10**: `banc de musculation développé incliné`
+  (`/materiel-de-musculation/banc-de-musculation-developpe-incline`). The builder passes such names
+  through untouched although the comment says they should be re-cased. Catalogue-wide builder change,
+  so it ships on its own day, not alongside anything else.
 
 - [ ] **CMS body links need an editorial pass** `(needs: owner)` — found 30/09 while measuring the
   in-content injector. `articles.description` carries author-written anchors the repo must not touch

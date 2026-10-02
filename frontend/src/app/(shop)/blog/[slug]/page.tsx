@@ -3,7 +3,7 @@ import { notFound, unstable_rethrow } from 'next/navigation';
 import { getErrorStatus } from '@/util/errorStatus';
 import { getLatestArticles, getAllArticles, getCategories } from '@/services/api';
 import { relatedArticles as pickRelatedArticles } from '@/util/relatedArticles';
-import { targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
+import { excludeLinkedDestinations, targetsFromTaxonomy, type LinkTarget } from '@/util/internalLinks';
 // Request-scoped cache: generateMetadata + the page body used to issue TWO separate
 // article_details calls, doubling 429 pressure and letting metadata fail while the body succeeded.
 import { getCachedArticleDetails as getArticleDetails } from '@/services/getCachedProductDetails';
@@ -15,7 +15,7 @@ import { buildArticleSchema, buildBreadcrumbListSchema } from '@/util/structured
 import { sanitizeArticleHtml } from '@/util/sanitizeArticleHtml';
 import { blogHref } from '@/util/blogSlug';
 import { BlogSeoBlock } from '@/app/(shop)/blog/BlogSeoBlock';
-import { getBlogSeoEntry } from '@/config/blogSeoConfig';
+import { getBlogSeoEntry, resolveBlogSeoLinks } from '@/config/blogSeoConfig';
 import { blogCommercialCategory } from '@/util/blogCommercialCategory';
 import { taxonomyDepth } from '@/config/catalogTaxonomy';
 import { loadCategoryStockFacts } from '@/util/loadCategoryStockFacts';
@@ -400,11 +400,40 @@ export default async function ArticlePage({ params }: ArticlePageProps) {
       },
       { allowSlugs: LINKABLE_CATEGORY_SLUGS }
     );
-    // The bridge is already the first, strongest link to its commercial owner. Do not inject a
-    // second link to the same shelf later in the prose; that dilutes the article's one clear job.
-    const articleLinkTargets = commerceBridge
-      ? linkTargets.filter((target) => target.href !== commerceBridge.href)
-      : linkTargets;
+    /*
+     * ── THE AUTOMATIC LINKER YIELDS TO EVERY CURATED LINK THIS PAGE ALREADY CARRIES ──────────
+     * "ONE link per destination" is the first rule in util/internalLinks.ts, and 30/09/2026 taught
+     * it against the CMS body: a shelf the prose already linked was being linked a second time.
+     * The seeding that fixed it can only see the HTML it is handed — the article body — and this
+     * page ships two further link blocks the injector never sees:
+     *
+     *   · the "Lire aussi" chips (BlogSeoBlock, from blogSeoConfig.internalLinks)
+     *   · the "Voir aussi sur la boutique" nav (article.related_shop_categories)
+     *
+     * Measured live on all 223 published articles, 02/10/2026 (Googlebot UA, links inside
+     * `<article>`, injected ones identified by `class="article-inline-link"`), after the 30/09 fix
+     * had landed:
+     *
+     *     CMS-body duplicates                                         0   ← 30/09 fix holding
+     *     duplicates against these two curated blocks                30   in 25 articles
+     *     of those 30: /whey-proteine 13 · /proteines 9 · /whey-isolate 2 ·
+     *                  /vitamines 2 · /mass-gainers 2 · /creatine 2
+     *     14 of the 25 are at the `max` cap, so the duplicate DISPLACES a first link
+     *
+     * 22 of the 30 land on /whey-proteine and /proteines — the two pages the ranking objective is
+     * written against. And the curated anchor is the better of the two every time: "whey protéine
+     * en Tunisie", "prix des whey chez Protein.tn", "comparer les whey en stock" against a bare
+     * "whey" lifted out of a sentence. So the injector yields and the shelf keeps the stronger
+     * anchor — the same direction the commerce-bridge exclusion, now folded into the one call
+     * below, already took: a hand-written link outranks a generated one. On the 14 at-cap articles
+     * the freed slot goes to a shelf with no link at all.
+     */
+    const articleLinkTargets = excludeLinkedDestinations(linkTargets, [
+      commerceBridge?.href,
+      ...resolveBlogSeoLinks(slug, commerceBridge?.href).map((link) => link.href),
+      // Same list, and the same bridge exclusion, that ArticleDetailClient renders as the nav.
+      ...(displayArticle.related_shop_categories ?? []).map((category) => `/${category.slug}`),
+    ]);
 
     /*
      * Related by SUBJECT, with the newest posts as the fallback when an article shares no
