@@ -20,6 +20,8 @@ export interface QuickOrderProduct {
   promo_expiration_date?: string | null;
   rupture?: number | boolean;
   aromes?: { id: number; designation_fr: string }[];
+  /** Rule 19: machines (their subcategory) never reach free delivery and take no code. */
+  sous_categorie?: { slug?: string | null } | null;
 }
 
 interface QuickOrderState {

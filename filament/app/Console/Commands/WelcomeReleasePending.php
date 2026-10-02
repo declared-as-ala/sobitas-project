@@ -59,7 +59,9 @@ class WelcomeReleasePending extends Command
                 continue;
             }
             try {
-                if ($welcome->creditPending($user)) {
+                // Protinas v3: a claim still pending was reserved under the old delivery-unlock terms
+                // (the deploy migration releases them the same way): grandfathered, no expiry.
+                if ($welcome->creditPending($user, true)) {
                     $credited++;
                 } else {
                     $skipped++;

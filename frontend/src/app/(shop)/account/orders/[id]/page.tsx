@@ -282,7 +282,12 @@ export default function OrderDetailPage() {
               <OrderProtinaOutcome
                 movement={order.protina}
                 lifecycle={lifecycle}
-                redemptionValueDt={order.totals ? order.totals.points_discount : null}
+                // v3: the Protinas also paid the delivery (points_shipping), not only the articles.
+                redemptionValueDt={order.totals ? Math.round((order.totals.points_discount + (order.totals.points_shipping ?? 0)) * 1000) / 1000 : null}
+                giftPoints={order.totals?.points_redeemed_gift ?? Number(order.points_redeemed_gift ?? 0)}
+                // The server zeroes it once staff waived the deposit; the raw column needs the same check.
+                forfeitedPoints={order.totals?.protinas_forfeited ?? (order.protinas_forfeit_waived ? 0 : Number(order.protinas_forfeited ?? 0))}
+                heldAfterDelivery={order.pricing_version != null && Number(order.pricing_version) >= 3}
               />
             )}
 

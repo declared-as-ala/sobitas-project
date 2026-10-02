@@ -7,6 +7,7 @@ use App\Filament\Resources\ClientResource;
 use App\Filament\Widgets\DocumentTimelineWidget;
 use App\Models\Commande;
 use App\Models\Product;
+use App\Support\OrderCashOnDelivery;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
 use Filament\Notifications\Notification;
@@ -79,9 +80,17 @@ class EditCommande extends EditRecord
                 ->modalCancelActionLabel('Annuler')
                 ->visible(fn () => ! $this->record->factures()->exists())
                 ->action(function () {
-                    $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($this->record);
+                    $service = app(\App\Services\DocumentConversion\OrderToBlService::class);
+                    try {
+                        $bl = $service->createBlFromOrder($this->record);
+                    } catch (\App\Services\DocumentConversion\BlAmountMismatchException $e) {
+                        Notification::make()->title('Bon de livraison non créé')->body($e->getMessage())->danger()->persistent()->send();
+
+                        return null;
+                    }
                     Notification::make()
                         ->title('Conversion réussie — BL #' . $bl->numero)
+                        ->body($service->aramexHoldReason ? 'Non envoyé à Aramex : '.$service->aramexHoldReason.'.' : null)
                         ->success()
                         ->send();
                     return redirect(route('factures.print', ['facture' => $bl->id]));
@@ -110,6 +119,9 @@ class EditCommande extends EditRecord
 
                     return redirect(route('factures.print', ['facture' => $bl->id]));
                 }),
+            // Protinas v3: rule 17 phone confirmation and the refusal-deposit waiver, as on the list.
+            CommandeResource::confirmPhoneAction(),
+            CommandeResource::waiveForfeitAction(),
             ActionGroup::make([
                 Actions\DeleteAction::make()->label('Supprimer la commande'),
             ])->label('')->icon('heroicon-o-ellipsis-vertical'),
@@ -193,11 +205,30 @@ class EditCommande extends EditRecord
             Product::syncRuptureFlags($touchedProductIds);
         });
 
-        $frais = (float) ($this->form->getState()['frais_livraison'] ?? 0);
-        $this->record->update([
-            'prix_ht'          => round($prixHt, 3),
-            'frais_livraison'  => round($frais, 3),
-            'prix_ttc'         => round($prixHt + $frais, 3),
-        ]);
+        // prix_ttc is what the courier collects: prix_ht − code − (pack + Protinas) + delivery, with the
+        // discounts read from the database (the form never carries them). It used to be prix_ht + frais,
+        // which silently dropped every discount on a routine status save (Protinas v3, spec F0).
+        $totals = OrderCashOnDelivery::adminTotals($this->record, $validRows, $this->form->getState()['frais_livraison'] ?? 0);
+        if ($totals !== null) {
+            $this->record->update($totals);
+        }
+    }
+
+    /**
+     * The totals reach the database BEFORE CommandeObserver sees the save: a status change in the same
+     * save (e.g. « livrée ») earns Protinas and computes commissions from prix_ttc, so the browser's
+     * total must never be stored even for the instant between the save and afterSave().
+     */
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        $totals = OrderCashOnDelivery::adminTotals($this->record, $data['details'] ?? [], $data['frais_livraison'] ?? 0);
+        if ($totals === null) {
+            // No valid line submitted: afterSave() keeps the stored lines, so keep the stored totals too.
+            unset($data['prix_ht'], $data['prix_ttc'], $data['frais_livraison']);
+
+            return $data;
+        }
+
+        return array_merge($data, $totals);
     }
 }

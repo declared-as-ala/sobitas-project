@@ -52,6 +52,9 @@ class FactureTvaSent extends Mailable
             ];
         })->all();
 
+        $shipPaidProtinas = \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt(
+            $factureTva->commande_id ? \App\Models\Commande::query()->find($factureTva->commande_id) : null);
+
         $data = [
             'facture' => $factureTva,
             'details_facture' => $details_facture,
@@ -67,6 +70,9 @@ class FactureTvaSent extends Mailable
             'totals' => array_values(array_filter([
                 ['label' => 'Total HT', 'value' => number_format($calcTotals['total_ht_brut'], 3, ',', ' ') . ' DT'],
                 $calcTotals['remise'] > 0 ? ['label' => 'Remise', 'value' => number_format($calcTotals['remise'], 3, ',', ' ') . ' DT'] : null,
+                // Protinas v3: delivery paid with Protinas — for the record, it nets to 0 on the invoice.
+                $shipPaidProtinas > 0 ? ['label' => 'Livraison', 'value' => number_format($shipPaidProtinas, 3, ',', ' ') . ' DT'] : null,
+                $shipPaidProtinas > 0 ? ['label' => 'Réglée en Protinas', 'value' => '−' . number_format($shipPaidProtinas, 3, ',', ' ') . ' DT'] : null,
                 ['label' => 'TVA', 'value' => number_format($calcTotals['tva'], 3, ',', ' ') . ' DT'],
                 ['label' => 'Total TTC', 'value' => number_format($calcTotals['net_a_payer'], 3, ',', ' ') . ' DT', 'class' => 'net-a-payer'],
             ])),

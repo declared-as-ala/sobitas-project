@@ -2,16 +2,18 @@
 
 import { useEffect, useState } from 'react';
 import { getPointsHistory } from '@/services/api';
-import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { FALLBACK_LOYALTY_RULES, formatProtinaDate, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { formatDt } from '@/util/checkoutPricing';
 import type { PointsHistory, PointsTransaction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Skeleton } from '@/app/components/ui/skeleton';
-import { Gift, TrendingUp, TrendingDown, Sparkles, History } from 'lucide-react';
+import { Gift, TrendingUp, TrendingDown, History } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
+import { ProtinaHowItWorks, ProtinaWalletPanel } from '@/app/components/loyalty/ProtinaWalletPanel';
 
 const TYPE_META: Record<
   PointsTransaction['type'],
@@ -90,62 +92,28 @@ export function FidelitySection() {
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.17em] text-brand">Solde Protina</p>
             <p className="mt-2 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1 sm:text-5xl">{balance.toLocaleString('fr-FR')} <span className="text-base text-brand">Protinas</span></p>
-            <p className="mt-1 whitespace-nowrap text-sm tabular-nums text-ink-3">Valeur disponible : {valueDt.toFixed(2)} DT</p>
+            <p className="mt-1 whitespace-nowrap text-sm tabular-nums text-ink-3">= {formatDt(valueDt)}</p>
           </div>
           <ProtinaMark size="lg" className="h-16 w-16 shrink-0 sm:h-24 sm:w-24 md:h-28 md:w-28" decorative={false} />
         </div>
       </section>
 
       {/*
-        ── THE TWO RULES, AS TWO FACTS ────────────────────────────────────────────────────
-        This was one paragraph carrying both rates and the caveat: 8 lines and 138px at 320,
-        6 lines at 390. It sat between the balance and the history — the wall you scroll past
-        — and it hid the only two numbers a member needs from it, because a rate written into
-        running prose has to be read rather than seen.
+        ── PROTINAS V3: WHAT THE TOTAL IS MADE OF, THEN THE RULES ───────────────────────────
+        The two-facts box that sat here quoted the 02/10 rules — a 10 % ceiling and a welcome gift
+        « créditée à la livraison » — both of which v3 retires. The wallet tiles (Gagnées / Cadeau /
+        En attente / En route + the savings counter) come from the server's wallet split, and the
+        five « Comment ça marche » lines from /api/loyalty/rules, so neither can drift from what
+        checkout actually does.
 
-        Same facts, same caveat, nothing removed. The two rates are now the two things you can
-        see without reading, and the honesty note keeps its own line under a rule: the earn
-        figure is computed BEFORE redemption and credited only on delivery, which is the
-        sentence that stops "gagnez 5%" from being a promise this shop cannot keep.
-
-        `min-[380px]` rather than `sm`, because the pair fits side by side well below 640 and
-        stacking them to 768 wastes the width a phone does have.
+        `bg-elevated`, NOT `bg-brand/5`: the brand kicker on that tint measured 4.21:1 against the
+        required 4.5 (`measure-account`). The colour lives in the border and the text, never in the
+        plate.
       */}
-      {/* `bg-elevated`, NOT `bg-brand/5`. The tinted plate is what the old paragraph used, and
-          it was fine there because the text on it was `text-ink-2`. Putting the brand kicker on
-          the same tint measured 4.21:1 against the required 4.5 — `measure-account` failed it
-          before this shipped. DESIGN_SYSTEM's rule for exactly this: the colour lives in the
-          border and the text, never in the plate. */}
-      <div className="rounded-xl border border-brand/20 bg-elevated p-3.5">
-        <dl className="grid gap-3 min-[380px]:grid-cols-2 min-[380px]:gap-4">
-          <div className="flex items-start gap-2.5">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand">Vous gagnez</dt>
-              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{rules.earn_per_dt} Protina par DT</dd>
-              <dd className="mt-0.5 text-xs leading-snug text-ink-3">soit {Math.round(rules.earn_per_dt / rules.points_per_dt * 100)}% des articles payés</dd>
-            </div>
-          </div>
-          <div className="flex items-start gap-2.5">
-            <Gift className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-            <div className="min-w-0">
-              <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand">Vous échangez</dt>
-              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{rules.points_per_dt} Protinas = 1 DT</dd>
-              <dd className="mt-0.5 text-xs leading-snug text-ink-3">de remise sur votre prochaine commande</dd>
-            </div>
-          </div>
-        </dl>
-        <p className="mt-3 border-t border-hairline pt-2.5 text-xs leading-snug text-ink-3">
-          1 Protina par dinar d&apos;articles payé, créditée à la livraison (20 Protinas = 1 DT, soit 5 % reversés).
-        </p>
-        <div className="mt-3 space-y-2 text-xs leading-relaxed text-ink-2">
-          <p>À la commande, remise et Protinas se cumulent jusqu&apos;à 10 % du montant de vos articles ; le reste de vos Protinas reste sur votre compte.</p>
-          <p>Code promo et remise pack ne se cumulent pas : la plus avantageuse s&apos;applique.</p>
-          <p>Cadeau de bienvenue : 300 Protinas (15 DT), créditées à la livraison de votre première commande.</p>
-          <p>Vos Protinas n&apos;expirent pas. Commande annulée ou retournée : les Protinas utilisées vous sont rendues, celles gagnées sont retirées.</p>
-          <p>Vos Protinas gardent toute leur valeur, sans date limite. À partir du 1er octobre 2026, remises et Protinas sont limitées à 10 % des articles de chaque commande : vos 15 DT de bienvenue s&apos;utilisent en entier dès 150 DT d&apos;achats.</p>
-        </div>
-        {history?.welcome_status === 'pending' && (history.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente, crédités à la livraison de votre 1re commande</span>}
+      <ProtinaWalletPanel wallet={history?.wallet} rules={rules} />
+      <div className="rounded-xl border border-brand/20 bg-elevated p-3.5 sm:p-4">
+        <ProtinaHowItWorks rules={rules} />
+        {history?.welcome_status === 'pending' && (history.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente : ils arrivent quand votre première commande sera livrée.</span>}
       </div>
 
       {/* Transactions history */}
@@ -248,6 +216,19 @@ export function FidelitySection() {
                           )}
                           <span aria-hidden="true">·</span>
                           <span>Solde&nbsp;{tx.balance_after}</span>
+                          {/* v3 ledger: which wallet, until when (gift), from when (held earnings). */}
+                          {tx.bucket === 'gift' && tx.points > 0 && (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span>Cadeau{formatProtinaDate(tx.expires_at) ? `, valable jusqu'au ${formatProtinaDate(tx.expires_at)}` : ''}</span>
+                            </>
+                          )}
+                          {tx.points > 0 && tx.available_at && new Date(tx.available_at).getTime() > Date.now() && (
+                            <>
+                              <span aria-hidden="true">·</span>
+                              <span>Disponibles le {formatProtinaDate(tx.available_at)}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                     </div>

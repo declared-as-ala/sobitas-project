@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { useEffect, useState } from 'react';
-import { pointsForSpend, pointsToDt, formatProtinas, FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { pointsForSpend, pointsToDt, formatProtinas, FALLBACK_LOYALTY_RULES, isLoyaltyExcludedProduct, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { cn } from '@/app/components/ui/utils';
 import { ProtinaMark } from './Protina';
@@ -53,13 +53,18 @@ interface LoyaltyEarnLineProps {
    */
   variant?: 'pdp' | 'summary';
   className?: string;
+  /**
+   * The product on a product page. A machine (rule 19: outside the programme) earns nothing, so the
+   * line is not shown for it — the checkout quote would contradict it.
+   */
+  product?: { sous_categorie?: { slug?: string | null } | null } | null;
 }
 
-export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: LoyaltyEarnLineProps) {
+export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className, product }: LoyaltyEarnLineProps) {
   const { isAuthenticated } = useAuth();
   const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
   useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
-  const points = pointsForSpend(amountDt, rules.earn_per_dt);
+  const points = isLoyaltyExcludedProduct(product, rules) ? 0 : pointsForSpend(amountDt, rules.earn_per_dt);
 
   // Under 20 points the reward rounds to less than 1 DT, and "gagnez 0.45 DT" reads as an insult
   // rather than an incentive. Below the threshold the programme is simply not mentioned.

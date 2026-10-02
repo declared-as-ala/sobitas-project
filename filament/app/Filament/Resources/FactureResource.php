@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Coordinate;
 use App\Models\Facture;
 use App\Services\AramexService;
+use App\Support\OrderCashOnDelivery;
 use Filament\Actions;
 use Filament\Forms;
 use Filament\Forms\Components\Repeater;
@@ -107,6 +108,8 @@ class FactureResource extends Resource
                     'factures.id',
                     'factures.numero',
                     'factures.client_id',
+                    // « Envoyer vers Aramex » compares the note with its source order (Protinas v3, F0).
+                    'factures.commande_id',
                     'factures.net_a_payer',
                     'factures.created_at',
                 ];
@@ -190,13 +193,19 @@ class FactureResource extends Resource
                     ->modalCancelActionLabel('Fermer'),
                 Actions\Action::make('push_aramex')
                     ->iconButton()
-                    ->tooltip('Envoyer vers Aramex')
+                    // Protinas v3 (spec F0 + rule 17): disabled, with the reason as tooltip, while the
+                    // source order waits for its phone call or the note would collect another amount
+                    // than the order. Nothing else about this action changed.
+                    ->tooltip(fn (Facture $record): string => OrderCashOnDelivery::aramexBlockReason($record) ?? 'Envoyer vers Aramex')
+                    ->disabled(fn (Facture $record): bool => OrderCashOnDelivery::aramexBlockReason($record) !== null)
                     ->icon('heroicon-o-truck')
                     ->color('primary')
                     ->visible(fn (Facture $record): bool => \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb') && ! $record->aramex_hawb)
                     ->requiresConfirmation()
                     ->modalHeading('Envoyer vers Aramex ?')
-                    ->modalDescription('Créer une expédition Aramex pour ce bon de livraison.')
+                    ->modalDescription(fn (Facture $record): string => (float) ($record->net_a_payer ?? 0) > 0
+                        ? 'Créer une expédition Aramex pour ce bon de livraison.'
+                        : 'Créer une expédition Aramex pour ce bon de livraison. Rien à encaisser : le colis part sans contre-remboursement. Si Aramex refuse l’expédition, envoyez ce colis manuellement.')
                     ->action(function (Facture $record, $livewire): void {
                         try {
                             if (! \Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_hawb')) {
@@ -210,6 +219,13 @@ class FactureResource extends Resource
                             // Reload the FULL record (the table query only selects a few
                             // columns, so livraison_* / adresse fields would be null here).
                             $bl = \App\Models\Facture::with('client')->findOrFail($record->getKey());
+                            // Same guard as the disabled state, re-read now: never ship on a stale page.
+                            $blocked = OrderCashOnDelivery::aramexBlockReason($bl, true);
+                            if ($blocked !== null) {
+                                Notification::make()->title('Envoi bloqué')->body($blocked)->warning()->send();
+
+                                return;
+                            }
                             $result = app(AramexService::class)->createShipment($bl);
                             $bl->aramex_hawb      = $result['hawb'];
                             $bl->aramex_label_url = $result['label_url'];

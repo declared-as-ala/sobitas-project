@@ -13,7 +13,8 @@ import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { DELIVERY } from '@/util/company';
-import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { deliveryPoints, FALLBACK_LOYALTY_RULES, formatProtinas, isLoyaltyExcludedProduct, isProtinasV3, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { formatDt } from '@/util/checkoutPricing';
 import { notify as toast } from '@/lib/notify';
 
 /** Layout-matching placeholder shown until the cart rehydrates from localStorage (no flash of empty). */
@@ -70,6 +71,23 @@ function CartSkeleton() {
   );
 }
 
+/**
+ * One progress plate — the free-delivery bar and the pack bar share it, so the two read as one
+ * system. Tokens only: the plate is `bg-sunken`, the track `bg-rule-strong`, and a reached goal
+ * says so in `text-ok` on the untinted plate (a status hue never tints its own background).
+ */
+function CartProgress({ percent, done, label, children }: { percent: number; done: boolean; label: string; children: React.ReactNode }) {
+  const value = Math.max(0, Math.min(100, Math.round(percent)));
+  return (
+    <div className="rounded-xl border border-hairline bg-sunken p-3 sm:p-4">
+      <p className={done ? 'text-xs font-semibold text-ok sm:text-sm' : 'text-xs font-medium leading-snug text-ink-1 sm:text-sm'}>{children}</p>
+      <div className="mt-2 h-2 overflow-hidden rounded-full bg-rule-strong" role="progressbar" aria-label={label} aria-valuemin={0} aria-valuemax={100} aria-valuenow={value}>
+        <div className={`h-full rounded-full transition-[width] duration-500 ease-out motion-reduce:transition-none ${done ? 'bg-ok' : 'bg-brand'}`} style={{ width: `${value}%` }} />
+      </div>
+    </div>
+  );
+}
+
 export default function CartPage() {
   const {
     items,
@@ -80,6 +98,7 @@ export default function CartPage() {
     getTotalPrice,
     getTotalItems,
     getEffectivePrice,
+    packDiscount,
   } = useCart();
 
   const hasClampedRef = useRef(false);
@@ -106,12 +125,23 @@ export default function CartPage() {
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
+  // Protinas v3, rule 19: machines count toward neither free delivery nor the pack tiers, and earn
+  // nothing — the same split the checkout quote makes, so the cart never promises what it won't keep.
+  const programmeTotal = items.reduce((sum, item) => (isLoyaltyExcludedProduct(item.product, rules)
+    ? sum : sum + getEffectivePrice(item.product) * item.quantity), 0);
+  const hasMachines = programmeTotal < totalPrice - 0.0005;
   const freeShippingThreshold = rules.delivery.free_from_dt;
-  const shippingCost = totalPrice >= freeShippingThreshold ? 0 : rules.delivery.fee_dt;
+  const shippingCost = programmeTotal >= freeShippingThreshold ? 0 : rules.delivery.fee_dt;
   const finalTotal = totalPrice + shippingCost;
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - totalPrice);
-  const freeShippingProgress = Math.min(100, (totalPrice / freeShippingThreshold) * 100);
-  const nextPackTier = rules.pack.tiers.find(tier => totalPrice < tier.from_dt);
+  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - programmeTotal);
+  const freeShippingProgress = Math.min(100, (programmeTotal / freeShippingThreshold) * 100);
+  const nextPackTier = rules.pack.tiers.find(tier => programmeTotal < tier.from_dt);
+  const topPackTier = rules.pack.tiers[rules.pack.tiers.length - 1];
+  const reachedPackTier = [...rules.pack.tiers].reverse().find(tier => programmeTotal >= tier.from_dt);
+  // Protinas v3: the delivery can be paid with Protinas (200 at 10 DT), and the pack counts promos.
+  const payDeliveryWithPoints = isProtinasV3(rules) && rules.earned?.cover_shipping !== false;
+  const promoWording = rules.pack.excludes_promo_lines ? 'articles en promo exclus' : 'promos comprises';
+  const packRule = `Remise pack : ${rules.pack.tiers.map(tier => `−${tier.percent} % dès ${tier.from_dt} DT`).join(', ')}, ${promoWording}. Non cumulable avec un code promo : la meilleure remise s’applique.`;
 
   // Gate on rehydration so returning users never see a flash of the empty state.
   if (!isLoaded) {
@@ -309,30 +339,29 @@ export default function CartPage() {
 
               {/* Collapsible details on mobile/tablet; always visible on lg */}
               <div className="lg:block">
-                {totalPrice < freeShippingThreshold && (
-                  <div className="px-4 sm:px-5 lg:px-6 pt-2 lg:pt-4">
-                    <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
-                      <div className="flex items-center justify-between gap-2 mb-1.5">
-                        <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                           Livraison gratuite à {freeShippingThreshold} DT
-                        </span>
-                        <span className="text-xs sm:text-sm font-display font-bold tabular-nums text-red-600 dark:text-red-400">
-                          {remainingForFreeShipping.toFixed(2)} DT restants
-                        </span>
-                      </div>
-                      <div className="h-2 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
-                        <div
-                          className="h-full bg-red-600 rounded-full transition-[width] duration-500 ease-out"
-                          style={{ width: `${freeShippingProgress}%` }}
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
+                {/* Both bars read /api/loyalty/rules. The pack bar only shows on a pack (the
+                    pack-builder opt-in): an ordinary cart never receives the pack discount, and a
+                    bar promising one would be a promise checkout does not keep. */}
+                <div className="space-y-2 px-4 pt-2 sm:px-5 lg:px-6 lg:pt-4">
+                  <CartProgress percent={freeShippingProgress} done={remainingForFreeShipping <= 0} label="Progression vers la livraison offerte">
+                    {remainingForFreeShipping > 0
+                      ? <>Plus que <span className="font-display font-bold tabular-nums">{formatDt(remainingForFreeShipping)}</span> pour la livraison offerte{payDeliveryWithPoints ? `, ou réglez-la avec ${formatProtinas(deliveryPoints(rules))}` : ''}.</>
+                      : 'Livraison offerte'}
+                  </CartProgress>
+                  {packDiscount && topPackTier && (
+                    <CartProgress percent={(programmeTotal / topPackTier.from_dt) * 100} done={!nextPackTier} label="Progression vers la remise pack maximale">
+                      {nextPackTier
+                        ? <>Encore <span className="font-display font-bold tabular-nums">{formatDt(nextPackTier.from_dt - programmeTotal)}</span> pour passer à −{nextPackTier.percent} % sur tout le pack ({promoWording}).</>
+                        : `Remise pack maximale : −${reachedPackTier?.percent ?? topPackTier.percent} % sur tout le pack (${promoWording}).`}
+                    </CartProgress>
+                  )}
+                </div>
 
                 <div className="p-4 sm:p-5 lg:p-6 space-y-2">
-                  <p className="text-xs text-ink-2">Remise pack : −{rules.pack.tiers[0]?.percent ?? 3} % dès {rules.pack.tiers[0]?.from_dt ?? 200} DT, −{rules.pack.tiers[1]?.percent ?? 5} % dès {rules.pack.tiers[1]?.from_dt ?? 350} DT, −{rules.pack.tiers[2]?.percent ?? 7} % dès {rules.pack.tiers[2]?.from_dt ?? 500} DT d&apos;articles (hors articles en promo, non cumulable avec un code promo).</p>
-                  {nextPackTier && <p className="text-xs text-ink-2">Encore {(nextPackTier.from_dt - totalPrice).toFixed(2)} DT pour la remise pack de −{nextPackTier.percent} %.</p>}
+                  <p className="text-xs leading-relaxed text-ink-2">{packRule}</p>
+                  {hasMachines && (
+                    <p className="text-xs leading-relaxed text-ink-3">Machines et matériel de musculation : hors livraison offerte, remise pack et Protinas gagnées.</p>
+                  )}
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                     <span>Sous-total</span>
                     <span className="font-display font-semibold text-gray-900 dark:text-white tabular-nums">{totalPrice.toFixed(2)} DT</span>
@@ -367,11 +396,11 @@ export default function CartPage() {
                   </span>
                 </div>
 
-                {/* `totalPrice`, NOT `finalTotal` — delivery never earns points. The backend's earn
+                {/* `programmeTotal`, NOT `finalTotal` — delivery and machines never earn points. The backend's earn
                     base is `prix_ttc - frais_livraison`, so quoting the figure that still contains
                     the 10 DT delivery fee would over-promise on every order under 300 DT, which is
                     most of them. See util/loyaltyPoints.ts. */}
-                <LoyaltyEarnLine amountDt={totalPrice} variant="summary" />
+                <LoyaltyEarnLine amountDt={programmeTotal} variant="summary" />
 
                 <Button
                   size="lg"

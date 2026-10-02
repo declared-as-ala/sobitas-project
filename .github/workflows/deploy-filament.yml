@@ -143,7 +143,10 @@ jobs:
             vendor/bin/phpunit \
               tests/Feature/ProtinasPricingCommerceTest.php \
               tests/Feature/CheckoutOrderCreationCommerceTest.php \
-              tests/Feature/WelcomeBonusCommerceTest.php
+              tests/Feature/WelcomeBonusCommerceTest.php \
+              tests/Feature/ProtinasV3PricingTest.php \
+              tests/Feature/ProtinasV3LifecycleTest.php \
+              tests/Feature/ProtinasV3AdminOpsTest.php
 
       - name: Test safe campaign artwork replacement before production
         run: |

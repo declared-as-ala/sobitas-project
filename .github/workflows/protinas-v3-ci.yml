@@ -1,0 +1,47 @@
+# TEMPORARY: runs every PHP test file on the test branch and on main (baseline) so new failures stand out.
+name: Protinas v3 CI (temporary)
+on:
+  push:
+    branches: ["test/protinas-v3-ci"]
+jobs:
+  php-tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: [branch, main]
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: testing
+      APP_KEY: base64:MTIzNDU2Nzg5MDEyMzQ1Njc4OTAxMjM0NTY3ODkwMTI=
+      DB_CONNECTION: sqlite
+      DB_DATABASE: ":memory:"
+      CACHE_STORE: array
+      SESSION_DRIVER: array
+      MAIL_MAILER: array
+      QUEUE_CONNECTION: sync
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ matrix.ref == 'main' && 'main' || github.sha }}
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: intl, zip, gd, bcmath, exif, pdo_sqlite, sqlite3, mbstring, pcntl
+          coverage: none
+      - name: Install
+        working-directory: filament
+        run: |
+          cp .env.example .env || true
+          composer install --no-interaction --prefer-dist --no-progress
+      - name: Every test file, one by one
+        working-directory: filament
+        run: |
+          : > /tmp/summary.txt
+          for f in $(ls tests/Feature/*Test.php tests/Unit/*Test.php | sort); do
+            rc=0; out=$(timeout 300 vendor/bin/phpunit "$f" 2>&1) || rc=$?
+            line=$(printf '%s\n' "$out" | grep -E "^(OK|Tests:|FAILURES|ERRORS)" | tail -1 || true)
+            printf '%s\t%s\t%s\n' "$rc" "$f" "$line" >> /tmp/summary.txt
+            if [ $rc -ne 0 ]; then echo "::group::FAILED $f"; printf '%s\n' "$out" | tail -80; echo "::endgroup::"; fi
+          done
+          echo "===== SUMMARY (${{ matrix.ref }}) ====="
+          cat /tmp/summary.txt

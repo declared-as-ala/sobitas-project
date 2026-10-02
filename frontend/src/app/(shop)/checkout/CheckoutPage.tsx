@@ -13,15 +13,14 @@ import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
-import { ArrowLeft, ShoppingCart, Shield, Truck, Loader2, Wallet, Printer, List, Tag, X, Gift, Percent, UserRound, Phone, Mail, MapPin, CircleAlert } from 'lucide-react';
+import { ArrowLeft, ShoppingCart, Shield, Loader2, Wallet, Printer, List, Tag, X, UserRound, Phone, Mail, MapPin, CircleAlert } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { AddressSelector } from '@/app/components/AddressSelector';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
-import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
-import { loadLoyaltyRules, FALLBACK_LOYALTY_RULES, type LoyaltyRules } from '@/util/loyaltyPoints';
-import { quoteCheckout, type CheckoutPricing } from '@/util/checkoutPricing';
+import { loadLoyaltyRules, FALLBACK_LOYALTY_RULES, isLoyaltyExcludedProduct, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { formatDt, isPricingV3, moneyPlaces, quoteCheckout, type CheckoutPricing } from '@/util/checkoutPricing';
 import { LoyaltyPointsRedeemer } from '@/app/components/loyalty/LoyaltyPointsRedeemer';
 import { Section } from '@/app/components/layout/Section';
 import { OrderDocument } from '@/app/components/order/OrderDocument';
@@ -32,6 +31,7 @@ import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, valid
 import styles from './checkout.module.css';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
+import { CheckoutEarnLine, CheckoutTotals, couponNote, maskPhone } from './CheckoutTotals';
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -72,9 +72,11 @@ export default function CheckoutPage() {
   const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
   const [pricing, setPricing] = useState<CheckoutPricing | null>(null);
   const [pricingState, setPricingState] = useState<'loading' | 'ready' | 'failed'>('loading');
-  // Loyalty points the user chooses to spend on this order.
+  // Protinas v3: the EARNED Protinas the customer chooses to spend (the gift applies on its own).
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
-  const pointsBalance = user?.points_balance ?? 0;
+  // « Garder pour plus tard »: null until the customer touches it, so the rules' auto_apply decides.
+  const [giftChoice, setGiftChoice] = useState<boolean | null>(null);
+  const useGift = giftChoice ?? (rules.gift?.auto_apply ?? true);
 
   // Single address (livraison) selector state
   const [gouvernorat, setGouvernorat] = useState('');
@@ -175,7 +177,11 @@ export default function CheckoutPage() {
   useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   const totalPrice = useMemo(() => getTotalPrice(), [items, getTotalPrice]);
-  const fallbackShipping = totalPrice >= rules.delivery.free_from_dt ? 0 : rules.delivery.fee_dt;
+  // Shown only while the quote is unavailable. Machines never reach free delivery (rule 19), as on
+  // the cart; the order still sends this total as expected_total, so a mismatch is a 409, not a charge.
+  const programmeTotal = useMemo(() => items.reduce((sum, item) => (isLoyaltyExcludedProduct(item.product, rules)
+    ? sum : sum + getEffectivePrice(item.product) * item.quantity), 0), [items, rules, getEffectivePrice]);
+  const fallbackShipping = programmeTotal >= rules.delivery.free_from_dt ? 0 : rules.delivery.fee_dt;
   const fallbackTotal = appliedCoupon?.totals?.total_ttc ?? totalPrice + fallbackShipping;
   const checkoutPayload = useMemo(() => buildBackendOrderPayload({
     livraison: {
@@ -196,7 +202,10 @@ export default function CheckoutPage() {
     coupon_code: appliedCoupon?.code,
     pack_discount: packDiscount || undefined,
     points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
-  }), [formData, gouvernorat, localite, delegation, codePostal, fallbackShipping, items, getEffectivePrice, user?.id, appliedCoupon?.code, packDiscount, pointsToRedeem]);
+    // Only an account has a gift wallet. Sent explicitly so the order honours « Garder pour plus
+    // tard » even when the quote service is down and the server would otherwise auto-apply it.
+    use_gift: isAuthenticated ? useGift : undefined,
+  }), [formData, gouvernorat, localite, delegation, codePostal, fallbackShipping, items, getEffectivePrice, user?.id, appliedCoupon?.code, packDiscount, pointsToRedeem, isAuthenticated, useGift]);
   /*
    * The quote prices the cart, coupon, pack, Protinas and login, never the delivery form: name,
    * address and note do not change the total, so typing them does not re-quote. Phone and e-mail
@@ -225,10 +234,27 @@ export default function CheckoutPage() {
   }, [quoteInputKey, isLoaded, items.length]);
 
   const visiblePricing = pricingState === 'failed' ? null : pricing;
+  // What the quote did with the code /coupons/apply validated: v3 may guard it to nothing, refuse a
+  // free delivery under its minimum or keep the pack instead. Only 'applied' may read green.
+  const couponState: 'pending' | 'applied' | 'kept' | 'not_applied' = !visiblePricing || !appliedCoupon
+    ? 'pending'
+    : visiblePricing.coupon.applied ? 'applied' : visiblePricing.coupon.reason === 'pack_better' ? 'kept' : 'not_applied';
+  // Why the code did not apply, or the cap it hit — shown in the coupon box itself.
+  const appliedCouponNote = visiblePricing && appliedCoupon
+    ? couponNote(visiblePricing, rules, moneyPlaces([visiblePricing.coupon.amount_dt]))
+    : null;
   const shippingCost = visiblePricing?.shipping_dt ?? fallbackShipping;
   const finalTotal = visiblePricing?.total_dt ?? fallbackTotal;
-  const maxRedeemablePoints = visiblePricing?.protinas.max_usable_points ?? 0;
+  // v3: the slider spends EARNED Protinas, whose ceiling is what is left after the gift.
+  const maxRedeemablePoints = visiblePricing
+    ? (isPricingV3(visiblePricing) ? visiblePricing.protinas.max_earned_points ?? 0 : visiblePricing.protinas.max_usable_points)
+    : 0;
   const effectivePointsToRedeem = Math.min(pointsToRedeem, maxRedeemablePoints);
+  const itemCount = items.reduce((sum, item) => sum + item.quantity, 0);
+  // Rule 17: staff call the ACCOUNT's verified phone, never the delivery phone typed on this form.
+  const confirmPhone = user?.phone_verified ? maskPhone(user.phone) : null;
+  const showRedeemer = isAuthenticated && !!visiblePricing
+    && (visiblePricing.protinas.balance > 0 || (visiblePricing.protinas.debt_points ?? 0) > 0);
   useEffect(() => {
     if (pricingState === 'ready') setPointsToRedeem(p => Math.min(p, maxRedeemablePoints));
   }, [pricingState, maxRedeemablePoints]);
@@ -372,9 +398,11 @@ export default function CheckoutPage() {
     try {
       const orderPayload = { ...checkoutPayload };
       if (!visiblePricing) delete orderPayload.points_to_redeem;
-      // Confirm the total on screen: the last server quote, even while a newer one is in flight. If
-      // the server now prices it differently it answers 409 with its pricing and creates nothing.
-      if (visiblePricing) orderPayload.expected_total = visiblePricing.total_dt;
+      // Confirm the total on screen: the last server quote, even while a newer one is in flight —
+      // or, when the quote failed, the fallback total shown instead. If the server prices it
+      // differently (a guarded code, machines, a free-delivery code under its minimum…) it answers
+      // 409 with its pricing and creates nothing, so the courier never collects more than displayed.
+      orderPayload.expected_total = finalTotal;
 
       const serializedPayload = JSON.stringify(orderPayload);
       if (checkoutAttemptRef.current?.payload !== serializedPayload) {
@@ -430,12 +458,16 @@ export default function CheckoutPage() {
             code_postale: formData.livraison_code_postale?.toString(),
             adresse1: formData.livraison_adresse1,
             livraison: formData.livraison,
+            // v3: frais_livraison is NET of the Protinas that paid it, and points_discount_ht is
+            // the articles part only — the same columns the server wrote.
             frais_livraison: response.pricing?.shipping_dt ?? shippingCost,
             prix_ht: response.pricing?.goods_dt ?? totalPrice,
             prix_ttc: response.pricing?.total_dt ?? finalTotal,
             pack_discount_ht: response.pricing?.pack?.amount_dt,
             discount_ht: response.pricing?.coupon?.applied ? response.pricing.coupon.amount_dt : 0,
-            points_discount_ht: response.pricing?.protinas?.used_dt,
+            points_discount_ht: response.pricing?.protinas?.used_on_goods_dt ?? response.pricing?.protinas?.used_dt,
+            points_shipping_dt: response.pricing?.protinas?.used_on_shipping_dt,
+            points_redeemed_gift: response.pricing?.protinas?.used_gift_points,
             points_redeemed: response.pricing?.protinas?.used_points,
             etat: 'nouvelle_commande',
             user_id: user?.id,
@@ -471,7 +503,7 @@ export default function CheckoutPage() {
         const updated = error.pricing as CheckoutPricing;
         setPricing(updated);
         setPricingState('ready');
-        setSubmitError(`Le total a été mis à jour : ${updated.total_dt.toFixed(2)} DT à payer à la livraison. Vérifiez puis confirmez.`);
+        setSubmitError(`Le total a été mis à jour : ${formatDt(updated.total_dt, moneyPlaces([updated.total_dt]))} à payer à la livraison. Vérifiez puis confirmez.`);
         focusCheckoutField('checkout-submit-error');
         return;
       }
@@ -741,24 +773,22 @@ export default function CheckoutPage() {
                       second control.
                     */}
                     <section className="space-y-3 border-t border-rule pt-4 lg:hidden" aria-label="Protinas">
-                      {isAuthenticated && visiblePricing && visiblePricing.protinas.balance > 0 && (
+                      {showRedeemer && visiblePricing && (
                         <LoyaltyPointsRedeemer
-                          balance={visiblePricing?.protinas.balance ?? pointsBalance}
-                          maxPoints={maxRedeemablePoints}
-                          pointsPerDt={rules.points_per_dt}
+                          pricing={visiblePricing}
+                          rules={rules}
                           value={effectivePointsToRedeem}
                           onChange={setPointsToRedeem}
+                          useGift={useGift}
+                          onUseGiftChange={setGiftChoice}
                           className="border-0 pt-0"
                         />
                       )}
-                      {visiblePricing && visiblePricing.protinas.balance > 0 && <p className="text-xs leading-relaxed text-ink-2">Utilisables sur cette commande : {visiblePricing.protinas.max_usable_dt.toFixed(2)} DT ({visiblePricing.protinas.max_usable_points} Protinas). Il vous restera {(visiblePricing.protinas.remaining_points / rules.points_per_dt).toFixed(2)} DT sur votre compte.</p>}
                       {/* The earn line renders for signed-out visitors too, where it is the
                           offer rather than a statement of fact — see LoyaltyEarnLine. That is
                           the one argument for an account this shop can honestly make at
                           checkout, and the phone never saw it. */}
-                      {visiblePricing && isAuthenticated ? (
-                        <p className="text-sm text-ink-2">Vous gagnerez {visiblePricing.earn_on_delivery_points} Protinas ({(visiblePricing.earn_on_delivery_points / rules.points_per_dt).toFixed(2)} DT) à la livraison.</p>
-                      ) : visiblePricing ? <LoyaltyEarnLine amountDt={visiblePricing.total_dt - visiblePricing.shipping_dt} variant="summary" /> : <p className="text-xs text-ink-3">Protinas confirmées à la validation.</p>}
+                      <CheckoutEarnLine pricing={visiblePricing} rules={rules} isAuthenticated={isAuthenticated} />
                       {pricingState === 'failed' && <p className="text-xs text-ink-3">Total confirmé à la validation.</p>}
                     </section>
 
@@ -853,11 +883,14 @@ export default function CheckoutPage() {
                     {appliedCoupon ? (
                       <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-sunken p-3">
                         <div className="flex items-center justify-between gap-2">
-                            <span className="font-medium text-ok">
-                              <bdi dir="auto">{appliedCoupon.code}</bdi> {visiblePricing?.coupon.reason === 'pack_better' ? 'conservé' : 'appliqué'}
+                            {/* The quote decides: /coupons/apply only validated the code, and v3 may
+                                guard it to nothing, refuse a free delivery under its minimum, or keep
+                                the pack. Green « appliqué » only when the quote really applied it. */}
+                            <span className={`font-medium ${couponState === 'applied' || couponState === 'pending' ? 'text-ok' : 'text-ink-2'}`}>
+                              <bdi dir="auto">{appliedCoupon.code}</bdi> {couponState === 'kept' ? 'conservé' : couponState === 'not_applied' ? 'non appliqué sur ce panier' : 'appliqué'}
                               {visiblePricing?.coupon.applied && visiblePricing.coupon.amount_dt > 0 && (
                                 <span dir="ltr" className="ms-1 text-ok">
-                                  (-{visiblePricing.coupon.amount_dt.toFixed(2)} DT)
+                                  (−{formatDt(visiblePricing.coupon.amount_dt, moneyPlaces([visiblePricing.coupon.amount_dt]))})
                                 </span>
                               )}
                           </span>
@@ -871,7 +904,11 @@ export default function CheckoutPage() {
                             <X className="h-4 w-4 mr-1" aria-hidden="true" /> Retirer
                           </Button>
                         </div>
-                        {couponMessage && (
+                        {/* Not applied by the quote: its reason replaces the green « Code vérifié ». A code the
+                            order step dropped (a 409) never keeps that green line beside « non appliqué ». */}
+                        {appliedCouponNote ? (
+                          <p className="checkout-coupon-message text-xs leading-relaxed text-ink-2">{appliedCouponNote}</p>
+                        ) : couponMessage && (couponMessageType === 'error' || couponState === 'applied' || couponState === 'pending') && (
                           <p
                             className={`checkout-coupon-message text-xs ${
                               couponMessageType === 'error'
@@ -923,95 +960,33 @@ export default function CheckoutPage() {
                     )}
                   </section>
 
-                  {/* Points de fidélité (utilisateurs connectés avec un solde) */}
-                  {isAuthenticated && visiblePricing && visiblePricing.protinas.balance > 0 && (
+                  {/* Protinas (comptes connectés avec un solde, ou un solde à compenser) */}
+                  {showRedeemer && visiblePricing && (
                     <LoyaltyPointsRedeemer
-                      balance={visiblePricing?.protinas.balance ?? pointsBalance}
-                      maxPoints={maxRedeemablePoints}
-                      pointsPerDt={rules.points_per_dt}
+                      pricing={visiblePricing}
+                      rules={rules}
                       value={effectivePointsToRedeem}
                       onChange={setPointsToRedeem}
+                      useGift={useGift}
+                      onUseGiftChange={setGiftChoice}
                     />
                   )}
 
-                  {/* Summary */}
-                  <div className="space-y-2.5 border-t border-rule pt-4 text-sm">
-                    <div className="flex justify-between items-center">
-                      <span className="text-ink-2">Sous-total articles</span>
-                      <span dir="ltr" className="font-display font-semibold tabular-nums text-ink-1">{(visiblePricing?.goods_dt ?? totalPrice).toFixed(2)} DT</span>
-                    </div>
-                    {visiblePricing?.coupon.applied && visiblePricing.coupon.amount_dt > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-ink-2">Code <bdi dir="auto">{visiblePricing.coupon.code}</bdi></span>
-                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          −{visiblePricing.coupon.amount_dt.toFixed(2)} DT
-                        </span>
-                      </div>
-                    )}
-                    {visiblePricing?.pack.applied && visiblePricing.pack.amount_dt > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-1.5 text-ink-2">
-                          <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
-                          Remise pack −{visiblePricing.pack.percent} %
-                        </span>
-                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          −{visiblePricing.pack.amount_dt.toFixed(2)} DT
-                        </span>
-                      </div>
-                    )}
-                    {visiblePricing && visiblePricing.protinas.used_dt > 0 && (
-                      <div className="flex justify-between items-center">
-                        <span className="flex items-center gap-1.5 text-ink-2">
-                          <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
-                          Protinas utilisées ({visiblePricing.protinas.used_points})
-                        </span>
-                        <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          −{visiblePricing.protinas.used_dt.toFixed(2)} DT
-                        </span>
-                      </div>
-                    )}
-                    <p className="text-xs leading-relaxed text-ink-2">Code promo ou remise pack (la meilleure des deux) + Protinas : jusqu&apos;à {rules.max_total_discount_percent} % de vos articles ; les Protinas non utilisées restent sur votre compte.</p>
-                    {visiblePricing?.coupon.reason === 'pack_better' && (
-                      <p className="text-xs leading-relaxed text-ink-2">Votre remise pack (−{visiblePricing.pack.amount_dt.toFixed(2)} DT) est plus avantageuse que ce code : elle est appliquée à sa place, et votre code reste valable pour une prochaine commande.</p>
-                    )}
-                    <div className="flex justify-between items-center">
-                      <span className="text-ink-2">Livraison</span>
-                      <span dir="ltr" className={`font-display font-semibold tabular-nums ${shippingCost === 0 ? 'text-ok' : 'text-ink-1'}`}>
-                        {shippingCost === 0 ? (
-                          <span className="flex items-center gap-1">
-                            <Truck className="h-4 w-4" aria-hidden="true" />
-                            Offerte
-                          </span>
-                        ) : (
-                          `${shippingCost.toFixed(2)} DT`
-                        )}
-                      </span>
-                    </div>
-                    {totalPrice < rules.delivery.free_from_dt && shippingCost > 0 && (
-                      <div className="flex items-start gap-2 rounded-xl border border-hairline bg-sunken p-3">
-                        <Truck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
-                        <p className="text-xs font-medium text-ink-2">
-                          Ajoutez {(rules.delivery.free_from_dt - totalPrice).toFixed(2)} DT pour la livraison gratuite !
-                        </p>
-                      </div>
-                    )}
-                    <div className="flex items-baseline justify-between border-t border-rule pt-4">
-                      <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total à payer à la livraison</span>
-                      <span dir="ltr" className="font-display text-2xl font-extrabold tracking-tight tabular-nums text-brand">
-                        {finalTotal.toFixed(2)} DT
-                      </span>
-                    </div>
-                    {(!visiblePricing || pricingState === 'failed') && (
-                      <p className="text-end text-[11px] leading-snug text-ink-3">
-                        Total confirmé à la validation.
-                      </p>
-                    )}
-                    {visiblePricing && visiblePricing.protinas.balance > 0 && (
-                      <p className="text-xs leading-relaxed text-ink-2">Utilisables sur cette commande : {visiblePricing.protinas.max_usable_dt.toFixed(2)} DT ({visiblePricing.protinas.max_usable_points} Protinas). Il vous restera {(visiblePricing.protinas.remaining_points / rules.points_per_dt).toFixed(2)} DT sur votre compte.</p>
-                    )}
-                    {visiblePricing && isAuthenticated ? (
-                      <p className="text-sm text-ink-2">Vous gagnerez {visiblePricing.earn_on_delivery_points} Protinas ({(visiblePricing.earn_on_delivery_points / rules.points_per_dt).toFixed(2)} DT) à la livraison.</p>
-                    ) : visiblePricing ? <LoyaltyEarnLine amountDt={visiblePricing.total_dt - visiblePricing.shipping_dt} variant="summary" className="pt-1" /> : <p className="text-xs text-ink-3">Protinas confirmées à la validation.</p>}
+                  {/* Summary — shared with the mobile sheet (CheckoutTotals). */}
+                  <div className="border-t border-rule pt-4">
+                    <CheckoutTotals
+                      pricing={visiblePricing}
+                      quoteFailed={pricingState === 'failed'}
+                      rules={rules}
+                      itemCount={itemCount}
+                      fallbackGoodsDt={totalPrice}
+                      fallbackShippingDt={fallbackShipping}
+                      fallbackTotalDt={fallbackTotal}
+                      isAuthenticated={isAuthenticated}
+                      confirmPhone={confirmPhone}
+                      // The coupon box right above already says why a code did not apply.
+                      showCouponNote={!appliedCoupon}
+                    />
                   </div>
 
                 </CardContent>
@@ -1028,11 +1003,14 @@ export default function CheckoutPage() {
         isSubmitting={isSubmitting}
         finalTotal={finalTotal}
         totalPrice={totalPrice}
-        shippingCost={shippingCost}
         pricing={visiblePricing}
         quoteFailed={pricingState === 'failed'}
-        pointsPerDt={rules.points_per_dt}
-        maxTotalDiscountPercent={rules.max_total_discount_percent}
+        rules={rules}
+        itemCount={itemCount}
+        fallbackTotal={fallbackTotal}
+        fallbackShipping={fallbackShipping}
+        isAuthenticated={isAuthenticated}
+        confirmPhone={confirmPhone}
         items={items}
         getEffectivePrice={getEffectivePrice}
         mobileSummaryOpen={mobileSummaryOpen}

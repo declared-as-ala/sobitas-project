@@ -16,8 +16,11 @@ use App\Services\CheckoutPricingService;
 use App\Services\CouponService;
 use App\Services\PackDiscountService;
 use App\Services\PointsService;
+use App\Services\OrderBudget;
 use App\Services\OrderConfirmationDispatcher;
+use App\Services\ProtinaWalletService;
 use App\Services\WelcomeBonusService;
+use App\Support\ProtinaWallet;
 use Laravel\Sanctum\PersonalAccessToken;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -40,6 +43,70 @@ class CommandeController extends Controller
     private function couponByCode(string $code): ?Coupon
     {
         return Coupon::whereRaw('UPPER(TRIM(code)) = ?', [app(CouponService::class)->normalizeCode($code)])->first();
+    }
+
+    /**
+     * Cart products for pricing. Under the v3 rules the subcategory is eager-loaded, because
+     * Product::isLoyaltyExcluded() reads it for every line (machines are outside the programme).
+     */
+    private function cartProducts(array $ids)
+    {
+        $query = Product::whereIn('id', $ids);
+        if (CheckoutPricingService::rulesVersion() >= 3 && Schema::hasTable('sous_categories')
+            && Schema::hasColumn('products', 'sous_categorie_id')) {
+            $query->with('sousCategorie:id,slug');
+        }
+
+        return $query->get()->keyBy('id');
+    }
+
+    /** « Garder pour plus tard » sends use_gift=false; without the field the gift applies by default. */
+    private static function useGift(Request $request): bool
+    {
+        return $request->has('use_gift') && $request->input('use_gift') !== null
+            ? $request->boolean('use_gift')
+            : (bool) config('loyalty.gift.auto_apply', true);
+    }
+
+    /** Rule 21: the gift does not apply when the delivery phone belongs to another account's welcome claim. */
+    private static function walletForDelivery(?ProtinaWallet $wallet, ?User $user, ?string $deliveryPhone): ?ProtinaWallet
+    {
+        if ($wallet && $user && $wallet->gift > 0
+            && WelcomeBonusService::deliveryPhoneUsedByAnotherClaim($user, $deliveryPhone)) {
+            return $wallet->withGiftBlocked(ProtinaWallet::BLOCK_WELCOME_PHONE_USED);
+        }
+
+        return $wallet;
+    }
+
+    private static function debtMessage(ProtinaWallet $wallet): string
+    {
+        return 'Solde à compenser : '.$wallet->debt.' Protinas. Vos prochains achats le compensent automatiquement ; '
+            .'retirez vos Protinas pour continuer.';
+    }
+
+    /**
+     * A checkout tab built before v3 sends no `use_gift` and means EVERY Protina by points_to_redeem
+     * (the gift now applies on its own). Its request is clamped to the earned Protinas instead of
+     * refused, so the expected_total check answers 409 with the v3 total (spec §E: one extra tap).
+     */
+    private static function clampPreV3Request(Request $request, int $requestedPoints, ?ProtinaWallet $wallet): int
+    {
+        if ($requestedPoints <= 0 || $request->has('use_gift')) {
+            return $requestedPoints;
+        }
+
+        return min($requestedPoints, (int) ($wallet?->usableEarned() ?? 0));
+    }
+
+    /** The account's verified phone (rule 17's number), or null. */
+    private static function verifiedPhoneOf(?User $user): ?string
+    {
+        if (! $user || empty($user->phone_verified_at) || trim((string) $user->phone) === '') {
+            return null;
+        }
+
+        return mb_substr(trim((string) $user->phone), 0, 32);
     }
 
     /** Two decimals with a dot, the way the storefront prints totals (toFixed(2)). */
@@ -110,7 +177,8 @@ class CommandeController extends Controller
             'panier.*.prix_unitaire' => ['nullable', 'numeric', 'min:0'], // CRIT-03: ignored; server uses DB price
             'coupon_code'       => ['nullable', 'string', 'max:64'],
             'pack_discount'     => ['nullable', 'boolean'],   // opt-in; amount computed server-side
-            'points_to_redeem'  => ['nullable', 'integer', 'min:0'], // validated <= balance & cap
+            'points_to_redeem'  => ['nullable', 'integer', 'min:0'], // v3: EARNED Protinas; validated <= wallet
+            'use_gift'          => ['nullable', 'boolean'],   // v3: false = « Garder pour plus tard »
             'expected_total' => ['nullable', 'numeric', 'min:0'],
             /*
              * Affiliate attribution — a hostname LABEL (`ali` for a visit that began on
@@ -136,7 +204,7 @@ class CommandeController extends Controller
          */
         $payloadHash = hash('sha256', (string) json_encode($request->only([
             'commande', 'panier', 'coupon_code', 'pack_discount', 'points_to_redeem',
-            'affiliate_subdomain',
+            'affiliate_subdomain', 'use_gift',
         ]), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
 
         if ($idempotencyKey !== '') {
@@ -177,6 +245,7 @@ class CommandeController extends Controller
         $pricingForResponse = null;
         try {
             $new_facture = DB::transaction(function () use ($commandeData, $request, $couponService, $authUser, $idempotencyKey, $payloadHash, &$pricingForResponse, &$couponGuessMissed) {
+            $attributedAffilie = null;
             $new_facture = new Commande();
 
             // Use livraison fields as primary source, fallback to billing fields
@@ -251,6 +320,7 @@ class CommandeController extends Controller
             if (filled($affiliateSubdomain) && Schema::hasColumn($new_facture->getTable(), 'affilie_id')) {
                 $affilie = Affilie::resolveActiveBySubdomain((string) $affiliateSubdomain);
                 if ($affilie !== null) {
+                    $attributedAffilie = $affilie; // its commission is a cost inside the v3 order budget
                     $new_facture->affilie_id = $affilie->id;
                     Log::info('filament.api.add_commande.affilie_attributed', [
                         'affilie_id' => $affilie->id,
@@ -291,7 +361,7 @@ class CommandeController extends Controller
 
             // CRIT-03: Load products and use server-side prices only
             $productIds = array_unique(array_column($request->panier, 'produit_id'));
-            $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+            $products = $this->cartProducts($productIds);
 
             // CRIT-06: Atomic stock decrement — decrement before creating details
             foreach ($request->panier as $panier) {
@@ -339,21 +409,34 @@ class CommandeController extends Controller
                 $new_details->save();
             }
 
-            // Re-validate the coupon against server-priced goods.
+            $v3 = CheckoutPricingService::rulesVersion() >= 3;
+            $pricingLines = [];
+            foreach ($request->panier as $line) {
+                $product = $products->get((int) $line['produit_id']);
+                if ($product) $pricingLines[] = ['product' => $product, 'quantity' => (int) $line['quantite']];
+            }
+
+            // Re-validate the coupon against server-priced goods (v3: programme goods, machines excluded).
             $coupon = null;
+            // Why a code the customer saw applied is dropped here (expired, used up, limit reached for
+            // this phone since the quote): put on pricing.coupon like quote() does, so the 409 says it.
+            $couponError = null;
             $coupon_code = $request->input('coupon_code');
             if ($coupon_code && Schema::hasColumn($new_facture->getTable(), 'coupon_id')) {
                 $client_id = $new_facture->client_id ?? $new_facture->user_id;
                 $result = $couponService->validateCoupon(
                     $coupon_code,
-                    $all_price_ht,
+                    $v3 ? CheckoutPricingService::programmeGoodsDt($pricingLines) : $all_price_ht,
                     $client_id ? (int) $client_id : null,
                     $new_facture->livraison_phone ?? $new_facture->phone,
                     $new_facture->livraison_email ?? $new_facture->email
                 );
                 if ($result['valid'] && $result['coupon']) {
                     $coupon = $result['coupon'];
-                } elseif ($this->couponByCode((string) $coupon_code) === null) {
+                } else {
+                    $couponError = trim((string) ($result['message'] ?? '')) ?: 'Code promo invalide ou expiré.';
+                }
+                if (! ($result['valid'] && $result['coupon']) && $this->couponByCode((string) $coupon_code) === null) {
                     // Only a code that does not exist counts as a guess: a real code that is expired,
                     // below its minimum or used up is what an honest customer sends, and every
                     // storefront order reaches us from the same proxy IP.
@@ -361,7 +444,9 @@ class CommandeController extends Controller
                 }
             }
             $requestedPoints = (int) $request->input('points_to_redeem', 0);
-            $lockedBalance = $authUser ? (int) $authUser->points_balance : null;
+            $lockedUser = null;
+            $wallet = null;
+            $internal = null;
             if ($requestedPoints > 0) {
                 if (! $authUser) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException(
@@ -373,30 +458,58 @@ class CommandeController extends Controller
                         response()->json(['message' => 'Vérifiez votre compte par téléphone ou par email avant d’utiliser vos points.'], 422)
                     );
                 }
+            }
 
-                $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
-                $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
-                if ($requestedPoints > $lockedBalance) {
+            if ($v3) {
+                // Protinas v3: the account row is locked whenever someone is logged in, because the
+                // gift applies automatically even when no earned Protinas are requested.
+                if ($authUser) {
+                    $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
+                    $wallet = $lockedUser ? app(ProtinaWalletService::class)->forUser($lockedUser) : null;
+                }
+                if ($requestedPoints > 0 && $wallet && $wallet->debt > 0) {
+                    throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                        response()->json(['message' => self::debtMessage($wallet)], 422)
+                    );
+                }
+                $requestedPoints = self::clampPreV3Request($request, $requestedPoints, $wallet);
+                if ($requestedPoints > (int) ($wallet?->usableEarned() ?? 0)) {
                     throw new \Illuminate\Http\Exceptions\HttpResponseException(
                         response()->json(['message' => 'Solde Protina insuffisant'], 422)
                     );
                 }
-
+                $wallet = self::walletForDelivery($wallet, $lockedUser, $new_facture->livraison_phone ?? $new_facture->phone);
+                // homeDelivery is ALWAYS true (see the v2 branch below).
+                $priced = app(CheckoutPricingService::class)->priceV3(
+                    $pricingLines, $coupon, $request->boolean('pack_discount'), $requestedPoints, true,
+                    $wallet, self::useGift($request), $attributedAffilie
+                );
+                $pricing = $priced['pricing'];
+                $internal = $priced['internal'];
+            } else {
+                $lockedBalance = $authUser ? (int) $authUser->points_balance : null;
+                if ($requestedPoints > 0) {
+                    $lockedUser = User::whereKey($authUser->getKey())->lockForUpdate()->first();
+                    $lockedBalance = (int) ($lockedUser->points_balance ?? 0);
+                    if ($requestedPoints > $lockedBalance) {
+                        throw new \Illuminate\Http\Exceptions\HttpResponseException(
+                            response()->json(['message' => 'Solde Protina insuffisant'], 422)
+                        );
+                    }
+                }
+                // homeDelivery is ALWAYS true: no pickup flow exists and nothing downstream (admin,
+                // prints, Aramex) reads commandes.livraison. When pickup is built, derive it from a
+                // server-validated mode that staff and the courier act on, never from a client flag.
+                $pricing = app(CheckoutPricingService::class)->priceV2(
+                    $pricingLines, $coupon, $request->boolean('pack_discount'), $lockedBalance,
+                    $requestedPoints, true,
+                    $authUser ? WelcomeBonusService::pendingPoints($authUser) : 0
+                );
             }
-
-            $pricingLines = [];
-            foreach ($request->panier as $line) {
-                $product = $products->get((int) $line['produit_id']);
-                if ($product) $pricingLines[] = ['product' => $product, 'quantity' => (int) $line['quantite']];
+            if ($couponError !== null) {
+                $pricing['coupon']['code'] = (string) $coupon_code;
+                $pricing['coupon']['reason'] = $couponError;
             }
-            // homeDelivery is ALWAYS true: no pickup flow exists and nothing downstream (admin,
-            // prints, Aramex) reads commandes.livraison. When pickup is built, derive it from a
-            // server-validated mode that staff and the courier act on, never from a client flag.
-            $pricing = app(CheckoutPricingService::class)->price(
-                $pricingLines, $coupon, $request->boolean('pack_discount'), $lockedBalance,
-                $requestedPoints, true,
-                $authUser ? WelcomeBonusService::pendingPoints($authUser) : 0
-            );
             $pricingForResponse = $pricing;
             $expected = $request->input('expected_total');
             if ($expected === null) {
@@ -408,38 +521,88 @@ class CommandeController extends Controller
                 throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
                     'message' => 'Le total de votre commande a changé : '.self::formatDt($pricing['total_dt'])
                         .' DT à payer à la livraison.',
-                    'pricing' => $pricing,
+                    'pricing' => self::pricingForClient($request, $pricing),
                 ], 409));
             }
 
             $couponApplied = $coupon && $pricing['coupon']['applied'];
             $discount_ht = $couponApplied ? $pricing['coupon']['amount_dt'] : 0.0;
             $discount_ttc = $couponApplied
-                ? $couponService->computeDiscount($coupon, $pricing['goods_dt'], $pricing['shipping_dt'])['discount_ttc'] : null;
+                ? ($v3 ? $couponService->discountTtc((float) $discount_ht)
+                    : $couponService->computeDiscount($coupon, $pricing['goods_dt'], $pricing['shipping_dt'])['discount_ttc'])
+                : null;
             if ($couponApplied) {
                 $new_facture->coupon_id = $coupon->id;
                 $new_facture->coupon_code_snapshot = $coupon->code;
                 $new_facture->coupon_type_snapshot = $coupon->type;
                 $new_facture->coupon_value_snapshot = $coupon->value;
             }
+            $table = $new_facture->getTable();
             $new_facture->prix_ht = $pricing['goods_dt'];
             $new_facture->discount_ht = $discount_ht;
             $new_facture->discount_ttc = $discount_ttc;
             $new_facture->pack_discount_ht = $pricing['pack']['amount_dt'];
-            $new_facture->points_discount_ht = $pricing['protinas']['used_dt'];
-            $new_facture->points_redeemed = $pricing['protinas']['used_points'];
-            $new_facture->remise = round($pricing['pack']['amount_dt'] + $pricing['protinas']['used_dt'], 3);
-            if (Schema::hasColumn($new_facture->getTable(), 'discount_amount')) {
+            if ($v3) {
+                // prix_ttc = prix_ht − discount_ht − remise + frais_livraison, with the delivery paid in
+                // Protinas taken off frais_livraison (net) and recorded in points_shipping_dt.
+                $new_facture->points_discount_ht = $pricing['protinas']['used_on_goods_dt'];
+                $new_facture->points_redeemed = $pricing['protinas']['used_points'];
+                $new_facture->remise = round($pricing['pack']['amount_dt'] + $pricing['protinas']['used_on_goods_dt'], 3);
+                $v3Columns = [
+                    'pricing_version' => 3,
+                    'points_redeemed_gift' => (int) $pricing['protinas']['used_gift_points'],
+                    'points_shipping_dt' => $pricing['protinas']['used_on_shipping_dt'],
+                    'earn_base_dt' => round(((int) $internal['earn_base_mm']) / 1000, 3),
+                    'budget_dt' => round(((int) $internal['budget_mm']) / 1000, 3),
+                    'requires_phone_confirmation' => (bool) $pricing['requires_phone_confirmation'],
+                    // Rule 17: the number staff call is the account's verified phone AS OF CHECKOUT, so a
+                    // number verified later (a thief's SIM) is never the one shown.
+                    'confirm_phone' => self::verifiedPhoneOf($lockedUser),
+                    'confirm_phone_verified_at' => self::verifiedPhoneOf($lockedUser) !== null ? $lockedUser->phone_verified_at : null,
+                ];
+                foreach ($v3Columns as $column => $value) {
+                    if (Schema::hasColumn($table, $column)) {
+                        $new_facture->{$column} = $value;
+                    }
+                }
+            } else {
+                $new_facture->points_discount_ht = $pricing['protinas']['used_dt'];
+                $new_facture->points_redeemed = $pricing['protinas']['used_points'];
+                $new_facture->remise = round($pricing['pack']['amount_dt'] + $pricing['protinas']['used_dt'], 3);
+            }
+            if (Schema::hasColumn($table, 'discount_amount')) {
                 $new_facture->discount_amount = $pricing['total_discount_dt'];
             }
             $new_facture->frais_livraison = $pricing['shipping_dt'];
             $new_facture->prix_ttc = $pricing['total_dt'];
             $new_facture->save();
 
-            if ($pricing['protinas']['used_points'] > 0) {
-                app(PointsService::class)->record($authUser, 'redeem', -$pricing['protinas']['used_points'],
-                    'Protinas utilisées sur commande ' . $new_facture->numero, $new_facture->id, null,
-                    'order:'.$new_facture->id.':redeem');
+            $usedPoints = (int) $pricing['protinas']['used_points'];
+            if ($usedPoints > 0) {
+                if ($v3) {
+                    // A wallet that is not split (yet, or again: an old worker wrote a NULL-bucket row
+                    // after the deploy's split) counts as gift for pricing, but its gift column may hold
+                    // anything from 0 to the gift the split left. Split the spend gift-first under the
+                    // locked row, as the v2 path does, so neither bucket's debit exceeds what record()
+                    // finds in it (the hourly split re-classifies every row of that account later).
+                    if (! empty($internal['wallet_unsplit'])) {
+                        [, $giftPoints] = app(PointsService::class)->splitLegacySpend($lockedUser ?? $authUser, $usedPoints);
+                    } else {
+                        $giftPoints = (int) $pricing['protinas']['used_gift_points'];
+                    }
+                    $ppd = app(OrderBudget::class)->pointsPerDt();
+                    app(PointsService::class)->redeemForOrder($authUser, (int) $new_facture->id, (string) $new_facture->numero,
+                        $usedPoints - $giftPoints, $giftPoints,
+                        OrderBudget::ceilDiv(CheckoutPricingService::millimes($pricing['protinas']['used_on_shipping_dt']) * $ppd, 1000));
+                    if ((int) $pricing['protinas']['used_gift_points'] > 0) {
+                        WelcomeBonusService::markGiftUse($authUser, (int) $new_facture->id,
+                            $new_facture->livraison_phone ?? $new_facture->phone);
+                    }
+                } else {
+                    [$earnedPart, $giftPart] = app(PointsService::class)->splitLegacySpend($lockedUser ?? $authUser, $usedPoints);
+                    app(PointsService::class)->redeemForOrder($authUser, (int) $new_facture->id, (string) $new_facture->numero,
+                        $earnedPart, $giftPart);
+                }
             }
 
             // Create redemption record when coupon was applied (including free_shipping with 0 discount_ht)
@@ -498,7 +661,7 @@ class CommandeController extends Controller
             ]);
         }
 
-        return $this->orderCreatedResponse($new_facture, false, $pricingForResponse);
+        return $this->orderCreatedResponse($new_facture, false, self::pricingForClient($request, $pricingForResponse));
     }
 
     /**
@@ -515,7 +678,43 @@ class CommandeController extends Controller
         ?Coupon $coupon,
         CouponService $couponService,
     ): void {
-        if ($requestedPoints > (int) $pricing['protinas']['used_points']) {
+        if ((int) ($pricing['rules_version'] ?? 2) >= 3) {
+            // v3 prices differently from what a tab without a quote computed (/coupons/apply, cart +
+            // flat delivery on ALL goods): a code guarded by the budget, a free-delivery code refused
+            // under its minimum, machines that neither reach free delivery nor take the code, a code
+            // whose minimum the programme goods miss, a pack the budget capped or removed (the old tab
+            // showed /pack/quote's uncapped tier amount), a code sent but dropped here (expired, used
+            // up, its per-phone limit reached since the screen applied it), or fewer Protinas than
+            // asked. Each of those could charge more than the screen showed, so the order is refused
+            // with the real total. Only a pack that beats the code, or a free-delivery code on a
+            // delivery already free, drops a code without raising the total.
+            $freeFrom = (float) config('loyalty.checkout.free_delivery_from_dt', 300);
+            $excluded = (float) ($pricing['excluded_goods_dt'] ?? 0);
+            $diverges = ! empty($pricing['coupon']['capped'])
+                || ! empty($pricing['pack']['capped'])
+                || in_array($pricing['coupon']['reason'] ?? null, ['budget', 'free_shipping_minimum'], true)
+                || (filled($request->input('coupon_code')) && empty($pricing['coupon']['applied'])
+                    && ! in_array($pricing['coupon']['reason'] ?? null, ['pack_better', 'shipping_already_free'], true))
+                || ($excluded > 0 && filled($request->input('coupon_code')))
+                || ((float) ($pricing['shipping_gross_dt'] ?? 0) > 0 && (float) $pricing['goods_dt'] >= $freeFrom)
+                || (int) $request->input('points_to_redeem', 0) > (int) $pricing['protinas']['used_points'];
+            if ($diverges) {
+                throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
+                    'message' => 'Le total de votre commande a changé : '.self::formatDt($pricing['total_dt'])
+                        .' DT à payer à la livraison.',
+                    'pricing' => self::pricingForClient($request, $pricing),
+                ], 409));
+            }
+            if ($requestedPoints > (int) $pricing['protinas']['earned_spendable']) {
+                throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
+                    'message' => sprintf(
+                        'Vos Protinas sont limitées à %d (%s DT) sur cette commande. Réduisez-les pour continuer.',
+                        (int) $pricing['protinas']['max_usable_points'],
+                        self::formatDt($pricing['protinas']['max_usable_dt']),
+                    ),
+                ], 422));
+            }
+        } elseif ($requestedPoints > (int) $pricing['protinas']['used_points']) {
             throw new \Illuminate\Http\Exceptions\HttpResponseException(response()->json([
                 'message' => sprintf(
                     'Vos Protinas sont limitées à %d pts (%s DT) sur cette commande (%d %% des articles). Réduisez-les pour continuer.',
@@ -562,8 +761,13 @@ class CommandeController extends Controller
             'coupon_code' => ['nullable', 'string', 'max:64'],
             'pack_discount' => ['nullable', 'boolean'],
             'points_to_redeem' => ['nullable', 'integer', 'min:0'],
+            'use_gift' => ['nullable', 'boolean'],
+            // Same label the order proxy stamps from the HttpOnly cookie: the quote must reserve the
+            // affiliate's commission exactly as the order will, or the first order answers 409.
+            'affiliate_subdomain' => ['nullable', 'string', 'max:32', 'regex:'.Affilie::SUBDOMAIN_PATTERN],
         ]);
         $authUser = $this->resolveTokenUser($request);
+        $v3 = CheckoutPricingService::rulesVersion() >= 3;
         $requestedPoints = (int) $request->input('points_to_redeem', 0);
         if ($requestedPoints > 0 && ! $authUser) {
             return response()->json(['message' => 'Veuillez vous reconnecter pour utiliser vos Protinas.'], 422);
@@ -572,10 +776,21 @@ class CommandeController extends Controller
             return response()->json(['message' => 'Vérifiez votre compte par téléphone ou par email avant d’utiliser vos points.'], 422);
         }
         $balance = $authUser ? (int) $authUser->points_balance : null;
-        if ($requestedPoints > (int) $balance) {
+        $wallet = null;
+        if ($v3) {
+            // Same wallet as the order (no lock: nothing is written). With a debt the quote still
+            // answers — the Protinas simply price at 0 and blocked_reason says why.
+            $wallet = $authUser ? app(ProtinaWalletService::class)->forUser($authUser) : null;
+            if (($wallet?->debt ?? 0) === 0) {
+                $requestedPoints = self::clampPreV3Request($request, $requestedPoints, $wallet);
+            }
+            if ($requestedPoints > 0 && ($wallet?->debt ?? 0) === 0 && $requestedPoints > (int) ($wallet?->usableEarned() ?? 0)) {
+                return response()->json(['message' => 'Solde Protina insuffisant'], 422);
+            }
+        } elseif ($requestedPoints > (int) $balance) {
             return response()->json(['message' => 'Solde Protina insuffisant'], 422);
         }
-        $products = Product::whereIn('id', array_column($request->panier, 'produit_id'))->get()->keyBy('id');
+        $products = $this->cartProducts(array_column($request->panier, 'produit_id'));
         $lines = [];
         foreach ($request->panier as $row) {
             $product = $products->get((int) $row['produit_id']);
@@ -585,6 +800,9 @@ class CommandeController extends Controller
         $goods = 0;
         foreach ($lines as $line) {
             $goods += $line['product']->getEffectiveUnitPrice() * $line['quantity'];
+        }
+        if ($v3) {
+            $goods = CheckoutPricingService::programmeGoodsDt($lines); // a code's minimum counts programme goods only
         }
         $coupon = null;
         $couponError = null;
@@ -607,6 +825,21 @@ class CommandeController extends Controller
                     $data['livraison_email'] ?? $data['email'] ?? null);
                 $coupon = $result['valid'] ? $result['coupon'] : null;
                 $couponError = $result['valid'] ? null : $result['message'];
+                if (! $result['valid'] && $v3 && $known !== null && $known->min_order_amount !== null
+                    && $goods < (float) $known->min_order_amount) {
+                    // v3 checks a code's minimum on programme goods. When the whole basket (machines
+                    // included) would have passed it, the machines are the reason — not « Montant
+                    // minimum » on a 1,220 DT basket.
+                    $allGoods = 0.0;
+                    foreach ($lines as $line) {
+                        $allGoods += $line['product']->getEffectiveUnitPrice() * $line['quantity'];
+                    }
+                    if ($allGoods > $goods && app(CouponService::class)->validateCoupon($couponCode, $allGoods, $client?->id,
+                        $data['livraison_phone'] ?? $data['phone'] ?? null,
+                        $data['livraison_email'] ?? $data['email'] ?? null)['valid']) {
+                        $couponError = 'excluded_goods';
+                    }
+                }
                 if (! $result['valid'] && $known === null) {
                     // Re-quoting a real code on every cart change costs nothing; a guess costs one try.
                     RateLimiter::hit($limiterKey, 60);
@@ -614,14 +847,45 @@ class CommandeController extends Controller
             }
         }
         // Always home delivery (see storeCommandeApi): commande.livraison never changes shipping.
-        $pricing = app(CheckoutPricingService::class)->price($lines, $coupon,
-            $request->boolean('pack_discount'), $balance, $requestedPoints, true,
-            $authUser ? WelcomeBonusService::pendingPoints($authUser) : 0);
+        if ($v3) {
+            $data = $request->input('commande');
+            $data = is_array($data) ? $data : [];
+            $wallet = self::walletForDelivery($wallet, $authUser, $data['livraison_phone'] ?? $data['phone'] ?? null);
+            // Resolved exactly as storeCommandeApi attributes it (same column guard), so both price alike.
+            $affilie = filled($request->input('affiliate_subdomain')) && Schema::hasColumn('commandes', 'affilie_id')
+                ? Affilie::resolveActiveBySubdomain((string) $request->input('affiliate_subdomain')) : null;
+            $pricing = app(CheckoutPricingService::class)->priceV3($lines, $coupon,
+                $request->boolean('pack_discount'), $requestedPoints, true, $wallet, self::useGift($request), $affilie)['pricing'];
+        } else {
+            $pricing = app(CheckoutPricingService::class)->priceV2($lines, $coupon,
+                $request->boolean('pack_discount'), $balance, $requestedPoints, true,
+                $authUser ? WelcomeBonusService::pendingPoints($authUser) : 0);
+        }
         if ($couponError !== null) {
             $pricing['coupon']['code'] = (string) $couponCode;
             $pricing['coupon']['reason'] = $couponError;
         }
-        return response()->json(['pricing' => $pricing]);
+        return response()->json(['pricing' => self::pricingForClient($request, $pricing)]);
+    }
+
+    /**
+     * A storefront bundle built before Protinas v3 (a checkout tab left open over the deploy, or a
+     * bundle served while the backend deploy lands first) sends no `use_gift` and prints
+     * « Livraison » from shipping_dt beside « Protinas utilisées −used_dt ». v3's shipping_dt is NET of
+     * the Protinas that paid the delivery, so those rows stopped adding up (180 − 15 + « Offerte »
+     * printed above a 175 total). For such a request shipping_dt is the delivery charged before
+     * Protinas, so goods − pack − code − used_dt + shipping_dt = total_dt again. Response only: the
+     * order's columns keep the net figure. Signed-in v3 tabs always send use_gift, and a guest spends
+     * no Protinas, so for them nothing changes.
+     */
+    private static function pricingForClient(Request $request, array $pricing): array
+    {
+        if ((int) ($pricing['rules_version'] ?? 2) >= 3 && ! $request->has('use_gift')) {
+            $pricing['shipping_dt'] = round((float) ($pricing['shipping_dt'] ?? 0)
+                + (float) ($pricing['protinas']['used_on_shipping_dt'] ?? 0), 3);
+        }
+
+        return $pricing;
     }
 
     private function existingQuoteClient(array $data, ?User $user): ?Client
@@ -674,7 +938,7 @@ class CommandeController extends Controller
     private function storedPricing(Commande $commande): array
     {
         // Replays use immutable order snapshots; never recalculate with current product prices.
-        return [
+        $pricing = [
             'goods_dt' => (float) $commande->prix_ht,
             'pack' => ['amount_dt' => (float) $commande->pack_discount_ht],
             'coupon' => ['code' => $commande->coupon_code_snapshot, 'type' => $commande->coupon_type_snapshot,
@@ -685,6 +949,29 @@ class CommandeController extends Controller
             'total_discount_dt' => (float) $commande->discount_amount,
             'total_dt' => (float) $commande->prix_ttc,
         ];
+        if ($commande->isPricedV3()) {
+            $onShip = round((float) ($commande->points_shipping_dt ?? 0), 3);
+            $onGoods = round((float) $commande->points_discount_ht, 3);
+            $gift = (int) ($commande->points_redeemed_gift ?? 0);
+            $pricing['rules_version'] = 3;
+            $pricing['shipping_gross_dt'] = round((float) $commande->frais_livraison + $onShip, 3);
+            $pricing['protinas'] = [
+                'used_points' => (int) $commande->points_redeemed,
+                'used_gift_points' => $gift,
+                'used_earned_points' => max(0, (int) $commande->points_redeemed - $gift),
+                'used_dt' => round($onGoods + $onShip, 3),
+                'used_on_shipping_dt' => $onShip,
+                'used_on_goods_dt' => $onGoods,
+            ];
+            $pricing['requires_phone_confirmation'] = (bool) ($commande->requires_phone_confirmation ?? false);
+            if ($commande->earn_base_dt !== null) {
+                // The frozen base, capped at the cash goods still on the order (an admin edit can lower them).
+                $pricing['earn_on_delivery_points'] = app(PointsService::class)->earnForSpend(
+                    app(PointsService::class)->earnableSpendFor($commande));
+            }
+        }
+
+        return $pricing;
     }
 
     /**
@@ -693,15 +980,20 @@ class CommandeController extends Controller
      */
     public function details(Request $request, int $id): JsonResponse
     {
-        $facture = Commande::select(
+        // v3 columns only when the migration ran. Never budget_dt (the hidden order budget).
+        $v3Columns = array_values(array_filter(
+            ['pricing_version', 'points_redeemed_gift', 'points_shipping_dt', 'requires_phone_confirmation'],
+            fn (string $column) => Schema::hasColumn('commandes', $column)
+        ));
+        $facture = Commande::select(array_merge([
             'id', 'numero', 'nom', 'prenom', 'email', 'phone', 'region', 'ville', 'etat',
             'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at',
             'coupon_code_snapshot', 'discount_ht', 'discount_ttc',
             'pack_discount_ht', 'points_discount_ht', 'points_redeemed',
             'user_id', 'client_id', 'livraison_email', 'livraison_phone',
             'livraison_nom', 'livraison_prenom', 'livraison_adresse1',
-            'livraison_region', 'livraison_ville', 'livraison_code_postale'
-        )->find($id);
+            'livraison_region', 'livraison_ville', 'livraison_code_postale',
+        ], $v3Columns))->find($id);
 
         if (! $facture) {
             return response()->json(['error' => 'Commande introuvable'], 404);

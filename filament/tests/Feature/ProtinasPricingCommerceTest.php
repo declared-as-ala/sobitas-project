@@ -21,6 +21,9 @@ class ProtinasPricingCommerceTest extends TestCase
         config([
             'database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:',
             'cache.default' => 'array',
+            // The 02/10/2026 rules, kept byte-identical behind LOYALTY_RULES_VERSION=2: every number
+            // below proves the rollback path. Protinas v3 lives in ProtinasV3PricingTest.
+            'loyalty.rules_version' => 2,
             'loyalty.checkout.max_total_discount_percent' => 10,
             'loyalty.checkout.delivery_fee_dt' => 10,
             'loyalty.checkout.free_delivery_from_dt' => 300,
@@ -30,7 +33,8 @@ class ProtinasPricingCommerceTest extends TestCase
             'loyalty.till.points_per_dt' => 20, 'loyalty.till.earn_per_dt' => 1,
             'loyalty.till.max_total_discount_percent' => 10, 'loyalty.till.min_redeem_points' => 100,
             // /api/loyalty/rules reports this switch; pin it so the server's own .env cannot flip the test.
-            'welcome_bonus.unlock_on_first_delivery' => true,
+            // Launch value since v3: the welcome gift is credited at phone verification.
+            'welcome_bonus.unlock_on_first_delivery' => false,
         ]);
         DB::purge('sqlite');
         DB::setDefaultConnection('sqlite');
@@ -176,7 +180,7 @@ class ProtinasPricingCommerceTest extends TestCase
         $this->getJson('/api/loyalty/rules')->assertOk()
             ->assertJsonPath('points_per_dt', 20)
             ->assertJsonPath('pack.tiers.1.percent', 5)
-            ->assertJsonPath('welcome.unlock', 'first_delivered_order');
+            ->assertJsonPath('welcome.unlock', 'phone_verification');
     }
 
     public function test_till_60_dt_and_45_dt_examples(): void

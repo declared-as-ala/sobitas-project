@@ -468,8 +468,21 @@ export interface Order {
   discount_ht?: number;
   discount_ttc?: number;
   pack_discount_ht?: number;
+  /** v3 orders: the Protinas that paid the ARTICLES only (the delivery part is points_shipping_dt). */
   points_discount_ht?: number;
+  /** Every Protina debited by the order (gift + earned, articles + delivery). */
   points_redeemed?: number;
+  /** Protinas v3 (`pricing_version` 3). Absent on orders priced before 02/10/2026. */
+  pricing_version?: number | null;
+  /** DT of the delivery fee paid with Protinas; `frais_livraison` is then the NET fee. */
+  points_shipping_dt?: number | null;
+  /** Gift Protinas among `points_redeemed`. */
+  points_redeemed_gift?: number | null;
+  requires_phone_confirmation?: boolean | null;
+  /** Protinas kept after a refusal post-dispatch (the round-trip deposit). */
+  protinas_forfeited?: number | null;
+  /** Staff gave the deposit back (« Rendre la retenue Protinas »): nothing is retained any more. */
+  protinas_forfeit_waived?: boolean | null;
   coupon_code_snapshot?: string;
   payment_method?: 'cod' | 'card' | string;
   user_id?: number;
@@ -514,9 +527,18 @@ export interface Order {
    */
   totals?: {
     goods: number;
+    /** NET delivery charged in cash (v3: after the part paid with Protinas). */
     shipping: number;
+    /** v3: the delivery fee before Protinas (= shipping + points_shipping). */
+    shipping_gross?: number;
+    /** v3: DT of the delivery paid with Protinas. */
+    points_shipping?: number;
+    points_redeemed_gift?: number;
+    points_redeemed?: number;
+    protinas_forfeited?: number;
     coupon_discount: number;
     coupon_code: string | null;
+    /** The Protinas part that paid the articles (never the delivery part). */
     points_discount: number;
     other_discount: number;
     total: number;
@@ -609,6 +631,11 @@ export interface QuickOrderPayload {
   website?: string;
   /** Code promo (validated via /coupons/apply before submit) */
   couponCode?: string;
+  /**
+   * The total the drawer shows (after a 409, the server's own figure the customer confirmed). Sent
+   * as `expected_total`, so the order is created only at that amount.
+   */
+  expectedTotal?: number;
 }
 
 export interface QuickOrderResponse {
@@ -641,6 +668,40 @@ export interface User {
   phone_verification_required?: boolean;
   marketing_email_opt_in?: boolean;
   marketing_email_status?: 'unsubscribed' | 'pending' | 'subscribed';
+  /** Protinas v3 wallet split. From GET /profil once the v3 backend is live. */
+  protinas?: ProtinaWalletSummary;
+}
+
+/**
+ * Protinas v3 wallet, as `ProtinaWalletService::customerPayload()` publishes it on /profil,
+ * /points/history and /member/dashboard. One total, two wallets:
+ *   earned  money the customer already paid (1 per DT), usable 14 days after delivery, never expires;
+ *   gift    the shop's money (welcome, reviews), applied automatically, may expire.
+ */
+export interface ProtinaWalletSummary {
+  total: number;
+  value_dt: number;
+  earned_spendable: number;
+  earned_pending: number;
+  pending_available_at: string | null;
+  gift_balance: number;
+  /** Soonest expiry of the gift Protinas; null = no date limit (gifts that existed before v3). */
+  gift_expires_at: string | null;
+  debt_points: number;
+  gift_frozen_until: string | null;
+  blocked_reason: 'unverified' | 'debt' | 'gift_frozen' | 'welcome_phone_used' | null;
+  hold_days: number;
+  /** Basket from which the whole welcome gift applies (derived from the hidden order budget). */
+  gift_full_from_dt: number | null;
+  lifetime_savings_dt: number;
+  en_route: Array<{ commande_id: number; numero: string | null; points: number }>;
+  /**
+   * Rule 17: a phone verified long enough ago. False: checkout lets Protinas pay at most about half
+   * of an order (under the confirmation thresholds) until `phone_trusted_from` (null: no verified
+   * phone yet). Absent from an older backend: treated as trusted.
+   */
+  phone_trusted?: boolean;
+  phone_trusted_from?: string | null;
 }
 
 /** Line item returned by POST /pack/quote (server-computed from real product prices). */
@@ -676,6 +737,12 @@ export interface PointsTransaction {
   description: string;
   commande_id: number | null;
   created_at: string;
+  /** v3: which wallet the row belongs to. */
+  bucket?: 'earned' | 'gift' | null;
+  /** v3 gift credits: until when they can be used. */
+  expires_at?: string | null;
+  /** v3 order earnings: when the return hold ends. */
+  available_at?: string | null;
 }
 
 /** Loyalty-points history + balance from GET /points/history (auth). */
@@ -684,6 +751,7 @@ export interface PointsHistory {
   value_dt: number;
   welcome_status?: NonNullable<User['welcome_bonus_status']>;
   pending_welcome_points?: number;
+  wallet?: ProtinaWalletSummary;
   transactions: PointsTransaction[];
 }
 
@@ -699,11 +767,13 @@ export interface MemberMission {
 export interface MemberDashboardData {
   welcome_status?: NonNullable<User['welcome_bonus_status']>;
   pending_welcome_points?: number;
+  wallet?: ProtinaWalletSummary;
   summary: {
     orders: number;
     delivered_orders: number;
     reviews: number;
     points_earned: number;
+    lifetime_savings_dt?: number;
   };
   review_access: ReviewAccess;
   missions: MemberMission[];

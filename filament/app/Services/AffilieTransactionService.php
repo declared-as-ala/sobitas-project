@@ -474,11 +474,12 @@ class AffilieTransactionService
      * every order forever. `PointsService::earnableSpend()` excludes shipping for the same reason
      * and this deliberately mirrors it.
      *
-     * It does NOT add back redeemed loyalty points, and there the two economies part company on
-     * purpose. Points treat a redemption as a payment instrument, so a customer spending an old
-     * reward still earns on the full product price — the shop is giving away points, which cost
-     * nothing to mint. Commission is CASH. In a COD order the cash that arrives is `prix_ttc` and
-     * nothing more; paying a percentage of money that was never collected is a straight loss.
+     * It does NOT add back redeemed loyalty points. Since 02/10/2026 spent Protinas earn nothing
+     * either (Protinas v3: the earning base is the programme goods paid in CASH, frozen at checkout
+     * in `earn_base_dt`), so both economies now stand on the cash that arrives. Commission is CASH.
+     * In a COD order the cash that arrives is `prix_ttc` and nothing more — since v3 `frais_livraison`
+     * is the delivery still due in cash (net of Protinas) — and paying a percentage of money that
+     * was never collected is a straight loss.
      */
     public function orderCommissionBase(Commande $commande): float
     {

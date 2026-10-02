@@ -14,6 +14,11 @@ class UserPointTransaction extends Model
     protected $casts = [
         'points'        => 'integer',
         'balance_after' => 'integer',
+        // Protinas v3 (migration 2026_10_02_000001): `bucket` earned|gift, gift lots carry
+        // `remaining` + `expires_at`, held earnings carry `available_at`.
+        'remaining'     => 'integer',
+        'expires_at'    => 'datetime',
+        'available_at'  => 'datetime',
     ];
 
     protected $hidden = ['idempotency_key'];

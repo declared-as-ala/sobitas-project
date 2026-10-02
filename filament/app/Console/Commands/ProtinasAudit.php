@@ -38,9 +38,58 @@ class ProtinasAudit extends Command
         $dt = fn ($p) => number_format(((int) $p) / $rate, 2, ',', ' ').' DT';
         $hasReview = Schema::hasColumn('user_point_transactions', 'review_id');
 
-        $this->info(sprintf('Rules: earn %d pt/DT · %d pts = 1 DT · redeem cap %d%% of goods HT · welcome bonus %d pts',
-            PointsService::earnRate(), $rate, (int) config('loyalty.checkout.max_total_discount_percent', 10),
-            \App\Services\PhoneVerificationService::bonusPoints()));
+        $v3 = (int) config('loyalty.rules_version', 3) >= 3;
+        $hasBucket = Schema::hasColumn('user_point_transactions', 'bucket');
+        $hasGift = Schema::hasColumn('users', 'gift_points_balance');
+        $hasDebt = Schema::hasColumn('users', 'points_debt');
+        if ($v3) {
+            $this->info(sprintf('Rules v3: earn %d pt/DT (held %d days) · %d pts = 1 DT · earned up to %d %% of goods%s · gift inside the hidden order budget · welcome %d pts',
+                PointsService::earnRate(), (int) config('loyalty.points.earn_hold_days', 14), $rate,
+                (int) config('loyalty.points.earned_max_percent', 100), config('loyalty.points.cover_shipping', true) ? ' + delivery' : '',
+                \App\Services\PhoneVerificationService::bonusPoints()));
+        } else {
+            $this->info(sprintf('Rules: earn %d pt/DT · %d pts = 1 DT · redeem cap %d%% of goods HT · welcome bonus %d pts',
+                PointsService::earnRate(), $rate, (int) config('loyalty.checkout.max_total_discount_percent', 10),
+                \App\Services\PhoneVerificationService::bonusPoints()));
+        }
+
+        // ── 0. Cash on delivery: prix_ttc must equal prix_ht − code − (pack + Protinas) + delivery ─
+        // (spec F0). An order breaking it makes the courier collect a wrong amount; fix each one
+        // (open it in the admin and save it) before creating its delivery note.
+        $identity = "ABS(COALESCE(prix_ttc,0) - GREATEST(0, COALESCE(prix_ht,0) - COALESCE(discount_ht,0) - COALESCE(remise,0) + COALESCE(frais_livraison,0))) > 0.01";
+        $broken = DB::table('commandes')->whereRaw($identity)
+            ->whereNotIn('etat', array_merge(PointsService::CANCELLED_STATUSES, PointsService::DELIVERED_STATUSES))
+            ->when(Schema::hasColumn('commandes', 'quotation_id'), fn ($q) => $q->whereNull('quotation_id'))
+            ->where(fn ($q) => $q->where('authenticated_user_id', '>', 0)->orWhere('points_redeemed', '>', 0)
+                ->orWhere('pack_discount_ht', '>', 0)->orWhere('discount_ht', '>', 0)
+                ->when(Schema::hasColumn('commandes', 'affilie_id'), fn ($q) => $q->orWhereNotNull('affilie_id'))
+                ->when(Schema::hasColumn('commandes', 'pricing_version'), fn ($q) => $q->orWhereNotNull('pricing_version')));
+        $brokenCount = (clone $broken)->count();
+        $this->line('');
+        $this->{$brokenCount > 0 ? 'error' : 'info'}(sprintf('0) Open orders whose total breaks prix_ttc = prix_ht − code − remise + livraison: %d', $brokenCount));
+        if ($brokenCount > 0) {
+            $this->table(['order', 'date', 'état', 'HT', 'code', 'remise', 'livraison', 'prix_ttc', 'should be'],
+                (clone $broken)->orderByDesc('id')->limit($top)
+                    ->get(['id', 'numero', 'created_at', 'etat', 'prix_ht', 'discount_ht', 'remise', 'frais_livraison', 'prix_ttc'])
+                    ->map(fn ($c) => [$c->numero ?? $c->id, substr((string) $c->created_at, 0, 10), $c->etat, $c->prix_ht,
+                        $c->discount_ht, $c->remise, $c->frais_livraison, $c->prix_ttc,
+                        \App\Support\OrderCashOnDelivery::amount((float) $c->prix_ht, (float) $c->discount_ht, (float) $c->remise, (float) $c->frais_livraison)])->all());
+        }
+        if (Schema::hasTable('factures') && Schema::hasColumn('factures', 'net_a_payer')) {
+            $blMismatch = DB::table('factures as f')->join('commandes as c', 'c.id', '=', 'f.commande_id')
+                ->whereRaw('ABS(COALESCE(f.net_a_payer,0) - COALESCE(c.prix_ttc,0)) > 0.01')
+                ->when(Schema::hasColumn('commandes', 'quotation_id'), fn ($q) => $q->whereNull('c.quotation_id'))
+                ->where(fn ($q) => $q->where('c.authenticated_user_id', '>', 0)->orWhere('c.points_redeemed', '>', 0)
+                    ->orWhere('c.pack_discount_ht', '>', 0)->orWhere('c.discount_ht', '>', 0))
+                ->when(Schema::hasColumn('factures', 'aramex_hawb'), fn ($q) => $q->where(fn ($w) => $w->whereNull('f.aramex_hawb')->orWhere('f.aramex_hawb', '')))
+                ->count();
+            $this->line(sprintf('   delivery notes not yet at Aramex whose net à payer ≠ the order total: %d (« Envoyer vers Aramex » is disabled on them)', $blMismatch));
+        }
+        if (Schema::hasColumn('commandes', 'requires_phone_confirmation') && Schema::hasColumn('commandes', 'phone_confirmed_at')) {
+            $this->line(sprintf('   orders waiting for their phone confirmation (rule 17): %d',
+                DB::table('commandes')->where('requires_phone_confirmation', true)->whereNull('phone_confirmed_at')
+                    ->whereNotIn('etat', PointsService::CANCELLED_STATUSES)->count()));
+        }
 
         // ── 1. Where every credited point came from ──────────────────────────────────────────
         $source = "CASE
@@ -60,6 +109,14 @@ class ProtinasAudit extends Command
         $this->info('1) Ledger by source (all time)');
         $this->table(['source', 'rows', 'users', 'points', 'value'],
             $bySource->map(fn ($r) => [$r->src, $r->n, $r->users, $r->pts, $dt($r->pts)])->all());
+        if ($hasBucket) {
+            $byBucket = DB::table('user_point_transactions')
+                ->selectRaw("COALESCE(bucket, 'NULL (not split)') as b, type, COUNT(*) n, SUM(points) pts")
+                ->groupBy('b', 'type')->orderBy('b')->orderBy('type')->get();
+            $this->info('   by wallet (bucket) and type');
+            $this->table(['bucket', 'type', 'rows', 'points', 'value'],
+                $byBucket->map(fn ($r) => [$r->b, $r->type, $r->n, $r->pts, $dt($r->pts)])->all());
+        }
 
         $otherCredits = DB::table('user_point_transactions')
             ->selectRaw('description, COUNT(*) n, SUM(points) pts')
@@ -88,12 +145,70 @@ class ProtinasAudit extends Command
         }
         $this->table(['balance band', 'customers', 'value'], $rows);
 
+        // Since v3 the ledger is exact: SUM(points) = points_balance − points_debt (the wallet split wrote
+        // one hidden migration:wallets:{uid} row per account whose old 0-floor had drifted).
         $drift = DB::table('users as u')
             ->joinSub(DB::table('user_point_transactions')->selectRaw('user_id, SUM(points) s')->groupBy('user_id'), 't', 't.user_id', '=', 'u.id')
-            ->whereRaw('u.points_balance <> GREATEST(t.s, 0)')->count();
+            ->whereRaw($hasDebt ? 'u.points_balance - COALESCE(u.points_debt, 0) <> t.s' : 'u.points_balance <> GREATEST(t.s, 0)')->count();
         $noLedger = DB::table('users')->where('points_balance', '>', 0)
             ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('user_point_transactions as t')->whereColumn('t.user_id', 'users.id'))->count();
-        $this->line(sprintf('   balance ≠ ledger sum: %d customers · balance with NO ledger row: %d', $drift, $noLedger));
+        $this->line(sprintf('   %s: %d customers · balance with NO ledger row: %d',
+            $hasDebt ? 'ledger sum ≠ balance − debt' : 'balance ≠ ledger sum', $drift, $noLedger));
+
+        // ── 2b. The two wallets (v3) ─────────────────────────────────────────────────────────────
+        if ($hasGift && $hasBucket) {
+            $giftTotal = (int) DB::table('users')->sum('gift_points_balance');
+            $debtTotal = $hasDebt ? (int) DB::table('users')->sum('points_debt') : 0;
+            $earnedTotal = max(0, $total - $giftTotal);
+            $pending = Schema::hasColumn('user_point_transactions', 'available_at')
+                ? (int) DB::table('user_point_transactions')->where('bucket', 'earned')->where('type', 'earn')
+                    ->where('available_at', '>', now())->sum(DB::raw(Schema::hasColumn('user_point_transactions', 'remaining') ? 'COALESCE(remaining, points)' : 'points'))
+                : 0;
+            $unsplit = DB::table('user_point_transactions')->whereNull('bucket')->distinct()->count('user_id');
+            $this->line('');
+            $this->info('2b) Wallets (liability at 0,050 DT per Protina)');
+            $this->table(['wallet', 'Protinas', 'value'], [
+                ['earned (prepaid by cash already delivered)', $earnedTotal, $dt($earnedTotal)],
+                ['   of which held (return window)', $pending, $dt($pending)],
+                ['gift (shop money, budget-bounded)', $giftTotal, $dt($giftTotal)],
+                ['debt (clawbacks not yet repaid)', $debtTotal, $dt($debtTotal)],
+            ]);
+            if ($unsplit > 0) {
+                $this->warn(sprintf('   %d account(s) still have unclassified ledger rows (bucket NULL): run vps-run protinas-split-wallets. Until then their whole balance counts as gift.', $unsplit));
+            }
+            if (Schema::hasColumn('user_point_transactions', 'remaining')) {
+                // Buckets add up: the gift balance is the sum of the open gift lots.
+                $lotMismatch = DB::table('users as u')
+                    ->leftJoinSub(DB::table('user_point_transactions')->where('bucket', 'gift')->where('remaining', '>', 0)
+                        ->selectRaw('user_id, SUM(remaining) r')->groupBy('user_id'), 'l', 'l.user_id', '=', 'u.id')
+                    ->whereRaw('COALESCE(u.gift_points_balance, 0) <> COALESCE(l.r, 0)')
+                    ->where(fn ($q) => $q->where('u.gift_points_balance', '>', 0)->orWhereNotNull('l.r'))->count();
+                $overGift = DB::table('users')->whereColumn('gift_points_balance', '>', 'points_balance')->count();
+                $this->line(sprintf('   gift balance ≠ open gift lots: %d accounts · gift > total balance: %d accounts', $lotMismatch, $overGift));
+                if (Schema::hasColumn('user_point_transactions', 'expires_at')) {
+                    $soon = DB::table('user_point_transactions')->where('bucket', 'gift')->where('remaining', '>', 0)
+                        ->whereNotNull('expires_at')->where('expires_at', '<=', now()->addDays(30));
+                    $this->line(sprintf('   gift Protinas expiring within 30 days: %d (%s) · without expiry (pre-v3): %d',
+                        (int) (clone $soon)->sum('remaining'), $dt((int) (clone $soon)->sum('remaining')),
+                        (int) DB::table('user_point_transactions')->where('bucket', 'gift')->where('remaining', '>', 0)->whereNull('expires_at')->sum('remaining')));
+                }
+            }
+
+            // Monthly movements per wallet (last 6 months).
+            $month = DB::connection()->getDriverName() === 'sqlite' ? "strftime('%Y-%m', created_at)" : "DATE_FORMAT(created_at, '%Y-%m')";
+            $moves = DB::table('user_point_transactions')->where('created_at', '>=', now()->subMonths(6)->startOfMonth())
+                ->selectRaw("$month as m,
+                    SUM(CASE WHEN bucket = 'earned' AND points > 0 THEN points ELSE 0 END) earned_in,
+                    SUM(CASE WHEN bucket = 'earned' AND points < 0 THEN -points ELSE 0 END) earned_out,
+                    SUM(CASE WHEN bucket = 'gift' AND points > 0 THEN points ELSE 0 END) gift_in,
+                    SUM(CASE WHEN bucket = 'gift' AND points < 0 AND type <> 'expiry' THEN -points ELSE 0 END) gift_out,
+                    SUM(CASE WHEN type = 'expiry' THEN -points ELSE 0 END) expired")
+                ->groupBy('m')->orderBy('m')->get();
+            $this->info('   monthly movements (Protinas; × 0,050 = DT)');
+            $this->table(['month', 'earned +', 'earned −', 'gift +', 'gift used/clawed', 'gift expired', 'net liability change'],
+                $moves->map(fn ($r) => [$r->m, (int) $r->earned_in, (int) $r->earned_out, (int) $r->gift_in, (int) $r->gift_out,
+                    (int) $r->expired, $dt((int) $r->earned_in - (int) $r->earned_out + (int) $r->gift_in - (int) $r->gift_out - (int) $r->expired)])->all());
+        }
 
         // ── 3. Every redemption in the window, with how the balance was built ────────────────
         $since = now()->subDays($days);
@@ -113,7 +228,7 @@ class ProtinasAudit extends Command
                 ->selectRaw("$source as src, SUM(points) pts")->groupBy('src')->pluck('pts', 'src');
             $delivered = DB::table('commandes')->where('user_id', $r->user_id)
                 ->whereIn('etat', PointsService::DELIVERED_STATUSES)->count();
-            $goods = (float) $r->prix_ht + (float) ($r->remise ?? 0);
+            $goods = (float) $r->prix_ht; // prix_ht is the GROSS goods (adding remise double-counted it)
             $rows[] = [
                 '#'.$r->user_id,
                 substr((string) $r->created_at, 0, 10),
@@ -138,6 +253,15 @@ class ProtinasAudit extends Command
             $this->line('');
             $this->info(sprintf('4) Welcome bonus: %d claimed (%s) · %d never had a delivered order · %d have redeemed points',
                 $claims, $dt($claims * \App\Services\PhoneVerificationService::bonusPoints()), $claimsNoOrder, $spent));
+            if (Schema::hasColumn('welcome_bonus_claims', 'used_phone_hash')) {
+                // Rule 21 is off by default: the audit shows when one delivery phone serves several
+                // gift accounts (a SIM farm). Turn WELCOME_BONUS_UNIQUE_DELIVERY_PHONE on if it grows.
+                $shared = DB::table('welcome_bonus_claims')->whereNotNull('used_phone_hash')
+                    ->selectRaw('used_phone_hash, COUNT(DISTINCT user_id) accounts')->groupBy('used_phone_hash')
+                    ->havingRaw('COUNT(DISTINCT user_id) > 1')->orderByDesc('accounts')->limit($top)->get();
+                $this->line(sprintf('   delivery phones shared by several gift-spending accounts: %d%s', $shared->count(),
+                    $shared->isEmpty() ? '' : ' — '.$shared->map(fn ($s) => substr((string) $s->used_phone_hash, 0, 8).'… ×'.$s->accounts)->implode(', ')));
+            }
             if (Schema::hasColumn('welcome_bonus_claims', 'credited_at')) {
                 $this->line(sprintf('   pending: %d · unlocked: %d',
                     DB::table('welcome_bonus_claims')->whereNull('credited_at')->count(),
@@ -147,18 +271,34 @@ class ProtinasAudit extends Command
 
         // ── 5. Online orders whose TOTAL discount was large (points + coupon + pack stacked) ───
         $this->line('');
+        $hasShipPts = Schema::hasColumn('commandes', 'points_shipping_dt');
         $big = DB::table('commandes')->where('created_at', '>=', now()->subDays(90))
-            ->whereRaw('(COALESCE(remise,0) + COALESCE(discount_ht,0)) >= 20')
+            ->whereRaw('(COALESCE(remise,0) + COALESCE(discount_ht,0)'.($hasShipPts ? ' + COALESCE(points_shipping_dt,0)' : '').') >= 20')
             ->orderByDesc('created_at')->limit($top)
-            ->get(['id', 'numero', 'created_at', 'etat', 'user_id', 'prix_ht', 'prix_ttc', 'remise', 'discount_ht', 'coupon_code_snapshot']);
+            ->get(array_merge(['id', 'numero', 'created_at', 'etat', 'user_id', 'prix_ht', 'prix_ttc', 'remise', 'discount_ht', 'coupon_code_snapshot'],
+                $hasShipPts ? ['points_shipping_dt', 'pricing_version'] : []));
         $this->info(sprintf('5) Online orders with ≥ 20 DT total discount, last 90 days: %d shown', $big->count()));
-        $this->table(['order', 'date', 'état', 'user', 'HT', 'TTC', 'remise (pack+pts)', 'coupon HT', 'coupon', 'points DT'],
+        $this->table(['order', 'date', 'état', 'v', 'user', 'HT', 'TTC', 'remise (pack+pts)', 'coupon HT', 'coupon', 'points DT', 'delivery by pts'],
             $big->map(function ($c) use ($rate) {
                 $pts = (int) DB::table('user_point_transactions')->where('commande_id', $c->id)->where('type', 'redeem')->sum('points');
 
-                return [$c->numero ?? $c->id, substr((string) $c->created_at, 0, 10), $c->etat, $c->user_id ? '#'.$c->user_id : 'invité',
-                    $c->prix_ht, $c->prix_ttc, $c->remise, $c->discount_ht, $c->coupon_code_snapshot ? 'oui' : '', number_format(abs($pts) / $rate, 2)];
+                return [$c->numero ?? $c->id, substr((string) $c->created_at, 0, 10), $c->etat, $c->pricing_version ?? 'legacy',
+                    $c->user_id ? '#'.$c->user_id : 'invité',
+                    $c->prix_ht, $c->prix_ttc, $c->remise, $c->discount_ht, $c->coupon_code_snapshot ? 'oui' : '', number_format(abs($pts) / $rate, 2),
+                    $c->points_shipping_dt ?? '0'];
             })->all());
+
+        // Delivered after a refund: before v3 such an order kept its Protinas refund (gap 2). Since v3
+        // the delivery debits again; the ones still refunded are listed for the owner to decide.
+        $refundedDelivered = DB::table('commandes as c')->whereIn('c.etat', PointsService::DELIVERED_STATUSES)
+            ->whereExists(fn ($q) => $q->select(DB::raw(1))->from('user_point_transactions as t')->whereColumn('t.commande_id', 'c.id')
+                ->where('t.type', 'adjustment')->where('t.points', '>', 0)
+                ->where(fn ($w) => $w->where('t.idempotency_key', 'like', 'order:%:redeem-refund%')->orWhereNull('t.idempotency_key')))
+            ->whereNotExists(fn ($q) => $q->select(DB::raw(1))->from('user_point_transactions as t2')->whereColumn('t2.commande_id', 'c.id')
+                ->where('t2.type', 'adjustment')->where('t2.points', '<', 0)->where('t2.idempotency_key', 'like', 'order:%:redeem%:v%'))
+            ->limit($top)->get(['c.id', 'c.numero', 'c.etat']);
+        $this->line(sprintf('   delivered orders whose spent Protinas were refunded and never debited again: %d%s', $refundedDelivered->count(),
+            $refundedDelivered->isEmpty() ? '' : ' — '.$refundedDelivered->map(fn ($c) => $c->numero ?? $c->id)->implode(', ')));
 
         // ── 6. The SHOP TILL card (clients.loyalty_points_balance) — a separate programme ───────
         if (Schema::hasTable('loyalty_point_transactions') && Schema::hasColumn('clients', 'loyalty_points_balance')) {
@@ -226,13 +366,35 @@ class ProtinasAudit extends Command
         }
         $orders = DB::table('commandes')->where('created_at', '>=', now()->subDays(90))
             ->where('prix_ht', '>', 0)->get(['prix_ht', 'remise', 'discount_ht']);
-        $cap = (float) config('loyalty.checkout.max_total_discount_percent', 10);
         $average = $orders->avg(fn ($o) => 100 * ((float) $o->remise + (float) $o->discount_ht) / (float) $o->prix_ht);
-        $bound = $orders->filter(fn ($o) => 100 * ((float) $o->remise + (float) $o->discount_ht)
-            >= $cap * (float) $o->prix_ht - 0.1)->count();
-        $this->info(sprintf('Last 90 days: average discount %.2f%% of goods · ceiling bound %d/%d orders (%.2f%%)',
-            $average ?? 0, $bound, $orders->count(), $orders->count() ? 100 * $bound / $orders->count() : 0));
-        if (Schema::hasTable('coupons')) {
+        if (! $v3) {
+            $cap = (float) config('loyalty.checkout.max_total_discount_percent', 10);
+            $bound = $orders->filter(fn ($o) => 100 * ((float) $o->remise + (float) $o->discount_ht)
+                >= $cap * (float) $o->prix_ht - 0.1)->count();
+            $this->info(sprintf('Last 90 days: average discount %.2f%% of goods · ceiling bound %d/%d orders (%.2f%%)',
+                $average ?? 0, $bound, $orders->count(), $orders->count() ? 100 * $bound / $orders->count() : 0));
+        } else {
+            $this->info(sprintf('Last 90 days: average discount (pack + code + Protinas on goods) %.2f%% of goods over %d orders',
+                $average ?? 0, $orders->count()));
+            if (Schema::hasColumn('commandes', 'pricing_version') && Schema::hasColumn('commandes', 'budget_dt')) {
+                $v3Orders = DB::table('commandes')->whereNotNull('pricing_version')->where('created_at', '>=', now()->subDays(90));
+                $overBudget = (clone $v3Orders)->where('budget_dt', '<', 0)
+                    ->where(fn ($q) => $q->where('pack_discount_ht', '>', 0)->orWhere('discount_ht', '>', 0)->orWhere('points_redeemed_gift', '>', 0))->count();
+                $this->line(sprintf('   v3 orders: %d · with a giveaway on a negative budget (only codes with « perte acceptée »): %d · zero cash at the door: %d',
+                    (clone $v3Orders)->count(), $overBudget, (clone $v3Orders)->where('prix_ttc', '<=', 0)->count()));
+                if (Schema::hasColumn('commandes', 'protinas_forfeited')) {
+                    $this->line(sprintf('   refusal deposits kept: %d Protinas on %d orders (%d waived)',
+                        (int) (clone $v3Orders)->where('protinas_forfeit_waived', false)->sum('protinas_forfeited'),
+                        (clone $v3Orders)->where('protinas_forfeited', '>', 0)->count(),
+                        (clone $v3Orders)->where('protinas_forfeit_waived', true)->count()));
+                }
+            }
+        }
+        if ($v3 && Schema::hasTable('coupons') && Schema::hasColumn('coupons', 'allow_over_budget')) {
+            $overCodes = DB::table('coupons')->where('is_active', true)->where('allow_over_budget', true)->pluck('code');
+            $this->info(sprintf('Active codes with « perte acceptée » (honoured above the budget): %d%s — worst cases: vps-run protinas-coupons-review',
+                $overCodes->count(), $overCodes->isEmpty() ? '' : ' ('.$overCodes->implode(', ').')'));
+        } elseif (Schema::hasTable('coupons')) {
             $warn = (float) config('loyalty.coupons.warn_above_percent', 10);
             $coupons = DB::table('coupons')->where('is_active', true)
                 ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))

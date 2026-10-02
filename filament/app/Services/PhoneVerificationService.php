@@ -69,7 +69,9 @@ class PhoneVerificationService
         // re-verification); otherwise nothing but a delivery could ever release it.
         if (! $unlockOnDelivery && DB::table('welcome_bonus_claims')->where('user_id', $user->id)
             ->whereNull('credited_at')->exists()) {
-            return $welcome->creditPending($user);
+            // Reserved under the delivery-unlock terms (before Protinas v3): grandfathered, no expiry —
+            // the same release the deploy migration and protinas:welcome-release-pending perform.
+            return $welcome->creditPending($user, true);
         }
         if ($this->bonusStatus($user) !== 'claimable') return false;
         $points = self::bonusPoints();
@@ -94,13 +96,34 @@ class PhoneVerificationService
         return $delivered ? $welcome->unlockOnDelivery($user, $delivered) : false;
     }
 
+    /** When the account's welcome gift expires (null = never, or no welcome credit yet). */
+    public static function welcomeGiftExpiresAt(User $user): ?\Illuminate\Support\Carbon
+    {
+        if (! \Illuminate\Support\Facades\Schema::hasColumn('user_point_transactions', 'expires_at')
+            || ! \Illuminate\Support\Facades\Schema::hasColumn('user_point_transactions', 'idempotency_key')) {
+            return null;
+        }
+        $expires = DB::table('user_point_transactions')->where('user_id', $user->id)
+            ->where('idempotency_key', 'like', 'welcome:'.$user->id.':unlock:%')
+            ->orderByDesc('id')->value('expires_at');
+
+        return $expires ? \Illuminate\Support\Carbon::parse($expires) : null;
+    }
+
     private function result(User $user, bool $awarded): array
     {
         $points = self::bonusPoints();
         $valueDt = self::bonusValueDt();
+        $expiresAt = self::welcomeGiftExpiresAt($user);
+        $fullFrom = app(OrderBudget::class)->giftFullFromDt($points);
+        $awardedMessage = $points.' Protinas cadeau ajoutées : '.$valueDt.' DT'
+            .($expiresAt ? ' à utiliser avant le '.$expiresAt->format('d/m/Y') : ' à utiliser sur votre prochaine commande')
+            .($fullFrom ? ', en entier dès '.$fullFrom.' DT d’articles.' : '.');
         return [
+            'bonus_expires_at' => $expiresAt?->toIso8601String(),
+            'gift_full_from_dt' => $fullFrom,
             'message' => $awarded
-                ? $points.' Protinas ajoutées : '.$valueDt.' DT à utiliser sur votre prochaine commande.'
+                ? $awardedMessage
                 : ($this->bonusStatus($user) === 'pending'
                     ? 'Téléphone vérifié. Vos '.$points.' Protinas ('.$valueDt.' DT) seront créditées à la livraison de votre première commande.'
                     : 'Votre téléphone est vérifié.'),

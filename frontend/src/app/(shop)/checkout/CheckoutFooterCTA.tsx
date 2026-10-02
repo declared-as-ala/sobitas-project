@@ -6,7 +6,9 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTi
 import { ChevronUp, Loader2, Shield, X } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
 import { Container } from '@/app/components/layout/Container';
-import type { CheckoutPricing } from '@/util/checkoutPricing';
+import { formatDt, moneyPlaces, type CheckoutPricing } from '@/util/checkoutPricing';
+import type { LoyaltyRules } from '@/util/loyaltyPoints';
+import { CheckoutTotals } from './CheckoutTotals';
 
 export const CHECKOUT_CTA_HEIGHT_REM = 6.25;
 
@@ -15,11 +17,15 @@ interface CheckoutFooterCTAProps {
   isSubmitting: boolean;
   finalTotal: number;
   totalPrice: number;
-  shippingCost: number;
   pricing: CheckoutPricing | null;
   quoteFailed: boolean;
-  pointsPerDt: number;
-  maxTotalDiscountPercent: number;
+  rules: LoyaltyRules;
+  itemCount: number;
+  fallbackTotal: number;
+  fallbackShipping: number;
+  isAuthenticated: boolean;
+  /** The account's verified phone, masked, for the « Nous vous appelons au … » note. */
+  confirmPhone?: string | null;
   items: Array<{ product: any; quantity: number }>;
   getEffectivePrice: (product: any) => number;
   mobileSummaryOpen: boolean;
@@ -32,11 +38,14 @@ export function CheckoutFooterCTA({
   isSubmitting,
   finalTotal,
   totalPrice,
-  shippingCost,
   pricing,
   quoteFailed,
-  pointsPerDt,
-  maxTotalDiscountPercent,
+  rules,
+  itemCount,
+  fallbackTotal,
+  fallbackShipping,
+  isAuthenticated,
+  confirmPhone,
   items,
   getEffectivePrice,
   mobileSummaryOpen,
@@ -59,7 +68,7 @@ export function CheckoutFooterCTA({
               <Button type="button" variant="ghost" className="h-auto min-h-12 min-w-0 flex-[0_1_44%] justify-between rounded-xl px-2.5 py-1.5 text-start hover:bg-sunken focus-visible:ring-focus">
                 <span className="min-w-0">
                   <span className="block text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-3">Total</span>
-                  <span dir="ltr" className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{finalTotal.toFixed(2)} DT</span>
+                  <span dir="ltr" className="block truncate font-display text-lg font-extrabold leading-tight tracking-tight tabular-nums text-ink-1">{formatDt(finalTotal, moneyPlaces([finalTotal]))}</span>
                 </span>
                 <ChevronUp className="ms-1 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
               </Button>
@@ -67,7 +76,7 @@ export function CheckoutFooterCTA({
             <SheetContent side="bottom" showCloseButton={false} style={{ backgroundColor: 'rgb(var(--c-elevated))' }} className="flex max-h-[85dvh] flex-col overflow-hidden rounded-t-2xl border-hairline bg-elevated">
               <SheetHeader className="sr-only">
                 <SheetTitle>Récapitulatif de la commande</SheetTitle>
-                <SheetDescription>Articles, expédition et total de votre commande.</SheetDescription>
+                <SheetDescription>Articles, remises, livraison, Protinas et total de votre commande.</SheetDescription>
               </SheetHeader>
               <SheetClose asChild><button type="button" aria-label="Fermer le récapitulatif" className="absolute end-2 top-2 flex h-11 w-11 items-center justify-center rounded-xl bg-elevated text-ink-2 hover:bg-sunken focus-visible:ring-2 focus-visible:ring-focus"><X className="h-5 w-5" aria-hidden="true" /></button></SheetClose>
               <div className="flex-1 overflow-y-auto p-5 pb-8">
@@ -92,28 +101,21 @@ export function CheckoutFooterCTA({
                     );
                   })}
                 </div>
-                <div className="space-y-2 border-t border-rule pt-4">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-ink-2">Sous-total articles</span>
-                    <span dir="ltr" className="font-semibold text-ink-1">{(pricing?.goods_dt ?? totalPrice).toFixed(2)} DT</span>
-                  </div>
-                  {pricing?.pack.applied && pricing.pack.amount_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Remise pack −{pricing.pack.percent} %</span><span dir="ltr" className="font-semibold text-ok">−{pricing.pack.amount_dt.toFixed(2)} DT</span></div>}
-                  {pricing?.coupon.applied && pricing.coupon.amount_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Code <bdi dir="auto">{pricing.coupon.code}</bdi></span><span dir="ltr" className="font-semibold text-ok">−{pricing.coupon.amount_dt.toFixed(2)} DT</span></div>}
-                  {pricing && pricing.protinas.used_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Protinas utilisées</span><span dir="ltr" className="font-semibold text-ok">−{pricing.protinas.used_dt.toFixed(2)} DT</span></div>}
-                  <div className="flex justify-between text-sm">
-                    <span className="text-ink-2">Livraison</span>
-                    <span dir="ltr" className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>
-                      {shippingCost === 0 ? 'Offerte' : `${shippingCost.toFixed(2)} DT`}
-                    </span>
-                  </div>
-                  <div className="flex items-baseline justify-between border-t border-rule pt-3">
-                    <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total à payer à la livraison</span>
-                    <span dir="ltr" className="font-display text-xl font-extrabold tracking-tight tabular-nums text-brand">{finalTotal.toFixed(2)} DT</span>
-                  </div>
-                  {(!pricing || quoteFailed) && <p className="text-xs text-ink-3">Total confirmé à la validation.</p>}
-                  {pricing?.coupon.reason === 'pack_better' && <p className="text-xs leading-relaxed text-ink-2">Votre remise pack (−{pricing.pack.amount_dt.toFixed(2)} DT) est plus avantageuse que ce code : elle est appliquée à sa place, et votre code reste valable pour une prochaine commande.</p>}
-                  <p className="text-xs leading-relaxed text-ink-2">Code promo ou remise pack (la meilleure des deux) + Protinas : jusqu&apos;à {maxTotalDiscountPercent} % de vos articles ; les Protinas non utilisées restent sur votre compte.</p>
-                  {pricing && <p className="text-xs leading-relaxed text-ink-2">Vous gagnerez {pricing.earn_on_delivery_points} Protinas ({(pricing.earn_on_delivery_points / pointsPerDt).toFixed(2)} DT) à la livraison.</p>}
+                {/* The same rows as the desktop summary — one component, so the two cannot drift. */}
+                <div className="border-t border-rule pt-4">
+                  <CheckoutTotals
+                    pricing={pricing}
+                    quoteFailed={quoteFailed}
+                    rules={rules}
+                    itemCount={itemCount}
+                    fallbackGoodsDt={totalPrice}
+                    fallbackShippingDt={fallbackShipping}
+                    fallbackTotalDt={fallbackTotal}
+                    isAuthenticated={isAuthenticated}
+                    confirmPhone={confirmPhone}
+                    showDeliveryNudge={false}
+                    totalSize="md"
+                  />
                 </div>
               </div>
             </SheetContent>

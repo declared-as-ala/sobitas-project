@@ -26,6 +26,8 @@ class CheckoutOrderCreationCommerceTest extends TestCase
             'database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:',
             'cache.default' => 'array', 'queue.default' => 'sync', 'mail.admin_emails' => [],
             'services.whatsapp.autosend' => false,
+            // The 02/10/2026 rules (rollback path). Protinas v3 orders: ProtinasV3LifecycleTest.
+            'loyalty.rules_version' => 2,
             'loyalty.checkout.max_total_discount_percent' => 10,
             'loyalty.checkout.delivery_fee_dt' => 10,
             'loyalty.checkout.free_delivery_from_dt' => 300,

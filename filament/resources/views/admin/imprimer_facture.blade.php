@@ -403,6 +403,12 @@
                                     @if ($sourceOrder && (int) ($sourceOrder->points_redeemed ?? 0) > 0)
                                     <tr><td colspan="3"></td><th>Protinas ({{ $sourceOrder->points_redeemed }} pts)</th><th class="text-right">-{{ number_format((float) $sourceOrder->points_discount_ht, 3, '.', '') }}</th></tr>
                                     @endif
+                                    {{-- Protinas v3: delivery paid with Protinas (frais_livraison is the cash part only). --}}
+                                    @php $shipPaidProtinas = \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($sourceOrder); @endphp
+                                    @if ($shipPaidProtinas > 0)
+                                    <tr><td colspan="3"></td><th>Livraison</th><th class="text-right">{{ number_format((float) ($facture->frais_livraison ?? 0) + $shipPaidProtinas, 3, '.', '') }}</th></tr>
+                                    <tr><td colspan="3"></td><th>Réglée en Protinas</th><th class="text-right">-{{ number_format($shipPaidProtinas, 3, '.', '') }}</th></tr>
+                                    @endif
                                     @if ($sourceOrder && ((float) ($sourceOrder->pack_discount_ht ?? 0) + (float) ($sourceOrder->discount_ht ?? 0) + (float) ($sourceOrder->points_discount_ht ?? 0)) > 0)
                                     @php $discountTotal = (float) $sourceOrder->pack_discount_ht + (float) $sourceOrder->discount_ht + (float) $sourceOrder->points_discount_ht; @endphp
                                     <tr><td colspan="3"></td><th>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($discountTotal / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</th><th class="text-right">{{ number_format($discountTotal, 3, '.', '') }}</th></tr>

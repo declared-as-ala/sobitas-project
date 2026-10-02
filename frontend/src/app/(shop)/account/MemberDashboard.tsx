@@ -15,10 +15,12 @@ import { LinkWithLoading as Link } from '@/app/components/LinkWithLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { getBestSellers, getMemberDashboard, getStorageUrl } from '@/services/api';
 import { getEffectivePrice } from '@/util/productPrice';
-import { pointsToDt, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { FALLBACK_LOYALTY_RULES, isProtinasV3, loadLoyaltyRules, pointsToDt, REDEEM_POINTS_PER_DT, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { formatDt } from '@/util/checkoutPricing';
 import type { MemberDashboardData, MemberMission, Product } from '@/types';
 import type { PubMedResearchFeed } from '@/services/pubmed';
 import { ProtinaAmount, ProtinaMark } from '@/app/components/loyalty/Protina';
+import { ProtinaHowItWorks, ProtinaWalletPanel } from '@/app/components/loyalty/ProtinaWalletPanel';
 
 const formatter = new Intl.NumberFormat('fr-FR');
 
@@ -51,8 +53,9 @@ const formatter = new Intl.NumberFormat('fr-FR');
  */
 const MISSION_COPY: Record<MemberMission['key'], { label: string; hint: string }> = {
   verify_phone: { label: 'Vérifier mon numéro', hint: 'Un code par SMS, une seule fois.' },
-  /* "à la livraison" is load-bearing and must not be shortened — points are credited on the
-     transition to `livree`, never at checkout. See util/loyaltyPoints.ts. */
+  /* "la livraison" is load-bearing and must not be shortened — points are credited on the
+     transition to `livree`, never at checkout. Since Protinas v3 they are spendable after the
+     return hold, which `missionCopy` writes in with the published `earned.hold_days`. */
   first_order: { label: 'Recevoir ma première commande', hint: 'Les Protinas sont créditées à la livraison.' },
   monthly_review: { label: 'Publier un avis ce mois-ci', hint: 'Crédité une fois l’avis publié.' },
   photo_review: { label: 'Ajouter une photo à un avis', hint: 'Une photo que vous avez prise.' },
@@ -61,8 +64,12 @@ const MISSION_COPY: Record<MemberMission['key'], { label: string; hint: string }
   first_redemption: { label: 'Utiliser mes Protinas', hint: `${REDEEM_POINTS_PER_DT} Protinas = 1 DT de remise au paiement.` },
 };
 
-function missionCopy(mission: MemberMission): { label: string; hint: string } {
-  return MISSION_COPY[mission.key] ?? { label: mission.label, hint: mission.description };
+function missionCopy(mission: MemberMission, holdDays = 0): { label: string; hint: string } {
+  const copy = MISSION_COPY[mission.key] ?? { label: mission.label, hint: mission.description };
+  if (mission.key === 'first_order' && holdDays > 0) {
+    return { ...copy, hint: `Utilisables ${holdDays} jours après la livraison.` };
+  }
+  return copy;
 }
 
 function shortName(name?: string): string {
@@ -84,6 +91,8 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   const load = async () => {
     setLoading(true);
@@ -125,8 +134,11 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
             <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-2 sm:text-base">
               Suivez vos commandes, partagez votre expérience et transformez vos achats en avantages.
             </p>
-            <p className="mt-3 max-w-md text-xs leading-relaxed text-ink-2">1 Protina par dinar d&apos;articles payé, créditée à la livraison (20 Protinas = 1 DT, soit 5 % reversés). À la commande, remise et Protinas se cumulent jusqu&apos;à 10 % du montant de vos articles ; le reste de vos Protinas reste sur votre compte. Code promo et remise pack ne se cumulent pas : la plus avantageuse s&apos;applique.</p>
-            {dashboard?.welcome_status === 'pending' && (dashboard.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente, crédités à la livraison de votre 1re commande</span>}
+            <p className="mt-3 max-w-md text-xs leading-relaxed text-ink-2">
+              {rules.earn_per_dt} Protina par DT payé pour vos articles{(rules.earned?.hold_days ?? 0) > 0 ? `, utilisable ${rules.earned?.hold_days} jours après la livraison` : ', créditée à la livraison'}.
+              {isProtinasV3(rules) && rules.earned?.cover_shipping !== false ? ' Vos Protinas règlent vos articles et la livraison.' : ` ${rules.points_per_dt} Protinas = 1 DT de remise.`}
+            </p>
+            {dashboard?.welcome_status === 'pending' && (dashboard.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente : ils arrivent quand votre première commande sera livrée.</span>}
 
             <div className="mt-6 flex flex-wrap items-end gap-5">
               <div>
@@ -134,7 +146,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
                 <p className="mt-1 font-display text-4xl font-bold tracking-tight tabular-nums text-ink-1">
                   {formatter.format(balance)} <span className="text-base text-brand">Protinas</span>
                 </p>
-                <p className="text-sm tabular-nums text-ink-3">soit {valueDt.toFixed(2)} DT à utiliser</p>
+                <p className="text-sm tabular-nums text-ink-3">= {formatDt(valueDt)}</p>
               </div>
               <ProtinaMark size="lg" className="h-[68px] w-[68px]" decorative={false} />
             </div>
@@ -181,9 +193,12 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
         </div>
       </section>
 
-      <div className="rounded-xl border border-hairline bg-elevated p-4 text-xs leading-relaxed text-ink-2 sm:p-5">
-        <p>Cadeau de bienvenue : 300 Protinas (15 DT), créditées à la livraison de votre première commande.</p>
-        <p className="mt-2">Vos Protinas n&apos;expirent pas. Commande annulée ou retournée : les Protinas utilisées vous sont rendues, celles gagnées sont retirées.</p>
+      {/* Protinas v3: what the balance is made of (server wallet split), then the five rules from
+          /api/loyalty/rules. Replaces two hard-coded sentences that promised the welcome gift « à
+          la livraison » and no expiry for every Protina — both retired on 02/10/2026. */}
+      <ProtinaWalletPanel wallet={dashboard?.wallet} rules={rules} />
+      <div className="rounded-xl border border-hairline bg-elevated p-4 sm:p-5">
+        <ProtinaHowItWorks rules={rules} />
       </div>
 
       {loading ? <DashboardSkeleton /> : failed || !dashboard ? (
@@ -254,7 +269,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
             </div>
             <ul className="divide-y divide-hairline">
               {dashboard.missions.map((mission) => {
-                const copy = missionCopy(mission);
+                const copy = missionCopy(mission, dashboard.wallet?.hold_days ?? rules.earned?.hold_days ?? 0);
                 return (
                   <li key={mission.key}>
                     <Link

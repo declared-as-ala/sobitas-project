@@ -74,6 +74,12 @@ on:
           # Protina points: where credited points came from, what is owed, every recent redemption
           # with how that customer's balance was built. Read-only; identities masked to #user-id.
           - protinas-audit
+          # Protinas v3 (read-only): the wallet split report, the live thresholds, each promo code's
+          # worst case under the order budget, and what gift expiry would remove tonight.
+          - protinas-split-wallets-dry-run
+          - protinas-check-rules
+          - protinas-coupons-review
+          - protinas-expire-dry-run
           # Shop-till card at 20 pts = 1 DT and the welcome bonus kill switch. Dry runs: counts only.
           - till-points-convert-dry-run
           - welcome-release-pending-dry-run
@@ -200,6 +206,8 @@ on:
           - till-points-convert-apply
           # Credits every reserved welcome bonus once WELCOME_BONUS_UNLOCK_ON_DELIVERY is false.
           - welcome-release-pending
+          # Re-runs the Protinas v3 wallet split (the deploy migration already ran it). Idempotent.
+          - protinas-split-wallets
       confirm:
         description: "Writing tasks only (including commerce-order-recovery-apply): type APPLY"
         required: false
@@ -505,6 +513,34 @@ jobs:
               # Idempotent: one ledger key per account (welcome:{user}:unlock:0).
               ARGS="protinas:welcome-release-pending --apply"
               WRITES=yes
+              ;;
+            protinas-split-wallets-dry-run)
+              # Which pre-v3 balances are gift / earned, and the drift each account carries. Writes nothing.
+              ARGS="protinas:split-wallets"
+              WRITES=no
+              ;;
+            protinas-split-wallets)
+              # Classifies the remaining unsplit accounts (bucket NULL) and reconciles their drift with
+              # one hidden migration:wallets:{user} row. Accounts already split are skipped.
+              ARGS="protinas:split-wallets --apply"
+              WRITES=yes
+              ;;
+            protinas-check-rules)
+              # Live thresholds (welcome gift, codes, free delivery) and the margin each pack tier
+              # needs. Exits 1 (red run) when a tier needs more than the margin floor.
+              ARGS="protinas:check-rules"
+              WRITES=no
+              ;;
+            protinas-coupons-review)
+              # Every active promo code priced by the real checkout engine on 1..1000 DT baskets:
+              # where the guard reduces it and the worst net margin. Writes nothing.
+              ARGS="protinas:coupons-review"
+              WRITES=no
+              ;;
+            protinas-expire-dry-run)
+              # Gift lots past their date (the 03:30 schedule expires them). Writes nothing.
+              ARGS="protinas:expire --dry-run"
+              WRITES=no
               ;;
             notifications-status)
               # Backward-compatible with backend images deployed before --recent was added.

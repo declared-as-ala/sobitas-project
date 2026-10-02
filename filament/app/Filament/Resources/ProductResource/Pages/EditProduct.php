@@ -51,6 +51,14 @@ class EditProduct extends EditRecord
 
     protected function mutateFormDataBeforeFill(array $data): array
     {
+        // ── PRIX D'ACHAT IS IN Product::$hidden, AND THE FORM IS FILLED FROM attributesToArray() ──
+        // $hidden keeps the purchase cost out of every API payload, but Filament fills this form from
+        // attributesToArray(), which honours $hidden too. Without this line the field would open
+        // EMPTY and the next save of anything (a price, the stock) would erase the real cost.
+        if (self::hasProductColumn('prix_achat')) {
+            $data['prix_achat'] = $this->getRecord()->getAttribute('prix_achat');
+        }
+
         $data['_slug_auto_source'] = $data['designation_fr'] ?? '';
         $description = $data['description_fr'] ?? null;
         $data['description_fr'] = is_string($description) ? $description : '';

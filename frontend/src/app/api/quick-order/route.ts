@@ -13,6 +13,8 @@ type AddCommandeResponse = {
   error?: string;
   commande?: { id?: number; numero?: string };
   data?: { id?: number };
+  /** On 409: the server's pricing (the total it would charge), shown to the customer to confirm. */
+  pricing?: unknown;
 };
 
 /** Simple rate limit: IP -> timestamps (last N requests). Max 5 per minute. */
@@ -66,6 +68,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       priceSnapshot,
       deliveryFeeSnapshot = 0,
       couponCode,
+      expectedTotal,
     } = body;
 
     if (!productId || !Number.isFinite(priceSnapshot) || priceSnapshot < 0) {
@@ -157,7 +160,17 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
         { produit_id: productId, quantite: qtyNum, prix_unitaire: priceSnapshot, arome: body.arome },
       ],
       ...(couponCode && String(couponCode).trim() !== '' && { coupon_code: String(couponCode).trim() }),
+      // The drawer has no Protinas block: no gift line, no « Garder pour plus tard ». Without this the
+      // server's auto-apply would spend gift Protinas the customer never saw and charge less than the
+      // drawer shows. The gift stays for the full checkout, where it is shown and can be declined.
+      use_gift: false,
     });
+    // The drawer sends the total it shows on every tap. The server creates the order only at that
+    // exact amount and otherwise answers 409 with its own pricing (a code capped or dropped since it
+    // was applied, a price that changed), which the drawer shows for the customer to confirm.
+    if (typeof expectedTotal === 'number' && Number.isFinite(expectedTotal) && expectedTotal >= 0) {
+      orderPayload.expected_total = expectedTotal;
+    }
 
     const authHeader = request.headers.get('Authorization');
     const idempotencyKey = request.headers.get('Idempotency-Key');
@@ -187,7 +200,10 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
 
     if (!response.ok) {
       return NextResponse.json(
-        { error: data.message || data.error || 'Erreur lors de la commande.' },
+        {
+          error: data.message || data.error || 'Erreur lors de la commande.',
+          ...(response.status === 409 && data.pricing ? { pricing: data.pricing } : {}),
+        },
         { status: response.status }
       );
     }

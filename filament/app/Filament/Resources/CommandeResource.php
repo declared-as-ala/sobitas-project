@@ -4,7 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\CommandeResource\Pages;
 use App\Models\Commande;
+use App\Services\PointsService;
 use App\Services\TransactionalSmsText;
+use App\Support\OrderCashOnDelivery;
 use App\Jobs\SendSmsJob;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
@@ -119,6 +121,16 @@ class CommandeResource extends Resource
                 if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', 'client_id')) {
                     $columns[] = 'client_id';
                 }
+                // Protinas v3: the phone-confirmation badge, its filter and actions, the refusal deposit.
+                foreach (['authenticated_user_id', 'pricing_version', 'requires_phone_confirmation', 'phone_confirmed_at',
+                    'protinas_forfeited', 'protinas_forfeit_waived', 'points_shipping_dt', 'points_redeemed_gift',
+                    // The bulk « Marquer comme livrée » saves these rows; PointsService re-reads the
+                    // full order anyway (never earn on a partial model).
+                    'earn_base_dt', 'delivered_at', 'confirm_phone'] as $column) {
+                    if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', $column)) {
+                        $columns[] = $column;
+                    }
+                }
                 return $query->whereNull('affilie_id')->with(['client:id,name,phone_1', 'legacyClient:id,name,phone_1', 'latestShipment'])->select($columns);
             })
             ->columns([
@@ -174,6 +186,20 @@ class CommandeResource extends Resource
                     ->getStateUsing(fn (Commande $record): string => $record->unifiedStatusLabel())
                     ->color(fn (Commande $record): string => $record->unifiedStatusColor())
                     ->tooltip(fn (Commande $record): ?string => $record->aramexStatusDescription()),
+                // Rule 17: cash under 20 DT or Protinas ≥ 50 % of the amount due → staff call the
+                // ACCOUNT's verified phone before « Envoyer vers Aramex ».
+                Tables\Columns\TextColumn::make('phone_confirmation')
+                    ->label('Téléphone')
+                    ->badge()
+                    ->getStateUsing(fn (Commande $record): ?string => $record->awaitsPhoneConfirmation()
+                        ? 'À confirmer'
+                        : (! empty($record->getAttributes()['phone_confirmed_at'] ?? null) ? 'Confirmée' : null))
+                    ->color(fn (?string $state): string => $state === 'À confirmer' ? 'warning' : 'success')
+                    ->tooltip(fn (Commande $record): ?string => $record->awaitsPhoneConfirmation()
+                        ? 'À confirmer par téléphone ('.OrderCashOnDelivery::phoneToCall($record).')'
+                        : null)
+                    ->placeholder('')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('region')
                     ->label('Région')
                     ->toggleable(),
@@ -189,6 +215,11 @@ class CommandeResource extends Resource
                 Tables\Filters\SelectFilter::make('etat')
                     ->label('État')
                     ->options(Commande::getStatusOptions()),
+                Tables\Filters\Filter::make('a_confirmer')
+                    ->label('À confirmer par téléphone')
+                    ->visible(fn (): bool => OrderCashOnDelivery::hasColumns('requires_phone_confirmation', 'phone_confirmed_at'))
+                    ->query(fn (Builder $query): Builder => $query->where('requires_phone_confirmation', true)
+                        ->whereNull('phone_confirmed_at')),
                 // Archived orders are hidden by default (blank state). This scope lives ONLY here,
                 // on the admin list — nothing else in the app filters on archived_at, so reports and
                 // the API still see every order. Switch the filter to see or include the archives.
@@ -217,9 +248,17 @@ class CommandeResource extends Resource
                         ->modalSubmitActionLabel('Confirmer la conversion')
                         ->modalCancelActionLabel('Annuler')
                         ->action(function (Commande $record) {
-                            $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($record);
+                            $service = app(\App\Services\DocumentConversion\OrderToBlService::class);
+                            try {
+                                $bl = $service->createBlFromOrder($record);
+                            } catch (\App\Services\DocumentConversion\BlAmountMismatchException $e) {
+                                Notification::make()->title('Bon de livraison non créé')->body($e->getMessage())->danger()->persistent()->send();
+
+                                return null;
+                            }
                             Notification::make()
                                 ->title('Conversion réussie — ouverture de l’impression pour le BL #' . $bl->numero)
+                                ->body($service->aramexHoldReason ? 'Non envoyé à Aramex : '.$service->aramexHoldReason.'.' : null)
                                 ->success()
                                 ->send();
                             return redirect(route('factures.print', ['facture' => $bl->id]));
@@ -246,6 +285,8 @@ class CommandeResource extends Resource
                     ->modalWidth(Width::FourExtraLarge)
                     ->modalSubmitAction(false)
                     ->modalCancelActionLabel('Fermer'),
+                static::confirmPhoneAction(),
+                static::waiveForfeitAction(),
                 // ── ARCHIVER, NOT SUPPRIMER ─────────────────────────────────────────────────────
                 // An order is never deleted: staff archive it, which drops it from the working list
                 // but keeps every row intact for the books, the API and the affiliate money gates.
@@ -542,10 +583,19 @@ class CommandeResource extends Resource
         $points = (float) ($record->points_discount_ht ?? 0);
         $discountTotal = $pack + $coupon + $points;
         $packPercent = $totalHt > 0 ? round($pack / $totalHt * 100, 1) : 0;
+        $summary = static::protinasSummary($record);
         $discountLines = [];
         if ($pack > 0) $discountLines[] = ['label' => 'Remise pack ('.$packPercent.' %)', 'amount' => $fmt($pack)];
         if ($record->coupon_code_snapshot) $discountLines[] = ['label' => 'Code promo '.$record->coupon_code_snapshot, 'amount' => $fmt($coupon)];
-        if ($points > 0) $discountLines[] = ['label' => 'Protinas ('.$protinasUsed.' pts)', 'amount' => $fmt($points)];
+        if ($points > 0) $discountLines[] = ['label' => 'Protinas ('.($summary['is_v3'] ? $summary['goods_points'] : $protinasUsed).' pts'.$summary['split_label'].')', 'amount' => $fmt($points)];
+        // v3: the delivery shows at its full price, then « Réglée en Protinas » (frais_livraison is net).
+        if ($summary['shipping_dt'] > 0) {
+            $frais += $summary['shipping_dt'];
+            $discountLines[] = ['label' => 'Livraison réglée en Protinas ('.$summary['shipping_points'].' pts)', 'amount' => $fmt($summary['shipping_dt'])];
+        }
+        $notice = $record->awaitsPhoneConfirmation()
+            ? 'À confirmer par téléphone ('.OrderCashOnDelivery::phoneToCall($record).') : le bon de livraison sera créé, l’envoi Aramex attendra la confirmation.'
+            : null;
 
         return view('filament.components.convert-wizard-summary', [
             'sourceType'      => 'Commande',
@@ -563,9 +613,134 @@ class CommandeResource extends Resource
             'frais'           => $frais > 0 ? $fmt($frais) : null,
             'tva'             => null,
             'totalTtc'        => $fmt($totalTtc),
+            'notice'          => $notice,
             'targetLabel'     => $targetLabel,
             'targetColor'     => $targetColor,
         ]);
+    }
+
+    /**
+     * The Protinas side of one order, for the admin form, the conversion summary and the actions.
+     * Read from the database by id, so a table row loaded with a column list is enough.
+     *
+     * @return array{is_v3: bool, used_points: int, gift_points: int, earned_points: int, goods_points: int, shipping_points: int, goods_dt: float, shipping_dt: float, split_label: string, budget_dt: ?float, forfeited: int, forfeit_waived: bool, deduct_points: int, deduct_dt: float}
+     */
+    public static function protinasSummary(Commande $record): array
+    {
+        $out = ['is_v3' => false, 'used_points' => 0, 'gift_points' => 0, 'earned_points' => 0, 'goods_points' => 0,
+            'shipping_points' => 0, 'goods_dt' => 0.0, 'shipping_dt' => 0.0, 'split_label' => '', 'budget_dt' => null,
+            'forfeited' => 0, 'forfeit_waived' => false, 'deduct_points' => 0, 'deduct_dt' => 0.0];
+        try {
+            $order = Commande::query()->find($record->getKey());
+            if (! $order) {
+                return $out;
+            }
+            $a = $order->getAttributes();
+            $ppd = PointsService::pointsPerDt();
+            $out['is_v3'] = $order->isPricedV3();
+            $out['used_points'] = (int) ($a['points_redeemed'] ?? 0);
+            $out['goods_dt'] = round((float) ($a['points_discount_ht'] ?? 0), 3);
+            if ($out['is_v3']) {
+                $out['gift_points'] = min($out['used_points'], (int) ($a['points_redeemed_gift'] ?? 0));
+                $out['earned_points'] = $out['used_points'] - $out['gift_points'];
+                $out['shipping_dt'] = OrderCashOnDelivery::shippingPaidWithProtinasDt($order);
+                $out['shipping_points'] = min($out['used_points'], (int) ceil(round($out['shipping_dt'] * $ppd, 6)));
+                $out['budget_dt'] = isset($a['budget_dt']) ? round((float) $a['budget_dt'], 3) : null;
+                $out['forfeited'] = (int) ($a['protinas_forfeited'] ?? 0);
+                $out['forfeit_waived'] = (bool) ($a['protinas_forfeit_waived'] ?? false);
+            }
+            $out['goods_points'] = max(0, $out['used_points'] - $out['shipping_points']);
+            if ($out['is_v3'] && $out['used_points'] > 0) {
+                $out['split_label'] = ' : '.$out['gift_points'].' cadeau, '.$out['earned_points'].' gagnées';
+            }
+
+            // Return panel (rule 16): what this order's clawback could not take back is a debt; on a
+            // refund it is deducted from the cash given back instead of being carried as debt.
+            if (in_array((string) ($a['etat'] ?? ''), PointsService::CANCELLED_STATUSES, true)) {
+                $user = app(PointsService::class)->orderUser($order);
+                $debt = $user && \Illuminate\Support\Facades\Schema::hasColumn('users', 'points_debt')
+                    ? (int) \Illuminate\Support\Facades\DB::table('users')->where('id', $user->getKey())->value('points_debt') : 0;
+                if ($debt > 0) {
+                    $reversed = (int) -\Illuminate\Support\Facades\DB::table('user_point_transactions')
+                        ->where('commande_id', $order->getKey())->where('type', 'adjustment')->where('points', '<', 0)
+                        ->where('idempotency_key', 'like', 'order:'.$order->getKey().':earn-reversal%')->sum('points');
+                    $out['deduct_points'] = max(0, min($debt, $reversed));
+                    $out['deduct_dt'] = round($out['deduct_points'] / $ppd, 3);
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('protinasSummary failed', ['commande_id' => $record->getKey(), 'error' => $e->getMessage()]);
+        }
+
+        return $out;
+    }
+
+    /**
+     * « Confirmé par téléphone » (rule 17). Shows the number to call — the ACCOUNT's verified phone,
+     * never the delivery phone a thief could have typed — and records who confirmed and when.
+     */
+    public static function confirmPhoneAction(): Actions\Action
+    {
+        return Actions\Action::make('confirmerTelephone')
+            ->label('Confirmé par téléphone')
+            ->icon('heroicon-o-phone')
+            ->color('warning')
+            ->visible(fn (Commande $record): bool => $record->awaitsPhoneConfirmation())
+            // No verified account phone at checkout on an order that spent Protinas: nobody safe to call.
+            ->disabled(fn (Commande $record): bool => OrderCashOnDelivery::phoneConfirmationBlockReason($record) !== null)
+            ->tooltip(fn (Commande $record): ?string => OrderCashOnDelivery::phoneConfirmationBlockReason($record))
+            ->requiresConfirmation()
+            ->modalHeading(fn (Commande $record): string => 'À confirmer par téléphone — commande #'.$record->numero)
+            ->modalDescription(fn (Commande $record): string => 'Appelez le '.OrderCashOnDelivery::phoneToCall($record)
+                .' et faites confirmer la commande, son montant et l’adresse de livraison avant l’envoi. '
+                .'N’utilisez pas un autre numéro : celui de la livraison peut appartenir à quelqu’un d’autre.')
+            ->modalSubmitActionLabel('Le client a confirmé')
+            ->action(function (Commande $record): void {
+                if (($reason = OrderCashOnDelivery::phoneConfirmationBlockReason($record)) !== null) {
+                    Notification::make()->title('Confirmation impossible')->body($reason)->danger()->send();
+
+                    return;
+                }
+                $record->markPhoneConfirmed(auth()->id() !== null ? (int) auth()->id() : null);
+                Notification::make()
+                    ->title('Commande confirmée par téléphone')
+                    ->body('« Envoyer vers Aramex » est maintenant disponible pour son bon de livraison.')
+                    ->success()
+                    ->send();
+            });
+    }
+
+    /** « Rendre la retenue Protinas »: gives back the refusal deposit of a v3 order, once per refusal. */
+    public static function waiveForfeitAction(): Actions\Action
+    {
+        return Actions\Action::make('rendreRetenueProtinas')
+            ->label('Rendre la retenue Protinas')
+            ->icon('heroicon-o-arrow-uturn-left')
+            ->color('gray')
+            ->visible(fn (Commande $record): bool => $record->isPricedV3()
+                // Only on a refused / returned order: a delivered one has no deposit to give back.
+                && in_array((string) $record->etat, PointsService::CANCELLED_STATUSES, true)
+                && (int) ($record->getAttributes()['protinas_forfeited'] ?? 0) > 0
+                && empty($record->getAttributes()['protinas_forfeit_waived']))
+            ->requiresConfirmation()
+            ->modalHeading('Rendre la retenue Protinas')
+            ->modalDescription(function (Commande $record): string {
+                $points = (int) ($record->getAttributes()['protinas_forfeited'] ?? 0);
+
+                return sprintf('Le client récupère les %d Protinas (%s DT) retenues pour le transport aller-retour du colis refusé. '
+                    .'Une seule fois par refus.', $points,
+                    OrderCashOnDelivery::formatDt($points / PointsService::pointsPerDt()));
+            })
+            ->modalSubmitActionLabel('Rendre la retenue')
+            ->action(function (Commande $record): void {
+                $order = Commande::query()->findOrFail($record->getKey());
+                $given = app(PointsService::class)->waiveForfeit($order);
+                if ($given > 0) {
+                    Notification::make()->title($given.' Protinas rendues au client')->success()->send();
+                } else {
+                    Notification::make()->title('Rien à rendre')->body('La retenue a déjà été rendue ou cette commande n’en a pas.')->warning()->send();
+                }
+            });
     }
 
     public static function canDeleteCommande(Commande $record): bool

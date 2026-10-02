@@ -9,6 +9,8 @@ import { AuthShell, AuthCardHeader, AuthField, AuthSubmit } from '@/app/componen
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { VerificationArtwork, VerificationPanel, VerifiedContactBadge } from '@/app/components/VerificationArtwork';
+import { FALLBACK_LOYALTY_RULES, formatProtinaDate, loadLoyaltyRules, welcomeOffer, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { formatTnd } from '@/util/productPrice';
 
 function errorMessage(error: unknown) {
   const data = (error as { response?: { data?: { message?: string; errors?: Record<string, string[]> } } }).response?.data;
@@ -25,6 +27,8 @@ export default function VerifyPhonePage() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState<PhoneVerificationResult | null>(null);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login?redirect=/verify-phone');
@@ -62,9 +66,20 @@ export default function VerifyPhonePage() {
   const pending = bonusStatus === 'pending' || !!success?.bonus_pending;
   const awarded = bonusStatus === 'awarded' || success?.bonus_awarded || user.welcome_bonus_awarded;
   const noBonusMessage = bonusStatus === 'already_used'
-    ? 'Cette offre a déjà été utilisée avec ces coordonnées. Votre téléphone reste vérifié.'
+    ? `Ce numéro a déjà reçu le cadeau de bienvenue. Vous gagnez ${rules.earn_per_dt} Protina par DT à chaque commande livrée.`
     : bonusStatus === 'paused' ? 'L’offre de points est momentanément suspendue. Votre téléphone reste vérifié.'
     : 'Votre numéro est bien confirmé. Vous pouvez continuer vos achats.';
+  /*
+   * ── PROTINAS V3: THE GIFT IS CREDITED AT THIS MOMENT ────────────────────────────────────────
+   * Since 02/10/2026 the 300 gift Protinas land in the account the second the code is accepted
+   * (WELCOME_BONUS_UNLOCK_ON_DELIVERY defaults to false), so the success screen says so and sends
+   * the customer shopping. The `pending` branch only exists for that switch turned back on.
+   */
+  const giftValue = formatTnd(rules.welcome.value_dt);
+  const giftPoints = (success?.bonus_points || rules.welcome.points).toLocaleString('fr-FR');
+  const giftFullFrom = success?.gift_full_from_dt ?? user.protinas?.gift_full_from_dt ?? rules.gift?.full_from_dt ?? null;
+  const giftExpires = formatProtinaDate(success?.bonus_expires_at ?? user.protinas?.gift_expires_at);
+  const awardedBody = `${giftPoints} Protinas cadeau viennent d’être ajoutées à votre compte. Elles s’appliquent toutes seules à votre prochaine commande${giftFullFrom ? ` : les ${giftValue} en entier dès ${giftFullFrom} DT d’articles, et elles peuvent aussi régler la livraison` : ', livraison comprise'}.${giftExpires ? ` À utiliser avant le ${giftExpires}.` : ''}`;
 
   const acceptResult = async (result: PhoneVerificationResult) => {
     setSuccess(result);
@@ -124,8 +139,7 @@ export default function VerifyPhonePage() {
       {complete ? (
         <div data-phone-success className="space-y-4">
           <VerifiedContactBadge label="Téléphone vérifié" />
-          <AuthCardHeader kicker="Vérification terminée" title={awarded ? 'Vos 15 DT sont là' : pending ? 'Vos 15 DT en attente' : claimable ? 'Vos 15 DT vous attendent' : 'Vous êtes vérifié'} subtitle={pending ? 'Téléphone vérifié. Vos 300 Protinas (15 DT) seront créditées à la livraison de votre première commande.' : awarded ? '300 Protinas ajoutées : 15 DT à utiliser sur votre prochaine commande.' : claimable ? 'Votre numéro est déjà confirmé. Aucun nouveau SMS nécessaire.' : noBonusMessage} />
-          {pending && <p className="rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente, crédités à la livraison de votre 1re commande</p>}
+          <AuthCardHeader kicker="Vérification terminée" title={awarded ? `Vos ${giftValue} sont là` : pending ? `Vos ${giftValue} en attente` : claimable ? `Vos ${giftValue} vous attendent` : 'Vous êtes vérifié'} subtitle={pending ? `Téléphone vérifié. Vos ${giftPoints} Protinas (${giftValue}) arriveront quand votre première commande sera livrée.` : awarded ? awardedBody : claimable ? 'Votre numéro est déjà confirmé. Aucun nouveau SMS nécessaire.' : noBonusMessage} />
           {(awarded || claimable) && <div className="rounded-xl border border-hairline bg-sunken p-4">
             <div className="flex items-baseline justify-between gap-3">
               <span className="text-sm font-medium text-ink-2">{claimable ? 'Cadeau à recevoir' : 'Solde disponible'}</span>
@@ -133,8 +147,15 @@ export default function VerifyPhonePage() {
             </div>
             <p className="mt-1 text-end text-sm text-ink-2">{claimable ? '300' : success?.points_balance ?? user.points_balance ?? 0} Protinas</p>
           </div>}
-          {claimable ? <AuthSubmit type="button" onClick={claim} loading={busy} loadingLabel="Ajout des Protinas…">Recevoir mes 15 DT</AuthSubmit> : <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
-          {(awarded || claimable || pending) && <p className="text-xs leading-relaxed text-ink-2">300 Protinas (15 DT), une seule fois par compte et par numéro, créditées à la livraison de votre première commande, puis utilisables dans la limite de 10 % de vos articles par commande.</p>}
+          {claimable
+            ? <AuthSubmit type="button" onClick={claim} loading={busy} loadingLabel="Ajout des Protinas…">Recevoir mes {giftValue}</AuthSubmit>
+            : awarded
+              ? <>
+                  <LinkWithLoading href="/shop" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Faire mes achats</LinkWithLoading>
+                  <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-lg px-2 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>
+                </>
+              : <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
+          {(awarded || claimable || pending) && <p className="text-xs leading-relaxed text-ink-2">{giftPoints} Protinas cadeau ({giftValue}), une seule fois par compte et par numéro. Elles s’appliquent toutes seules à votre commande, livraison comprise.</p>}
           {!user.email_verified && <p className="text-center text-xs text-ink-3">Votre email reste optionnel. Votre compte est déjà vérifié.</p>}
         </div>
       ) : (
@@ -144,7 +165,7 @@ export default function VerifyPhonePage() {
             <span className="h-px w-8 bg-rule" />
             <span className={delivery ? 'flex items-center justify-end gap-2 text-brand' : 'flex items-center justify-end gap-2'}><span className="flex h-6 w-6 items-center justify-center rounded-full border border-hairline">2</span> Code</span>
           </div>
-          <AuthCardHeader kicker="Sécurité du compte" title={delivery ? 'Entrez le code' : 'Vérifiez votre téléphone'} subtitle={delivery ? `SMS envoyé au ${delivery.maskedPhone}` : user.welcome_bonus_eligible ? '15 DT offerts (300 Protinas) : vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.' : 'Confirmez votre numéro avec un code SMS personnel.'} />
+          <AuthCardHeader kicker="Sécurité du compte" title={delivery ? 'Entrez le code' : 'Vérifiez votre téléphone'} subtitle={delivery ? `SMS envoyé au ${delivery.maskedPhone}` : user.welcome_bonus_eligible ? `Vérifiez votre numéro : ${welcomeOffer(rules)}` : 'Confirmez votre numéro avec un code SMS personnel.'} />
           {delivery ? (
             <form onSubmit={verify} className="space-y-4">
               <AuthField label="Code à 6 chiffres" Icon={KeyRound} inputMode="numeric" autoComplete="one-time-code" maxLength={6} pattern="[0-9]{6}" value={code} onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} placeholder="000 000" required className="text-center font-display text-2xl font-bold tracking-[0.28em]" />

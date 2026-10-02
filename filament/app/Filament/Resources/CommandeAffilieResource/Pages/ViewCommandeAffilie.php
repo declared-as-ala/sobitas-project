@@ -34,9 +34,18 @@ class ViewCommandeAffilie extends ViewRecord
                 ->modalSubmitActionLabel('Confirmer la conversion')
                 ->modalCancelActionLabel('Annuler')
                 ->action(function () {
-                    $bl = app(\App\Services\DocumentConversion\OrderToBlService::class)->createBlFromOrder($this->record);
+                    $service = app(\App\Services\DocumentConversion\OrderToBlService::class);
+                    try {
+                        $bl = $service->createBlFromOrder($this->record);
+                    } catch (\App\Services\DocumentConversion\BlAmountMismatchException $e) {
+                        // The note would collect another amount than the order total (Protinas v3, F0).
+                        Notification::make()->title('Bon de livraison non créé')->body($e->getMessage())->danger()->persistent()->send();
+
+                        return null;
+                    }
                     Notification::make()
                         ->title('Conversion réussie — BL #' . $bl->numero)
+                        ->body($service->aramexHoldReason ? 'Non envoyé à Aramex : '.$service->aramexHoldReason.'.' : null)
                         ->success()
                         ->send();
 

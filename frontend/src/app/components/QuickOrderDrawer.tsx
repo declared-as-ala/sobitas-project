@@ -1,24 +1,24 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import * as DialogPrimitive from '@radix-ui/react-dialog';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
 import { Label } from '@/app/components/ui/label';
 import { AddressSelector } from '@/app/components/AddressSelector';
-import { submitQuickOrder, getProductDetails, applyCoupon, removeCoupon } from '@/services/api';
-import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
+import { submitQuickOrder, getProductDetails, applyCoupon, removeCoupon, getStorageUrl } from '@/services/api';
+import type { Product, QuickOrderPayload, QuickOrderResponse } from '@/types';
+import { couponNote, formatDt, moneyPlaces, type CheckoutPricing } from '@/util/checkoutPricing';
+import { cachedLoyaltyRules, isLoyaltyExcludedProduct, isProtinasV3, loadLoyaltyRules, pointsToDt, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { useAuth } from '@/contexts/AuthContext';
+import { useCartActions } from '@/app/contexts/CartContext';
 import type { QuickOrderProduct } from '@/contexts/QuickOrderContext';
 import { getPriceDisplay } from '@/util/productPrice';
 import { isInStock } from '@/util/cartStock';
-import { Loader2, CheckCircle2, X, Minus, Plus, Tag } from 'lucide-react';
+import { Loader2, CheckCircle2, X, Minus, Plus, Tag, Gift } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { cn } from '@/app/components/ui/utils';
-
-/** Cart and checkout also hardcode 300/10; no config/API threshold exists. Keep pricing
- * unchanged, but omit the promotional nudge until a data-backed threshold is available. */
-const FREE_SHIPPING_THRESHOLD = 300;
-const SHIPPING_FEE = 10;
 
 export interface QuickOrderDrawerProps {
   open: boolean;
@@ -71,20 +71,89 @@ export function QuickOrderDrawer({
   const [couponInput, setCouponInput] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<{
     code: string;
+    /** percent · fixed · free_shipping (from /coupons/apply). */
+    type?: string;
     discount_ht: number;
     discount_ttc: number;
     free_shipping?: boolean;
-    totals: { subtotal_ht: number; discount_ht: number; net_ht: number; tva: number; timbre: number; frais_livraison: number; total_ttc: number };
+    /** The subtotal /coupons/apply priced the code on: a percentage follows the quantity from there. */
+    appliedSubtotal: number;
   } | null>(null);
   const [isApplyingCoupon, setIsApplyingCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
 
+  /**
+   * The server's own figures, after it answered 409 because it would charge more than this drawer
+   * computed (a code capped by the order budget, a machine that never reaches free delivery…).
+   * Shown instead of the local estimate; the next tap sends `total` as expected_total. `pricing` keeps
+   * the whole answer so the code line says what the server did with the code (capped, refused).
+   */
+  const [serverPricing, setServerPricing] = useState<{ total: number; shipping: number; pricing: CheckoutPricing } | null>(null);
+
   const priceDisplay = getPriceDisplay(product);
   const unitPrice = priceDisplay.finalPrice;
   const subtotal = unitPrice * quantity;
-  const fraisLivraison = subtotal >= FREE_SHIPPING_THRESHOLD ? 0 : SHIPPING_FEE;
-  const total = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : subtotal + fraisLivraison;
+  /*
+   * The published rules, not a hard-coded 300 / 10: rule 19 keeps the machines out of free delivery
+   * and out of every code, so their delivery is always charged and a code never lowers their price.
+   */
+  const [rules, setRules] = useState<LoyaltyRules>(() => cachedLoyaltyRules());
+  const isMachine = isLoyaltyExcludedProduct(product, rules);
+  const fraisLivraison = isMachine || subtotal < rules.delivery.free_from_dt ? rules.delivery.fee_dt : 0;
+  /*
+   * The estimate follows the CURRENT quantity. /coupons/apply priced the code once, on the subtotal of
+   * that moment; reading its old total_ttc after « + » showed 57.50 for three units of 50. A
+   * percentage scales with the subtotal, a fixed amount stays. The figure is discount_ht, the one the
+   * order deducts (prix_ttc = prix_ht − discount_ht − remise + frais). The server still prices the
+   * order: every tap sends the total shown here as expected_total, and any difference (a code capped
+   * or dropped, a price that changed) comes back as a 409 with its own figures instead of an order.
+   */
+  const couponDiscount = !appliedCoupon || appliedCoupon.free_shipping || isMachine
+    ? 0
+    : appliedCoupon.type === 'percent' && appliedCoupon.appliedSubtotal > 0
+      ? Math.min(subtotal, Math.round((appliedCoupon.discount_ht * subtotal / appliedCoupon.appliedSubtotal) * 1000) / 1000)
+      : Math.min(subtotal, appliedCoupon.discount_ht);
+  const shippingEstimate = appliedCoupon?.free_shipping && !isMachine ? 0 : fraisLivraison;
+  const estimatedTotal = Math.max(0, Math.round((subtotal - couponDiscount + shippingEstimate) * 1000) / 1000);
+  const total = serverPricing?.total ?? estimatedTotal;
+  const shippingShown = serverPricing?.shipping ?? shippingEstimate;
+  const discountShown = serverPricing
+    ? Math.max(0, Math.round((subtotal + serverPricing.shipping - serverPricing.total) * 1000) / 1000)
+    : couponDiscount;
+  // One precision for the whole column (« 282.106 » never rounds to « 282.11 » under « 300.00 »).
+  const places = moneyPlaces([subtotal, shippingShown, discountShown, total]);
+  // After a 409 the server's verdict on the code replaces /coupons/apply's uncapped figure.
+  const serverCoupon = serverPricing && appliedCoupon ? serverPricing.pricing.coupon : null;
+  const serverCouponApplied = !!serverCoupon && serverCoupon.applied && serverCoupon.amount_dt > 0;
+  const serverCouponNote = serverPricing && serverCoupon
+    ? couponNote(serverPricing.pricing, rules, moneyPlaces([serverCoupon.amount_dt]))
+    : null;
+
+  /*
+   * The quick order spends no gift (the route sends use_gift: false: the drawer has no Protinas block,
+   * so no gift line and no « Garder pour plus tard »). A signed-in customer holding gift Protinas was
+   * promised they apply on their own to the next order, so the drawer says where they do: the cart.
+   */
+  const { user } = useAuth();
+  const { addToCart } = useCartActions();
+  const router = useRouter();
+  const giftPoints = isProtinasV3(rules) && !isMachine && !user?.protinas?.blocked_reason
+    ? Math.max(0, Math.floor(user?.protinas?.gift_balance ?? 0))
+    : 0;
+  const giftDt = pointsToDt(giftPoints, Math.max(1, rules.points_per_dt));
+
+  // Any change to the basket voids the confirmed server total.
+  useEffect(() => {
+    setServerPricing(null);
+  }, [quantity, appliedCoupon?.code, product.id]);
+
+  useEffect(() => {
+    if (!open) return;
+    let live = true;
+    void loadLoyaltyRules().then((value) => { if (live) setRules(value); });
+    return () => { live = false; };
+  }, [open]);
   const inStock = isInStock(product);
   // Cap quantity at the KNOWN available stock. We only cap when qte is a real positive number —
   // when the API doesn't return qte we leave it unbounded (getStockDisponible would wrongly clamp
@@ -182,10 +251,11 @@ export function QuickOrderDrawer({
       if (result.success && result.totals != null) {
         setAppliedCoupon({
           code: result.coupon?.code ?? code,
+          type: result.coupon?.type,
           discount_ht: result.discount_ht ?? 0,
           discount_ttc: result.discount_ttc ?? 0,
           free_shipping: result.free_shipping,
-          totals: result.totals,
+          appliedSubtotal: subtotal,
         });
         setCouponMessage(result.message || 'Code promo appliqué');
         setCouponMessageType('success');
@@ -256,6 +326,9 @@ export function QuickOrderDrawer({
       deliveryFeeSnapshot: fraisLivraison,
       website: website || undefined,
       ...(appliedCoupon?.code && { couponCode: appliedCoupon.code }),
+      // Always the total on screen: the server creates the order only at that amount, and answers
+      // 409 with its own pricing otherwise (never a courier collecting more than the drawer said).
+      expectedTotal: total,
     };
 
     try {
@@ -272,6 +345,17 @@ export function QuickOrderDrawer({
       trackEvent('quick_order_success', { order_id: res.orderId, product_id: product.id });
       onSuccess?.(res);
     } catch (err: unknown) {
+      const pricing = (err as { status?: number; pricing?: CheckoutPricing }).pricing;
+      if ((err as { status?: number }).status === 409 && pricing && Number.isFinite(pricing.total_dt)) {
+        // Nothing was created: show the server's total and let the customer confirm it.
+        const shipping = Math.round(((pricing.shipping_dt ?? 0) + (pricing.protinas?.used_on_shipping_dt ?? 0)) * 1000) / 1000;
+        setServerPricing({ total: pricing.total_dt, shipping, pricing });
+        const msg = `Le total a été mis à jour : ${formatDt(pricing.total_dt, moneyPlaces([pricing.total_dt]))} à payer à la livraison. Vérifiez puis confirmez.`;
+        setErrors({ submit: msg });
+        toast.warning(msg);
+        trackEvent('quick_order_total_updated', { product_id: product.id, total: pricing.total_dt });
+        return;
+      }
       const msg = err instanceof Error ? err.message : 'Erreur. Réessayez.';
       setErrors({ submit: msg });
       toast.error(msg);
@@ -279,6 +363,23 @@ export function QuickOrderDrawer({
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  /** « Utiliser mon cadeau »: the same line in the cart, where the checkout applies the gift. */
+  const handleUseGiftInCart = () => {
+    const aroma = productWithAromes.aromes?.find((entry) => entry.id === selectedVariantId);
+    addToCart({
+      ...product,
+      name: product.designation_fr,
+      price: unitPrice,
+      priceText: `${unitPrice} DT`,
+      image: product.cover ? getStorageUrl(product.cover) : '',
+      ...(aroma && { selectedAroma: { id: aroma.id, designation_fr: aroma.designation_fr } }),
+    } as unknown as Product, quantity, aroma?.designation_fr);
+    trackEvent('quick_order_gift_to_cart', { product_id: product.id });
+    setInternalOpen(false);
+    onOpenChange(false);
+    router.push('/cart');
   };
 
   const handleClose = () => {
@@ -297,6 +398,7 @@ export function QuickOrderDrawer({
       setAppliedCoupon(null);
       setCouponMessage(null);
       setCouponMessageType(null);
+      setServerPricing(null);
     }, 200);
   };
 
@@ -520,13 +622,28 @@ export function QuickOrderDrawer({
                       Code promo
                     </summary>
                     {appliedCoupon ? (
-                      <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-elevated border border-ok/40">
-                        <span className="font-medium text-ok text-sm">
-                          {appliedCoupon.code} appliqué
-                          {appliedCoupon.discount_ht > 0 && (
-                            <span className="text-ok ml-1">(-{appliedCoupon.discount_ttc.toFixed(2)} DT)</span>
-                          )}
-                        </span>
+                      <div className={cn('flex items-center justify-between gap-2 p-3 rounded-xl bg-elevated border', serverCoupon && !serverCouponApplied ? 'border-hairline' : 'border-ok/40')}>
+                        {serverCoupon ? (
+                          serverCouponApplied ? (
+                            <span className="font-medium text-ok text-sm">
+                              {appliedCoupon.code} appliqué
+                              <span className="text-ok ml-1">(-{formatDt(serverCoupon.amount_dt, moneyPlaces([serverCoupon.amount_dt]))})</span>
+                              {serverCouponNote && <span className="mt-0.5 block text-xs font-normal text-ink-2">{serverCouponNote}</span>}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-ink-2">
+                              <span className="font-medium text-ink-1">{appliedCoupon.code}</span> non appliqué sur ce panier
+                              {serverCouponNote && <span className="mt-0.5 block text-xs text-ink-2">{serverCouponNote}</span>}
+                            </span>
+                          )
+                        ) : (
+                          <span className="font-medium text-ok text-sm">
+                            {appliedCoupon.code} appliqué
+                            {couponDiscount > 0 && (
+                              <span className="text-ok ml-1">(-{formatDt(couponDiscount, moneyPlaces([couponDiscount]))})</span>
+                            )}
+                          </span>
+                        )}
                         <Button
                           type="button"
                           variant="ghost"
@@ -568,6 +685,29 @@ export function QuickOrderDrawer({
                     )}
                   </details>
 
+                  {isMachine && (
+                    <p className="text-xs leading-relaxed text-ink-3">
+                      Machines et matériel de musculation : hors livraison offerte, code promo, remise pack et cadeau ; sans Protinas gagnées.
+                    </p>
+                  )}
+
+                  {giftPoints > 0 && (
+                    <div className="flex items-start gap-2 rounded-lg border border-hairline bg-sunken p-3" data-quick-order-gift="">
+                      <Gift className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
+                      <div className="min-w-0 text-xs leading-relaxed text-ink-2">
+                        <p>Votre cadeau de {formatDt(giftDt)} ne s’applique pas en commande rapide : passez par le panier pour l’utiliser.</p>
+                        <button
+                          type="button"
+                          onClick={handleUseGiftInCart}
+                          disabled={!inStock || needsAromaSelection}
+                          className="-mb-2 inline-flex min-h-11 items-center rounded-lg font-semibold text-brand underline underline-offset-4 hover:text-brand-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50"
+                        >
+                          Ajouter au panier
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   {errors.submit && (
                     <p className="text-sm text-destructive">{errors.submit}</p>
                   )}
@@ -582,23 +722,23 @@ export function QuickOrderDrawer({
               <div className="space-y-1 mb-2">
                 <div className="flex justify-between text-sm">
                   <span className="text-ink-2">Sous-total</span>
-                  <span className="font-medium text-ink-1">{subtotal.toFixed(2)} DT</span>
+                  <span className="font-medium text-ink-1">{formatDt(subtotal, places)}</span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-ink-2">Expédition</span>
-                  <span className={(appliedCoupon?.free_shipping ? 0 : fraisLivraison) === 0 ? 'text-ok font-medium' : 'font-medium text-ink-1'}>
-                    {(appliedCoupon?.free_shipping ? 0 : fraisLivraison) === 0 ? 'Gratuite' : `${(appliedCoupon?.free_shipping ? 0 : fraisLivraison)} DT`}
+                  <span className={shippingShown === 0 ? 'text-ok font-medium' : 'font-medium text-ink-1'}>
+                    {shippingShown === 0 ? 'Gratuite' : formatDt(shippingShown, places)}
                   </span>
                 </div>
-                {appliedCoupon && appliedCoupon.discount_ht > 0 && (
+                {(serverPricing ? discountShown > 0 : appliedCoupon && couponDiscount > 0) && (
                   <div className="flex items-center justify-between gap-3 text-sm">
-                    <span className="text-ink-2">Remise ({appliedCoupon.code})</span>
-                    <span className="font-medium text-ok">-{appliedCoupon.discount_ttc.toFixed(2)} DT</span>
+                    <span className="text-ink-2">{serverPricing ? 'Remises' : `Remise (${appliedCoupon?.code})`}</span>
+                    <span className="font-medium text-ok">-{formatDt(discountShown, places)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-base font-bold pt-2 border-t border-rule">
                   <span className="font-display uppercase tracking-wide text-ink-1">Total</span>
-                  <span className="font-display font-bold tracking-tight tabular-nums text-brand">{total.toFixed(2)} DT</span>
+                  <span className="font-display font-bold tracking-tight tabular-nums text-brand">{formatDt(total, places)}</span>
                 </div>
 
               </div>

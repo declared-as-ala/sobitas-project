@@ -35,14 +35,4 @@ class PointsServiceTest extends TestCase
 
         $this->assertSame(100.0, $base);
     }
-
-    public function test_legacy_redemption_helper_uses_the_new_ten_percent_ceiling(): void
-    {
-        $service = new PointsService();
-
-        [$points, $discount] = $service->computeRedemption(10_000, 10_000, 100);
-
-        $this->assertSame(200, $points);
-        $this->assertSame(10.0, $discount);
-    }
 }

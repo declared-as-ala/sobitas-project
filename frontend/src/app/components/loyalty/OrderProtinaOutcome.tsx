@@ -1,7 +1,7 @@
 import { ShieldCheck } from 'lucide-react';
 import type { Order } from '@/types';
 import type { OrderLifecycle } from '@/util/orderStatus';
-import { pointsToDt } from '@/util/loyaltyPoints';
+import { formatProtinas, pointsToDt } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { ProtinaAmount, ProtinaMark } from './Protina';
 
@@ -37,12 +37,22 @@ import { ProtinaAmount, ProtinaMark } from './Protina';
 
 type Movement = NonNullable<Order['protina']>;
 
-/** The DT a redemption actually removed from the invoice, from the server's receipt. */
-function RedemptionLine({ points, valueDt }: { points: number; valueDt: number | null }) {
+/**
+ * The DT a redemption actually removed from the invoice, from the server's receipt — articles AND,
+ * since Protinas v3, the delivery they paid. `giftPoints` splits the gift (welcome, reviews) from
+ * the Protinas the customer earned, because only the earned ones are the customer's own money.
+ */
+function RedemptionLine({ points, valueDt, giftPoints }: { points: number; valueDt: number | null; giftPoints: number }) {
+  const gift = Math.min(points, Math.max(0, giftPoints));
+  const earned = points - gift;
+  const split = gift > 0
+    ? (earned > 0 ? `dont ${formatProtinas(gift)} cadeau et ${earned.toLocaleString('fr-FR')} gagnées` : 'Protinas cadeau')
+    : null;
   return (
     <div className="flex items-start justify-between gap-3">
       <span className="text-sm text-ink-2">
         Utilisées sur cette commande
+        {split && <span className="mt-0.5 block text-xs text-ink-3">{split}</span>}
         {valueDt !== null && <span className="mt-0.5 block text-xs text-ink-3">{formatTnd(valueDt)} de remise</span>}
       </span>
       <ProtinaAmount value={-points} className="shrink-0 text-sm font-bold text-brand" />
@@ -54,11 +64,20 @@ export function OrderProtinaOutcome({
   movement,
   lifecycle,
   redemptionValueDt,
+  giftPoints = 0,
+  forfeitedPoints = 0,
+  heldAfterDelivery = false,
 }: {
   movement: Movement;
   lifecycle: OrderLifecycle;
-  /** `totals.points_discount` — the server's figure, or null when the receipt is unavailable. */
+  /** `totals.points_discount` (+ `points_shipping` in v3) — the server's figure, or null when the receipt is unavailable. */
   redemptionValueDt: number | null;
+  /** v3: gift Protinas among those used (`points_redeemed_gift`). */
+  giftPoints?: number;
+  /** v3: Protinas kept after a refusal post-dispatch (`protinas_forfeited`). */
+  forfeitedPoints?: number;
+  /** v3 orders: earnings stay « en attente » for the return period before they can be spent. */
+  heldAfterDelivery?: boolean;
 }) {
   const redeemed = movement.redeemed ?? movement.spent;
   const refunded = movement.refunded ?? 0;
@@ -67,7 +86,7 @@ export function OrderProtinaOutcome({
 
   // Nothing happened on the ledger for this order — a guest checkout, or a basket under 20 DT.
   // An empty loyalty card is a card that teaches the customer the programme does not apply here.
-  if (redeemed <= 0 && incoming <= 0 && refunded <= 0 && revoked <= 0) return null;
+  if (redeemed <= 0 && incoming <= 0 && refunded <= 0 && revoked <= 0 && forfeitedPoints <= 0) return null;
 
   return (
     <section
@@ -89,7 +108,7 @@ export function OrderProtinaOutcome({
       </div>
 
       <div className="mt-4 space-y-3 border-t border-hairline pt-4">
-        {redeemed > 0 && <RedemptionLine points={redeemed} valueDt={redemptionValueDt} />}
+        {redeemed > 0 && <RedemptionLine points={redeemed} valueDt={redemptionValueDt} giftPoints={giftPoints} />}
 
         {lifecycle === 'open' && incoming > 0 && (
           <div className="flex items-start justify-between gap-3">
@@ -111,10 +130,19 @@ export function OrderProtinaOutcome({
           </div>
         )}
 
-        {lifecycle === 'cancelled' && refunded > 0 && (
+        {/* The deposit is not a second movement: it is the part of « Utilisées » that did not come
+            back, so it is said under the refund instead of as another −400 the rows would add twice. */}
+        {lifecycle === 'cancelled' && (refunded > 0 || forfeitedPoints > 0) && (
           <div className="flex items-start justify-between gap-3">
-            <span className="text-sm text-ink-2">Remboursées après annulation</span>
-            <ProtinaAmount value={refunded} signed className="shrink-0 text-sm font-bold text-ok" />
+            <span className="text-sm text-ink-2">
+              {refunded > 0 ? 'Remboursées après annulation' : 'Aucune Protina remboursée'}
+              {forfeitedPoints > 0 && (
+                <span className="mt-0.5 block text-xs text-ink-3">
+                  {formatProtinas(forfeitedPoints)} retenues pour l’aller-retour (colis refusé après l’envoi)
+                </span>
+              )}
+            </span>
+            {refunded > 0 && <ProtinaAmount value={refunded} signed className="shrink-0 text-sm font-bold text-ok" />}
           </div>
         )}
 
@@ -128,16 +156,20 @@ export function OrderProtinaOutcome({
 
       <p className="mt-4 flex items-start gap-2 border-t border-hairline pt-3 text-xs leading-relaxed text-ink-3">
         <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-ok" aria-hidden="true" />
-        {lifecycle === 'open' &&
-          'Les Protinas sont créditées une fois la commande livrée. 20 Protinas = 1 DT de remise.'}
-        {lifecycle === 'delivered' &&
-          'Ces Protinas sont dans votre solde. 20 Protinas = 1 DT de remise sur une prochaine commande.'}
+        {lifecycle === 'open' && (heldAfterDelivery
+          ? 'Les Protinas sont créditées à la livraison et utilisables une fois le délai de retour passé. 20 Protinas = 1 DT.'
+          : 'Les Protinas sont créditées une fois la commande livrée. 20 Protinas = 1 DT de remise.')}
+        {lifecycle === 'delivered' && (heldAfterDelivery
+          ? 'Ces Protinas sont dans votre solde, utilisables une fois le délai de retour passé. 20 Protinas = 1 DT de remise.'
+          : 'Ces Protinas sont dans votre solde. 20 Protinas = 1 DT de remise sur une prochaine commande.')}
         {/* Only claim the refund when a refund row actually exists. The reversal is best-effort in
             PointsService and an order can sit cancelled with the ledger not yet compensated. */}
         {lifecycle === 'cancelled' &&
-          (refunded > 0
-            ? 'Cette commande est annulée : aucune Protina n’a été gagnée, et celles utilisées ont été remises sur votre solde.'
-            : 'Cette commande est annulée : aucune Protina n’a été gagnée.')}
+          (forfeitedPoints > 0
+            ? `Colis refusé après l’envoi : ${formatProtinas(forfeitedPoints)} retenues pour l’aller-retour${refunded > 0 ? ', le reste vous a été rendu' : ''}. Aucune Protina n’a été gagnée.`
+            : refunded > 0
+              ? 'Cette commande est annulée : aucune Protina n’a été gagnée, et celles utilisées ont été remises sur votre solde.'
+              : 'Cette commande est annulée : aucune Protina n’a été gagnée.')}
       </p>
     </section>
   );

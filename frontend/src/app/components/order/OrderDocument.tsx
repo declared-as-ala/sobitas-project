@@ -1,5 +1,7 @@
 import type { Order } from '@/types';
 import { LEGAL_IDENTITY } from '@/util/company';
+import { formatProtinas, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { storedProtinasSplit } from '@/util/checkoutPricing';
 import styles from './order-document.module.css';
 
 type Figure = number | string | null | undefined;
@@ -33,14 +35,33 @@ export function OrderDocument({ order, details }: { order: Order; details: Docum
   const date = order.created_at ? new Date(order.created_at) : null;
   const separated = order.pack_discount_ht != null && order.points_discount_ht != null;
   const discountHt = number(order.remise) ?? number(order.discount_ht);
-  const rows = [
+  /*
+   * Protinas v3: `frais_livraison` is NET of the Protinas that paid the delivery
+   * (`points_shipping_dt`), so the document prints the delivery at its price. The Protinas are split
+   * the way the checkout showed them (storedProtinasSplit): the gift on its own « Cadeau » line,
+   * earned Protinas crossing the delivery out (« Livraison réglée en Protinas »), the rest on the
+   * articles. A 180 DT order paid with the welcome gift reads « Livraison 10,000 / Cadeau −15,000 »,
+   * exactly as at checkout, never as a delivery the customer chose to pay with Protinas.
+   */
+  const netShipping = number(order.frais_livraison);
+  const split = storedProtinasSplit({
+    goodsPointsDt: number(order.points_discount_ht),
+    shippingPointsDt: number(order.points_shipping_dt),
+    netShippingDt: netShipping,
+    pointsRedeemed: number(order.points_redeemed),
+    giftPoints: number(order.points_redeemed_gift),
+  }, REDEEM_POINTS_PER_DT);
+  const paidInProtinas = (number(order.points_shipping_dt) ?? 0) > 0;
+  const rows: Array<{ label: string; value: number | null; total?: boolean; deduct?: boolean }> = [
     { label: 'Sous-total HT', value: number(order.prix_ht) },
     ...(separated ? [
-      { label: 'Remise pack', value: Number(order.pack_discount_ht) > 0 ? number(order.pack_discount_ht) : null },
-      { label: order.coupon_code_snapshot ? `Code promo ${order.coupon_code_snapshot}` : 'Code promo', value: Number(order.discount_ht) > 0 ? number(order.discount_ht) : null },
-      { label: `Protinas (${order.points_redeemed ?? 0} pts)`, value: Number(order.points_discount_ht) > 0 ? number(order.points_discount_ht) : null },
-    ] : [{ label: discountHt === null ? 'Remise TTC' : 'Remise HT', value: discountHt ?? number(order.discount_ttc) }]),
-    { label: 'Livraison', value: number(order.frais_livraison) },
+      { label: 'Remise pack', value: Number(order.pack_discount_ht) > 0 ? number(order.pack_discount_ht) : null, deduct: true },
+      { label: order.coupon_code_snapshot ? `Code promo ${order.coupon_code_snapshot}` : 'Code promo', value: Number(order.discount_ht) > 0 ? number(order.discount_ht) : null, deduct: true },
+      { label: `Cadeau (${formatProtinas(split.giftPoints)})`, value: split.giftDt > 0 ? split.giftDt : null, deduct: true },
+      { label: `Protinas (${formatProtinas(split.earnedGoodsPoints)})`, value: split.earnedGoodsDt > 0 ? split.earnedGoodsDt : null, deduct: true },
+    ] : [{ label: discountHt === null ? 'Remise TTC' : 'Remise HT', value: discountHt ?? number(order.discount_ttc), deduct: true }]),
+    { label: 'Livraison', value: netShipping !== null && paidInProtinas ? split.shippingGrossDt : netShipping },
+    ...(split.shippingPointsDt > 0 ? [{ label: `Livraison réglée en Protinas (${formatProtinas(split.shippingPoints)})`, value: split.shippingPointsDt, deduct: true }] : []),
     { label: 'Total de la commande', value: number(order.prix_ttc), total: true },
   ].filter(row => row.value !== null);
 
@@ -96,7 +117,7 @@ export function OrderDocument({ order, details }: { order: Order; details: Docum
         {order.note && <div><h2 className={styles.label}>Note de livraison</h2><p className="whitespace-pre-wrap"><bdi dir="auto">{order.note}</bdi></p></div>}
       </div>
       <dl className={styles.totals}>{rows.map(row => <div key={row.label} className={row.total ? styles.total : undefined}>
-        <dt>{row.label}</dt><dd><bdi dir="ltr">{money(row.value)}</bdi></dd>
+        <dt>{row.label}</dt><dd><bdi dir="ltr">{row.deduct ? '−' : ''}{money(row.value)}</bdi></dd>
       </div>)}</dl>
     </div>
     <footer className={styles.footer}>Bon de commande · {LEGAL_IDENTITY.brand}</footer>

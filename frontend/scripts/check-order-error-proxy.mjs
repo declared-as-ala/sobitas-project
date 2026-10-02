@@ -91,6 +91,38 @@ try {
   // to reject: nothing downstream should ever see a string this side already knows is malformed.
   await route.exports.POST(request('NOT A LABEL'));
   assert.equal('affiliate_subdomain' in forwarded, false); checks++;
+
+  /*
+   * ── QUICK ORDER: A 409 CARRIES THE SERVER TOTAL, AND THE CONFIRMED TOTAL GOES BACK ──────────
+   * The drawer computes its own total. When the server would charge more (a code capped by the
+   * order budget, a machine that never reaches free delivery) it refuses with 409 + pricing; the
+   * drawer must receive that pricing and send the confirmed total as expected_total, or the
+   * customer can never order at all.
+   */
+  const quickFile = path.resolve('src/app/api/quick-order/route.ts');
+  const quick = new Module(quickFile);
+  quick.filename = quickFile;
+  quick.paths = Module._nodeModulePaths(path.dirname(quickFile));
+  quick._compile(transpile(quickFile), quickFile);
+  const quickRequest = (extra = {}) => {
+    const body = { productId: 7, qty: 1, nom: 'Test', prenom: '', phone: '20123456', gouvernorat: 'Tunis',
+      delegation: 'Bab Bhar', localite: 'Tunis', priceSnapshot: 1200, deliveryFeeSnapshot: 0, ...extra };
+    const req = new Request('http://localhost/api/quick-order', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '203.0.113.9' }, body: JSON.stringify(body) });
+    Object.defineProperty(req, 'cookies', { value: { get: () => undefined } });
+    return req;
+  };
+  globalThis.fetch = async (_url, options) => {
+    forwarded = JSON.parse(options.body);
+    return Response.json({ message: 'Le total de votre commande a changé : 1210.00 DT à payer à la livraison.', pricing: { total_dt: 1210, shipping_dt: 10 } }, { status: 409 });
+  };
+  response = await quick.exports.POST(quickRequest());
+  assert.equal(response.status, 409); checks++;
+  assert.deepEqual((await response.json()).pricing, { total_dt: 1210, shipping_dt: 10 }); checks++;
+  assert.equal('expected_total' in forwarded, false); checks++;
+  globalThis.fetch = async (_url, options) => { forwarded = JSON.parse(options.body); return Response.json({ id: 9, numero: '2026/0009' }, { status: 201 }); };
+  response = await quick.exports.POST(quickRequest({ expectedTotal: 1210 }));
+  assert.equal(response.status, 200); checks++;
+  assert.equal(forwarded.expected_total, 1210); checks++;
 } finally {
   globalThis.fetch = originalFetch;
   console.log = originalLog;

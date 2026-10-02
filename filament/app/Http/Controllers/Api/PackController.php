@@ -35,7 +35,12 @@ class PackController extends Controller
 
         $products = empty($ids)
             ? collect()
-            : Product::whereIn('id', $ids)->get()->keyBy('id');
+            : Product::whereIn('id', $ids)
+                ->when(\App\Services\CheckoutPricingService::rulesVersion() >= 3
+                    && \Illuminate\Support\Facades\Schema::hasTable('sous_categories')
+                    && \Illuminate\Support\Facades\Schema::hasColumn('products', 'sous_categorie_id'),
+                    fn ($q) => $q->with('sousCategorie:id,slug'))
+                ->get()->keyBy('id');
 
         $items = [];
         $subtotal = 0.0;
@@ -48,6 +53,9 @@ class PackController extends Controller
 
             if (! $product || $quantite < 1) {
                 continue; // fail-safe: skip unknown/absent products
+            }
+            if (\App\Services\CheckoutPricingService::rulesVersion() >= 3 && $product->isLoyaltyExcluded()) {
+                continue; // machines are outside the programme: no pack, and they do not count toward a tier
             }
 
             $unit = (float) $product->getEffectiveUnitPrice();
