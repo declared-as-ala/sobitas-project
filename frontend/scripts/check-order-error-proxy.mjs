@@ -5,6 +5,10 @@ import Module from 'node:module';
 import path from 'node:path';
 import ts from 'typescript';
 const filename = path.resolve('src/app/api/orders/route.ts');
+// Both set, so the guard proves which one wins: the Docker-network address, not the public URL that
+// loops back out through Cloudflare (lib/shopperIp.ts). Read when the route is compiled below.
+process.env.API_BACKEND_URL = 'http://backend-nginx-v2.test/api';
+process.env.NEXT_PUBLIC_API_URL = 'https://protein.test/api-proxy';
 /*
  * The route is compiled and run as CommonJS, which knows nothing about the `@/…` path alias or
  * about TypeScript. Both are taught here rather than by keeping the route import-free: this guard
@@ -91,6 +95,29 @@ try {
   // to reject: nothing downstream should ever see a string this side already knows is malformed.
   await route.exports.POST(request('NOT A LABEL'));
   assert.equal('affiliate_subdomain' in forwarded, false); checks++;
+
+  /*
+   * ── LARAVEL RATE-LIMITS THE SHOPPER, SO THE PROXY MUST NAME THE SHOPPER ──────────────────────
+   * coupon-apply:{ip} (10/min, shared with the quote and this order endpoint) keys on the address
+   * Laravel resolves. Behind NPM the first x-forwarded-for hop is whatever the client typed;
+   * Cloudflare's cf-connecting-ip is not. Nothing that fails to parse as an IP is ever forwarded.
+   */
+  let sent = null;
+  globalThis.fetch = async (url, options) => { sent = { url, headers: options.headers }; return Response.json({ id: 1 }, { status: 201 }); };
+  const from = (headers) => {
+    const req = new Request('http://localhost/api/orders', { method: 'POST', headers: { 'Content-Type': 'application/json', ...headers }, body: JSON.stringify({ commande: {}, panier: [] }) });
+    Object.defineProperty(req, 'cookies', { value: { get: () => undefined } });
+    return req;
+  };
+  await route.exports.POST(from({ 'cf-connecting-ip': '197.9.24.160', 'x-forwarded-for': '6.6.6.6, 197.9.24.160, 162.158.23.31', 'x-real-ip': '162.158.23.31' }));
+  assert.equal(sent.url, 'http://backend-nginx-v2.test/api/add_commande'); checks++;
+  assert.equal(sent.headers['X-Forwarded-For'], '197.9.24.160'); checks++;
+  await route.exports.POST(from({ 'x-forwarded-for': '198.51.100.7, 10.0.0.2' }));
+  assert.equal(sent.headers['X-Forwarded-For'], '198.51.100.7'); checks++;
+  await route.exports.POST(from({ 'cf-connecting-ip': 'not-an-ip', 'x-real-ip': '198.51.100.8' }));
+  assert.equal(sent.headers['X-Forwarded-For'], '198.51.100.8'); checks++;
+  await route.exports.POST(from({ 'x-forwarded-for': '<script>' }));
+  assert.equal('X-Forwarded-For' in sent.headers, false); checks++;
 } finally {
   globalThis.fetch = originalFetch;
   console.log = originalLog;

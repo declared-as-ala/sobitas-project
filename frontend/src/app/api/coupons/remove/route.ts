@@ -1,18 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://admin.protein.tn/api';
+import { BACKEND_API_URL, forwardShopperIp } from '@/lib/shopperIp';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const authHeader = request.headers.get('Authorization');
 
-    const response = await fetch(`${API_URL}/coupons/remove`, {
+    const response = await fetch(`${BACKEND_API_URL}/coupons/remove`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
         ...(authHeader && { Authorization: authHeader }),
+        ...forwardShopperIp(request),
       },
       body: JSON.stringify(body),
       signal: AbortSignal.timeout(10000),

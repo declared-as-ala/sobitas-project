@@ -1,10 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
 import { withAffiliateAttribution } from '@/lib/orderAttribution';
+import { BACKEND_API_URL, forwardShopperIp, shopperIp } from '@/lib/shopperIp';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
-
-// Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.protein.tn/api';
 
 type AddCommandeResponse = {
   id?: number;
@@ -36,7 +34,8 @@ function validatePhone(phone: string): boolean {
 }
 
 async function handleQuickOrder(request: NextRequest): Promise<Response> {
-    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? request.headers.get('x-real-ip') ?? 'unknown';
+    // Was the first x-forwarded-for hop, which behind NPM is whatever the client typed.
+    const ip = shopperIp(request) ?? 'unknown';
     if (isRateLimited(ip)) {
       return NextResponse.json(
         { error: 'Trop de demandes. Réessayez dans une minute.' },
@@ -161,13 +160,14 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
 
     const authHeader = request.headers.get('Authorization');
     const idempotencyKey = request.headers.get('Idempotency-Key');
-    const response = await fetch(`${API_URL}/add_commande`, {
+    const response = await fetch(`${BACKEND_API_URL}/add_commande`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         ...(authHeader && { Authorization: authHeader }),
         ...(idempotencyKey && { 'Idempotency-Key': idempotencyKey }),
+        ...forwardShopperIp(request),
       },
       body: JSON.stringify(withAffiliateAttribution(orderPayload, request)),
       signal: AbortSignal.timeout(30000),

@@ -1,15 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.protein.tn/api';
+import { BACKEND_API_URL, forwardShopperIp } from '@/lib/shopperIp';
 
 export async function POST(request: NextRequest) {
   try {
-    const response = await fetch(`${API_URL}/checkout/quote`, {
+    const response = await fetch(`${BACKEND_API_URL}/checkout/quote`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
         ...(request.headers.get('Authorization') && { Authorization: request.headers.get('Authorization')! }),
+        // throttle:checkout-quote and the coupon-apply bucket are per shopper (lib/shopperIp.ts).
+        ...forwardShopperIp(request),
       },
       body: JSON.stringify(await request.json()),
       cache: 'no-store',
