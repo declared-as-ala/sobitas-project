@@ -217,7 +217,7 @@ function compileTargets(targets: LinkTarget[]): CompiledTarget[] {
  * `https://protein.tn/proteines`, `/proteines/`, `/Proteines` and `/proteines?ref=blog` all point
  * at one page — and a raw string compare against the taxonomy's `/proteines` sees four misses.
  */
-function normalizeLinkPath(href: string | undefined | null): string | null {
+export function normalizeLinkPath(href: string | undefined | null): string | null {
   if (!href) return null;
   let path = href.trim().replace(/^https?:\/\/(?:www\.)?protein\.tn/i, '');
   // `/x` only. Another host (`https://example.com/proteines`) and a protocol-relative one
@@ -226,6 +226,32 @@ function normalizeLinkPath(href: string | undefined | null): string | null {
   path = path.split('#')[0].split('?')[0];
   if (path.length > 1) path = path.replace(/\/+$/, '');
   return path.toLowerCase() || '/';
+}
+
+/**
+ * Drop every target whose destination is already linked elsewhere on the page.
+ *
+ * `injectInternalLinks` seeds itself from the HTML it is handed, which is the article body and
+ * nothing else. A page that also renders curated link blocks around that body — the commerce
+ * bridge, the "Lire aussi" chips, the shop-category nav — must subtract their destinations here,
+ * before the targets reach the injector, or the prose links a shelf the page already links and the
+ * slot is spent for no new signal. Unparseable or off-site hrefs are ignored, so passing a full
+ * list with holes in it is safe.
+ */
+export function excludeLinkedDestinations(
+  targets: LinkTarget[],
+  linkedHrefs: Array<string | undefined | null>
+): LinkTarget[] {
+  const linked = new Set<string>();
+  for (const href of linkedHrefs) {
+    const path = normalizeLinkPath(href);
+    if (path) linked.add(path);
+  }
+  if (linked.size === 0) return targets;
+  return targets.filter((target) => {
+    const path = normalizeLinkPath(target.href);
+    return !path || !linked.has(path);
+  });
 }
 
 /** Every destination the incoming HTML already links, normalised for comparison. */

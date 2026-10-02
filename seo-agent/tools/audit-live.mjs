@@ -21,9 +21,11 @@
  *       word count < 250 on a product · price missing in offers
  *   P2  a CATEGORY serving `noindex, follow` where the page rendered cards and not one is buyable
  *       — the deliberate dead-listing gate (commit 9c9dc83), self-reversing on restock. Any other
- *       noindex, and any noindex with a single in-stock card under it, stays a P0. ALSO: a 200
- *       whose body rendered but whose head carried none of title/canonical/description/robots,
- *       where a confirming re-fetch came back clean (see the comment in `probe`).
+ *       noindex, and any noindex with a single in-stock card under it, stays a P0. ALSO, both
+ *       with a confirming re-fetch behind them (see the comments in `probe`): a 200 whose body
+ *       rendered but whose head carried none of title/canonical/description/robots, and a 429/5xx
+ *       that a re-fetch cleared — the category route rethrows upstream failures deliberately, so
+ *       one of those is the design working, not an outage. A 4xx gets no re-fetch and stays P0.
  * No dependencies. Regex parsing on purpose: the run needs answers, not a DOM.
  */
 import { readFileSync, existsSync } from 'node:fs';
@@ -108,6 +110,44 @@ async function probe(pathname) {
     out.problems.push(['P0', `fetch failed: ${e.message}`]);
     return out;
   }
+  /*
+   * ── A TRANSIENT 5xx IS CONFIRMED BEFORE IT IS BELIEVED ──────────────────────────────────────
+   * The category route rethrows an upstream 429/5xx/timeout ON PURPOSE
+   * (app/(shop)/category/[slug]/page.tsx, the catch at the end of generateMetadata): Next then
+   * answers with a 5xx it never caches and the crawler simply retries, which is strictly better
+   * than caching a 200 whose head carries the generic title and no canonical. The code says so in
+   * as many words.
+   *
+   * This checker was calling that intended behaviour a P0 on a single render, and P0 means "drop
+   * everything": `/sante-vitalite` 500'd on the first of its two watchlist rows on 30/09 and again
+   * on 02/10, was a clean 200 on its second row both times, and answered 200 to 22 consecutive
+   * fetches on 30/09 and 12 on 02/10 — two mornings spent on a page that was never down. Same
+   * reasoning as the head-metadata case below, same remedy: ONE confirming re-fetch.
+   *
+   * A 4xx is NOT given one. 404/410/403 are states the origin is sure about, they do not clear on
+   * a retry, and a disappeared watchlist URL must stay a P0 on the first look.
+   */
+  const transient = res.status >= 500 || res.status === 429;
+  if (res.status !== 200 && transient) {
+    const first = res.status;
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      const again = await fetch(url, { headers: { 'user-agent': UA, accept: 'text/html' }, redirect: 'follow' });
+      if (again.status === 200) {
+        res = again;
+        out.problems.push(['P2', `transient: HTTP ${first} on 1 of 2 fetches — re-fetch was clean (the route rethrows upstream 429/5xx by design)`]);
+      } else {
+        out.status = first;
+        out.problems.push(['P0', `HTTP ${first} (confirmed: re-fetch returned ${again.status})`]);
+        return out;
+      }
+    } catch (e) {
+      out.status = first;
+      out.problems.push(['P0', `HTTP ${first} (re-fetch failed: ${e.message})`]);
+      return out;
+    }
+  }
+
   out.status = res.status;
   out.finalAbsolute = res.url;
   out.finalUrl = res.url.replace(ORIGIN, '') || '/';

@@ -2547,3 +2547,32 @@ export function getBlogSeoEntry(slug: string | undefined): BlogSeoEntry | null {
   const key = decodedSlug.trim().normalize('NFC').toLowerCase();
   return BLOG_SEO_CONFIG[key] ?? null;
 }
+
+/**
+ * The "Lire aussi" chips exactly as the page will render them: one per destination, the commerce
+ * bridge's own shelf removed.
+ *
+ * ── WHY THIS IS A FUNCTION AND NOT A `.filter()` INSIDE THE COMPONENT ─────────────────────────
+ * Two places need to know which destinations this block links: BlogSeoBlock, to render them, and
+ * the article route, to keep the automatic in-content linker from spending a slot on a shelf these
+ * curated anchors already cover. A second copy of the rule in the second place is a copy that
+ * drifts, and the drift is invisible — the page still renders, it just links one shelf twice. So
+ * the rule lives here once and both callers read it.
+ *
+ * One chip per destination: thirteen entries listed the same anchor+href two to four times, so the
+ * block rendered "créatine monohydrate en Tunisie → /creatine" twice in a row. No extra signal
+ * (Google weighs the first anchor to a URL on a page) and a repeated exact-match phrase is what a
+ * generated keyword strip looks like. The first occurrence wins, so each entry's editorial order
+ * is preserved.
+ */
+export function resolveBlogSeoLinks(
+  slug: string | undefined,
+  excludeHref?: string
+): Array<{ anchor: string; href: string }> {
+  const entry = getBlogSeoEntry(slug);
+  if (!entry) return [];
+  return entry.internalLinks.filter(
+    (link, i, all) =>
+      link.href !== excludeHref && all.findIndex((other) => other.href === link.href) === i
+  );
+}
