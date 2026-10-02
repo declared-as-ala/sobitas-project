@@ -28,6 +28,9 @@ use Filament\Facades\Filament;
 use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
 use Illuminate\Support\Facades\URL;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Livewire\Livewire;
 
 class AppServiceProvider extends ServiceProvider
@@ -45,6 +48,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        RateLimiter::for('checkout-quote', fn (Request $request) => Limit::perMinute(
+            max(1, (int) config('loyalty.checkout.quote_throttle_per_minute', 60))
+        )->by($request->user()?->getAuthIdentifier() ?: $request->ip()));
         // Force all URL/asset generation to use APP_URL regardless of the Host header
         // received by PHP-FPM (which may differ from the public domain when behind a
         // reverse proxy like Nginx Proxy Manager).

@@ -467,6 +467,9 @@ export interface Order {
   remise?: number;
   discount_ht?: number;
   discount_ttc?: number;
+  pack_discount_ht?: number;
+  points_discount_ht?: number;
+  points_redeemed?: number;
   coupon_code_snapshot?: string;
   payment_method?: 'cod' | 'card' | string;
   user_id?: number;
@@ -632,7 +635,7 @@ export interface User {
   phone_verified?: boolean;
   welcome_bonus_eligible?: boolean;
   welcome_bonus_awarded?: boolean;
-  welcome_bonus_status?: 'phone_required' | 'claimable' | 'awarded' | 'already_used' | 'not_eligible' | 'paused';
+  welcome_bonus_status?: 'phone_required' | 'claimable' | 'pending' | 'awarded' | 'already_used' | 'not_eligible' | 'paused';
   contact_verified?: boolean;
   verification_status?: 'unverified' | 'email_only' | 'phone_verified';
   phone_verification_required?: boolean;
@@ -679,6 +682,8 @@ export interface PointsTransaction {
 export interface PointsHistory {
   balance: number;
   value_dt: number;
+  welcome_status?: NonNullable<User['welcome_bonus_status']>;
+  pending_welcome_points?: number;
   transactions: PointsTransaction[];
 }
 
@@ -692,6 +697,8 @@ export interface MemberMission {
 }
 
 export interface MemberDashboardData {
+  welcome_status?: NonNullable<User['welcome_bonus_status']>;
+  pending_welcome_points?: number;
   summary: {
     orders: number;
     delivered_orders: number;

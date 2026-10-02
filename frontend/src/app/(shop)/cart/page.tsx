@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { PageHeader } from '@/app/components/PageHeader';
@@ -13,9 +13,8 @@ import { Skeleton } from '@/app/components/ui/skeleton';
 import { getStorageUrl } from '@/services/api';
 import { getStockDisponible } from '@/util/cartStock';
 import { DELIVERY } from '@/util/company';
+import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 import { notify as toast } from '@/lib/notify';
-
-const FREE_SHIPPING_THRESHOLD = DELIVERY.freeFromDt;
 
 /** Layout-matching placeholder shown until the cart rehydrates from localStorage (no flash of empty). */
 function CartSkeleton() {
@@ -84,6 +83,8 @@ export default function CartPage() {
   } = useCart();
 
   const hasClampedRef = useRef(false);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   // Clamp cart quantities to current stock when product stock dropped below cart qty
   useEffect(() => {
@@ -105,10 +106,12 @@ export default function CartPage() {
 
   const totalItems = getTotalItems();
   const totalPrice = getTotalPrice();
-  const shippingCost = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : DELIVERY.feeDt;
+  const freeShippingThreshold = rules.delivery.free_from_dt;
+  const shippingCost = totalPrice >= freeShippingThreshold ? 0 : rules.delivery.fee_dt;
   const finalTotal = totalPrice + shippingCost;
-  const remainingForFreeShipping = Math.max(0, FREE_SHIPPING_THRESHOLD - totalPrice);
-  const freeShippingProgress = Math.min(100, (totalPrice / FREE_SHIPPING_THRESHOLD) * 100);
+  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - totalPrice);
+  const freeShippingProgress = Math.min(100, (totalPrice / freeShippingThreshold) * 100);
+  const nextPackTier = rules.pack.tiers.find(tier => totalPrice < tier.from_dt);
 
   // Gate on rehydration so returning users never see a flash of the empty state.
   if (!isLoaded) {
@@ -306,12 +309,12 @@ export default function CartPage() {
 
               {/* Collapsible details on mobile/tablet; always visible on lg */}
               <div className="lg:block">
-                {totalPrice < FREE_SHIPPING_THRESHOLD && (
+                {totalPrice < freeShippingThreshold && (
                   <div className="px-4 sm:px-5 lg:px-6 pt-2 lg:pt-4">
                     <div className="p-3 sm:p-4 bg-red-50 dark:bg-red-950/20 rounded-xl border border-red-100 dark:border-red-900/50">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
-                           Livraison gratuite à {DELIVERY.freeFromDt} DT
+                           Livraison gratuite à {freeShippingThreshold} DT
                         </span>
                         <span className="text-xs sm:text-sm font-display font-bold tabular-nums text-red-600 dark:text-red-400">
                           {remainingForFreeShipping.toFixed(2)} DT restants
@@ -328,6 +331,8 @@ export default function CartPage() {
                 )}
 
                 <div className="p-4 sm:p-5 lg:p-6 space-y-2">
+                  <p className="text-xs text-ink-2">Remise pack : −{rules.pack.tiers[0]?.percent ?? 3} % dès {rules.pack.tiers[0]?.from_dt ?? 200} DT, −{rules.pack.tiers[1]?.percent ?? 5} % dès {rules.pack.tiers[1]?.from_dt ?? 350} DT, −{rules.pack.tiers[2]?.percent ?? 7} % dès {rules.pack.tiers[2]?.from_dt ?? 500} DT d&apos;articles (hors articles en promo, non cumulable avec un code promo).</p>
+                  {nextPackTier && <p className="text-xs text-ink-2">Encore {(nextPackTier.from_dt - totalPrice).toFixed(2)} DT pour la remise pack de −{nextPackTier.percent} %.</p>}
                   <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
                     <span>Sous-total</span>
                     <span className="font-display font-semibold text-gray-900 dark:text-white tabular-nums">{totalPrice.toFixed(2)} DT</span>
@@ -392,7 +397,7 @@ export default function CartPage() {
                   <p className="text-xs text-gray-600 dark:text-gray-400">
                      {shippingCost === 0
                        ? `Livraison ${DELIVERY.windowLabel} · offerte`
-                       : `Livraison ${DELIVERY.windowLabel} · ${DELIVERY.feeDt} DT (offerte dès ${DELIVERY.freeFromDt} DT)`}
+                       : `Livraison ${DELIVERY.windowLabel} · ${rules.delivery.fee_dt} DT (offerte dès ${freeShippingThreshold} DT)`}
                   </p>
                 </div>
               </div>

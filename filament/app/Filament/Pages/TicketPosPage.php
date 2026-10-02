@@ -169,7 +169,7 @@ class TicketPosPage extends Page
     {
         $svc    = app(LoyaltyService::class);
         $totals = $this->computeTicketTotals();
-        $earn   = $svc->calculateEarnablePoints($totals['base_after_regular_discount'], $totals['loyalty_discount']);
+        $earn   = $svc->calculateEarnablePoints($totals['base_after_affilie'], $totals['loyalty_discount']);
 
         $this->loyalty_points_earn    = $earn;
         $this->loyalty_points_earn_dt = number_format($svc->pointsToDiscount($earn), 3, '.', ' ');
@@ -200,12 +200,12 @@ class TicketPosPage extends Page
             $this->loyalty_redeem_input = $points;
         }
 
-        $maxFromTicket = (int) floor($totals['base_after_affilie'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = $svc->maxRedeemablePoints($totals['total_ht'], $totals['regular_discount'] + $totals['affilie_discount'], $this->loyalty_balance);
         if ($points > $maxFromTicket) {
             $points = $maxFromTicket;
             $this->loyalty_redeem_input = $points;
         }
-        if ($points > 0 && $points < LoyaltyService::MIN_REDEEM_POINTS) {
+        if ($points > 0 && $points < LoyaltyService::minRedeemPoints()) {
             $points = 0;
             $this->loyalty_redeem_input = 0;
         }
@@ -221,9 +221,9 @@ class TicketPosPage extends Page
         $svc            = app(LoyaltyService::class);
         $totals         = $this->computeTicketTotals();
         $maxFromBalance = $this->loyalty_balance;
-        $maxFromTicket  = (int) floor($totals['base_after_affilie'] * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket  = $svc->maxRedeemablePoints($totals['total_ht'], $totals['regular_discount'] + $totals['affilie_discount'], $this->loyalty_balance);
         $max            = min($maxFromBalance, $maxFromTicket);
-        if ($max > 0 && $max < LoyaltyService::MIN_REDEEM_POINTS) {
+        if ($max > 0 && $max < LoyaltyService::minRedeemPoints()) {
             $max = 0;
         }
 
@@ -673,7 +673,9 @@ class TicketPosPage extends Page
                             $loyaltyClient,
                             $loyaltyCard,
                             (int) $this->loyalty_redeem_input,
-                            (float) $totals['base_after_affilie']
+                            (float) $totals['base_after_affilie'],
+                            (float) $totals['total_ht'],
+                            (float) ($totals['regular_discount'] + $totals['affilie_discount'])
                         );
                     }
                 }
@@ -748,12 +750,12 @@ class TicketPosPage extends Page
             $this->loyalty_redeem_input = $pointsToRedeem;
         }
 
-        $maxFromTicket = (int) floor($baseAfterAffilie * LoyaltyService::POINTS_PER_DT_VALUE);
+        $maxFromTicket = app(LoyaltyService::class)->maxRedeemablePoints($total, $regularDiscount + $affilieDiscount, $this->loyalty_balance);
         if ($pointsToRedeem > $maxFromTicket) {
             $pointsToRedeem = $maxFromTicket;
             $this->loyalty_redeem_input = $pointsToRedeem;
         }
-        if ($pointsToRedeem > 0 && $pointsToRedeem < LoyaltyService::MIN_REDEEM_POINTS) {
+        if ($pointsToRedeem > 0 && $pointsToRedeem < LoyaltyService::minRedeemPoints()) {
             $pointsToRedeem = 0;
             $this->loyalty_redeem_input = 0;
         }

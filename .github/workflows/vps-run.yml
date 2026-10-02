@@ -74,6 +74,9 @@ on:
           # Protina points: where credited points came from, what is owed, every recent redemption
           # with how that customer's balance was built. Read-only; identities masked to #user-id.
           - protinas-audit
+          # Shop-till card at 20 pts = 1 DT and the welcome bonus kill switch. Dry runs: counts only.
+          - till-points-convert-dry-run
+          - welcome-release-pending-dry-run
           - campaign-artwork-retire-dry-run
           # Affiliate pricing: fills products.prix_affilie = retail − 10% so the affiliate order
           # desk has a catalogue to sell. Dry-run previews the eligible count + a sample; writes
@@ -193,6 +196,10 @@ on:
           - commerce-order-recovery-apply
           - campaign-artwork-retire-apply
           - affilie-seed-base-prices-apply
+          # Doubles the shop-till card balances the deploy migration could not convert (idempotent).
+          - till-points-convert-apply
+          # Credits every reserved welcome bonus once WELCOME_BONUS_UNLOCK_ON_DELIVERY is false.
+          - welcome-release-pending
       confirm:
         description: "Writing tasks only (including commerce-order-recovery-apply): type APPLY"
         required: false
@@ -468,12 +475,36 @@ jobs:
             commerce-flow-tests)
               # Runs only the isolated commerce lifecycle regression suite. The test
               # defines its own in-memory SQLite schema and never touches production data.
-              ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php tests/Feature/VerifiedCustomerReviewsTest.php"
+              ARGS="test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php tests/Feature/VerifiedCustomerReviewsTest.php tests/Feature/ProtinasPricingCommerceTest.php tests/Feature/WelcomeBonusCommerceTest.php tests/Feature/CheckoutOrderCreationCommerceTest.php"
               WRITES=no
               ;;
             protinas-audit)
               ARGS="protinas:audit --days=180 --top=20"
               WRITES=no
+              ;;
+            till-points-convert-dry-run)
+              # Shop-till card moved to 20 pts = 1 DT: which cards still need their balance doubled.
+              # The deploy migration converts them; this lists what it left behind. Writes nothing.
+              ARGS="protinas:till-convert"
+              WRITES=no
+              ;;
+            till-points-convert-apply)
+              # Doubles every card not yet converted, once (one marker row per card), so its value
+              # in DT is unchanged. Run it when laravel.log or protinas-audit names cards left
+              # unconverted. Idempotent: a converted card is skipped.
+              ARGS="protinas:till-convert --apply"
+              WRITES=yes
+              ;;
+            welcome-release-pending-dry-run)
+              ARGS="protinas:welcome-release-pending"
+              WRITES=no
+              ;;
+            welcome-release-pending)
+              # For the day WELCOME_BONUS_UNLOCK_ON_DELIVERY is set to false (then config:clear):
+              # credits every welcome bonus reserved while it was on. Refuses while it is still on.
+              # Idempotent: one ledger key per account (welcome:{user}:unlock:0).
+              ARGS="protinas:welcome-release-pending --apply"
+              WRITES=yes
               ;;
             notifications-status)
               # Backward-compatible with backend images deployed before --recent was added.
@@ -866,7 +897,7 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           port: ${{ secrets.VPS_PORT }}
           timeout: 120s
-          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php,filament/tests/Feature/OrderIdentityAndNotificationTest.php,filament/tests/Feature/VerifiedCustomerReviewsTest.php
+          source: filament/tests/TestCase.php,filament/tests/CreatesApplication.php,filament/tests/Feature/CustomerAuthFlowTest.php,filament/tests/Feature/CustomerOrderStatusMailerTest.php,filament/tests/Feature/OrderIdentityAndNotificationTest.php,filament/tests/Feature/VerifiedCustomerReviewsTest.php,filament/tests/Feature/ProtinasPricingCommerceTest.php,filament/tests/Feature/WelcomeBonusCommerceTest.php,filament/tests/Feature/CheckoutOrderCreationCommerceTest.php
           target: /root/sobitas-project/inbox/commerce-tests
           strip_components: 2
           overwrite: true
@@ -981,21 +1012,12 @@ jobs:
               echo "[ok] research.json delivered"
             fi
 
-            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php tests/Feature/VerifiedCustomerReviewsTest.php" ]; then
+            if [ "$ARGS" = "test tests/Feature/CustomerAuthFlowTest.php tests/Feature/CustomerOrderStatusMailerTest.php tests/Feature/OrderIdentityAndNotificationTest.php tests/Feature/VerifiedCustomerReviewsTest.php tests/Feature/ProtinasPricingCommerceTest.php tests/Feature/WelcomeBonusCommerceTest.php tests/Feature/CheckoutOrderCreationCommerceTest.php" ]; then
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 mkdir -p /var/www/html/tests/Feature
-              docker cp "$APP_DIR/inbox/commerce-tests/TestCase.php" \
-                sobitas-backend-v2:/var/www/html/tests/TestCase.php
-              docker cp "$APP_DIR/inbox/commerce-tests/CreatesApplication.php" \
-                sobitas-backend-v2:/var/www/html/tests/CreatesApplication.php
-              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerAuthFlowTest.php" \
-                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerAuthFlowTest.php
-              docker cp "$APP_DIR/inbox/commerce-tests/Feature/CustomerOrderStatusMailerTest.php" \
-                sobitas-backend-v2:/var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php
-              docker cp "$APP_DIR/inbox/commerce-tests/Feature/OrderIdentityAndNotificationTest.php" \
-                sobitas-backend-v2:/var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php
-              docker cp "$APP_DIR/inbox/commerce-tests/Feature/VerifiedCustomerReviewsTest.php" \
-                sobitas-backend-v2:/var/www/html/tests/Feature/VerifiedCustomerReviewsTest.php
+              for f in TestCase CreatesApplication Feature/CustomerAuthFlowTest Feature/CustomerOrderStatusMailerTest Feature/OrderIdentityAndNotificationTest Feature/VerifiedCustomerReviewsTest Feature/ProtinasPricingCommerceTest Feature/WelcomeBonusCommerceTest Feature/CheckoutOrderCreationCommerceTest; do
+                docker cp "$APP_DIR/inbox/commerce-tests/$f.php" "sobitas-backend-v2:/var/www/html/tests/$f.php"
+              done
               docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
                 chown -R www-data:www-data /var/www/html/tests
               echo "[ok] isolated commerce tests delivered"
@@ -1337,12 +1359,7 @@ jobs:
               RC=$?
               if [ "${ARGS#test }" != "$ARGS" ] || [ "$ARGS" = "test" ]; then
                 docker compose -f "$COMPOSE_FILE" exec -T -u root backend-v2 \
-                  rm -f /var/www/html/tests/TestCase.php \
-                    /var/www/html/tests/CreatesApplication.php \
-                    /var/www/html/tests/Feature/CustomerAuthFlowTest.php \
-                    /var/www/html/tests/Feature/CustomerOrderStatusMailerTest.php \
-                    /var/www/html/tests/Feature/OrderIdentityAndNotificationTest.php \
-                    /var/www/html/tests/Feature/VerifiedCustomerReviewsTest.php >/dev/null 2>&1 || true
+                  sh -c 'cd /var/www/html/tests && rm -f TestCase.php CreatesApplication.php Feature/CustomerAuthFlowTest.php Feature/CustomerOrderStatusMailerTest.php Feature/OrderIdentityAndNotificationTest.php Feature/VerifiedCustomerReviewsTest.php Feature/ProtinasPricingCommerceTest.php Feature/WelcomeBonusCommerceTest.php Feature/CheckoutOrderCreationCommerceTest.php' >/dev/null 2>&1 || true
               fi
               echo "$OUT"
               echo ""

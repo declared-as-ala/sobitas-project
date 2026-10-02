@@ -125,6 +125,8 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
             <p className="mt-3 max-w-md text-sm leading-relaxed text-ink-2 sm:text-base">
               Suivez vos commandes, partagez votre expérience et transformez vos achats en avantages.
             </p>
+            <p className="mt-3 max-w-md text-xs leading-relaxed text-ink-2">1 Protina par dinar d&apos;articles payé, créditée à la livraison (20 Protinas = 1 DT, soit 5 % reversés). À la commande, remise et Protinas se cumulent jusqu&apos;à 10 % du montant de vos articles ; le reste de vos Protinas reste sur votre compte. Code promo et remise pack ne se cumulent pas : la plus avantageuse s&apos;applique.</p>
+            {dashboard?.welcome_status === 'pending' && (dashboard.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente, crédités à la livraison de votre 1re commande</span>}
 
             <div className="mt-6 flex flex-wrap items-end gap-5">
               <div>
@@ -143,7 +145,7 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
                   <ShieldCheck className="h-4 w-4" aria-hidden="true" /> Vérifier mon compte
                 </Link>
               ) : (
-                <span className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-emerald-400/30 bg-emerald-400/10 px-4 text-sm font-bold text-emerald-300">
+                <span className="pt-plate inline-flex min-h-11 items-center gap-2 rounded-xl border border-ok/40 px-4 text-sm font-bold text-ink-1">
                   <BadgeCheck className="h-4 w-4" aria-hidden="true" /> Membre vérifié
                 </span>
               )}
@@ -178,6 +180,11 @@ export function MemberDashboard({ research }: { research: PubMedResearchFeed }) 
           ))}
         </div>
       </section>
+
+      <div className="rounded-xl border border-hairline bg-elevated p-4 text-xs leading-relaxed text-ink-2 sm:p-5">
+        <p>Cadeau de bienvenue : 300 Protinas (15 DT), créditées à la livraison de votre première commande.</p>
+        <p className="mt-2">Vos Protinas n&apos;expirent pas. Commande annulée ou retournée : les Protinas utilisées vous sont rendues, celles gagnées sont retirées.</p>
+      </div>
 
       {loading ? <DashboardSkeleton /> : failed || !dashboard ? (
         <div className="rounded-2xl border border-hairline bg-elevated p-6 text-center shadow-sm">

@@ -672,7 +672,8 @@ class ClientController extends Controller
                 // discounted order. These four are already returned to the same customer by
                 // CommandeController::details() on /commande/{id} (the confirmation page), so
                 // this exposes nothing new — it stops one of the two order views from lying.
-                'remise', 'discount_ht', 'discount_ttc', 'coupon_code_snapshot'
+                'remise', 'discount_ht', 'discount_ttc', 'coupon_code_snapshot',
+                'pack_discount_ht', 'points_discount_ht', 'points_redeemed'
             )
             ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
             ->first();
@@ -730,7 +731,6 @@ class ClientController extends Controller
             $pending = $points->earnForSpend($points->earnableSpend(
                 (float) $commande->prix_ttc,
                 (float) ($commande->frais_livraison ?? 0),
-                -$redeemedGross,
                 (float) $commande->prix_ht
             ));
         }
@@ -771,11 +771,10 @@ class ClientController extends Controller
             $shipping = round((float) ($commande->frais_livraison ?? 0), 3);
             $total = round((float) $commande->prix_ttc, 3);
             $couponDiscount = round((float) ($commande->discount_ht ?? 0), 3);
-            // What the redemption took off the price, at the rate PointsService owns.
-            $pointsDiscount = $points->pointsToDt($redeemedGross);
+            $pointsDiscount = round((float) ($commande->points_discount_ht ?? $points->pointsToDt($redeemedGross)), 3);
             // `remise` minus the points half of it. Clamped: a hand-edited remise smaller than the
             // recorded redemption must not surface as a negative discount row.
-            $otherDiscount = round(max(0, (float) ($commande->remise ?? 0) - $pointsDiscount), 3);
+            $otherDiscount = round((float) ($commande->pack_discount_ht ?? max(0, (float) ($commande->remise ?? 0) - $pointsDiscount)), 3);
             $residual = round($goods - $couponDiscount - $otherDiscount - $pointsDiscount + $shipping - $total, 3);
 
             $commande->setAttribute('totals', [
@@ -784,6 +783,8 @@ class ClientController extends Controller
                 'coupon_discount' => $couponDiscount,
                 'coupon_code' => $commande->coupon_code_snapshot ?: null,
                 'points_discount' => $pointsDiscount,
+                'points_redeemed' => (int) ($commande->points_redeemed ?? $redeemedGross),
+                'pack_discount' => $otherDiscount,
                 'other_discount' => $otherDiscount,
                 'total' => $total,
                 // Five millimes of slack — one per rounded component. Anything larger is a real

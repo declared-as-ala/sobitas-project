@@ -39,6 +39,7 @@ class PackController extends Controller
 
         $items = [];
         $subtotal = 0.0;
+        $fullPriceSubtotal = 0.0;
 
         foreach ($panier as $row) {
             $produitId = (int) ($row['produit_id'] ?? 0);
@@ -52,6 +53,7 @@ class PackController extends Controller
             $unit = (float) $product->getEffectiveUnitPrice();
             $lineTotal = round($unit * $quantite, 3);
             $subtotal += $lineTotal;
+            if (! $product->hasActivePromo()) $fullPriceSubtotal += $lineTotal;
 
             $items[] = [
                 'produit_id'    => $produitId,
@@ -64,7 +66,7 @@ class PackController extends Controller
 
         $subtotal = round($subtotal, 3);
         $percent = $packDiscount->percentForSubtotal($subtotal);
-        $discountAmount = $packDiscount->amountForSubtotal($subtotal);
+        $discountAmount = $packDiscount->amountForSubtotal($subtotal, $fullPriceSubtotal);
         $total = round($subtotal - $discountAmount, 3);
 
         return response()->json([

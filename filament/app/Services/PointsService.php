@@ -13,14 +13,10 @@ use Illuminate\Support\Str;
 /**
  * Single source of truth for the loyalty points economy.
  *
- *   EARN_RATE            = 1  point earned per 1 DT of product spend before
- *                          loyalty redemption (floored; shipping excluded).
- *   REDEEM_POINTS_PER_DT = 20 points == 1 DT of discount.
- *   MAX_REDEEM_FRACTION  = 0.5 — points cover at most 50% of the
- *                          post-coupon, post-pack HT subtotal.
+ *   EARN_RATE and REDEEM_POINTS_PER_DT are compatibility aliases for default
+ *   values; runtime rules come from config/loyalty.php.
  *
- * Effective cashback is therefore 5%. Tune the three constants below to
- * change the whole economy in one place.
+ * Earning uses goods actually paid, excluding shipping and redeemed points.
  *
  * ── AND SINCE 21/08/2026, REVIEWS PAY TOO ───────────────────────────────────────────────────
  * `awardForReview()` credits a flat number of points for a published review. That makes this class
@@ -39,7 +35,9 @@ class PointsService
 
     public const REDEEM_POINTS_PER_DT = 20;
 
-    public const MAX_REDEEM_FRACTION = 0.5;
+    public static function earnRate(): int { return (int) config('loyalty.points.earn_per_dt', self::EARN_RATE); }
+
+    public static function pointsPerDt(): int { return max(1, (int) config('loyalty.points.points_per_dt', self::REDEEM_POINTS_PER_DT)); }
 
     /** Order statuses (etat) that GRANT earned points — i.e. delivered/paid. */
     public const DELIVERED_STATUSES = ['livree', 'livrée', 'livre'];
@@ -56,7 +54,7 @@ class PointsService
             return 0.0;
         }
 
-        return round($points / self::REDEEM_POINTS_PER_DT, 3);
+        return round($points / self::pointsPerDt(), 3);
     }
 
     /**
@@ -68,45 +66,27 @@ class PointsService
             return 0;
         }
 
-        return (int) floor($netPaidHt * self::EARN_RATE);
+        return (int) floor($netPaidHt * self::earnRate());
     }
 
     /**
      * Product spend eligible for new points.
      *
-     * Redeemed points are a payment instrument, not a commercial discount: a
-     * customer spending an old reward still earns on the product price before
-     * that reward. Coupon and pack savings remain excluded. The original goods
-     * subtotal is a hard ceiling, so a malformed ledger can never inflate an
-     * order's reward beyond the server-priced products.
+     * Only goods actually paid earn points. The original goods subtotal is a
+     * hard ceiling, so malformed order amounts cannot inflate an award.
      */
-    public function earnableSpend(float $orderTotal, float $shipping, int $redeemedPoints, float $grossProducts): float
+    public function earnableSpend(float $orderTotal, float $shipping, float $grossProducts): float
     {
         $paidGoods = max(0, $orderTotal - max(0, $shipping));
-        $redeemedValue = $this->pointsToDt(abs(min(0, $redeemedPoints)));
-
-        return round(min(max(0, $grossProducts), $paidGoods + $redeemedValue), 3);
-    }
-
-    /**
-     * Maximum DT that points may cover for a given HT base (3 decimals).
-     */
-    public function maxRedeemableDt(float $baseHt): float
-    {
-        if ($baseHt <= 0) {
-            return 0.0;
-        }
-
-        return round($baseHt * self::MAX_REDEEM_FRACTION, 3);
+        return round(min(max(0, $grossProducts), $paidGoods), 3);
     }
 
     /**
      * PURE redemption math from an EXPLICIT balance. The caller is responsible
      * for reading that balance under a row lock (lockForUpdate) so the amount it
      * discounts and the amount it later consumes come from the SAME value —
-     * otherwise two concurrent checkouts could double-spend. Capped by BOTH the
-     * balance and maxRedeemableDt (50% of the HT base). Only whole points that
-     * are actually converted are returned.
+     * otherwise two concurrent checkouts could double-spend. Checkout now uses
+     * CheckoutPricingService, which also accounts for commercial discounts.
      *
      * @return array{0: int, 1: float}  [pointsConsumed, discountDt]
      */
@@ -120,9 +100,8 @@ class PointsService
             return [0, 0.0];
         }
 
-        // Cap by the 50% fraction, expressed in whole points.
-        $maxDt = $this->maxRedeemableDt($baseHt);
-        $maxPointsByCap = (int) floor($maxDt * self::REDEEM_POINTS_PER_DT);
+        $maxDt = floor($baseHt * (int) config('loyalty.checkout.max_total_discount_percent', 10) * 10) / 1000;
+        $maxPointsByCap = (int) floor($maxDt * self::pointsPerDt());
 
         $pointsConsumed = min($usablePoints, $maxPointsByCap);
         if ($pointsConsumed <= 0) {
@@ -155,7 +134,7 @@ class PointsService
      * `etat` changes. Best-effort — any throw is caught by the observer so it can
      * never block an admin status change.
      *
-     *   delivered            -> earn on products before loyalty redemption (once per order).
+     *   delivered            -> earn on products actually paid (once per order).
      *   cancelled / returned -> claw back any earned points AND refund any
      *                           redeemed points (a cancelled order must never
      *                           cost the customer points).
@@ -165,7 +144,14 @@ class PointsService
      */
     public function syncOnStatusChange(Commande $commande): void
     {
-        $userId = $commande->user_id;
+        $userId = array_key_exists('authenticated_user_id', $commande->getAttributes())
+            ? $commande->authenticated_user_id
+            : (Schema::hasColumn('commandes', 'authenticated_user_id')
+                ? Commande::whereKey($commande->id)->value('authenticated_user_id') : null);
+        if ($userId !== null && (int) $userId === 0) {
+            return; // New guest orders use a Client id in user_id; never treat it as a User id.
+        }
+        $userId ??= $commande->user_id; // Legacy rows predate the explicit identity marker.
         if (empty($userId)) {
             return;
         }
@@ -177,13 +163,9 @@ class PointsService
         $etat = (string) $commande->etat;
 
         if (in_array($etat, self::DELIVERED_STATUSES, true)) {
-            $redeemedPoints = (int) UserPointTransaction::where('commande_id', $commande->id)
-                ->where('type', 'redeem')
-                ->sum('points');
             $earnableSpend = $this->earnableSpend(
                 (float) $commande->prix_ttc,
                 (float) ($commande->frais_livraison ?? 0),
-                $redeemedPoints,
                 (float) $commande->prix_ht
             );
             // earn() dedupes per commande via the ledger, so re-saving a delivered
@@ -195,11 +177,22 @@ class PointsService
                 'Protinas gagnées (commande ' . ($commande->numero ?? $commande->id) . ' livrée)'
             );
 
+            try {
+                app(WelcomeBonusService::class)->unlockOnDelivery($user, $commande);
+            } catch (\Throwable $e) {
+                Log::error('Welcome bonus unlock failed', ['commande_id' => $commande->id, 'error' => $e->getMessage()]);
+            }
+
             return;
         }
 
         if (in_array($etat, self::CANCELLED_STATUSES, true)) {
             $this->reverseForCommande($user, (int) $commande->id, (string) ($commande->numero ?? $commande->id));
+            try {
+                app(WelcomeBonusService::class)->reverseUnlock($user, $commande);
+            } catch (\Throwable $e) {
+                Log::error('Welcome bonus reversal failed', ['commande_id' => $commande->id, 'error' => $e->getMessage()]);
+            }
         }
     }
 

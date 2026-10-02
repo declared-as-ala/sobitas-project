@@ -748,6 +748,13 @@
                 </div>
 
                 <div id="loyalty-panel-active" class="loyalty-panel-active" style="{{ $loyalty_panel_visible ? '' : 'display:none;' }}">
+                <p style="padding:8px 16px;font-size:12px;">
+                    Carte fidélité : {{ \App\Services\LoyaltyService::earnRate() }} point par dinar payé,
+                    {{ \App\Services\LoyaltyService::pointsPerDt() }} points = 1 DT
+                    ({{ round(100 * \App\Services\LoyaltyService::earnRate() / \App\Services\LoyaltyService::pointsPerDt()) }} % reversés).
+                    Utilisables dès {{ \App\Services\LoyaltyService::minRedeemPoints() }} points,
+                    jusqu'à {{ (int) config('loyalty.till.max_total_discount_percent', 10) }} % du ticket.
+                </p>
 
                 {{-- Stats row --}}
                 <div style="padding:14px 16px;display:grid;grid-template-columns:1fr 1fr;gap:12px;">
@@ -771,11 +778,11 @@
 
                 {{-- Redeem row --}}
                 <div style="padding:0 16px 14px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;">
-                    <span style="font-size:12px;font-weight:600;color:#78716c;white-space:nowrap;">Utiliser des pts (min 100) :</span>
+                    <span style="font-size:12px;font-weight:600;color:#78716c;white-space:nowrap;">Utiliser des pts (min {{ \App\Services\LoyaltyService::minRedeemPoints() }}) :</span>
                     <input type="number"
                            id="loyalty_redeem_input"
                            min="0"
-                           step="10"
+                           step="1"
                            value="{{ $loyalty_redeem_input }}"
                            autocomplete="off"
                            style="width:90px;border:1px solid #d6d3d1;border-radius:6px;padding:5px 8px;font-size:14px;"
@@ -975,9 +982,16 @@
 <script>
     // Constants
     const maxRows = {{ $maxRows }};
-    const pointsPerDtValue = {{ \App\Services\LoyaltyService::POINTS_PER_DT_VALUE }};
-    const pointsPerDt = {{ \App\Services\LoyaltyService::POINTS_PER_DT }};
-    const minRedeemPoints = {{ \App\Services\LoyaltyService::MIN_REDEEM_POINTS }};
+const pointsPerDtValue = {{ \App\Services\LoyaltyService::pointsPerDt() }};
+const pointsPerDt = {{ \App\Services\LoyaltyService::earnRate() }};
+const minRedeemPoints = {{ \App\Services\LoyaltyService::minRedeemPoints() }};
+const tillMaxDiscountPercent = {{ (int) config('loyalty.till.max_total_discount_percent', 10) }};
+
+function maxLoyaltyPoints(total, otherDiscounts) {
+    var roomMillimes = Math.max(0, Math.floor(Math.round(total * 1000) * tillMaxDiscountPercent / 100) - Math.round(otherDiscounts * 1000));
+    var points = Math.floor(roomMillimes * pointsPerDtValue / 1000);
+    return points >= minRedeemPoints ? points : 0;
+}
     const produits = @json(json_decode($productsJson)); // Array of products for barcode
     let visibleRows = {{ count($startLines) }};
     window.affilieDiscountHt = window.affilieDiscountHt || 0;
@@ -1407,7 +1421,7 @@
         var redeemInput = document.getElementById('loyalty_redeem_input');
         var rawPoints = parseInt(redeemInput?.value || 0, 10);
         if (Number.isNaN(rawPoints)) rawPoints = 0;
-        var maxFromTicket = Math.floor(base_after_affilie * pointsPerDtValue);
+        var maxFromTicket = maxLoyaltyPoints(m_totale_ht, totale_remise + affilie_discount);
         var maxFromBalance = loyaltyState.balance || 0;
         var redeemPoints = Math.max(0, Math.min(rawPoints, maxFromBalance, maxFromTicket));
         // Do not stomp the field while the user is typing (partial numbers / empty).
@@ -1465,7 +1479,7 @@
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
         var pd = typeof window.affilieDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.affilieDiscountHt) || 0), baseAfterRegularDiscount) : 0;
         var baseAfterAffilie = Math.max(0, baseAfterRegularDiscount - pd);
-        var maxFromTicket = Math.floor(baseAfterAffilie * pointsPerDtValue);
+        var maxFromTicket = maxLoyaltyPoints(total, regularDiscount + pd);
         var maxFromBalance = loyaltyState.balance || 0;
         pts = Math.max(0, Math.min(pts, maxFromBalance, maxFromTicket));
 
@@ -1499,7 +1513,7 @@
         var baseAfterRegularDiscount = Math.max(0, total - regularDiscount);
         var pd = typeof window.affilieDiscountHt !== 'undefined' ? Math.min(Math.max(0, parseFloat(window.affilieDiscountHt) || 0), baseAfterRegularDiscount) : 0;
         var baseAfterAffilie = Math.max(0, baseAfterRegularDiscount - pd);
-        var maxFromTicket = Math.floor(baseAfterAffilie * pointsPerDtValue);
+        var maxFromTicket = maxLoyaltyPoints(total, regularDiscount + pd);
         var maxPts = Math.max(0, Math.min(loyaltyState.balance || 0, maxFromTicket));
         if (maxPts > 0 && maxPts < minRedeemPoints) maxPts = 0;
         redeemInput.value = maxPts;

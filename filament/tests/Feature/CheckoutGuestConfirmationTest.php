@@ -25,6 +25,13 @@ class CheckoutGuestConfirmationTest extends TestCase
                 $table->string($column)->nullable();
             }
             foreach (['prix_ht', 'prix_ttc', 'frais_livraison', 'discount_ht', 'discount_ttc'] as $column) $table->decimal($column, 12, 3)->default(0);
+            // Checkout discount breakdown (2026_09_29_000100): details() selects these and
+            // storedPricing() reads them for replayed orders.
+            foreach (['pack_discount_ht', 'points_discount_ht', 'discount_amount'] as $column) $table->decimal($column, 10, 3)->default(0);
+            $table->unsignedInteger('points_redeemed')->default(0);
+            $table->unsignedBigInteger('coupon_id')->nullable();
+            $table->string('coupon_type_snapshot')->nullable();
+            $table->unsignedBigInteger('authenticated_user_id')->nullable();
             $table->unsignedBigInteger('user_id')->nullable();
             $table->unsignedBigInteger('client_id')->nullable();
             $table->timestamps();
@@ -49,6 +56,9 @@ class CheckoutGuestConfirmationTest extends TestCase
             $response = $method->invoke(new CommandeController(), Commande::findOrFail(1), $replayed);
             $this->assertSame(str_repeat('a', 64), $response->getData(true)['order_token']);
             $this->assertSame($replayed ? 200 : 201, $response->getStatusCode());
+            // Without fresh pricing the response is rebuilt from the stored snapshot columns.
+            $this->assertEquals(309, $response->getData(true)['pricing']['total_dt']);
+            $this->assertFalse($response->getData(true)['pricing']['coupon']['applied']);
         }
     }
 

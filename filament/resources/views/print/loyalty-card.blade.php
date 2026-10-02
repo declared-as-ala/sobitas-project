@@ -649,8 +649,8 @@
                             <div class="back-rule-item">
                                 <div class="back-rule-badge">1</div>
                                 <div class="back-rule-text">
-                                    1 DT d&eacute;pens&eacute;<br>
-                                    <span class="orange">= 1 point gagn&eacute;</span>
+                                    1 DT pay&eacute;<br>
+                                    <span class="orange">= {{ \App\Services\LoyaltyService::earnRate() }} point gagn&eacute;</span>
                                 </div>
                             </div>
                             <div class="back-rules-divider"></div>
@@ -659,8 +659,9 @@
                                     <img src="{{ $icoGift }}" alt="">
                                 </div>
                                 <div class="back-rule-text">
-                                    10 points<br>
-                                    <span class="orange">= 1 DT de r&eacute;duction</span>
+                                    {{ \App\Services\LoyaltyService::pointsPerDt() }} points<br>
+                                    <span class="orange">= 1 DT de r&eacute;duction</span><br>
+                                    D&egrave;s {{ \App\Services\LoyaltyService::minRedeemPoints() }} pts, jusqu'&agrave; {{ (int) config('loyalty.till.max_total_discount_percent', 10) }} % du ticket
                                 </div>
                             </div>
                         </div>

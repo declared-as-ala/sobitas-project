@@ -10,8 +10,9 @@
  * that is presented. The wizard receives numbers and callbacks and computes no prices at all.
  *
  * ── THE PRICE RULE, UNCHANGED THROUGH THREE REDESIGNS ──────────────────────────────────────
- * The authoritative discount comes from `/pack/quote` on the server, debounced. `PACK_TIERS` below
- * is a DISPLAY MIRROR of the backend's PackDiscountService, used only to draw progress — never to
+ * The authoritative discount comes from `/pack/quote` on the server, debounced. Public rules
+ * drive the displayed tier ladder and progress — never a locally computed final discount.
+ * The ladder is used only to draw progress — never to
  * compute a price the customer is shown as final. `total` reads `quote.total` and falls back to
  * the raw subtotal, never to a locally-computed discount, so a disagreement between client and
  * server can only ever show the customer a price that is too HIGH, which they will query, rather
@@ -32,6 +33,7 @@ import type { Product, PackQuote } from '@/types';
 import { notify as toast } from '@/lib/notify';
 import { flyToPack, pulseTierUnlocked } from './packMotion';
 import { PackWizard } from './wizard/PackWizard';
+import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 export interface PackBuilderGroup {
   slug: string;
@@ -45,14 +47,7 @@ interface PackBuilderClientProps {
   groups: PackBuilderGroup[];
 }
 
-/** Display-only mirror of the backend PackDiscountService tiers. See the header note. */
-const PACK_TIERS: { min: number; percent: number }[] = [
-  { min: 200, percent: 5 },
-  { min: 350, percent: 8 },
-  { min: 500, percent: 12 },
-];
-
-function FocusedBuilderHeader() {
+function FocusedBuilderHeader({ maxPercent }: { maxPercent: number }) {
   return (
     <header className="border-b border-hairline bg-elevated">
       <div className="max-w-site relative mx-auto flex min-h-[56px] items-center justify-between gap-3 px-4 sm:px-6 lg:px-8">
@@ -73,7 +68,7 @@ function FocusedBuilderHeader() {
         />
         <p className="hidden text-xs font-semibold text-ink-2 lg:block">
           Pack sur mesure <span className="mx-1.5 text-hairline">•</span>
-          jusqu’à <span className="font-display text-base font-extrabold text-brand">−12%</span>
+          jusqu’à <span className="font-display text-base font-extrabold text-brand">−{maxPercent}%</span>
         </p>
       </div>
     </header>
@@ -86,6 +81,9 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
 
   const [pack, setPack] = useState<Record<number, number>>({});
   const [quote, setQuote] = useState<PackQuote | null>(null);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
+  const tiers = useMemo(() => rules.pack.tiers.map(tier => ({ min: tier.from_dt, percent: tier.percent })), [rules]);
   const [quoteLoading, setQuoteLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
@@ -222,7 +220,8 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   const discountPercent = liveQuote?.discount_percent ?? 0;
   const discountAmount = liveQuote?.discount_amount ?? 0;
   const total = liveQuote ? liveQuote.total : subtotal;
-  const nextTier = liveQuote?.next_tier ?? null;
+  const nextRuleTier = rules.pack.tiers.find(tier => subtotal < tier.from_dt);
+  const nextTier = nextRuleTier ? { percent: nextRuleTier.percent, remaining: Math.max(0, nextRuleTier.from_dt - subtotal) } : null;
 
   /**
    * One expanding ring on the tier track the moment a discount tier is actually reached.
@@ -278,7 +277,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
   if (groups.length === 0) {
     return (
       <div className="pt-no-chrome min-h-screen bg-canvas">
-        <FocusedBuilderHeader />
+        <FocusedBuilderHeader maxPercent={tiers[tiers.length - 1]?.percent ?? 7} />
         <main className="max-w-site mx-auto px-4 pb-16 pt-10 sm:px-6 lg:px-8">
           {/* The H1 still renders when the catalogue is unavailable. The page must not become
               heading-less because an upstream fetch failed — that is a permanent SEO loss caused by
@@ -303,7 +302,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
        On sand the same cards read as objects, exactly as they do on the homepage, and the borders
        become an edge rather than the only thing defining a card. */
     <div className="pt-no-chrome min-h-screen bg-sunken">
-      <FocusedBuilderHeader />
+      <FocusedBuilderHeader maxPercent={tiers[tiers.length - 1]?.percent ?? 7} />
       <main className="max-w-site mx-auto px-4 pb-32 pt-3 sm:px-6 sm:pt-4 lg:px-8 lg:pb-16 lg:pt-4">
         <PackWizard
           groups={groups}
@@ -318,7 +317,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           nextTier={nextTier}
           quoteLoading={quoteLoading}
           submitting={submitting}
-          tiers={PACK_TIERS}
+          tiers={tiers}
           onAdd={addOne}
           onSetQty={setQty}
           onRemove={removeProduct}

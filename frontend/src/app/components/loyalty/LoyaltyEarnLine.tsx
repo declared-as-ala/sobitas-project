@@ -2,7 +2,8 @@
 
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { pointsForSpend, pointsToDt, formatProtinas, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { useEffect, useState } from 'react';
+import { pointsForSpend, pointsToDt, formatProtinas, FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 import { formatTnd } from '@/util/productPrice';
 import { cn } from '@/app/components/ui/utils';
 import { ProtinaMark } from './Protina';
@@ -36,15 +37,12 @@ import { ProtinaMark } from './Protina';
  *      and no balance the next morning has been lied to by the UI.
  *   2. On a product it quotes `floor(price x qty)`, which is exact for a full-price order and an
  *      over-quote once a coupon lands. The checkout figure is computed after commercial savings
- *      but before loyalty redemption, so spending points never reduces the next reward.
+ *      and redeemed Protinas; spending points reduces the next reward.
  *
  * See `util/loyaltyPoints.ts` for why the base excludes delivery.
  */
 
 /** Below this, the reward is worth less than a dinar and is not worth a row of the page. */
-const REDEEM_FLOOR = REDEEM_POINTS_PER_DT;
-
-const EARN_TITLE = 'Protinas créditées une fois la commande livrée. 20 Protinas = 1 DT de remise.';
 
 interface LoyaltyEarnLineProps {
   /** Goods amount in DT — price x quantity, or a cart subtotal excluding delivery. */
@@ -59,17 +57,19 @@ interface LoyaltyEarnLineProps {
 
 export function LoyaltyEarnLine({ amountDt, variant = 'pdp', className }: LoyaltyEarnLineProps) {
   const { isAuthenticated } = useAuth();
-  const points = pointsForSpend(amountDt);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
+  const points = pointsForSpend(amountDt, rules.earn_per_dt);
 
   // Under 20 points the reward rounds to less than 1 DT, and "gagnez 0.45 DT" reads as an insult
   // rather than an incentive. Below the threshold the programme is simply not mentioned.
-  if (points < REDEEM_FLOOR) return null;
+  if (points < rules.points_per_dt) return null;
 
-  const valueDt = pointsToDt(points);
+  const valueDt = pointsToDt(points, rules.points_per_dt);
 
   return (
     <div
-      title={EARN_TITLE}
+      title={`Protinas créditées une fois la commande livrée. ${rules.points_per_dt} Protinas = 1 DT de remise.`}
       className={cn(
         'flex items-center gap-2 text-[13px] leading-snug text-ink-2',
         variant === 'pdp' && 'w-full max-w-full rounded-xl border border-brand/20 bg-brand/5 px-3 py-2 sm:w-fit',

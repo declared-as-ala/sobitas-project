@@ -28,6 +28,8 @@ class Commande extends Model
         'delivered_at', 'refund_amount', 'discount_amount', 'payment_method', 'is_returning_customer',
         'coupon_id', 'coupon_code_snapshot', 'coupon_type_snapshot', 'coupon_value_snapshot',
         'discount_ht', 'discount_ttc', 'stock_restored_at',
+        'pack_discount_ht', 'points_discount_ht', 'points_redeemed',
+        'authenticated_user_id',
         // ── Affiliate attribution + the two COD money gates (migration 2026_09_09_120100) ──
         // `cod_remitted_at` is NOT a duplicate of `delivered_at`. Delivered means the COURIER has
         // the customer's cash; remitted means the shop does. Commission is EARNED on the first and
@@ -45,6 +47,10 @@ class Commande extends Model
         'discount_amount' => 'float',
         'discount_ht' => 'float',
         'discount_ttc' => 'float',
+        'pack_discount_ht' => 'float',
+        'points_discount_ht' => 'float',
+        'points_redeemed' => 'integer',
+        'authenticated_user_id' => 'integer',
         'sms_sent' => 'boolean',
         'is_returning_customer' => 'boolean',
         'delivered_at' => 'datetime',
@@ -67,6 +73,12 @@ class Commande extends Model
         // Set on creating() rather than in each controller so there is one place it can be missed:
         // none.
         static::creating(function (Commande $commande): void {
+            // API checkout writes the Sanctum owner's id. Other creation paths use
+            // Client ids in user_id and must never be mistaken for account orders.
+            if ($commande->authenticated_user_id === null
+                && \Illuminate\Support\Facades\Schema::hasColumn('commandes', 'authenticated_user_id')) {
+                $commande->authenticated_user_id = 0;
+            }
             if (empty($commande->order_token)) {
                 try {
                     $commande->order_token = bin2hex(random_bytes(32));

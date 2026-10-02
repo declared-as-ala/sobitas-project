@@ -389,21 +389,27 @@
                                             {{ number_format((float) @$facture->prix_ht, 3, '.', '') }}</th>
                                     </tr>
 
-                                    @if ($facture->commande && $facture->commande->coupon_code_snapshot)
+                                    @php $sourceOrder = $facture->commande; @endphp
+                                    @if ($sourceOrder && (float) ($sourceOrder->pack_discount_ht ?? 0) > 0)
+                                    <tr><td colspan="3"></td><th>Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($sourceOrder->pack_discount_ht / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</th><th class="text-right">-{{ number_format((float) $sourceOrder->pack_discount_ht, 3, '.', '') }}</th></tr>
+                                    @endif
+                                    @if ($sourceOrder && $sourceOrder->coupon_code_snapshot)
                                     <tr>
                                         <td colspan="3"></td>
-                                        <th colspan="1">Code promo</th>
-                                        <th class="text-right">{{ $facture->commande->coupon_code_snapshot }}</th>
+                                        <th colspan="1">Code promo {{ $sourceOrder->coupon_code_snapshot }}</th>
+                                        <th class="text-right">-{{ number_format((float) $sourceOrder->discount_ht, 3, '.', '') }}</th>
                                     </tr>
-                                    <tr>
-                                        <td colspan="3"></td>
-                                        <th colspan="1">Remise (code promo)</th>
-                                        <th class="text-right">-{{ number_format((float) ($facture->commande->discount_ttc ?? $facture->commande->discount_ht ?? 0), 3, '.', '') }}</th>
-                                    </tr>
+                                    @endif
+                                    @if ($sourceOrder && (int) ($sourceOrder->points_redeemed ?? 0) > 0)
+                                    <tr><td colspan="3"></td><th>Protinas ({{ $sourceOrder->points_redeemed }} pts)</th><th class="text-right">-{{ number_format((float) $sourceOrder->points_discount_ht, 3, '.', '') }}</th></tr>
+                                    @endif
+                                    @if ($sourceOrder && ((float) ($sourceOrder->pack_discount_ht ?? 0) + (float) ($sourceOrder->discount_ht ?? 0) + (float) ($sourceOrder->points_discount_ht ?? 0)) > 0)
+                                    @php $discountTotal = (float) $sourceOrder->pack_discount_ht + (float) $sourceOrder->discount_ht + (float) $sourceOrder->points_discount_ht; @endphp
+                                    <tr><td colspan="3"></td><th>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($discountTotal / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</th><th class="text-right">{{ number_format($discountTotal, 3, '.', '') }}</th></tr>
                                     @endif
                                     <tr>
                                         <td colspan="3"></td>
-                                        <th colspan="1">Montant Remise</th>
+                                        <th colspan="1">{{ $sourceOrder ? 'Remise document' : 'Montant Remise' }}</th>
                                         <th class="text-right">
                                             {{ number_format((float) @$facture->remise, 3, '.', '') }}</th>
                                     </tr>

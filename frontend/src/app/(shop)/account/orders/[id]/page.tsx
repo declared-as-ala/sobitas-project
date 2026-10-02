@@ -213,6 +213,7 @@ export default function OrderDetailPage() {
                   {order.totals ? (
                     <OrderReceipt
                       totals={order.totals}
+                      order={order}
                       lifecycle={lifecycle}
                       pointsRedeemed={order.protina?.redeemed ?? order.protina?.spent ?? 0}
                       decimals={decimals}

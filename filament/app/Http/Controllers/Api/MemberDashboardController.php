@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\Review;
 use App\Models\UserPointTransaction;
 use App\Services\PhoneVerificationService;
+use App\Services\WelcomeBonusService;
 use App\Services\PointsService;
 use App\Services\ReviewSubmissionService;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,8 @@ class MemberDashboardController extends Controller
         $profileComplete = trim((string) $user->name) !== '' && trim((string) $user->phone) !== '' && trim((string) $user->email) !== '';
 
         return response()->json([
+            'welcome_status' => app(PhoneVerificationService::class)->bonusStatus($user),
+            'pending_welcome_points' => WelcomeBonusService::pendingPoints($user),
             'summary' => [
                 'orders' => (clone $orders)->count(),
                 'delivered_orders' => (clone $orders)->whereIn('etat', PointsService::DELIVERED_STATUSES)->count(),
@@ -54,7 +57,7 @@ class MemberDashboardController extends Controller
                     'key' => 'verify_phone',
                     'label' => 'Vérifier mon téléphone',
                     'description' => 'Sécurisez votre compte et débloquez les avantages membre.',
-                    'reward_points' => PhoneVerificationService::BONUS_POINTS,
+                    'reward_points' => PhoneVerificationService::bonusPoints(),
                     'completed' => $user->phone_verified_at !== null,
                     'href' => '/verify-phone',
                 ],

@@ -9,6 +9,7 @@ import { ProtinaMark } from './Protina';
 interface LoyaltyPointsRedeemerProps {
   balance: number;
   maxPoints: number;
+  pointsPerDt?: number;
   value: number;
   onChange: (points: number) => void;
   /**
@@ -22,7 +23,7 @@ interface LoyaltyPointsRedeemerProps {
   className?: string;
 }
 
-export function LoyaltyPointsRedeemer({ balance, maxPoints, value, onChange, className }: LoyaltyPointsRedeemerProps) {
+export function LoyaltyPointsRedeemer({ balance, maxPoints, pointsPerDt, value, onChange, className }: LoyaltyPointsRedeemerProps) {
   /* Was a hardcoded literal id. This renders TWICE on checkout now — the
      desktop summary aside is `hidden lg:block`, which keeps it in the DOM at every width, so a
      literal id would have put two of them on the page and `aria-labelledby` would resolve to
@@ -31,8 +32,8 @@ export function LoyaltyPointsRedeemer({ balance, maxPoints, value, onChange, cla
   const safeBalance = Math.max(0, Math.floor(balance));
   const safeMax = Math.max(0, Math.min(Math.floor(maxPoints), safeBalance));
   const safeValue = Math.max(0, Math.min(Math.floor(value), safeMax));
-  const discount = pointsToDt(safeValue);
-  const availableValue = pointsToDt(safeBalance);
+  const discount = pointsToDt(safeValue, pointsPerDt);
+  const availableValue = pointsToDt(safeBalance, pointsPerDt);
 
   const updateValue = (next: number) => {
     const normalized = Number.isFinite(next) ? Math.floor(next) : 0;
@@ -111,7 +112,7 @@ export function LoyaltyPointsRedeemer({ balance, maxPoints, value, onChange, cla
             </div>
           </div>
         ) : (
-          <p className="p-4 text-sm text-ink-2">Vos Protinas deviennent utilisables dès que votre panier contient un produit éligible.</p>
+          <p className="p-4 text-sm text-ink-2">Aucune Protina utilisable sur cette commande. Votre solde reste sur votre compte.</p>
         )}
       </div>
     </section>

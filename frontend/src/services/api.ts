@@ -1627,6 +1627,7 @@ const ORDER_429_DELAYS = [400, 900];
 export const createOrder = async (orderData: BackendOrderPayload, existingIdempotencyKey?: string): Promise<{
   id: number;
   order_token?: string;
+  pricing?: import('@/util/checkoutPricing').CheckoutPricing;
   message: string;
   'alert-type': string;
 }> => {
@@ -1659,6 +1660,7 @@ export const createOrder = async (orderData: BackendOrderPayload, existingIdempo
     throw Object.assign(new Error((error as any).error || 'Erreur lors de la création de la commande'), {
       status: response.status,
       fieldErrors: (error as any).errors,
+      pricing: (error as any).pricing,
     });
   }
   return response.json();
@@ -1849,6 +1851,7 @@ export interface PhoneVerificationResult {
   phone: string;
   phone_verified: boolean;
   bonus_awarded: boolean;
+  bonus_pending?: boolean;
   bonus_status: NonNullable<User['welcome_bonus_status']>;
   bonus_points: number;
   points_balance: number;

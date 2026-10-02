@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\UserPointTransaction;
 use App\Services\PointsService;
+use App\Services\PhoneVerificationService;
+use App\Services\WelcomeBonusService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -40,7 +42,9 @@ class PointsController extends Controller
 
         return response()->json([
             'balance'      => $balance,
-            'value_dt'     => round($balance / PointsService::REDEEM_POINTS_PER_DT, 3),
+            'value_dt'     => round($balance / PointsService::pointsPerDt(), 3),
+            'welcome_status' => app(PhoneVerificationService::class)->bonusStatus($user),
+            'pending_welcome_points' => WelcomeBonusService::pendingPoints($user),
             'transactions' => $transactions,
         ]);
     }

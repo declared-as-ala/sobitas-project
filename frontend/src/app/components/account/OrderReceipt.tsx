@@ -80,33 +80,37 @@ const TOTAL_NOTE: Record<OrderLifecycle, string> = {
   cancelled: 'Cette commande a été annulée.',
 };
 
-function buildRows(totals: Totals, pointsRedeemed: number): Row[] {
+function buildRows(totals: Totals, pointsRedeemed: number, order?: Order): Row[] {
   const rows: Row[] = [
     { key: 'goods', label: 'Sous-total articles', amount: totals.goods, sign: 'neutral' },
   ];
 
   if (totals.reconciled) {
+    const separated = order?.pack_discount_ht != null && order?.points_discount_ht != null;
     if (totals.coupon_discount > 0) {
       rows.push({
         key: 'coupon',
-        label: 'Remise boutique',
+        label: separated && order?.coupon_code_snapshot ? `Code ${order.coupon_code_snapshot}` : 'Remise boutique',
         detail: totals.coupon_code ? `Code ${totals.coupon_code}` : undefined,
         amount: totals.coupon_discount,
         sign: 'subtract',
       });
     }
-    if (totals.other_discount > 0) {
+    if (separated && Number(order?.pack_discount_ht) > 0) {
+      rows.push({ key: 'pack', label: 'Remise pack', amount: Number(order?.pack_discount_ht), sign: 'subtract' });
+    } else if (totals.other_discount > 0) {
       // `remise` minus its points half. It is a pack/lot tier for orders placed through the pack
       // builder and a hand-entered commercial gesture for orders created in the back office, and
       // the column does not record which — so it is labelled for what it certainly is.
       rows.push({ key: 'other', label: 'Remise supplémentaire', amount: totals.other_discount, sign: 'subtract' });
     }
-    if (totals.points_discount > 0) {
+    const pointsDiscount = separated ? Number(order?.points_discount_ht) : totals.points_discount;
+    if (pointsDiscount > 0) {
       rows.push({
         key: 'points',
         label: 'Protinas utilisées',
-        detail: pointsRedeemed > 0 ? formatProtinas(pointsRedeemed) : undefined,
-        amount: totals.points_discount,
+        detail: (order?.points_redeemed ?? pointsRedeemed) > 0 ? formatProtinas(order?.points_redeemed ?? pointsRedeemed) : undefined,
+        amount: pointsDiscount,
         sign: 'subtract',
       });
     }
@@ -130,15 +134,17 @@ export function OrderReceipt({
   lifecycle,
   pointsRedeemed,
   decimals,
+  order,
 }: {
   totals: Totals;
   lifecycle: OrderLifecycle;
   /** Gross points debited at checkout, from the ledger — labels the redemption row. */
   pointsRedeemed: number;
+  order?: Order;
   /** Shared with the line items above (see `moneyDecimals`); falls back to this card's own. */
   decimals?: number;
 }) {
-  const rows = buildRows(totals, pointsRedeemed);
+  const rows = buildRows(totals, pointsRedeemed, order);
   const places = decimals ?? moneyDecimals([...rows.map((r) => r.amount), totals.total]);
   const money = (n: number) => `${n.toFixed(places)} DT`;
 

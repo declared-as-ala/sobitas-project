@@ -53,6 +53,7 @@ export interface BackendOrderPayload {
   pack_discount?: boolean;
   /** Whole loyalty points the user chooses to spend; backend validates <= balance and <= cap. */
   points_to_redeem?: number;
+  expected_total?: number;
   /**
    * Affiliate attribution — the `pt_aff` subdomain label, e.g. `ali` for a visit that started on
    * `ali.protein.tn`.

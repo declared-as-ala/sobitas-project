@@ -73,6 +73,7 @@ class CustomerAuthFlowTest extends TestCase
             $table->timestamp('created_at')->nullable();
         });
         (require database_path('migrations/2026_09_03_160000_add_phone_verification_welcome_bonus.php'))->up();
+        (require database_path('migrations/2026_09_29_000200_add_welcome_unlock_fields.php'))->up();
         Schema::create('user_point_transactions', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('user_id');
@@ -85,6 +86,8 @@ class CustomerAuthFlowTest extends TestCase
         });
         config()->set('welcome_bonus.enabled', true);
         config()->set('welcome_bonus.include_existing_customers', true);
+        // These legacy assertions exercise the documented immediate-credit kill switch.
+        config()->set('welcome_bonus.unlock_on_first_delivery', false);
     }
 
     public function test_welcome_migration_can_resume_without_erasing_claims(): void
@@ -248,6 +251,23 @@ class CustomerAuthFlowTest extends TestCase
         $this->postJson('/api/phone-verification/verify', ['code' => $code])->assertUnprocessable();
         $this->assertDatabaseCount('welcome_bonus_claims', 1);
         $this->assertDatabaseCount('user_point_transactions', 1);
+    }
+
+    public function test_default_phone_proof_reserves_welcome_points_until_delivery(): void
+    {
+        config()->set('welcome_bonus.unlock_on_first_delivery', true);
+        Schema::create('commandes', function (Blueprint $table): void {
+            $table->id(); $table->unsignedBigInteger('user_id')->nullable();
+            $table->unsignedBigInteger('authenticated_user_id')->nullable(); $table->string('etat');
+        });
+        $user = $this->phoneCustomer('pending@example.test');
+        $result = app(\App\Services\PhoneVerificationService::class)->verify($user, $this->sendPhoneCode($user));
+        $this->assertFalse($result['bonus_awarded']);
+        $this->assertTrue($result['bonus_pending']);
+        $this->assertSame('pending', $result['bonus_status']);
+        $this->assertSame(0, $user->fresh()->points_balance);
+        $this->assertDatabaseCount('user_point_transactions', 0);
+        $this->assertNull(DB::table('welcome_bonus_claims')->where('user_id', $user->id)->value('credited_at'));
     }
 
     public function test_phone_code_expires_at_three_minutes(): void

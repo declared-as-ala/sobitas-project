@@ -31,7 +31,7 @@
  *   the kicker            moved to the shell, ABOVE the h1 where it belongs — it had been
  *                         rendering underneath it. See the note in PackWizard.
  *   a second sentence     "Répondez à une question, choisissez vos produits, et la remise
- *                         s'applique toute seule." The three −5/−8/−12% cards directly below say
+ *                         s'applique toute seule." The three tier cards directly below say
  *                         the second half in figures, and the button says the first half.
  *   "Moins d'une minute.  Reassurance about a form nobody has seen yet. It answers an objection
  *    Aucune inscription." the visitor has not had time to form.
@@ -87,6 +87,7 @@ export function StepWelcome({ tiers, groups, onStart, calm }: StepWelcomeProps) 
           </m.li>
         ))}
       </m.ul>
+      <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-ink-2">Remise pack : {tiers.map(tier => `−${tier.percent} % dès ${tier.min} DT`).join(', ')} d&apos;articles (hors articles en promo, non cumulable avec un code promo).</p>
 
       <m.div variants={child} className="mt-7">
         <m.button

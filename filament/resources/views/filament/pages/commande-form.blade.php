@@ -291,6 +291,19 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                                 <td>Montant Total</td>
                                 <td style="width:50%"><input class="form-control" disabled id="p_ht" step="0.001" value="{{ $data['prix_ht'] ?? '0.000' }}"></td>
                             </tr>
+                            @if($isEdit && $record)
+                                @php
+                                    $packDt = (float) ($record->pack_discount_ht ?? 0);
+                                    $couponDt = (float) ($record->discount_ht ?? 0);
+                                    $pointsDt = (float) ($record->points_discount_ht ?? 0);
+                                    $discountDt = $packDt + $couponDt + $pointsDt;
+                                    $goodsDt = (float) ($record->prix_ht ?? 0);
+                                @endphp
+                                @if($packDt > 0)<tr><td>Remise pack ({{ $goodsDt > 0 ? round($packDt / $goodsDt * 100, 1) : 0 }} %)</td><td>− {{ number_format($packDt, 3, ',', ' ') }} DT</td></tr>@endif
+                                @if($record->coupon_code_snapshot)<tr><td>Code promo {{ $record->coupon_code_snapshot }}</td><td>− {{ number_format($couponDt, 3, ',', ' ') }} DT</td></tr>@endif
+                                @if($pointsDt > 0)<tr><td>Protinas ({{ (int) $record->points_redeemed }} pts)</td><td>− {{ number_format($pointsDt, 3, ',', ' ') }} DT</td></tr>@endif
+                                @if($discountDt > 0)<tr><td>Total remises</td><td>{{ number_format($discountDt, 3, ',', ' ') }} DT ({{ $goodsDt > 0 ? round($discountDt / $goodsDt * 100, 2) : 0 }} % des articles)</td></tr>@endif
+                            @endif
                             <tr>
                                 <td>Frais de livraison</td>
                                 <td><input class="form-control" id="frais_livraison" step="0.001" value="{{ $data['frais_livraison'] ?? '0.000' }}" onkeyup="calculate()" onchange="calculate()"></td>

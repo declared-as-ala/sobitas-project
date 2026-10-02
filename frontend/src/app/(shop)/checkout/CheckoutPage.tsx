@@ -5,9 +5,9 @@ import { useRouter } from 'next/navigation';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
 import { useCart } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
-import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved, packQuote } from '@/services/api';
+import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved } from '@/services/api';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
-import type { Order, PackQuote } from '@/types';
+import type { Order } from '@/types';
 import Image from 'next/image';
 import { Button } from '@/app/components/ui/button';
 import { Input } from '@/app/components/ui/input';
@@ -20,7 +20,8 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { CheckoutFooterCTA } from '@/app/(shop)/checkout/CheckoutFooterCTA';
 import { useKeyboardOpen } from '@/hooks/useKeyboardOpen';
 import { LoyaltyEarnLine } from '@/app/components/loyalty/LoyaltyEarnLine';
-import { MAX_REDEEM_FRACTION, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { loadLoyaltyRules, FALLBACK_LOYALTY_RULES, type LoyaltyRules } from '@/util/loyaltyPoints';
+import { quoteCheckout, type CheckoutPricing } from '@/util/checkoutPricing';
 import { LoyaltyPointsRedeemer } from '@/app/components/loyalty/LoyaltyPointsRedeemer';
 import { Section } from '@/app/components/layout/Section';
 import { OrderDocument } from '@/app/components/order/OrderDocument';
@@ -31,13 +32,6 @@ import { checkoutFieldOrder, checkoutServerErrors, normalizeCheckoutPhone, valid
 import styles from './checkout.module.css';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
-import { DELIVERY } from '@/util/company';
-
-const FREE_SHIPPING_THRESHOLD = DELIVERY.freeFromDt;
-
-// Points economy — imported, not redeclared. These two numbers were previously written out here
-// AND in FidelitySection AND in two reassurance strings; util/loyaltyPoints.ts is now the one place
-// they live on the client, mirroring PointsService.php. The server total is always authoritative.
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -75,8 +69,9 @@ export default function CheckoutPage() {
   const [couponMessage, setCouponMessage] = useState<string | null>(null);
   const [couponMessageType, setCouponMessageType] = useState<'success' | 'error' | null>(null);
 
-  // Pack (bundle) discount — authoritative quote from the server when the user opted in on /pack-builder.
-  const [packQuoteData, setPackQuoteData] = useState<PackQuote | null>(null);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  const [pricing, setPricing] = useState<CheckoutPricing | null>(null);
+  const [pricingState, setPricingState] = useState<'loading' | 'ready' | 'failed'>('loading');
   // Loyalty points the user chooses to spend on this order.
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
   const pointsBalance = user?.points_balance ?? 0;
@@ -177,55 +172,66 @@ export default function CheckoutPage() {
     }));
   }, [gouvernorat, delegation, localite, codePostal]);
 
-  // When the pack (bundle) discount is opted-in, fetch the authoritative quote from the server so the
-  // "Remise pack" line reflects the real tier discount (the client never computes the DT amount itself).
-  useEffect(() => {
-    let ignore = false;
-    if (!packDiscount || items.length === 0) {
-      setPackQuoteData(null);
-      return;
-    }
-    packQuote(items.map((item) => ({ produit_id: item.product.id, quantite: item.quantity })))
-      .then((quote) => { if (!ignore) setPackQuoteData(quote); })
-      .catch(() => { if (!ignore) setPackQuoteData(null); });
-    return () => { ignore = true; };
-  }, [packDiscount, items]);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
-  // Memoize price calculations to avoid recalculating on every render
   const totalPrice = useMemo(() => getTotalPrice(), [items, getTotalPrice]);
-  const shippingCost = useMemo(() => 
-    totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : DELIVERY.feeDt,
-    [totalPrice]
-  );
-  // Coupon discount in DT (HT). appliedCoupon.totals already reflects it; we reuse it for the points cap.
-  const couponDiscount = appliedCoupon?.discount_ht ?? 0;
+  const fallbackShipping = totalPrice >= rules.delivery.free_from_dt ? 0 : rules.delivery.fee_dt;
+  const fallbackTotal = appliedCoupon?.totals?.total_ttc ?? totalPrice + fallbackShipping;
+  const checkoutPayload = useMemo(() => buildBackendOrderPayload({
+    livraison: {
+      livraison_nom: formData.livraison_nom.trim(),
+      livraison_prenom: formData.livraison_prenom,
+      livraison_email: formData.livraison_email.trim() || undefined,
+      livraison_phone: normalizeCheckoutPhone(formData.livraison_phone),
+      livraison_region: gouvernorat,
+      livraison_ville: localite || delegation,
+      livraison_code_postale: codePostal || undefined,
+      livraison_adresse1: formData.livraison_adresse1.trim(),
+      note: formData.note || undefined,
+      livraison: formData.livraison,
+      frais_livraison: fallbackShipping,
+    },
+    panier: items.map(item => ({ produit_id: item.product.id, quantite: item.quantity, arome: item.arome, prix_unitaire: getEffectivePrice(item.product) })),
+    user_id: user?.id,
+    coupon_code: appliedCoupon?.code,
+    pack_discount: packDiscount || undefined,
+    points_to_redeem: pointsToRedeem > 0 ? pointsToRedeem : undefined,
+  }), [formData, gouvernorat, localite, delegation, codePostal, fallbackShipping, items, getEffectivePrice, user?.id, appliedCoupon?.code, packDiscount, pointsToRedeem]);
+  /*
+   * The quote prices the cart, coupon, pack, Protinas and login, never the delivery form: name,
+   * address and note do not change the total, so typing them does not re-quote. Phone and e-mail
+   * travel once complete (a per-customer coupon limit needs one); half-typed, the server would
+   * refuse the whole quote.
+   */
+  const contactErrors = validateCheckout({ ...formData, gouvernorat, delegation, localite });
+  const quotePhone = contactErrors.livraison_phone ? undefined : normalizeCheckoutPhone(formData.livraison_phone);
+  const quoteEmail = contactErrors.livraison_email ? undefined : formData.livraison_email.trim() || undefined;
+  const quotePayload = useMemo(() => ({
+    ...checkoutPayload,
+    commande: { livraison: 1, livraison_phone: quotePhone, livraison_email: quoteEmail, user_id: user?.id },
+  }), [checkoutPayload, quotePhone, quoteEmail, user?.id]);
+  const quoteInputKey = JSON.stringify(quotePayload);
 
-  // Pack (bundle) discount — only when the user opted in on /pack-builder AND the server quote loaded.
-  const packDiscountAmount = packDiscount && packQuoteData ? packQuoteData.discount_amount : 0;
-
-  // Post-coupon, post-pack subtotal — the base the points redemption is capped against (contract: 50%).
-  const subtotalAfterPack = useMemo(
-    () => Math.max(0, totalPrice - couponDiscount - packDiscountAmount),
-    [totalPrice, couponDiscount, packDiscountAmount]
-  );
-
-  const maxRedeemablePoints = useMemo(() => {
-    const capPoints = Math.floor(subtotalAfterPack * MAX_REDEEM_FRACTION * REDEEM_POINTS_PER_DT);
-    return Math.max(0, Math.min(pointsBalance, capPoints));
-  }, [subtotalAfterPack, pointsBalance]);
-
-  // Keep the chosen amount within the live cap (cart/coupon/pack changes can shrink it).
   useEffect(() => {
-    setPointsToRedeem((p) => Math.min(p, maxRedeemablePoints));
-  }, [maxRedeemablePoints]);
+    if (!isLoaded || items.length === 0) return;
+    const controller = new AbortController();
+    setPricingState('loading');
+    const timer = setTimeout(() => {
+      void quoteCheckout(quotePayload, controller.signal)
+        .then(value => { setPricing(value); setPricingState('ready'); })
+        .catch(() => { if (!controller.signal.aborted) setPricingState('failed'); });
+    }, 300);
+    return () => { clearTimeout(timer); controller.abort(); };
+  }, [quoteInputKey, isLoaded, items.length]);
 
+  const visiblePricing = pricingState === 'failed' ? null : pricing;
+  const shippingCost = visiblePricing?.shipping_dt ?? fallbackShipping;
+  const finalTotal = visiblePricing?.total_dt ?? fallbackTotal;
+  const maxRedeemablePoints = visiblePricing?.protinas.max_usable_points ?? 0;
   const effectivePointsToRedeem = Math.min(pointsToRedeem, maxRedeemablePoints);
-  const pointsDiscountDt = effectivePointsToRedeem / REDEEM_POINTS_PER_DT;
-
-  const finalTotal = useMemo(() => {
-    const base = appliedCoupon?.totals ? appliedCoupon.totals.total_ttc : totalPrice + shippingCost;
-    return Math.max(0, base - packDiscountAmount - pointsDiscountDt);
-  }, [totalPrice, shippingCost, appliedCoupon, packDiscountAmount, pointsDiscountDt]);
+  useEffect(() => {
+    if (pricingState === 'ready') setPointsToRedeem(p => Math.min(p, maxRedeemablePoints));
+  }, [pricingState, maxRedeemablePoints]);
 
   // Memoized handler to prevent unnecessary re-renders
   // Using a stable reference to avoid recreating the function on every render
@@ -273,7 +279,7 @@ export default function CheckoutPage() {
     setIsApplyingCoupon(true);
     try {
       const subtotal = totalPrice;
-      const frais = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
+      const frais = fallbackShipping;
       const result = await applyCoupon({
         code,
         subtotal_ht: subtotal,
@@ -290,9 +296,9 @@ export default function CheckoutPage() {
           free_shipping: result.free_shipping,
           totals: result.totals,
         });
-        setCouponMessage(result.message || 'Code promo appliqué');
+        setCouponMessage('Code vérifié. La meilleure remise est indiquée dans le récapitulatif.');
         setCouponMessageType('success');
-        toast.success(result.message || 'Code promo appliqué');
+        toast.info('Code vérifié. La meilleure remise sera appliquée.');
       } else {
         const message = result.message || 'Code promo invalide ou expiré';
         setCouponMessage(message);
@@ -314,7 +320,7 @@ export default function CheckoutPage() {
     setIsApplyingCoupon(true);
     try {
       const subtotal = totalPrice;
-      const frais = totalPrice >= FREE_SHIPPING_THRESHOLD ? 0 : shippingCost;
+      const frais = fallbackShipping;
       await removeCoupon({ subtotal_ht: subtotal, frais_livraison: frais });
       setAppliedCoupon(null);
       setCouponInput('');
@@ -364,34 +370,11 @@ export default function CheckoutPage() {
     setIsSubmitting(true);
 
     try {
-      // Same backend structure as commande rapide (see lib/orderPayload.ts)
-      const orderPayload = buildBackendOrderPayload({
-        livraison: {
-          livraison_nom: formData.livraison_nom.trim(),
-          livraison_prenom: formData.livraison_prenom,
-          livraison_email: formData.livraison_email.trim() || undefined,
-          livraison_phone: normalizeCheckoutPhone(formData.livraison_phone),
-          livraison_region: gouvernorat,
-          livraison_ville: localite || delegation,
-          livraison_code_postale: codePostal || undefined,
-          livraison_adresse1: formData.livraison_adresse1.trim(),
-          note: formData.note || undefined,
-          livraison: formData.livraison,
-          frais_livraison: appliedCoupon?.free_shipping ? 0 : shippingCost,
-        },
-        panier: items.map(item => ({
-          produit_id: item.product.id,
-          quantite: item.quantity,
-          arome: item.arome,
-          prix_unitaire: getEffectivePrice(item.product),
-        })),
-        user_id: user?.id,
-        coupon_code: appliedCoupon?.code,
-        // Opt-in bundle discount: backend derives the DT amount from the SERVER subtotal.
-        pack_discount: packDiscount || undefined,
-        // Loyalty points to spend: backend re-validates <= balance and <= cap.
-        points_to_redeem: effectivePointsToRedeem > 0 ? effectivePointsToRedeem : undefined,
-      });
+      const orderPayload = { ...checkoutPayload };
+      if (!visiblePricing) delete orderPayload.points_to_redeem;
+      // Confirm the total on screen: the last server quote, even while a newer one is in flight. If
+      // the server now prices it differently it answers 409 with its pricing and creates nothing.
+      if (visiblePricing) orderPayload.expected_total = visiblePricing.total_dt;
 
       const serializedPayload = JSON.stringify(orderPayload);
       if (checkoutAttemptRef.current?.payload !== serializedPayload) {
@@ -447,9 +430,13 @@ export default function CheckoutPage() {
             code_postale: formData.livraison_code_postale?.toString(),
             adresse1: formData.livraison_adresse1,
             livraison: formData.livraison,
-            frais_livraison: shippingCost,
-            prix_ht: totalPrice,
-            prix_ttc: finalTotal,
+            frais_livraison: response.pricing?.shipping_dt ?? shippingCost,
+            prix_ht: response.pricing?.goods_dt ?? totalPrice,
+            prix_ttc: response.pricing?.total_dt ?? finalTotal,
+            pack_discount_ht: response.pricing?.pack?.amount_dt,
+            discount_ht: response.pricing?.coupon?.applied ? response.pricing.coupon.amount_dt : 0,
+            points_discount_ht: response.pricing?.protinas?.used_dt,
+            points_redeemed: response.pricing?.protinas?.used_points,
             etat: 'nouvelle_commande',
             user_id: user?.id,
             created_at: new Date().toISOString(),
@@ -480,6 +467,14 @@ export default function CheckoutPage() {
       clearCart();
     } catch (error: any) {
       console.error('Order error:', error);
+      if (error?.status === 409 && error?.pricing) {
+        const updated = error.pricing as CheckoutPricing;
+        setPricing(updated);
+        setPricingState('ready');
+        setSubmitError(`Le total a été mis à jour : ${updated.total_dt.toFixed(2)} DT à payer à la livraison. Vérifiez puis confirmez.`);
+        focusCheckoutField('checkout-submit-error');
+        return;
+      }
       // createOrder throws a fetch-based `Error` whose message carries the backend detail (e.g.
       // 'Stock insuffisant pour "X" (demandé: N).') — read error.message first. `error.response`
       // is an axios shape that never exists here, so it always fell through to the generic text.
@@ -746,20 +741,25 @@ export default function CheckoutPage() {
                       second control.
                     */}
                     <section className="space-y-3 border-t border-rule pt-4 lg:hidden" aria-label="Protinas">
-                      {isAuthenticated && pointsBalance > 0 && (
+                      {isAuthenticated && visiblePricing && visiblePricing.protinas.balance > 0 && (
                         <LoyaltyPointsRedeemer
-                          balance={pointsBalance}
+                          balance={visiblePricing?.protinas.balance ?? pointsBalance}
                           maxPoints={maxRedeemablePoints}
+                          pointsPerDt={rules.points_per_dt}
                           value={effectivePointsToRedeem}
                           onChange={setPointsToRedeem}
                           className="border-0 pt-0"
                         />
                       )}
+                      {visiblePricing && visiblePricing.protinas.balance > 0 && <p className="text-xs leading-relaxed text-ink-2">Utilisables sur cette commande : {visiblePricing.protinas.max_usable_dt.toFixed(2)} DT ({visiblePricing.protinas.max_usable_points} Protinas). Il vous restera {(visiblePricing.protinas.remaining_points / rules.points_per_dt).toFixed(2)} DT sur votre compte.</p>}
                       {/* The earn line renders for signed-out visitors too, where it is the
                           offer rather than a statement of fact — see LoyaltyEarnLine. That is
                           the one argument for an account this shop can honestly make at
                           checkout, and the phone never saw it. */}
-                      <LoyaltyEarnLine amountDt={subtotalAfterPack} variant="summary" />
+                      {visiblePricing && isAuthenticated ? (
+                        <p className="text-sm text-ink-2">Vous gagnerez {visiblePricing.earn_on_delivery_points} Protinas ({(visiblePricing.earn_on_delivery_points / rules.points_per_dt).toFixed(2)} DT) à la livraison.</p>
+                      ) : visiblePricing ? <LoyaltyEarnLine amountDt={visiblePricing.total_dt - visiblePricing.shipping_dt} variant="summary" /> : <p className="text-xs text-ink-3">Protinas confirmées à la validation.</p>}
+                      {pricingState === 'failed' && <p className="text-xs text-ink-3">Total confirmé à la validation.</p>}
                     </section>
 
                     {/* Desktop submit - hidden on mobile (sticky bar CTA on mobile) */}
@@ -853,13 +853,13 @@ export default function CheckoutPage() {
                     {appliedCoupon ? (
                       <div className="flex flex-col gap-2 rounded-xl border border-hairline bg-sunken p-3">
                         <div className="flex items-center justify-between gap-2">
-                          <span className="font-medium text-ok">
-                            <bdi dir="auto">{appliedCoupon.code}</bdi> appliqué
-                            {appliedCoupon.discount_ht > 0 && (
-                              <span dir="ltr" className="ms-1 text-ok">
-                                (-{appliedCoupon.discount_ttc.toFixed(2)} DT)
-                              </span>
-                            )}
+                            <span className="font-medium text-ok">
+                              <bdi dir="auto">{appliedCoupon.code}</bdi> {visiblePricing?.coupon.reason === 'pack_better' ? 'conservé' : 'appliqué'}
+                              {visiblePricing?.coupon.applied && visiblePricing.coupon.amount_dt > 0 && (
+                                <span dir="ltr" className="ms-1 text-ok">
+                                  (-{visiblePricing.coupon.amount_dt.toFixed(2)} DT)
+                                </span>
+                              )}
                           </span>
                           <Button
                             type="button"
@@ -924,10 +924,11 @@ export default function CheckoutPage() {
                   </section>
 
                   {/* Points de fidélité (utilisateurs connectés avec un solde) */}
-                  {isAuthenticated && pointsBalance > 0 && (
+                  {isAuthenticated && visiblePricing && visiblePricing.protinas.balance > 0 && (
                     <LoyaltyPointsRedeemer
-                      balance={pointsBalance}
+                      balance={visiblePricing?.protinas.balance ?? pointsBalance}
                       maxPoints={maxRedeemablePoints}
+                      pointsPerDt={rules.points_per_dt}
                       value={effectivePointsToRedeem}
                       onChange={setPointsToRedeem}
                     />
@@ -936,91 +937,81 @@ export default function CheckoutPage() {
                   {/* Summary */}
                   <div className="space-y-2.5 border-t border-rule pt-4 text-sm">
                     <div className="flex justify-between items-center">
-                      <span className="text-ink-2">Sous-total</span>
-                      <span dir="ltr" className="font-display font-semibold tabular-nums text-ink-1">{totalPrice.toFixed(2)} DT</span>
+                      <span className="text-ink-2">Sous-total articles</span>
+                      <span dir="ltr" className="font-display font-semibold tabular-nums text-ink-1">{(visiblePricing?.goods_dt ?? totalPrice).toFixed(2)} DT</span>
                     </div>
-                    {appliedCoupon && appliedCoupon.discount_ht > 0 && (
+                    {visiblePricing?.coupon.applied && visiblePricing.coupon.amount_dt > 0 && (
                       <div className="flex justify-between items-center">
-                        <span className="text-ink-2">Remise (<bdi dir="auto">{appliedCoupon.code}</bdi>)</span>
+                        <span className="text-ink-2">Code <bdi dir="auto">{visiblePricing.coupon.code}</bdi></span>
                         <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          -{appliedCoupon.discount_ttc.toFixed(2)} DT
+                          −{visiblePricing.coupon.amount_dt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
-                    {packDiscountAmount > 0 && (
+                    {visiblePricing?.pack.applied && visiblePricing.pack.amount_dt > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <Percent className="h-4 w-4 text-brand" aria-hidden="true" />
-                          Remise pack{packQuoteData?.tier_label ? ` (${packQuoteData.tier_label})` : ''}
+                          Remise pack −{visiblePricing.pack.percent} %
                         </span>
                         <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          -{packDiscountAmount.toFixed(2)} DT
+                          −{visiblePricing.pack.amount_dt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
-                    {pointsDiscountDt > 0 && (
+                    {visiblePricing && visiblePricing.protinas.used_dt > 0 && (
                       <div className="flex justify-between items-center">
                         <span className="flex items-center gap-1.5 text-ink-2">
                           <Gift className="h-4 w-4 text-brand" aria-hidden="true" />
-                          Remise fidélité <span className="text-xs text-ink-3">(estimée)</span>
+                          Protinas utilisées ({visiblePricing.protinas.used_points})
                         </span>
                         <span dir="ltr" className="font-display font-semibold tabular-nums text-ok">
-                          -{pointsDiscountDt.toFixed(2)} DT
+                          −{visiblePricing.protinas.used_dt.toFixed(2)} DT
                         </span>
                       </div>
                     )}
+                    <p className="text-xs leading-relaxed text-ink-2">Code promo ou remise pack (la meilleure des deux) + Protinas : jusqu&apos;à {rules.max_total_discount_percent} % de vos articles ; les Protinas non utilisées restent sur votre compte.</p>
+                    {visiblePricing?.coupon.reason === 'pack_better' && (
+                      <p className="text-xs leading-relaxed text-ink-2">Votre remise pack (−{visiblePricing.pack.amount_dt.toFixed(2)} DT) est plus avantageuse que ce code : elle est appliquée à sa place, et votre code reste valable pour une prochaine commande.</p>
+                    )}
                     <div className="flex justify-between items-center">
-                      <span className="text-ink-2">Expédition</span>
-                      <span dir="ltr" className={`font-display font-semibold tabular-nums ${(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? 'text-ok' : 'text-ink-1'}`}>
-                        {(appliedCoupon?.free_shipping ? 0 : shippingCost) === 0 ? (
+                      <span className="text-ink-2">Livraison</span>
+                      <span dir="ltr" className={`font-display font-semibold tabular-nums ${shippingCost === 0 ? 'text-ok' : 'text-ink-1'}`}>
+                        {shippingCost === 0 ? (
                           <span className="flex items-center gap-1">
                             <Truck className="h-4 w-4" aria-hidden="true" />
-                            Gratuite
+                            Offerte
                           </span>
                         ) : (
-                          `${appliedCoupon?.free_shipping ? 0 : shippingCost} DT`
+                          `${shippingCost.toFixed(2)} DT`
                         )}
                       </span>
                     </div>
-                    {totalPrice < FREE_SHIPPING_THRESHOLD && shippingCost > 0 && (
+                    {totalPrice < rules.delivery.free_from_dt && shippingCost > 0 && (
                       <div className="flex items-start gap-2 rounded-xl border border-hairline bg-sunken p-3">
                         <Truck className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                         <p className="text-xs font-medium text-ink-2">
-                          Ajoutez {(FREE_SHIPPING_THRESHOLD - totalPrice).toFixed(2)} DT pour la livraison gratuite !
+                          Ajoutez {(rules.delivery.free_from_dt - totalPrice).toFixed(2)} DT pour la livraison gratuite !
                         </p>
                       </div>
                     )}
                     <div className="flex items-baseline justify-between border-t border-rule pt-4">
-                      <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
+                      <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total à payer à la livraison</span>
                       <span dir="ltr" className="font-display text-2xl font-extrabold tracking-tight tabular-nums text-brand">
                         {finalTotal.toFixed(2)} DT
                       </span>
                     </div>
-                    {(packDiscountAmount > 0 || pointsDiscountDt > 0) && (
+                    {(!visiblePricing || pricingState === 'failed') && (
                       <p className="text-end text-[11px] leading-snug text-ink-3">
-                        Total estimé — le montant définitif est confirmé sur la page de confirmation.
+                        Total confirmé à la validation.
                       </p>
                     )}
-
-                    {/*
-                      ── WHAT THIS ORDER PAYS BACK ─────────────────────────────────────────────
-                      The block above this one only ever appeared for a signed-in customer who
-                      ALREADY had a balance (`isAuthenticated && pointsBalance > 0`). So the two
-                      people the programme most needed to reach — a guest, and a new account with
-                      zero points — reached the final screen of the funnel without the word
-                      "fidélité" on it once.
-
-                      `subtotalAfterPack` is the backend's earn base to the millime: goods after
-                      coupon and pack savings, but BEFORE points spent; delivery is excluded.
-                      Spending an existing reward never reduces the next reward. This is the one
-                      place in the site where the figure is not an
-                      estimate, so it is the one place it is worth showing beside a real total.
-                    */}
-                    <LoyaltyEarnLine
-                      amountDt={subtotalAfterPack}
-                      variant="summary"
-                      className="pt-1"
-                    />
+                    {visiblePricing && visiblePricing.protinas.balance > 0 && (
+                      <p className="text-xs leading-relaxed text-ink-2">Utilisables sur cette commande : {visiblePricing.protinas.max_usable_dt.toFixed(2)} DT ({visiblePricing.protinas.max_usable_points} Protinas). Il vous restera {(visiblePricing.protinas.remaining_points / rules.points_per_dt).toFixed(2)} DT sur votre compte.</p>
+                    )}
+                    {visiblePricing && isAuthenticated ? (
+                      <p className="text-sm text-ink-2">Vous gagnerez {visiblePricing.earn_on_delivery_points} Protinas ({(visiblePricing.earn_on_delivery_points / rules.points_per_dt).toFixed(2)} DT) à la livraison.</p>
+                    ) : visiblePricing ? <LoyaltyEarnLine amountDt={visiblePricing.total_dt - visiblePricing.shipping_dt} variant="summary" className="pt-1" /> : <p className="text-xs text-ink-3">Protinas confirmées à la validation.</p>}
                   </div>
 
                 </CardContent>
@@ -1037,7 +1028,11 @@ export default function CheckoutPage() {
         isSubmitting={isSubmitting}
         finalTotal={finalTotal}
         totalPrice={totalPrice}
-        shippingCost={appliedCoupon?.free_shipping ? 0 : shippingCost}
+        shippingCost={shippingCost}
+        pricing={visiblePricing}
+        quoteFailed={pricingState === 'failed'}
+        pointsPerDt={rules.points_per_dt}
+        maxTotalDiscountPercent={rules.max_total_discount_percent}
         items={items}
         getEffectivePrice={getEffectivePrice}
         mobileSummaryOpen={mobileSummaryOpen}

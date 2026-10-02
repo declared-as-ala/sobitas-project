@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Models\Commande;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -16,6 +17,9 @@ class PhoneVerificationService
     public const BONUS_POINTS = self::BONUS_DT * PointsService::REDEEM_POINTS_PER_DT;
     public const MAX_ATTEMPTS = 5;
 
+    public static function bonusPoints(): int { return (int) config('welcome_bonus.points', self::BONUS_POINTS); }
+    public static function bonusValueDt(): float { return round(self::bonusPoints() / PointsService::pointsPerDt(), 3); }
+
     public static function normalize(string $value): string
     {
         $digits = preg_replace('/\D/', '', $value);
@@ -27,7 +31,7 @@ class PhoneVerificationService
         return '+216'.$digits;
     }
 
-    private static function fingerprint(string $value): string
+    public static function fingerprint(string $value): string
     {
         return hash_hmac('sha256', $value, (string) config('app.key'));
     }
@@ -35,7 +39,14 @@ class PhoneVerificationService
     /** Read-only state shared by the profile, proof response and catch-up action. */
     public function bonusStatus(User $user): string
     {
-        if ($user->welcome_bonus_awarded_at || DB::table('welcome_bonus_claims')->where('user_id', $user->id)->exists()) return 'awarded';
+        $claim = DB::table('welcome_bonus_claims')->where('user_id', $user->id)->first();
+        if ($claim) {
+            if ($claim->credited_at !== null) return 'awarded';
+            // Kill switch off: a claim reserved while it was on is released on request, so the
+            // storefront offers 'Recevoir mes 15 DT' instead of an 'en attente' badge.
+            return config('welcome_bonus.unlock_on_first_delivery', true) ? 'pending' : 'claimable';
+        }
+        if ($user->welcome_bonus_awarded_at) return 'awarded';
         if (! config('welcome_bonus.enabled')) return 'paused';
         if ((int) $user->role_id !== 2 || (! config('welcome_bonus.include_existing_customers') && ! $user->welcome_bonus_eligible)) return 'not_eligible';
         if (! $user->phone_verified_at) return 'phone_required';
@@ -52,28 +63,53 @@ class PhoneVerificationService
     /** Caller holds the user row lock. Claim + ledger + balance commit together. */
     private function awardWelcomeBonus(User $user): bool
     {
+        $unlockOnDelivery = (bool) config('welcome_bonus.unlock_on_first_delivery', true);
+        $welcome = app(WelcomeBonusService::class);
+        // Kill switch off: a claim reserved while it was on is credited now (claim button or
+        // re-verification); otherwise nothing but a delivery could ever release it.
+        if (! $unlockOnDelivery && DB::table('welcome_bonus_claims')->where('user_id', $user->id)
+            ->whereNull('credited_at')->exists()) {
+            return $welcome->creditPending($user);
+        }
         if ($this->bonusStatus($user) !== 'claimable') return false;
+        $points = self::bonusPoints();
         $claimed = DB::table('welcome_bonus_claims')->insertOrIgnore([
             'user_id' => $user->id,
             'phone_hash' => self::fingerprint(self::normalize((string) $user->phone)),
             'email_hash' => self::fingerprint(strtolower(trim((string) $user->email))),
-            'points' => self::BONUS_POINTS, 'created_at' => now(),
+            'points' => $points, 'credited_at' => null, 'created_at' => now(),
         ]);
         if ($claimed !== 1) return false;
-        app(PointsService::class)->record($user, 'earn', self::BONUS_POINTS, 'Cadeau de bienvenue — 15 DT en points');
-        $user->forceFill(['welcome_bonus_awarded_at' => now(), 'welcome_bonus_eligible' => false])->saveQuietly();
-        return true;
+        $user->forceFill(['welcome_bonus_eligible' => false])->saveQuietly();
+        if (! $unlockOnDelivery) {
+            return $welcome->creditPending($user);
+        }
+        // An account that already has a delivered order is credited now, through the same path as
+        // a delivery-time unlock: that order is recorded as the unlocking one (so returning it sends
+        // the bonus back to pending), the delivery-phone uniqueness rule applies, and the ledger key
+        // is versioned per order.
+        $delivered = Commande::query()->where('authenticated_user_id', $user->id)
+            ->whereIn('etat', PointsService::DELIVERED_STATUSES)->orderBy('id')->first();
+
+        return $delivered ? $welcome->unlockOnDelivery($user, $delivered) : false;
     }
 
     private function result(User $user, bool $awarded): array
     {
+        $points = self::bonusPoints();
+        $valueDt = self::bonusValueDt();
         return [
-            'message' => $awarded ? '300 points ajoutés : 15 DT pour vos prochains achats.' : 'Votre téléphone est vérifié.',
+            'message' => $awarded
+                ? $points.' Protinas ajoutées : '.$valueDt.' DT à utiliser sur votre prochaine commande.'
+                : ($this->bonusStatus($user) === 'pending'
+                    ? 'Téléphone vérifié. Vos '.$points.' Protinas ('.$valueDt.' DT) seront créditées à la livraison de votre première commande.'
+                    : 'Votre téléphone est vérifié.'),
             'phone_verified' => $user->phone_verified_at !== null,
             'phone' => $user->phone,
             'bonus_awarded' => $awarded,
+            'bonus_pending' => $this->bonusStatus($user) === 'pending',
             'bonus_status' => $this->bonusStatus($user),
-            'bonus_points' => $awarded ? self::BONUS_POINTS : 0,
+            'bonus_points' => $awarded ? $points : 0,
             'points_balance' => (int) $user->points_balance,
             'points_value_dt' => app(PointsService::class)->pointsToDt((int) $user->points_balance),
         ];

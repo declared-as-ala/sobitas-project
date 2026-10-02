@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getPointsHistory } from '@/services/api';
-import { EARN_RATE, REDEEM_POINTS_PER_DT, CASHBACK_PERCENT } from '@/util/loyaltyPoints';
+import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 import type { PointsHistory, PointsTransaction } from '@/types';
 import { useAuth } from '@/contexts/AuthContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
@@ -52,6 +52,8 @@ export function FidelitySection() {
   const [history, setHistory] = useState<PointsHistory | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   useEffect(() => {
     let ignore = false;
@@ -74,7 +76,7 @@ export function FidelitySection() {
 
   const transactions = history?.transactions ?? [];
   const balance = history?.balance ?? user?.points_balance ?? 0;
-  const valueDt = history?.value_dt ?? user?.points_value_dt ?? balance / REDEEM_POINTS_PER_DT;
+  const valueDt = history?.value_dt ?? user?.points_value_dt ?? balance / rules.points_per_dt;
 
   return (
     <div className="space-y-6">
@@ -120,22 +122,30 @@ export function FidelitySection() {
             <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
             <div className="min-w-0">
               <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand">Vous gagnez</dt>
-              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{EARN_RATE} Protina par DT</dd>
-              <dd className="mt-0.5 text-xs leading-snug text-ink-3">soit {CASHBACK_PERCENT}% du prix des produits</dd>
+              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{rules.earn_per_dt} Protina par DT</dd>
+              <dd className="mt-0.5 text-xs leading-snug text-ink-3">soit {Math.round(rules.earn_per_dt / rules.points_per_dt * 100)}% des articles payés</dd>
             </div>
           </div>
           <div className="flex items-start gap-2.5">
             <Gift className="mt-0.5 h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
             <div className="min-w-0">
               <dt className="text-[10px] font-bold uppercase tracking-[0.14em] text-brand">Vous échangez</dt>
-              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{REDEEM_POINTS_PER_DT} Protinas = 1 DT</dd>
+              <dd className="mt-0.5 text-sm font-semibold leading-snug text-ink-1">{rules.points_per_dt} Protinas = 1 DT</dd>
               <dd className="mt-0.5 text-xs leading-snug text-ink-3">de remise sur votre prochaine commande</dd>
             </div>
           </div>
         </dl>
         <p className="mt-3 border-t border-hairline pt-2.5 text-xs leading-snug text-ink-3">
-          Le calcul porte sur le prix des produits, avant l’utilisation de vos Protinas. Votre solde est crédité après la livraison.
+          1 Protina par dinar d&apos;articles payé, créditée à la livraison (20 Protinas = 1 DT, soit 5 % reversés).
         </p>
+        <div className="mt-3 space-y-2 text-xs leading-relaxed text-ink-2">
+          <p>À la commande, remise et Protinas se cumulent jusqu&apos;à 10 % du montant de vos articles ; le reste de vos Protinas reste sur votre compte.</p>
+          <p>Code promo et remise pack ne se cumulent pas : la plus avantageuse s&apos;applique.</p>
+          <p>Cadeau de bienvenue : 300 Protinas (15 DT), créditées à la livraison de votre première commande.</p>
+          <p>Vos Protinas n&apos;expirent pas. Commande annulée ou retournée : les Protinas utilisées vous sont rendues, celles gagnées sont retirées.</p>
+          <p>Vos Protinas gardent toute leur valeur, sans date limite. À partir du 1er octobre 2026, remises et Protinas sont limitées à 10 % des articles de chaque commande : vos 15 DT de bienvenue s&apos;utilisent en entier dès 150 DT d&apos;achats.</p>
+        </div>
+        {history?.welcome_status === 'pending' && (history.pending_welcome_points ?? 0) > 0 && <span className="mt-3 inline-flex rounded-lg border border-warn/40 bg-elevated px-3 py-2 text-xs font-semibold text-warn">15 DT en attente, crédités à la livraison de votre 1re commande</span>}
       </div>
 
       {/* Transactions history */}

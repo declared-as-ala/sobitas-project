@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     if (!response.ok) {
       console.error('[API Route] Backend error response:', data);
       return NextResponse.json(
-        { error: data.message || data.error || 'Erreur lors de la création de la commande', errors: data.errors },
+        { error: data.message || data.error || 'Erreur lors de la création de la commande', errors: data.errors, pricing: data.pricing },
         { status: response.status }
       );
     }

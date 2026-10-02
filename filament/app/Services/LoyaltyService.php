@@ -18,8 +18,12 @@ class LoyaltyService
     // ── Business rules (single source of truth) ──────────────────────────────
 
     public const POINTS_PER_DT       = 1;   // 1 point per 1 DT spent
-    public const POINTS_PER_DT_VALUE = 10;  // 10 points = 1 DT discount
+    public const POINTS_PER_DT_VALUE = 20;  // default; runtime value comes from config
     public const MIN_REDEEM_POINTS   = 100; // minimum to redeem in one transaction
+
+    public static function earnRate(): int { return (int) config('loyalty.till.earn_per_dt', self::POINTS_PER_DT); }
+    public static function pointsPerDt(): int { return max(1, (int) config('loyalty.till.points_per_dt', self::POINTS_PER_DT_VALUE)); }
+    public static function minRedeemPoints(): int { return (int) config('loyalty.till.min_redeem_points', self::MIN_REDEEM_POINTS); }
 
     private ?bool $hasAssignedAtColumn = null;
     private ?bool $hasBarcodeValueColumn = null;
@@ -190,15 +194,24 @@ class LoyaltyService
     {
         $eligible = max(0.0, $prixTtc - $loyaltyDiscount);
 
-        return (int) floor($eligible * self::POINTS_PER_DT);
+        return (int) floor($eligible * self::earnRate());
     }
 
     public function pointsToDiscount(int $points): float
     {
-        return $points / self::POINTS_PER_DT_VALUE;
+        return $points / self::pointsPerDt();
     }
 
-    public function validateRedemption(Client $client, int $points, float $ticketTotal): array
+    public function maxRedeemablePoints(float $ticketTotalHt, float $otherDiscountsHt, int $balance): int
+    {
+        $total = (int) round(max(0, $ticketTotalHt) * 1000);
+        $other = (int) round(max(0, $otherDiscountsHt) * 1000);
+        $room = max(0, intdiv($total * (int) config('loyalty.till.max_total_discount_percent', 10), 100) - $other);
+        $points = min(max(0, $balance), intdiv($room * self::pointsPerDt(), 1000));
+        return $points >= self::minRedeemPoints() ? $points : 0;
+    }
+
+    public function validateRedemption(Client $client, int $points, float $ticketTotalHt, float $otherDiscountsHt): array
     {
         $errors = [];
 
@@ -206,18 +219,17 @@ class LoyaltyService
             return ['valid' => true, 'errors' => []];
         }
 
-        if ($points < self::MIN_REDEEM_POINTS) {
-            $errors[] = "Minimum " . self::MIN_REDEEM_POINTS . " points requis pour utiliser vos points.";
+        if ($points < self::minRedeemPoints()) {
+            $errors[] = "Minimum " . self::minRedeemPoints() . " points requis pour utiliser vos points.";
         }
 
         if ($points > $client->loyalty_points_balance) {
             $errors[] = "Solde insuffisant ({$client->loyalty_points_balance} pts disponibles).";
         }
 
-        $discount = $this->pointsToDiscount($points);
-        if ($discount > $ticketTotal) {
-            $maxPoints = (int) floor($ticketTotal * self::POINTS_PER_DT_VALUE);
-            $errors[] = "Vous ne pouvez pas utiliser plus de {$maxPoints} pts sur ce ticket ({$ticketTotal} DT).";
+        $maxPoints = $this->maxRedeemablePoints($ticketTotalHt, $otherDiscountsHt, (int) $client->loyalty_points_balance);
+        if ($points > $maxPoints) {
+            $errors[] = "Vous ne pouvez pas utiliser plus de {$maxPoints} pts sur ce ticket.";
         }
 
         return ['valid' => empty($errors), 'errors' => $errors];
@@ -230,7 +242,9 @@ class LoyaltyService
         Client $client,
         LoyaltyCard $card,
         int $pointsToRedeem,
-        float $baseHtBeforeLoyaltyDiscount
+        float $baseHtBeforeLoyaltyDiscount,
+        float $ticketTotalHt,
+        float $otherDiscountsHt
     ): array {
         $lockedTicket = Ticket::query()
             ->whereKey($ticket->id)
@@ -254,7 +268,7 @@ class LoyaltyService
 
         // Redeem transaction
         if ($pointsToRedeem > 0) {
-            $validation = $this->validateRedemption($lockedClient, $pointsToRedeem, $baseHtBeforeLoyaltyDiscount);
+            $validation = $this->validateRedemption($lockedClient, $pointsToRedeem, $ticketTotalHt, $otherDiscountsHt);
             if (!$validation['valid']) {
                 throw new \RuntimeException(implode(' ', $validation['errors']));
             }
@@ -285,7 +299,7 @@ class LoyaltyService
         }
 
         // Earn transaction
-        $pointsEarned = $this->calculateEarnablePoints($baseAfterRegularDiscount, $loyaltyDiscount);
+        $pointsEarned = $this->calculateEarnablePoints($baseHtBeforeLoyaltyDiscount, $loyaltyDiscount);
 
         if ($pointsEarned > 0) {
             $newBalance += $pointsEarned;

@@ -46,7 +46,12 @@
     $totalRemise   = (float)($ct['remise']         ?? $facture->remise ?? 0);
     $couponDiscountHt = (float)($facture->discount_ht ?? 0);
     $manualRemise  = max(0.0, round($totalRemise - $couponDiscountHt, 3));
-    $couponCode    = $facture->coupon_code_snapshot ?? null;
+$couponCode    = $facture->coupon_code_snapshot ?? null;
+    $sourceOrder = $facture->commande ?? null;
+    $orderPack = (float) ($sourceOrder?->pack_discount_ht ?? 0);
+    $orderCoupon = (float) ($sourceOrder?->discount_ht ?? 0);
+    $orderPoints = (float) ($sourceOrder?->points_discount_ht ?? 0);
+    $orderDiscount = $orderPack + $orderCoupon + $orderPoints;
     $baseImp       = round($totalHtBrut - $totalRemise, 3);
     $totalTva      = (float)($ct['tva']            ?? $facture->tva ?? 0);
     $totalTimbre   = (float)($ct['timbre']         ?? $facture->timbre ?? 0);
@@ -684,13 +689,19 @@ table.ftva-totals tr.row-grand td:last-child {
             <td>Total HT</td>
             <td>{{ $fmt($totalHtBrut) }}&nbsp;DT</td>
         </tr>
-        @if($manualRemise > 0)
+        @if($sourceOrder && $orderDiscount > 0)
+            @if($orderPack > 0)<tr><td>Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($orderPack / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</td><td>− {{ $fmt($orderPack) }}&nbsp;DT</td></tr>@endif
+            @if($sourceOrder->coupon_code_snapshot)<tr><td>Code promo {{ $sourceOrder->coupon_code_snapshot }}</td><td>− {{ $fmt($orderCoupon) }}&nbsp;DT</td></tr>@endif
+            @if($orderPoints > 0)<tr><td>Protinas ({{ $sourceOrder->points_redeemed }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
+            <tr><td>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($orderDiscount / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</td><td>{{ $fmt($orderDiscount) }}&nbsp;DT</td></tr>
+        @endif
+        @if($manualRemise > 0 && ! $sourceOrder)
         <tr>
             <td>Remise</td>
             <td>− {{ $fmt($manualRemise) }}&nbsp;DT</td>
         </tr>
         @endif
-        @if($couponDiscountHt > 0)
+        @if($couponDiscountHt > 0 && ! $sourceOrder)
         <tr>
             <td>Code promo{{ $couponCode ? ' (' . $couponCode . ')' : '' }}</td>
             <td>− {{ $fmt($couponDiscountHt) }}&nbsp;DT</td>

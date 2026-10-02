@@ -34,13 +34,13 @@ class ProtinasAudit extends Command
         }
         $days = max(1, (int) $this->option('days'));
         $top = max(1, (int) $this->option('top'));
-        $rate = PointsService::REDEEM_POINTS_PER_DT;
+        $rate = PointsService::pointsPerDt();
         $dt = fn ($p) => number_format(((int) $p) / $rate, 2, ',', ' ').' DT';
         $hasReview = Schema::hasColumn('user_point_transactions', 'review_id');
 
         $this->info(sprintf('Rules: earn %d pt/DT · %d pts = 1 DT · redeem cap %d%% of goods HT · welcome bonus %d pts',
-            PointsService::EARN_RATE, $rate, (int) round(PointsService::MAX_REDEEM_FRACTION * 100),
-            \App\Services\PhoneVerificationService::BONUS_POINTS));
+            PointsService::earnRate(), $rate, (int) config('loyalty.checkout.max_total_discount_percent', 10),
+            \App\Services\PhoneVerificationService::bonusPoints()));
 
         // ── 1. Where every credited point came from ──────────────────────────────────────────
         $source = "CASE
@@ -137,7 +137,12 @@ class ProtinasAudit extends Command
                 ->from('user_point_transactions as t')->whereColumn('t.user_id', 'w.user_id')->where('t.type', 'redeem'))->count();
             $this->line('');
             $this->info(sprintf('4) Welcome bonus: %d claimed (%s) · %d never had a delivered order · %d have redeemed points',
-                $claims, $dt($claims * \App\Services\PhoneVerificationService::BONUS_POINTS), $claimsNoOrder, $spent));
+                $claims, $dt($claims * \App\Services\PhoneVerificationService::bonusPoints()), $claimsNoOrder, $spent));
+            if (Schema::hasColumn('welcome_bonus_claims', 'credited_at')) {
+                $this->line(sprintf('   pending: %d · unlocked: %d',
+                    DB::table('welcome_bonus_claims')->whereNull('credited_at')->count(),
+                    DB::table('welcome_bonus_claims')->whereNotNull('credited_at')->count()));
+            }
         }
 
         // ── 5. Online orders whose TOTAL discount was large (points + coupon + pack stacked) ───
@@ -158,11 +163,12 @@ class ProtinasAudit extends Command
         // ── 6. The SHOP TILL card (clients.loyalty_points_balance) — a separate programme ───────
         if (Schema::hasTable('loyalty_point_transactions') && Schema::hasColumn('clients', 'loyalty_points_balance')) {
             $svc = \App\Services\LoyaltyService::class;
-            $storeRate = $svc::POINTS_PER_DT_VALUE;
+            $storeRate = $svc::pointsPerDt();
             $sdt = fn ($p) => number_format(((int) $p) / $storeRate, 2, ',', ' ').' DT';
             $this->line('');
-            $this->info(sprintf('6) Shop-till card: earn %d pt/DT · %d pts = 1 DT (= %d%% back) · min %d pts · cap = whole ticket',
-                $svc::POINTS_PER_DT, $storeRate, (int) round(100 * $svc::POINTS_PER_DT / $storeRate), $svc::MIN_REDEEM_POINTS));
+            $this->info(sprintf('6) Shop-till card: earn %d pt/DT · %d pts = 1 DT (= %d%% back) · min %d pts · cap = %d%%',
+                $svc::earnRate(), $storeRate, (int) round(100 * $svc::earnRate() / $storeRate),
+                $svc::minRedeemPoints(), (int) config('loyalty.till.max_total_discount_percent', 10)));
             $types = DB::table('loyalty_point_transactions')
                 ->selectRaw('type, COUNT(*) n, COUNT(DISTINCT client_id) clients, SUM(points) pts')->groupBy('type')->get();
             $this->table(['type', 'rows', 'clients', 'points', 'value'],
@@ -176,6 +182,16 @@ class ProtinasAudit extends Command
                 ->selectRaw('COUNT(*) n, SUM(COALESCE(c.loyalty_points_balance,0) - GREATEST(COALESCE(t.s,0),0)) extra')->first();
             $this->line(sprintf('   balance ≠ ledger (typed by hand or legacy import): %d clients, %+d pts = %s not backed by any transaction',
                 (int) ($sdrift->n ?? 0), (int) ($sdrift->extra ?? 0), $sdt((int) ($sdrift->extra ?? 0))));
+            if ($storeRate === 20) {
+                // The 20 pts = 1 DT scale is live: a card that was never doubled lost half its value.
+                $unconverted = \App\Services\TillPointsConversion::unconvertedClientIds($top);
+                if ($unconverted === []) {
+                    $this->line('   conversion to 20 pts = 1 DT: every card holding points was doubled');
+                } else {
+                    $this->warn(sprintf('   NOT converted to 20 pts = 1 DT (balance held, no conversion row): %s — run vps-run till-points-convert-apply',
+                        implode(', ', array_map(fn ($id) => '#'.$id, $unconverted))));
+                }
+            }
 
             $hasMoney = Schema::hasColumn('loyalty_point_transactions', 'monetary_value');
             $red = DB::table('loyalty_point_transactions as t')
@@ -201,6 +217,33 @@ class ProtinasAudit extends Command
         }
 
         $this->line('');
+        if (Schema::hasColumn('commandes', 'delivered_at')) {
+            foreach ([30, 90] as $period) {
+                $this->info(sprintf('Orders reaching delivered status in last %d days: %d', $period,
+                    DB::table('commandes')->whereNotNull('delivered_at')
+                        ->where('delivered_at', '>=', now()->subDays($period))->count()));
+            }
+        }
+        $orders = DB::table('commandes')->where('created_at', '>=', now()->subDays(90))
+            ->where('prix_ht', '>', 0)->get(['prix_ht', 'remise', 'discount_ht']);
+        $cap = (float) config('loyalty.checkout.max_total_discount_percent', 10);
+        $average = $orders->avg(fn ($o) => 100 * ((float) $o->remise + (float) $o->discount_ht) / (float) $o->prix_ht);
+        $bound = $orders->filter(fn ($o) => 100 * ((float) $o->remise + (float) $o->discount_ht)
+            >= $cap * (float) $o->prix_ht - 0.1)->count();
+        $this->info(sprintf('Last 90 days: average discount %.2f%% of goods · ceiling bound %d/%d orders (%.2f%%)',
+            $average ?? 0, $bound, $orders->count(), $orders->count() ? 100 * $bound / $orders->count() : 0));
+        if (Schema::hasTable('coupons')) {
+            $warn = (float) config('loyalty.coupons.warn_above_percent', 10);
+            $coupons = DB::table('coupons')->where('is_active', true)
+                ->where(fn ($q) => $q->whereNull('starts_at')->orWhere('starts_at', '<=', now()))
+                ->where(fn ($q) => $q->whereNull('ends_at')->orWhere('ends_at', '>=', now()))
+                ->get(['code', 'type', 'value', 'min_order_amount'])
+                ->filter(fn ($c) => ($c->type === 'percent' && (float) $c->value > $warn)
+                    || ($c->type === 'fixed' && (float) $c->value > (float) $c->min_order_amount * $warn / 100));
+            $this->info('Active coupons above '.$warn.'%: '.$coupons->count());
+            $this->table(['code', 'type', 'value', 'minimum goods'],
+                $coupons->map(fn ($c) => [$c->code, $c->type, $c->value, $c->min_order_amount])->all());
+        }
         $this->comment('Read-only: nothing was written.');
 
         return self::SUCCESS;

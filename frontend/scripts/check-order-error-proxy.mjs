@@ -53,6 +53,10 @@ try {
   let response = await route.exports.POST(request());
   assert.equal(response.status, 422); checks++;
   assert.deepEqual((await response.json()).errors, { 'commande.livraison_phone': ['invalid'] }); checks++;
+  globalThis.fetch = async () => Response.json({ message: 'Le total de votre commande a changé.', pricing: { total_dt: 190 } }, { status: 409 });
+  response = await route.exports.POST(request());
+  assert.equal(response.status, 409); checks++;
+  assert.deepEqual((await response.json()).pricing, { total_dt: 190 }); checks++;
   globalThis.fetch = async () => { throw Object.assign(new Error('timeout'), { name: 'TimeoutError' }); };
   response = await route.exports.POST(request());
   assert.equal(response.status, 500); checks++;

@@ -31,12 +31,15 @@ export function OrderDocument({ order, details }: { order: Order; details: Docum
   const city = [order.livraison_ville || order.ville, order.livraison_region || order.region].filter(Boolean);
   const postal = order.livraison_code_postale || order.code_postale;
   const date = order.created_at ? new Date(order.created_at) : null;
-  // remise is the aggregate HT discount in the house BL. Coupon snapshots are a fallback,
-  // never an extra row added to that aggregate (which would count the same reduction twice).
+  const separated = order.pack_discount_ht != null && order.points_discount_ht != null;
   const discountHt = number(order.remise) ?? number(order.discount_ht);
   const rows = [
     { label: 'Sous-total HT', value: number(order.prix_ht) },
-    { label: discountHt === null ? 'Remise TTC' : 'Remise HT', value: discountHt ?? number(order.discount_ttc) },
+    ...(separated ? [
+      { label: 'Remise pack', value: Number(order.pack_discount_ht) > 0 ? number(order.pack_discount_ht) : null },
+      { label: order.coupon_code_snapshot ? `Code promo ${order.coupon_code_snapshot}` : 'Code promo', value: Number(order.discount_ht) > 0 ? number(order.discount_ht) : null },
+      { label: `Protinas (${order.points_redeemed ?? 0} pts)`, value: Number(order.points_discount_ht) > 0 ? number(order.points_discount_ht) : null },
+    ] : [{ label: discountHt === null ? 'Remise TTC' : 'Remise HT', value: discountHt ?? number(order.discount_ttc) }]),
     { label: 'Livraison', value: number(order.frais_livraison) },
     { label: 'Total de la commande', value: number(order.prix_ttc), total: true },
   ].filter(row => row.value !== null);

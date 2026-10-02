@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\ProductFeedController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\ReviewThreadController;
 use App\Http\Controllers\Api\MemberDashboardController;
+use App\Http\Controllers\Api\LoyaltyRulesController;
 
 /*
 |--------------------------------------------------------------------------
@@ -115,6 +116,8 @@ Route::get('/searchProductBySubCategoryText/{slug}/{text}', [ApisController::cla
 Route::get('/commande/{id}', [CommandeController::class, 'details'])->whereNumber('id');
 
 Route::post('/add_commande', [CommandeController::class, 'storeCommandeApi']);
+Route::get('/loyalty/rules', LoyaltyRulesController::class);
+Route::post('/checkout/quote', [CommandeController::class, 'quote'])->middleware('throttle:checkout-quote');
 // Pack (bundle) tier quote — PUBLIC, server-computes discount from real prices
 Route::post('/pack/quote', [PackController::class, 'quote']);
 Route::post('/coupons/apply', [CouponController::class, 'apply']);

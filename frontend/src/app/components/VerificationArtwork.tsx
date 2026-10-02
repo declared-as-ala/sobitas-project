@@ -45,14 +45,14 @@ export function RegistrationPanel() {
         Votre compte.<br /><span className="text-brand-300">Vos avantages.</span>
       </h2>
       <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-2">
-        Confirmez votre téléphone en quelques secondes et recevez votre cadeau de bienvenue.
+        15 DT offerts (300 Protinas) : vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.
       </p>
     </div>
     <div className="relative z-10 my-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <CircleDollarSign className="h-6 w-6 text-brand-300" aria-hidden="true" />
         <strong className="mt-3 block font-display text-2xl">15 DT offerts</strong>
-        <span className="mt-1 block text-xs text-ink-2">300 Protinas après vérification</span>
+        <span className="mt-1 block text-xs text-ink-2">300 Protinas créditées à la première livraison</span>
       </div>
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <ShieldCheck className="h-6 w-6 text-ok" aria-hidden="true" />

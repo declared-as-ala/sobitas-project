@@ -50,7 +50,15 @@
                 </div>
             @endif
 
-            @if(!empty($remise))
+            @if(!empty($discountLines))
+                @foreach($discountLines as $discountLine)
+                    <div class="cw-totals-row cw-totals-row--remise">
+                        <span>{{ $discountLine['label'] }}</span>
+                        <span>− {{ $discountLine['amount'] }}</span>
+                    </div>
+                @endforeach
+                <div class="cw-totals-row"><span>{{ $discountTotalLabel }}</span></div>
+            @elseif(!empty($remise))
                 <div class="cw-totals-row cw-totals-row--remise">
                     <span>Remise</span>
                     <span>- {{ $remise }}</span>
@@ -71,7 +79,7 @@
         </div>
 
         {{-- WHY there is a remise — so staff never have to guess where a discount came from. --}}
-        @if(!empty($remise) && $isLoyaltyRemise)
+        @if(empty($discountLines) && !empty($remise) && $isLoyaltyRemise)
             <div class="cw-loyalty">
                 <img
                     class="cw-loyalty__coin"
@@ -86,7 +94,7 @@
                     <div class="cw-loyalty__hint">Le client a échangé ses points de fidélité — c’est l’origine de la remise.</div>
                 </div>
             </div>
-        @elseif(!empty($remise) && !empty($remiseReason))
+        @elseif(empty($discountLines) && !empty($remise) && !empty($remiseReason))
             <div class="cw-remise-reason">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
                     <path fill-rule="evenodd" d="M5.25 2.25h3.879a1.5 1.5 0 011.06.44l11.122 11.12a1.5 1.5 0 010 2.122l-3.879 3.879a1.5 1.5 0 01-2.121 0L3.31 10.81a1.5 1.5 0 01-.44-1.061V5.872A3.622 3.622 0 015.25 2.25zM6 6a.75.75 0 100-1.5.75.75 0 000 1.5z" clip-rule="evenodd" />

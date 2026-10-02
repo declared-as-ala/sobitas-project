@@ -109,6 +109,8 @@ class CommandeResource extends Resource
                     'livraison_prenom',
                     'livraison_phone',
                     'prix_ttc',
+                    'prix_ht', 'remise', 'frais_livraison', 'discount_ht', 'coupon_code_snapshot',
+                    'pack_discount_ht', 'points_discount_ht', 'points_redeemed',
                     'etat',
                     'region',
                     'created_at',
@@ -535,6 +537,16 @@ class CommandeResource extends Resource
                 : 'Remise commerciale appliquée à la commande';
         }
 
+        $pack = (float) ($record->pack_discount_ht ?? 0);
+        $coupon = (float) ($record->discount_ht ?? 0);
+        $points = (float) ($record->points_discount_ht ?? 0);
+        $discountTotal = $pack + $coupon + $points;
+        $packPercent = $totalHt > 0 ? round($pack / $totalHt * 100, 1) : 0;
+        $discountLines = [];
+        if ($pack > 0) $discountLines[] = ['label' => 'Remise pack ('.$packPercent.' %)', 'amount' => $fmt($pack)];
+        if ($record->coupon_code_snapshot) $discountLines[] = ['label' => 'Code promo '.$record->coupon_code_snapshot, 'amount' => $fmt($coupon)];
+        if ($points > 0) $discountLines[] = ['label' => 'Protinas ('.$protinasUsed.' pts)', 'amount' => $fmt($points)];
+
         return view('filament.components.convert-wizard-summary', [
             'sourceType'      => 'Commande',
             'sourceNumber'    => $record->numero,
@@ -543,6 +555,8 @@ class CommandeResource extends Resource
             'itemsCount'      => $record->details->count(),
             'totalHt'         => $fmt($totalHt > 0 ? $totalHt : $totalTtc),
             'remise'          => $remise > 0 ? $fmt($remise) : 0,
+            'discountLines' => $discountLines,
+            'discountTotalLabel' => 'Total remises : '.$fmt($discountTotal).' ('.($totalHt > 0 ? round($discountTotal / $totalHt * 100, 2) : 0).' % des articles)',
             'remiseReason'    => $remiseReason,
             'remiseIsLoyalty' => $protinasUsed > 0,
             'protinasUsed'    => $protinasUsed,

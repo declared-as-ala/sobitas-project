@@ -6,6 +6,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTi
 import { ChevronUp, Loader2, Shield, X } from 'lucide-react';
 import { getStorageUrl } from '@/services/api';
 import { Container } from '@/app/components/layout/Container';
+import type { CheckoutPricing } from '@/util/checkoutPricing';
 
 export const CHECKOUT_CTA_HEIGHT_REM = 6.25;
 
@@ -15,6 +16,10 @@ interface CheckoutFooterCTAProps {
   finalTotal: number;
   totalPrice: number;
   shippingCost: number;
+  pricing: CheckoutPricing | null;
+  quoteFailed: boolean;
+  pointsPerDt: number;
+  maxTotalDiscountPercent: number;
   items: Array<{ product: any; quantity: number }>;
   getEffectivePrice: (product: any) => number;
   mobileSummaryOpen: boolean;
@@ -28,6 +33,10 @@ export function CheckoutFooterCTA({
   finalTotal,
   totalPrice,
   shippingCost,
+  pricing,
+  quoteFailed,
+  pointsPerDt,
+  maxTotalDiscountPercent,
   items,
   getEffectivePrice,
   mobileSummaryOpen,
@@ -85,23 +94,26 @@ export function CheckoutFooterCTA({
                 </div>
                 <div className="space-y-2 border-t border-rule pt-4">
                   <div className="flex justify-between text-sm">
-                    <span className="text-ink-2">Sous-total</span>
-                    <span dir="ltr" className="font-semibold text-ink-1">{totalPrice.toFixed(2)} DT</span>
+                    <span className="text-ink-2">Sous-total articles</span>
+                    <span dir="ltr" className="font-semibold text-ink-1">{(pricing?.goods_dt ?? totalPrice).toFixed(2)} DT</span>
                   </div>
-                  {totalPrice + shippingCost > finalTotal && <div className="flex justify-between text-sm">
-                    <span className="text-ink-2">Remises</span>
-                    <span dir="ltr" className="font-semibold text-ok">−{Math.max(0, totalPrice + shippingCost - finalTotal).toFixed(2)} DT</span>
-                  </div>}
+                  {pricing?.pack.applied && pricing.pack.amount_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Remise pack −{pricing.pack.percent} %</span><span dir="ltr" className="font-semibold text-ok">−{pricing.pack.amount_dt.toFixed(2)} DT</span></div>}
+                  {pricing?.coupon.applied && pricing.coupon.amount_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Code <bdi dir="auto">{pricing.coupon.code}</bdi></span><span dir="ltr" className="font-semibold text-ok">−{pricing.coupon.amount_dt.toFixed(2)} DT</span></div>}
+                  {pricing && pricing.protinas.used_dt > 0 && <div className="flex justify-between text-sm"><span className="text-ink-2">Protinas utilisées</span><span dir="ltr" className="font-semibold text-ok">−{pricing.protinas.used_dt.toFixed(2)} DT</span></div>}
                   <div className="flex justify-between text-sm">
-                    <span className="text-ink-2">Expédition</span>
+                    <span className="text-ink-2">Livraison</span>
                     <span dir="ltr" className={shippingCost === 0 ? 'font-semibold text-ok' : 'font-semibold text-ink-1'}>
-                      {shippingCost === 0 ? 'Gratuite' : `${shippingCost} DT`}
+                      {shippingCost === 0 ? 'Offerte' : `${shippingCost.toFixed(2)} DT`}
                     </span>
                   </div>
                   <div className="flex items-baseline justify-between border-t border-rule pt-3">
-                    <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total</span>
+                    <span className="font-display text-lg font-extrabold uppercase tracking-tight text-ink-1">Total à payer à la livraison</span>
                     <span dir="ltr" className="font-display text-xl font-extrabold tracking-tight tabular-nums text-brand">{finalTotal.toFixed(2)} DT</span>
                   </div>
+                  {(!pricing || quoteFailed) && <p className="text-xs text-ink-3">Total confirmé à la validation.</p>}
+                  {pricing?.coupon.reason === 'pack_better' && <p className="text-xs leading-relaxed text-ink-2">Votre remise pack (−{pricing.pack.amount_dt.toFixed(2)} DT) est plus avantageuse que ce code : elle est appliquée à sa place, et votre code reste valable pour une prochaine commande.</p>}
+                  <p className="text-xs leading-relaxed text-ink-2">Code promo ou remise pack (la meilleure des deux) + Protinas : jusqu&apos;à {maxTotalDiscountPercent} % de vos articles ; les Protinas non utilisées restent sur votre compte.</p>
+                  {pricing && <p className="text-xs leading-relaxed text-ink-2">Vous gagnerez {pricing.earn_on_delivery_points} Protinas ({(pricing.earn_on_delivery_points / pointsPerDt).toFixed(2)} DT) à la livraison.</p>}
                 </div>
               </div>
             </SheetContent>

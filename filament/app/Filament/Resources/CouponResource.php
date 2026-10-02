@@ -48,14 +48,25 @@ class CouponResource extends Resource
                             Coupon::TYPE_FREE_SHIPPING => 'Livraison gratuite',
                         ])
                         ->default(Coupon::TYPE_PERCENT)
-                        ->required(),
+                        ->required()->live(),
                     Forms\Components\TextInput::make('value')
                         ->label('Valeur (%) ou montant DT')
                         ->numeric()
                         ->minValue(0)
                         ->default(10)
                         ->required()
+                        ->live(onBlur: true)
                         ->helperText('Pour type Pourcentage: ex. 10 pour 10%. Pour type Montant fixe: ex. 5 pour 5 DT.'),
+                    Forms\Components\Placeholder::make('discount_warning')
+                        ->label('Attention')
+                        ->content(fn () => 'Cette remise dépasse le seuil recommandé de '.config('loyalty.coupons.warn_above_percent', 10).' % des articles. Elle reste autorisée et sera auditée.')
+                        ->visible(function (callable $get): bool {
+                            $warn = (float) config('loyalty.coupons.warn_above_percent', 10);
+                            $value = (float) $get('value');
+                            return ($get('type') === Coupon::TYPE_PERCENT && $value > $warn)
+                                || ($get('type') === Coupon::TYPE_FIXED
+                                    && $value > (float) $get('min_order_amount') * $warn / 100);
+                        }),
                 ])->columns(2),
 
             Section::make('Validité')
@@ -77,6 +88,7 @@ class CouponResource extends Resource
                         ->label('Montant minimum (HT) DT')
                         ->numeric()
                         ->minValue(0)
+                        ->live(onBlur: true)
                         ->nullable(),
                     Forms\Components\TextInput::make('max_discount_amount')
                         ->label('Plafond remise (DT)')

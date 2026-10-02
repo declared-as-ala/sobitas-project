@@ -56,7 +56,8 @@ export function AccountVerificationCard() {
     </div>
     {user.welcome_bonus_eligible && !phoneVerified && <div className="flex items-center gap-3 border-t border-hairline bg-brand-50 px-4 py-3 text-sm text-ink-2 sm:px-5">
       <Gift className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-      <p><strong className="text-ink-1">15 DT vous attendent.</strong> Confirmez votre téléphone pour recevoir 300 Protinas.</p>
+      <p><strong className="text-ink-1">15 DT offerts (300 Protinas) :</strong> vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.</p>
     </div>}
+    {user.welcome_bonus_status === 'pending' && <div className="flex items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 text-sm text-ink-2 sm:px-5"><Gift className="h-5 w-5 shrink-0 text-warn" aria-hidden="true" /><p>15 DT en attente, crédités à la livraison de votre 1re commande</p></div>}
   </section>;
 }
