@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAffiliateAttribution } from '@/lib/orderAttribution';
-
-// Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.protein.tn/api';
+import { BACKEND_API_URL, forwardShopperIp } from '@/lib/shopperIp';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +14,7 @@ export async function POST(request: NextRequest) {
     const idempotencyKey = request.headers.get('Idempotency-Key');
     
     // Forward the request to the backend API
-    const backendUrl = `${API_URL}/add_commande`;
+    const backendUrl = `${BACKEND_API_URL}/add_commande`;
     
     console.log('[API Route] Calling backend:', backendUrl);
     console.log('[API Route] Request body keys:', Object.keys(body));
@@ -28,6 +26,8 @@ export async function POST(request: NextRequest) {
         'Accept': 'application/json',
         ...(authHeader && { Authorization: authHeader }),
         ...(idempotencyKey && { 'Idempotency-Key': idempotencyKey }),
+        // The coupon-apply bucket this order may spend is keyed on the shopper, not on this server.
+        ...forwardShopperIp(request),
       },
       body: JSON.stringify(body),
       // Add timeout and signal for better error handling
