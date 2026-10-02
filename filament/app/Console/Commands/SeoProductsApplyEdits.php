@@ -35,8 +35,13 @@ class SeoProductsApplyEdits extends Command
 
     private const FIELDS = ['description_fr', 'description_cover', 'questions'];
 
-    /** Blog articles take the same guarded replacement (`"model": "article"`), on their body fields. */
-    private const ARTICLE_FIELDS = ['description_fr', 'description'];
+    /**
+     * Blog articles take the same guarded replacement (`"model": "article"`): the body fields, and
+     * since 29/09/2026 the cover + its alt (new generated covers shipped via restore-article-images)
+     * and `publier` (a post merged into another by a 301 leaves the sitemap). Same hash guard: the
+     * edit applies only while the stored value still hashes to `old_sha1` (sha1 of '' when empty).
+     */
+    private const ARTICLE_FIELDS = ['description_fr', 'description', 'cover', 'alt_cover', 'publier'];
 
     public function handle(): int
     {
@@ -57,26 +62,33 @@ class SeoProductsApplyEdits extends Command
                 $this->error(sprintf('  INVALID   %s — not a JSON object, ignored', basename($file)));
                 continue;
             }
-            foreach ($decoded as $slug => $entry) {
-                if (is_string($slug) && is_array($entry)) {
-                    $entries[$slug] = $entry; // later files win on the same slug
+            foreach ($decoded as $key => $entry) {
+                if (! is_string($key) || ! is_array($entry)) {
+                    continue;
                 }
+                // One edit per slug AND field: a post can take a new body, a new cover and its alt in
+                // one run. The key may carry a `#suffix` (e.g. "slug#cover") so one JSON object can
+                // hold several fields of one slug; later files still win on the same slug+field.
+                $slug = explode('#', $key, 2)[0];
+                $entry['__slug'] = $slug;
+                $entries[$slug."|".($entry['field'] ?? '')] = $entry;
             }
         }
         if ($only !== '') {
-            $entries = array_intersect_key($entries, [$only => true]);
+            $entries = array_filter($entries, fn ($e) => $e['__slug'] === $only);
         }
 
         $this->line(sprintf('%s — %d edit(s) from %s', $apply ? 'APPLY' : 'REPORT ONLY', count($entries), $dir));
         $this->line('');
 
-        $productSlugs = array_keys(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') !== 'article'));
-        $articleSlugs = array_keys(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') === 'article'));
+        $productSlugs = array_values(array_unique(array_column(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') !== 'article'), '__slug')));
+        $articleSlugs = array_values(array_unique(array_column(array_filter($entries, fn ($e) => ($e['model'] ?? 'product') === 'article'), '__slug')));
         $products = Product::query()->whereIn('slug', $productSlugs)->get();
         $articles = $articleSlugs === [] ? collect() : Article::query()->whereIn('slug', $articleSlugs)->get();
         $changed = $upToDate = $skipped = 0;
 
-        foreach ($entries as $slug => $entry) {
+        foreach ($entries as $entry) {
+            $slug = $entry['__slug'];
             $field = (string) ($entry['field'] ?? '');
             $value = $entry['value'] ?? null;
             $oldSha = strtolower((string) ($entry['old_sha1'] ?? ''));

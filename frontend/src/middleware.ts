@@ -7,6 +7,7 @@ import { brandSlugRedirectTarget } from '@/util/brandSlug';
 import { isTaxonomySlug, bestCategoryForSlug, isBrandSlug, isCmsPageSlug } from '@/util/taxonomySlugs';
 import { resolveArticleSlug } from '@/util/blogSlugs';
 import { blogHref } from '@/util/blogSlug';
+import BLOG_MERGES_2909 from '@/generated/blogMerges2909.json';
 import {
   AFFILIATE_COOKIE,
   AFFILIATE_COOKIE_MAX_AGE,
@@ -764,6 +765,12 @@ async function handleRequest(request: NextRequest, pathname: string): Promise<Ne
   if (blogArticle?.[1]) {
     let articleSlug = blogArticle[1];
     try { articleSlug = decodeURIComponent(articleSlug); } catch { /* keep raw */ }
+    /* 29/09/2026: 87 near-duplicate posts were merged into the post that answers the same question.
+       Their CMS rows are unpublished, so resolveArticleSlug would answer 410 — checked FIRST, the
+       merge answers one 301 to the survivor instead. redirects.js carries the ASCII (French) ones
+       too; the Arabic slugs (spaces, « ؟ », « : ») only work here, after decoding + NFC. */
+    const mergedInto = (BLOG_MERGES_2909 as Record<string, string>)[articleSlug.trim().normalize('NFC').toLowerCase()];
+    if (mergedInto) return redirectPreservingQuery(request, blogHref(mergedInto));
     const realSlug = await resolveArticleSlug(articleSlug);
     if (realSlug === false) {
       return new NextResponse('Gone', { status: 410, headers: { 'Cache-Control': 'no-store' } });

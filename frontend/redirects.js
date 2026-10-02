@@ -28,6 +28,20 @@
 /** @type {() => import('next').Redirect[]} */
 function buildRedirects() {
   const p = (source, destination) => ({ source, destination, permanent: true });
+  /* 29/09/2026 blog refresh: merged posts (decoded slug → survivor slug). The ASCII ones become
+     rules here; every one of them — Arabic included — is also answered by the middleware. Any older
+     rule whose DESTINATION is now a merged post is pointed straight at the survivor (no chain). */
+  // This CommonJS redirect config is loaded by next.config.js; keep JSON loading synchronous.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const blogMerges = require('./src/generated/blogMerges2909.json');
+  const asciiSlug = (s) => /^[a-z0-9-]+$/.test(s);
+  const mergedRules = Object.entries(blogMerges)
+    .filter(([from, to]) => asciiSlug(from) && asciiSlug(to))
+    .map(([from, to]) => p(`/blog/${from}`, `/blog/${to}`));
+  const settleBlogDestination = (rule) => {
+    const m = typeof rule.destination === 'string' && rule.destination.match(/^\/blog\/([a-z0-9-]+)$/);
+    return m && blogMerges[m[1]] ? { ...rule, destination: `/blog/${blogMerges[m[1]]}` } : rule;
+  };
 
   return [
     /*
@@ -733,7 +747,8 @@ function buildRedirects() {
        crawled URL itself — the old site truncated the slug — so both spellings are listed. */
     p('/shop/galvanize-aqua-', '/galvanize-chrome'),
     p('/product/galvanize-aqua-', '/galvanize-chrome'),
-  ];
+    ...mergedRules,
+  ].map(settleBlogDestination);
 }
 
 module.exports = buildRedirects;
