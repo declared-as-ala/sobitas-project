@@ -149,3 +149,23 @@
 # Both verified live 02/10 from their own Offer.availability. Watch for the day the 908 g restocks
 # or the owner adds a Redirections row — and watch that the 2,27 kg stays InStock and self-canonical.
 /whey-proteine/whey-gold-standard-908g
+
+# ── 05/10/2026: the blog sitemap must list no redirect ────────────────────────────────────────
+# MEASURED 05/10 on all 137 URLs in /sitemaps/blog.xml, Googlebot UA, redirect:manual: 136 answered
+# 200 at the listed URL and ONE answered 308 — the slug below, folded into its survivor by the
+# owner's 29/09 blog refresh (blogMerges2909.json) while a published row of it survives in
+# /all_articles. The sitemap source now subtracts every key of that merge map
+# (sitemapSources.ts), so AFTER this deploy blog.xml must hold 136 <loc> and this URL must not be
+# among them. The URL itself keeps 308-ing — that is correct and is not what is being watched.
+/blog/quand-prendre-de-la-creatine-le-guide-complet-pour-optimiser-vos-resultats
+/blog/comment-utiliser-la-creatine-en-tunisie-pour-maximiser-vos-performances
+
+# ── 05/10/2026: the Gold Standard flavour consolidation (shipped 28/09) must keep holding ─────
+# 21 Gold Standard SKUs sit in /whey-proteine and exactly ONE is buyable (2,27 kg, 379 DT, qte 59);
+# the other 20 are qte 0, 11 of them iHerb flavour imports of that very format priced 587 DT.
+# productVariantCanonicals.ts canonicalises 19 of them (11 → the 2,27 kg, 8 → the 908 g) and drops
+# them from the sitemap. Verified live 05/10 on the Rocky Road 2,27 kg: canonical points at the
+# buyable page, robots index,follow, 0 occurrences in products-*.xml. This is the kind of fix that
+# regresses silently — if a flavour URL ever goes self-canonical again, that is the finding.
+/whey-proteine/optimum-nutrition-gold-standard-100-whey-rocky-road-227-kg
+/whey-proteine/100-whey-gold-standard-2-27kg
