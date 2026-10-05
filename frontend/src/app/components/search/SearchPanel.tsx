@@ -9,7 +9,7 @@ import { getPriceDisplay } from '@/util/productPrice';
 import { buildProductUrlPath } from '@/util/productUrl';
 import { isInStock } from '@/util/cartStock';
 import type { Product } from '@/types';
-import { pointsForSpend } from '@/util/loyaltyPoints';
+import { cachedLoyaltyRules, isLoyaltyExcludedProduct, pointsForSpend } from '@/util/loyaltyPoints';
 import { ProtinaAmount } from '@/app/components/loyalty/Protina';
 
 /**
@@ -75,6 +75,8 @@ export function SearchResultRow({
 }) {
   const pd = getPriceDisplay(product);
   const inStock = isInStock(product);
+  // Machines are outside the Protinas programme (rule 19): no « +N Protinas » on them.
+  const earnPoints = isLoyaltyExcludedProduct(product, cachedLoyaltyRules()) ? 0 : pointsForSpend(pd.finalPrice);
   const category = product.sous_categorie?.designation_fr;
   const saving =
     pd.hasPromo && pd.oldPrice != null ? Math.max(0, Math.round(pd.oldPrice - pd.finalPrice)) : 0;
@@ -187,7 +189,7 @@ export function SearchResultRow({
               <span className="whitespace-nowrap font-semibold text-brand">Économisez {saving} DT</span>
             </>
           )}
-          <span className="whitespace-nowrap font-semibold text-ink-3"><ProtinaAmount value={pointsForSpend(pd.finalPrice)} signed /></span>
+          {earnPoints > 0 && <span className="whitespace-nowrap font-semibold text-ink-3"><ProtinaAmount value={earnPoints} signed /></span>}
         </span>
       </span>
 

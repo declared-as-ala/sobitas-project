@@ -610,6 +610,8 @@ class ClientController extends Controller
             'welcome_bonus_awarded' => $bonusStatus === 'awarded',
             'welcome_bonus_status' => $bonusStatus,
             'points_value_dt' => app(PointsService::class)->pointsToDt($pointsBalance),
+            // Protinas v3: earned / gift / pending / expiry / debt / savings / en route.
+            'protinas'        => app(\App\Services\ProtinaWalletService::class)->customerPayload($user),
             'email_verified'  => $user->hasVerifiedEmail(),
             'phone_verified'  => $user->phone_verified_at !== null,
             'contact_verified' => $user->hasVerifiedContact(),
@@ -641,11 +643,13 @@ class ClientController extends Controller
         $user = $request->user();
         $commandes = Commande::query()
             ->visibleToStorefrontUser($user)
-            ->select('id', 'numero', 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at', 'region', 'ville')
+            ->select('id', 'numero', 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at', 'region', 'ville',
+                // v3: the earning base frozen at checkout, so "en route" Protinas match what delivery credits.
+                ...(Schema::hasColumn('commandes', 'earn_base_dt') ? ['earn_base_dt'] : []))
             // latestShipment is an ofMany relation. A relation-level column projection makes
             // MySQL generate an unqualified `commande_id` beside the ofMany subquery join and
             // crashes the whole account page with "Column commande_id is ambiguous".
-            ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
+            ->with(['latestShipment', self::pointTransactionsRelation()])
             ->latest()
             ->paginate($perPage);
 
@@ -673,9 +677,13 @@ class ClientController extends Controller
                 // CommandeController::details() on /commande/{id} (the confirmation page), so
                 // this exposes nothing new — it stops one of the two order views from lying.
                 'remise', 'discount_ht', 'discount_ttc', 'coupon_code_snapshot',
-                'pack_discount_ht', 'points_discount_ht', 'points_redeemed'
+                'pack_discount_ht', 'points_discount_ht', 'points_redeemed',
+                // Protinas v3: delivery paid with Protinas and the gift part (never budget_dt).
+                ...array_values(array_filter(['pricing_version', 'points_shipping_dt', 'points_redeemed_gift',
+                    'requires_phone_confirmation', 'protinas_forfeited', 'protinas_forfeit_waived', 'earn_base_dt'],
+                    fn (string $column) => Schema::hasColumn('commandes', $column)))
             )
-            ->with(['latestShipment', 'pointTransactions:id,commande_id,type,points'])
+            ->with(['latestShipment', self::pointTransactionsRelation()])
             ->first();
 
         if (! $commande) {
@@ -688,6 +696,16 @@ class ClientController extends Controller
             ->get();
 
         return response()->json(['commande' => $this->withCustomerTracking($commande), 'details' => $details]);
+    }
+
+    /**
+     * The order's ledger rows for withCustomerTracking(), with their key when the column exists: a
+     * negative adjustment keyed order:{id}:redeem… is a re-debit (spending), not a clawback.
+     */
+    private static function pointTransactionsRelation(): string
+    {
+        return 'pointTransactions:id,commande_id,type,points'
+            .(Schema::hasColumn('user_point_transactions', 'idempotency_key') ? ',idempotency_key' : '');
     }
 
     /**
@@ -718,8 +736,15 @@ class ClientController extends Controller
         $redeemedGross = abs((int) $movements->where('type', 'redeem')->sum('points'));
         $earnedGross = max(0, (int) $movements->where('type', 'earn')->sum('points'));
         $adjustments = $movements->where('type', 'adjustment');
-        $refunded = max(0, (int) $adjustments->where('points', '>', 0)->sum('points'));
-        $revoked = abs(min(0, (int) $adjustments->where('points', '<', 0)->sum('points')));
+        // A negative adjustment keyed order:{id}:redeem… (`:v{n}`) is the re-debit of an order
+        // delivered or put back in progress after a cancellation refunded it: spending again, which
+        // cancels that refund. Only earn reversals (and legacy keyless negatives) are clawbacks.
+        $redebitPrefix = 'order:'.$commande->id.':redeem';
+        $isRedebit = fn ($row): bool => str_starts_with((string) ($row->getAttributes()['idempotency_key'] ?? ''), $redebitPrefix);
+        $negatives = $adjustments->where('points', '<', 0);
+        $redebited = abs((int) $negatives->filter($isRedebit)->sum('points'));
+        $refunded = max(0, (int) $adjustments->where('points', '>', 0)->sum('points') - $redebited);
+        $revoked = abs(min(0, (int) $negatives->reject($isRedebit)->sum('points')));
         $spent = max(0, $redeemedGross - $refunded);
         $earned = max(0, $earnedGross - $revoked);
 
@@ -728,11 +753,13 @@ class ClientController extends Controller
         $isClosed = $isDelivered || $isCancelled;
         $pending = 0;
         if (! $isClosed) {
-            $pending = $points->earnForSpend($points->earnableSpend(
-                (float) $commande->prix_ttc,
-                (float) ($commande->frais_livraison ?? 0),
-                (float) $commande->prix_ht
-            ));
+            $pending = $points->earnForSpend(array_key_exists('earn_base_dt', $commande->getAttributes())
+                ? $points->earnableSpendFor($commande)
+                : $points->earnableSpend(
+                    (float) $commande->prix_ttc,
+                    (float) ($commande->frais_livraison ?? 0),
+                    (float) $commande->prix_ht
+                ));
         }
 
         $commande->setAttribute('protina', [
@@ -768,7 +795,9 @@ class ClientController extends Controller
         $attributes = $commande->getAttributes();
         if (array_key_exists('remise', $attributes) && array_key_exists('discount_ht', $attributes)) {
             $goods = round((float) $commande->prix_ht, 3);
+            // v3: frais_livraison is NET of the delivery paid with Protinas (points_shipping_dt).
             $shipping = round((float) ($commande->frais_livraison ?? 0), 3);
+            $pointsShipping = round((float) ($attributes['points_shipping_dt'] ?? 0), 3);
             $total = round((float) $commande->prix_ttc, 3);
             $couponDiscount = round((float) ($commande->discount_ht ?? 0), 3);
             $pointsDiscount = round((float) ($commande->points_discount_ht ?? $points->pointsToDt($redeemedGross)), 3);
@@ -780,6 +809,12 @@ class ClientController extends Controller
             $commande->setAttribute('totals', [
                 'goods' => $goods,
                 'shipping' => $shipping,
+                // « Livraison 10,000 / Réglée en Protinas −10,000 »: gross fee and the Protinas part.
+                'shipping_gross' => round($shipping + $pointsShipping, 3),
+                'points_shipping' => $pointsShipping,
+                'points_redeemed_gift' => (int) ($attributes['points_redeemed_gift'] ?? 0),
+                // Waived by staff (« Rendre la retenue Protinas »): nothing is retained any more.
+                'protinas_forfeited' => empty($attributes['protinas_forfeit_waived']) ? (int) ($attributes['protinas_forfeited'] ?? 0) : 0,
                 'coupon_discount' => $couponDiscount,
                 'coupon_code' => $commande->coupon_code_snapshot ?: null,
                 'points_discount' => $pointsDiscount,

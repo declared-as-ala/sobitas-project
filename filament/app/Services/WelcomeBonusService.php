@@ -55,23 +55,34 @@ class WelcomeBonusService
         return 'Cadeau de bienvenue — '.round($points / PointsService::pointsPerDt(), 3).' DT en Protinas';
     }
 
+    /** The expiry a welcome gift credited now gets (null = never; pre-v3 claims are grandfathered). */
+    public static function giftExpiryFor(bool $grandfathered): ?\Carbon\CarbonInterface
+    {
+        return $grandfathered ? null : PointsService::giftExpiry();
+    }
+
     /**
      * Credit a reserved (pending) claim now, without a delivered order.
      *
      * This is what turning welcome_bonus.unlock_on_first_delivery OFF means for claims reserved
      * while it was on: claimWelcomeBonus(), a re-verification and `protinas:welcome-release-pending`
-     * all come here. Idempotent: an already-credited claim is left alone, the ledger key is unique.
+     * all come here — and, since v3, the phone verification itself (the gift is credited at once).
+     * Idempotent: an already-credited claim is left alone, the ledger key is unique.
+     *
+     * Since v3 the credit is GIFT Protinas valid loyalty.gift.valid_days. $grandfathered = a claim
+     * reserved before v3 (released by the deploy migration): no expiry, as promised at the time.
      */
-    public function creditPending(User $user): bool
+    public function creditPending(User $user, bool $grandfathered = false): bool
     {
-        return DB::transaction(function () use ($user): bool {
+        return DB::transaction(function () use ($user, $grandfathered): bool {
             $claim = DB::table('welcome_bonus_claims')->where('user_id', $user->id)
                 ->whereNull('credited_at')->lockForUpdate()->first();
             if (! $claim || (int) $claim->points <= 0) {
                 return false;
             }
             $tx = app(PointsService::class)->record($user, 'earn', (int) $claim->points,
-                self::creditDescription((int) $claim->points), null, null, self::unlockKey((int) $user->id, 0));
+                self::creditDescription((int) $claim->points), null, null, self::unlockKey((int) $user->id, 0),
+                PointsService::BUCKET_GIFT, self::giftExpiryFor($grandfathered));
             if (! $tx->wasRecentlyCreated) {
                 return false;
             }
@@ -125,7 +136,8 @@ class WelcomeBonusService
             }
             $tx = app(PointsService::class)->record($user, 'earn', (int) $claim->points,
                 self::creditDescription((int) $claim->points), null, null,
-                self::unlockKey((int) $user->id, (int) $commande->id));
+                self::unlockKey((int) $user->id, (int) $commande->id), PointsService::BUCKET_GIFT,
+                self::giftExpiryFor(false));
             if (! $tx->wasRecentlyCreated) {
                 return false;
             }
@@ -157,8 +169,12 @@ class WelcomeBonusService
                 return;
             }
             $points = (int) $claim->points;
-            $balance = (int) User::whereKey($user->id)->lockForUpdate()->value('points_balance');
-            $recovered = max(0, min($balance, $points));
+            $locked = User::whereKey($user->id)->lockForUpdate()->first();
+            $balance = (int) ($locked?->points_balance ?? 0);
+            // Since v3 the welcome is gift Protinas: only what the gift wallet still holds comes back.
+            $recoverable = Schema::hasColumn('users', 'gift_points_balance')
+                ? min($balance, (int) ($locked?->gift_points_balance ?? 0)) : $balance;
+            $recovered = max(0, min($recoverable, $points));
             if ($recovered === 0) {
                 Log::warning('Welcome bonus reversal recovered nothing: bonus already spent, claim kept credited', [
                     'user_id' => $user->id, 'commande_id' => $commande->id, 'points' => $points,
@@ -168,7 +184,7 @@ class WelcomeBonusService
             }
             $tx = app(PointsService::class)->record($user, 'adjustment', -$recovered,
                 'Annulation du cadeau de bienvenue', null, null,
-                self::reversalKey((int) $user->id, (int) $commande->id));
+                self::reversalKey((int) $user->id, (int) $commande->id), PointsService::BUCKET_GIFT);
             if (! $tx->wasRecentlyCreated) {
                 return;
             }
@@ -184,5 +200,56 @@ class WelcomeBonusService
             ]);
             User::whereKey($user->id)->update(['welcome_bonus_awarded_at' => null]);
         });
+    }
+    /**
+     * Rule 21 (welcome_bonus.unique_delivery_phone, default OFF): gift Protinas do not apply when the
+     * delivery phone belongs to ANOTHER account's welcome claim (its verified phone, the phone that
+     * unlocked it, or the phone its gift was first used with). Earned Protinas are never affected.
+     */
+    public static function deliveryPhoneUsedByAnotherClaim(User $user, ?string $deliveryPhone): bool
+    {
+        if (! config('welcome_bonus.unique_delivery_phone', false) || trim((string) $deliveryPhone) === ''
+            || ! Schema::hasTable('welcome_bonus_claims')) {
+            return false;
+        }
+        try {
+            $hash = PhoneVerificationService::fingerprint(PhoneVerificationService::normalize((string) $deliveryPhone));
+        } catch (ValidationException) {
+            return false;
+        }
+        $columns = array_values(array_filter(['phone_hash', 'unlock_phone_hash', 'used_phone_hash'],
+            fn (string $column) => Schema::hasColumn('welcome_bonus_claims', $column)));
+        if ($columns === []) {
+            return false;
+        }
+
+        return DB::table('welcome_bonus_claims')->where('user_id', '<>', $user->id)
+            ->where(function ($q) use ($columns, $hash): void {
+                foreach ($columns as $column) {
+                    $q->orWhere($column, $hash);
+                }
+            })
+            ->exists();
+    }
+
+    /** First use of the gift: remember the delivery phone and the order (audit + rule 21). */
+    public static function markGiftUse(User $user, int $commandeId, ?string $deliveryPhone): void
+    {
+        if (! Schema::hasTable('welcome_bonus_claims') || ! Schema::hasColumn('welcome_bonus_claims', 'used_by_commande_id')) {
+            return;
+        }
+        $hash = null;
+        try {
+            $hash = trim((string) $deliveryPhone) === '' ? null
+                : PhoneVerificationService::fingerprint(PhoneVerificationService::normalize((string) $deliveryPhone));
+        } catch (ValidationException) {
+            $hash = null;
+        }
+        $update = ['used_by_commande_id' => $commandeId];
+        if (Schema::hasColumn('welcome_bonus_claims', 'used_phone_hash')) {
+            $update['used_phone_hash'] = $hash;
+        }
+        DB::table('welcome_bonus_claims')->where('user_id', $user->id)->whereNotNull('credited_at')
+            ->whereNull('used_by_commande_id')->update($update);
     }
 }

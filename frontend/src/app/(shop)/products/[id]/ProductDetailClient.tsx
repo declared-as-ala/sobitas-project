@@ -599,6 +599,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     promo_expiration_date: product.promo_expiration_date ?? undefined,
     rupture: product.rupture,
     aromes: product.aromes,
+    sous_categorie: product.sous_categorie ? { slug: product.sous_categorie.slug } : null,
   };
 
   /** Effective aroma for cart/quick order: selected or first (never block add/command). */
@@ -1116,7 +1117,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 than the unit price, so raising the stepper raises the reward in the same gesture
                 that raises the cost — the same pairing the "Total" line below the stepper makes.
               */}
-              <LoyaltyEarnLine amountDt={displayPrice * quantity} className="mt-3 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:w-auto lg:justify-self-end lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:[&>p]:text-end lg:[&>p]:text-xs lg:[&>p]:leading-snug lg:[&>p>span:last-child]:whitespace-nowrap" />
+              <LoyaltyEarnLine amountDt={displayPrice * quantity} product={product} className="mt-3 lg:col-start-2 lg:row-start-1 lg:row-span-2 lg:mt-0 lg:w-auto lg:justify-self-end lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 lg:[&>p]:text-end lg:[&>p]:text-xs lg:[&>p]:leading-snug lg:[&>p>span:last-child]:whitespace-nowrap" />
               </div>
 
               <div className="contents lg:mt-4 lg:flex lg:flex-wrap lg:items-center lg:gap-x-3 lg:gap-y-3 lg:border-t lg:border-rule-strong lg:pt-4">

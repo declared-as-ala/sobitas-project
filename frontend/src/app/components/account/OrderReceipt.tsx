@@ -1,6 +1,7 @@
 import type { Order } from '@/types';
 import type { OrderLifecycle } from '@/util/orderStatus';
-import { formatProtinas } from '@/util/loyaltyPoints';
+import { formatProtinas, REDEEM_POINTS_PER_DT } from '@/util/loyaltyPoints';
+import { storedProtinasSplit, type StoredProtinasSplit } from '@/util/checkoutPricing';
 
 /**
  * ── THE RECEIPT: WHAT WAS CHARGED, AND WHY IT IS NOT THE SUM OF THE ARTICLES ────────────────
@@ -30,6 +31,19 @@ import { formatProtinas } from '@/util/loyaltyPoints';
  * millime (301 Protinas = 15.05 DT). Formatting each row independently would print "15.05" beside
  * "412.00" and the column would look like it had been rounded differently in different places.
  * `decimalsFor` picks 3 for the whole receipt as soon as ANY row needs a millime, and 2 otherwise.
+ *
+ * ── PROTINAS V3: THE DELIVERY CAN BE PAID WITH PROTINAS ─────────────────────────────────────
+ * From 02/10/2026 `frais_livraison` is stored NET of the Protinas that paid it, and the server
+ * sends `shipping_gross` + `points_shipping` beside it. The receipt then shows the delivery at its
+ * real price and a separate « Livraison réglée avec vos Protinas » reduction, so the column still
+ * adds up row by row (goods − remises + delivery − delivery paid in Protinas = total) and the
+ * customer sees what their Protinas actually paid. `points_discount` is the articles part only.
+ *
+ * The engine pays the delivery first with every Protina used, gift included. Shown that way, a 15 DT
+ * welcome gift on a 180 DT basket would read « Livraison réglée avec vos Protinas » plus « Protinas
+ * utilisées −5 », a split the checkout never showed. So the receipt uses the checkout's allocation
+ * (`storedProtinasSplit`): the gift keeps its own « Protinas cadeau » row, and only EARNED Protinas
+ * cross the delivery out. Same rows, same total, the story the customer was told.
  */
 
 type Totals = NonNullable<Order['totals']>;
@@ -46,14 +60,32 @@ export function moneyDecimals(values: number[]): number {
 
 /** Every figure this component prints, for callers that need the same precision as the receipt. */
 export function receiptFigures(totals: Totals): number[] {
+  const split = protinasSplit(totals);
   return [
     totals.goods,
     totals.shipping,
+    totals.shipping_gross ?? totals.shipping,
+    totals.points_shipping ?? 0,
     totals.coupon_discount,
     totals.other_discount,
     totals.points_discount,
+    split.giftDt,
+    split.earnedGoodsDt,
+    split.shippingPointsDt,
     totals.total,
   ];
+}
+
+/** The checkout's allocation of this order's Protinas (see the docblock above). */
+function protinasSplit(totals: Totals, order?: Order, pointsRedeemed?: number): StoredProtinasSplit {
+  const separated = order?.pack_discount_ht != null && order?.points_discount_ht != null;
+  return storedProtinasSplit({
+    goodsPointsDt: separated ? Number(order?.points_discount_ht) : totals.points_discount,
+    shippingPointsDt: totals.reconciled ? Math.max(0, totals.points_shipping ?? 0) : 0,
+    netShippingDt: totals.shipping,
+    pointsRedeemed: order?.points_redeemed ?? totals.points_redeemed ?? pointsRedeemed ?? 0,
+    giftPoints: totals.points_redeemed_gift ?? order?.points_redeemed_gift ?? 0,
+  }, REDEEM_POINTS_PER_DT);
 }
 
 /** A signed row of the receipt. `sign` is what the amount DOES to the total, not its stored sign. */
@@ -84,6 +116,8 @@ function buildRows(totals: Totals, pointsRedeemed: number, order?: Order): Row[]
   const rows: Row[] = [
     { key: 'goods', label: 'Sous-total articles', amount: totals.goods, sign: 'neutral' },
   ];
+  const pointsShipping = totals.reconciled ? Math.max(0, totals.points_shipping ?? 0) : 0;
+  const split = protinasSplit(totals, order, pointsRedeemed);
 
   if (totals.reconciled) {
     const separated = order?.pack_discount_ht != null && order?.points_discount_ht != null;
@@ -104,13 +138,16 @@ function buildRows(totals: Totals, pointsRedeemed: number, order?: Order): Row[]
       // the column does not record which — so it is labelled for what it certainly is.
       rows.push({ key: 'other', label: 'Remise supplémentaire', amount: totals.other_discount, sign: 'subtract' });
     }
-    const pointsDiscount = separated ? Number(order?.points_discount_ht) : totals.points_discount;
-    if (pointsDiscount > 0) {
+    if (split.giftDt > 0) {
+      rows.push({ key: 'gift', label: 'Protinas cadeau', detail: formatProtinas(split.giftPoints), amount: split.giftDt, sign: 'subtract' });
+    }
+    if (split.earnedGoodsDt > 0) {
+      // v3: points_redeemed also counts the gift and the Protinas that paid the delivery (own rows).
       rows.push({
         key: 'points',
         label: 'Protinas utilisées',
-        detail: (order?.points_redeemed ?? pointsRedeemed) > 0 ? formatProtinas(order?.points_redeemed ?? pointsRedeemed) : undefined,
-        amount: pointsDiscount,
+        detail: split.earnedGoodsPoints > 0 ? formatProtinas(split.earnedGoodsPoints) : undefined,
+        amount: split.earnedGoodsDt,
         sign: 'subtract',
       });
     }
@@ -124,7 +161,21 @@ function buildRows(totals: Totals, pointsRedeemed: number, order?: Order): Row[]
     }
   }
 
-  rows.push({ key: 'shipping', label: 'Livraison', amount: totals.shipping, sign: totals.shipping > 0 ? 'add' : 'neutral' });
+  if (pointsShipping > 0) {
+    const gross = totals.shipping_gross ?? split.shippingGrossDt;
+    rows.push({ key: 'shipping', label: 'Livraison', amount: gross, sign: gross > 0 ? 'add' : 'neutral' });
+    if (split.shippingPointsDt > 0) {
+      rows.push({
+        key: 'shipping-points',
+        label: 'Livraison réglée avec vos Protinas',
+        detail: formatProtinas(split.shippingPoints),
+        amount: split.shippingPointsDt,
+        sign: 'subtract',
+      });
+    }
+  } else {
+    rows.push({ key: 'shipping', label: 'Livraison', amount: totals.shipping, sign: totals.shipping > 0 ? 'add' : 'neutral' });
+  }
 
   return rows;
 }

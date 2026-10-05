@@ -15,6 +15,7 @@ import {
   AuthAlt,
 } from '@/app/components/AuthShell';
 import { GoogleSignInButton } from '@/app/components/auth/GoogleSignInButton';
+import { FALLBACK_LOYALTY_RULES, isProtinasV3, loadLoyaltyRules, welcomeOnDelivery, welcomeValueLabel, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 /** Mirrors the backend rule (min 8, at least one letter and one digit) so the form rejects a bad
  *  password before the request rather than surfacing a 422 the customer cannot read. */
@@ -44,6 +45,9 @@ export default function RegisterPage() {
     phone: '',
     password: '',
   });
+  // The gift's threshold and validity are published by /api/loyalty/rules, never written here.
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   useEffect(() => {
     if (!authLoading && isAuthenticated) router.replace(user?.phone_verified ? '/account' : '/verify-phone');
@@ -190,8 +194,16 @@ export default function RegisterPage() {
         />
 
         <details className="text-xs leading-relaxed text-ink-2">
-          <summary className="min-h-11 cursor-pointer rounded-lg py-3 font-semibold focus-visible:ring-2 focus-visible:ring-focus">Conditions des 15 DT offerts</summary>
-          <p className="pb-3">300 Protinas (15 DT), une seule fois par compte et par numéro, créditées à la livraison de votre première commande, puis utilisables dans la limite de 10 % de vos articles par commande.</p>
+          <summary className="min-h-11 cursor-pointer rounded-lg py-3 font-semibold focus-visible:ring-2 focus-visible:ring-focus">{welcomeValueLabel(rules)} offerts {welcomeOnDelivery(rules) ? 'au 1er colis reçu' : 'tout de suite'}</summary>
+          {/* Same length as the old « Conditions des 15 DT offerts » summary: /register is
+              pixel-tight on a phone (measure-auth), so the teaser line must not wrap. It follows the
+              published unlock rule (a pre-v3 backend, or the switch turned back on, credits the gift
+              at the first delivered parcel), so it stays true whichever side deploys first. */}
+          <p className="pb-3">
+            Vérifiez votre numéro : {rules.welcome.points} Protinas cadeau {welcomeOnDelivery(rules) ? 'débloquées à la réception de votre premier colis' : 'ajoutées tout de suite'}, une seule fois par compte et par numéro.
+            {isProtinasV3(rules) && <> Elles s&apos;appliquent toutes seules à vos commandes, livraison comprise
+            {rules.gift?.full_from_dt ? ` : en entier dès ${rules.gift.full_from_dt} DT d'articles` : ''}{rules.gift?.expires && rules.gift.valid_days > 0 ? `, à utiliser dans les ${rules.gift.valid_days} jours` : ''}.</>}
+          </p>
         </details>
         <AuthSubmit loading={isLoading} loadingLabel="Création…" disabled={busy}>
           Continuer vers le SMS

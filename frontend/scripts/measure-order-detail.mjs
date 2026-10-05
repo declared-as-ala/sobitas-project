@@ -302,6 +302,69 @@ const SCENARIOS = {
     },
   },
 
+  /* Protinas v3 (02/10/2026): pack −3 % on 200 DT and 660 earned Protinas, 200 of which paid the
+     delivery. The server stores frais_livraison NET (0) and sends shipping_gross + points_shipping,
+     so the receipt must show the delivery at 10 DT AND its own « réglée avec vos Protinas »
+     reduction — and still add up row by row. Spec §D1 « Pack at 200 DT, 660 earned ». */
+  protinasV3: {
+    commande: {
+      id: 9006,
+      numero: '2026/0510',
+      etat: 'en_cours_de_preparation',
+      created_at: '2026-10-03 11:05:00',
+      prix_ht: 200,
+      prix_ttc: 171,
+      frais_livraison: 0,
+      remise: 29,
+      discount_ht: 0,
+      discount_ttc: null,
+      pack_discount_ht: 6,
+      points_discount_ht: 23,
+      points_redeemed: 660,
+      pricing_version: 3,
+      points_shipping_dt: 10,
+      points_redeemed_gift: 0,
+      requires_phone_confirmation: false,
+      protinas_forfeited: 0,
+      coupon_code_snapshot: null,
+      note: null,
+      tracking: null,
+      protina: { spent: 660, earned: 0, pending: 171, redeemed: 660, refunded: 0, revoked: 0, state: 'pending_delivery' },
+      totals: {
+        goods: 200,
+        shipping: 0,
+        shipping_gross: 10,
+        points_shipping: 10,
+        points_redeemed_gift: 0,
+        points_redeemed: 660,
+        protinas_forfeited: 0,
+        coupon_discount: 0,
+        coupon_code: null,
+        points_discount: 23,
+        other_discount: 6,
+        total: 171,
+        reconciled: true,
+      },
+      ...ADDRESS,
+    },
+    details: [line(1, 17, 'Iso 100 Hydrolyzed 2.2 kg', 2, 100)],
+    expect: {
+      receipt: 'itemised',
+      rows: [
+        ['goods', 'neutral', '200.00 DT'],
+        ['pack', 'subtract', '−6.00 DT'],
+        ['points', 'subtract', '−23.00 DT'],
+        ['shipping', 'add', '+10.00 DT'],
+        ['shipping-points', 'subtract', '−10.00 DT'],
+      ],
+      totalLabel: 'Total à payer',
+      total: '171.00 DT',
+      protina: 'open',
+      require: [/Livraison réglée avec vos Protinas/, /460\s*Protinas/, /200\s*Protinas/, /délai de retour/i, /33 DT de remise/],
+      forbid: [/protinas créditées/i],
+    },
+  },
+
   /* A legacy order whose components do not reproduce the total. The receipt must stop itemising
      rather than paint a column that disagrees with what was paid. */
   legacy: {
@@ -398,6 +461,8 @@ for (const [name, data] of Object.entries(SCENARIOS)) {
           'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
         };
         if (req.method() === 'OPTIONS') return req.respond({ status: 204, headers: CORS, body: '' });
+        // A measurement run is not a visit: never send analytics hits to the shop's property.
+        if (/googletagmanager\.com|google-analytics\.com|analytics\.google\.com|doubleclick\.net|google\.[a-z.]+\/ads/.test(url)) return req.respond({ status: 204, headers: CORS, body: '' });
         const json = (body) =>
           req.respond({ status: 200, contentType: 'application/json', headers: CORS, body: JSON.stringify(body) });
 

@@ -164,6 +164,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         verification_status: result.phone_verified ? 'phone_verified' as const : current.verification_status,
         phone_verification_required: !result.phone_verified,
         points_balance: result.points_balance, points_value_dt: result.points_value_dt,
+        // The welcome gift just credited is GIFT Protinas: the wallet split must show it at once (the
+        // quick-order drawer and the account tiles read it), not after the next profile reload.
+        ...(current.protinas && result.bonus_awarded && result.bonus_points > 0 && {
+          protinas: {
+            ...current.protinas,
+            total: result.points_balance,
+            value_dt: result.points_value_dt,
+            gift_balance: current.protinas.gift_balance + result.bonus_points,
+            gift_expires_at: [current.protinas.gift_expires_at, result.bonus_expires_at ?? null]
+              .filter((date): date is string => !!date).sort()[0] ?? null,
+          },
+        }),
         welcome_bonus_status: result.bonus_status,
         welcome_bonus_awarded: result.bonus_status === 'awarded',
         welcome_bonus_eligible: ['phone_required', 'claimable'].includes(result.bonus_status) };

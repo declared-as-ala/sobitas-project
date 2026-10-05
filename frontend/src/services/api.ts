@@ -1749,7 +1749,12 @@ export const submitQuickOrder = async (payload: QuickOrderPayload, existingIdemp
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
-    throw new Error((data as any).error || 'Erreur lors de la commande rapide');
+    // 409 carries the server pricing: the drawer shows that total and the next tap confirms it.
+    const failure = data as { error?: string; pricing?: import('@/util/checkoutPricing').CheckoutPricing };
+    throw Object.assign(new Error(failure.error || 'Erreur lors de la commande rapide'), {
+      status: response.status,
+      pricing: failure.pricing,
+    });
   }
   return data as QuickOrderResponse;
 };
@@ -1856,6 +1861,10 @@ export interface PhoneVerificationResult {
   bonus_points: number;
   points_balance: number;
   points_value_dt: number;
+  /** Protinas v3: when the welcome gift expires (null = no date limit, or not credited). */
+  bonus_expires_at?: string | null;
+  /** Protinas v3: basket from which the whole gift applies (« en entier dès 180 DT d'articles »). */
+  gift_full_from_dt?: number | null;
 }
 
 export const verifyPhoneOtp = async (code: string): Promise<PhoneVerificationResult> => {

@@ -57,16 +57,44 @@ class CouponResource extends Resource
                         ->required()
                         ->live(onBlur: true)
                         ->helperText('Pour type Pourcentage: ex. 10 pour 10%. Pour type Montant fixe: ex. 5 pour 5 DT.'),
+                    // v2 (rollback) only: the old 10 % advisory.
                     Forms\Components\Placeholder::make('discount_warning')
                         ->label('Attention')
                         ->content(fn () => 'Cette remise dépasse le seuil recommandé de '.config('loyalty.coupons.warn_above_percent', 10).' % des articles. Elle reste autorisée et sera auditée.')
                         ->visible(function (callable $get): bool {
+                            if (self::guardedRules()) {
+                                return false;
+                            }
                             $warn = (float) config('loyalty.coupons.warn_above_percent', 10);
                             $value = (float) $get('value');
                             return ($get('type') === Coupon::TYPE_PERCENT && $value > $warn)
                                 || ($get('type') === Coupon::TYPE_FIXED
                                     && $value > (float) $get('min_order_amount') * $warn / 100);
                         }),
+                    // Protinas v3: the largest code that never eats into the shop's margin floor, from the
+                    // hidden order budget (OrderBudget). Only the derived thresholds are shown.
+                    Forms\Components\Placeholder::make('safe_discount')
+                        ->label('Remise sûre')
+                        ->content(fn (callable $get): string => self::safeDiscountHint(
+                            (string) $get('type'), (float) $get('value'), (float) $get('min_order_amount'),
+                            (bool) $get('allow_over_budget')))
+                        ->visible(fn (): bool => self::guardedRules())
+                        ->columnSpanFull(),
+                    Forms\Components\Toggle::make('allow_over_budget')
+                        ->label('Accepter une perte possible')
+                        ->helperText('Désactivé (recommandé) : le code est plafonné sur chaque commande pour que la boutique reste gagnante. Activé : le code est honoré en entier, même quand la commande devient perdante.')
+                        ->default(false)
+                        ->live()
+                        ->visible(fn (): bool => \Illuminate\Support\Facades\Schema::hasColumn('coupons', 'allow_over_budget'))
+                        ->columnSpanFull(),
+                    // The confirmation the toggle needs: asked only when switching it ON.
+                    Forms\Components\Checkbox::make('confirm_over_budget')
+                        ->label('Je confirme : ce code pourra faire perdre de l’argent à la boutique sur certaines commandes.')
+                        ->accepted()
+                        ->dehydrated(false)
+                        ->visible(fn (callable $get, ?Coupon $record): bool => (bool) $get('allow_over_budget')
+                            && ! (bool) ($record?->allow_over_budget ?? false))
+                        ->columnSpanFull(),
                 ])->columns(2),
 
             Section::make('Validité')
@@ -126,6 +154,13 @@ class CouponResource extends Resource
     {
         return $table
             ->columns([
+                // The public vps-run reports (protinas:coupons-review, protinas:audit) name codes by this
+                // number only, never by the code itself.
+                Tables\Columns\TextColumn::make('id')
+                    ->label('#')
+                    ->sortable()
+                    ->searchable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('code')
                     ->label('Code')
                     ->searchable()
@@ -145,6 +180,13 @@ class CouponResource extends Resource
                 Tables\Columns\IconColumn::make('is_active')
                     ->label('Actif')
                     ->boolean(),
+                Tables\Columns\IconColumn::make('allow_over_budget')
+                    ->label('Perte acceptée')
+                    ->boolean()
+                    ->trueColor('danger')
+                    ->falseColor('gray')
+                    ->visible(fn (): bool => \Illuminate\Support\Facades\Schema::hasColumn('coupons', 'allow_over_budget'))
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('starts_at')
                     ->label('Début')
                     ->dateTime('d/m/Y H:i')
@@ -193,6 +235,63 @@ class CouponResource extends Resource
                     Actions\DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /** v3 rules with the code guard on: the budget-based hint replaces the old 10 % advisory. */
+    public static function guardedRules(): bool
+    {
+        return (int) config('loyalty.rules_version', 3) >= 3;
+    }
+
+    /**
+     * « Remise sûre max : 5 % dès 60 DT » and friends, for the code being typed. French, staff-facing.
+     * Never shows the budget itself, only the thresholds derived from it.
+     */
+    public static function safeDiscountHint(string $type, float $value, float $minOrderDt, bool $allowOver): string
+    {
+        $budget = app(\App\Services\OrderBudget::class);
+        $guard = (bool) config('loyalty.coupons.margin_guard', true);
+        $minLabel = $minOrderDt > 0 ? rtrim(rtrim(number_format($minOrderDt, 3, ',', ' '), '0'), ',').' DT' : null;
+        $lines = [];
+        if ($type === Coupon::TYPE_FREE_SHIPPING) {
+            $from = $budget->freeShippingCodeFromDt();
+            $lines[] = $from !== null
+                ? 'Livraison offerte sûre dès '.$from.' DT d’articles. En dessous, le client garde la livraison à payer (le code n’est pas consommé).'
+                : 'Livraison offerte jamais sûre avec la marge plancher actuelle.';
+            if ($from !== null && $minOrderDt < $from) {
+                $lines[] = 'Conseil : montant minimum '.$from.' DT.';
+            }
+        } elseif ($type === Coupon::TYPE_FIXED) {
+            $from = $value > 0 ? $budget->safeFixedFrom($value) : 1;
+            $lines[] = $from !== null
+                ? 'Montant sûr dès '.$from.' DT d’articles pour '.rtrim(rtrim(number_format($value, 3, ',', ' '), '0'), ',').' DT de remise.'
+                : 'Ce montant n’est jamais sûr avec la marge plancher actuelle.';
+            if ($from !== null && $minOrderDt < $from) {
+                $lines[] = 'En dessous de '.$from.' DT, le code sera réduit automatiquement. Conseil : montant minimum '.$from.' DT.';
+            }
+        } else {
+            $reference = $minOrderDt > 0 ? $minOrderDt : 60.0;
+            $safe = $budget->safeCouponPercent($reference);
+            $lines[] = $safe > 0
+                ? 'Remise sûre max : '.$safe.' % dès '.($minLabel ?? '60 DT').($minLabel === null ? ' (exemple : aucun montant minimum saisi)' : '').'.'
+                : 'Aucun pourcentage n’est sûr dès '.($minLabel ?? '60 DT').' : augmentez le montant minimum.';
+            if ($value > 0) {
+                $from = $budget->safePercentFromDt((int) ceil($value));
+                $lines[] = $from !== null
+                    ? 'Ce code de '.rtrim(rtrim(number_format($value, 2, ',', ''), '0'), ',').' % est entier dès '.$from.' DT d’articles'
+                        .($minOrderDt < $from ? ' ; en dessous il sera réduit automatiquement. Conseil : montant minimum '.$from.' DT.' : '.')
+                    : 'Ce code de '.rtrim(rtrim(number_format($value, 2, ',', ''), '0'), ',').' % sera toujours réduit : il dépasse la marge plancher.';
+            }
+        }
+        if ($allowOver) {
+            $lines[] = '⚠ Perte acceptée : ce code est honoré en entier, même au-delà de la remise sûre.';
+        } elseif (! $guard) {
+            $lines[] = '⚠ Le plafonnement des codes est désactivé (COUPON_MARGIN_GUARD=false).';
+        } else {
+            $lines[] = 'Le code est plafonné automatiquement sur chaque commande : la boutique reste gagnante.';
+        }
+
+        return implode(' ', $lines);
     }
 
     public static function getPages(): array

@@ -253,7 +253,7 @@ class CustomerAuthFlowTest extends TestCase
         $this->assertDatabaseCount('user_point_transactions', 1);
     }
 
-    public function test_default_phone_proof_reserves_welcome_points_until_delivery(): void
+    public function test_phone_proof_reserves_welcome_points_until_delivery_when_delivery_unlock_is_on(): void
     {
         config()->set('welcome_bonus.unlock_on_first_delivery', true);
         Schema::create('commandes', function (Blueprint $table): void {

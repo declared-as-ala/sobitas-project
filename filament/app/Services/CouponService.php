@@ -100,6 +100,8 @@ class CouponService
      * Accounting: discount applied to HT first; TVA is computed on net HT.
      * Returns ['discount_ht' => float, 'discount_ttc' => float].
      * For percent: base = subtotal_ht, cap by max_discount_amount if set.
+     * Rules v3 passes PROGRAMME goods as the base (machines excluded) and prices in millimes through
+     * discountMillimes(); this float form stays for the v2 path and the admin documents.
      */
     public function computeDiscount(Coupon $coupon, float $subtotal_ht, float $frais_livraison = 0): array
     {
@@ -133,6 +135,40 @@ class CouponService
         $discount_ttc = round($discount_ttc, 2);
 
         return ['discount_ht' => $discount_ht, 'discount_ttc' => $discount_ttc];
+    }
+
+    /**
+     * Protinas v3: the code's amount in integer millimes on $baseMm (programme goods only — machines
+     * never carry a code). Floors, so a rounding never gives away a millime the code did not promise.
+     * Free-delivery codes return 0 (the caller zeroes the delivery fee instead).
+     */
+    public function discountMillimes(Coupon $coupon, int $baseMm): int
+    {
+        $baseMm = max(0, $baseMm);
+        $value = max(0.0, (float) $coupon->value);
+        switch ($coupon->type) {
+            case Coupon::TYPE_FREE_SHIPPING:
+                return 0;
+            case Coupon::TYPE_FIXED:
+                return min((int) round($value * 1000, 0, PHP_ROUND_HALF_UP), $baseMm);
+            case Coupon::TYPE_PERCENT:
+            default:
+                $amount = (int) floor($baseMm * $value / 100 + 1e-6);
+                if ($coupon->max_discount_amount !== null) {
+                    $amount = min($amount, (int) round((float) $coupon->max_discount_amount * 1000, 0, PHP_ROUND_HALF_UP));
+                }
+
+                return max(0, min($amount, $baseMm));
+        }
+    }
+
+    /** The TTC figure stored beside a (possibly budget-capped) coupon discount_ht, same rule as computeDiscount(). */
+    public function discountTtc(float $discountHt): float
+    {
+        $coordinate = Coordinate::getCached();
+        $tvaRate = $coordinate && isset($coordinate->tva) ? (float) $coordinate->tva : 0;
+
+        return round($discountHt + ($discountHt * $tvaRate / 100), 2);
     }
 
     /**

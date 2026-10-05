@@ -36,7 +36,20 @@ class Commande extends Model
         // PAYABLE only after the second. Collapsing them pays affiliates from the shop's own float.
         'affilie_id', 'affilie_code_id', 'affilie_commission_processed_at', 'cod_remitted_at',
         'archived_at', 'whatsapp_confirmation_sent_at',
+        // ── Protinas v3 (migration 2026_10_02_000001). Only the staff-editable flags are fillable:
+        // pricing_version, points_redeemed_gift, points_shipping_dt, earn_base_dt, budget_dt and
+        // protinas_forfeited are written by the checkout / PointsService by explicit assignment, so
+        // an admin form save can never rewrite what an order was priced and charged at.
+        'requires_phone_confirmation', 'phone_confirmed_at', 'phone_confirmed_by', 'protinas_forfeit_waived',
     ];
+
+    /**
+     * `budget_dt` is the order's hidden giveaway budget (margin floor, courier, safety). It must never
+     * reach a customer or affiliate payload; Filament reads attributes directly and still sees it.
+     *
+     * @var list<string>
+     */
+    protected $hidden = ['budget_dt'];
 
     protected $casts = [
         'prix_ht' => 'float',
@@ -59,7 +72,91 @@ class Commande extends Model
         'cod_remitted_at' => 'datetime',
         'archived_at' => 'datetime',
         'whatsapp_confirmation_sent_at' => 'datetime',
+        'pricing_version' => 'integer',
+        'points_redeemed_gift' => 'integer',
+        'points_shipping_dt' => 'float',
+        'earn_base_dt' => 'float',
+        'budget_dt' => 'float',
+        'requires_phone_confirmation' => 'boolean',
+        'phone_confirmed_at' => 'datetime',
+        'phone_confirmed_by' => 'integer',
+        'protinas_forfeited' => 'integer',
+        'protinas_forfeit_waived' => 'boolean',
+        'confirm_phone_verified_at' => 'datetime',
+        // Stamped by PointsService when etat first enters a shipping status (wasShippedForProtinas).
+        'shipped_at' => 'datetime',
+        // Stamped by PointsService when a dispatched v3 order is refused (rule 18 dates strikes by it).
+        'refused_at' => 'datetime',
     ];
+
+    /** Priced by the Protinas v3 engine (pricing_version >= 3). NULL = legacy order, old terms. */
+    public function isPricedV3(): bool
+    {
+        $attributes = $this->getAttributes();
+
+        return array_key_exists('pricing_version', $attributes) && $attributes['pricing_version'] !== null
+            && (int) $attributes['pricing_version'] >= 3;
+    }
+
+    /**
+     * Rule 17: the order waits for a phone call to the account's verified number before
+     * "Envoyer vers Aramex". True while requires_phone_confirmation is set and nobody confirmed it.
+     */
+    public function awaitsPhoneConfirmation(): bool
+    {
+        $attributes = $this->getAttributes();
+
+        return ! empty($attributes['requires_phone_confirmation'])
+            && empty($attributes['phone_confirmed_at']);
+    }
+
+    /**
+     * The number staff must call for rule 17: the ACCOUNT's verified phone (never the delivery phone
+     * typed at checkout, which a thief controls). Null for guests or an unverified account.
+     *
+     * A v3 order uses the phone snapshotted at checkout (`confirm_phone`): a number verified on the
+     * account AFTER the order — a thief swapping in their own SIM — is never the one shown. No
+     * snapshot on a v3 order means the account had no verified phone when it ordered.
+     */
+    public function verifiedAccountPhone(): ?string
+    {
+        $attributes = $this->getAttributes();
+        $userId = (int) ($attributes['authenticated_user_id'] ?? 0);
+        if ($userId <= 0) {
+            return null;
+        }
+        if (\Illuminate\Support\Facades\Schema::hasColumn('commandes', 'confirm_phone')) {
+            $snapshot = array_key_exists('confirm_phone', $attributes)
+                ? $attributes['confirm_phone']
+                : static::query()->whereKey($this->getKey())->value('confirm_phone');
+            if (trim((string) $snapshot) !== '') {
+                return (string) $snapshot;
+            }
+            $version = array_key_exists('pricing_version', $attributes)
+                ? $attributes['pricing_version']
+                : static::query()->whereKey($this->getKey())->value('pricing_version');
+            if ($version !== null && (int) $version >= 3) {
+                return null;
+            }
+        }
+        $user = User::query()->whereKey($userId)->first(['id', 'phone', 'phone_verified_at']);
+
+        return $user && $user->phone_verified_at !== null && trim((string) $user->phone) !== '' ? (string) $user->phone : null;
+    }
+
+    /**
+     * « Confirmé par téléphone »: record who confirmed and when. Written with a query-builder update so
+     * a partially loaded model can never rewrite the order's money columns.
+     */
+    public function markPhoneConfirmed(?int $staffUserId): void
+    {
+        $values = ['phone_confirmed_at' => now(), 'phone_confirmed_by' => $staffUserId];
+        static::query()->whereKey($this->getKey())->update($values);
+        foreach ($values as $column => $value) {
+            $this->setAttribute($column, $value);
+        }
+        $this->syncOriginalAttributes(array_keys($values));
+    }
 
     protected static function booted(): void
     {
@@ -448,6 +545,56 @@ class Commande extends Model
             // Missing column or table on a partially migrated install. Unknown means "not
             // dispatched", so the affiliate keeps the benefit of the doubt.
             \Illuminate\Support\Facades\Log::warning('wasDispatched() could not read shipments', [
+                'commande_id' => $this->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+    }
+
+    /** Statuses meaning the parcel has left the shop (stamped once into `shipped_at`). */
+    public const SHIPPING_STATES = ['en_cours_de_livraison', 'expidee'];
+
+    /** Values `factures.aramex_status` takes when staff cancelled the Aramex shipment (« Annuler l'expédition »). */
+    public const ARAMEX_CANCELLED_STATUSES = ['annulé', 'annule'];
+
+    /**
+     * Protinas v3 (refusal deposit, rule 15; repeat refusers, rule 18): did a courier really take
+     * this parcel? Not wasDispatched(), which serves the affiliate return fee and differs on two
+     * points:
+     *   - a parcel shipped by hand (Aramex refused a 0 DT note) leaves no HAWB: `shipped_at`, stamped
+     *     the first time etat enters a SHIPPING_STATES status, or a $previousEtat in them, proves it;
+     *   - an Aramex note created (and so pushed) at BL creation, then cancelled at Aramex before
+     *     pickup (`aramex_status` « annulé ») made no trip, so it proves nothing.
+     * Unknown means "not shipped", as in wasDispatched().
+     */
+    public function wasShippedForProtinas(?string $previousEtat = null): bool
+    {
+        $attributes = $this->getAttributes();
+        if (! empty($attributes['shipped_at'] ?? null)) {
+            return true;
+        }
+        if ($previousEtat !== null && in_array($previousEtat, self::SHIPPING_STATES, true)) {
+            return true;
+        }
+        if (str_starts_with(strtolower(trim((string) $this->etat)), 'retour')) {
+            return true;
+        }
+        if (! empty($this->delivered_at)) {
+            return true;
+        }
+
+        try {
+            $notes = $this->factures()->whereNotNull('aramex_hawb')->where('aramex_hawb', '!=', '');
+            if (\Illuminate\Support\Facades\Schema::hasColumn('factures', 'aramex_status')) {
+                $notes->where(fn ($q) => $q->whereNull('aramex_status')
+                    ->orWhereNotIn('aramex_status', self::ARAMEX_CANCELLED_STATUSES));
+            }
+
+            return $notes->exists();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('wasShippedForProtinas() could not read shipments', [
                 'commande_id' => $this->id,
                 'error' => $e->getMessage(),
             ]);

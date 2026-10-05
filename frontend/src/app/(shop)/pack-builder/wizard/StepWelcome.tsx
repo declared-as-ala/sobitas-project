@@ -49,12 +49,14 @@ import type { PackGroup } from './steps';
 
 export interface StepWelcomeProps {
   tiers: { min: number; percent: number }[];
+  /** From /api/loyalty/rules (`pack.excludes_promo_lines`); false since Protinas v3. */
+  excludesPromoLines?: boolean;
   groups: PackGroup[];
   onStart: () => void;
   calm: boolean;
 }
 
-export function StepWelcome({ tiers, groups, onStart, calm }: StepWelcomeProps) {
+export function StepWelcome({ tiers, excludesPromoLines = false, groups, onStart, calm }: StepWelcomeProps) {
   const child = childVariants(calm);
 
   return (
@@ -87,7 +89,7 @@ export function StepWelcome({ tiers, groups, onStart, calm }: StepWelcomeProps) 
           </m.li>
         ))}
       </m.ul>
-      <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-ink-2">Remise pack : {tiers.map(tier => `−${tier.percent} % dès ${tier.min} DT`).join(', ')} d&apos;articles (hors articles en promo, non cumulable avec un code promo).</p>
+      <p className="mx-auto mt-3 max-w-md text-xs leading-relaxed text-ink-2">Remise pack : {tiers.map(tier => `−${tier.percent} % dès ${tier.min} DT`).join(', ')}, {excludesPromoLines ? 'articles en promo exclus' : 'promos comprises'}. Non cumulable avec un code promo : la meilleure remise s&apos;applique.</p>
 
       <m.div variants={child} className="mt-7">
         <m.button

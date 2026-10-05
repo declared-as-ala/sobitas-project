@@ -49,6 +49,8 @@
     $orderResidual = round($totalRemise - $orderDiscount, 3);
     $showOrderBreakdown = $sourceOrder && $orderDiscount > 0 && $orderResidual >= -0.001;
     $docDiscount = $orderDiscount + max(0, $orderResidual);
+    // Protinas v3: delivery paid with Protinas — shown for the record, it nets to 0 on this invoice.
+    $shipPaidProtinas = \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($sourceOrder);
 
     $baseImp     = round($totalHtBrut - $totalRemise, 3);
     $totalTva    = (float)($ct['tva']            ?? $facture->tva ?? 0);
@@ -652,9 +654,13 @@ table.ftva-totals tr.row-grand td:last-child {
         @if($showOrderBreakdown)
             @if($orderPack > 0)<tr><td>Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($orderPack / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</td><td>− {{ $fmt($orderPack) }}&nbsp;DT</td></tr>@endif
             @if($sourceOrder->coupon_code_snapshot)<tr><td>Code promo {{ $sourceOrder->coupon_code_snapshot }}</td><td>− {{ $fmt($orderCoupon) }}&nbsp;DT</td></tr>@endif
-            @if($orderPoints > 0)<tr><td>Protinas ({{ $sourceOrder->points_redeemed }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
+            @if($orderPoints > 0)<tr><td>Protinas ({{ \App\Support\OrderCashOnDelivery::goodsProtinasPoints($sourceOrder) }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
             @if($orderResidual > 0.001)<tr><td>Remise</td><td>− {{ $fmt($orderResidual) }}&nbsp;DT</td></tr>@endif
             <tr><td>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($docDiscount / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</td><td>{{ $fmt($docDiscount) }}&nbsp;DT</td></tr>
+        @endif
+        @if($shipPaidProtinas > 0)
+        <tr><td>Livraison</td><td>{{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
+        <tr><td>Réglée en Protinas</td><td>− {{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
         @endif
         @if($manualRemise > 0 && ! $showOrderBreakdown)
         <tr>

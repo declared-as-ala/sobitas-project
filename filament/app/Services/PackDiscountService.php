@@ -11,7 +11,10 @@ namespace App\Services;
  *   subtotal_ht >= 500 DT  -> 7%
  *   otherwise              -> 0%
  *
- * Pack is applied only to full-price lines by CheckoutPricingService.
+ * Promo lines count toward the tier AND get the pack discount by default (Protinas v3: the promo price
+ * is the real price; `loyalty.pack.exclude_promo_lines` false). With the flag on, promo lines still
+ * count toward the tier but the discount applies to full-price lines only. Machines
+ * (Product::isLoyaltyExcluded) count toward nothing: callers pass programme goods only.
  */
 class PackDiscountService
 {
@@ -57,7 +60,7 @@ class PackDiscountService
 
         $percent = $this->percentForSubtotal($subtotalHt);
 
-        $base = config('loyalty.pack.exclude_promo_lines', true)
+        $base = config('loyalty.pack.exclude_promo_lines', false)
             ? ($fullPriceSubtotalHt ?? $subtotalHt) : $subtotalHt;
         return round($base * $percent / 100, 3);
     }

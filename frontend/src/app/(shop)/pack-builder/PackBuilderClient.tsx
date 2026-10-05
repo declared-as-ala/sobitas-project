@@ -318,6 +318,7 @@ export function PackBuilderClient({ groups }: PackBuilderClientProps) {
           quoteLoading={quoteLoading}
           submitting={submitting}
           tiers={tiers}
+          excludesPromoLines={rules.pack.excludes_promo_lines}
           onAdd={addOne}
           onSetQty={setQty}
           onRemove={removeProduct}

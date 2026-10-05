@@ -7,6 +7,7 @@ use App\Models\Commande;
 use App\Models\Review;
 use App\Models\UserPointTransaction;
 use App\Services\PhoneVerificationService;
+use App\Services\ProtinaWalletService;
 use App\Services\WelcomeBonusService;
 use App\Services\PointsService;
 use App\Services\ReviewSubmissionService;
@@ -39,17 +40,22 @@ class MemberDashboardController extends Controller
         $hasRedeemed = UserPointTransaction::query()->where('user_id', $user->getKey())->where('type', 'redeem')->exists();
         $profileComplete = trim((string) $user->name) !== '' && trim((string) $user->phone) !== '' && trim((string) $user->email) !== '';
 
+        $wallet = app(ProtinaWalletService::class)->customerPayload($user);
+
         return response()->json([
             'welcome_status' => app(PhoneVerificationService::class)->bonusStatus($user),
             'pending_welcome_points' => WelcomeBonusService::pendingPoints($user),
+            // Protinas v3 wallet split: earned / gift / pending / debt / savings / en route.
+            'wallet' => $wallet,
             'summary' => [
                 'orders' => (clone $orders)->count(),
                 'delivered_orders' => (clone $orders)->whereIn('etat', PointsService::DELIVERED_STATUSES)->count(),
                 'reviews' => Review::query()->where('user_id', $user->getKey())->count(),
-                'points_earned' => (int) UserPointTransaction::query()
+                'points_earned' => (int) self::withoutMigrationRows(UserPointTransaction::query())
                     ->where('user_id', $user->getKey())
                     ->where('points', '>', 0)
                     ->sum('points'),
+                'lifetime_savings_dt' => $wallet['lifetime_savings_dt'],
             ],
             'review_access' => $reviewAccess,
             'missions' => [
@@ -64,7 +70,8 @@ class MemberDashboardController extends Controller
                 [
                     'key' => 'first_order',
                     'label' => 'Recevoir ma première commande',
-                    'description' => 'Les Protinas sont calculées sur les produits et créditées après livraison.',
+                    'description' => '1 Protina par DT payé pour vos articles, disponible '
+                        .max(0, (int) config('loyalty.points.earn_hold_days', 14)).' jours après la livraison.',
                     'reward_points' => null,
                     'completed' => (clone $orders)->whereIn('etat', PointsService::DELIVERED_STATUSES)->exists(),
                     'href' => '/shop',
@@ -114,6 +121,17 @@ class MemberDashboardController extends Controller
         ]);
     }
 
+    /** The hidden wallet-split reconciliation rows (migration:wallets:{uid}) are not activity. */
+    private static function withoutMigrationRows($query)
+    {
+        if (! Schema::hasColumn('user_point_transactions', 'idempotency_key')) {
+            return $query;
+        }
+
+        return $query->where(fn ($q) => $q->whereNull('idempotency_key')
+            ->orWhere('idempotency_key', 'not like', ProtinaWalletService::MIGRATION_KEY_PREFIX.'%'));
+    }
+
     /** Real, aggregate-only programme activity plus recent published community reviews. */
     private function community(): array
     {
@@ -133,8 +151,8 @@ class MemberDashboardController extends Controller
                 ->get();
 
             return [
-                'members_rewarded' => UserPointTransaction::query()->where('points', '>', 0)->distinct('user_id')->count('user_id'),
-                'points_awarded' => (int) UserPointTransaction::query()->where('points', '>', 0)->sum('points'),
+                'members_rewarded' => self::withoutMigrationRows(UserPointTransaction::query())->where('points', '>', 0)->distinct('user_id')->count('user_id'),
+                'points_awarded' => (int) self::withoutMigrationRows(UserPointTransaction::query())->where('points', '>', 0)->sum('points'),
                 'published_reviews' => Review::query()->published()->count(),
                 'reviews' => $reviews->map(fn (Review $review) => [
                     'id' => (int) $review->id,

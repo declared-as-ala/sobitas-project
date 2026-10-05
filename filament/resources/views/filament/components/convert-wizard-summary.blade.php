@@ -78,6 +78,13 @@
             </div>
         </div>
 
+        {{-- Protinas v3, rule 17: the order waits for a phone call before anything is sent to Aramex. --}}
+        @if(!empty($notice))
+            <div class="cw-remise-reason" style="color:#92400e;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:8px 10px;margin-top:8px;">
+                <span>{{ $notice }}</span>
+            </div>
+        @endif
+
         {{-- WHY there is a remise — so staff never have to guess where a discount came from. --}}
         @if(empty($discountLines) && !empty($remise) && $isLoyaltyRemise)
             <div class="cw-loyalty">

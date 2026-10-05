@@ -16,6 +16,8 @@ interface PackSummaryProps {
   nextTier: { percent: number; remaining: number } | null;
   quoteLoading: boolean;
   tiers: { min: number; percent: number }[];
+  /** `rules.pack.excludes_promo_lines`: the progress sentence says what the tier counts, like the cart. */
+  excludesPromoLines?: boolean;
   onRemove: (product: Product) => void;
   onReview: () => void;
   actionRef: React.RefObject<HTMLDivElement | null>;
@@ -27,8 +29,9 @@ function TierProgress({
   discountPercent,
   nextTier,
   tiers,
+  excludesPromoLines = false,
   trackRef,
-}: Pick<PackSummaryProps, 'subtotal' | 'discountPercent' | 'nextTier' | 'tiers'> & {
+}: Pick<PackSummaryProps, 'subtotal' | 'discountPercent' | 'nextTier' | 'tiers' | 'excludesPromoLines'> & {
   trackRef?: React.RefObject<HTMLDivElement | null>;
 }) {
   const maximum = tiers[tiers.length - 1]?.min ?? 1;
@@ -55,7 +58,7 @@ function TierProgress({
         {nextTier ? (
           <>
             Encore <strong className="font-semibold tabular-nums text-ink-1">{nextTier.remaining.toFixed(2)} DT</strong>{' '}
-            pour −{nextTier.percent}%
+            pour passer à −{nextTier.percent} % sur tout le pack ({excludesPromoLines ? 'articles en promo exclus' : 'promos comprises'}).
           </>
         ) : discountPercent > 0 ? (
           <span className="font-semibold text-ok">Remise maximale atteinte</span>
@@ -127,6 +130,7 @@ export function PackSummary({
   nextTier,
   quoteLoading,
   tiers,
+  excludesPromoLines = false,
   onRemove,
   onReview,
   actionRef,
@@ -156,6 +160,7 @@ export function PackSummary({
                 discountPercent={discountPercent}
                 nextTier={nextTier}
                 tiers={tiers}
+                excludesPromoLines={excludesPromoLines}
                 trackRef={tierTrackRef}
               />
             </div>

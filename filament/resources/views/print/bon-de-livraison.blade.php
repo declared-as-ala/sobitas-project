@@ -54,6 +54,9 @@
     $orderResidual = round($blRemiseTotal - $orderDiscount, 3);
     $showOrderBreakdown = $sourceOrder && $orderDiscount > 0 && $orderResidual >= -0.001;
     $docDiscount = $orderDiscount + max(0, $orderResidual);
+    // Protinas v3: delivery paid with Protinas prints as « Livraison 10.000 / Réglée en Protinas −10.000 »
+    // (the note's own frais_livraison is only the part still due in cash).
+    $shipPaidProtinas = \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($sourceOrder);
 
     $dateStr = $documentDate ?? $facture->created_at?->format('d/m/Y');
     $timbre  = (float) ($facture->timbre ?? 0);
@@ -558,7 +561,7 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
             @if($showOrderBreakdown)
                 @if($orderPack > 0)<tr><td class="k">Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($orderPack / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</td><td class="c">:</td><td class="v">− {{ $fmt($orderPack) }}</td></tr>@endif
                 @if($sourceOrder->coupon_code_snapshot)<tr><td class="k">Code promo {{ $sourceOrder->coupon_code_snapshot }}</td><td class="c">:</td><td class="v">− {{ $fmt($orderCoupon) }}</td></tr>@endif
-                @if($orderPoints > 0)<tr><td class="k">Protinas ({{ $sourceOrder->points_redeemed }} pts)</td><td class="c">:</td><td class="v">− {{ $fmt($orderPoints) }}</td></tr>@endif
+                @if($orderPoints > 0)<tr><td class="k">Protinas ({{ \App\Support\OrderCashOnDelivery::goodsProtinasPoints($sourceOrder) }} pts)</td><td class="c">:</td><td class="v">− {{ $fmt($orderPoints) }}</td></tr>@endif
                 @if($orderResidual > 0.001)<tr><td class="k">Remise</td><td class="c">:</td><td class="v">− {{ $fmt($orderResidual) }}</td></tr>@endif
                 <tr><td class="k">Total remises ({{ $sourceOrder->prix_ht > 0 ? round($docDiscount / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</td><td class="c">:</td><td class="v">{{ $fmt($docDiscount) }}</td></tr>
             @endif
@@ -569,7 +572,10 @@ table.bl-totals tr.grand td { font-weight: 700; font-size: 9.4pt; border-top: 1.
             <tr><td class="k">Code promo{{ $blCouponCode ? ' ('.$blCouponCode.')' : '' }}</td><td class="c">:</td><td class="v">− {{ $fmt($blCouponHt) }}</td></tr>
             @endif
             <tr><td class="k">Tot. Tva</td><td class="c">:</td><td class="v">{{ $fmt($totTva) }}</td></tr>
-            @if($frais > 0)
+            @if($shipPaidProtinas > 0)
+            <tr><td class="k">Livraison</td><td class="c">:</td><td class="v">{{ $fmt($frais + $shipPaidProtinas) }}</td></tr>
+            <tr><td class="k">Réglée en Protinas</td><td class="c">:</td><td class="v">− {{ $fmt($shipPaidProtinas) }}</td></tr>
+            @elseif($frais > 0)
             <tr><td class="k">Frais de livraison</td><td class="c">:</td><td class="v">{{ $fmt($frais) }}</td></tr>
             @endif
             <tr><td class="k">Timbre</td><td class="c">:</td><td class="v">{{ $fmt($timbre) }}</td></tr>

@@ -10,6 +10,7 @@ import { AuthCardHeader, AuthField, AuthShell, AuthSubmit } from '@/app/componen
 import { LoadingSpinner } from '@/app/components/LoadingSpinner';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { VerificationArtwork, VerificationPanel, VerifiedContactBadge } from '@/app/components/VerificationArtwork';
+import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, welcomeTeaser, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 type VerificationApiError = {
   response?: {
@@ -37,6 +38,9 @@ export default function VerifyEmailPage() {
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState('');
   const [cooldown, setCooldown] = useState(0);
+  // The welcome teaser follows the published unlock rule (true whichever side deploys first).
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) router.replace('/login');
@@ -105,7 +109,7 @@ export default function VerifyEmailPage() {
         <VerifiedContactBadge label="Email vérifié" />
         <AuthCardHeader title="Votre email est confirmé" subtitle="Retrouvez vos avis et vos achats dans votre espace client." />
         <LinkWithLoading href="/account?section=reviews" className="flex min-h-11 items-center justify-center rounded-xl bg-brand px-4 py-3 font-semibold text-on-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mes avis</LinkWithLoading>
-        {!user?.phone_verified && <><LinkWithLoading href="/verify-phone" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-brand-50 px-4 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Vérifier maintenant mon téléphone</LinkWithLoading>{user?.welcome_bonus_eligible && <p className="text-xs leading-relaxed text-ink-2">15 DT offerts (300 Protinas) : vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.</p>}</>}
+        {!user?.phone_verified && <><LinkWithLoading href="/verify-phone" className="flex min-h-11 items-center justify-center rounded-xl border border-brand bg-brand-50 px-4 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Vérifier maintenant mon téléphone</LinkWithLoading>{user?.welcome_bonus_eligible && <p className="text-xs leading-relaxed text-ink-2">{welcomeTeaser(rules)}</p>}</>}
         {user?.phone_verified && <LinkWithLoading href="/account" className="flex min-h-11 items-center justify-center rounded-lg px-2 text-center text-sm font-semibold text-brand focus-visible:ring-2 focus-visible:ring-focus">Voir mon compte</LinkWithLoading>}
       </div> : <>
       <AuthCardHeader

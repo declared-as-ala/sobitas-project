@@ -47,6 +47,12 @@ class User extends Authenticatable implements FilamentUser, MustVerifyEmail
         'welcome_bonus_eligible' => 'boolean',
         'welcome_bonus_awarded_at' => 'datetime',
         'password' => 'hashed',
+        // Protinas v3 wallets (migration 2026_10_02_000001). points_balance stays the total;
+        // gift_points_balance is the gift part of it, points_debt is owed on top of it.
+        'gift_points_balance' => 'integer',
+        'points_debt' => 'integer',
+        'gift_frozen_until' => 'datetime',
+        'cod_confirm_until' => 'datetime',
     ];
 
     public function hasVerifiedContact(): bool

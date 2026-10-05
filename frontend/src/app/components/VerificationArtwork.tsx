@@ -1,6 +1,7 @@
 import Image from 'next/image';
 import { ArrowRight, BadgeCheck, CircleDollarSign, Gift, Mail, ShieldCheck, Smartphone } from 'lucide-react';
 import { cn } from '@/app/components/ui/utils';
+import { FALLBACK_LOYALTY_RULES, welcomeOnDelivery, welcomeTeaser, welcomeValueLabel, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 /** Brand-native artwork: existing P asset + the site's monoline icon system.
  * No illustration download, animation, or text embedded in an image. */
@@ -33,7 +34,12 @@ export function VerificationPanel({ kind }: { kind: 'phone' | 'email' | 'success
   </div>;
 }
 
-export function RegistrationPanel() {
+/**
+ * The welcome copy follows the published unlock rule (pass the rules from /api/loyalty/rules): a
+ * pre-v3 backend, or the switch turned back on, credits the gift at the first delivered parcel.
+ */
+export function RegistrationPanel({ rules = FALLBACK_LOYALTY_RULES }: { rules?: Pick<LoyaltyRules, 'welcome'> } = {}) {
+  const onDelivery = welcomeOnDelivery(rules);
   return <div className="pt-slab relative flex h-full flex-col justify-between overflow-hidden p-8 text-ink-1 lg:p-10">
     <div aria-hidden="true" className="absolute -end-20 -top-24 h-72 w-72 rounded-full border border-brand/30" />
     <div aria-hidden="true" className="absolute -end-8 top-14 grid grid-cols-5 gap-2 opacity-60">
@@ -45,14 +51,14 @@ export function RegistrationPanel() {
         Votre compte.<br /><span className="text-brand-300">Vos avantages.</span>
       </h2>
       <p className="mt-5 max-w-sm text-sm leading-relaxed text-ink-2">
-        15 DT offerts (300 Protinas) : vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.
+        {welcomeTeaser(rules)} {rules.welcome.points.toLocaleString('fr-FR')} Protinas cadeau qui s&apos;appliquent toutes seules à votre commande, livraison comprise.
       </p>
     </div>
     <div className="relative z-10 my-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <CircleDollarSign className="h-6 w-6 text-brand-300" aria-hidden="true" />
-        <strong className="mt-3 block font-display text-2xl">15 DT offerts</strong>
-        <span className="mt-1 block text-xs text-ink-2">300 Protinas créditées à la première livraison</span>
+        <strong className="mt-3 block font-display text-2xl">{welcomeValueLabel(rules)} offerts</strong>
+        <span className="mt-1 block text-xs text-ink-2">{rules.welcome.points.toLocaleString('fr-FR')} Protinas {onDelivery ? 'débloquées à la réception de votre premier colis' : 'ajoutées dès la vérification du numéro'}</span>
       </div>
       <div className="rounded-2xl border border-hairline bg-elevated p-4">
         <ShieldCheck className="h-6 w-6 text-ok" aria-hidden="true" />

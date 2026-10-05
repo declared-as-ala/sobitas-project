@@ -43,6 +43,8 @@ export interface PackWizardProps {
   quoteLoading: boolean;
   submitting: boolean;
   tiers: { min: number; percent: number }[];
+  /** `rules.pack.excludes_promo_lines`, for the summary's progress sentence. */
+  excludesPromoLines?: boolean;
   onAdd: (product: Product, img: HTMLElement | null) => void;
   onSetQty: (product: Product, qty: number) => void;
   onRemove: (product: Product) => void;
@@ -105,7 +107,7 @@ function DiscountSteps({ tiers }: { tiers: { min: number; percent: number }[] })
 export function PackWizard(props: PackWizardProps) {
   const {
     groups, pack, entries, itemCount, subtotal, discountPercent, discountAmount,
-    total, tierLabel, nextTier, quoteLoading, submitting, tiers, onAdd, onSetQty,
+    total, tierLabel, nextTier, quoteLoading, submitting, tiers, excludesPromoLines, onAdd, onSetQty,
     onRemove, onSubmit, footerRef, tierTrackRef,
   } = props;
   const calm = useReducedMotion() === true;
@@ -294,6 +296,7 @@ export function PackWizard(props: PackWizardProps) {
                       nextTier={nextTier}
                       quoteLoading={quoteLoading}
                       tiers={tiers}
+                      excludesPromoLines={excludesPromoLines}
                       onRemove={onRemove}
                       onReview={() => goToStage('review')}
                       actionRef={footerRef}

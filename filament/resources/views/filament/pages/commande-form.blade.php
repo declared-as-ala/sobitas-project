@@ -15,6 +15,8 @@
             'produit_id'    => $d->produit_id,
             'qte'           => $d->qte,
             'prix_unitaire' => $d->prix_unitaire,
+            // Without it every save (a routine status change included) wrote arome = null on every line.
+            'arome'         => $d->arome,
         ])->toArray();
     } else {
         $detailsRows = [];
@@ -298,19 +300,51 @@ body:has(.commande-edit-page) .fi-form-actions { display: none !important; }
                                     $pointsDt = (float) ($record->points_discount_ht ?? 0);
                                     $discountDt = $packDt + $couponDt + $pointsDt;
                                     $goodsDt = (float) ($record->prix_ht ?? 0);
+                                    // Protinas v3: gift / earned split, the delivery paid with Protinas, the budget.
+                                    $pv3 = \App\Filament\Resources\CommandeResource::protinasSummary($record);
+                                    $fmt3 = fn ($v) => number_format((float) $v, 3, ',', ' ');
                                 @endphp
                                 @if($packDt > 0)<tr><td>Remise pack ({{ $goodsDt > 0 ? round($packDt / $goodsDt * 100, 1) : 0 }} %)</td><td>− {{ number_format($packDt, 3, ',', ' ') }} DT</td></tr>@endif
                                 @if($record->coupon_code_snapshot)<tr><td>Code promo {{ $record->coupon_code_snapshot }}</td><td>− {{ number_format($couponDt, 3, ',', ' ') }} DT</td></tr>@endif
-                                @if($pointsDt > 0)<tr><td>Protinas ({{ (int) $record->points_redeemed }} pts)</td><td>− {{ number_format($pointsDt, 3, ',', ' ') }} DT</td></tr>@endif
+                                @if($pointsDt > 0)<tr><td>Protinas ({{ $pv3['is_v3'] ? $pv3['goods_points'] : (int) $record->points_redeemed }} pts{{ $pv3['split_label'] }})</td><td>− {{ number_format($pointsDt, 3, ',', ' ') }} DT</td></tr>@endif
                                 @if($discountDt > 0)<tr><td>Total remises</td><td>{{ number_format($discountDt, 3, ',', ' ') }} DT ({{ $goodsDt > 0 ? round($discountDt / $goodsDt * 100, 2) : 0 }} % des articles)</td></tr>@endif
+                                @if($pv3['shipping_dt'] > 0)
+                                    <tr><td>Livraison</td><td>{{ $fmt3((float) ($record->frais_livraison ?? 0) + $pv3['shipping_dt']) }} DT</td></tr>
+                                    <tr><td>Réglée en Protinas ({{ $pv3['shipping_points'] }} pts{{ $pv3['split_label'] !== '' && $pointsDt <= 0 ? $pv3['split_label'] : '' }})</td><td>− {{ $fmt3($pv3['shipping_dt']) }} DT</td></tr>
+                                @endif
+                                @if($pv3['is_v3'] && $pv3['budget_dt'] !== null)
+                                    <tr><td style="color:#777">Budget remises de la commande (interne, jamais affiché au client)</td><td style="color:#777">{{ $fmt3($pv3['budget_dt']) }} DT</td></tr>
+                                @endif
+                                @if($record->awaitsPhoneConfirmation())
+                                    <tr><td colspan="2" style="background:#fffbeb;color:#92400e;font-weight:600">À confirmer par téléphone ({{ \App\Support\OrderCashOnDelivery::phoneToCall($record) }}) — « Envoyer vers Aramex » reste bloqué jusqu’à la confirmation.</td></tr>
+                                @elseif(!empty($record->phone_confirmed_at))
+                                    <tr><td colspan="2" style="color:#047857">Confirmée par téléphone le {{ $record->phone_confirmed_at->format('d/m/Y H:i') }}</td></tr>
+                                @endif
+                                @if($pv3['forfeited'] > 0)
+                                    <tr><td>Retenue Protinas (colis refusé, transport aller-retour)</td><td>{{ $pv3['forfeited'] }} Protinas = {{ $fmt3($pv3['forfeited'] / \App\Services\PointsService::pointsPerDt()) }} DT{{ $pv3['forfeit_waived'] ? ' — rendue au client' : '' }}</td></tr>
+                                @endif
+                                @if($pv3['deduct_dt'] > 0)
+                                    <tr><td colspan="2" style="background:#fef2f2;color:#b91c1c;font-weight:600">Protinas à déduire du remboursement : {{ $fmt3($pv3['deduct_dt']) }} DT ({{ $pv3['deduct_points'] }} Protinas gagnées sur cette commande et déjà dépensées). Après les avoir retenus sur le remboursement, cliquez « Retenue déduite du remboursement » : sinon ils restent un solde à compenser sur ses prochains achats.</td></tr>
+                                @endif
                             @endif
                             <tr>
                                 <td>Frais de livraison</td>
-                                <td><input class="form-control" id="frais_livraison" step="0.001" value="{{ $data['frais_livraison'] ?? '0.000' }}" onkeyup="calculate()" onchange="calculate()"></td>
+                                <td>
+                                    <input class="form-control" id="frais_livraison" step="0.001" value="{{ $data['frais_livraison'] ?? '0.000' }}" onkeyup="calculate()" onchange="calculate()">
+                                    @if($isEdit && $record && ($pv3['shipping_dt'] ?? 0) > 0)
+                                        <small style="color:#777">Livraison réglée en Protinas : {{ $fmt3($pv3['shipping_dt']) }} DT. Ce champ est la part encore due en espèces.</small>
+                                    @endif
+                                </td>
                             </tr>
                             <tr id="ligne_apres_remise">
                                 <td>Net à payer</td>
-                                <td><input class="form-control" id="apres_remise" step="0.001" value="{{ ($data['prix_ttc'] ?? 0) ?: '0.000' }}" disabled></td>
+                                <td><input class="form-control" id="apres_remise" step="0.001" value="{{ ($data['prix_ttc'] ?? 0) ?: '0.000' }}" disabled>
+                                    {{-- Read-only: the stored code and pack + Protinas discounts. The save recomputes
+                                         prix_ttc from the database values anyway (EditCommande); these only keep the
+                                         « Net à payer » shown here equal to what the courier will collect. --}}
+                                    <input type="hidden" id="cmd_remise" value="{{ $isEdit && $record ? number_format((float) ($record->remise ?? 0), 3, '.', '') : '0' }}" readonly>
+                                    <input type="hidden" id="cmd_discount" value="{{ $isEdit && $record ? number_format((float) ($record->discount_ht ?? 0), 3, '.', '') : '0' }}" readonly>
+                                </td>
                             </tr>
                         </table>
                         <div class="col-md-12">
@@ -382,7 +416,11 @@ function cmdBootPage() {
                     var newOption = new Option(pInfo.designation_fr, line.produit_id, true, true);
                     $('#select_produit' + j).append(newOption).trigger('change.select2');
                 } else {
-                    $('#select_produit' + j).val(line.produit_id).trigger('change.select2');
+                    // The product row was deleted: .val() on a select without that option returns null,
+                    // so cmdSave skipped the line — the order lost it, and a discounted order could no
+                    // longer be saved at all (line-change guard). Keep the line with a placeholder label.
+                    var goneOption = new Option('Produit supprimé #' + line.produit_id, line.produit_id, true, true);
+                    $('#select_produit' + j).append(goneOption).trigger('change.select2');
                 }
                 document.getElementById('arome' + j).value = line.arome ?? '';
                 document.getElementById('qte' + j).value = line.qte || 1;
@@ -577,8 +615,11 @@ function calculate() {
         m_totale_ht += pt;
     }
     var frais = parseFloat(document.getElementById('frais_livraison').value) || 0;
+    var remise = parseFloat((document.getElementById('cmd_remise') || {}).value) || 0;
+    var discount = parseFloat((document.getElementById('cmd_discount') || {}).value) || 0;
     document.getElementById('p_ht').value        = m_totale_ht.toFixed(3);
-    document.getElementById('apres_remise').value = (m_totale_ht + frais).toFixed(3);
+    // Same identity as the checkout and EditCommande: lines − code − (pack + Protinas) + delivery.
+    document.getElementById('apres_remise').value = Math.max(0, m_totale_ht - discount - remise + frais).toFixed(3);
 }
 
 function cmdSave() {

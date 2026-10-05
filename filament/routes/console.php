@@ -893,3 +893,42 @@ Schedule::call(function (): void {
             ->where('created_at', '<', now()->subDays(7))->limit(1000)->delete();
     }
 })->name('prune-phone-verification-codes')->dailyAt('04:20')->withoutOverlapping();
+
+/*
+|--------------------------------------------------------------------------
+| Protinas v3: gift expiry and reminders (rule 20)
+|--------------------------------------------------------------------------
+| protinas:expire (03:30) writes one `expiry` row per gift lot past its date (key expiry:{lot}) and
+| never touches earned Protinas, which do not expire; gifts that existed before v3 have no date.
+| protinas:gift-reminders (10:15) e-mails customers whose gift expires in 7 days and tomorrow, once
+| per lot and day (claimed in notification_deliveries first). SMS only with
+| PROTINAS_SMS_REMINDERS=true (off while the WinSMS balance is 0).
+|
+| Both are idempotent, so a second run after a deploy restart writes and sends nothing. Bounded
+| locks for the reason given on the payout batch above. The log is the only place a pass that
+| expired or reminded nothing is distinguishable from one that did not run.
+*/
+Schedule::command('protinas:expire')
+    ->dailyAt('03:30')
+    ->withoutOverlapping(30)
+    ->appendOutputTo(storage_path('logs/protinas.log'));
+
+Schedule::command('protinas:gift-reminders')
+    ->dailyAt('10:15')
+    ->withoutOverlapping(30)
+    ->appendOutputTo(storage_path('logs/protinas.log'));
+
+/*
+|--------------------------------------------------------------------------
+| Protinas v3: the wallet split heals itself
+|--------------------------------------------------------------------------
+| The deploy migration splits every wallet, but the OLD queue worker, scheduler and php-fpm keep
+| running old code for a few seconds to minutes around it, and every ledger row they write has no
+| bucket. One such row leaves its account "unsplit" (whole balance counted as gift, earned Protinas
+| unusable) until somebody re-runs the split. This does it: idempotent, it only touches accounts that
+| still hold unclassified rows, adds them to the wallet as it stands, and never forgives a debt.
+*/
+Schedule::command('protinas:split-wallets --apply')
+    ->hourlyAt(25)
+    ->withoutOverlapping(30)
+    ->appendOutputTo(storage_path('logs/protinas.log'));

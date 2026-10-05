@@ -27,18 +27,30 @@ try {
     page.on('request', async req => {
       const pathname = new URL(req.url()).pathname;
       const respond = (data, status = 200) => req.respond({ status, contentType: 'application/json', body: JSON.stringify(data) });
+      // A measurement run is not a visit: never send analytics hits to the shop's property.
+      if (/googletagmanager\.com|google-analytics\.com|analytics\.google\.com|doubleclick\.net|google\.[a-z.]+\/ads/.test(req.url())) return req.respond({ status: 204, body: '' });
       if (pathname.endsWith('/profil')) {
         if (failProfileOnce) { failProfileOnce = false; return respond({ message: 'Temporary failure' }, 503); }
         return respond(user);
       }
       const award = () => {
         user = { ...user, phone_verified: true, welcome_bonus_eligible: false, welcome_bonus_status: 'awarded', welcome_bonus_awarded: true, points_balance: 300, points_value_dt: 15 };
-        return { message: '300 points ajoutés : 15 DT pour vos prochains achats.', phone: user.phone, phone_verified: true, bonus_awarded: true, bonus_status: 'awarded', bonus_points: 300, points_balance: 300, points_value_dt: 15 };
+        // Protinas v3 (02/10/2026): the gift is credited at verification, with an expiry and the
+        // basket from which it applies whole — the two fields the success screen prints.
+        const expires = new Date(Date.now() + 60 * 86400_000).toISOString();
+        return { message: '300 Protinas cadeau ajoutées : 15 DT à utiliser avant le …, en entier dès 180 DT d’articles.', phone: user.phone, phone_verified: true, bonus_awarded: true, bonus_status: 'awarded', bonus_points: 300, points_balance: 300, points_value_dt: 15, bonus_expires_at: expires, gift_full_from_dt: 180 };
       };
       if (pathname.endsWith('/phone-verification/claim-bonus')) {
         claims++;
         failProfileOnce = true;
         return respond(award());
+      }
+      // The page restores an in-progress challenge from this on reload; unmocked, the GET reached
+      // the real backend with a fixture token and the « reload keeps the challenge » step timed out.
+      if (pathname.endsWith('/phone-verification/status')) {
+        return respond(sends > 0 && !user.phone_verified
+          ? { active: true, phone: '+21620123456', masked_phone: '+216 20 *** *56', expires_in: 170, resend_after: 50, attempts_remaining: 5 }
+          : { active: false });
       }
       if (pathname.endsWith('/phone-verification/send')) {
         sends++;
@@ -92,7 +104,12 @@ try {
     await page.type('input[autocomplete=one-time-code]', '123456');
     await page.click('button[type=submit]');
     await page.waitForSelector('[data-phone-success]');
-    assert.match(await page.$eval('main', el => el.innerText), /300 points/);
+    // The gift is THERE now, not « en attente » until a first delivery: no pending state to test.
+    assert.equal(await page.$eval('h1', el => el.textContent.includes('Vos 15 DT sont là')), true, 'v3 success title');
+    assert.match(await page.$eval('main', el => el.innerText), /300 Protinas cadeau viennent d’être ajoutées/);
+    assert.match(await page.$eval('main', el => el.innerText), /en entier dès 180 DT d’articles/);
+    assert.equal(await page.$eval('main', el => /en attente|à la livraison de votre première commande/.test(el.innerText)), false, 'no pending-delivery copy');
+    assert.equal(await page.$eval('main', el => el.innerText.includes('Faire mes achats')), true);
     await check('success');
     // An old, already verified account must never buy another SMS to catch up.
     user = { ...user, welcome_bonus_awarded: false, welcome_bonus_eligible: true, welcome_bonus_status: 'claimable', points_balance: 0, points_value_dt: 0 };
@@ -109,9 +126,9 @@ try {
     await page.waitForSelector('[data-phone-success]');
     assert.equal(await page.$eval('main', el => el.innerText.includes('Recevoir mes 15 DT')), false);
     assert.equal(claims, 1);
-    await page.goto(`${base}/account`, { waitUntil: 'networkidle2' });
-    await page.waitForSelector('[data-verified-identity]');
-    assert.match(await page.$eval('main', el => el.innerText), /300\s*points/);
+    await page.goto(`${base}/account?section=profile`, { waitUntil: 'networkidle2' });
+    await page.waitForSelector('[data-account-verification]');
+    assert.match(await page.$eval('[data-account-verification]', el => el.innerText), /Membre vérifié/i);
     await check('account-badge');
     await page.goto(`${base}/verify-email`, { waitUntil: 'networkidle2' });
     await page.waitForSelector('input[autocomplete=one-time-code]');

@@ -10,12 +10,19 @@ use App\Models\DetailsFacture;
 use App\Models\Facture;
 use App\Services\AramexService;
 use App\Services\InvoiceCalculator;
+use App\Support\OrderCashOnDelivery;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class OrderToBlService
 {
+    /**
+     * Why the automatic Aramex push was held for the last delivery note created (null = pushed or
+     * not applicable). Read by the admin actions to tell staff the shipment still has to be sent.
+     */
+    public ?string $aramexHoldReason = null;
+
     public function __construct(
         protected \App\Services\NumberSequenceService $numberSequence
     ) {}
@@ -83,6 +90,8 @@ class OrderToBlService
      */
     public function createBlFromOrder(Commande $order, ?array $quantities = null): Facture
     {
+        $this->aramexHoldReason = null;
+
         return DB::transaction(function () use ($order, $quantities) {
             $order = $order->fresh(['details.product', 'client']);
 
@@ -122,7 +131,12 @@ class OrderToBlService
             // Derive delivery fee from Order TTC minus the actual sum of line items.
             // Uses the COMBINED remise (manual + coupon) so the derivation is correct
             // regardless of whether a coupon was applied.
-            if ($fraisLivraison <= 0 && ($order->prix_ttc ?? 0) > 0) {
+            //
+            // ONLY for a legacy order with no pack, Protinas or code (Protinas v3, spec F0). On any
+            // other order frais_livraison = 0 is real (free from 300 DT, or paid with Protinas) and
+            // "prix_ttc − lines + remise" is just the discount: deriving it put the discount back on
+            // the courier's bill whenever an admin save had dropped it from prix_ttc.
+            if ($fraisLivraison <= 0 && ($order->prix_ttc ?? 0) > 0 && OrderCashOnDelivery::mayDeriveFee($order)) {
                 $sumLinesHt = 0;
                 foreach ($details as $d) {
                     $sumLinesHt += $d['qte'] * $d['prix_unitaire'];
@@ -158,6 +172,19 @@ class OrderToBlService
                 $totals['tva'] = 0.0;
                 $totals['prix_ttc'] = $htApres;
                 $totals['net_a_payer'] = round($htApres + $timbre + $fraisLivraison, 3);
+            }
+
+            // The courier collects net_a_payer. For an order priced by the checkout (or the affiliate
+            // desk) that MUST be the prix_ttc the customer was told; anything else is refused here,
+            // inside the transaction, so no delivery note and no Aramex shipment exist for it.
+            $netAPayer = round(max(0.0, (float) ($totals['net_a_payer'] ?? 0)), 3);
+            if ($quantities === null && OrderCashOnDelivery::isCheckoutPriced($order)
+                && OrderCashOnDelivery::differs($netAPayer, $orderTtc)) {
+                throw new BlAmountMismatchException(sprintf(
+                    'Bon de livraison refusé : la commande %s doit encaisser %s DT, le bon de livraison calculerait %s DT. '
+                    .'Ouvrez la commande, vérifiez les lignes, les remises et la livraison, enregistrez-la, puis recommencez.',
+                    (string) ($order->numero ?? $order->id), OrderCashOnDelivery::formatDt($orderTtc),
+                    OrderCashOnDelivery::formatDt($netAPayer)));
             }
 
             $bl = new Facture();
@@ -232,7 +259,15 @@ class OrderToBlService
             $bl->save();
 
             // ── Push to Aramex (non-blocking) ────────────────────────────
-            if (Schema::hasColumn('factures', 'aramex_hawb')) {
+            // Held (no call at all) while the order waits for its phone confirmation (rule 17), and for
+            // a note with nothing to collect: a 0 DT parcel leaves WITHOUT the CODS service (see
+            // AramexService::createShipment), so staff send it themselves with « Envoyer vers Aramex »
+            // after checking it — the first one is the supervised live test (Aramex has no sandbox).
+            $this->aramexHoldReason = Schema::hasColumn('factures', 'aramex_hawb')
+                ? (OrderCashOnDelivery::blockReasonFor($order, (float) $bl->net_a_payer)
+                    ?? ((float) $bl->net_a_payer <= 0 ? 'rien à encaisser, envoyez-le vous-même après vérification' : null))
+                : null;
+            if ($this->aramexHoldReason === null && Schema::hasColumn('factures', 'aramex_hawb')) {
                 try {
                     $aramex = app(AramexService::class)->createShipment($bl);
                     $bl->aramex_hawb       = $aramex['hawb'];

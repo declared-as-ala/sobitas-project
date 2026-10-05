@@ -29,6 +29,9 @@ class Product extends Model
         // AI-drafted copy awaiting approval. Never rendered to customers or Googlebot — publishing
         // copies these into description_fr / faq via the "Publier le contenu IA" bulk action.
         'ai_description_draft', 'ai_faq_draft', 'ai_generated_at', 'ai_review_status', 'ai_model',
+        // Private purchase cost (Protinas v3 order budget). Fillable for the admin form ONLY; it is in
+        // $hidden below and must never be selected into a public payload.
+        'prix_achat',
     ];
 
     /**
@@ -51,6 +54,9 @@ class Product extends Model
         'ai_generated_at',
         'ai_review_status',
         'ai_model',
+        // What the shop pays for the product. Feeds the hidden Protinas order budget (OrderBudget);
+        // publishing it would publish the shop's margin on every product page.
+        'prix_achat',
     ];
 
     protected $casts = [
@@ -58,6 +64,7 @@ class Product extends Model
         'prix' => 'float',
         'prix_ht' => 'float',
         'prix_affilie' => 'float',
+        'prix_achat' => 'float',
         'promo' => 'float',
         'promo_ht' => 'float',
         'qte' => 'integer',
@@ -349,6 +356,44 @@ class Product extends Model
         }
         // Expiration date >= today (inclusive): still valid for the whole day
         return $this->promo_expiration_date->format('Y-m-d') >= now()->format('Y-m-d');
+    }
+
+    /**
+     * Protinas v3: products outside the loyalty programme (the machines — Cardio Fitness and Matériel
+     * de Musculation by default, `loyalty.program.excluded_subcategory_slugs`). They get no pack, no
+     * gift and earn nothing, and they count toward neither the pack tiers nor free delivery; earned
+     * Protinas may still pay for them.
+     *
+     * Reads the legacy single subcategory (`sousCategorie->slug`); eager-load `sousCategorie` when
+     * pricing several lines. A product without a subcategory, or loaded without the column, is IN the
+     * programme. Never throws: a failed lookup (missing table on a partial install) counts as "in".
+     */
+    public function isLoyaltyExcluded(): bool
+    {
+        $slugs = array_values(array_filter(array_map(
+            static fn ($slug) => strtolower(trim((string) $slug)),
+            (array) config('loyalty.program.excluded_subcategory_slugs', [])
+        )));
+        if ($slugs === []) {
+            return false;
+        }
+        try {
+            if (! $this->relationLoaded('sousCategorie')) {
+                $attributes = $this->getAttributes();
+                if (! array_key_exists('sous_categorie_id', $attributes) || empty($attributes['sous_categorie_id'])) {
+                    return false;
+                }
+            }
+            $slug = $this->sousCategorie?->slug;
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('isLoyaltyExcluded could not read the subcategory', [
+                'product_id' => $this->getKey(), 'error' => $e->getMessage(),
+            ]);
+
+            return false;
+        }
+
+        return $slug !== null && in_array(strtolower(trim((string) $slug)), $slugs, true);
     }
 
     /**

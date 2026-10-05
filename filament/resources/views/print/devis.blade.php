@@ -52,6 +52,9 @@ $couponCode    = $facture->coupon_code_snapshot ?? null;
     $orderCoupon = (float) ($sourceOrder?->discount_ht ?? 0);
     $orderPoints = (float) ($sourceOrder?->points_discount_ht ?? 0);
     $orderDiscount = $orderPack + $orderCoupon + $orderPoints;
+    // Protinas v3: delivery paid with Protinas — shown for the record, it nets to 0 here.
+    $shipPaidProtinas = $sourceOrder instanceof \App\Models\Commande
+        ? \App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($sourceOrder) : 0.0;
     $baseImp       = round($totalHtBrut - $totalRemise, 3);
     $totalTva      = (float)($ct['tva']            ?? $facture->tva ?? 0);
     $totalTimbre   = (float)($ct['timbre']         ?? $facture->timbre ?? 0);
@@ -692,8 +695,12 @@ table.ftva-totals tr.row-grand td:last-child {
         @if($sourceOrder && $orderDiscount > 0)
             @if($orderPack > 0)<tr><td>Remise pack ({{ $sourceOrder->prix_ht > 0 ? round($orderPack / $sourceOrder->prix_ht * 100, 1) : 0 }} %)</td><td>− {{ $fmt($orderPack) }}&nbsp;DT</td></tr>@endif
             @if($sourceOrder->coupon_code_snapshot)<tr><td>Code promo {{ $sourceOrder->coupon_code_snapshot }}</td><td>− {{ $fmt($orderCoupon) }}&nbsp;DT</td></tr>@endif
-            @if($orderPoints > 0)<tr><td>Protinas ({{ $sourceOrder->points_redeemed }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
+            @if($orderPoints > 0)<tr><td>Protinas ({{ \App\Support\OrderCashOnDelivery::goodsProtinasPoints($sourceOrder) }} pts)</td><td>− {{ $fmt($orderPoints) }}&nbsp;DT</td></tr>@endif
             <tr><td>Total remises ({{ $sourceOrder->prix_ht > 0 ? round($orderDiscount / $sourceOrder->prix_ht * 100, 2) : 0 }} % des articles)</td><td>{{ $fmt($orderDiscount) }}&nbsp;DT</td></tr>
+        @endif
+        @if($shipPaidProtinas > 0)
+        <tr><td>Livraison</td><td>{{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
+        <tr><td>Réglée en Protinas</td><td>− {{ $fmt($shipPaidProtinas) }}&nbsp;DT</td></tr>
         @endif
         @if($manualRemise > 0 && ! $sourceOrder)
         <tr>

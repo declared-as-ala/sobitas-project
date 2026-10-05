@@ -51,8 +51,13 @@ export interface BackendOrderPayload {
    * SERVER-side subtotal (client never supplies an amount — a forged flag grants at most the honest tier).
    */
   pack_discount?: boolean;
-  /** Whole loyalty points the user chooses to spend; backend validates <= balance and <= cap. */
+  /**
+   * Whole loyalty points the user chooses to spend; backend validates <= balance and <= cap.
+   * Protinas v3: EARNED Protinas only — gift Protinas apply on their own (see `use_gift`).
+   */
   points_to_redeem?: number;
+  /** Protinas v3: false = « Garder pour plus tard » (the gift is not used on this order). */
+  use_gift?: boolean;
   expected_total?: number;
   /**
    * Affiliate attribution — the `pt_aff` subdomain label, e.g. `ali` for a visit that started on
@@ -99,8 +104,9 @@ export function buildBackendOrderPayload(params: {
   coupon_code?: string;
   pack_discount?: boolean;
   points_to_redeem?: number;
+  use_gift?: boolean;
 }): BackendOrderPayload {
-  const { livraison, panier, user_id, m_remise, coupon_code, pack_discount, points_to_redeem } = params;
+  const { livraison, panier, user_id, m_remise, coupon_code, pack_discount, points_to_redeem, use_gift } = params;
   const commande: BackendCommandeFields = {
     livraison_nom: livraison.livraison_nom,
     livraison_prenom: livraison.livraison_prenom || undefined,
@@ -147,6 +153,9 @@ export function buildBackendOrderPayload(params: {
   }
   if (points_to_redeem != null && points_to_redeem > 0) {
     payload.points_to_redeem = Math.floor(points_to_redeem);
+  }
+  if (typeof use_gift === 'boolean') {
+    payload.use_gift = use_gift;
   }
   return payload;
 }

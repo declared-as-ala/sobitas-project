@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
 import { useCart } from '@/app/contexts/CartContext';
 import {
   Drawer,
@@ -21,6 +22,7 @@ import { useScrollLock } from '@/util/useScrollLock';
 import { notify as toast } from '@/lib/notify';
 import { useI18n } from '@/i18n/I18nProvider';
 import { localizedName } from '@/i18n/content';
+import { cachedLoyaltyRules, isLoyaltyExcludedProduct, loadLoyaltyRules, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 interface CartDrawerProps {
   open: boolean;
@@ -43,6 +45,17 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
   useScrollLock(open);
 
   const totalPrice = getTotalPrice();
+
+  /* Protinas v3, rule 19 — the same split as the cart page and the checkout quote: machines count
+     neither toward free delivery nor its threshold, which comes from /api/loyalty/rules (never a
+     hard-coded 300). Otherwise a 350 DT bench reads « Livraison gratuite incluse » here while the
+     checkout charges the 10 DT. */
+  const [rules, setRules] = useState<LoyaltyRules>(cachedLoyaltyRules);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
+  const programmeTotal = items.reduce((sum, item) => (isLoyaltyExcludedProduct(item.product, rules)
+    ? sum : sum + getEffectivePrice(item.product) * item.quantity), 0);
+  const hasMachines = programmeTotal < totalPrice - 0.0005;
+  const freeDeliveryFrom = rules.delivery.free_from_dt;
 
   /*
     ── WHAT THE BASKET SAVED, WHICH THE DRAWER NEVER SAID ────────────────────────────────────
@@ -489,13 +502,14 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                 12px, the savings merges INTO the total row as a chip beside the label rather than
                 a line of its own, and the secondary button comes down to 40px. ~239 -> ~190px,
                 and the rows above get all of it. */}
-            {totalPrice < 300 ? (
+            {programmeTotal < freeDeliveryFrom ? (
               <div className="mb-2">
                 <p className="mb-1.5 flex items-center gap-2 text-[12px] leading-tight text-ink-2">
                   <Truck className="h-4 w-4 shrink-0 text-brand" aria-hidden="true" />
                   <span>
                     Plus que{' '}
-                    <span className="font-bold tabular-nums text-ink-1">{formatCurrency(300 - totalPrice)}</span>
+                    <span className="font-bold tabular-nums text-ink-1">{formatCurrency(freeDeliveryFrom - programmeTotal)}</span>
+                    {hasMachines ? ' d’articles hors machines' : ''}
                     {' '}pour la <span className="font-semibold text-brand">livraison gratuite</span>
                   </span>
                 </p>
@@ -508,7 +522,7 @@ export function CartDrawer({ open, onOpenChange }: CartDrawerProps) {
                        what DESIGN_SYSTEM §9 asks for, and `motion-reduce` is what the other two
                        carry. Only the width ever changes here. */
                     className="h-full rounded-full bg-brand transition-[width] duration-300 ease-out motion-reduce:transition-none"
-                    style={{ width: `${Math.min(100, (totalPrice / 300) * 100)}%` }}
+                    style={{ width: `${freeDeliveryFrom > 0 ? Math.min(100, (programmeTotal / freeDeliveryFrom) * 100) : 100}%` }}
                   />
                 </div>
               </div>

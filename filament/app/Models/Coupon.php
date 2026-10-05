@@ -25,6 +25,9 @@ class Coupon extends Model
         'code', 'type', 'value', 'starts_at', 'ends_at', 'is_active',
         'min_order_amount', 'max_discount_amount', 'usage_limit_total', 'usage_limit_per_client',
         'applies_to', 'notes',
+        // Protinas v3: « Accepter une perte possible » — honour the code in full even above the
+        // order budget. Default false (guarded) for every code, existing ones included.
+        'allow_over_budget',
     ];
 
     protected $casts = [
@@ -36,6 +39,7 @@ class Coupon extends Model
         'ends_at' => 'datetime',
         'is_active' => 'boolean',
         'is_affilie_code' => 'boolean',
+        'allow_over_budget' => 'boolean',
         'usage_limit_total' => 'integer',
         'usage_limit_per_client' => 'integer',
         'applies_channel' => AffilieAppliesChannel::class,

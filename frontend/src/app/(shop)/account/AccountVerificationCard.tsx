@@ -1,9 +1,11 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { BadgeCheck, CircleAlert, Gift, Mail, ShieldCheck, Smartphone } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { VerifiedAvatar } from '@/app/components/VerificationArtwork';
+import { FALLBACK_LOYALTY_RULES, loadLoyaltyRules, welcomeOffer, type LoyaltyRules } from '@/util/loyaltyPoints';
 
 function ContactRow({ icon: Icon, label, value, verified }: {
   icon: typeof Smartphone;
@@ -22,6 +24,9 @@ function ContactRow({ icon: Icon, label, value, verified }: {
 
 export function AccountVerificationCard() {
   const { user } = useAuth();
+  // The teaser follows the published unlock rule, so it stays true whichever side deploys first.
+  const [rules, setRules] = useState<LoyaltyRules>(FALLBACK_LOYALTY_RULES);
+  useEffect(() => { void loadLoyaltyRules().then(setRules); }, []);
   if (!user) return null;
 
   const phoneVerified = !!user.phone_verified;
@@ -56,8 +61,8 @@ export function AccountVerificationCard() {
     </div>
     {user.welcome_bonus_eligible && !phoneVerified && <div className="flex items-center gap-3 border-t border-hairline bg-brand-50 px-4 py-3 text-sm text-ink-2 sm:px-5">
       <Gift className="h-5 w-5 shrink-0 text-brand" aria-hidden="true" />
-      <p><strong className="text-ink-1">15 DT offerts (300 Protinas) :</strong> vérifiez votre téléphone, ils sont crédités à la livraison de votre première commande et utilisables dès la suivante.</p>
+      <p><strong className="text-ink-1">Vérifiez votre numéro :</strong> {welcomeOffer(rules)}</p>
     </div>}
-    {user.welcome_bonus_status === 'pending' && <div className="flex items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 text-sm text-ink-2 sm:px-5"><Gift className="h-5 w-5 shrink-0 text-warn" aria-hidden="true" /><p>15 DT en attente, crédités à la livraison de votre 1re commande</p></div>}
+    {user.welcome_bonus_status === 'pending' && <div className="flex items-center gap-3 border-t border-hairline bg-elevated px-4 py-3 text-sm text-ink-2 sm:px-5"><Gift className="h-5 w-5 shrink-0 text-warn" aria-hidden="true" /><p>15 DT en attente : ils arrivent quand votre première commande sera livrée.</p></div>}
   </section>;
 }

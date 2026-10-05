@@ -14,10 +14,40 @@
         $commande->livraison_code_postale ?? $commande->code_postale ?? null,
     ])->filter()->implode(', ');
     $phone = $commande->livraison_phone ?? $commande->phone ?? null;
-    $subtotal = (float) ($commande->prix_ht ?? 0);
-    $shipping = (float) ($commande->frais_livraison ?? 0);
-    $total = (float) ($commande->prix_ttc ?? 0);
-    $discount = max(0, $subtotal + $shipping - $total);
+    // Same rows as the checkout summary (util/checkoutPricing.ts checkoutSummaryView), rebuilt from the
+    // stored columns. Since Protinas v3 frais_livraison is the delivery still due in CASH: the part
+    // Protinas paid is points_shipping_dt. The gift keeps its own line (the engine only caps it when no
+    // earned Protinas are spent, so min(gift value, Protinas value) is exact), and earned Protinas are
+    // what crosses the delivery out: never « Livraison : Gratuite » beside a smaller « Remise ».
+    $mm = fn ($dt) => (int) round((float) ($dt ?? 0) * 1000);
+    $ppd = max(1, (int) config('loyalty.points.points_per_dt', 20));
+    $isV3 = $commande->isPricedV3();
+    $subtotalMm = $mm($commande->prix_ht);
+    $totalMm = $mm($commande->prix_ttc);
+    $pointsShipMm = $mm(\App\Support\OrderCashOnDelivery::shippingPaidWithProtinasDt($commande));
+    $grossMm = $mm($commande->frais_livraison) + $pointsShipMm;
+    $valueMm = $mm($commande->points_discount_ht) + $pointsShipMm;
+    $giftPoints = $isV3 ? max(0, (int) ($commande->getAttributes()['points_redeemed_gift'] ?? 0)) : 0;
+    $giftMm = min(intdiv($giftPoints * 1000, $ppd), $valueMm);
+    $earnedMm = max(0, $valueMm - $giftMm);
+    $earnedOnShipMm = min($pointsShipMm, $earnedMm, $grossMm);
+    $shipPoints = $earnedOnShipMm > 0 ? (int) ceil((min($earnedOnShipMm, $grossMm) * $ppd) / 1000) : 0;
+    $earnedGoodsMm = $earnedMm - $earnedOnShipMm;
+    $earnedGoodsPoints = max(0, (int) ($commande->points_redeemed ?? 0) - $giftPoints - $shipPoints);
+    $discountMm = max(0, $subtotalMm + $grossMm - $valueMm - $totalMm);
+    $welcomeGift = false;
+    if ($giftMm > 0) {
+        try {
+            $welcomeGift = \Illuminate\Support\Facades\Schema::hasColumn('welcome_bonus_claims', 'used_by_commande_id')
+                && \Illuminate\Support\Facades\DB::table('welcome_bonus_claims')->where('used_by_commande_id', $commande->id)->exists();
+        } catch (\Throwable $e) {
+            $welcomeGift = false;
+        }
+    }
+    // One precision for the whole column: 3 decimals as soon as one figure carries a millime (282.106).
+    $places = collect([$subtotalMm, $discountMm, $grossMm, $giftMm, $earnedMm, $totalMm])
+        ->contains(fn ($v) => abs($v) % 10 !== 0) ? 3 : 2;
+    $money = fn (int $millimes) => number_format($millimes / 1000, $places, '.', ' ').' DT';
     $paymentLabel = ($commande->payment_method ?? '') === 'card' ? 'Carte bancaire' : 'Paiement à la livraison';
     $coordinate = \App\Models\Coordinate::getCached();
     $contactEmail = ($coordinate && !empty($coordinate->email)) ? $coordinate->email : 'contact@protein.tn';
@@ -48,7 +78,7 @@
     <tr><td class="pad" style="padding:0 32px 22px;">
         <table role="presentation" width="100%" style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;background:#fafafa;"><tr>
             <td class="stat" width="34%" style="padding:14px 16px;border-right:1px solid #e5e7eb;"><p style="font-size:11px;color:#71717a;">COMMANDE</p><p style="margin-top:4px;font-size:17px;font-weight:bold;color:#18181b;">#{{ $commande->numero }}</p></td>
-            <td class="stat" width="33%" style="padding:14px 16px;border-right:1px solid #e5e7eb;"><p style="font-size:11px;color:#71717a;">TOTAL</p><p style="margin-top:4px;font-size:17px;font-weight:bold;color:#df3b05;">{{ number_format($total,2,'.',' ') }} DT</p></td>
+            <td class="stat" width="33%" style="padding:14px 16px;border-right:1px solid #e5e7eb;"><p style="font-size:11px;color:#71717a;">TOTAL</p><p style="margin-top:4px;font-size:17px;font-weight:bold;color:#df3b05;">{{ $money($totalMm) }}</p></td>
             <td class="stat" width="33%" style="padding:14px 16px;"><p style="font-size:11px;color:#71717a;">PAIEMENT</p><p style="margin-top:4px;font-size:13px;font-weight:bold;line-height:18px;color:#18181b;">{{ $paymentLabel }}</p></td>
         </tr></table><p style="margin-top:9px;font-size:12px;color:#71717a;">{{ $dateFormatted }}</p>
     </td></tr>
@@ -63,10 +93,22 @@
         @endforeach
     </table>
     <table role="presentation" width="100%" style="margin-top:10px;background:#fafafa;border-radius:12px;overflow:hidden;">
-        <tr><td style="padding:11px 14px;font-size:13px;color:#52525b;">Sous-total</td><td align="right" style="padding:11px 14px;font-size:13px;font-weight:bold;">{{ number_format($subtotal,2,'.',' ') }} DT</td></tr>
-        @if($discount > 0)<tr><td style="padding:4px 14px 11px;font-size:13px;color:#16834a;">Remise</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:#16834a;">-{{ number_format($discount,2,'.',' ') }} DT</td></tr>@endif
-        <tr><td style="padding:4px 14px 11px;font-size:13px;color:#52525b;">Livraison</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:{{ $shipping > 0 ? '#18181b' : '#16834a' }};">{{ $shipping > 0 ? number_format($shipping,2,'.',' ').' DT' : 'Gratuite' }}</td></tr>
-        <tr><td style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:16px;font-weight:bold;">Total</td><td align="right" style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:18px;font-weight:bold;color:#df3b05;">{{ number_format($total,2,'.',' ') }} DT</td></tr>
+        <tr><td style="padding:11px 14px;font-size:13px;color:#52525b;">Sous-total</td><td align="right" style="padding:11px 14px;font-size:13px;font-weight:bold;">{{ $money($subtotalMm) }}</td></tr>
+        @if($discountMm > 0)<tr><td style="padding:4px 14px 11px;font-size:13px;color:#16834a;">Remise</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:#16834a;">-{{ $money($discountMm) }}</td></tr>@endif
+        <tr><td style="padding:4px 14px 11px;font-size:13px;color:#52525b;">Livraison</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:{{ $grossMm > 0 && $earnedOnShipMm < $grossMm ? '#18181b' : '#16834a' }};">
+            @if($grossMm === 0)
+                Gratuite
+            @elseif($earnedOnShipMm >= $grossMm)
+                <s style="font-weight:normal;color:#71717a;">{{ $money($grossMm) }}</s> Réglée avec {{ $shipPoints }} Protinas
+            @elseif($earnedOnShipMm > 0)
+                <s style="font-weight:normal;color:#71717a;">{{ $money($grossMm) }}</s> {{ $money($grossMm - $earnedOnShipMm) }}
+            @else
+                {{ $money($grossMm) }}
+            @endif
+        </td></tr>
+        @if($giftMm > 0)<tr><td style="padding:4px 14px 11px;font-size:13px;color:#16834a;">{{ $welcomeGift ? 'Cadeau de bienvenue' : 'Cadeau' }} ({{ $giftPoints }} Protinas)</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:#16834a;">-{{ $money($giftMm) }}</td></tr>@endif
+        @if($earnedGoodsMm > 0)<tr><td style="padding:4px 14px 11px;font-size:13px;color:#16834a;">Vos Protinas ({{ $earnedGoodsPoints }})</td><td align="right" style="padding:4px 14px 11px;font-size:13px;font-weight:bold;color:#16834a;">-{{ $money($earnedGoodsMm) }}</td></tr>@endif
+        <tr><td style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:16px;font-weight:bold;">Total</td><td align="right" style="padding:13px 14px;border-top:1px solid #e5e7eb;font-size:18px;font-weight:bold;color:#df3b05;">{{ $money($totalMm) }}</td></tr>
     </table></td></tr>
     @if($address || $phone)
     <tr><td class="pad" style="padding:0 32px 22px;"><table role="presentation" width="100%" style="border-left:3px solid #df3b05;background:#fafafa;"><tr><td style="padding:14px 16px;"><p style="font-size:12px;font-weight:bold;text-transform:uppercase;letter-spacing:.7px;color:#52525b;">Livraison</p>@if($fullName)<p style="margin-top:7px;font-size:14px;font-weight:bold;color:#18181b;">{{ $fullName }}</p>@endif @if($address)<p style="margin-top:3px;font-size:13px;line-height:19px;color:#52525b;">{{ $address }}</p>@endif @if($phone)<p style="margin-top:3px;font-size:13px;color:#18181b;">{{ $phone }}</p>@endif</td></tr></table></td></tr>

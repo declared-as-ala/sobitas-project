@@ -362,6 +362,35 @@ class ProductResource extends Resource
                                             ->minValue(0.001)
                                             ->extraInputAttributes(['class' => 'text-lg font-semibold text-amber-600'])
                                             ->helperText('Prix que la boutique doit encaisser sur une vente affiliée ; l’affilié revend au-dessus et garde la différence. Laissez vide pour que ce produit n’apparaisse pas dans le catalogue des affiliés.'),
+                                        /*
+                                         * ── PRIX D'ACHAT — PRIVATE, NEVER PUBLISHED ─────────────
+                                         * What the shop pays for one unit, HT as on the supplier's
+                                         * invoice (OrderBudget::costMm() adds the VAT). It feeds the hidden
+                                         * Protinas order budget (OrderBudget): with it, the real
+                                         * margin of this product replaces the margin floor when the
+                                         * shop decides how much pack, code and gift an order can
+                                         * carry. It is in Product::$hidden, so no API payload can
+                                         * serialise it; nothing on the storefront reads it.
+                                         *
+                                         * Saved only by this full edit form (EditRecord loads the
+                                         * whole row). Never write it from a model loaded with a
+                                         * column list: that save would rewrite the other columns
+                                         * with what was not loaded (the 28/09 qte = 0 incident).
+                                         */
+                                        Forms\Components\TextInput::make('prix_achat')
+                                            ->label('Prix d’achat HT (privé, par unité)')
+                                            ->visible(fn (): bool => self::hasProductColumn('prix_achat'))
+                                            ->dehydrated(fn (): bool => self::hasProductColumn('prix_achat'))
+                                            ->numeric()
+                                            ->prefix('DT')
+                                            ->placeholder('0.000')
+                                            ->step(0.001)
+                                            ->minValue(0)
+                                            ->nullable()
+                                            ->helperText(fn (): string => 'Hors TVA, pour UNE unité, comme sur la facture du fournisseur : la TVA ('
+                                                .rtrim(rtrim(number_format(\App\Services\OrderBudget::vatBasisPoints() / 100, 2, ',', ''), '0'), ',')
+                                                .' %) est ajoutée automatiquement. Jamais affiché sur le site. Sert au calcul interne des remises Protinas (marge réelle du produit). Vide : la marge plancher de '
+                                                .rtrim(rtrim(number_format((float) config('loyalty.budget.margin_floor_percent', 15), 2, ',', ''), '0'), ',').' % s’applique.'),
                                     ]),
                                     Forms\Components\DateTimePicker::make("promo_expiration_date")
                                         ->label("Date d'expiration de la promotion")

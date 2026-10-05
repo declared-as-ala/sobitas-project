@@ -58,14 +58,14 @@
     "DS007": 1
   },
   "src/app/(shop)/cart/page.tsx": {
-    "DS001": 30,
-    "DS002": 63,
-    "DS003": 33,
+    "DS001": 28,
+    "DS002": 58,
+    "DS003": 32,
     "DS004": 30,
     "DS005": 2,
     "DS007": 4,
     "DS008": 1,
-    "DS011": 39
+    "DS011": 32
   },
   "src/app/(shop)/category/CategorySeoLandingExpandable.tsx": {
     "DS002": 1,
