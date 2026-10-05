@@ -48,7 +48,11 @@ class ReviewModerator
             (string) $review->comment,
             (int) ($review->note ?? $review->stars ?? 0),
             (string) (optional($review->product)->designation_fr ?? ('#' . $review->product_id)),
-            self::KIND_REVIEW
+            self::KIND_REVIEW,
+            // A review tied to an order may be stars only: the /avis/{ref} link is gated on a
+            // DELIVERED order, so the order is the evidence and the text is optional. A review
+            // with no order and no text still has nothing to judge and stays held.
+            ! empty($review->commande_id)
         );
     }
 
@@ -65,19 +69,25 @@ class ReviewModerator
      *
      * Never throws, exactly like moderate(): a moderation failure must never break a submission.
      *
+     * `$ratingOnlyAllowed` is true only for a REVIEW linked to an order (see moderate()). With it,
+     * an empty text is flagged `rating_only` and publishes instead of being held as `empty`; the
+     * LLM is not called at all, because there is no text to classify and an empty prompt invites a
+     * made-up verdict. A reply never passes it: an empty reply is still `empty`.
+     *
      * @return array{
      *   decision:string, genuine:?bool, sentiment:?string, language:?string,
      *   flags:array<int,string>, summary:string, reason:string, source:string, checked_at:string
      * }
      */
-    public function moderateComment(string $text, ?int $stars, string $productLabel, string $kind = self::KIND_REVIEW): array
+    public function moderateComment(string $text, ?int $stars, string $productLabel, string $kind = self::KIND_REVIEW, bool $ratingOnlyAllowed = false): array
     {
         $comment = trim($text);
 
-        $ruleFlags = $this->ruleScan($comment);
+        $ruleFlags = $this->ruleScan($comment, $ratingOnlyAllowed && $kind === self::KIND_REVIEW);
 
         $ai = null;
-        if ((bool) config('reviews.moderation.enabled', true) && $this->apiKey() !== '') {
+        if (! in_array('rating_only', $ruleFlags, true)
+            && (bool) config('reviews.moderation.enabled', true) && $this->apiKey() !== '') {
             $ai = $this->aiClassify($productLabel, $stars, $comment, $kind);
         }
 
@@ -89,14 +99,18 @@ class ReviewModerator
      * approves) so a false positive just routes a review to a human, never
      * publishes something bad.
      *
+     * The one exception is `rating_only`: an EMPTY text on a review tied to a delivered order.
+     * It is not an approval of any text (there is none) - it only stops the empty text from being
+     * the reason to hold a rating whose evidence is the order itself.
+     *
      * @return array<int,string>
      */
-    private function ruleScan(string $text): array
+    private function ruleScan(string $text, bool $ratingOnlyAllowed = false): array
     {
         $flags = [];
 
         if ($text === '') {
-            $flags[] = 'empty';
+            $flags[] = $ratingOnlyAllowed ? 'rating_only' : 'empty';
 
             return $flags;
         }
@@ -227,12 +241,30 @@ SYS;
         $flags = $ruleFlags;
 
         // Baseline decision from rules alone (also the fallback when AI is off).
+        // `rating_only` is deliberately NOT in this list: an empty text on a delivered-order review
+        // publishes. `empty` (no text AND no order) still holds.
         $ruleDecision = 'publish';
         if (in_array('link', $ruleFlags, true) || in_array('contact', $ruleFlags, true) || in_array('empty', $ruleFlags, true)) {
             $ruleDecision = 'hold';
         }
 
         if ($ai === null) {
+            // A stars-only review from an order link: nothing was scanned, so say exactly that
+            // rather than "no link detected", which would read as if a text had been checked.
+            if (in_array('rating_only', $ruleFlags, true)) {
+                return [
+                    'decision'   => $ruleDecision,
+                    'genuine'    => null,
+                    'sentiment'  => null,
+                    'language'   => null,
+                    'flags'      => array_values(array_unique($flags)),
+                    'summary'    => 'Note seule (commande livrée)',
+                    'reason'     => 'Note sans commentaire, liée à une commande livrée — aucun texte à modérer.',
+                    'source'     => 'rules',
+                    'checked_at' => $now,
+                ];
+            }
+
             return [
                 'decision'   => $ruleDecision,
                 'genuine'    => null,
@@ -242,7 +274,9 @@ SYS;
                 'summary'    => $ruleDecision === 'publish' ? 'OK (règles)' : 'Signalé par règles',
                 'reason'     => $ruleDecision === 'publish'
                     ? 'Aucun lien / coordonnées détectés (IA indisponible).'
-                    : 'Lien ou coordonnées détectés dans l’avis.',
+                    : (in_array('empty', $ruleFlags, true)
+                        ? 'Avis vide, sans commande liée.'
+                        : 'Lien ou coordonnées détectés dans l’avis.'),
                 'source'     => 'rules',
                 'checked_at' => $now,
             ];

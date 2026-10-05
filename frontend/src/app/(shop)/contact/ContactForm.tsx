@@ -9,6 +9,7 @@ import { sendContact } from '@/services/api';
 import { notify as toast } from '@/lib/notify';
 import { CONTACT_PHONE } from '@/util/company';
 import { WHATSAPP_NUMBER } from '@/util/whatsapp';
+import { gaEvent } from '@/lib/analytics/ga4';
 
 /**
  * The only client island on /contact.
@@ -95,6 +96,8 @@ export function ContactForm() {
         subject: formData.subject || undefined,
         company: honeypot?.value || undefined,
       });
+      // A filled honeypot is answered with success and stored nowhere: not a lead either.
+      if (!honeypot?.value) gaEvent('generate_lead', { method: 'contact_form' });
       toast.success('Message envoyé. Nous vous répondons sous 24 h ouvrées.');
       setFormData({ name: '', email: '', phone: '', subject: '', message: '' });
       setSent(true);

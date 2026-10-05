@@ -8,7 +8,37 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
 
-export default async function AvisPage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
-  return <AvisClient token={token} />;
+type SearchParams = Record<string, string | string[] | undefined>;
+
+/** A whole, positive number from a query param, or null. `?p=12abc` and `?note=4.5` are not. */
+function wholeNumberParam(value: string | string[] | undefined): number | null {
+  const raw = (Array.isArray(value) ? value[0] : value)?.trim();
+  if (!raw || !/^\d{1,10}$/.test(raw)) return null;
+  const n = Number(raw);
+  return Number.isSafeInteger(n) && n > 0 ? n : null;
+}
+
+/*
+  The review email links each star to `/avis/{ref}?p={product_id}&note={1-5}`. Both are read here
+  and handed down as plain props; AvisClient only PRESELECTS with them — a link a mail scanner
+  prefetches must never publish anything. Invalid values become null and the page behaves exactly
+  as a bare `/avis/{ref}`.
+*/
+export default async function AvisPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ token: string }>;
+  searchParams: Promise<SearchParams>;
+}) {
+  const [{ token }, query] = await Promise.all([params, searchParams]);
+  const productId = wholeNumberParam(query.p);
+  const note = wholeNumberParam(query.note);
+  return (
+    <AvisClient
+      token={token}
+      preselectProductId={productId}
+      preselectStars={note != null && note >= 1 && note <= 5 ? note : null}
+    />
+  );
 }

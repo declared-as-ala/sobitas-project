@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { inGlobalNav, taxonomyNode } from '@/config/catalogTaxonomy';
+import { isRetiredCmsPageSlug } from '@/config/cmsPageSeoConfig';
 import BLOG_MERGES_2909 from '@/generated/blogMerges2909.json';
 import { CATEGORY_CONTENT_DATES } from '@/generated/categoryContentDates';
 import { getApiPage, getStorageUrl } from '@/services/api';
@@ -1101,6 +1102,8 @@ const cmsPagesSource: SitemapSource = {
     const entries: SourceEntry[] = [];
     for (const page of crawl.rows) {
       if (!page.slug || page.slug === 'api') continue;
+      // Folded into the catalogue: /{slug} 301s (redirects.js) even while the row is still ACTIVE.
+      if (isRetiredCmsPageSlug(page.slug)) continue;
       // Gate like categories: don't submit CMS pages an admin marked noindex / excluded from the
       // sitemap (otherwise Search Console flags "Submitted URL marked noindex").
       if ((page as { robots_index?: boolean }).robots_index === false) continue;

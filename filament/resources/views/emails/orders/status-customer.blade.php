@@ -8,6 +8,12 @@
         ? 'https://www.aramex.com/tn/en/track/track-results-new?ShipmentNumber=' . rawurlencode((string) $trackingNumber)
         : $accountUrl;
     $firstName = trim((string) ($commande->livraison_prenom ?: $commande->prenom));
+    // Same delivered rule as the review link and the Protinas ledger (PointsService::DELIVERED_STATUSES).
+    $isDelivered = in_array($status, \App\Services\PointsService::DELIVERED_STATUSES, true);
+    // An affiliate-desk order is never asked for a review (Commande::isAffiliateDeskOrder): its
+    // address is whatever the affiliate typed, possibly the affiliate's own.
+    $asksForReviews = $isDelivered && ! $commande->isAffiliateDeskOrder();
+    $googleReviewUrl = trim((string) config('reviews.google_review_url', ''));
     $message = match ($status) {
         'en_cours_de_livraison', 'expidee' => 'Votre colis a quitté notre dépôt et poursuit son chemin vers vous.',
         'livree', 'livrée', 'livre' => 'Votre commande a été indiquée comme livrée. Merci pour votre confiance.',
@@ -26,6 +32,19 @@
             <p style="margin:0 0 8px;color:#dc3500;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase">Commande #{{ $commande->numero }}</p>
             <h1 style="margin:0 0 14px;font-size:28px;line-height:1.15">{{ $statusLabel }}</h1>
             <p style="margin:0 0 22px;color:#555;line-height:1.6">Bonjour{{ $firstName ? ' ' . $firstName : '' }}, {{ $message }}</p>
+            @if($asksForReviews)
+                {{--
+                    Sent to EVERY delivered customer, whatever they thought of the order: no condition
+                    on sentiment, rating or history, which is what Google's no-selective-solicitation
+                    rule requires of the Google link below. And NO Protinas / points / reward wording
+                    anywhere in this block or this email — Google forbids incentives for its reviews.
+                    The product review request (with its disclosed Protinas line) is a separate email.
+                --}}
+                <p style="margin:0 0 10px;color:#555;line-height:1.6">Dans quelques jours, nous vous demanderons votre avis sur les produits reçus.</p>
+                @if($googleReviewUrl !== '')
+                    <p style="margin:0 0 22px;font-size:13px;line-height:1.6"><a href="{{ $googleReviewUrl }}" style="color:#777;text-decoration:underline">Votre expérience avec la boutique ? Laissez un avis Google</a></p>
+                @endif
+            @endif
             @if($trackingNumber)
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 22px;background:#fff7f3;border:1px solid #ffd8c9;border-radius:12px"><tr><td style="padding:16px 18px">
                     <p style="margin:0 0 5px;color:#777;font-size:12px;text-transform:uppercase;letter-spacing:.06em">Suivi Aramex</p>

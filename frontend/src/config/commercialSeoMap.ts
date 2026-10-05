@@ -103,6 +103,10 @@ export const protectedByTraffic: Record<string, string> = {
   '/articulations': '1 click (28 d)',
   '/cla': '1 click / 2 impressions @22.0 (28 d)',
   '/glucides': '4 clicks / 126 impressions @55.1 (28 d) — the surviving half of the duplicate carbohydrate shelf',
+  // Added 05/10/2026 from GSC 28 d to 05/10/2026 (page level): the three head-term owners, now climbing. Insurance against the zero-stock noindex rule in the category route.
+  '/proteines': '11 clicks / 124 impressions @13.7 on "proteine tunisie" (28 d to 05/10/2026, prev 28 d @47.6); live #7 on google.com gl=tn the same day',
+  '/whey-proteine': '9 clicks / 162 impressions @13.8 on "whey protein tunisie" (28 d to 05/10/2026; @34.4 on 22/09)',
+  '/creatine': '7 clicks / 18 impressions @28.6 on "creatine tunisie" (28 d to 05/10/2026; @64 on 22/09)',
 };
 
 export const commercialSeoMap: Record<string, CommercialCluster> = {
@@ -256,7 +260,8 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
 
   preWorkout: {
     owner: '/pre-workout',
-    owns: ['pre workout tunisie', 'pre workout prix tunisie', 'booster tunisie'],
+    // 05/10/2026: GSC 28 d "pre workout" 274 impr / 0 clicks @8.4, answered by one PDP (Born Rage @5.3, image/product block) while /pre-workout sits @57.7; the sitewide anchor now names the owner (categoryAnchor.ts).
+    owns: ['pre workout tunisie', 'pre workout prix tunisie', 'booster tunisie', 'pre workout', 'preworkout'],
     secondary: ['c4 tunisie', 'pre workout sans caféine'],
     supporting: [],
     conflicts: [
@@ -277,21 +282,28 @@ export const commercialSeoMap: Record<string, CommercialCluster> = {
     anchors: ['BCAA en Tunisie', 'nos BCAA disponibles', 'acides aminés BCAA'],
   },
 
+  /*
+   * ── 05/10/2026: "PROTEINE TUNISIE" MOVES TO /proteines; /proteine-tunisie FOLDS INTO IT ──
+   * GSC 28 d to 05/10/2026: /proteines 11 clicks / 124 impr @13.7 on "proteine tunisie" (prev @47.6),
+   * live #7 on google.com gl=tn hl=fr; the homepage fell to @12.6 (prev @7.4) and is not in the live
+   * top 20. The homepage keeps "protein tunisie" (128 clicks / 597 impr @5.9) and its brand title;
+   * neither page is retitled. Both spellings move together (the guard folds accents).
+   */
   protein: {
     owner: '/',
-    owns: ['proteine tunisie', 'protéine tunisie', 'protein tunisie', 'complément sportif tunisie', 'nutrition sportive tunisie', 'supplement sportif tunisie'],
+    owns: ['protein tunisie', 'complément sportif tunisie', 'nutrition sportive tunisie', 'supplement sportif tunisie'],
     secondary: ['compléments alimentaires tunisie', 'protein tn'],
-    supporting: ['/proteines', '/proteine-tunisie', '/qui-sommes-nous', '/proteine-sousse'],
+    supporting: ['/qui-sommes-nous', '/proteine-sousse'],
     conflicts: [
-      { url: '/proteines', reason: 'the catalogue hub. It must NOT carry a "Protéine Tunisie" head-term title — the homepage earns 125 clicks @5.5 there and /proteines sits at 35-39', action: 'retarget' },
-      { url: '/proteine-tunisie', reason: 'already repositioned to "Comment choisir sa protéine ? Guide Tunisie" — informational, correct as-is', action: 'leave-earns-clicks' },
+      { url: '/proteines', reason: 'Owner of "proteine tunisie" since 05/10/2026 (proteinPowder cluster): live #7 on google.com gl=tn and 11 clicks / 124 impr @13.7 (28 d to 05/10, prev @47.6) while the homepage fell to @12.6 there. The homepage keeps "protein tunisie" and its brand title; neither page is retitled', action: 'leave-earns-clicks' },
+      { url: '/proteine-tunisie', reason: 'Product-less CMS guide whose URL is the head term (0 clicks, @80–85 on protein(e) tunisie, 28 d to 05/10/2026); its « comment choisir » intent is answered by /proteines — 301 to /proteines since 05/10/2026 (CMS row INACTIVE)', action: 'merge-301' },
     ],
     anchors: ['protéines en Tunisie', 'tout le catalogue protéines', 'nos protéines'],
   },
 
   proteinPowder: {
     owner: '/proteines',
-    owns: ['proteines en poudre tunisie', 'protéines en poudre tunisie', 'prix proteine tunisie', 'prix protéine tunisie', 'proteine musculation tunisie', 'protéine musculation tunisie'],
+    owns: ['proteine tunisie', 'protéine tunisie', 'proteines en poudre tunisie', 'protéines en poudre tunisie', 'prix proteine tunisie', 'prix protéine tunisie', 'proteine musculation tunisie', 'protéine musculation tunisie'],
     secondary: ['protein powder tunisie', 'poudre protéinée tunisie', 'complément protéiné tunisie'],
     supporting: [
       '/blog/prix-proteine-tunisie-guide-complet-pour-trouver-les-meilleures-offres-en-2025',

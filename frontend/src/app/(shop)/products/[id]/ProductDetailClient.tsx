@@ -68,11 +68,23 @@ import { findInStockSibling } from '@/util/inStockSibling';
 import { getProductLink } from '@/util/productUrl';
 import { getPriceDisplay } from '@/util/productPrice';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
+import { isAttestedPurchase } from '@/util/structuredData';
+import { gaEvent } from '@/lib/analytics/ga4';
 
 export type BreadcrumbItem = { name: string; url: string };
 
 /** The three orders worth offering. See `sortedReviews` for why there is no "most helpful". */
 type ReviewSort = 'recent' | 'best' | 'worst';
+
+/*
+  The incentive, disclosed where the reviews are read and written. The reward is credited for a
+  PUBLISHED review and does not depend on the rating — the sentence says so, because an undisclosed
+  or rating-dependent reward is exactly what makes a review untrustworthy. It also states who can
+  earn it (ReviewObserver::settlePoints: an account with a verified phone, a comment of 15+
+  characters), never promising it to a guest or to stars alone. Same words on the crawler view and
+  on /avis/{code}.
+*/
+const REVIEW_INCENTIVE_DISCLOSURE = 'Avec un compte au téléphone vérifié, un avis publié avec un commentaire d’au moins 15 caractères peut être récompensé par des Protinas, quelle que soit la note.';
 
 interface ProductDetailClientProps {
   product: Product;
@@ -202,10 +214,69 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
   const displayPrice = promoPrice ?? basePrice;
   const oldPrice = promoPrice ? basePrice : null;
   const discount = promoPrice != null && basePrice > 0 ? Math.round(((basePrice - promoPrice) / basePrice) * 100) : 0;
-  const rating = product.note || (reviews.length > 0
-    ? reviews.reduce((s, r) => s + r.stars, 0) / reviews.length
-    : 0);
-  const reviewCount = reviews.length;
+  /*
+    ── THE STAR SUMMARY COUNTS ATTESTED PURCHASES ONLY (05/10/2026) ───────────────────────────
+    `rating` used to be `product.note || avg(every published review)`. `product.note` is the
+    backend average of EVERY published row, and the seeded backlog republished on 21/09 made 111
+    of 148 in-stock product pages print « 4.5 · 119 avis » while not one of those rows came from
+    an order. The JSON-LD and the product cards already refused them, so the page disagreed with
+    its own structured data and with the bot view.
+
+    So the summary is now built from exactly what buildAggregateRatingAndReviews may claim:
+    published AND (verified OR attached to an order), stars 1-5 — the same `isAttestedPurchase`
+    gate. `product.note` is never read. With nothing attested there is NO numeric or star summary
+    anywhere on the page, even when the list below is long: the list is what the admin
+    published, the summary is what we can stand behind.
+
+    `listedReviewCount` is the list's own size and drives the list chrome only (sort, « Charger
+    plus », the empty state) — never a score.
+  */
+  const attestedReviews = useMemo(
+    () =>
+      reviews.filter((r) => {
+        if (!isAttestedPurchase(r)) return false;
+        const stars = Number(r.stars);
+        return Number.isFinite(stars) && stars >= 1 && stars <= 5;
+      }),
+    [reviews]
+  );
+  const reviewCount = attestedReviews.length;
+  const rating = reviewCount
+    ? Math.round((attestedReviews.reduce((s, r) => s + Number(r.stars), 0) / reviewCount) * 10) / 10
+    : 0;
+  const listedReviewCount = reviews.length;
+  /** « 1 achat vérifié » / « 3 achats vérifiés » — the same words the crawler view prints. */
+  const attestedLabel = `${reviewCount} ${reviewCount > 1 ? 'achats vérifiés' : 'achat vérifié'}`;
+  /*
+    view_item, once per product. `gaItemFromProduct` is loaded on demand because it pulls the
+    product-meta helpers into the chunk; `defer` lets the analytics module send it off the
+    critical path. The value is the price the page shows (promo-aware, same `hasValidPromo` logic
+    as the buy box).
+  */
+  useEffect(() => {
+    let cancelled = false;
+    import('@/lib/analytics/ga4Items')
+      .then(({ gaItemFromProduct }) => {
+        if (cancelled) return;
+        gaEvent(
+          'view_item',
+          {
+            currency: 'TND',
+            value: displayPrice,
+            items: [gaItemFromProduct(product, { quantity: 1, price: displayPrice })],
+          },
+          { defer: true }
+        );
+      })
+      .catch(() => {
+        /* Analytics must never break the product page. */
+      });
+    return () => {
+      cancelled = true;
+    };
+    // Keyed on the product id on purpose: a price or review refresh is not a new view.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   /*
     The WhatsApp message names the product, its reference and its URL — see the CTA for why that
@@ -263,11 +334,22 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
       const db = b.created_at ? new Date(b.created_at).getTime() : 0;
       return db - da;
     };
-    const list = starFilter ? reviews.filter((r) => r.stars === starFilter) : [...reviews];
-    if (reviewSort === 'best') return list.sort((a, b) => b.stars - a.stars || byDate(a, b));
-    if (reviewSort === 'worst') return list.sort((a, b) => a.stars - b.stars || byDate(a, b));
-    return list.sort(byDate);
-  }, [reviews, reviewSort, starFilter]);
+    /*
+      ATTESTED FIRST, in every order. A review attached to a real purchase is the evidence a reader
+      came for, so it leads; the chosen order applies within each group. Nothing is removed — the
+      rest follows, exactly as published.
+
+      The star filter is set from the distribution, which counts attested reviews only (it is a
+      summary, see `attestedReviews`), so a tapped bar lists the reviews that bar counted.
+    */
+    const attested = (r: Review) => (isAttestedPurchase(r) ? 0 : 1);
+    const list = starFilter
+      ? attestedReviews.filter((r) => Number(r.stars) === starFilter)
+      : [...reviews];
+    if (reviewSort === 'best') return list.sort((a, b) => attested(a) - attested(b) || b.stars - a.stars || byDate(a, b));
+    if (reviewSort === 'worst') return list.sort((a, b) => attested(a) - attested(b) || a.stars - b.stars || byDate(a, b));
+    return list.sort((a, b) => attested(a) - attested(b) || byDate(a, b));
+  }, [reviews, attestedReviews, reviewSort, starFilter]);
   const reviewsToShowOnPage = sortedReviews.slice(0, visibleReviewCount);
 
   /*
@@ -599,7 +681,18 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
     promo_expiration_date: product.promo_expiration_date ?? undefined,
     rupture: product.rupture,
     aromes: product.aromes,
-    sous_categorie: product.sous_categorie ? { slug: product.sous_categorie.slug } : null,
+    // Brand and category names ride along for the GA4 item (item_brand / item_category) the quick
+    // order sends with begin_checkout and purchase; `slug` still drives the machine-delivery rule.
+    brand: product.brand ? { designation_fr: product.brand.designation_fr ?? null } : null,
+    sous_categorie: product.sous_categorie
+      ? {
+          slug: product.sous_categorie.slug,
+          designation_fr: product.sous_categorie.designation_fr ?? null,
+          categorie: product.sous_categorie.categorie
+            ? { designation_fr: product.sous_categorie.categorie.designation_fr ?? null }
+            : null,
+        }
+      : null,
   };
 
   /** Effective aroma for cart/quick order: selected or first (never block add/command). */
@@ -1006,6 +1099,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 "(0) · 0 avis" — a filled-in scoreboard reading nil, which says "nobody liked this"
                 when the truth is "nobody has said anything yet". The ask for a review belongs in
                 the reviews section, which has an honest empty state. Hide it here, ask for it there.
+
+                `reviewCount` is the ATTESTED count (see `attestedReviews`): a product whose list
+                holds only unattested rows shows no score here at all.
               */}
               {reviewCount > 0 && (
                 <button
@@ -1015,7 +1111,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 >
                   <StarRating rating={rating} size="md" />
                   <span className="text-sm font-medium tabular-nums text-ink-2 transition-colors group-hover:text-brand">
-                    {rating.toFixed(1)} · {reviewCount} avis
+                    {rating.toFixed(1)} · {attestedLabel}
                   </span>
                 </button>
               )}
@@ -2184,6 +2280,9 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                   <h2 className="font-display text-xl font-bold uppercase leading-[1.05] tracking-tight text-ink-1 sm:text-2xl">
                     Des avis utiles, des achats identifiés
                   </h2>
+                  {/* The incentive disclosure, directly above the composer slot below — so it
+                      is read both by someone reading reviews and by someone about to write one. */}
+                  <p className="mt-1.5 text-xs leading-relaxed text-ink-3">{REVIEW_INCENTIVE_DISCLOSURE}</p>
                 </div>
 
                 {/* The score, inline. It was a 154px card of its own directly below this heading:
@@ -2197,7 +2296,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                     <div className="min-w-0">
                       <StarRating rating={rating} size="sm" />
                       <p className="mt-1 text-xs tabular-nums text-ink-3">
-                        {reviewCount} avis · sur 5
+                        sur 5 · {attestedLabel}
                       </p>
                     </div>
                   </div>
@@ -2342,7 +2441,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                 />
               )}
 
-              {reviewCount > 0 ? (
+              {listedReviewCount > 0 ? (
                 <>
                   {/*
                     -- THE DISTRIBUTION, AND ONLY WHEN IT DISTRIBUTES ANYTHING ---------------
@@ -2411,7 +2510,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                        into that height — the block grows ~70px and every rating is now tappable. */
                     <div className="rounded-2xl border border-hairline bg-sunken p-2 sm:p-3">
                       {[5, 4, 3, 2, 1].map((starLevel) => {
-                        const count = reviews.filter(r => r.stars === starLevel).length;
+                        const count = attestedReviews.filter((r) => Number(r.stars) === starLevel).length;
                         const pct = reviewCount > 0 ? (count / reviewCount) * 100 : 0;
                         const active = starFilter === starLevel;
                         return (
@@ -2484,7 +2583,7 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
 
                   {/* The order is the reader's choice from two reviews up - below that there is
                       nothing to sort and the control would be furniture. */}
-                  {reviewCount > 1 && (
+                  {listedReviewCount > 1 && (
                     <div className="flex items-center justify-end gap-2">
                       <label
                         htmlFor="review-sort"
@@ -2585,21 +2684,27 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                                 buildAggregateRatingAndReviews uses to decide what may enter the
                                 structured data — one rule, both places.
                               */}
-                              {(review.verified === 1 || review.verified === true || review.commande_id != null) && (
+                              {isAttestedPurchase(review) && (
                                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ok">
                                   <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden="true" />
                                   Achat vérifié
                                 </span>
                               )}
-                              {!(review.verified === 1 || review.verified === true || review.commande_id != null) && review.user?.phone_verified_at && (
+                              {!isAttestedPurchase(review) && review.user?.phone_verified_at && (
                                 <span className="inline-flex shrink-0 items-center gap-1 rounded-full border border-brand/25 bg-brand/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brand">
                                   <BadgeCheck className="h-3 w-3 shrink-0" aria-hidden="true" /> Membre vérifié
                                 </span>
                               )}
-                              {!(review.verified === 1 || review.verified === true || review.commande_id != null) && review.user && !review.user.phone_verified_at && (
+                              {!isAttestedPurchase(review) && review.user && !review.user.phone_verified_at && (
                                 <span className="shrink-0 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Membre</span>
                               )}
                               {!review.user && <span className="shrink-0 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Anonyme</span>}
+                              {/* Protinas were credited for this review. Neutral on purpose: it
+                                  discloses the reward, it is not a quality mark. `Boolean()` because
+                                  the API may send 0, which React would print as a bare "0". */}
+                              {Boolean(review.points_awarded) && (
+                                <span className="shrink-0 rounded-full border border-hairline bg-sunken px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-3">Récompensé</span>
+                              )}
                             </div>
                             <span className="shrink-0 text-xs tabular-nums text-ink-3">
                               {review.created_at
@@ -2656,11 +2761,11 @@ export function ProductDetailClient({ product: initialProduct, similarProducts, 
                       size="default"
                       onClick={() => setVisibleReviewCount((prev) => prev + REVIEW_PAGE_SIZE)}
                     >
-                      Charger plus d'avis ({sortedReviews.length - reviewsToShowOnPage.length} restants sur {reviewCount})
+                      Charger plus d'avis ({sortedReviews.length - reviewsToShowOnPage.length} restants sur {listedReviewCount})
                     </Button>
                   ) : (
                     <p className="text-sm text-center text-ink-3">
-                      Tous les avis sont affichés ({reviewCount})
+                      Tous les avis sont affichés ({listedReviewCount})
                     </p>
                   )}
 

@@ -216,7 +216,7 @@ class CommandeController extends Controller
                     ], 409);
                 }
 
-                return $this->orderCreatedResponse($existing, true);
+                return $this->replayedOrderResponse($existing);
             }
         }
 
@@ -633,7 +633,7 @@ class CommandeController extends Controller
                         ], 409);
                     }
 
-                    return $this->orderCreatedResponse($existing, true);
+                    return $this->replayedOrderResponse($existing);
                 }
             }
 
@@ -661,7 +661,28 @@ class CommandeController extends Controller
             ]);
         }
 
-        return $this->orderCreatedResponse($new_facture, false, self::pricingForClient($request, $pricingForResponse));
+        /*
+         * GA4 server-side `purchase` for storefront orders the browser could not report (gtag.js
+         * blocked). Inert until GA4_MEASUREMENT_ID + GA4_API_SECRET are set. `ga` is deliberately
+         * NOT validated above and NOT in $payloadHash: a malformed analytics value must never cost a
+         * cash-on-delivery order a 422, and a replay that differs only in `ga` must still return the
+         * first order. The replay branches return before this point, so a retry never sends twice, and
+         * they repeat `ga4_server_purchase` (replayedOrderResponse) so the browser does not send either.
+         */
+        $ga4ServerPurchase = false;
+        try {
+            $ga4ServerPurchase = app(\App\Services\Analytics\Ga4MeasurementProtocol::class)->maybeQueuePurchase($new_facture, $request->exists('ga'), $request->input('ga'));
+        } catch (\Throwable $e) {
+            Log::warning('GA4 purchase send could not be queued', ['commande_id' => $new_facture->id, 'error' => $e->getMessage()]);
+        }
+
+        $response = $this->orderCreatedResponse($new_facture, false, self::pricingForClient($request, $pricingForResponse));
+        if ($ga4ServerPurchase) {
+            // The server reports this purchase to GA4: the storefront must not send it a second time.
+            $response->setData(array_merge($response->getData(true), ['ga4_server_purchase' => true]));
+        }
+
+        return $response;
     }
 
     /**
@@ -920,6 +941,21 @@ class CommandeController extends Controller
                 || $clients->normalizePhone($c->phone_2) === $phone);
     }
 
+    /**
+     * An idempotent replay is the same order. When the server already took over its GA4 `purchase`,
+     * the replay says so again: the first response may have been lost (network drop, the proxy's
+     * timeout), and without the flag the retrying browser would send the purchase a second time.
+     */
+    private function replayedOrderResponse(Commande $existing): JsonResponse
+    {
+        $response = $this->orderCreatedResponse($existing, true);
+        if (app(\App\Services\Analytics\Ga4MeasurementProtocol::class)->serverReported($existing)) {
+            $response->setData(array_merge($response->getData(true), ['ga4_server_purchase' => true]));
+        }
+
+        return $response;
+    }
+
     private function orderCreatedResponse(Commande $commande, bool $replayed = false, ?array $pricing = null): JsonResponse
     {
         return response()->json([
@@ -1042,9 +1078,26 @@ class CommandeController extends Controller
             return response()->json(['error' => 'Accès non autorisé'], 403);
         }
 
+        /*
+         * Line items carry what the confirmation page and the browser `purchase` event need: the real
+         * product name, brand, category, sub-category and flavour. The relation serialises as
+         * `product` (with `product.brand` and `product.sous_categorie.categorie`), never `produit`.
+         * Keys: products.brand_id → brands, products.sous_categorie_id → sous_categories,
+         * sous_categories.categorie_id → categs. Ga4MeasurementProtocol::purchasePayload() loads the
+         * same relations for the server-side send, so both sources name items alike.
+         */
+        $detailColumns = ['id', 'commande_id', 'produit_id', 'qte', 'prix_unitaire', 'prix_ht', 'prix_ttc'];
+        if (Schema::hasColumn('commande_details', 'arome')) {
+            $detailColumns[] = 'arome';
+        }
         $details_facture = CommandeDetail::where('commande_id', $id)
-            ->select('id', 'commande_id', 'produit_id', 'qte', 'prix_unitaire', 'prix_ht', 'prix_ttc')
-            ->with('product:id,designation_fr,cover,prix,promo')
+            ->select($detailColumns)
+            ->with([
+                'product:id,designation_fr,slug,cover,prix,promo,brand_id,sous_categorie_id',
+                'product.brand:id,designation_fr',
+                'product.sousCategorie:id,designation_fr,slug,categorie_id',
+                'product.sousCategorie.categorie:id,designation_fr',
+            ])
             ->get();
 
         return response()->json(['facture' => $facture, 'details_facture' => $details_facture]);

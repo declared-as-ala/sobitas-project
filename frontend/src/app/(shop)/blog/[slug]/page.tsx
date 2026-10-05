@@ -182,21 +182,31 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
     // restated as the first words of the snippet.
     const storedHeadline =
       seoOverlay?.headline || article.seo?.title || article.seo_title || article.meta_title || article.designation_fr || 'Blog';
-    const articleHeadline = topicAlignedArticleHeadline(
-      storedHeadline,
-      article.designation_fr || storedHeadline
-    );
+    /*
+     * 05/10/2026: the overlay in blogSeoConfig is reviewed copy, and it wins. The alignment guards
+     * below were written for Filament campaign titles, so they compare against the CMS
+     * `designation_fr` — which on an overlaid post is the STALE title. When the overlay dropped a
+     * topic word that old title still had (whey, créatine, gainer, prise de masse), the guard threw
+     * the reviewed copy away: live, 5 of 136 posts printed a <title> that was not their H1 (e.g.
+     * "ISO 100 de Dymatize | Protéine Tunisie" over the H1 "ISO 100 de Dymatize : avis, composition
+     * et alternatives"), and 8 reviewed meta descriptions were discarded. The visible H1 and the
+     * Article schema already use the overlay, so the <title> now says the same thing. The guards
+     * stay for CMS-only posts, which behave exactly as before.
+     */
+    const overlayHeadline = seoOverlay?.headline?.trim();
+    const articleHeadline = overlayHeadline
+      ? overlayHeadline
+      : topicAlignedArticleHeadline(storedHeadline, article.designation_fr || storedHeadline);
 
     // buildMetaDescription wraps the RESOLVED value, not just the fallback: seo.description and
     // meta_description_fr are CMS fields and carry the same raw entities AND the same repeated
     // headline. It decodes, drops that repetition, and truncates on a word boundary.
     const storedDescription =
       seoOverlay?.metaDescription || article.seo?.description || article.seo_description || article.meta_description_fr || '';
-    const alignedDescription = topicAlignedArticleDescription(
-      storedDescription,
-      description,
-      article.designation_fr || articleHeadline
-    );
+    const overlayDescription = seoOverlay?.metaDescription?.trim();
+    const alignedDescription = overlayDescription
+      ? overlayDescription
+      : topicAlignedArticleDescription(storedDescription, description, article.designation_fr || articleHeadline);
     const metaDescription = buildArticleDescription(
       alignedDescription ||
         `Découvrez ${article.designation_fr} sur le blog Protéine Tunisie — conseils nutrition et sport`,
@@ -215,7 +225,10 @@ export async function generateMetadata({ params }: ArticlePageProps): Promise<Me
        moves to the visual START — an Arabic searcher sees the French brand first and the headline
        they typed second. See buildArticleTitle for the five articles this is measured on. */
     const title = buildArticleTitle(articleHeadline, articleLanguage);
-    const descriptionWithTunisia = localityHint(metaDescription, articleLanguage);
+    // 05/10/2026: a reviewed overlay description is written to fit the snippet on its own.
+    // localityHint appended "Conseils nutrition sportive Tunisie — Protéine Tunisie." and truncated
+    // the copy to make room, which cut 124 of 136 overlay descriptions mid-sentence.
+    const descriptionWithTunisia = overlayDescription ? metaDescription : localityHint(metaDescription, articleLanguage);
     // CMS social overrides need the same entity decoding, title removal and locality budget.
     const socialDescription = (raw?: string | null) => localityHint(
       buildArticleDescription(raw || metaDescription, articleHeadline),

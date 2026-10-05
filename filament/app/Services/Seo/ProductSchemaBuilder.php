@@ -130,6 +130,9 @@ final class ProductSchemaBuilder
             'canonical_url' => $canonicalProductUrl,
             'rating_value' => $ratingValues->isNotEmpty() ? round($ratingValues->avg(), 1) : null,
             'review_count' => $reviews->count(),
+            // Additive (05/10/2026): the attested 1-5 star rows behind rating_value, the figure
+            // JSON-LD now publishes as aggregateRating.ratingCount. review_count keeps its meaning.
+            'rating_count' => $ratingValues->count(),
         ];
 
         return array_filter(
@@ -198,34 +201,60 @@ final class ProductSchemaBuilder
             return;
         }
 
-        $values = $reviews->map(fn (Review $r) => $this->reviewStarValue($r))->filter(fn (int $n) => $n >= 1 && $n <= 5);
-        if ($values->isEmpty()) {
+        /*
+         * ── RATINGS vs REVIEWS (05/10/2026) ─────────────────────────────────────────────────────
+         * Mirrors buildAggregateRatingAndReviews() in frontend/src/util/structuredData.ts. The
+         * post-delivery /avis flow accepts stars WITHOUT a comment, and schema.org counts those as
+         * ratings, not reviews:
+         *   ratingCount  every attested review with a 1-5 star value (all of them feed the average);
+         *   reviewCount  only those of them that also carry text — OMITTED when 0, because
+         *                "reviewCount: 0" beside a rating is a contradiction Google flags.
+         * The attested gate (publishedReviews / isAttestedPurchase) is unchanged.
+         */
+        $rated = $reviews->filter(function (Review $r): bool {
+            $n = $this->reviewStarValue($r);
+
+            return $n >= 1 && $n <= 5;
+        })->values();
+        if ($rated->isEmpty()) {
             return;
         }
 
+        $values = $rated->map(fn (Review $r) => $this->reviewStarValue($r));
         $ratingValue = max(1.0, min(5.0, round($values->avg() * 10) / 10));
-        $reviewCount = $reviews->count();
+        // Measured on the tag-stripped text, like the frontend's jsonLdText(): a comment that is
+        // nothing but markup is not a review.
+        $withText = $rated->filter(fn (Review $r) => self::reviewText($r) !== '')->count();
 
-        $graph['aggregateRating'] = [
+        $aggregate = [
             '@type' => 'AggregateRating',
             'ratingValue' => (string) $ratingValue,
             'bestRating' => 5,
             'worstRating' => 1,
-            'reviewCount' => $reviewCount,
+            'ratingCount' => $rated->count(),
         ];
+        if ($withText > 0) {
+            $aggregate['reviewCount'] = $withText;
+        }
+        $graph['aggregateRating'] = $aggregate;
 
         $reviewNodes = [];
-        foreach ($reviews as $review) {
-            $body = trim((string) ($review->comment ?? ''));
-            if ($body === '') {
+        foreach ($rated as $review) {
+            if (self::reviewText($review) === '') {
                 continue;
             }
+            $body = trim((string) ($review->comment ?? ''));
             $stars = $this->reviewStarValue($review);
             if ($stars < 1) {
                 continue;
             }
 
+            // The name the PDP prints: the account's, else the one stored on the row (a tokenised
+            // order review stores "Prénom N."; a guest review its own name), else "Client".
             $authorName = trim((string) ($review->user?->name ?? ''));
+            if ($authorName === '') {
+                $authorName = trim((string) ($review->author_name ?? ''));
+            }
             if ($authorName === '') {
                 $authorName = 'Client';
             }
@@ -297,6 +326,12 @@ final class ProductSchemaBuilder
         }
 
         return ($review->commande_id ?? null) !== null;
+    }
+
+    /** The review's text without markup or surrounding whitespace; '' for a stars-only row. */
+    private static function reviewText(Review $review): string
+    {
+        return trim(strip_tags((string) ($review->comment ?? '')));
     }
 
     private function reviewStarValue(Review $review): int

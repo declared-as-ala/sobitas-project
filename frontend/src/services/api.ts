@@ -41,6 +41,7 @@ import type {
 } from '@/types';
 import type { BackendOrderPayload } from '@/lib/orderPayload';
 import { SITE_LOGO_PUBLIC_PATH } from '@/constants/branding';
+import { isRetiredCmsPageSlug } from '@/config/cmsPageSeoConfig';
 import { withCategorySeoEntityFallbacks, type CategorySeoFromApi } from '@/util/resolveCategorySeo';
 
 // In browser on localhost: use same-origin API proxy to avoid CORS (next.config.js rewrites /api-proxy to backend).
@@ -342,7 +343,6 @@ const CMS_PAGE_SLUG_BY_ID: Record<number, string> = {
   5: 'qui-sommes-nous',
   7: 'politique-de-remboursement',
   8: 'politique-des-cookies',
-  9: 'proteine-tunisie',
 };
 
 /** Static list when API fails or returns empty so "Services & Ventes" always shows (excludes "Qui sommes nous"). */
@@ -350,7 +350,6 @@ const CMS_PAGES_FALLBACK: CmsPage[] = [
   { id: 2, title: 'Conditions générales de ventes - Proteine Tunisie', slug: 'conditions-generale-de-ventes-protein.tn' },
   { id: 7, title: 'Politique de remboursement', slug: 'politique-de-remboursement' },
   { id: 8, title: 'Politique des Cookies', slug: 'politique-des-cookies' },
-  { id: 9, title: 'Proteine Tunisie', slug: 'proteine-tunisie' },
 ];
 
 export const getCmsPages = async (): Promise<CmsPage[]> => {
@@ -360,10 +359,13 @@ export const getCmsPages = async (): Promise<CmsPage[]> => {
     // API returns either a flat array or a paginated { data: [...], meta, links } shape
     const list: CmsPage[] = Array.isArray(raw) ? raw : (Array.isArray(raw?.data) ? raw.data : []);
     if (list.length === 0) return CMS_PAGES_FALLBACK;
-    return list.map((p) => ({
-      ...p,
-      slug: p.slug ?? CMS_PAGE_SLUG_BY_ID[p.id] ?? slugFromTitle(p.title),
-    }));
+    // A retired page 301s (redirects.js) whether or not its row is INACTIVE yet: never link it.
+    return list
+      .map((p) => ({
+        ...p,
+        slug: p.slug ?? CMS_PAGE_SLUG_BY_ID[p.id] ?? slugFromTitle(p.title),
+      }))
+      .filter((p) => !isRetiredCmsPageSlug(p.slug));
   } catch {
     return CMS_PAGES_FALLBACK;
   }
@@ -1628,6 +1630,8 @@ export const createOrder = async (orderData: BackendOrderPayload, existingIdempo
   id: number;
   order_token?: string;
   pricing?: import('@/util/checkoutPricing').CheckoutPricing;
+  /** The backend queued this order's GA4 purchase itself: the checkout must not send it too. */
+  ga4_server_purchase?: boolean;
   message: string;
   'alert-type': string;
 }> => {
@@ -1918,6 +1922,14 @@ export interface OrderForReview {
   numero: string;
   prenom: string;
   products: ReviewProduct[];
+  /**
+   * Whether a review written on /avis for this order can earn Protinas at all: the order was placed
+   * by an account whose phone is verified (ReviewController::orderEarnsProtinas). Absent from an
+   * older API = false: the page never promises a reward the server did not confirm.
+   */
+  reward_eligible?: boolean;
+  /** reviews.points.min_length — the comment length the observer requires before paying. */
+  reward_min_length?: number;
 }
 
 /** Fetch the products of an order (by its order_token) so the customer can review them without logging in. */

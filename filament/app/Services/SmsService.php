@@ -160,12 +160,33 @@ class SmsService
 
             return $reference;
         } catch (\Exception $e) {
+            if ($e instanceof ConnectionException) {
+                // Same URL-in-the-message leak as probe(); still a ConnectionException, so
+                // sendOnce() keeps recording the delivery as `uncertain`.
+                $e = new ConnectionException(self::redact($e->getMessage()));
+            }
             Log::error('SMS sending failed', [
                 'phone_last4' => substr($tel, -4),
-                'error'       => $e->getMessage(),
+                'error'       => self::redact($e->getMessage()),
             ]);
             throw $e;
         }
+    }
+
+    /**
+     * Removes the WinSMS API key — and the rest of the request's query string (phone, text) — from
+     * a message before it is logged, stored or printed. Every request carries the key in its query
+     * string, and a connection error's message quotes the full URL.
+     */
+    public static function redact(string $message): string
+    {
+        $apiKey = trim((string) config('services.sms.api_key', ''));
+        if ($apiKey !== '') {
+            $message = str_replace([$apiKey, rawurlencode($apiKey), urlencode($apiKey)], '[redacted]', $message);
+        }
+        $message = (string) preg_replace('~(winsmspro\.com[^\s?"\']*)\?[^\s"\']*~i', '$1?[redacted]', $message);
+
+        return (string) preg_replace('/api_key=[^&\s"\']*/i', 'api_key=[redacted]', $message);
     }
 
     /**
@@ -242,11 +263,18 @@ class SmsService
             throw new RuntimeException('SMS_API_KEY non configuré.');
         }
 
-        $response = Http::acceptJson()->timeout(15)->get(self::ENDPOINT, [
-            'action' => 'check-balance',
-            'api_key' => $apiKey,
-            'response' => 'json',
-        ]);
+        try {
+            $response = Http::acceptJson()->timeout(15)->get(self::ENDPOINT, [
+                'action' => 'check-balance',
+                'api_key' => $apiKey,
+                'response' => 'json',
+            ]);
+        } catch (ConnectionException $e) {
+            // Guzzle's message quotes the request URL, api_key included; callers log and print it
+            // (review commands' balance gate, notifications:doctor, vps-run dry-runs in CI logs).
+            // A fresh exception, without the original as `previous`, which still carries the URL.
+            throw new ConnectionException(self::redact($e->getMessage()));
+        }
 
         if (! $response->successful()) {
             throw new RuntimeException('WinSMS est inaccessible (HTTP '.$response->status().').');

@@ -45,7 +45,9 @@ export default function OrderConfirmationPage() {
         const options = token ? { token } : undefined;
         const data = await getOrderDetails(Number(orderId), options);
         setOrder(data.facture);
-        setOrderDetails(data.details_facture || []);
+        // GA4 `purchase` is sent at order creation (checkout, quick order) and by the backend
+        // fallback, never from this emailed page. The API names the line's product `product`.
+        setOrderDetails((data.details_facture || []).map((d) => ({ ...d, produit: d.produit ?? d.product })));
       } catch (error) {
         console.error('Error fetching order:', error);
         toast.error('Erreur lors du chargement de la commande');
@@ -58,84 +60,6 @@ export default function OrderConfirmationPage() {
       fetchOrder();
     }
   }, [orderId, token]);
-
-  /*
-   * ── THE GA4 `purchase` EVENT ────────────────────────────────────────────────────────────
-   * Until this existed, GA4 reported e-commerce revenue of 0.000 DT for the whole site. Not a
-   * misconfiguration on the reporting side: NO purchase event was ever sent from anywhere in
-   * `src/`. Every SEO, design and merchandising decision was therefore unmeasurable — we could see
-   * sessions arriving and never learn which ones paid.
-   *
-   * This is the completion point: the customer only reaches /order-confirmation/{id} once the
-   * order exists in the database.
-   *
-   * ── FIRING EXACTLY ONCE, WHICH IS THE WHOLE DIFFICULTY ─────────────────────────────────
-   * Two separate hazards, so two separate guards:
-   *
-   *   `sentRef` covers the render pass. React StrictMode invokes effects twice in development,
-   *   and `order` is a new object identity on every fetch, so a bare effect double-counts.
-   *
-   *   `localStorage` covers the RELOAD, which is the one that corrupts real revenue. This URL is
-   *   emailed to the customer and printed from — a refresh, a back-button, or opening the link a
-   *   week later would each post another full-value purchase against the same order. sessionStorage
-   *   would miss the new-tab and next-day cases, so the key is durable and namespaced by
-   *   transaction id. Wrapped in try/catch because Safari private mode throws on write, and a
-   *   storage failure must not take down the confirmation page — the worst case is a duplicate
-   *   event, which GA4 also de-duplicates on `transaction_id`.
-   *
-   * ── WHY dataLayer AND NOT `window.gtag` ────────────────────────────────────────────────
-   * layout.tsx defines `window.gtag` immediately, but loads gtag.js on interaction or idle.
-   * Pushing onto `dataLayer` is exactly what that stub does, and gtag.js drains anything already
-   * queued when it finally loads. The non-arrow function is deliberate: `arguments` is the
-   * shape Google's own snippet pushes.
-   *
-   * ── THE MONEY FIELDS ───────────────────────────────────────────────────────────────────
-   * `value` is `prix_ttc`, which line 381 already treats as the grand total the customer pays
-   * (`order.prix_ttc || subtotal + shipping`) and which the printed receipt prints as "Total:".
-   * Taking `prix_ht` instead would under-report every order by the shipping fee.
-   *
-   * `transaction_id` prefers `numero`, the human-facing order number, so a figure in GA4 can be
-   * reconciled against an invoice in Filament without a lookup.
-   */
-  const purchaseSentRef = useRef(false);
-
-  useEffect(() => {
-    if (!order || purchaseSentRef.current) return;
-
-    const transactionId = String(order.numero || order.id);
-    const storageKey = `ga4_purchase_${transactionId}`;
-
-    try {
-      if (window.localStorage.getItem(storageKey)) return;
-      window.localStorage.setItem(storageKey, '1');
-    } catch {
-      /* private mode — fall through and accept a possible duplicate over a lost sale */
-    }
-
-    purchaseSentRef.current = true;
-
-    const w = window as unknown as { dataLayer?: unknown[] };
-    w.dataLayer = w.dataLayer || [];
-    // Rest params give TypeScript the call signature; the body still pushes the real `arguments`
-    // object, which is the exact shape Google's own gtag() snippet enqueues.
-    function gtag(..._args: unknown[]) {
-      // eslint-disable-next-line prefer-rest-params
-      w.dataLayer!.push(arguments);
-    }
-
-    gtag('event', 'purchase', {
-      transaction_id: transactionId,
-      value: Number(order.prix_ttc) || 0,
-      currency: 'TND',
-      shipping: Number(order.frais_livraison) || 0,
-      items: orderDetails.map((detail) => ({
-        item_id: String(detail.produit?.id ?? detail.produit_id),
-        item_name: detail.produit?.designation_fr ?? `Produit ${detail.produit_id}`,
-        price: Number(detail.prix_unitaire) || 0,
-        quantity: Number(detail.qte) || 0,
-      })),
-    });
-  }, [order, orderDetails]);
 
   const handlePrintPDF = async () => {
     const document = printRef.current?.querySelector<HTMLElement>('[data-order-document]');

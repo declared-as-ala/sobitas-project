@@ -89,6 +89,49 @@ class Commande extends Model
         'refused_at' => 'datetime',
     ];
 
+    /**
+     * An order an AFFILIATE typed at the affiliate desk (AffilieOrderService): affilie_id set and no
+     * storefront checkout key. Its contact fields are whatever the affiliate entered — possibly the
+     * affiliate's own e-mail — and the shop promised no customer mail for it, so it is never asked
+     * for a review: an « Achat vérifié » rating from a reseller paid on that product would be a
+     * conflict of interest. A storefront order attributed to an affiliate subdomain also carries
+     * affilie_id, but the customer typed it (it has checkout_idempotency_key), so it stays eligible.
+     * excludingAffiliateDesk() is the query form of the same rule.
+     */
+    public function isAffiliateDeskOrder(): bool
+    {
+        return (int) ($this->getAttribute('affilie_id') ?? 0) > 0
+            && trim((string) ($this->getAttribute('checkout_idempotency_key') ?? '')) === '';
+    }
+
+    /** Every order except affiliate-desk ones (see isAffiliateDeskOrder()). Needs both columns. */
+    public function scopeExcludingAffiliateDesk(Builder $query): Builder
+    {
+        $table = $query->getModel()->getTable();
+
+        return $query->where(function (Builder $q) use ($table): void {
+            $q->whereNull($table.'.affilie_id')
+                ->orWhere($table.'.affilie_id', 0)
+                ->orWhere(function (Builder $storefront) use ($table): void {
+                    $storefront->whereNotNull($table.'.checkout_idempotency_key')
+                        ->where($table.'.checkout_idempotency_key', '!=', '');
+                });
+        });
+    }
+
+    /**
+     * forceFill + saveQuietly WITHOUT moving updated_at, for bookkeeping stamps (the review request,
+     * reminder and SMS markers, a backfilled review_code). updated_at is the fallback delivery clock
+     * of a delivered row that never stamped delivered_at (ReviewController::reviewLinkState): moving
+     * it makes an old delivery look recent and restarts its review link's life.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function stampQuietly(array $attributes): void
+    {
+        static::withoutTimestamps(fn () => $this->forceFill($attributes)->saveQuietly());
+    }
+
     /** Priced by the Protinas v3 engine (pricing_version >= 3). NULL = legacy order, old terms. */
     public function isPricedV3(): bool
     {

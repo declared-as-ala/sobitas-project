@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Commande;
 use App\Models\Review;
 use App\Models\User;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 
 class ReviewSubmissionService
@@ -61,12 +62,21 @@ class ReviewSubmissionService
                 throw new \DomainException('MONTHLY_LIMIT_REACHED');
             }
 
-            $review = Review::create([
-                ...$attributes,
-                'user_id' => $locked->getKey(),
-                'product_id' => $productId,
-                'commande_id' => $this->deliveredOrderId($locked, $productId),
-            ]);
+            try {
+                $review = Review::create([
+                    ...$attributes,
+                    'user_id' => $locked->getKey(),
+                    'product_id' => $productId,
+                    'commande_id' => $this->deliveredOrderId($locked, $productId),
+                ]);
+            } catch (QueryException $e) {
+                // reviews(commande_id, product_id) is unique: an /avis submission for the same order
+                // took that order's rating slot between deliveredOrderId() and this insert.
+                if (self::isUniqueViolation($e)) {
+                    throw new \DomainException('ALREADY_REVIEWED');
+                }
+                throw $e;
+            }
 
             if ($afterCreate !== null) {
                 $afterCreate($review);
@@ -76,6 +86,12 @@ class ReviewSubmissionService
         });
     }
 
+    /**
+     * The delivered order that attests this account's rating of `$productId` — one whose rating
+     * slot for that product is still free. One order attests ONE rating per product (unique index
+     * reviews(commande_id, product_id)): an order already rated through its /avis link cannot back
+     * a second, account-side rating, which then counts as unverified.
+     */
     public function deliveredOrderId(User $user, int $productId): ?int
     {
         try {
@@ -83,10 +99,22 @@ class ReviewSubmissionService
                 ->visibleToStorefrontUser($user)
                 ->whereIn('etat', PointsService::DELIVERED_STATUSES)
                 ->whereHas('details', fn ($details) => $details->where('produit_id', $productId))
+                ->whereNotIn('commandes.id', Review::query()
+                    ->select('commande_id')
+                    ->where('product_id', $productId)
+                    ->whereNotNull('commande_id'))
                 ->latest('id')
                 ->value('id');
         } catch (\Throwable) {
             return null;
         }
+    }
+
+    /** A duplicate-key error (MySQL 1062, PostgreSQL 23505, SQLite "UNIQUE constraint failed"), not any 23000. */
+    public static function isUniqueViolation(QueryException $e): bool
+    {
+        return (int) ($e->errorInfo[1] ?? 0) === 1062
+            || (string) $e->getCode() === '23505'
+            || str_contains($e->getMessage(), 'UNIQUE constraint failed');
     }
 }

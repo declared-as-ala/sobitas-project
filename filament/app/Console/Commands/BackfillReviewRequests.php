@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Http\Controllers\Api\ReviewController;
 use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Services\PointsService;
@@ -24,7 +25,9 @@ use Illuminate\Support\Facades\Schema;
  *   - --limit    : hard cap per run (default 25) so sends stay in small batches
  *                  and never look like a blast to spam filters.
  *   - --days     : only orders delivered recently enough for a review to make
- *                  sense (default 180). Asking about a 2-year-old order is odd.
+ *                  sense (default 120, capped at reviews.link_max_age_days: an
+ *                  older delivery's /avis link already answers 410 « Lien expiré »,
+ *                  so those orders are skipped, never emailed).
  *   - --sleep    : seconds between sends (default 2) to respect SMTP limits.
  *   - Idempotent : review_request_sent_at is stamped per order, so an order can
  *                  never receive two requests, even across repeated runs.
@@ -37,7 +40,7 @@ use Illuminate\Support\Facades\Schema;
 class BackfillReviewRequests extends Command
 {
     protected $signature = 'reviews:backfill-requests
-                            {--days=180 : Only orders delivered within this many days}
+                            {--days=120 : Only orders delivered within this many days (capped at reviews.link_max_age_days)}
                             {--limit=25 : Maximum emails to send in this run}
                             {--sleep=2 : Seconds to pause between sends}
                             {--dry-run : Report what would be sent without sending}';
@@ -47,7 +50,10 @@ class BackfillReviewRequests extends Command
     public function handle(): int
     {
         $dryRun = (bool) $this->option('dry-run');
-        $days   = max(1, (int) $this->option('days'));
+        // Never wider than the life of the link the email carries: past reviews.link_max_age_days
+        // after delivery, GET /api/reviews/order/{token} answers 410 « Lien expiré ».
+        $linkMaxAge = max(1, (int) config('reviews.link_max_age_days', 120));
+        $days   = min(max(1, (int) $this->option('days')), $linkMaxAge);
         $limit  = max(1, (int) $this->option('limit'));
         $sleep  = max(0, (int) $this->option('sleep'));
 
@@ -70,7 +76,13 @@ class BackfillReviewRequests extends Command
             ->where('order_token', '!=', '')
             ->where('created_at', '>=', now()->subDays($days))
             ->orderByDesc('created_at')
-            ->get();
+            ->get()
+            // Created recently is not delivered recently: an order whose delivery (delivered_at, set
+            // from the courier's real event date by the Aramex sync) is older than the link's life
+            // would get an email whose every link is already dead, and burn its only request. The same
+            // gate keeps affiliate-desk orders out (LINK_NOT_ELIGIBLE, Commande::isAffiliateDeskOrder).
+            ->filter(fn (Commande $c) => ReviewController::reviewLinkState($c) === ReviewController::LINK_OPEN)
+            ->values();
 
         // Only rows with a usable address are actually sendable.
         $sendable = $candidates->filter(fn (Commande $c) => $this->emailFor($c) !== null)->values();
@@ -110,8 +122,9 @@ class BackfillReviewRequests extends Command
             $email = $this->emailFor($commande);
             try {
                 Mail::to($email)->send(new ReviewRequestMail($commande));
-                // saveQuietly so this write does not re-fire observer events.
-                $commande->forceFill(['review_request_sent_at' => now()])->saveQuietly();
+                // Quietly (no observer re-fire) and without moving updated_at, the legacy delivery
+                // clock reviewLinkState() reads (Commande::stampQuietly).
+                $commande->stampQuietly(['review_request_sent_at' => now()]);
                 $sent++;
             } catch (\Throwable $e) {
                 $failed++;

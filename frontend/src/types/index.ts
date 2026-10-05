@@ -232,7 +232,7 @@ export interface Review {
    * "genuine": the catalogue carries a large seeded review backlog with verified = 0 and
    * commande_id = null on every row.
    */
-  verified?: number | boolean;
+  verified?: number | boolean | null;
   commande_id?: number | null;
   user?: {
     id: number;
@@ -246,6 +246,11 @@ export interface Review {
    * whole guest-review feature renders as a page of "Client".
    */
   author_name?: string | null;
+  /**
+   * Protinas were credited for this review. The reward never depends on the rating, and the
+   * storefront discloses it next to the review (« Récompensé ») and under the reviews heading.
+   */
+  points_awarded?: boolean | number | null;
   /**
    * Published replies under this review. Sent by `product_details` via `withCount`, so a product
    * page can label a thread without one request per review. Absent (not 0) when the backend has
@@ -500,6 +505,13 @@ export interface Order {
   livraison_adresse2?: string;
   tracking?: OrderTracking | null;
   /**
+   * Relative link to the post-delivery review page (`/avis/{code}` for an order this account
+   * placed, `/products/{slug}#reviews` for a guest order it only sees), sent by `detail_commande`
+   * only while the order can still be reviewed (delivered and not too old). `null` otherwise —
+   * the account page renders « Donner mon avis » only when this is a non-empty string.
+   */
+  review_url?: string | null;
+  /**
    * Loyalty movement for THIS order, from the `user_point_transactions` ledger.
    * Server-computed in `ClientController::withCustomerTracking()` — never re-derive it here.
    *
@@ -636,12 +648,16 @@ export interface QuickOrderPayload {
    * as `expected_total`, so the order is created only at that amount.
    */
   expectedTotal?: number;
+  /** isGtagLoaded() when the order button was pressed; the proxy keeps only this boolean. */
+  ga?: { gtag_loaded?: boolean };
 }
 
 export interface QuickOrderResponse {
   orderId: number | string;
   status: string;
   numero?: string;
+  /** The backend queued the GA4 purchase itself (Measurement Protocol): do not send it from the browser. */
+  ga4ServerPurchase?: boolean;
 }
 
 // Auth Types

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useId, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { Star, Loader2, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import {
@@ -58,11 +58,48 @@ import { RATING_WORDS, ratingLabel } from '@/app/components/reviews/rating';
  * of them, and it never calls `ReviewImageService`. `add_review` and `storeGuestReview` both
  * accept photos; this route does not. A picker here would collect files the API discards, so
  * there is none. It needs a backend change, not a frontend one.
+ *
+ * ── 05/10/2026: ONE TAP FROM THE EMAIL, AND THE COMMENT IS OPTIONAL ─────────────────────────
+ * The review email now carries five star links, `/avis/{ref}?p={product_id}&note={1-5}`. The page
+ * reads them (see page.tsx) and PRESELECTS that product's rating, opens its comment box and
+ * scrolls it into view. It never submits on load: mail scanners and link-preview bots fetch every
+ * link in an email, so a link that published a review would publish five of them per email,
+ * with whatever rating the scanner happened to open last. Publishing stays a button press.
+ *
+ * The comment is optional: a star rating attached to a delivered order is a genuine rating, and
+ * `storeByToken` accepts it with an empty comment. Asking for « quelques mots » is a hint, not a
+ * gate. The only limit left is the maximum.
+ *
+ * A 410 (`not_delivered` / `expired` / `not_eligible`) from either the load or the submit switches the page to
+ * its error state with the server's own sentence — the link is unusable, not the one review.
  */
 
-/** The API's own floor is `required` with no minimum, so this is the shortest thing worth storing. */
-const MIN_COMMENT = 3;
 const MAX_COMMENT = 1000;
+
+/**
+ * The incentive, disclosed beside the button that earns it, WITH its conditions: ReviewObserver::
+ * settlePoints pays only an account with a verified phone, for a comment of reviews.points.min_length
+ * characters or more. Same words as the product page, but shown ONLY when the server says this
+ * order can earn (`reward_eligible`): /avis attributes a review to the account that placed the
+ * order and nothing else, so a guest order — even one a verified member opens — or an account
+ * without a verified phone is never paid, and must not be told it could be. The minimum comes from
+ * the server too (`reward_min_length`), never a hard-coded copy of the config; 15 is its default.
+ */
+function reviewIncentiveDisclosure(minLength: number | undefined): string {
+  const min = typeof minLength === 'number' && Number.isFinite(minLength) && minLength >= 0 ? Math.round(minLength) : 15;
+  return `Avec un compte au téléphone vérifié, un avis publié avec un commentaire d’au moins ${min} caractères peut être récompensé par des Protinas, quelle que soit la note.`;
+}
+
+type ApiError = { response?: { status?: number; data?: { message?: string; reason?: string } } };
+
+/** The error state's title, from the 410 `reason` when there is one. The body is the server's. */
+function errorTitle(e: unknown): string {
+  const res = (e as ApiError)?.response;
+  if (res?.status === 410 && res.data?.reason === 'not_delivered') return 'Commande pas encore livrée';
+  if (res?.status === 410 && res.data?.reason === 'not_eligible') return 'Avis non disponible';
+  if (res?.status === 410) return 'Lien expiré';
+  return 'Lien invalide';
+}
 
 interface RowState {
   stars: number;
@@ -77,10 +114,22 @@ interface RowState {
   openedAt: number | null;
 }
 
-export default function AvisClient({ token }: { token: string }) {
+export default function AvisClient({
+  token,
+  preselectProductId = null,
+  preselectStars = null,
+}: {
+  token: string;
+  /** `?p=` from the email's star link: the product whose star was pressed. Validated in page.tsx. */
+  preselectProductId?: number | null;
+  /** `?note=` from the same link, 1-5. Preselects only — never submits. */
+  preselectStars?: number | null;
+}) {
   const uid = useId();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ title: string; message: string } | null>(null);
+  /** The card to bring into view once the order has rendered — set at most once, by the load. */
+  const scrollToProduct = useRef<number | null>(null);
   const [order, setOrder] = useState<OrderForReview | null>(null);
   const [rows, setRows] = useState<Record<number, RowState>>({});
   /*
@@ -107,17 +156,41 @@ export default function AvisClient({ token }: { token: string }) {
         const data = await getOrderForReview(token);
         if (!active) return;
         setOrder(data);
+        /*
+          The email's star link, applied only when BOTH halves hold: `p` is a product of THIS order
+          that is still waiting for a review, and `note` is a whole 1-5. Anything else is ignored
+          rather than half-applied.
+
+          `openedAt` is stamped now for that row, and only that row. The general rule (above) is
+          that the clock starts at the first interaction, not at page load — here the first
+          interaction WAS the star pressed in the email a moment ago, so load time is the honest
+          start. The other rows keep the general rule.
+        */
+        const note =
+          typeof preselectStars === 'number' && Number.isInteger(preselectStars) && preselectStars >= 1 && preselectStars <= 5
+            ? preselectStars
+            : null;
+        const target =
+          note != null && preselectProductId != null
+            ? data.products.find((p) => p.product_id === preselectProductId && !p.reviewed)
+            : undefined;
         const init: Record<number, RowState> = {};
         data.products.forEach((p) => {
-          init[p.product_id] = { stars: 0, comment: '', submitting: false, done: p.reviewed, openedAt: null };
+          const preselected = target != null && note != null && p.product_id === target.product_id;
+          init[p.product_id] = {
+            stars: preselected ? note : 0,
+            comment: '',
+            submitting: false,
+            done: p.reviewed,
+            openedAt: preselected ? Date.now() : null,
+          };
         });
         setRows(init);
+        if (target) scrollToProduct.current = target.product_id;
       } catch (e: unknown) {
         if (!active) return;
-        const msg =
-          (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-          'Lien invalide ou expiré.';
-        setError(msg);
+        const msg = (e as ApiError)?.response?.data?.message || 'Lien invalide ou expiré.';
+        setError({ title: errorTitle(e), message: msg });
       } finally {
         if (active) setLoading(false);
       }
@@ -125,7 +198,24 @@ export default function AvisClient({ token }: { token: string }) {
     return () => {
       active = false;
     };
-  }, [token]);
+  }, [token, preselectProductId, preselectStars]);
+
+  /*
+    Bring the preselected card into view once it exists. An effect on `loading` rather than a
+    requestAnimationFrame inside the fetch: the cards only mount on the render that follows
+    `setLoading(false)`, and a frame callback can run before React has committed it. No focus —
+    on a phone that would open the keyboard over the stars the customer came to check.
+  */
+  useEffect(() => {
+    if (loading || scrollToProduct.current == null) return;
+    const id = scrollToProduct.current;
+    scrollToProduct.current = null;
+    const reduce =
+      typeof window !== 'undefined' && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+    document
+      .getElementById(`${uid}-product-${id}`)
+      ?.scrollIntoView({ block: 'center', behavior: reduce ? 'auto' : 'smooth' });
+  }, [loading, uid]);
 
   const update = (id: number, patch: Partial<RowState>) =>
     setRows((r) => ({
@@ -158,16 +248,13 @@ export default function AvisClient({ token }: { token: string }) {
       toast.error('Choisissez une note (1 à 5 étoiles).');
       return;
     }
-    if (row.comment.trim().length < MIN_COMMENT) {
-      toast.error('Écrivez un court commentaire.');
-      return;
-    }
     update(p.product_id, { submitting: true });
     try {
       const res = await submitReviewByToken({
         order_token: token,
         product_id: p.product_id,
         stars: row.stars,
+        // Optional: an empty box is sent as '' and the rating stands on its own.
         comment: row.comment.trim(),
         compose_ms: row.openedAt ? Math.max(0, Date.now() - row.openedAt) : 0,
         hp_field: honeypot,
@@ -178,9 +265,13 @@ export default function AvisClient({ token }: { token: string }) {
       );
     } catch (e: unknown) {
       update(p.product_id, { submitting: false });
-      const msg =
-        (e as { response?: { data?: { message?: string } } })?.response?.data?.message ||
-        'Une erreur est survenue. Réessayez.';
+      const msg = (e as ApiError)?.response?.data?.message || 'Une erreur est survenue. Réessayez.';
+      // 410: the order is no longer reviewable (not delivered, or the window closed). That is
+      // true of every card on the page, so the page says it once instead of a toast per card.
+      if ((e as ApiError)?.response?.status === 410) {
+        setError({ title: errorTitle(e), message: msg });
+        return;
+      }
       toast.error(msg);
     }
   };
@@ -198,9 +289,9 @@ export default function AvisClient({ token }: { token: string }) {
         ) : error ? (
           <div className="rounded-2xl border border-hairline bg-elevated p-8 text-center">
             <p className="font-display text-xl font-bold uppercase tracking-tight text-ink-1">
-              Lien invalide
+              {error.title}
             </p>
-            <p className="mt-2 text-sm text-ink-2">{error}</p>
+            <p className="mt-2 text-sm text-ink-2">{error.message}</p>
           </div>
         ) : order ? (
           <>
@@ -240,11 +331,11 @@ export default function AvisClient({ token }: { token: string }) {
                 const row = rows[p.product_id];
                 const cover = p.cover ? getStorageUrl(p.cover) : null;
                 const stars = row?.stars ?? 0;
-                const tooShort = (row?.comment.trim().length ?? 0) < MIN_COMMENT;
                 return (
                   <article
                     key={p.product_id}
-                    className="rounded-2xl border border-hairline bg-elevated p-4 sm:p-5"
+                    id={`${uid}-product-${p.product_id}`}
+                    className="scroll-mt-24 rounded-2xl border border-hairline bg-elevated p-4 sm:p-5"
                   >
                     <div className="flex items-start gap-3">
                       {cover ? (
@@ -352,16 +443,23 @@ export default function AvisClient({ token }: { token: string }) {
                                   update(p.product_id, { comment: e.target.value.slice(0, MAX_COMMENT) })
                                 }
                                 rows={3}
+                                aria-describedby={`${uid}-hint-${p.product_id}`}
                                 placeholder="Goût, résultats, qualité…"
                                 className="w-full resize-y rounded-xl border border-hairline bg-canvas px-3 py-3 text-base leading-snug text-ink-1 placeholder:text-ink-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-focus"
                               />
-                              {/* The counter exists only while it means something: a maximum you
-                                  are approaching. A permanent 0/1000 under every box is furniture. */}
-                              {(row?.comment.length ?? 0) > MAX_COMMENT - 100 && (
-                                <p className="mt-1 text-end text-xs tabular-nums text-ink-3">
-                                  {row?.comment.length}/{MAX_COMMENT}
+                              {/* A hint, never a gate: the comment is optional and the button works
+                                  with the box empty. The counter beside it exists only while it
+                                  means something — a maximum you are approaching. */}
+                              <div className="mt-1 flex items-start justify-between gap-3">
+                                <p id={`${uid}-hint-${p.product_id}`} className="text-xs text-ink-3">
+                                  Un commentaire de quelques mots aide les autres clients (facultatif).
                                 </p>
-                              )}
+                                {(row?.comment.length ?? 0) > MAX_COMMENT - 100 && (
+                                  <p className="shrink-0 text-xs tabular-nums text-ink-3">
+                                    {row?.comment.length}/{MAX_COMMENT}
+                                  </p>
+                                )}
+                              </div>
                             </div>
                             <button
                               type="button"
@@ -374,13 +472,8 @@ export default function AvisClient({ token }: { token: string }) {
                               ) : null}
                               Publier mon avis
                             </button>
-                            {/* Only once there is something to be too short. An empty box does
-                                not need telling that it is empty, and a hint that is on screen
-                                before the customer has done anything wrong reads as a scolding
-                                rather than as help — the same reason the composer's character
-                                counter waits for a first keystroke. */}
-                            {(row?.comment.length ?? 0) > 0 && tooShort && (
-                              <p className="text-xs text-ink-3">Ajoutez quelques mots avant de publier.</p>
+                            {order.reward_eligible === true && (
+                              <p className="text-xs text-ink-3">{reviewIncentiveDisclosure(order.reward_min_length)}</p>
                             )}
                           </div>
                         )}

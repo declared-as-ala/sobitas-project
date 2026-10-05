@@ -67,7 +67,13 @@ function validateProductSchema(schema) {
     if (!offers.url) errors.push('offers.url missing');
   }
   if (schema.aggregateRating) {
-    if (typeof schema.aggregateRating.reviewCount !== 'number') errors.push('aggregateRating.reviewCount must be integer');
+    // Google requires ratingCount OR reviewCount. A star-only review counts as a rating, so
+    // buildAggregateRatingAndReviews always emits ratingCount and adds reviewCount only when at
+    // least one attested review carries text.
+    const ar = schema.aggregateRating;
+    const hasReviewCount = Number.isInteger(ar.reviewCount) && ar.reviewCount > 0;
+    const hasRatingCount = Number.isInteger(ar.ratingCount) && ar.ratingCount > 0;
+    if (!hasReviewCount && !hasRatingCount) errors.push('aggregateRating needs an integer reviewCount or ratingCount');
     const rv = schema.aggregateRating.ratingValue;
     if (rv !== undefined && typeof rv !== 'number' && typeof rv !== 'string') errors.push('aggregateRating.ratingValue must be number or string');
   }

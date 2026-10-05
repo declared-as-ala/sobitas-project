@@ -371,6 +371,9 @@ class CommandeObserver
         if (empty($commande->order_token)) {
             return; // no token -> cannot build a no-login review link
         }
+        if ($commande->isAffiliateDeskOrder()) {
+            return; // the affiliate typed this address; never solicited (Commande::isAffiliateDeskOrder)
+        }
         $email = $commande->livraison_email ?? $commande->email;
         if (empty($email) || ! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return;

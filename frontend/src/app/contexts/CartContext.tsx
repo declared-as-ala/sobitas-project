@@ -16,6 +16,7 @@ import type { Product as ApiProduct } from '@/types';
 import { notify as toast } from '@/lib/notify';
 import { getEffectivePrice as getEffectivePriceUtil } from '@/util/productPrice';
 import { getStockDisponible, getCartQty } from '@/util/cartStock';
+import { gaEvent } from '@/lib/analytics/ga4';
 
 // Support both Product types
 type Product = ApiProduct | DataProduct;
@@ -29,6 +30,24 @@ export interface CartItem {
 /** Effective unit price: promo if valid (promo + no expiry or future expiration), else prix/price. Uses shared util. */
 function getEffectivePrice(product: Product): number {
   return getEffectivePriceUtil(product as any);
+}
+
+/**
+ * GA4 `add_to_cart`, entirely off the tap: the send waits for the next task, and the item builder
+ * (product-name humaniser included) is only downloaded then. Module-level, so `addToCart` gains no
+ * dependency and stays lifetime-stable — the INP fix below depends on that.
+ */
+function trackAddToCart(product: Product, quantity: number, arome?: string): void {
+  if (typeof window === 'undefined' || !(quantity > 0)) return;
+  setTimeout(() => {
+    void import('@/lib/analytics/ga4Items')
+      .then(({ gaItemFromProduct }) => {
+        const price = Number(getEffectivePrice(product)) || 0;
+        const item = gaItemFromProduct(product, { quantity, price, variant: arome });
+        gaEvent('add_to_cart', { currency: 'TND', value: price * quantity, items: [item] }, { defer: true });
+      })
+      .catch(() => undefined);
+  }, 0);
 }
 
 interface CartContextType {
@@ -243,6 +262,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
           return [...prevItems, { product, quantity: restant, arome }];
         });
         openDrawerDeferred();
+        trackAddToCart(product, restant, arome);
       }
       return;
     }
@@ -259,6 +279,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       return [...prevItems, { product, quantity, arome }];
     });
     openDrawerDeferred();
+    trackAddToCart(product, quantity, arome);
     // `openDrawerDeferred` is itself lifetime-stable, so this callback remains lifetime-stable.
   }, [openDrawerDeferred]);
 

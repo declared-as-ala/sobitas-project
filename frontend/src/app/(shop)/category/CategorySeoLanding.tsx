@@ -184,8 +184,9 @@ export function CategorySeoLanding({
             {/* Apposition, not a conjugated phrase: "Comparer les créatine" is what a template that
                 tries to inline a category name into a sentence produces, and French category names
                 are not reliably pluralisable from code. `Nom : verbe` reads correctly for every
-                one of them, and the table's own lead sentence says what the rows are. */}
-            {`${title} : comparer les prix`}
+                one of them, and the table's own lead sentence says what the rows are.
+                05/10/2026: only the head of the title, so a subtitle is not followed by a second colon. */}
+            {`${title.split(/\s+:\s+/u)[0]} : comparer les prix`}
           </h2>
           {comparisonKind === 'mass-gainers' ? (
             <ProductComparisonTable gainerRows={buildGainerRows(products, brands)} />

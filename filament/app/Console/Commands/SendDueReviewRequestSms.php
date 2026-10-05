@@ -7,8 +7,10 @@ use App\Models\Commande;
 use App\Services\PointsService;
 use App\Services\SmsService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * Send the post-delivery review request BY SMS to orders that are due for one.
@@ -45,16 +47,32 @@ use Illuminate\Support\Facades\Log;
  *     left alone. A wrong number is a credit spent on nobody.
  *   - --dry-run prints the batch with masked numbers, the exact message, its GSM-7 length, and
  *     sends nothing.
+ *   - Balance gate (05/10/2026): WinSMS is asked for the balance once per run, before anything is
+ *     dispatched. A zero balance or an unreachable gateway skips the run's SMS entirely — nothing
+ *     dispatched, NOTHING STAMPED — so the orders stay due and go out once the balance is topped
+ *     up. Before this, a zero balance stamped `review_request_sms_sent_at` on orders whose text
+ *     then failed in the worker, and the stamp kept them out of every later run.
+ *
+ * ── --retry-failed ──────────────────────────────────────────────────────────────────────────
+ * The texts already lost that way have a `notification_deliveries` row with event key
+ * `order:{id}:review-request-sms` and status `failed` (SmsService::sendOnce records it). This mode
+ * re-sends exactly those, ONCE, under the event key `order:{id}:review-request-sms:r1`, and only
+ * while the delivery is inside the normal window and the order still has no linked review.
+ * `uncertain` rows (a timeout after WinSMS may have accepted the message) are never retried: a
+ * second send there can bill a duplicate. Same cap, same balance gate, same --dry-run. It runs
+ * INSTEAD of the normal pass, so it is a deliberate, manual step after a top-up.
  *
  * Usage:
  *   php artisan reviews:send-due-sms-requests --dry-run
  *   php artisan reviews:send-due-sms-requests --limit=25
+ *   php artisan reviews:send-due-sms-requests --retry-failed --dry-run
  */
 class SendDueReviewRequestSms extends Command
 {
     protected $signature = 'reviews:send-due-sms-requests
                             {--limit=25 : Maximum messages to send in this run}
                             {--sleep=2 : Seconds to pause between sends}
+                            {--retry-failed : Re-send, once, the review SMS whose delivery row is "failed" (instead of the normal pass)}
                             {--dry-run : Report what would be sent without sending}';
 
     protected $description = 'Text the "leave a review" request to delivered orders that have a mobile but no request yet';
@@ -96,6 +114,10 @@ class SendDueReviewRequestSms extends Command
             }
         }
 
+        if ((bool) $this->option('retry-failed')) {
+            return $this->retryFailed($dryRun, $maxAge, $limit, $sleep);
+        }
+
         // The eligibility query is a copy of SendDueReviewRequests', with one substitution:
         // review_request_sent_at -> review_request_sms_sent_at. Everything else must stay
         // identical, because "due for a review request" is one definition, not two.
@@ -110,6 +132,7 @@ class SendDueReviewRequestSms extends Command
             // Oldest first: the closest to falling out of the max-age window goes first, so a
             // backlog drains without anyone ageing out unasked.
             ->orderBy('delivered_at')
+            ->when($this->canExcludeAffiliateDesk(), fn ($q) => $q->excludingAffiliateDesk())
             ->get();
 
         $sendable = $due->filter(fn (Commande $c) => $this->mobileFor($c) !== null)->values();
@@ -158,7 +181,12 @@ class SendDueReviewRequestSms extends Command
             ));
         }
 
+        // Once per run, before any dispatch. See smsBalanceGate().
+        $gate = $this->smsBalanceGate();
+
         if ($dryRun) {
+            $this->line('WinSMS probe: ' . $this->describeGate($gate)
+                . ($gate['ok'] ? ' — a real run would send.' : ' — a real run would SKIP every SMS and stamp nothing.'));
             $this->warn(sprintf('DRY RUN — nothing sent, nothing charged. Would text %d:', $batch->count()));
             foreach ($batch as $c) {
                 // Built with the SAME review_code the real send would use, except that a missing
@@ -184,6 +212,12 @@ class SendDueReviewRequestSms extends Command
             return self::SUCCESS;
         }
 
+        if (! $gate['ok']) {
+            $this->skipForBalance($gate);
+
+            return self::SUCCESS;
+        }
+
         $sent = 0;
         $failed = 0;
 
@@ -196,9 +230,9 @@ class SendDueReviewRequestSms extends Command
 
                 // Backfill the short code for orders created before the column existed, rather
                 // than falling back to the 64-character order_token and silently paying for a
-                // 3-segment message. saveQuietly so this write does not re-fire observer events.
+                // 3-segment message. Quietly (no observer re-fire) and without moving updated_at.
                 if (empty($commande->review_code)) {
-                    $commande->forceFill(['review_code' => Commande::generateReviewCode()])->saveQuietly();
+                    $commande->stampQuietly(['review_code' => Commande::generateReviewCode()]);
                 }
 
                 // Queued, not sent inline: SendSmsJob is where WinSMS failures are already logged
@@ -211,7 +245,8 @@ class SendDueReviewRequestSms extends Command
                     'order:' . $commande->id . ':review-request-sms'
                 );
 
-                $commande->forceFill(['review_request_sms_sent_at' => now()])->saveQuietly();
+                // Without moving updated_at, the legacy delivery clock (Commande::stampQuietly).
+                $commande->stampQuietly(['review_request_sms_sent_at' => now()]);
                 $sent++;
             } catch (\Throwable $e) {
                 $failed++;
@@ -242,6 +277,217 @@ class SendDueReviewRequestSms extends Command
         Log::info($summary);
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Re-send, once, the review SMS that WinSMS refused.
+     *
+     * Source of truth: `notification_deliveries`, where SmsService::sendOnce recorded every keyed
+     * attempt. Only `failed` rows qualify — WinSMS answered and refused (typically: no balance).
+     * `uncertain` means the connection dropped after the request left, i.e. it may have been
+     * delivered and billed, and is deliberately left alone.
+     *
+     * Each retry carries its own key, `order:{id}:review-request-sms:r1`: sendOnce claims it before
+     * spending a credit, so a retry can itself never be bought twice, and an order whose `:r1` row
+     * already exists (in any status) is skipped — one retry per order, ever.
+     */
+    private function retryFailed(bool $dryRun, int $maxAge, int $limit, int $sleep): int
+    {
+        if (! Schema::hasTable('notification_deliveries')) {
+            $this->error('notification_deliveries does not exist — nothing to retry.');
+
+            return self::FAILURE;
+        }
+
+        $failedKeys = DB::table('notification_deliveries')
+            ->where('event_key', 'like', 'order:%:review-request-sms')
+            ->where('status', 'failed')
+            ->pluck('event_key');
+
+        $ids = $failedKeys
+            ->map(fn ($key) => preg_match('/^order:(\d+):review-request-sms$/', (string) $key, $m) === 1 ? (int) $m[1] : null)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $this->info(sprintf('Failed review SMS on record: %d.', $ids->count()));
+        if ($ids->isEmpty()) {
+            $this->line('Nothing to retry.');
+
+            return self::SUCCESS;
+        }
+
+        $retriedAlready = DB::table('notification_deliveries')
+            ->whereIn('event_key', $ids->map(fn (int $id) => 'order:' . $id . ':review-request-sms:r1')->all())
+            ->pluck('event_key')
+            ->map(fn ($key) => preg_match('/^order:(\d+):/', (string) $key, $m) === 1 ? (int) $m[1] : 0)
+            ->all();
+
+        /** @var Collection<int, Commande> $orders */
+        $orders = Commande::query()
+            ->whereIn('id', $ids->all())
+            ->whereIn('etat', PointsService::DELIVERED_STATUSES)
+            ->whereNotNull('delivered_at')
+            ->where('delivered_at', '>=', now()->subDays($maxAge))
+            ->whereNotExists(function ($q): void {
+                $q->select(DB::raw(1))
+                    ->from('reviews')
+                    ->whereColumn('reviews.commande_id', 'commandes.id');
+            })
+            ->when($this->canExcludeAffiliateDesk(), fn ($q) => $q->excludingAffiliateDesk())
+            ->orderBy('delivered_at')
+            ->get();
+
+        $skippedRetried = $orders->filter(fn (Commande $c) => in_array((int) $c->id, $retriedAlready, true))->count();
+        $candidates = $orders->reject(fn (Commande $c) => in_array((int) $c->id, $retriedAlready, true))->values();
+        $sendable = $candidates->filter(fn (Commande $c) => $this->mobileFor($c) !== null)->values();
+
+        $this->info(sprintf(
+            'Still eligible (delivered ≤ %d days ago, no review yet): %d; already retried once: %d; with a usable mobile: %d; out of window, not delivered or reviewed: %d.',
+            $maxAge,
+            $orders->count(),
+            $skippedRetried,
+            $sendable->count(),
+            $ids->count() - $orders->count()
+        ));
+
+        if ($sendable->isEmpty()) {
+            $this->line('Nothing to retry.');
+
+            return self::SUCCESS;
+        }
+
+        $batch = $sendable->take($limit);
+        if ($sendable->count() > $batch->count()) {
+            $this->warn(sprintf('Capped at %d; %d retries wait for the next run.', $batch->count(), $sendable->count() - $batch->count()));
+        }
+
+        $gate = $this->smsBalanceGate();
+
+        if ($dryRun) {
+            $this->line('WinSMS probe: ' . $this->describeGate($gate)
+                . ($gate['ok'] ? ' — a real run would send.' : ' — a real run would SKIP every retry.'));
+            $this->warn(sprintf('DRY RUN — nothing sent, nothing charged. Would retry %d:', $batch->count()));
+            foreach ($batch as $c) {
+                $this->line(sprintf(
+                    '  #%s  delivered %s  %s  key order:%d:review-request-sms:r1',
+                    $c->numero ?? $c->id,
+                    $c->delivered_at ? $c->delivered_at->format('Y-m-d') : '?',
+                    $this->mask($this->mobileFor($c)),
+                    $c->id
+                ));
+            }
+
+            return self::SUCCESS;
+        }
+
+        if (! $gate['ok']) {
+            $this->skipForBalance($gate);
+
+            return self::SUCCESS;
+        }
+
+        $queued = 0;
+        $failed = 0;
+
+        foreach ($batch as $commande) {
+            try {
+                $phone = $this->mobileFor($commande);
+                if ($phone === null) {
+                    continue;
+                }
+
+                if (empty($commande->review_code)) {
+                    $commande->stampQuietly(['review_code' => Commande::generateReviewCode()]);
+                }
+
+                // Exactly the normal path's dispatch, with the retry's own idempotency key.
+                SendSmsJob::dispatch(
+                    $phone,
+                    $this->reviewSmsText($commande, (string) $commande->review_code),
+                    'order:' . $commande->id . ':review-request-sms:r1'
+                );
+                $queued++;
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::error('Review SMS retry dispatch failed', [
+                    'commande_id' => $commande->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+
+            if ($sleep > 0) {
+                sleep($sleep);
+            }
+        }
+
+        $summary = sprintf(
+            'reviews:send-due-sms-requests --retry-failed — queued %d, failed %d, waiting %d',
+            $queued,
+            $failed,
+            max(0, $sendable->count() - $queued - $failed)
+        );
+        $this->info($summary);
+        Log::info($summary);
+
+        return self::SUCCESS;
+    }
+
+    /**
+     * Ask WinSMS for the balance once, before any SMS of this run.
+     *
+     * Skip (ok = false) when the probe throws (no key, HTTP error, refusal) or when it reports a
+     * NUMERIC balance at or below zero. A null or non-numeric balance is a response format this
+     * code does not understand — not evidence of an empty account — so the run proceeds.
+     *
+     * WinSMS rate-limits this endpoint (30 s); one call per run, at 10:30, is well inside it.
+     *
+     * @return array{ok:bool, balance:mixed, license:mixed, error:?string}
+     */
+    private function smsBalanceGate(): array
+    {
+        try {
+            $probe = app(SmsService::class)->probe();
+        } catch (\Throwable $e) {
+            // Redacted: a connection error quotes the request URL, api_key included (SmsService::redact).
+            return ['ok' => false, 'balance' => null, 'license' => null, 'error' => SmsService::redact($e->getMessage())];
+        }
+
+        $balance = $probe['balance'] ?? null;
+        $license = $probe['license'] ?? null;
+
+        if (is_numeric($balance) && (float) $balance <= 0) {
+            return ['ok' => false, 'balance' => $balance, 'license' => $license, 'error' => null];
+        }
+
+        return ['ok' => true, 'balance' => $balance, 'license' => $license, 'error' => null];
+    }
+
+    /** @param  array{ok:bool, balance:mixed, license:mixed, error:?string}  $gate */
+    private function describeGate(array $gate): string
+    {
+        if ($gate['error'] !== null) {
+            return 'unreachable (' . $gate['error'] . ')';
+        }
+
+        $balance = $gate['balance'] === null ? 'unknown' : (is_scalar($gate['balance']) ? (string) $gate['balance'] : json_encode($gate['balance']));
+        $license = $gate['license'] === null ? '' : ', license ' . (is_scalar($gate['license']) ? (string) $gate['license'] : json_encode($gate['license']));
+
+        return 'balance ' . $balance . $license;
+    }
+
+    /**
+     * Nothing dispatched, nothing stamped: the orders stay due for the next run.
+     *
+     * @param  array{ok:bool, balance:mixed, license:mixed, error:?string}  $gate
+     */
+    private function skipForBalance(array $gate): void
+    {
+        Log::warning('Review SMS skipped: WinSMS balance is zero or unreachable', [
+            'balance' => $gate['balance'],
+            'error'   => $gate['error'],
+        ]);
+        $this->warn('Review SMS skipped for this run: ' . $this->describeGate($gate) . ' — nothing dispatched, nothing stamped.');
     }
 
     /**
@@ -352,6 +598,14 @@ class SendDueReviewRequestSms extends Command
      * A genuine absence returns false. Any OTHER failure is logged with its message rather than
      * being silently rewritten as "the feature is off".
      */
+    private function canExcludeAffiliateDesk(): bool
+    {
+        // Affiliate-desk orders are never asked for a review (Commande::isAffiliateDeskOrder):
+        // the affiliate typed the phone, and the shop promised that customer no messages.
+        return $this->hasColumn('commandes', 'affilie_id')
+            && $this->hasColumn('commandes', 'checkout_idempotency_key');
+    }
+
     private function hasColumn(string $table, string $column): bool
     {
         try {
@@ -360,7 +614,8 @@ class SendDueReviewRequestSms extends Command
             return true;
         } catch (\Throwable $e) {
             $message = strtolower($e->getMessage());
-            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column');
+            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column')
+                || str_contains($message, 'no such column');
 
             if (! $missing) {
                 Log::error('reviews:send-due-sms-requests could not probe a column, and it is NOT a missing column', [

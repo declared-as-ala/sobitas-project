@@ -48,6 +48,7 @@ import {
 import type { Product } from '@/types';
 import { humanProductHeading } from '@/util/productMetaDescription';
 import { findInStockSibling } from '@/util/inStockSibling';
+import { isAttestedPurchase } from '@/util/structuredData';
 
 function reviewRating(r: { stars?: number; note?: number }): number {
   const v = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 0;
@@ -103,12 +104,28 @@ export function CrawlerProductView({
     Array.isArray(product.nutrition_images) ? product.nutrition_images : []
   ).filter(Boolean);
   const aromas = product.aromes ?? [];
-  const reviews = (product.reviews ?? []).filter(
-    (r) => (r.publier === undefined || r.publier === 1) && reviewRating(r) >= 1
-  );
+  /*
+   * THE LIST IS WHAT IS PUBLISHED; THE SCORE IS WHAT IS ATTESTED (05/10/2026).
+   *
+   * This printed « Avis clients — 4.5/5 (119) » to Googlebot on 111 of 148 in-stock products,
+   * averaged over a seeded backlog in which not one row came from an order — while the JSON-LD on
+   * the same page (buildAggregateRatingAndReviews) and the human page refuse those rows. The set of
+   * listed reviews is unchanged; only the summary is now restricted to attested purchases
+   * (published AND verified OR attached to an order — the shared `isAttestedPurchase` gate), and
+   * attested reviews are listed first, newest first. Same rule as ProductDetailClient, so bot and
+   * human read the same score, or none.
+   */
+  const reviewTime = (r: { created_at?: string }) => (r.created_at ? new Date(r.created_at).getTime() || 0 : 0);
+  const reviews = (product.reviews ?? [])
+    .filter((r) => (r.publier === undefined || r.publier === 1) && reviewRating(r) >= 1)
+    .sort(
+      (a, b) =>
+        (isAttestedPurchase(a) ? 0 : 1) - (isAttestedPurchase(b) ? 0 : 1) || reviewTime(b) - reviewTime(a)
+    );
+  const attestedReviews = reviews.filter(isAttestedPurchase);
   const avgRating =
-    reviews.length > 0
-      ? Math.round((reviews.reduce((s, r) => s + reviewRating(r), 0) / reviews.length) * 10) / 10
+    attestedReviews.length > 0
+      ? Math.round((attestedReviews.reduce((s, r) => s + reviewRating(r), 0) / attestedReviews.length) * 10) / 10
       : null;
   const faq = (product.faq ?? [])
     .map((f) => ({ q: (f.q || f.question || '').trim(), a: (f.a || f.answer || '').trim() }))
@@ -424,13 +441,19 @@ export function CrawlerProductView({
         {reviews.length > 0 && (
           <section aria-label="Avis clients" className="my-6">
             <h2 className="text-lg font-semibold">
-              Avis clients {avgRating != null && `— ${avgRating}/5 (${reviews.length})`}
+              Avis clients
+              {avgRating != null &&
+                ` — ${avgRating}/5 (${attestedReviews.length} ${attestedReviews.length > 1 ? 'achats vérifiés' : 'achat vérifié'})`}
             </h2>
+            <p className="mt-1 text-xs text-ink-2">
+              Avec un compte au téléphone vérifié, un avis publié avec un commentaire d’au moins 15 caractères peut être récompensé par des Protinas, quelle que soit la note.
+            </p>
             <ul className="mt-2 space-y-3">
               {reviews.map((r) => (
                 <li key={r.id} className="border-l-2 border-hairline pl-3">
                   <p className="text-sm font-medium">
-                    {(r.user?.name || 'Client')} — {reviewRating(r)}/5
+                    {r.user?.name?.trim() || r.author_name?.trim() || 'Client'} — {reviewRating(r)}/5
+                    {isAttestedPurchase(r) ? ' · Achat vérifié' : ''}
                     {r.created_at ? ` · ${String(r.created_at).slice(0, 10)}` : ''}
                   </p>
                   {r.comment && <p className="text-sm text-ink-2">{r.comment}</p>}

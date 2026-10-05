@@ -20,8 +20,10 @@ export interface QuickOrderProduct {
   promo_expiration_date?: string | null;
   rupture?: number | boolean;
   aromes?: { id: number; designation_fr: string }[];
+  /** GA4 item_brand (analytics/ga4Items). */
+  brand?: { designation_fr?: string | null } | null;
   /** Rule 19: machines (their subcategory) never reach free delivery and take no code. */
-  sous_categorie?: { slug?: string | null } | null;
+  sous_categorie?: { slug?: string | null; designation_fr?: string | null; categorie?: { designation_fr?: string | null } | null } | null;
 }
 
 interface QuickOrderState {

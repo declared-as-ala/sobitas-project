@@ -77,6 +77,12 @@ export interface BackendOrderPayload {
    * name an affiliate that already exists; it can never name a row by number.
    */
   affiliate_subdomain?: string;
+  /**
+   * GA4 context. The browser sends only `{ gtag_loaded }` (isGtagLoaded() at submit, set by the
+   * checkout AFTER the idempotency comparison, so a retry keeps its key); the order proxies replace
+   * it with the cookie ids (lib/orderAnalytics.ts). Not in the backend's idempotency hash.
+   */
+  ga?: { gtag_loaded?: boolean; client_id?: string | null; session_id?: string | null };
 }
 
 /**

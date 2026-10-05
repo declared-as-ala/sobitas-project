@@ -8,6 +8,7 @@ use App\Models\Commande;
 use App\Models\CommandeDetail;
 use App\Models\Facture;
 use App\Models\FactureTva;
+use App\Models\Review;
 use App\Models\Ticket;
 use App\Models\User;
 use App\Services\PointsService;
@@ -660,6 +661,14 @@ class ClientController extends Controller
 
     public function detail_commande(Request $request, int $id): JsonResponse
     {
+        // Read only to decide `review_url` below, and hidden again before the response, so the
+        // payload shape is unchanged apart from that one key.
+        // affilie_id + checkout_idempotency_key: reviewLinkState() closes affiliate-desk orders.
+        $reviewLinkColumns = array_values(array_filter(
+            ['delivered_at', 'review_code', 'authenticated_user_id', 'affilie_id', 'checkout_idempotency_key'],
+            fn (string $column) => Schema::hasColumn('commandes', $column)
+        ));
+
         $commande = Commande::where('id', $id)
             ->visibleToStorefrontUser($request->user())
             ->select(
@@ -668,6 +677,8 @@ class ClientController extends Controller
                 'livraison_email', 'livraison_phone', 'livraison_region', 'livraison_ville',
                 'livraison_code_postale', 'livraison_adresse1', 'livraison_adresse2', 'note',
                 'etat', 'prix_ht', 'prix_ttc', 'frais_livraison', 'created_at',
+                // For review_url only (the legacy fallback delivery clock); hidden before the response.
+                'updated_at',
                 // ── THE MONEY COLUMNS, WITHOUT WHICH THE ORDER PAGE CANNOT ADD UP ───────────
                 // `prix_ttc` is the ONLY figure the customer actually pays, and it is
                 // `prix_ht - (coupon + pack + points) + frais_livraison` (CommandeController).
@@ -681,7 +692,8 @@ class ClientController extends Controller
                 // Protinas v3: delivery paid with Protinas and the gift part (never budget_dt).
                 ...array_values(array_filter(['pricing_version', 'points_shipping_dt', 'points_redeemed_gift',
                     'requires_phone_confirmation', 'protinas_forfeited', 'protinas_forfeit_waived', 'earn_base_dt'],
-                    fn (string $column) => Schema::hasColumn('commandes', $column)))
+                    fn (string $column) => Schema::hasColumn('commandes', $column))),
+                ...$reviewLinkColumns
             )
             ->with(['latestShipment', self::pointTransactionsRelation()])
             ->first();
@@ -692,10 +704,111 @@ class ClientController extends Controller
 
         $details = CommandeDetail::where('commande_id', $commande->id)
             ->select('id', 'commande_id', 'produit_id', 'qte', 'prix_unitaire', 'prix_ht', 'prix_ttc')
-            ->with('product:id,designation_fr,cover,prix,promo')
+            // `slug` is read by reviewUrlFor() (the product-page review link), not only displayed.
+            ->with('product:id,slug,designation_fr,cover,prix,promo')
             ->get();
 
-        return response()->json(['commande' => $this->withCustomerTracking($commande), 'details' => $details]);
+        // BEFORE withCustomerTracking(): that method sets computed attributes (protina, totals,
+        // tracking) on the model, and reviewUrlFor() may save it to backfill a review_code.
+        $reviewUrl = $this->reviewUrlFor($commande, in_array('review_code', $reviewLinkColumns, true), $request->user(), $details);
+
+        $commande = $this->withCustomerTracking($commande);
+        $commande->setAttribute('review_url', $reviewUrl);
+        $commande->makeHidden(['updated_at', ...$reviewLinkColumns]);
+
+        return response()->json(['commande' => $commande, 'details' => $details]);
+    }
+
+    /**
+     * The order's review link for the account page — /avis/{code} for an order this account placed,
+     * the product page's review block for one it only sees (below) — or null.
+     *
+     * Offered only while ReviewController would accept it — delivered, and delivered at most
+     * `reviews.link_max_age_days` ago — through the SAME reviewLinkState() the /avis endpoints use,
+     * so the account page can never show a link that then answers 410.
+     *
+     * The short `review_code` (the SMS one) rather than the 64-character order_token: the path is
+     * shown to a signed-in owner, it is what the frontend's /avis/{ref} accepts either way, and it
+     * keeps the token — which also opens the order-confirmation page — out of one more payload.
+     * A legacy order with no code gets one now, from the generator Commande uses at creation, saved
+     * quietly and WITHOUT touching updated_at: updated_at is the fallback delivery clock for rows
+     * that never stamped delivered_at, and moving it would extend the link's life.
+     *
+     * ONLY FOR AN ORDER THIS ACCOUNT PLACED. The account page also lists orders matched by the
+     * member's verified phone or e-mail (Commande::visibleToStorefrontUser), typically a guest
+     * checkout with `authenticated_user_id` 0. /avis attributes a review to `authenticated_user_id`
+     * and nothing else, so for such an order it would store the member's review anonymously, pay no
+     * Protinas, and spend the order's one attested slot (unique reviews(commande_id, product_id)),
+     * leaving the member's later product-page review unverified. The product-page composer attests
+     * that same order through ReviewSubmissionService::deliveredOrderId and pays the member, so such
+     * an order links there instead — `/products/{slug}#reviews`, which the middleware 301s to the
+     * canonical product URL in one hop; the Location carries no fragment, so the browser keeps
+     * #reviews — when it holds one product, and offers no single link when it holds several. Never
+     * by numeric id: /products/{id} is read as a slug, misses, and answers 410. No link either when
+     * the slug is empty, or when the product can no longer be rated from that page (the member
+     * already reviewed it, or the order's attested slot for it is taken).
+     *
+     * Never throws: an account page must not fail over a review link.
+     *
+     * @param  \Illuminate\Support\Collection<int, CommandeDetail>  $details
+     */
+    private function reviewUrlFor(Commande $commande, bool $hasReviewCode, User $viewer, \Illuminate\Support\Collection $details): ?string
+    {
+        try {
+            if (ReviewController::reviewLinkState($commande) !== ReviewController::LINK_OPEN) {
+                return null;
+            }
+
+            if ((int) ($commande->authenticated_user_id ?? 0) !== (int) $viewer->getKey()) {
+                $productIds = $details->pluck('produit_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->filter(fn (int $id) => $id > 0)
+                    ->unique()
+                    ->values();
+
+                if ($productIds->count() !== 1) {
+                    return null;
+                }
+                $productId = (int) $productIds->first();
+                $slug = trim((string) $details->first(fn ($d) => (int) $d->produit_id === $productId)?->product?->slug);
+                if ($slug === '') {
+                    return null;
+                }
+                // One review per account and product, one attested rating per order and product.
+                if (Review::where('product_id', $productId)
+                    ->where(fn ($q) => $q->where('user_id', $viewer->getKey())->orWhere('commande_id', $commande->id))
+                    ->exists()) {
+                    return null;
+                }
+
+                return '/products/' . rawurlencode($slug) . '#reviews';
+            }
+
+            if (! $hasReviewCode) {
+                return null;
+            }
+
+            if (empty($commande->review_code)) {
+                $commande->forceFill(['review_code' => Commande::generateReviewCode()]);
+                $commande->timestamps = false;
+                try {
+                    $commande->saveQuietly();
+                } finally {
+                    $commande->timestamps = true;
+                }
+            }
+
+            $code = trim((string) $commande->review_code);
+
+            return $code !== '' ? '/avis/' . $code : null;
+        } catch (\Throwable $e) {
+            Log::warning('review_url could not be built for the account order page', [
+                'commande_id' => $commande->id,
+                'error'       => $e->getMessage(),
+            ]);
+
+            return null;
+        }
     }
 
     /**

@@ -81,12 +81,14 @@ final class ProductSchemaBuilderTest extends TestCase
         $user = new User(['name' => 'Jane']);
         $user->id = 1;
 
+        // Attested (verified = 1): only reviews backed by a purchase may reach structured data.
         $review = new Review([
             'stars' => 5,
             'comment' => 'Excellent produit',
             'publier' => 1,
             'product_id' => 4,
             'user_id' => 1,
+            'verified' => 1,
         ]);
         $review->setRelation('user', $user);
 
@@ -96,8 +98,85 @@ final class ProductSchemaBuilderTest extends TestCase
 
         $this->assertIsArray($graph);
         $this->assertArrayHasKey('aggregateRating', $graph);
+        $this->assertSame(1, $graph['aggregateRating']['ratingCount']);
         $this->assertSame(1, $graph['aggregateRating']['reviewCount']);
         $this->assertArrayHasKey('review', $graph);
+        $this->assertSame('Jane', $graph['review']['author']['name']);
+    }
+
+    /**
+     * The seeded backlog: published, but neither verified nor linked to an order. It must never
+     * become an AggregateRating, however many rows there are.
+     */
+    public function test_unattested_published_reviews_never_reach_structured_data(): void
+    {
+        $product = $this->ratedProduct(20);
+        $product->setRelation('reviews', collect([
+            new Review(['stars' => 5, 'comment' => 'Vanilla taste great', 'publier' => 1, 'product_id' => 20]),
+            new Review(['stars' => 4, 'comment' => 'Top.', 'publier' => 1, 'product_id' => 20, 'verified' => 0]),
+        ]));
+
+        $graph = (new ProductSchemaBuilder)->buildGraph($product, 'https://example.com/shop/x');
+
+        $this->assertIsArray($graph);
+        $this->assertArrayNotHasKey('aggregateRating', $graph);
+        $this->assertArrayNotHasKey('review', $graph);
+    }
+
+    /**
+     * A stars-only review from the post-delivery link is a RATING: it counts in ratingCount and in
+     * the average, not in reviewCount, and it produces no Review node (there is no body).
+     */
+    public function test_stars_only_order_review_counts_as_a_rating_not_a_review(): void
+    {
+        $product = $this->ratedProduct(21);
+        $product->setRelation('reviews', collect([
+            new Review(['stars' => 4, 'comment' => '', 'publier' => 1, 'product_id' => 21, 'commande_id' => 501]),
+            new Review(['stars' => 5, 'comment' => 'Bon goût, se mélange bien.', 'publier' => 1, 'product_id' => 21, 'commande_id' => 502, 'author_name' => 'Amira B.']),
+        ]));
+
+        $graph = (new ProductSchemaBuilder)->buildGraph($product, 'https://example.com/shop/x');
+
+        $this->assertSame(2, $graph['aggregateRating']['ratingCount']);
+        $this->assertSame(1, $graph['aggregateRating']['reviewCount']);
+        $this->assertSame('4.5', $graph['aggregateRating']['ratingValue']);
+        // One node only, and the guest-style author name stored on the row is used.
+        $this->assertSame('Review', $graph['review']['@type']);
+        $this->assertSame('Amira B.', $graph['review']['author']['name']);
+    }
+
+    /** No text anywhere: ratingCount alone. "reviewCount: 0" next to a rating would be flagged. */
+    public function test_review_count_is_omitted_when_no_attested_rating_has_text(): void
+    {
+        $product = $this->ratedProduct(22);
+        $product->setRelation('reviews', collect([
+            new Review(['stars' => 5, 'comment' => '', 'publier' => 1, 'product_id' => 22, 'commande_id' => 601]),
+            new Review(['stars' => 3, 'comment' => '   ', 'publier' => 1, 'product_id' => 22, 'verified' => 1]),
+        ]));
+
+        $graph = (new ProductSchemaBuilder)->buildGraph($product, 'https://example.com/shop/x');
+
+        $this->assertSame(2, $graph['aggregateRating']['ratingCount']);
+        $this->assertArrayNotHasKey('reviewCount', $graph['aggregateRating']);
+        $this->assertArrayNotHasKey('review', $graph);
+
+        $facts = (new ProductSchemaBuilder)->buildSchemaFacts($product, 'https://example.com/shop/x');
+        $this->assertSame(2, $facts['rating_count']);
+    }
+
+    private function ratedProduct(int $id): Product
+    {
+        $product = new Product([
+            'designation_fr' => 'X',
+            'slug' => 'x',
+            'prix' => 10,
+            'qte' => 1,
+            'rupture' => false,
+        ]);
+        $product->id = $id;
+        $product->syncOriginal();
+
+        return $product;
     }
 
     public function test_no_aggregate_rating_when_star_values_are_invalid(): void

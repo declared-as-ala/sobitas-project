@@ -337,10 +337,11 @@ export function CrawlerCategoryView({
 
       {/* Price comparison — directly after the product list and its pager, before the guide.
           Identical markup to the human render: CreatineComparisonTable is a pure server component
-          with no client code, written to be mounted in both. */}
+          with no client code, written to be mounted in both.
+          05/10/2026: only the head of the title, so a subtitle is not followed by a second colon. */}
       {showComparison && (
         <section aria-label="Comparatif" className="my-6">
-          <h2 className="text-lg font-semibold">{`${title} : comparer les prix`}</h2>
+          <h2 className="text-lg font-semibold">{`${title.split(/\s+:\s+/u)[0]} : comparer les prix`}</h2>
           <div className="mt-2">
             {comparisonKind === 'mass-gainers' ? (
               <ProductComparisonTable gainerRows={buildGainerRows(products, brands)} />

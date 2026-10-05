@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { ScrollToTop } from '@/app/components/ScrollToTop';
-import { useCart } from '@/app/contexts/CartContext';
+import { useCart, type CartItem } from '@/app/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { createOrder, getStorageUrl, getOrderDetails, applyCoupon, removeCoupon, getSiteLogoUrlResolved } from '@/services/api';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
@@ -32,6 +32,37 @@ import styles from './checkout.module.css';
 import { LinkWithLoading } from '@/app/components/LinkWithLoading';
 import { OrderProtinaSummary } from '@/app/components/loyalty/OrderProtinaSummary';
 import { CheckoutConfirmationNote, CheckoutEarnLine, CheckoutTotals, couponNote, maskPhone } from './CheckoutTotals';
+import { gaEvent, isGtagLoaded, trackPurchaseOnce, type Ga4Item } from '@/lib/analytics/ga4';
+
+/**
+ * GA4 items for the order just placed: the server's own lines when the confirmation loaded (their
+ * `prix_unitaire` is what was charged), the cart as submitted otherwise. The builder module is
+ * loaded on demand (begin_checkout has usually fetched it already). Never throws: if it cannot
+ * load, the purchase still goes out with its revenue and no items.
+ */
+async function purchaseItems(
+  details: unknown[] | null,
+  cart: CartItem[],
+  priceOf: (product: CartItem['product']) => number,
+): Promise<Ga4Item[]> {
+  try {
+    const { gaItemFromOrderDetail, gaItemFromProduct } = await import('@/lib/analytics/ga4Items');
+    if (details && details.length > 0) {
+      return details.map((detail) => {
+        const line = (detail ?? {}) as { produit_id?: unknown; arome?: unknown };
+        const cartLine = cart.find((item) => item.product.id === Number(line.produit_id));
+        return gaItemFromOrderDetail({ ...line, arome: line.arome ?? cartLine?.arome }, cartLine?.product ?? null);
+      });
+    }
+    return cart.map((item) => gaItemFromProduct(item.product, {
+      quantity: item.quantity,
+      price: Number(priceOf(item.product)) || 0,
+      variant: item.arome,
+    }));
+  } catch {
+    return [];
+  }
+}
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -115,6 +146,25 @@ export default function CheckoutPage() {
       return;
     }
   }, [items, isLoaded, router, isOrderComplete, isSubmitting, currentStep]);
+
+  // GA4 begin_checkout: once per visit, as soon as the restored cart has something in it. Off the
+  // render path (deferred send, item builder loaded on demand).
+  const beginCheckoutSentRef = useRef(false);
+  useEffect(() => {
+    if (!isLoaded || items.length === 0 || beginCheckoutSentRef.current) return;
+    beginCheckoutSentRef.current = true;
+    const lines = items.map((item) => ({ item, price: Number(getEffectivePrice(item.product)) || 0 }));
+    const value = lines.reduce((sum, line) => sum + line.price * line.item.quantity, 0);
+    void import('@/lib/analytics/ga4Items')
+      .then(({ gaItemFromProduct }) => {
+        gaEvent('begin_checkout', {
+          currency: 'TND',
+          value,
+          items: lines.map(({ item, price }) => gaItemFromProduct(item.product, { quantity: item.quantity, price, variant: item.arome })),
+        }, { defer: true });
+      })
+      .catch(() => undefined);
+  }, [isLoaded, items, getEffectivePrice]);
 
   /**
    * Mobile viewport: set --app-height from visualViewport so we avoid 100vh jumps
@@ -395,6 +445,9 @@ export default function CheckoutPage() {
     submitLock.current = true;
     setIsSubmitting(true);
 
+    // What the customer is ordering, kept for the GA4 purchase: clearCart() empties the cart below.
+    const cartSnapshot = items.slice();
+
     try {
       const orderPayload = { ...checkoutPayload };
       if (!visiblePricing) delete orderPayload.points_to_redeem;
@@ -411,7 +464,12 @@ export default function CheckoutPage() {
           key: crypto.randomUUID?.() ?? `order-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         };
       }
-      const response = await createOrder(orderPayload, checkoutAttemptRef.current.key);
+      // Added after the comparison above: whether gtag.js has booted may change between two taps,
+      // and a retry must keep its idempotency key. The proxy keeps only this boolean.
+      const response = await createOrder(
+        { ...orderPayload, ga: { gtag_loaded: isGtagLoaded() } },
+        checkoutAttemptRef.current.key,
+      );
       
       // Get order ID from response (could be response.id or response.commande.id)
       const orderId = response.id || (response as any).commande?.id || (response as any).data?.id;
@@ -429,6 +487,7 @@ export default function CheckoutPage() {
       setCurrentStep(3);
       
       // Fetch order details for confirmation step
+      let purchaseDetails: unknown[] | null = null;
       try {
         const orderDetailsData = await getOrderDetails(Number(orderId), {
           token: response.order_token,
@@ -436,6 +495,7 @@ export default function CheckoutPage() {
           email: response.order_token ? undefined : formData.livraison_email.trim() || undefined,
           phone: response.order_token ? undefined : normalizeCheckoutPhone(formData.livraison_phone),
         });
+        purchaseDetails = orderDetailsData.details_facture || [];
         setOrderData({
           order: orderDetailsData.facture,
           orderDetails: (orderDetailsData.details_facture || []).map(detail => ({ ...detail, produit: detail.produit || detail.product }))
@@ -493,6 +553,28 @@ export default function CheckoutPage() {
         });
       }
       
+      /*
+       * GA4 `purchase`, sent where the order is created — the confirmation page is only reached from
+       * the e-mail. A replayed response is the same order: trackPurchaseOnce de-duplicates it.
+       * `value` is item revenue without delivery, the backend's own formula. Never fails the order.
+       */
+      try {
+        const placed = response as { numero?: string | null; pricing?: CheckoutPricing };
+        const total = placed.pricing?.total_dt ?? finalTotal;
+        const shipping = placed.pricing?.shipping_dt ?? shippingCost;
+        const numero = typeof placed.numero === 'string' ? placed.numero.trim() : '';
+        trackPurchaseOnce({
+          transactionId: numero || String(orderId),
+          value: Math.round(Math.max(0, total - shipping) * 1000) / 1000,
+          shipping,
+          coupon: placed.pricing?.coupon?.applied ? placed.pricing.coupon.code ?? undefined : undefined,
+          items: await purchaseItems(purchaseDetails, cartSnapshot, getEffectivePrice),
+          serverReported: response.ga4_server_purchase === true,
+        });
+      } catch {
+        // Analytics never turns a placed order into an error.
+      }
+
       toast.success('Commande passée avec succès !');
       
       // Clear cart AFTER setting step 3 and order data

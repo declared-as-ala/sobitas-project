@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { buildBackendOrderPayload } from '@/lib/orderPayload';
 import { withAffiliateAttribution } from '@/lib/orderAttribution';
+import { withAnalyticsContext } from '@/lib/orderAnalytics';
 import type { QuickOrderPayload, QuickOrderResponse } from '@/types';
 
 // Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
@@ -15,6 +16,8 @@ type AddCommandeResponse = {
   data?: { id?: number };
   /** On 409: the server's pricing (the total it would charge), shown to the customer to confirm. */
   pricing?: unknown;
+  /** The backend queued this order's GA4 purchase itself: the drawer must not send it too. */
+  ga4_server_purchase?: boolean;
 };
 
 /** Simple rate limit: IP -> timestamps (last N requests). Max 5 per minute. */
@@ -182,7 +185,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
         ...(authHeader && { Authorization: authHeader }),
         ...(idempotencyKey && { 'Idempotency-Key': idempotencyKey }),
       },
-      body: JSON.stringify(withAffiliateAttribution(orderPayload, request)),
+      body: JSON.stringify(withAnalyticsContext(withAffiliateAttribution(orderPayload, request), request, body.ga)),
       signal: AbortSignal.timeout(30000),
     });
 
@@ -215,6 +218,7 @@ async function handleQuickOrder(request: NextRequest): Promise<Response> {
       orderId,
       status: 'created',
       numero: numero ?? (orderId ? `#${orderId}` : undefined),
+      ...(data.ga4_server_purchase === true ? { ga4ServerPurchase: true } : {}),
     };
     return NextResponse.json(result);
 }

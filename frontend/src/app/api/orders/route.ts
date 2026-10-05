@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { withAffiliateAttribution } from '@/lib/orderAttribution';
+import { withAnalyticsContext } from '@/lib/orderAnalytics';
 
 // Commande backend – fetch from admin.protein.tn (override with NEXT_PUBLIC_API_URL or API_BACKEND_URL)
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? process.env.API_BACKEND_URL ?? 'https://admin.protein.tn/api';
@@ -9,7 +10,7 @@ export async function POST(request: NextRequest) {
     // Affiliate attribution is stamped from the HttpOnly `pt_aff` cookie and any client-supplied
     // value is discarded. This proxy is the last place that can tell the two apart — past it, the
     // body is just JSON. See lib/orderAttribution.ts.
-    const body = withAffiliateAttribution(await request.json(), request);
+    const body = withAnalyticsContext(withAffiliateAttribution(await request.json(), request), request);
 
     // Get auth token from Authorization header (sent from client)
     const authHeader = request.headers.get('Authorization');

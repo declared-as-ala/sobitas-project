@@ -213,6 +213,16 @@ function buildRedirects() {
     p('/marques', '/brands'),
     p('/marque', '/brands'),
     //
+    // ── 05/10/2026: THE PROTEIN GUIDE CMS PAGE FOLDS INTO THE CATALOGUE (same as creatine) ──
+    // /proteine-tunisie (CMS id 9) is a product-less guide whose URL is the head term: 3 m to 19/09
+    // 2 clicks / 684 impr @56.9; 28 d to 05/10 0 clicks, @85 on « protein tunisie », @80 on
+    // « proteine tunisie », while /proteines climbed 47.6 → 13.7. Its « comment choisir » intent is
+    // answered by /proteines' guide + FAQ. Listed here so /page/proteine-tunisie takes one hop.
+    // The footer and pages.xml drop it via RETIRED_CMS_PAGES (cmsPageSeoConfig.ts) whatever the DB
+    // says; migration 2026_10_05_000200 then sets the CMS row INACTIVE (ship it AFTER this deploy).
+    p('/page/proteine-tunisie', '/proteines'),
+    p('/proteine-tunisie', '/proteines'),
+    //
     // ── THE LEGAL PAGES HAVE A REAL HOME, AND `/page/:slug` WAS NOT SENDING THEM TO IT ────
     // Checked live on 11/08/2026: /page/a-propos 308s to /a-propos, which is 404, and
     // /page/cookies 308s to /cookies, which is 404. A redirect into a 404 is worse than a plain

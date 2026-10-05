@@ -8,15 +8,20 @@ use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
 /**
- * Post-delivery review request. Sent once, when an order is marked delivered
- * (see App\Observers\CommandeObserver). Links to /avis/{order_token} where the
- * customer can rate the products they bought without logging in.
+ * Post-delivery review request. Sent once after delivery (reviews:send-due-requests, or
+ * App\Observers\CommandeObserver when the delay is 0), and at most once more as a reminder
+ * (`$reminder = true`, reviews:send-due-requests' second pass) when no review came back. Links to
+ * /avis/{order_token} where the customer can rate the products they bought without logging in.
  */
 class ReviewRequestMail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public function __construct(public Commande $commande)
+    /**
+     * @param  bool  $reminder  The one follow-up: a "Rappel" subject and a one-line reminder intro.
+     *                          Shared with the view as `$reminder`.
+     */
+    public function __construct(public Commande $commande, public bool $reminder = false)
     {
     }
 
@@ -45,9 +50,15 @@ class ReviewRequestMail extends Mailable
         $contact = \App\Models\Coordinate::getCached();
         $replyTo = ($contact && ! empty($contact->email)) ? $contact->email : 'contact@protein.tn';
 
+        // Same shape as the first subject, so the two read as one conversation in the inbox, with
+        // the order number still inside what a phone shows before truncating.
+        $subject = $this->reminder
+            ? 'Rappel — votre avis sur la commande #' . $numero
+            : 'Votre avis sur la commande #' . $numero;
+
         return $this
-            ->subject('Votre avis sur la commande #' . $numero)
+            ->subject($subject)
             ->replyTo($replyTo, 'Protein.tn')
-            ->view('emails.orders.review-request');
+            ->view('emails.orders.review-request', ['reminder' => $this->reminder]);
     }
 }

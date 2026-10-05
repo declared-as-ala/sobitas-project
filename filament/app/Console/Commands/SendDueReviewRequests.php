@@ -6,7 +6,9 @@ use App\Jobs\SendSmsJob;
 use App\Mail\ReviewRequestMail;
 use App\Models\Commande;
 use App\Services\PointsService;
+use App\Services\SmsService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -25,13 +27,22 @@ use Illuminate\Support\Facades\Mail;
  * set from the database on every run, so it is idempotent, self-healing, and a missed day simply
  * sends the next day instead of losing the request forever.
  *
+ * TWO PASSES SINCE 05/10/2026
+ *   1. The first request, exactly as before.
+ *   2. ONE reminder, to delivered orders whose first email went out `reviews.reminder_after_days`
+ *      ago and that still have no linked review (see reminderPass()). Same daily cap, same
+ *      --dry-run, stamped in `review_reminder_sent_at` so it can never go twice.
+ *
  * Safety — this mails REAL customers:
- *   - Idempotent: review_request_sent_at is stamped per order, so no order is ever asked twice.
- *   - Windowed: only orders delivered between `delay` and `max_age` days ago. Turning this on can
- *     never quietly email the back catalogue — that stays behind reviews:backfill-requests, which
- *     is manual and has its own --dry-run.
- *   - Capped: request_daily_limit per run, so sends read as transactional, not as a blast.
- *   - Honours the reviews.request_emails_enabled kill-switch.
+ *   - Idempotent: review_request_sent_at / review_reminder_sent_at are stamped per order, so no
+ *     order is ever asked more than once plus one reminder.
+ *   - Windowed: only orders delivered between `delay` and `max_age` days ago (reminders: at most
+ *     `reminder_max_age_days`). Turning this on can never quietly email the back catalogue — that
+ *     stays behind reviews:backfill-requests, which is manual and has its own --dry-run.
+ *   - Capped: request_daily_limit per run, shared by both passes, so sends read as transactional.
+ *   - Honours the reviews.request_emails_enabled kill-switch (and reviews.reminder_enabled).
+ *   - The SMS that rides along is skipped for the whole run when WinSMS reports a zero balance or
+ *     cannot be reached, and nothing is stamped — see smsBalanceGate().
  *   - --dry-run prints the batch with masked addresses and sends nothing.
  */
 class SendDueReviewRequests extends Command
@@ -41,7 +52,7 @@ class SendDueReviewRequests extends Command
                             {--sleep=2 : Seconds to pause between sends}
                             {--dry-run : Report what would be sent without sending}';
 
-    protected $description = 'Email the "leave a review" request to orders delivered long enough ago to be due';
+    protected $description = 'Email the "leave a review" request to orders delivered long enough ago to be due, then one reminder';
 
     public function handle(): int
     {
@@ -57,22 +68,36 @@ class SendDueReviewRequests extends Command
             return self::FAILURE;
         }
 
+        $used = 0;
+
         if ($delay === 0) {
+            // The first request is sent inline by CommandeObserver on delivery. The reminder is
+            // still this command's job, so the run continues to the second pass.
             $this->info('reviews.request_delay_days is 0 — the observer sends on delivery, nothing is due here.');
+        } else {
+            // Ask MySQL directly rather than Schema::hasColumn, which has twice reported false for
+            // columns that exist on this database and silently turned guarded code into a no-op.
+            if (! $this->hasColumn('commandes', 'delivered_at')) {
+                $this->error('commandes.delivered_at cannot be read — run migrations first.');
+                $this->line('Si les migrations sont à jour, cherchez « could not probe a column » dans le log Laravel :');
+                $this->line('la colonne existe et c’est la base qui refuse la lecture pour une autre raison.');
 
-            return self::SUCCESS;
+                return self::FAILURE;
+            }
+
+            $used = $this->firstRequestPass($dryRun, $delay, $maxAge, $limit, $sleep);
         }
 
-        // Ask MySQL directly rather than Schema::hasColumn, which has twice reported false for
-        // columns that exist on this database and silently turned guarded code into a no-op.
-        if (! $this->hasColumn('commandes', 'delivered_at')) {
-            $this->error('commandes.delivered_at cannot be read — run migrations first.');
-            $this->line('Si les migrations sont à jour, cherchez « could not probe a column » dans le log Laravel :');
-            $this->line('la colonne existe et c’est la base qui refuse la lecture pour une autre raison.');
+        $this->reminderPass($dryRun, max(0, $limit - $used), $sleep);
 
-            return self::FAILURE;
-        }
+        return self::SUCCESS;
+    }
 
+    /**
+     * The first review request. Returns how many orders it took out of the shared cap.
+     */
+    private function firstRequestPass(bool $dryRun, int $delay, int $maxAge, int $limit, int $sleep): int
+    {
         $due = Commande::query()
             ->whereIn('etat', PointsService::DELIVERED_STATUSES)
             ->whereNull('review_request_sent_at')
@@ -84,6 +109,7 @@ class SendDueReviewRequests extends Command
             // Oldest first: the closest to falling out of the max-age window goes first, so a
             // backlog drains without anyone ageing out unasked.
             ->orderBy('delivered_at')
+            ->when($this->canExcludeAffiliateDesk(), fn ($q) => $q->excludingAffiliateDesk())
             ->get();
 
         $sendable = $due->filter(fn (Commande $c) => $this->emailFor($c) !== null)->values();
@@ -99,7 +125,7 @@ class SendDueReviewRequests extends Command
         if ($sendable->isEmpty()) {
             $this->line('Nothing due.');
 
-            return self::SUCCESS;
+            return 0;
         }
 
         $batch = $sendable->take($limit);
@@ -114,6 +140,8 @@ class SendDueReviewRequests extends Command
             ));
         }
 
+        $smsEnabled = (bool) config('reviews.request_sms_enabled', false);
+
         if ($dryRun) {
             $this->warn(sprintf('DRY RUN — nothing sent. Would email %d:', $batch->count()));
             foreach ($batch as $c) {
@@ -125,20 +153,46 @@ class SendDueReviewRequests extends Command
                 ));
             }
 
-            return self::SUCCESS;
+            if ($smsEnabled) {
+                $gate = $this->smsBalanceGate();
+                $this->line('WinSMS probe: ' . $this->describeGate($gate)
+                    . ($gate['ok'] ? ' — the SMS that rides along would be queued.' : ' — the SMS that rides along would be SKIPPED for this run.'));
+            }
+
+            return $batch->count();
         }
 
         $sent = 0;
         $failed = 0;
-
-        $smsEnabled = (bool) config('reviews.request_sms_enabled', false);
         $smsSent = 0;
+        $smsSkippedForBalance = false;
+
+        /*
+         * ── THE BALANCE GATE, ONCE PER RUN, BEFORE ANY SMS ──────────────────────────────────────
+         * Measured 05/10/2026: the WinSMS balance was 0, and every review SMS was still dispatched
+         * and its order still stamped `review_request_sms_sent_at`. The job then failed in the
+         * worker, and the stamp kept the order out of every later run — the text was lost for good.
+         * So the run asks WinSMS first. Zero or unreachable: no SMS is dispatched and nothing is
+         * stamped, so the same orders are simply due again tomorrow, once the balance is topped up.
+         */
+        if ($smsEnabled) {
+            $gate = $this->smsBalanceGate();
+            if (! $gate['ok']) {
+                $smsEnabled = false;
+                $smsSkippedForBalance = true;
+                Log::warning('Review SMS skipped: WinSMS balance is zero or unreachable', [
+                    'balance' => $gate['balance'],
+                    'error'   => $gate['error'],
+                ]);
+                $this->warn('Review SMS skipped for this run: ' . $this->describeGate($gate) . ' — nothing dispatched, nothing stamped.');
+            }
+        }
 
         foreach ($batch as $commande) {
             try {
                 Mail::to($this->emailFor($commande))->send(new ReviewRequestMail($commande));
-                // saveQuietly so this write does not re-fire observer events.
-                $commande->forceFill(['review_request_sent_at' => now()])->saveQuietly();
+                // Quietly (no observer re-fire) and without moving updated_at (Commande::stampQuietly).
+                $commande->stampQuietly(['review_request_sent_at' => now()]);
                 $sent++;
             } catch (\Throwable $e) {
                 $failed++;
@@ -185,14 +239,169 @@ class SendDueReviewRequests extends Command
             $sent,
             $failed,
             max(0, $sendable->count() - $sent),
-            $smsEnabled ? sprintf(' (+%d SMS)', $smsSent) : ''
+            $smsEnabled
+                ? sprintf(' (+%d SMS)', $smsSent)
+                : ($smsSkippedForBalance ? ' (SMS skipped: WinSMS balance zero or unreachable)' : '')
         );
         $this->info($summary);
         // Logged as well as printed: this runs unattended in the scheduler container, where
         // console output goes nowhere anyone reads.
         Log::info($summary);
 
-        return self::SUCCESS;
+        return $batch->count();
+    }
+
+    /**
+     * ── THE ONE REMINDER ────────────────────────────────────────────────────────────────────
+     * Measured 05/10/2026: zero attested reviews. A single email, sent once, with no follow-up, is
+     * most of why. This pass sends ONE more, and only:
+     *
+     *   - to a DELIVERED order (same statuses as everything else here);
+     *   - whose first email went out at least `reviews.reminder_after_days` days ago
+     *     (`review_request_sent_at`, the column the first pass stamps);
+     *   - that was never reminded (`review_reminder_sent_at` IS NULL);
+     *   - with a real delivery clock: `delivered_at` set and at most `reminder_max_age_days` old.
+     *     A legacy row that never stamped it is never reminded — its `updated_at` fallback moves
+     *     with every write, so it cannot prove the delivery was « il y a quelques jours »;
+     *   - that is not an affiliate-desk order (Commande::isAffiliateDeskOrder);
+     *   - that has a usable email and an order_token (the link is built from it);
+     *   - with NO review linked to the order at all. One reviewed product is an answer; reminding
+     *     somebody who already replied is how a request turns into a nag.
+     *
+     * It shares the first pass's cap: whatever the first pass used today is not available here.
+     * The marker is stamped only after the mailer accepted the message, exactly like the first one.
+     */
+    private function reminderPass(bool $dryRun, int $budget, int $sleep): void
+    {
+        if (! (bool) config('reviews.reminder_enabled', true)) {
+            $this->line('Reminders: off (reviews.reminder_enabled = false).');
+
+            return;
+        }
+
+        // `$this->hasColumn`, not Schema::hasColumn — see its docblock.
+        foreach ([['commandes', 'review_reminder_sent_at'], ['commandes', 'review_request_sent_at'], ['reviews', 'commande_id']] as [$table, $column]) {
+            if (! $this->hasColumn($table, $column)) {
+                $this->warn("Reminders skipped: {$table}.{$column} cannot be read — run migrations first.");
+
+                return;
+            }
+        }
+
+        $afterDays = max(1, (int) config('reviews.reminder_after_days', 5));
+        $maxAge    = max(1, (int) config('reviews.reminder_max_age_days', 45));
+        $cutoff    = now()->subDays($maxAge);
+
+        if (! $this->hasColumn('commandes', 'delivered_at')) {
+            $this->warn('Reminders skipped: commandes.delivered_at cannot be read — run migrations first.');
+
+            return;
+        }
+
+        /** @var Collection<int, Commande> $due */
+        $due = Commande::query()
+            ->whereIn('etat', PointsService::DELIVERED_STATUSES)
+            ->whereNotNull('review_request_sent_at')
+            ->where('review_request_sent_at', '<=', now()->subDays($afterDays))
+            ->whereNull('review_reminder_sent_at')
+            ->whereNotNull('order_token')
+            ->where('order_token', '!=', '')
+            ->whereNotNull('delivered_at')
+            ->where('delivered_at', '>=', $cutoff)
+            ->whereNotExists(function ($q): void {
+                $q->select(DB::raw(1))
+                    ->from('reviews')
+                    ->whereColumn('reviews.commande_id', 'commandes.id');
+            })
+            ->when($this->canExcludeAffiliateDesk(), fn ($q) => $q->excludingAffiliateDesk())
+            ->orderBy('review_request_sent_at')
+            ->get();
+        $sendable = $due->filter(fn (Commande $c) => $this->emailFor($c) !== null)->values();
+
+        $this->info(sprintf(
+            'Reminders: first email ≥ %d days ago, delivered ≤ %d days ago, no review yet: %d (%d with a usable email); %d left under today’s cap.',
+            $afterDays,
+            $maxAge,
+            $due->count(),
+            $sendable->count(),
+            $budget
+        ));
+
+        if ($sendable->isEmpty()) {
+            $this->line('Reminders: nothing due.');
+
+            return;
+        }
+
+        if ($budget <= 0) {
+            $this->warn(sprintf('Reminders: today’s cap is used up; %d reminder(s) wait for the next run.', $sendable->count()));
+
+            return;
+        }
+
+        $batch = $sendable->take($budget);
+        if ($sendable->count() > $batch->count()) {
+            $this->warn(sprintf(
+                'Reminders capped at %d; %d wait for the next run.',
+                $batch->count(),
+                $sendable->count() - $batch->count()
+            ));
+        }
+
+        if ($dryRun) {
+            $this->warn(sprintf('DRY RUN — no reminder sent. Would remind %d:', $batch->count()));
+            foreach ($batch as $c) {
+                $this->line(sprintf(
+                    '  #%s  first email %s  %s',
+                    $c->numero ?? $c->id,
+                    $this->formatDate($c->review_request_sent_at),
+                    $this->mask($this->emailFor($c))
+                ));
+            }
+
+            return;
+        }
+
+        $sent = 0;
+        $failed = 0;
+
+        foreach ($batch as $commande) {
+            try {
+                Mail::to($this->emailFor($commande))->send(new ReviewRequestMail($commande, reminder: true));
+                // Stamped only after the mailer accepted it; quietly and without moving updated_at.
+                $commande->stampQuietly(['review_reminder_sent_at' => now()]);
+                $sent++;
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::error('Review reminder send failed', [
+                    'commande_id' => $commande->id,
+                    'error'       => $e->getMessage(),
+                ]);
+            }
+
+            if ($sleep > 0) {
+                sleep($sleep);
+            }
+        }
+
+        $summary = sprintf(
+            'reviews:send-due-requests reminders — sent %d, failed %d, still due %d',
+            $sent,
+            $failed,
+            max(0, $sendable->count() - $sent)
+        );
+        $this->info($summary);
+        Log::info($summary);
+    }
+
+    /**
+     * Affiliate-desk orders are never asked for a review (Commande::isAffiliateDeskOrder). The
+     * filter needs both columns; without them there is no affiliate desk to exclude.
+     */
+    private function canExcludeAffiliateDesk(): bool
+    {
+        return $this->hasColumn('commandes', 'affilie_id')
+            && $this->hasColumn('commandes', 'checkout_idempotency_key');
     }
 
     /**
@@ -231,7 +440,8 @@ class SendDueReviewRequests extends Command
             return true;
         } catch (\Throwable $e) {
             $message = strtolower($e->getMessage());
-            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column');
+            $missing = str_contains($message, '42s22') || str_contains($message, 'unknown column')
+                || str_contains($message, 'no such column');
 
             if (! $missing) {
                 Log::error('reviews:send-due-requests could not probe a column, and it is NOT a missing column', [
@@ -243,6 +453,47 @@ class SendDueReviewRequests extends Command
 
             return false;
         }
+    }
+
+    /**
+     * Ask WinSMS for the balance once, before any review SMS of this run.
+     *
+     * Skip (ok = false) when the probe throws (no key, HTTP error, refusal) or when it reports a
+     * NUMERIC balance at or below zero. A null or non-numeric balance is a response format this
+     * code does not understand — not evidence of an empty account — so the run proceeds.
+     *
+     * @return array{ok:bool, balance:mixed, license:mixed, error:?string}
+     */
+    private function smsBalanceGate(): array
+    {
+        try {
+            $probe = app(SmsService::class)->probe();
+        } catch (\Throwable $e) {
+            // Redacted: a connection error quotes the request URL, api_key included (SmsService::redact).
+            return ['ok' => false, 'balance' => null, 'license' => null, 'error' => SmsService::redact($e->getMessage())];
+        }
+
+        $balance = $probe['balance'] ?? null;
+        $license = $probe['license'] ?? null;
+
+        if (is_numeric($balance) && (float) $balance <= 0) {
+            return ['ok' => false, 'balance' => $balance, 'license' => $license, 'error' => null];
+        }
+
+        return ['ok' => true, 'balance' => $balance, 'license' => $license, 'error' => null];
+    }
+
+    /** @param  array{ok:bool, balance:mixed, license:mixed, error:?string}  $gate */
+    private function describeGate(array $gate): string
+    {
+        if ($gate['error'] !== null) {
+            return 'unreachable (' . $gate['error'] . ')';
+        }
+
+        $balance = $gate['balance'] === null ? 'unknown' : (is_scalar($gate['balance']) ? (string) $gate['balance'] : json_encode($gate['balance']));
+        $license = $gate['license'] === null ? '' : ', license ' . (is_scalar($gate['license']) ? (string) $gate['license'] : json_encode($gate['license']));
+
+        return 'balance ' . $balance . $license;
     }
 
     /**
@@ -260,6 +511,13 @@ class SendDueReviewRequests extends Command
      * with bulk marketing, and this message has to read as coming from the shop that just
      * delivered their parcel. The order number is in it for the same reason — it is the detail no
      * spammer would have.
+     *
+     * ── SAME IDEMPOTENCY KEY AS THE SMS-ONLY COMMAND (05/10/2026) ───────────────────────────
+     * The job now carries `order:{id}:review-request-sms`, the key reviews:send-due-sms-requests
+     * already used. SmsService::sendOnce claims it in notification_deliveries before contacting
+     * WinSMS, so (a) the two senders can never buy the same message twice, and (b) a gateway
+     * failure is recorded as a `failed` row that `reviews:send-due-sms-requests --retry-failed`
+     * can find — before, a failure on this path left no trace at all.
      */
     private function sendReviewSms(Commande $commande): bool
     {
@@ -277,7 +535,7 @@ class SendDueReviewRequests extends Command
             if (! $this->hasColumn('commandes', 'review_code')) {
                 return false;
             }
-            $commande->forceFill(['review_code' => Commande::generateReviewCode()])->saveQuietly();
+            $commande->stampQuietly(['review_code' => Commande::generateReviewCode()]);
         }
 
         $base = rtrim((string) config('app.frontend_url', config('app.url')), '/');
@@ -294,11 +552,11 @@ class SendDueReviewRequests extends Command
             return false; // already texted by reviews:send-due-sms-requests
         }
 
-        SendSmsJob::dispatch($phone, $text);
+        SendSmsJob::dispatch($phone, $text, 'order:' . $commande->id . ':review-request-sms');
 
         if ($tracked) {
-            // saveQuietly so this write does not re-fire observer events.
-            $commande->forceFill(['review_request_sms_sent_at' => now()])->saveQuietly();
+            // Quietly (no observer re-fire) and without moving updated_at (Commande::stampQuietly).
+            $commande->stampQuietly(['review_request_sms_sent_at' => now()]);
         }
 
         return true;
@@ -311,6 +569,18 @@ class SendDueReviewRequests extends Command
         $email = is_string($email) ? trim($email) : '';
 
         return ($email !== '' && filter_var($email, FILTER_VALIDATE_EMAIL)) ? $email : null;
+    }
+
+    /** `review_request_sent_at` is not cast on the model, so it may arrive as a string. */
+    private function formatDate(mixed $value): string
+    {
+        if ($value instanceof \DateTimeInterface) {
+            return $value->format('Y-m-d');
+        }
+
+        $value = trim((string) $value);
+
+        return $value !== '' ? substr($value, 0, 10) : '?';
     }
 
     /** Mask an address for console output — never print full customer emails. */

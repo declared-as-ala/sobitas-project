@@ -81,6 +81,53 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | One reminder email, and how long a review link stays open
+    |--------------------------------------------------------------------------
+    | Measured 05/10/2026: zero attested reviews. One email, sent once, with no
+    | follow-up, is most of the reason. `reviews:send-due-requests` now runs a
+    | second pass after the main one and sends AT MOST ONE reminder per order:
+    |
+    |   - only to delivered orders whose first email went out at least
+    |     `reminder_after_days` days ago;
+    |   - only while the delivery is at most `reminder_max_age_days` days old;
+    |   - only when no review is linked to the order yet (any product counts);
+    |   - stamped in `commandes.review_reminder_sent_at`, so never twice;
+    |   - under the SAME daily cap as the first email (`request_daily_limit`).
+    |
+    | REVIEWS_REMINDER_ENABLED=false in the VPS .env switches the pass off without
+    | a deploy.
+    */
+    'reminder_enabled' => (bool) env('REVIEWS_REMINDER_ENABLED', true),
+
+    // Days after the FIRST review email before the reminder may go out.
+    'reminder_after_days' => 5,
+
+    // A delivery older than this is never reminded: the parcel is old news by then.
+    'reminder_max_age_days' => 45,
+
+    /*
+    | The /avis/{ref} link answers 410 (`reason: expired`) once the delivery is
+    | older than this, and 410 (`reason: not_delivered`) before the order is
+    | delivered at all. The order-confirmation URL carries the same token, so
+    | without the delivered gate a refused cash-on-delivery parcel could still
+    | produce an "Achat vérifié" review. The delivery moment is `delivered_at`,
+    | falling back to `updated_at` for legacy rows that never stamped it.
+    */
+    'link_max_age_days' => 120,
+
+    /*
+    | The shop's PUBLIC Google Business "write a review" link (the same one the
+    | storefront uses in frontend/src/util/company.ts). Not a secret.
+    |
+    | Google forbids incentives and selective solicitation for these reviews, so
+    | it is only ever placed in the "livrée" status email, which every delivered
+    | customer receives regardless of sentiment, and never next to any Protinas /
+    | points wording. Never put it in the product review-request email.
+    */
+    'google_review_url' => env('REVIEWS_GOOGLE_URL', 'https://search.google.com/local/writereview?placeid=ChIJsZHosBsTAhMRDLJJWPLg2lE'),
+
+    /*
+    |--------------------------------------------------------------------------
     | AI review moderation (Groq LLM)
     |--------------------------------------------------------------------------
     | Reviews are published immediately for a simple submission flow. This layer

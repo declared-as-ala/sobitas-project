@@ -7,7 +7,7 @@ import { Button } from '@/app/components/ui/button';
 import { Section } from '@/app/components/layout/Section';
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
-import { ArrowLeft, MapPin, Phone, Mail, Truck, ExternalLink, CheckCircle2, Clock3, Package } from 'lucide-react';
+import { ArrowLeft, MapPin, Phone, Mail, Truck, ExternalLink, CheckCircle2, Clock3, Package, Star } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Image from 'next/image';
@@ -121,6 +121,20 @@ export default function OrderDetailPage() {
   }
 
   const lifecycle = orderLifecycle(order.etat);
+  /*
+    The post-delivery review link for THIS order. `detail_commande` sends it only while the order
+    can still be reviewed (delivered, inside the window) and null otherwise, so its presence is the
+    whole condition — no status logic is re-derived here. It is /avis/{code} for an order this
+    account placed, and the product page's review block (/products/{slug}#reviews) for a guest order
+    the account only sees through its verified phone or e-mail — /avis would store that review
+    anonymously and pay nothing (ClientController::reviewUrlFor). Accepted only as a same-site path:
+    this value becomes an href, and anything that is not a relative path — a protocol-relative
+    `//host`, a `javascript:` — is simply not rendered.
+  */
+  const reviewUrl =
+    typeof order.review_url === 'string' && /^\/(?!\/)\S*$/.test(order.review_url.trim())
+      ? order.review_url.trim()
+      : null;
   const itemCount = details.reduce((sum, detail) => sum + (Number(detail.qte) || 0), 0);
   const lineTotal = (detail: OrderDetail) => Number(detail.prix_ttc || detail.prix_ht) || 0;
   // One precision for the whole card: the line totals and the receipt beneath them are the same
@@ -205,6 +219,26 @@ export default function OrderDetailPage() {
                     </li>
                   ))}
                 </ul>
+
+                {reviewUrl && (
+                  <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-sm text-ink-2">Notez les produits de cette commande.</p>
+                    <Button
+                      asChild
+                      variant="outline"
+                      className="min-h-[44px] w-full shrink-0 justify-center rounded-xl border-brand/30 text-brand hover:bg-brand/10 sm:w-auto"
+                    >
+                      {/* A plain <a>, not next/link: a full page load fires no history event, so
+                          GA4's automatic history page_view cannot send /avis/{code} — a bearer code
+                          that opens this order's review form — as `dl`. AnalyticsPageView then
+                          reports the redacted /avis/[code] location. */}
+                      <a href={reviewUrl}>
+                        <Star className="mr-2 h-4 w-4" aria-hidden="true" />
+                        Donner mon avis
+                      </a>
+                    </Button>
+                  </div>
+                )}
 
                 {/* `totals` comes only from /detail_commande, which is the only endpoint that
                     selects the money columns. No fallback arithmetic: if the server did not send

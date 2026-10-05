@@ -22,6 +22,7 @@
  * /proteine-tunisie and /page/proteine-tunisie return 200 and both carry real Search Console
  * impressions — 301'ing either would throw that away, and the catch-all that makes them resolve
  * is load-bearing for other URLs.
+ * SUPERSEDED 05/10/2026: both URLs now 301 to /proteines — see the RETIRED note below.
  *
  * So the page is retargeted instead of retired:
  *   titleOverride    stops it competing head-on for the bare commercial phrase
@@ -70,24 +71,11 @@ export interface CmsPageSeoEntry {
 }
 
 const CMS_PAGE_SEO_CONFIG: Record<string, CmsPageSeoEntry> = {
-  'proteine-tunisie': {
-    navLabel: 'Guide : bien choisir sa protéine',
-    titleOverride: 'Comment choisir sa protéine ? Guide Tunisie | Protein.tn',
-    headingOverride: 'Comment choisir sa protéine ? Le guide',
-    commercialIntro: 'Vous voulez acheter directement ?',
-    commercialLinks: [
-      {
-        anchor: 'protéine en Tunisie',
-        href: '/proteines',
-        hint: 'Tout le catalogue : whey, isolate, caséine, végétale — prix et stock du jour.',
-      },
-      {
-        anchor: 'whey protein en Tunisie',
-        href: '/whey-proteine',
-        hint: 'La catégorie whey, marque par marque, avec les formats disponibles.',
-      },
-    ],
-  },
+  /*
+   * RETIRED 05/10/2026 — /proteine-tunisie and /page/proteine-tunisie now 301 to /proteines
+   * (redirects.js) and the slug is in RETIRED_CMS_PAGES below, so its overlay is gone.
+   * Why: product-less guide on the head-term URL, 0 clicks @80–85 (28 d) while /proteines rose 47.6 → 13.7.
+   */
   /*
    * RETIRED 30/09/2026 — /creatine-monohydrate-tunisie now 301s to /creatine (redirects.js), so
    * its overlay is gone. Kept as the record of why it was a problem:
@@ -124,4 +112,27 @@ export function getCmsPageTitleOverride(slug: string): string | undefined {
 /** Anchor text for a CMS page in the site chrome; `undefined` means "use the CMS title". */
 export function getCmsPageNavLabel(slug: string): string | undefined {
   return getCmsPageSeoEntry(slug)?.navLabel;
+}
+
+/**
+ * CMS pages folded into the catalogue: slug → the URL its 301 in redirects.js lands on.
+ *
+ * The FRONTEND owns the retirement, not the database. A migration also sets each row INACTIVE so
+ * GET /api/pages stops listing it, but the frontend and backend deploys start in parallel from the
+ * same push (and the owner cherry-picks commits one at a time), so nothing guarantees the row is
+ * gone when this bundle goes live. Until it is, /api/pages still returns the row and the footer
+ * would print its raw CMS title ("Proteine Tunisie") as a sitewide anchor into a redirect, and
+ * pages.xml would submit a URL that 308s. getCmsPages() and the sitemap's CMS source both drop
+ * these slugs, so either DB state renders the same site.
+ *
+ * Add a slug here in the same change as its redirects.js rule.
+ */
+export const RETIRED_CMS_PAGES: Readonly<Record<string, string>> = Object.freeze({
+  'proteine-tunisie': '/proteines',
+  'creatine-monohydrate-tunisie': '/creatine',
+});
+
+/** True when `slug` is a CMS page that now redirects (see RETIRED_CMS_PAGES). */
+export function isRetiredCmsPageSlug(slug: string): boolean {
+  return Object.prototype.hasOwnProperty.call(RETIRED_CMS_PAGES, normaliseSlug(slug));
 }

@@ -575,20 +575,33 @@ function buildAggregateRatingAndReviews(product: Product): { aggregateRating?: o
     return s + v;
   }, 0);
   const ratingValue = Math.max(1, Math.min(5, Math.round((sum / reviews.length) * 10) / 10));
-  const result: { aggregateRating?: object; review?: object[] } = {
-    aggregateRating: {
-      '@type': 'AggregateRating',
-      ratingValue: String(ratingValue),
-      bestRating: 5,
-      worstRating: 1,
-      reviewCount: reviews.length,
-    },
+  // RATINGS vs REVIEWS. A post-delivery review may be stars only (the comment is optional on the
+  // /avis/{code} flow). schema.org counts those as ratings, not reviews, so `ratingCount` is every
+  // attested 1-5 star row and `reviewCount` only the ones carrying text — emitted only when > 0,
+  // because "reviewCount: 0" next to a rating is a contradiction Google flags. Measured on the
+  // sanitised text, so a comment that is nothing but markup does not count as a review.
+  const hasReviewText = (r: Review): boolean => jsonLdText(String(r.comment ?? '')).trim().length > 0;
+  const withText = reviews.filter(hasReviewText);
+  const aggregateRating: Record<string, unknown> = {
+    '@type': 'AggregateRating',
+    ratingValue: String(ratingValue),
+    bestRating: 5,
+    worstRating: 1,
+    ratingCount: reviews.length,
   };
-  const reviewSnippets = reviews
+  if (withText.length > 0) aggregateRating.reviewCount = withText.length;
+  const result: { aggregateRating?: object; review?: object[] } = { aggregateRating };
+  // Filter BEFORE slicing: with rating-only rows in the set, slicing first could return three
+  // text-less rows and drop every snippet even though commented reviews exist further down.
+  const reviewSnippets = withText
     .slice(0, 3)
-    .filter((r) => r.comment && String(r.comment).trim())
     .map((r) => {
-      const authorName = jsonLdText((r.user?.name && String(r.user.name).trim()) || 'Client') || 'Client';
+      // Same name the PDP prints: the account name, else the guest's own name, else "Client".
+      const rawName =
+        (r.user?.name && String(r.user.name).trim()) ||
+        (r.author_name && String(r.author_name).trim()) ||
+        'Client';
+      const authorName = jsonLdText(rawName) || 'Client';
       const raw = typeof r.stars === 'number' ? r.stars : typeof r.note === 'number' ? r.note : 5;
       const ratingVal = Math.max(1, Math.min(5, raw));
       return {

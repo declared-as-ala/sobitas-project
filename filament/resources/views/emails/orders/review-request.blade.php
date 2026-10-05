@@ -9,11 +9,23 @@
     online before has seen all of them. It looks automated because it IS automated, and it made no
     attempt to hide that.
 
-    What makes a request like this work is not enthusiasm, it is a REASON. This shop has a real
-    one, and it is unusual enough to be worth telling the truth about: 203 reviews were taken down
-    because none of them had a purchase behind it, so every product page currently shows nothing.
-    That is a genuinely human thing to say, and it is the only thing in this email that a reader
-    cannot get from any other shop's review request.
+    What makes a request like this work is not enthusiasm, it is a REASON. The one given here is
+    the true one: only a review tied to a delivered order carries « Achat vérifié » and counts in a
+    product's rating, so this customer's review is worth more than any other kind. (It used to say
+    that the product pages showed no reviews at all. That stopped being true on 21/09/2026, and a
+    reason that is false is worse than none — replaced 05/10/2026.)
+
+    ── THE STAR LINKS (05/10/2026) ─────────────────────────────────────────────────────────────
+    Five ★ under each product, ordered 1 to 5, ALL THE SAME colour and size, none preselected or
+    highlighted. Each opens /avis/{ref}?p={product_id}&note={n}, where the page preselects that
+    note and the customer confirms it, with a comment only if they want one. The choice must stay
+    neutral: a pre-coloured fifth star is a nudge, and a nudge toward a rating is review-gating.
+
+    ── THE INCENTIVE, AND THE LINK THAT IS NOT HERE ────────────────────────────────────────────
+    A published review can earn Protinas whatever the rating, and the email says so in plain
+    grey text: an undisclosed incentive is the problem, not the incentive. For the same reason
+    there is NO Google review link in this email — Google forbids any incentive, and this message
+    mentions one. The Google link lives only in the « livrée » status email (status-customer).
 
     The other change is that it invites a bad review as plainly as a good one. A request that only
     wants stars is review-gating; besides being against Google's rules, it is instantly legible as
@@ -33,6 +45,11 @@
     $contactEmail = ($coordonnee && !empty($coordonnee->email)) ? $coordonnee->email : 'contact@protein.tn';
     $contactPhone = ($coordonnee && !empty($coordonnee->phone_1)) ? $coordonnee->phone_1 : '+216 22 464 315';
     $greeting     = $prenom !== '' ? 'Bonjour ' . $prenom . ',' : 'Bonjour,';
+    $reminder     = (bool) ($reminder ?? false);
+    // One row per PRODUCT: two flavours of the same product are one review, exactly as the
+    // /avis page groups them (ReviewController::orderForReview dedupes by product_id).
+    $rows         = $details->unique(fn ($d) => $d->produit_id ? 'p' . $d->produit_id : 'line' . $d->id)->values();
+    $starJoin     = str_contains($reviewUrl, '?') ? '&' : '?';
 @endphp
 <!DOCTYPE html>
 <html lang="fr">
@@ -71,34 +88,62 @@
             <td class="pad" style="background:#ffffff;padding:28px;">
                 <p style="margin:0 0 16px;font-size:16px;line-height:1.65;color:#1e293b;">{{ $greeting }}</p>
 
+                @if($reminder)
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#334155;">
+                    Petit rappel&nbsp;: votre commande a été livrée il y a quelques jours, et votre avis compte toujours.
+                </p>
+
+                {{-- The delivery was just mentioned once; the usual intro would say it a second time. --}}
+                <p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#334155;">
+                    Votre commande <strong>#{{ $commande->numero }}</strong>&nbsp;: j’espère que tout
+                    s’est bien passé et que les produits vous conviennent.
+                </p>
+                @else
                 <p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#334155;">
                     Votre commande <strong>#{{ $commande->numero }}</strong> vous a été livrée il y a
                     quelques jours. J’espère que tout s’est bien passé et que les produits vous conviennent.
                 </p>
+                @endif
 
                 <p style="margin:0 0 16px;font-size:15px;line-height:1.75;color:#334155;">
-                    Si vous avez un moment, votre avis nous serait vraiment utile. Je vous explique
-                    pourquoi&nbsp;: nous avons retiré tous les anciens avis du site, parce que nous ne
-                    pouvions pas prouver qu’ils venaient de vrais acheteurs. Résultat, nos fiches
-                    produits n’en affichent plus aucun aujourd’hui — et quelqu’un qui hésite entre
-                    deux whey n’a rien pour se décider.
+                    Si vous avez un moment, votre avis nous serait vraiment utile. Sur Protein.tn, seuls
+                    les avis liés à une commande livrée portent la mention «&nbsp;Achat vérifié&nbsp;» et
+                    comptent dans la note d’un produit&nbsp;: le vôtre aidera directement quelqu’un qui
+                    hésite entre deux produits.
                 </p>
 
                 <p style="margin:0 0 8px;font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:.06em;">
                     Ce que vous avez commandé
                 </p>
                 <table role="presentation" cellpadding="0" cellspacing="0" width="100%"
-                       style="border:1px solid #e2e8f0;border-radius:10px;margin-bottom:22px;">
+                       style="border:1px solid #e2e8f0;border-radius:10px;margin-bottom:10px;">
                     <tbody>
-                        @foreach($details as $d)
+                        @foreach($rows as $d)
+                        @php
+                            $productId = (int) ($d->produit_id ?: ($d->product->id ?? 0));
+                        @endphp
                         <tr>
                             <td style="padding:12px 16px;font-size:14px;line-height:1.5;color:#334155;{{ $loop->first ? '' : 'border-top:1px solid #f1f5f9;' }}">
                                 {{ $d->product->designation_fr ?? '—' }}
+                                @if($productId > 0 && $d->product)
+                                {{-- Five identical links, 1 to 5, none highlighted: the note is confirmed on the next page. --}}
+                                <div style="margin-top:6px;line-height:1;white-space:nowrap;">
+                                    @for($n = 1; $n <= 5; $n++)
+                                    <a href="{{ $reviewUrl . $starJoin . 'p=' . $productId . '&note=' . $n }}"
+                                       title="{{ $n }} sur 5" aria-label="{{ $n }} sur 5"
+                                       style="display:inline-block;padding:2px 3px;font-size:24px;line-height:1;color:#64748b;text-decoration:none;">&#9733;</a>
+                                    @endfor
+                                </div>
+                                @endif
                             </td>
                         </tr>
                         @endforeach
                     </tbody>
                 </table>
+
+                <p style="margin:0 0 22px;font-size:13px;line-height:1.6;color:#64748b;">
+                    Choisissez une note&nbsp;: vous la confirmerez sur la page suivante, avec un commentaire si vous le souhaitez.
+                </p>
 
                 <a href="{{ $reviewUrl }}" class="btn"
                    style="display:inline-block;background:#d03b04;color:#ffffff;font-size:15px;font-weight:700;text-decoration:none;padding:14px 28px;border-radius:10px;">
@@ -108,6 +153,21 @@
                 <p style="margin:16px 0 0;font-size:13px;line-height:1.7;color:#64748b;">
                     Aucun compte à créer&nbsp;: le lien est lié à votre commande.
                 </p>
+
+                {{-- The incentive, disclosed, with its real conditions (ReviewObserver::settlePoints pays only an
+                     account with a verified phone, for a comment of reviews.points.min_length characters or more).
+                     « votre compte au téléphone vérifié » is a statement about THIS reader, so the line is shown only
+                     when it is true: an order placed by an account whose phone is verified
+                     (ReviewController::orderEarnsProtinas, the same test the /avis page uses). A guest order, or an
+                     account without a verified phone, can never earn and is not promised anything. Independent of
+                     the rating; and no Google review link anywhere in this email. --}}
+                @if (\App\Http\Controllers\Api\ReviewController::orderEarnsProtinas($commande))
+                    <p style="margin:8px 0 0;font-size:12px;line-height:1.6;color:#94a3b8;">
+                        Avec votre compte au téléphone vérifié, un avis publié avec un commentaire d’au moins
+                        {{ (int) config('reviews.points.min_length', 15) }} caractères peut vous rapporter des Protinas,
+                        quelle que soit la note donnée.
+                    </p>
+                @endif
 
                 <p style="margin:22px 0 0;font-size:15px;line-height:1.75;color:#334155;">
                     Et si quelque chose n’allait pas — un produit abîmé, une saveur décevante, un
@@ -129,7 +189,13 @@
                 <p style="margin:0 0 4px;font-size:12px;color:#64748b;font-weight:600;">SOBITAS — Protein.tn</p>
                 <p style="margin:0;font-size:12px;color:#94a3b8;line-height:1.6;">
                     Rue Ribat, Sousse 4000, Tunisie<br>
-                    Vous recevez ce message une seule fois, parce que vous avez commandé chez nous.
+                    @if($reminder)
+                    Vous avez commandé chez nous, et c’est notre seul rappel&nbsp;: nous ne vous
+                    écrirons plus au sujet de l’avis sur cette commande.
+                    @else
+                    Vous recevez ce message parce que vous avez commandé chez nous&nbsp;; au plus un
+                    rappel suivra si vous n’avez pas encore donné votre avis.
+                    @endif
                     Vous pouvez répondre à cet e-mail, il nous arrive directement.
                 </p>
             </td>

@@ -38,6 +38,9 @@ export function categoryAnchor(slug: string, fallback: string): string {
     eaa: 'EAA — acides aminés essentiels',
     glutamine: 'Glutamine en Tunisie',
 
+    // Performance. /pre-workout owns "pre workout" (commercialSeoMap.preWorkout; GSC 28 d to 05/10/2026: 274 impr / 0 clicks @8.4, answered by a single PDP while /pre-workout sits @57.7). Label = the cluster's first anchor.
+    'pre-workout': 'Pre-workout en Tunisie',
+
     // Health & wellness. /sante-vitalite owns no head term (1 click on 405 impressions), so its
     // label stays a plain shelf name and the demand-carrying children get the searched phrases.
     'sante-vitalite': 'Santé et vitalité',

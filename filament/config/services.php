@@ -77,6 +77,47 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Google Analytics 4 — server-side `purchase` (Measurement Protocol)
+    |--------------------------------------------------------------------------
+    | The storefront sends `purchase` from the browser. When gtag.js never ran
+    | there (an ad blocker), that event is lost, so the backend can send it
+    | instead (App\Services\Analytics\Ga4MeasurementProtocol). It stays INERT
+    | until BOTH the measurement id and the API secret are set:
+    |
+    |   GA4_MEASUREMENT_ID  The web stream's id, G-XXXXXXXXXX (GA4 Admin →
+    |                       Data streams → protein).
+    |   GA4_API_SECRET      GA4 Admin → Data streams → protein → Measurement
+    |                       Protocol API secrets → Create.
+    |   GA4_MP_MODE         off      — never send.
+    |                       fallback — (default) send only for storefront
+    |                                  orders whose browser reported no GA
+    |                                  client id (gtag.js blocked).
+    |                       always   — send for every storefront order and
+    |                                  rely on GA4 de-duplicating purchases
+    |                                  that share a transaction_id.
+    |                       Any other value behaves as off.
+    |   GA4_MP_DEBUG        'true' posts to the /debug/mp/collect validation
+    |                       endpoint (nothing is recorded) and logs Google's
+    |                       validationMessages. The browser keeps sending its
+    |                       own purchase while debug is on (the order response
+    |                       never claims it), so no order is lost from GA4.
+    |
+    | Only storefront orders are ever sent (affiliate desk, manual and
+    | quotation orders never), and no personal data: no name, email, phone,
+    | address or user id reaches Google.
+    |
+    | The API secret is a real secret: it lives only in the VPS backend .env,
+    | never in git.
+    */
+    'ga4' => [
+        'measurement_id' => env('GA4_MEASUREMENT_ID'),
+        'api_secret' => env('GA4_API_SECRET'),
+        'mode' => env('GA4_MP_MODE', 'fallback'),
+        'debug' => (bool) env('GA4_MP_DEBUG', false),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Sign in with Google
     |--------------------------------------------------------------------------
     | ONE variable, and it is the same string the storefront uses as

@@ -18,6 +18,7 @@ import { isInStock } from '@/util/cartStock';
 import { Loader2, CheckCircle2, X, Minus, Plus, Tag, Gift } from 'lucide-react';
 import { notify as toast } from '@/lib/notify';
 import { cn } from '@/app/components/ui/utils';
+import { gaEvent, isGtagLoaded, trackPurchaseOnce, type Ga4Item } from '@/lib/analytics/ga4';
 
 export interface QuickOrderDrawerProps {
   open: boolean;
@@ -35,6 +36,32 @@ function trackEvent(name: string, params?: Record<string, unknown>) {
   } catch {
     // no-op
   }
+}
+
+/** GA4 begin_checkout for the drawer's one product; the item builder is loaded on demand. */
+function trackBeginCheckout(product: QuickOrderProduct, quantity: number, variant?: string) {
+  void import('@/lib/analytics/ga4Items')
+    .then(({ gaItemFromProduct }) => {
+      const item = gaItemFromProduct(product, { quantity, variant });
+      gaEvent('begin_checkout', { currency: 'TND', value: (item.price ?? 0) * quantity, items: [item] }, { defer: true });
+    })
+    .catch(() => undefined);
+}
+
+/**
+ * GA4 `purchase` for a created quick order. The builder module is normally cached by the
+ * begin_checkout above; if it cannot load, the purchase still goes out with its revenue.
+ */
+function trackQuickOrderPurchase(
+  order: { transactionId: string; value: number; shipping: number; coupon?: string; serverReported?: boolean },
+  line: { product: QuickOrderProduct; quantity: number; price: number; variant?: string },
+) {
+  const send = (items: Ga4Item[]) => trackPurchaseOnce({ ...order, items });
+  void import('@/lib/analytics/ga4Items')
+    .then(({ gaItemFromProduct }) => {
+      send([gaItemFromProduct(line.product, { quantity: line.quantity, price: line.price, variant: line.variant })]);
+    })
+    .catch(() => { send([]); });
 }
 
 export function QuickOrderDrawer({
@@ -180,6 +207,11 @@ export function QuickOrderDrawer({
       setErrors({});
       setWebsite('');
       trackEvent('quick_order_open', { product_id: product.id });
+      trackBeginCheckout(
+        product,
+        Math.min(stock, Math.max(1, initialQty)),
+        product.aromes?.find((aroma) => aroma.id === (initialVariantId ?? product.aromes?.[0]?.id))?.designation_fr,
+      );
       document.body.style.overflow = 'hidden';
       setTimeout(() => document.getElementById('qo-full-name')?.focus(), 150);
       const hasAromes = product.aromes && product.aromes.length > 0;
@@ -337,10 +369,24 @@ export function QuickOrderDrawer({
           key: crypto.randomUUID?.() ?? `quick-order-${Date.now()}-${Math.random().toString(36).slice(2)}`,
         };
       }
-      const res = await submitQuickOrder(payload, orderAttemptRef.current.key);
+      // After the comparison above, so a retry keeps its idempotency key (see CheckoutPage).
+      const res = await submitQuickOrder({ ...payload, ga: { gtag_loaded: isGtagLoaded() } }, orderAttemptRef.current.key);
       orderAttemptRef.current = null;
       setResult(res);
       trackEvent('quick_order_success', { order_id: res.orderId, product_id: product.id });
+      if (res.status === 'created' && res.orderId) {
+        // The server created the order at exactly `total` (otherwise it answers 409), so the
+        // revenue is that total less the delivery shown. A machine takes no code (rule 19).
+        trackQuickOrderPurchase({
+          transactionId: typeof res.numero === 'string' && /^\d{4}\/\d+$/.test(res.numero) ? res.numero : String(res.orderId),
+          value: Math.round(Math.max(0, total - shippingShown) * 1000) / 1000,
+          shipping: shippingShown,
+          coupon: serverPricing
+            ? (serverPricing.pricing.coupon.applied ? serverPricing.pricing.coupon.code ?? appliedCoupon?.code : undefined)
+            : (isMachine ? undefined : appliedCoupon?.code),
+          serverReported: res.ga4ServerPurchase === true,
+        }, { product, quantity, price: unitPrice, variant: payload.arome });
+      }
       onSuccess?.(res);
     } catch (err: unknown) {
       const pricing = (err as { status?: number; pricing?: CheckoutPricing }).pricing;

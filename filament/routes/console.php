@@ -159,14 +159,16 @@ Schedule::command('seo:products-legacy-reindex --apply --force')
 /*
  * ── THE ATTESTED-STAR ENGINE, ON A DRIP ─────────────────────────────────────────────────────
  * reviews:send-due-requests (10:00 above) only looks 3-21 days back; this weekly catch-up walks
- * the 180-day backlog of delivered-but-never-asked orders, 25 throttled emails at a time. Every
+ * the 120-day backlog of delivered-but-never-asked orders, 25 throttled emails at a time — 120 =
+ * reviews.link_max_age_days, the life of the /avis link (the command clamps to it and skips any
+ * order whose delivery is already older). Every
  * reply that comes through the tokenised link carries a commande_id — an ATTESTED review, the only
  * kind that moves the star rating on the page and in Product JSON-LD. This is the honest engine
  * behind the SERP stars; it only has fuel when orders actually reach `livrée` (Aramex sync above +
  * the admin's bulk "Marquer livrées"). The weekly rescore keeps text_hash/dedup current for the
  * moderation queue.
  */
-Schedule::command('reviews:backfill-requests --days=180 --limit=25 --sleep=2')
+Schedule::command('reviews:backfill-requests --days=120 --limit=25 --sleep=2')
     ->weeklyOn(1, '10:30')
     ->withoutOverlapping()
     ->appendOutputTo(storage_path('logs/reviews-backfill.log'));
