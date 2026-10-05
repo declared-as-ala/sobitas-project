@@ -6,6 +6,20 @@ lands it, then updates this file. `PLAYBOOK.md` says how; `KEYWORDS.md` says wha
 Legend: `[ ]` open · `[~]` in progress · `[x]` done (one line of what shipped) · `(needs: owner)`
 = cannot be done from the repo (DB row, Google account, credentials) — say it in the run summary.
 
+**State on 05/10/2026:** live audit `--sample=40` 91 URLs **exit 0, 0 P0**; `/sante-vitalite` served
+its transient 5xx on the first of two fetches again and the 02/10 checker fix recorded it **P2**, as
+designed. `parity-check.mjs` **0 editorial bot-only words** on all five money pages. Robots
+unchanged. Sitemaps **12,149**, Δ **−85** vs 02/10 — **all of it blog (223 → 137, −38.6 %)** and the
+cause is landed and verified: the owner's `42e7a3e` refreshed 136 posts and folded 86 duplicates.
+**02/10's owed verification passed on production: 0 duplicate injected links across all 137 live
+articles** (was 30 in 25 articles), 465 injected links, 0 fetch errors, 0 self-duplicates — the
+curated-block fix is 100 % effective. Monday's `suggest.mjs --deep` (516 requests, 3,639
+suggestions) returned its clearest shape yet: **19 of the 40 new commercial candidates are
+`whey gold standard <format> prix <country>`**, and the whole Gold Standard line has **exactly one
+buyable SKU of 21**. Ten SERP rows re-checked (extended mode). Shipped: the blog sitemap stops
+listing a URL the repo itself redirects. Google: **September 2026 spam update still rolling —
+attribution mode (day 12).**
+
 **State on 02/10/2026:** live audit `--sample=40` 82 URLs exit 1 on the **same transient as 30/09**
 (`/sante-vitalite` HTTP 500 on the first of its two watchlist rows, a clean 200 on the second, 12/12
 clean on immediate re-fetch and clean at bursts of 1/4/8) — so the **checker** was fixed, not the
@@ -355,7 +369,14 @@ record the page-level position first — never act on a query average.
   wasting two slots. Fix seeds `used` from the destinations the incoming HTML already links, through
   a normaliser (origin / trailing slash / query / case). Five-case harness: 3 failures on the old
   code, 0 on the new, and both regression guards (clean body, external href) identical.
-  **Verify on production tomorrow**: re-run the 223-article measurement and expect 0.
+  **Verified on production 02/10 and again 05/10.** 02/10 (223 articles): CMS-body duplicates
+  7 → **0**, and the residue it exposed — the injector duplicating the page's own curated blocks —
+  was fixed the same day. **05/10, after that deploy landed, on all 137 live articles** (Googlebot UA,
+  anchors inside `<article>`, injected links identified by `class="article-inline-link"`, destinations
+  normalised for origin / trailing slash / query / case): **465 injected links, 0 duplicates of any
+  curated block, 0 CMS-body duplicates, 0 self-duplicates, 0 fetch errors**, 37 of the 137 at the
+  6-destination cap. Both fixes hold; the article population changed under them (the owner folded 86
+  posts on 29/09), so the before/after article counts are not comparable — the 0 is.
 - [ ] **A dead SKU answers the money query — now FOUR confirmed instances, all `(needs: owner)`.**
   Same shape each time: the URL Google shows is unbuyable and the buyable sibling is absent from the
   set. (a) `lipo 6 black` → legacy `/shop/lipo-6-black-60-caps`, one 301, **139 DT `BackOrder`**,
@@ -395,10 +416,77 @@ record the page-level position first — never act on a query average.
   gainlabnutrition's `/collections/mass-gainer-tunisie` leading. Same shape as the `pre workout`
   and `serious mass tunisie` rows: Saturday's cannibalisation work (exact-anchor link from the
   blog post to `/mass-gainers` via `blogSeoConfig.ts`), never a title rewrite during the update.
-- [ ] **`/vitamines` is Tuesday's category target** — 683 words (the thinnest money-ish listing),
-  `vitamines tunisie` 35.4 on 16 impressions and `multivitamines tunisie` in the map, ~10 in-stock
-  SKUs, and it is **outside** the 05/10 freeze, so its title and H1 can be worked on legitimately.
-  Converge it to the page standard in `frontend/content/categories/vitamines.json`.
+- [x] **The blog sitemap listed a URL the repo redirects** — FIXED 05/10 in
+  `frontend/src/util/sitemapSources.ts`. The owner's 29/09 blog refresh folded 86 duplicate posts
+  into their survivors and recorded the mapping in `src/generated/blogMerges2909.json`; every key of
+  that map is answered by `middleware.ts` with a redirect, and `redirects.js` carries the ASCII
+  subset. `blogArticlesSource` never read the map, so a merged slug whose article row is still
+  published kept being submitted. **Measured 05/10 on all 137 URLs in `/sitemaps/blog.xml`
+  (Googlebot UA, `redirect: manual`): 136 answered 200 at the listed URL, ONE answered 308** —
+  `/blog/quand-prendre-de-la-creatine-le-guide-complet-pour-optimiser-vos-resultats` →
+  `/blog/comment-utiliser-la-creatine-en-tunisie-pour-maximiser-vos-performances`. Only one of the 86
+  leaked because that slug is the one claimed by TWO published rows (ids 44 and 45, `sitemapData.ts`),
+  so a row of it survives in `/all_articles`. The guard reads the same map and normalises it the same
+  way the middleware does, so the next fold is covered by construction. Proved against the REAL
+  source with the crawl stubbed: old code 137 URLs / 1 redirect listed, new code 136 / 0, exactly one
+  URL dropped and every other entry byte-identical, plus 8 edge cases (upper-case key, surrounding
+  whitespace, an Arabic key, that key with a literal newline, a survivor, an unrelated article, a slug
+  that merely starts with a merged key) all passing. **Verify live tomorrow: blog.xml = 136 `<loc>`.**
+- [ ] **One buyable Gold Standard SKU of 21, and the unqualified money query is answered by a dead
+  one** `(needs: owner)` — measured 05/10 from `/api/productsBySubCategoryId/whey-proteine`
+  (168 SKUs, **13 buyable**). The Gold Standard line holds **21 URLs and exactly one buyable page**:
+  the 2,27 kg at **379 DT, qte 59**. The other 20 are qte 0 — the 908 g at 155 DT, the 4,5 kg at
+  529 DT, and **19 iHerb flavour imports priced 332 DT (907 g) and 587 DT (2,27 kg)**, i.e. 55 %
+  above our own price for the identical format. The repo half of this is **already done and verified
+  live today**: `productVariantCanonicals.ts` (shipped 28/09) canonicalises all 19 flavours — 11 to
+  the 2,27 kg, 8 to the 908 g — and drops them from the sitemap (checked on the Rocky Road 2,27 kg:
+  canonical = the buyable page, `index, follow`, 0 occurrences in `products-*.xml`). What is left is
+  owner-only: **restock or a Redirections row for the 908 g**, which still holds the unqualified
+  query's slot. Note the 28/09 decision that 8 small-format flavours canonicalise INTO that 908 g
+  page; re-pointing them is a canonical rewrite and must not be done during the spam update.
+- [ ] **We are the most expensive of five Tunisian shops on the SKU behind the densest query
+  cluster** `(needs: owner)` — same SERP set, 05/10, identical Optimum Nutrition Gold Standard
+  2,27 kg: protein-shop-tunisia **299 DT**, gohardnutrition **320 DT (rupture)**, stock-x **360 DT**,
+  nutribeast **360 DT**, **protein.tn 379 DT**. The 02/10 log flagged 299 at two competitors; the full
+  set is now priced. Prices are outside what the routine may touch — this is the number, not a
+  recommendation.
+- [ ] **`meta_title` is corrupt on 2 of the 13 buyable whey SKUs, and it blocks the routine's own
+  lever** `(needs: owner)` — read from the API 05/10. `whey-regime-2kg-william-bonac` stores a
+  `meta_title` of `"description;Whey Regime William Bonac 2,21 kg avec 25 g de protéines…"` (158
+  chars, a leaked field name), and `tantor-whey-protein-908-g-scenit-nutrition` stores raw meta-tag
+  attribute soup (`name="title" content="…" name="description" content="…" name="robots"
+  content="index,follow"`, ~200 chars). **Neither reaches the live `<title>`** — verified on both
+  pages today, `productTitle()` prefers `seo_title` and both `seo_title` values are clean — so this is
+  latent, not a live SERP defect. The consequence is narrower and real: `seo:products-apply-copy`
+  fills `meta_title`/`meta_description` **only when the column is empty**, so these two products can
+  never be repaired by a `resources/seo/products` entry without `"force": true`, and forcing would
+  override a column a person may have meant. Backend cleanup, like the `seo_title` importer item above.
+  **And the same mechanism applies far beyond those two:** measured 05/10, `meta_title` and
+  `meta_description` are non-empty on **all 13** buyable whey SKUs (what is empty is
+  `seo_title`/`seo_description`, on 10 of them), so a `resources/seo/products` batch can only ever
+  land `append_html` and `faq` on this shelf — never a description. The non-empty values are the
+  generic `"<NAME> — Whey Protéine en Tunisie. Livraison 24-72h…"` boilerplate, which `productDescription()`
+  already detects as formulaic and replaces at render time with body copy + price; that is why the
+  live snippets differ from the column. Any future run planning a description pass on PDPs must read
+  the columns first.
+- [ ] **`mass gainer` is now answered by THREE of our URLs, two of them near-duplicate blog posts** —
+  SERP look 05/10 (extended) on `prise de masse tunisie gainer prix acheter`: the set holds
+  `/mass-gainers` (a shape change — on 28/09 only the blog was in it), **and both**
+  `/blog/mass-gainer-prix-tunisie` **and** `/blog/mass-gainer-prix-tunisie-guide-complet-pour-2025`.
+  Two posts whose slugs differ by a suffix answering one query beside the category is the cleanest
+  cannibalisation case on the board. Saturday's theme: the category wins, the two posts link to it
+  with the exact anchor via `blogSeoConfig.ts`, and whether the two posts should be one is the
+  owner's call (the DB owns the bodies).
+- [~] **`/vitamines` is NOT this week's category target — withdrawn 05/10 on price evidence.** The
+  original reasoning (683 words, the thinnest money-ish listing) was answered by the 29/09 rebuild:
+  1,855 bot words, 6 words above the grid, FAQPage, and the live audit measures it at 1,139 words
+  today. What is left is not a copy gap. SERP look 05/10 (extended) on `vitamines tunisie
+  multivitamines prix acheter complément`: parashop ×2, **primini.tn** (price aggregator),
+  maparatunisie, bonheur.tn, tunisiepara, nutribeast, sf-nutrition, bioherbs — protein.tn **absent
+  for the third look in a row**, and the set's multivitamins sell at **20–40 DT** against our
+  **60–270 DT** imported shelf (10 buyable of 1,870). No page edit closes a 3× price gap on a
+  parapharmacy query. Reopen only if the catalogue gains a budget multivitamin; until then the hours
+  belong to the whey shelf (see the Gold Standard items above).
 
 - [ ] **4,344 of 7,389 product titles exceed 65 characters** (measured 24/09 over the live
   catalogue, mean 72.3). Google truncates them, so the brand and "Prix Tunisie" — the two things

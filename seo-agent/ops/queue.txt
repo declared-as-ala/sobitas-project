@@ -1,7 +1,12 @@
 # VPS tasks to run after this branch lands (one task name per line, # = comment).
 # The land workflow dispatches each allowed line as a vps-run.yml task, then empties this file.
 # Allowed: seo-copy-dry-run seo-copy-apply seo-legacy-reindex-dry-run seo-legacy-reindex-apply seo-legacy-copy-dry-run seo-legacy-copy-apply catalog-reindex seo-robots-audit seo-robots-fix catalog-status reviews-publish-backlog-dry-run
-# Consumed on 2026-09-23T09:55Z: seo-copy-apply 
+# Consumed on 2026-09-23T09:55Z: seo-copy-apply
 # 2026-10-02: nothing queued on purpose. Both of today's changes are frontend/tooling and ship
 # with deploy-frontend.yml; no resources/seo/products entry was added (30/09 verified both honest
 # candidate sets already have entries, and today's 128 no-FAQ P1s are the out-of-stock long tail).
+# 2026-10-05: nothing queued on purpose. The single change is a sitemap-builder fix in
+# frontend/src/util/sitemapSources.ts and ships with deploy-frontend.yml, which regenerates the
+# sitemaps on its own — no catalog-reindex is needed for a blog.xml membership change, and no
+# resources/seo/products entry was written (the whey product batch is Wednesday's theme, see
+# log/2026-10-05.md "Tomorrow"). A seo-copy-apply with nothing to apply is a wasted VPS run.

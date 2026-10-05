@@ -1,6 +1,7 @@
 import type { MetadataRoute } from 'next';
 
 import { inGlobalNav, taxonomyNode } from '@/config/catalogTaxonomy';
+import BLOG_MERGES_2909 from '@/generated/blogMerges2909.json';
 import { CATEGORY_CONTENT_DATES } from '@/generated/categoryContentDates';
 import { getApiPage, getStorageUrl } from '@/services/api';
 import type { Product, Article, Category, Brand, SubCategory, Page } from '@/types';
@@ -1136,9 +1137,46 @@ const blogArticlesSource: SitemapSource = {
       critical: true,
     });
 
+    /*
+     * A MERGED ARTICLE IS A REDIRECT, AND A REDIRECT IS NOT A SITEMAP URL.
+     *
+     * The 29/09/2026 blog refresh folded 86 duplicate posts into their survivors and recorded the
+     * mapping in `blogMerges2909.json`. Every key of that map is answered by `middleware.ts` with a
+     * redirect to its survivor — unconditionally, before the article is ever resolved, and for the
+     * Arabic slugs too (`redirects.js` carries only the ASCII subset). So a key of that map can
+     * never serve a 200 at its own URL, and this file's own header already states the rule it was
+     * missing: "middleware 301s them to the canonical form. Submitting a redirect is the 'Page with
+     * redirect' bucket in Search Console."
+     *
+     * MEASURED 2026-10-05 against production: of the 137 URLs in /sitemaps/blog.xml, 136 answered
+     * 200 at the listed URL and ONE — /blog/quand-prendre-de-la-creatine-le-guide-complet-pour-
+     * optimiser-vos-resultats — answered 308 to /blog/comment-utiliser-la-creatine-en-tunisie-pour-
+     * maximiser-vos-performances. Only one of the 86 leaked because the rest were unpublished with
+     * the fold, while that slug is the one claimed by TWO published rows (ids 44 and 45, see
+     * sitemapData.ts) so a row of it survives in /all_articles.
+     *
+     * The guard reads the SAME map the middleware reads, normalised the SAME way
+     * (`trim().normalize('NFC').toLowerCase()`, middleware.ts), so the sitemap cannot drift from
+     * the redirect: the next fold is covered by construction, and nothing has to be remembered.
+     */
+    const mergedAway = BLOG_MERGES_2909 as Record<string, string>;
+    /* Whitespace is collapsed before the comparison for the same reason `encodeBlogSlug` collapses
+       it: a handful of CMS slugs were saved as their raw Arabic title and carry literal newlines,
+       so the DB string and the URL segment the middleware matches differ by whitespace alone.
+       Measured today: 0 of the 86 keys and 0 of the 137 listed slugs are affected, so this changes
+       nothing now and keeps the two sides comparable if the next fold touches one of them. */
+    const mergeKey = (slug: string): string =>
+      slug.replace(/[\r\n\t]+/g, ' ').replace(/\s+/g, ' ').trim().normalize('NFC').toLowerCase();
+    const isMergedAway = (slug: string): boolean => Object.hasOwn(mergedAway, mergeKey(slug));
+
     const entries: SourceEntry[] = [];
+    let merged = 0;
     for (const article of crawl.rows) {
       if (!article.slug) continue;
+      if (isMergedAway(article.slug)) {
+        merged++;
+        continue;
+      }
       const coverImg = toSitemapImage(article.cover);
       entries.push({
         url: `${ctx.baseUrl}/blog/${encodeURIComponent(article.slug)}`,
@@ -1149,7 +1187,10 @@ const blogArticlesSource: SitemapSource = {
       });
     }
 
-    return { entries, verified, note: `${note} → ${entries.length} article URL(s)` };
+    /* Counted out loud, like the collisions below it: a published row that the repo redirects away
+       is a content/redirect disagreement worth seeing, not a silent subtraction. */
+    const mergedNote = merged > 0 ? ` (${merged} merged away by the 29/09 blog refresh)` : '';
+    return { entries, verified, note: `${note} → ${entries.length} article URL(s)${mergedNote}` };
   },
 };
 
